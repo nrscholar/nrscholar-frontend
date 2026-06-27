@@ -1,0 +1,23 @@
+{
+  "translation": {
+    "app_name": "स्टडी-साथी",
+    "home": "होम",
+    "library": "लाइब्रेरी",
+    "tasks": "कार्य",
+    "profile": "प्रोफाइल",
+    "settings": "सेटिंग्स",
+    "notifications": "सूचनाएं",
+    "language": "भाषा",
+    "select_language": "भाषा चुनें",
+    "english": "अंग्रेज़ी",
+    "hindi": "हिंदी",
+    "gujarati": "गुजराती",
+    "parent_space": "पेरेंट स्पेस",
+    "journey": "मेरी यात्रा",
+    "rewards": "इनाम",
+    "good_habits": "अच्छी आदतें",
+    "ai_chat": "साथी से बात करें",
+    "continue_learning": "पढ़ना जारी रखें",
+    "daily_challenge": "दैनिक चुनौती"
+  }
+}

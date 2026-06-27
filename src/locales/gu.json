@@ -1,0 +1,23 @@
+{
+  "translation": {
+    "app_name": "સ્ટડી-સાથી",
+    "home": "હોમ",
+    "library": "લાઇબ્રેરી",
+    "tasks": "કાર્યો",
+    "profile": "પ્રોફાઇલ",
+    "settings": "સેટિંગ્સ",
+    "notifications": "સૂચનાઓ",
+    "language": "ભાષા",
+    "select_language": "ભાષા પસંદ કરો",
+    "english": "અંગ્રેજી",
+    "hindi": "હિન્દી",
+    "gujarati": "ગુજરાતી",
+    "parent_space": "પેરેન્ટ સ્પેસ",
+    "journey": "મારી યાત્રા",
+    "rewards": "ઇનામ",
+    "good_habits": "સારી આદતો",
+    "ai_chat": "સાથી સાથે વાત કરો",
+    "continue_learning": "ભણવાનું ચાલુ રાખો",
+    "daily_challenge": "દૈનિક પડકાર"
+  }
+}

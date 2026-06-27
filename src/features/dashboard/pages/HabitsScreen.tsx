@@ -1,0 +1,168 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Bell, Star, Heart, Lock, Sparkles, PartyPopper, CheckCircle2 } from "lucide-react";
+import { apiFetch } from "../../../api";
+
+
+export default function HabitsScreen() {
+  const navigate = useNavigate();
+  const [completed, setCompleted] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+
+  const [habit, setHabit] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const fetchHabit = async () => {
+      try {
+        const response = await apiFetch("/api/practice/habits/daily");
+        const data = await response.json();
+        if (data.success) {
+          setHabit(data.data);
+        }
+      } catch (e) {
+        console.error("Failed to fetch daily habit");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchHabit();
+  }, []);
+
+  const handleComplete = () => {
+    setCompleted(true);
+    setTimeout(() => {
+      setShowModal(true);
+    }, 500);
+  };
+
+  return (
+    <div className="min-h-screen bg-[#f7f9fb] font-sans relative overflow-hidden pb-10">
+      {/* Background Elements */}
+      <div className="absolute top-[25%] -left-[50px] w-[150px] h-[150px] bg-[rgba(0,106,98,0.1)] rounded-full z-0" />
+      <div className="absolute bottom-[25%] -right-[50px] w-[180px] h-[180px] bg-[rgba(20,23,121,0.05)] rounded-full z-0" />
+
+      {/* Header */}
+      <header className="flex items-center justify-between px-6 py-4 bg-[rgba(247,249,251,0.8)] border-b border-[rgba(255,255,255,0.2)] sticky top-0 z-40 backdrop-blur-md">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => navigate(-1)} 
+            className="w-10 h-10 rounded-full border-2 border-[rgba(0,106,98,0.2)] relative overflow-hidden flex items-center justify-center hover:opacity-80 transition-opacity"
+          >
+            <img
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqeAKVn9xa7Ti_J8T-zoZ3ynEZ6mJOWr0fMC42PX8I9NluRtuKibMc07OBY583RokuTgs1t8fEYpqU7uqvKxqNxx9vdeohuaGmnpD-5dtpQwq1M0G8Dp5y7iG3PIL4AElV-CqOp3hfgcWIGlmuas0t5yK4wk1BAZfqt2JN1U3nlvcTTfDxN-6pkHO6S_QogXJjJZf63EkXyTVE2N2e66-WDtl-X9bncG9ElpwT4DLKy-Q1KgiI6K7yOW-IZw7jpf3ZkMJzou82Pg"
+              alt="Avatar"
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-[rgba(0,0,0,0.3)] flex items-center justify-center">
+              <ArrowLeft size={16} color="white" />
+            </div>
+          </button>
+          <h1 className="text-2xl font-bold text-[#141779] tracking-[-0.5px]">Studysaathy</h1>
+        </div>
+        <button onClick={() => navigate("/notifications")} className="p-1 hover:bg-gray-100 rounded-full transition-colors">
+          <Bell size={24} color="#141779" />
+        </button>
+      </header>
+
+      <main className="px-6 pt-8 flex flex-col items-center gap-8 relative z-10">
+        
+        {/* Title Section */}
+        <div className="flex flex-col items-center">
+          <h2 className="text-2xl font-bold text-[#141779] mb-1">Good Habits & Values</h2>
+          <span className="text-sm font-semibold text-[#006a62]">Sparkle like a Star today!</span>
+        </div>
+
+        {/* Progress Orbit Tracker */}
+        <div className="flex justify-center gap-4 w-full">
+          {/* Day 1 */}
+          <div className="flex flex-col items-center gap-1">
+            <div className="w-12 h-12 rounded-full bg-[#57fae9] flex items-center justify-center shadow-[0_0_10px_rgba(87,250,233,0.5)]">
+              <Star size={24} color="#00201d" className="fill-[#00201d]" />
+            </div>
+            <span className="text-xs font-bold text-[#464652]">Day 1</span>
+          </div>
+          {/* Day 2 */}
+          <div className="flex flex-col items-center gap-1">
+            <div className="w-12 h-12 rounded-full bg-[#57fae9] flex items-center justify-center shadow-[0_0_10px_rgba(87,250,233,0.5)]">
+              <Star size={24} color="#00201d" className="fill-[#00201d]" />
+            </div>
+            <span className="text-xs font-bold text-[#464652]">Day 2</span>
+          </div>
+          {/* Today */}
+          <div className="flex flex-col items-center gap-1">
+            <div className="w-12 h-12 rounded-full border-2 border-dashed border-[#2addcd] flex items-center justify-center">
+              <Heart size={24} color="#2addcd" className="fill-[#2addcd]" />
+            </div>
+            <span className="text-xs font-bold text-[#464652]">Today</span>
+          </div>
+          {/* Day 4 */}
+          <div className="flex flex-col items-center gap-1 opacity-40">
+            <div className="w-12 h-12 rounded-full border-2 border-dashed border-[#c7c5d4] flex items-center justify-center">
+              <Lock size={24} color="#767683" />
+            </div>
+            <span className="text-xs font-bold text-[#464652]">Day 4</span>
+          </div>
+        </div>
+
+        {/* Daily Lesson Card */}
+        <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-6 flex flex-col items-center border-[1.5px] border-[rgba(255,255,255,0.4)] shadow-[0_2px_10px_rgba(0,0,0,0.05)] w-full max-w-[400px]">
+          {loading ? (
+            <div className="py-10 flex items-center justify-center">
+              <div className="w-8 h-8 border-4 border-[#141779] border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : (
+            <>
+              <div className="w-16 h-16 bg-[#e0e0ff] rounded-2xl flex items-center justify-center mb-4">
+                <Sparkles size={36} color="#141779" />
+              </div>
+              <h3 className="text-xl font-bold text-[#141779] text-center mb-3">
+                {habit?.title || "Daily Lesson"}
+              </h3>
+              <p className="text-base font-medium text-[#464652] text-center leading-6 mb-8 px-2">
+                {habit?.description || "Loading your lesson..."}
+              </p>
+
+              {/* Interaction Button */}
+              <button
+                disabled={completed || !habit}
+                onClick={handleComplete}
+                className={`w-full py-4 rounded-full flex items-center justify-center gap-2 shadow-[0_4px_10px_rgba(20,23,121,0.3)] transition-colors ${
+                  completed ? 'bg-[#006a62]' : 'bg-[#141779] hover:opacity-90'
+                }`}
+              >
+                <span className="text-sm font-semibold text-white">
+                  {completed ? `Brilliant! +${habit?.rewardPoints || 10} Points` : "Complete Story"}
+                </span>
+                {completed ? (
+                  <CheckCircle2 size={20} color="white" />
+                ) : (
+                  <PartyPopper size={20} color="white" />
+                )}
+              </button>
+            </>
+          )}
+        </div>
+
+        {showModal && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-6 backdrop-blur-sm">
+            <div className="bg-white rounded-[24px] p-6 flex flex-col items-center w-full max-w-[320px] shadow-2xl animate-in fade-in zoom-in duration-300">
+              <div className="w-16 h-16 bg-[#fff0da] rounded-full flex items-center justify-center mb-4">
+                <PartyPopper size={32} color="#ff9f43" />
+              </div>
+              <h3 className="text-xl font-bold text-[#141779] text-center mb-2">Brilliant!</h3>
+              <p className="text-[#464652] text-center mb-6">You earned <span className="font-bold text-[#ff9f43]">{habit?.rewardPoints || 10} Points</span> for completing today's story.</p>
+              <button 
+                onClick={() => { setShowModal(false); navigate(-1); }}
+                className="w-full bg-[#141779] text-white py-3 rounded-full font-bold hover:opacity-90 transition-opacity"
+              >
+                Continue Journey
+              </button>
+            </div>
+          </div>
+        )}
+
+      </main>
+    </div>
+  );
+}

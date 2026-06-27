@@ -1,0 +1,23 @@
+{
+  "translation": {
+    "app_name": "StudySaathy",
+    "home": "Home",
+    "library": "Library",
+    "tasks": "Tasks",
+    "profile": "Profile",
+    "settings": "Settings",
+    "notifications": "Notifications",
+    "language": "Language",
+    "select_language": "Select Language",
+    "english": "English",
+    "hindi": "Hindi",
+    "gujarati": "Gujarati",
+    "parent_space": "Parent Space",
+    "journey": "My Journey",
+    "rewards": "Rewards",
+    "good_habits": "Good Habits",
+    "ai_chat": "Chat with Saathy",
+    "continue_learning": "Continue Learning",
+    "daily_challenge": "Daily Challenge"
+  }
+}
