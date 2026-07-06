@@ -1,6 +1,6 @@
 {
   "translation": {
-    "app_name": "StudySaathy",
+    "app_name": "{{brandName}}",
     "home": "Home",
     "library": "Library",
     "tasks": "Tasks",
