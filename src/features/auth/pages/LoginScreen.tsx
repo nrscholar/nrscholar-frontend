@@ -78,7 +78,7 @@ export default function LoginScreen() {
             <BookOpen size={32} color="white" />
           </div>
           <h1 className="text-[26px] font-bold text-[#141779] tracking-[-0.5px]">Studysaathy</h1>
-          <p className="text-base text-[#767683] font-medium mt-1">Continue your cosmic mission</p>
+          <p className="text-base text-[#767683] font-medium mt-1">Welcome back</p>
         </div>
 
         {errorMsg && (
@@ -93,7 +93,7 @@ export default function LoginScreen() {
             <AtSign size={20} color="#767683" className="absolute left-4" />
             <input
               type="email"
-              placeholder="Explorer Email"
+              placeholder="Enter Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full h-14 bg-[#eceef0] rounded-full pl-12 pr-4 text-base font-medium text-[#191c1e] focus:outline-none focus:ring-2 focus:ring-[#141779] transition-shadow placeholder:text-[#767683]"
@@ -106,7 +106,7 @@ export default function LoginScreen() {
               <Lock size={20} color="#767683" className="absolute left-4" />
               <input
                 type={showPassword ? "text" : "password"}
-                placeholder="Secret Key"
+                placeholder="Enter Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full h-14 bg-[#eceef0] rounded-full pl-12 pr-12 text-base font-medium text-[#191c1e] focus:outline-none focus:ring-2 focus:ring-[#141779] transition-shadow placeholder:text-[#767683]"
@@ -138,16 +138,16 @@ export default function LoginScreen() {
                 <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  <span className="text-white text-lg font-bold">Launch Journey</span>
+                  <span className="text-white text-lg font-bold">Login</span>
                   <ArrowRight size={20} color="white" />
                 </>
               )}
             </button>
 
             <div className="flex justify-center items-center gap-1">
-              <span className="text-base text-[#767683] font-medium">New explorer?</span>
+              <span className="text-base text-[#767683] font-medium">Don't have an account? </span>
               <button type="button" onClick={() => navigate("/signup-step1")} className="text-base font-bold text-[#141779] hover:underline">
-                Join the Galaxy
+                Sign up
               </button>
             </div>
           </div>

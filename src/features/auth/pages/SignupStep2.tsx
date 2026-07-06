@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Rocket, X, Sparkles, UserRound, GraduationCap, Cake, ChevronDown, Check, BookOpen } from "lucide-react";
+import { Rocket, ArrowLeft, Sparkles, UserRound, GraduationCap, Cake, ChevronDown, Check, BookOpen } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect, placeholder }: any) => {
@@ -72,10 +72,10 @@ export default function SignupStep2Screen() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   
-  const [childName, setChildName] = useState("");
-  const [selectedClass, setSelectedClass] = useState("");
-  const [age, setAge] = useState("");
-  const [selectedBoard, setSelectedBoard] = useState("");
+  const [childName, setChildName] = useState(searchParams.get("childName") || "");
+  const [selectedClass, setSelectedClass] = useState(searchParams.get("selectedClass") || "");
+  const [age, setAge] = useState(searchParams.get("age") || "");
+  const [selectedBoard, setSelectedBoard] = useState(searchParams.get("board") || "");
 
   const classes = ["Nursery", "KG", "Class 1", "Class 2", "Class 3", "Class 4", "Class 5"];
   const ages = ["4 Years", "5 Years", "6 Years", "7 Years", "8 Years", "9 Years", "10 Years"];
@@ -102,14 +102,14 @@ export default function SignupStep2Screen() {
       </div>
 
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 bg-[rgba(255,255,255,0.8)] border-b border-[rgba(255,255,255,0.2)] sticky top-0 z-40 backdrop-blur-md">
+      <header className="flex items-center px-6 py-4 bg-[rgba(255,255,255,0.8)] border-b border-[rgba(255,255,255,0.2)] sticky top-0 z-40 backdrop-blur-md">
         <div className="flex items-center gap-2">
+          <button type="button" onClick={() => navigate(`/signup-step1?${searchParams.toString()}`)} className="w-10 h-10 -ml-2 rounded-full bg-[#e0e0ff] flex items-center justify-center hover:opacity-80 transition-opacity">
+            <ArrowLeft size={24} color="#141779" />
+          </button>
           <Rocket size={28} color="#141779" />
           <h1 className="text-[22px] font-bold text-[#141779] tracking-[-0.5px]">Studysaathy</h1>
         </div>
-        <button type="button" onClick={() => navigate("/signup-step1")} className="p-2 hover:bg-gray-100 rounded-full transition-colors z-50">
-          <X size={24} color="#767683" />
-        </button>
       </header>
 
       <main className="px-6 pt-8 flex flex-col items-center w-full max-w-[430px] mx-auto relative z-10">
@@ -129,7 +129,7 @@ export default function SignupStep2Screen() {
         <div className="w-full bg-[rgba(255,255,255,0.7)] rounded-3xl p-6 border-[1.5px] border-white shadow-[0_10px_20px_rgba(0,0,0,0.1)]">
           
           <div className="flex flex-col items-center mb-6">
-            <h2 className="text-[28px] font-bold text-[#141779] mb-2 text-center">Who's Exploring?</h2>
+            <h2 className="text-[28px] font-bold text-[#141779] mb-2 text-center">About Your Child</h2>
             <p className="text-base text-[#464652] font-medium text-center">
               Tell us about your child to personalize their learning journey.
             </p>
@@ -139,11 +139,11 @@ export default function SignupStep2Screen() {
             
             {/* Child's Name */}
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-[#767683] ml-4">Child's Explorer Name</label>
+              <label className="text-sm font-semibold text-[#767683] ml-4">Child's Name</label>
               <div className="relative flex items-center">
                 <input
                   type="text"
-                  placeholder="e.g. Leo Star"
+                  placeholder="Enter Child Name"
                   value={childName}
                   onChange={(e) => setChildName(e.target.value)}
                   className="w-full h-14 bg-[rgba(255,255,255,0.5)] rounded-full pl-12 pr-6 text-base font-medium text-[#191c1e] border-2 border-white focus:outline-none focus:border-[#141779] transition-colors placeholder:text-[#c7c5d4]"
@@ -196,7 +196,7 @@ export default function SignupStep2Screen() {
             disabled={!childName || !selectedClass || !age || !selectedBoard}
             className={`w-full h-14 bg-[#141779] rounded-full flex items-center justify-center gap-3 shadow-[0_4px_15px_rgba(20,23,121,0.3)] transition-opacity ${(!childName || !selectedClass || !age || !selectedBoard) ? 'opacity-70 cursor-not-allowed' : 'hover:opacity-90'}`}
           >
-            <span className="text-white text-lg font-semibold">Almost There</span>
+            <span className="text-white text-lg font-semibold">Submit</span>
             <Rocket size={22} color="white" />
           </button>
         </div>
@@ -209,7 +209,7 @@ export default function SignupStep2Screen() {
             className="w-10 h-10 rounded-full border-2 border-white object-cover"
           />
           <span className="text-sm font-semibold text-[#005049] flex-1">
-            Your space journey is almost ready!
+            Your learning journey is almost ready!
           </span>
         </div>
 

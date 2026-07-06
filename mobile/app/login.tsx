@@ -1,21 +1,21 @@
-import React, { useState } from "react";
+import { MaterialIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import React, { useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  Dimensions,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  Image,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Dimensions,
-  StatusBar,
-  ScrollView,
+  View,
 } from "react-native";
-import { MaterialIcons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import Toast from "react-native-toast-message";
 import { authApi, saveToken } from "./services/api";
 
@@ -96,7 +96,7 @@ export default function LoginScreen() {
               <MaterialIcons name="menu-book" size={32} color="#ffffff" />
             </View>
             <Text style={styles.titleText}>Studysaathy</Text>
-            <Text style={styles.subtitleText}>Continue your cosmic mission</Text>
+            <Text style={styles.subtitleText}>Welcome back</Text>
           </View>
 
           {/* Login Fields */}
@@ -105,7 +105,7 @@ export default function LoginScreen() {
               <MaterialIcons name="alternate-email" size={22} color="#767683" style={styles.inputIconLeft} />
               <TextInput
                 style={styles.input}
-                placeholder="Explorer Email"
+                placeholder="Enter Email"
                 placeholderTextColor="#767683"
                 value={email}
                 onChangeText={setEmail}
@@ -119,7 +119,7 @@ export default function LoginScreen() {
                 <MaterialIcons name="lock-outline" size={22} color="#767683" style={styles.inputIconLeft} />
                 <TextInput
                   style={[styles.input, { paddingRight: 48 }]}
-                  placeholder="Secret Key"
+                  placeholder="Enter Password"
                   placeholderTextColor="#767683"
                   secureTextEntry={!showPassword}
                   value={password}
@@ -152,16 +152,16 @@ export default function LoginScreen() {
                 <ActivityIndicator color="#ffffff" />
               ) : (
                 <>
-                  <Text style={styles.loginButtonText}>Launch Journey</Text>
+                  <Text style={styles.loginButtonText}>Login</Text>
                   <MaterialIcons name="arrow-forward" size={20} color="#ffffff" />
                 </>
               )}
             </TouchableOpacity>
 
             <View style={styles.signupContainer}>
-              <Text style={styles.signupText}>New explorer? </Text>
+              <Text style={styles.signupText}>Don't have an account? </Text>
               <TouchableOpacity onPress={() => router.push("/signup-step1")}>
-                <Text style={styles.signupLink}>Join the Galaxy</Text>
+                <Text style={styles.signupLink}>Sign up</Text>
               </TouchableOpacity>
             </View>
           </View>

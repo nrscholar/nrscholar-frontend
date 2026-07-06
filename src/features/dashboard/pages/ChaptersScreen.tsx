@@ -16,6 +16,12 @@ export default function ChaptersScreen() {
   const [loading, setLoading] = useState(true);
   const [chapters, setChapters] = useState<any[]>([]);
   const [completedChapters, setCompletedChapters] = useState<string[]>([]);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
   
   useEffect(() => {
     const fetchChapters = async () => {
@@ -55,10 +61,12 @@ export default function ChaptersScreen() {
   }, []);
 
   const totalChapters = chapters.length;
-  const completedChaptersCount = chapters.filter(ch => completedChapters.includes(ch._id)).length;
+  // A chapter is only fully complete if the legacy exact match exists OR the hard level boss is beaten
+  const isChapterCompleted = (chapterId: string) => completedChapters.includes(chapterId) || completedChapters.includes(`${chapterId}_hard`);
+  const completedChaptersCount = chapters.filter(ch => isChapterCompleted(ch._id)).length;
   const progressPercent = totalChapters > 0 ? (completedChaptersCount / totalChapters) * 100 : 0;
   
-  const currentChapterIndex = chapters.findIndex(ch => !completedChapters.includes(ch._id));
+  const currentChapterIndex = chapters.findIndex(ch => !isChapterCompleted(ch._id));
 
   const radius = 20;
   const circumference = 2 * Math.PI * radius;
@@ -68,7 +76,7 @@ export default function ChaptersScreen() {
     <div className="min-h-screen bg-[#f7f9fb] font-sans pb-10">
       {/* TopAppBar */}
       <header className="flex items-center justify-between px-6 h-16 bg-[rgba(247,249,251,0.8)] border-b border-[rgba(255,255,255,0.2)] sticky top-0 z-50 backdrop-blur-sm">
-        <button onClick={() => navigate(-1)} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors">
+        <button onClick={() => navigate("/home")} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors">
           <ArrowLeft size={24} color="#141779" />
         </button>
         <h1 className="text-2xl font-bold text-[#141779]">{subjectName}</h1>
@@ -121,7 +129,7 @@ export default function ChaptersScreen() {
             {/* Chapter List */}
             <div className="flex flex-col gap-4">
               {chapters.map((chap, index) => {
-                const isCompleted = completedChapters.includes(chap._id);
+                const isCompleted = isChapterCompleted(chap._id);
                 const isCurrent = !isCompleted && index === currentChapterIndex;
                 const status = isCompleted ? "completed" : isCurrent ? "current" : "locked";
                 const IconComponent = chapterIcons[index % chapterIcons.length];
@@ -164,7 +172,7 @@ export default function ChaptersScreen() {
                 }
 
                 return (
-                  <div key={chap._id} className="flex items-center gap-4 bg-[#f2f4f6] opacity-60 rounded-2xl p-4 border border-[rgba(118,118,131,0.1)]">
+                  <div key={chap._id} onClick={() => showToast(`Complete Chapter ${currentChapterIndex + 1} to unlock!`)} className="flex items-center gap-4 bg-[#f2f4f6] opacity-60 rounded-2xl p-4 border border-[rgba(118,118,131,0.1)] cursor-pointer">
                     <div className="w-12 h-12 rounded-full bg-[rgba(118,118,131,0.1)] flex items-center justify-center shrink-0">
                       <IconComponent size={24} color="#767683" />
                     </div>
@@ -180,6 +188,14 @@ export default function ChaptersScreen() {
           </>
         )}
       </main>
+
+      {/* Toast Message */}
+      {toastMessage && (
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-[#141779] text-white px-6 py-3 rounded-full shadow-lg z-[9999] font-medium text-sm flex items-center gap-2 whitespace-nowrap max-w-[90vw]">
+          <Lock size={16} color="white" className="shrink-0" />
+          <span className="truncate">{toastMessage}</span>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
 
@@ -109,14 +109,6 @@ export default function JourneyMapScreen() {
     fetchJourney();
   }, []);
 
-  const handleBoost = () => {
-    setFuel((prev) => prev + 500);
-    setCities(cities.map(c => ({
-      ...c,
-      unlocked: (fuel + 500) >= c.requiredFuel
-    })));
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -135,11 +127,11 @@ export default function JourneyMapScreen() {
         {/* TopAppBar */}
         <header className="fixed top-0 w-full max-w-[430px] z-50 flex justify-between items-center px-6 py-4 bg-surface/80 dark:bg-surface-dim/80 backdrop-blur-lg border-b-[1.5px] border-outline-variant/30 shadow-sm">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity">
+            <button onClick={() => navigate('/home')} className="p-1 hover:opacity-80 transition-opacity">
               <span className="material-symbols-outlined text-primary">arrow_back</span>
             </button>
             <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary">
-              <img alt="User Profile" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD0ZWo3fDxyiZD8StCnUC4fY047jgH0FaG8luIxpsQ1DztWFSdAOFAitklpXH7p5Z_Y9tIyNPEMzfI6L-bEDrqcG4bkOShfFqj9vl-u1MnX7HZV8bI5lCCD-Okjb7q6v5O0o5IoKVdOWHG_DZp3_NlJOIYoUkpXQ3Cpg-DU_ukfVhcWcQipC5JtGYQNJr_FA-vPgGj7YWGMVrbvqcTjbYaz6w6badrpySxkT6xRLDfyFT_T7AOB3fxfQDnI0UXSeNoEF5VmnpGAog"/>
+              <img alt="User Profile" className="w-full h-full object-cover" src={`https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`}/>
             </div>
             <div>
               <h1 className="font-display text-label-lg font-bold text-primary">{username}</h1>
@@ -178,7 +170,7 @@ export default function JourneyMapScreen() {
 
           <div className="relative min-h-[800px] py-10 flex flex-col items-center gap-16">
             <svg className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none">
-              <path className="map-path" d="M 215 50 Q 350 200 215 350 T 215 650" fill="none" stroke="#e0e3e5" strokeDasharray="8" strokeWidth="4"></path>
+              <line x1="50%" y1="0" x2="50%" y2="100%" stroke="#e0e3e5" strokeDasharray="8" strokeWidth="4" />
             </svg>
 
             {cities.map((city, idx) => {
@@ -188,9 +180,10 @@ export default function JourneyMapScreen() {
               const translateClass = idx % 2 === 0 ? "translate-x-[-40px]" : "translate-x-[40px]";
 
               if (isUltimate) {
+                const canPlay = isNext || city.unlocked;
                 return (
-                  <div key={idx} className={`relative z-10 w-full flex justify-center opacity-${city.unlocked ? '100' : '30'} mb-10`}>
-                    <div className="glass-card p-6 rounded-3xl w-72 text-center border-2 border-dashed border-outline-variant cursor-pointer active:scale-95 transition-all">
+                  <div key={idx} className={`relative z-10 w-full flex justify-center opacity-${canPlay ? '100' : '30'} mb-10`}>
+                    <div onClick={canPlay ? () => navigate(`/boss-battle?worldId=${city._id || 'w1'}&difficulty=hard&returnTo=/practice/journey-map`) : undefined} className="glass-card p-6 rounded-3xl w-72 text-center border-2 border-dashed border-outline-variant cursor-pointer active:scale-95 transition-all">
                       <div className="w-16 h-16 bg-surface-container mx-auto rounded-full flex items-center justify-center mb-4 text-3xl">{uiCity.emoji}</div>
                       <h3 className="font-headline text-headline-md font-bold text-on-surface-variant mb-2">{city.name}</h3>
                       <p className="text-label-sm text-outline mb-4">The Final Legend awaits...</p>
@@ -227,7 +220,7 @@ export default function JourneyMapScreen() {
                 return (
                   <div key={idx} className={`relative z-10 w-full flex justify-center ${translateClass}`}>
                     <div 
-                      onClick={() => navigate(`/boss-battle?worldId=${city._id || 'w1'}`)}
+                      onClick={() => navigate(`/boss-battle?worldId=${city._id || 'w1'}&difficulty=hard&returnTo=/practice/journey-map`)}
                       className="glass-card p-4 rounded-2xl w-64 border-l-4 border-primary shadow-lg ring-2 ring-primary/20 cursor-pointer active:scale-95 hover:shadow-[0_0_20px_rgba(20,23,121,0.2)] transition-all group"
                     >
                       <div className="flex justify-between items-start mb-2">
@@ -284,7 +277,7 @@ export default function JourneyMapScreen() {
 
         {/* Stats Overlay */}
         <div className="fixed bottom-24 w-full max-w-[430px] px-6 pointer-events-none z-40">
-          <div className="pointer-events-auto glass-card p-4 rounded-2xl flex items-center justify-between shadow-2xl ring-1 ring-white/50">
+          <div className="pointer-events-auto glass-card p-4 rounded-2xl flex items-center justify-center shadow-2xl ring-1 ring-white/50">
             <div 
               className="flex items-center gap-3 cursor-pointer hover:opacity-80 active:scale-95 transition-all"
               onClick={() => navigate('/evolution')}
@@ -297,12 +290,6 @@ export default function JourneyMapScreen() {
                 <p className="text-body-md font-bold text-primary">Tap to View</p>
               </div>
             </div>
-            <button 
-              onClick={handleBoost}
-              className="bg-secondary text-on-secondary px-6 py-3 rounded-full font-bold text-label-lg shadow-lg active:scale-95 transition-all"
-            >
-              Fuel Up (+500)
-            </button>
           </div>
         </div>
 
@@ -316,11 +303,11 @@ export default function JourneyMapScreen() {
             <span className="material-symbols-outlined">explore</span>
             <span className="font-label text-label-sm font-bold">Quests</span>
           </div>
-          <div className="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-4 py-1.5 hover:text-secondary active:scale-90 transition-transform duration-200 cursor-pointer">
+          <div onClick={() => alert('Feature coming soon!')} className="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-4 py-1.5 hover:text-secondary active:scale-90 transition-transform duration-200 cursor-pointer">
             <span className="material-symbols-outlined">backpack</span>
             <span className="font-label text-label-sm font-bold">Backpack</span>
           </div>
-          <div className="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-4 py-1.5 hover:text-secondary active:scale-90 transition-transform duration-200 cursor-pointer">
+          <div onClick={() => alert('Feature coming soon!')} className="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-4 py-1.5 hover:text-secondary active:scale-90 transition-transform duration-200 cursor-pointer">
             <span className="material-symbols-outlined">group</span>
             <span className="font-label text-label-sm font-bold">Friends</span>
           </div>

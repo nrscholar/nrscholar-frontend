@@ -37,7 +37,7 @@ export default function ChapterLevelsScreen() {
     <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col pb-24 relative">
       {/* Header */}
       <header className="flex items-center justify-between px-5 py-4 bg-[#f4efff] sticky top-0 z-40">
-        <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity">
+        <button onClick={() => navigate("/practice/chapters")} className="p-1 hover:opacity-80 transition-opacity">
           <ArrowLeft size={24} color="#141779" />
         </button>
         <h1 className="text-[20px] font-extrabold text-[#141779]">{chapterName}</h1>

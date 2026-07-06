@@ -53,12 +53,8 @@ export default function EvolutionScreen() {
       <div className="w-full max-w-[430px] flex-1 bg-surface-bright flex flex-col shadow-2xl relative overflow-hidden">
         
         {/* Header */}
-        <header className="px-6 py-4 flex items-center justify-between sticky top-0 z-50">
-          <button onClick={() => navigate(-1)} className="p-2 bg-surface rounded-full shadow-sm hover:opacity-80 transition-opacity">
-            <ArrowLeft size={24} color="#141779" />
-          </button>
-          <h1 className="text-xl font-bold text-primary">Dragon Evolution</h1>
-          <div className="w-10 h-10" />
+        <header className="px-6 pt-10 pb-4 flex items-center justify-center sticky top-0 z-50 bg-surface-bright border-b border-surface-variant/20 shadow-sm">
+          <h1 className="text-[24px] font-black text-[#141779] uppercase tracking-wide">Dragon Evolution</h1>
         </header>
 
         <main className="flex-1 flex flex-col items-center justify-center p-6 relative">

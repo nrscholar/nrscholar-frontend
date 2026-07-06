@@ -1,8 +1,28 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Swords, Heart, ShieldAlert } from "lucide-react";
-import { apiFetch } from "../../../api";
+import Particles, { initParticlesEngine } from "@tsparticles/react";
+import { loadSlim } from "@tsparticles/slim";
 import { motion } from "framer-motion";
+import { ArrowLeft, Heart, Swords } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { apiFetch } from "../../../api";
+import DragonCharacter from "../../../components/DragonCharacter";
+import MonsterCharacter from "../../../components/MonsterCharacter";
+
+// Fire Sparks particle config for Boss Battle background
+const FIRE_PARTICLES_CONFIG = {
+  background: { color: { value: "transparent" } },
+  fpsLimit: 60,
+  particles: {
+    color: { value: ["#ff6600", "#ff4400", "#ffcc00", "#ff0000"] },
+    move: { direction: "top" as const, enable: true, speed: 2, outModes: { default: "out" as const } },
+    number: { value: 25 },
+    opacity: { value: { min: 0.05, max: 0.25 }, animation: { enable: true, speed: 2 } },
+    shape: { type: "circle" },
+    size: { value: { min: 1, max: 4 } },
+    life: { duration: { sync: false, value: 3 }, count: 0 },
+  },
+  detectRetina: true,
+};
 
 export default function BossBattleScreen() {
   const navigate = useNavigate();
@@ -18,6 +38,14 @@ export default function BossBattleScreen() {
   const [attacking, setAttacking] = useState(false);
   const [actionResult, setActionResult] = useState<"idle" | "correct" | "wrong">("idle");
   const [lossOverlay, setLossOverlay] = useState({ show: false, xpLoss: 0 });
+  const [particlesInit, setParticlesInit] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+
+  useEffect(() => {
+    initParticlesEngine(async (engine) => { await loadSlim(engine); }).then(() => setParticlesInit(true));
+  }, []);
+
+  const confettiInit = useCallback(async (engine: any) => { await loadSlim(engine); }, []);
 
   useEffect(() => {
     const startBattle = async () => {
@@ -51,12 +79,18 @@ export default function BossBattleScreen() {
     startBattle();
   }, [worldId]);
 
+  const isAttackingRef = useRef(false);
+
   const handleAttack = async () => {
-    if (selected === null || !battleData) return;
+    if (selected === null || !battleData || isAttackingRef.current) return;
+    isAttackingRef.current = true;
     setAttacking(true);
     
-    const currentQ = battleData.questions[currentQIndex];
-    const isCorrect = selected === currentQ.options.indexOf(currentQ.answer);
+    // Wrap index so we don't run out of questions in hard mode
+    const actualIndex = currentQIndex % battleData.questions.length;
+    const currentQ = battleData.questions[actualIndex];
+    // Use direct value comparison in case of duplicate options
+    const isCorrect = currentQ.options[selected] === currentQ.answer;
     
     setActionResult(isCorrect ? "correct" : "wrong");
 
@@ -71,22 +105,51 @@ export default function BossBattleScreen() {
       const res = await apiFetch("/api/world/boss/attack", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ battleId: battleData.battleId, isCorrect: isCorrect })
+        body: JSON.stringify({ 
+          battleId: battleData.battleId, 
+          questionId: currentQ._id,
+          answer: currentQ.options[selected] 
+        })
       });
       const json = await res.json();
       if (json.success && json.data) {
-        const { bossHP, playerHearts, status } = json.data;
+        const { bossHP, playerHearts, status, coinsReward } = json.data;
         
         // Wait for animation (longer if wrong so the boss attack plays out)
         const delay = isCorrect ? 1000 : 1800;
         setTimeout(() => {
           setBattleData(prev => ({ ...prev, bossHP, playerHearts }));
           if (status === "WON") {
-            if (returnTo) {
-               navigate(`/practice/reward?type=boss&amount=1000&returnTo=${encodeURIComponent(returnTo)}`, { state: location.state });
-            } else {
-               navigate("/practice/reward?type=coins&amount=1000&returnTo=/practice/journey-map");
+            const rewardAmt = coinsReward || 1000;
+            const chapterId = searchParams.get("chapterId");
+            const level = searchParams.get("difficulty") || "easy";
+            
+            // 🎉 Trigger confetti burst!
+            setShowConfetti(true);
+            
+            if (chapterId) {
+                const existingAnswers = location.state?.userAnswers || [];
+                apiFetch("/api/practice/chapter-progress", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    chapterId: `${chapterId}_${level}`,
+                    currentQ: 10,
+                    score: existingAnswers.length,
+                    completed: true,
+                    answers: existingAnswers
+                  })
+                }).catch(console.error);
             }
+
+            // Wait 2s for confetti to show, then navigate
+            setTimeout(() => {
+              if (returnTo) {
+                 navigate(`/practice/reward?type=boss&amount=${rewardAmt}&returnTo=${encodeURIComponent(returnTo)}`, { state: location.state, replace: true });
+              } else {
+                 navigate(`/practice/reward?type=coins&amount=${rewardAmt}&returnTo=/practice/journey-map`, { replace: true });
+              }
+            }, 1000);
           } else if (status === "LOST") {
             setLossOverlay({ show: true, xpLoss: json.data.xpLoss || -30 });
             
@@ -111,20 +174,21 @@ export default function BossBattleScreen() {
                       })
                     }).then(() => {
                         const returnDest = chapterName ? `/chapter-levels?chapterId=${chapterId}&chapterName=${encodeURIComponent(chapterName)}` : `/chapter-levels?chapterId=${chapterId}`;
-                        navigate(returnDest);
+                        navigate(returnDest, { replace: true });
                     }).catch(() => {
-                        navigate("/practice/journey-map");
+                        navigate("/practice/journey-map", { replace: true });
                     });
                 } else if (returnTo) {
-                   navigate(returnTo, { state: location.state });
+                   navigate(returnTo, { state: location.state, replace: true });
                 } else {
-                   navigate("/practice/journey-map");
+                   navigate("/practice/journey-map", { replace: true });
                 }
             }, 3000);
           } else {
             setCurrentQIndex(prev => prev + 1);
             setSelected(null);
             setAttacking(false);
+            isAttackingRef.current = false;
             setActionResult("idle");
           }
         }, delay);
@@ -132,6 +196,7 @@ export default function BossBattleScreen() {
     } catch (e) {
       console.error(e);
       setAttacking(false);
+      isAttackingRef.current = false;
       setActionResult("idle");
     }
   };
@@ -156,7 +221,14 @@ export default function BossBattleScreen() {
   }
 
   const { bossName, bossHP, maxHP, playerHearts, questions } = battleData;
-  const currentQ = questions && currentQIndex < questions.length ? questions[currentQIndex] : null;
+  const currentQ = questions && questions.length > 0 ? questions[currentQIndex % questions.length] : null;
+
+  // Format question to fit nicely on one line
+  let displayQuestion = currentQ?.question || "Prepare yourself!";
+  // 1. Remove redundant "Boss Attack (Easy): " prefixes
+  displayQuestion = displayQuestion.replace(/^Boss Attack \([A-Za-z]+\):\s*/i, '');
+  // 2. Prevent math equations from wrapping by replacing spaces with non-breaking spaces
+  displayQuestion = displayQuestion.replace(/(\d+)\s+([+\-*/])\s+(\d+)/g, '$1\u00A0$2\u00A0$3');
 
   return (
     <div className={`min-h-screen bg-background text-on-background flex flex-col items-center justify-center relative overflow-hidden font-sans transition-colors duration-300 ${actionResult === 'wrong' ? 'bg-error-container/20 animate-hard-shake' : ''}`}>
@@ -183,6 +255,15 @@ export default function BossBattleScreen() {
         }
         .animate-boss-attack {
             animation: boss-zoom 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+        @keyframes player-zoom {
+            0% { transform: scaleX(-1) scale(1); }
+            20% { transform: scaleX(-1) scale(1.5); filter: drop-shadow(0 0 30px rgba(0, 229, 255, 1)); z-index: 50; }
+            80% { transform: scaleX(-1) scale(1.5); filter: drop-shadow(0 0 30px rgba(0, 229, 255, 1)); z-index: 50; }
+            100% { transform: scaleX(-1) scale(1); }
+        }
+        .animate-player-attack {
+            animation: player-zoom 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
         }
         .boss-glow {
             filter: drop-shadow(0 0 15px rgba(20, 23, 121, 0.4));
@@ -211,6 +292,37 @@ export default function BossBattleScreen() {
       {/* Dynamic Background */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#87CEEB] to-[#e8ddff] z-0"></div>
       
+      {/* Fire Sparks particles - non-interactive background */}
+      {particlesInit && (
+        <Particles
+          id="boss-fire-particles"
+          options={FIRE_PARTICLES_CONFIG}
+          className="absolute inset-0 z-[1] pointer-events-none"
+        />
+      )}
+
+      {/* Confetti burst on win */}
+      {showConfetti && particlesInit && (
+        <Particles
+          id="boss-confetti"
+          options={{
+            background: { color: { value: "transparent" } },
+            fpsLimit: 60,
+            particles: {
+              color: { value: ["#ff0080", "#ffcc00", "#00e5ff", "#58cc02", "#ff6600", "#e040fb"] },
+              move: { direction: "bottom" as const, enable: true, speed: 6, gravity: { enable: true, acceleration: 5 } },
+              number: { value: 80 },
+              opacity: { value: { min: 0.6, max: 1 } },
+              shape: { type: ["square", "circle"] },
+              size: { value: { min: 4, max: 10 } },
+              rotate: { value: { min: 0, max: 360 }, animation: { enable: true, speed: 15 } },
+            },
+            detectRetina: true,
+          }}
+          className="absolute inset-0 z-[200] pointer-events-none"
+        />
+      )}
+
       {/* Decorative Clouds */}
       <div className="absolute top-[20%] left-[-10%] w-48 h-16 bg-white/40 blur-xl rounded-full z-0"></div>
       <div className="absolute top-[40%] right-[-10%] w-64 h-24 bg-white/50 blur-xl rounded-full z-0"></div>
@@ -250,19 +362,18 @@ export default function BossBattleScreen() {
                  {[...Array(playerHearts)].map((_, i) => <Heart key={i} size={14} className="fill-[#ff0055] text-[#ff0055] animate-pulse" />)}
                  {[...Array(3 - playerHearts)].map((_, i) => <Heart key={i+3} size={14} className="fill-transparent text-[#afafaf]" />)}
               </div>
-              <motion.div 
-                 animate={{ y: [0, -8, 0] }}
-                 transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
-                 className={`text-[80px] drop-shadow-2xl relative z-10 transition-all ${actionResult === 'correct' ? 'animate-boss-attack z-50' : actionResult === 'wrong' ? 'animate-hard-shake brightness-50 saturate-200' : ''}`}
-                 style={{ transform: "scaleX(-1)" }} /* Face right */
-              >
-                 🐉
+               <div className="relative">
+                 <DragonCharacter
+                   state={actionResult === 'correct' ? 'attack' : actionResult === 'wrong' ? 'hurt' : 'idle'}
+                   flipped={actionResult !== 'correct'}
+                   className="w-28 h-28"
+                 />
                  {/* Damage Number Overlay for Dragon */}
                  {actionResult === 'wrong' && (
                     <span className="absolute top-0 right-[-10px] text-red-500 font-black text-2xl drop-shadow-md animate-[ping_0.5s_ease-out_forwards] z-50">-1 ❤️</span>
                  )}
-              </motion.div>
-            </div>
+               </div>
+             </div>
 
             {/* VS Badge */}
             <div className="w-10 h-10 rounded-full bg-[#ffcc00] border-4 border-white flex items-center justify-center font-black text-[#141779] text-sm z-30 shadow-lg absolute left-1/2 -translate-x-1/2">
@@ -275,20 +386,17 @@ export default function BossBattleScreen() {
               <div className="w-16 h-2 rounded-full mb-3 overflow-hidden border border-white/80 bg-white/50 shadow-inner">
                 <div className="h-full bg-[#ba1a1a] transition-all duration-1000" style={{ width: `${Math.max((bossHP / maxHP) * 100, 0)}%` }}></div>
               </div>
-              <motion.div 
-                animate={{ y: [0, -12, 0], scale: [1, 1.05, 1] }}
-                transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut" }}
-                className={`boss-glow relative w-24 h-24 rounded-full flex items-center justify-center transition-all ${actionResult === 'wrong' ? 'animate-boss-attack z-50' : actionResult === 'correct' ? 'animate-hard-shake brightness-200' : ''}`}
-              >
+              <div className="relative">
                 <div className="absolute inset-[-5px] bg-[#ba1a1a]/10 rounded-full blur-lg z-0 animate-pulse"></div>
-                <div className="text-[70px] drop-shadow-[0_10px_15px_rgba(0,0,0,0.3)] z-10 relative">
-                   👺
-                </div>
-                 {/* Damage Number Overlay for Boss */}
-                 {actionResult === 'correct' && (
-                    <span className="absolute top-0 left-[-10px] text-[#00e5ff] font-black text-2xl drop-shadow-md animate-[ping_0.5s_ease-out_forwards] z-50">-10 HP</span>
-                 )}
-              </motion.div>
+                <MonsterCharacter
+                  state={actionResult === 'wrong' ? 'attack' : actionResult === 'correct' ? 'hurt' : 'idle'}
+                  className="w-28 h-28 relative z-10"
+                />
+                {/* Damage Number Overlay for Boss */}
+                {actionResult === 'correct' && (
+                   <span className="absolute top-0 left-[-10px] text-[#00e5ff] font-black text-2xl drop-shadow-md animate-[ping_0.5s_ease-out_forwards] z-50">-10 HP</span>
+                )}
+              </div>
             </div>
 
         </div>
@@ -298,7 +406,7 @@ export default function BossBattleScreen() {
             {/* Speech Bubble Arrow pointing TOP RIGHT towards the Boss */}
             <div className="absolute -right-3 -top-3 w-6 h-6 bg-white border-t-2 border-r-2 border-gray-200 transform rotate-45" />
             <p className="text-[12px] text-[#ba1a1a] mb-1 uppercase tracking-widest font-black">Boss is Attacking!</p>
-            <h2 className="text-[20px] font-bold text-[#4b4b4b] leading-snug">{currentQ?.question || "Prepare yourself!"}</h2>
+            <h2 className="text-[20px] font-bold text-[#4b4b4b] leading-snug">{displayQuestion}</h2>
         </div>
 
         {/* Options Bento Grid */}

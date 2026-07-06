@@ -75,6 +75,11 @@ export default function HomeScreen() {
           }
         }
         
+        // IMPORTANT: Update the streak BEFORE fetching it
+        try {
+          await apiFetch("/api/retention/streak/update", { method: "POST" });
+        } catch(e) {}
+        
         const stRes = await apiFetch("/api/retention/streak");
         if (stRes.ok) {
           const stData = await stRes.json();
@@ -240,7 +245,7 @@ export default function HomeScreen() {
 
         {/* QUICK ACTIONS BENTO GRID */}
         <div className="flex flex-col gap-[14px] relative z-10">
-          <h2 className="text-[10px] font-bold text-[#767683] tracking-[1.5px] px-1">EXPLORER MISSION CONTROLS</h2>
+          <h2 className="text-[10px] font-bold text-[#767683] tracking-[1.5px] px-1">EXPLORER MISSION CONTROLS 13</h2>
           
           <div className="grid grid-cols-2 gap-3">
             {/* Continue Learning */}
@@ -429,7 +434,7 @@ export default function HomeScreen() {
       </motion.div>
 
       {/* SURPRISE CHEST MINIGAME MODAL */}
-      {surpriseData && chestTaps < 5 && (
+      {surpriseData && chestTaps < 2 && (
         <div className="fixed inset-0 z-[100] bg-[rgba(0,0,0,0.85)] backdrop-blur-md flex flex-col items-center justify-center p-6">
           <motion.div
             initial={{ y: -500, scale: 0 }}
@@ -439,39 +444,69 @@ export default function HomeScreen() {
           >
             <h2 className="text-3xl font-bold text-white mb-8 animate-pulse text-center">A Wild Surprise<br/>Appeared!</h2>
             <motion.button
-              onClick={() => setChestTaps(t => t + 1)}
-              animate={{ 
-                scale: 1 + (chestTaps * 0.05),
-                rotate: chestTaps % 2 === 0 ? 5 : -5
+              onClick={() => {
+                 if(chestTaps === 0) {
+                   setChestTaps(1);
+                   setTimeout(() => setChestTaps(2), 1200);
+                 }
               }}
-              className="text-[140px] filter drop-shadow-[0_0_30px_rgba(255,215,0,0.6)] active:scale-90 transition-transform cursor-pointer"
+              animate={chestTaps === 1 ? { 
+                scale: [1, 1.2, 1.1, 1.3, 1.5],
+                rotate: [0, -10, 10, -15, 15, -20, 20, 0],
+                filter: ["brightness(1)", "brightness(1.5)", "brightness(2)"]
+              } : {}}
+              transition={chestTaps === 1 ? { duration: 1.2, ease: "easeInOut" } : {}}
+              whileHover={chestTaps === 0 ? { scale: 1.1, rotate: 5 } : {}}
+              whileTap={chestTaps === 0 ? { scale: 0.8, rotate: -15 } : {}}
+              className="text-[140px] filter drop-shadow-[0_0_30px_rgba(255,215,0,0.6)] cursor-pointer relative"
             >
-              {chestTaps < 2 ? '📦' : chestTaps < 4 ? '🎁' : '💥'}
+              <span className="relative z-10">🎁</span>
+              {chestTaps === 1 && (
+                <motion.div 
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: [0, 5, 15], opacity: [0, 1, 1] }}
+                  transition={{ duration: 1, delay: 0.2, ease: "easeIn" }}
+                  className="absolute inset-0 bg-white rounded-full blur-2xl z-20 pointer-events-none"
+                />
+              )}
             </motion.button>
-            <p className="text-white mt-12 font-bold text-xl bg-[rgba(255,255,255,0.2)] px-6 py-3 rounded-full">
-              Tap to break it open! ({5 - chestTaps} left)
+            <p className="text-white mt-12 font-bold text-xl bg-[rgba(255,255,255,0.2)] px-6 py-3 rounded-full shadow-[0_0_15px_rgba(255,255,255,0.3)] animate-pulse">
+              {chestTaps === 1 ? "Opening..." : "Tap to open!"}
             </p>
           </motion.div>
         </div>
       )}
 
       {/* REWARD REVEAL */}
-      {surpriseData && chestTaps >= 5 && (
+      {surpriseData && chestTaps >= 2 && (
         <div className="fixed inset-0 z-[100] bg-[rgba(0,0,0,0.9)] flex flex-col items-center justify-center p-6">
           <motion.div 
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring", damping: 12 }}
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: "spring", damping: 15, stiffness: 200 }}
             className="bg-gradient-to-b from-[#fff7e6] to-white w-full max-w-sm rounded-[32px] p-8 text-center relative shadow-[0_0_50px_rgba(255,215,0,0.4)]"
           >
-            <span className="text-6xl block mb-4">🎉</span>
+            <motion.span 
+              initial={{ scale: 0 }}
+              animate={{ scale: [1, 1.2, 1] }}
+              transition={{ delay: 0.3, duration: 0.5 }}
+              className="text-6xl block mb-4"
+            >
+              🎉
+            </motion.span>
             <h2 className="text-3xl font-bold text-[#141779] mb-2">Surprise Reward!</h2>
             <p className="text-[#767683] font-semibold mb-6">The magic chest gave you something special.</p>
             
-            <div className="bg-[#ff9f43]/10 rounded-2xl p-6 mb-8 border-2 border-[#ff9f43]/30">
-               <span className="text-5xl block mb-2">{surpriseData.reward_type === 'coins' ? '🪙' : surpriseData.reward_type === 'xp' ? '⭐' : '📦'}</span>
-               <h3 className="text-2xl font-bold text-[#ff9f43]">+{surpriseData.amount} {surpriseData.reward_type.toUpperCase()}</h3>
-            </div>
+            <motion.div 
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="bg-[#ff9f43]/10 rounded-2xl p-6 mb-8 border-2 border-[#ff9f43]/30 relative overflow-hidden"
+            >
+               <div className="absolute inset-0 bg-white/40 blur-xl animate-pulse" />
+               <span className="text-5xl block mb-2 relative z-10">{surpriseData.reward_type === 'coins' ? '🪙' : surpriseData.reward_type === 'xp' ? '⭐' : '🔮'}</span>
+               <h3 className="text-2xl font-bold text-[#ff9f43] relative z-10">+{surpriseData.amount} {surpriseData.reward_type.toUpperCase()}</h3>
+            </motion.div>
 
             <button 
               onClick={() => { 

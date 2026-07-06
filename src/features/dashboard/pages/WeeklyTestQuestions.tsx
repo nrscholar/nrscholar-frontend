@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { ArrowLeft, Check, Lightbulb, X as XIcon } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Lightbulb, Check, X as XIcon } from "lucide-react";
 
 import { apiFetch } from "../../../api";
 
@@ -52,7 +52,7 @@ export default function WeeklyTestQuestionsScreen() {
         setSelected(null);
         setConfirmed(false);
       } else {
-        navigate(`/weekly-test-results?score=${score + (isCorrect ? 1 : 0)}&total=${total}`);
+        navigate(`/weekly-test-results?score=${score + (isCorrect ? 1 : 0)}&total=${total}`, { replace: true });
       }
     }
   };

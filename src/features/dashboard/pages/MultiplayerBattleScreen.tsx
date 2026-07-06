@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { Trophy, X } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { apiFetch } from "../../../api";
 
 // Hardcoded rapid fire questions for MVP multiplayer
@@ -34,6 +34,12 @@ export default function MultiplayerBattleScreen() {
   const [winnerId, setWinnerId] = useState<string | null>(null);
   const [showRewardModal, setShowRewardModal] = useState(false);
   const [continuousWins, setContinuousWins] = useState(0);
+
+  // Sync state
+  const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const [timeLeft, setTimeLeft] = useState(15);
+  const [isAdvancing, setIsAdvancing] = useState(false);
+  const [waitTimer, setWaitTimer] = useState(0);
 
   useEffect(() => {
     const loadQuestions = async () => {
@@ -83,12 +89,12 @@ export default function MultiplayerBattleScreen() {
     return () => clearInterval(interval);
   }, [roomId]);
 
-  const updateBackendProgress = async (prog: number, sc: number, fin: boolean) => {
+  const updateBackendProgress = async (prog: number, sc: number, fin: boolean, timeTaken: number = 0, isCorrect: boolean = false) => {
     try {
       await apiFetch(`/api/multiplayer/room/${roomId}/progress`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ progress: prog, score: sc, isFinished: fin })
+        body: JSON.stringify({ progress: prog, score: sc, isFinished: fin, timeTaken, isCorrect })
       });
       // Force an immediate fetch to sync state
       fetchRoomStatus();
@@ -96,9 +102,12 @@ export default function MultiplayerBattleScreen() {
   };
 
   const handleAnswer = (selectedIndex: number) => {
-    if (isFinished) return;
+    if (isFinished || selectedOption !== null) return;
     
-    const isCorrect = selectedIndex === questions[currentQ].a;
+    setSelectedOption(selectedIndex);
+    const timeTaken = 15 - timeLeft; // calculate time taken
+    
+    const isCorrect = selectedIndex !== -1 && selectedIndex === questions[currentQ].a;
     let newScore = myScore;
     if (isCorrect) {
       newScore += 10;
@@ -110,22 +119,88 @@ export default function MultiplayerBattleScreen() {
     const newProgress = Math.round(((currentQ + 1) / questions.length) * 100);
     
     setMyProgress(newProgress);
-    updateBackendProgress(newProgress, newScore, isLast);
-    
-    if (isLast) {
-      setIsFinished(true);
-      // Wait for backend to resolve winner via polling
-    } else {
-      setCurrentQ(prev => prev + 1);
-    }
+    updateBackendProgress(newProgress, newScore, isLast, timeTaken, isCorrect);
   };
+
+  // Timer logic
+  useEffect(() => {
+    if (isFinished) return;
+    const t = setInterval(() => {
+      if (selectedOption !== null && !isAdvancing) {
+        setWaitTimer(prev => prev + 1);
+        return;
+      }
+      setWaitTimer(0);
+      
+      setTimeLeft((prev) => {
+        if (selectedOption !== null) return prev;
+        if (prev <= 1) {
+          clearInterval(t);
+          handleAnswer(-1); // Auto-fail on timeout
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(t);
+  }, [currentQ, isFinished, selectedOption, isAdvancing]);
+
+  // Synchronous Advancement logic
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    
+    // Auto-advance if opponent disconnects/AFKs for >15 seconds
+    if (waitTimer > 15 && selectedOption !== null && !isAdvancing) {
+       setIsAdvancing(true);
+       const isLast = currentQ === questions.length - 1;
+       timeout = setTimeout(() => {
+          if (isLast) {
+            setIsFinished(true);
+          } else {
+            setCurrentQ(q => q + 1);
+            setSelectedOption(null);
+            setTimeLeft(15);
+            setWaitTimer(0);
+            setIsAdvancing(false);
+          }
+       }, 500);
+       return () => clearTimeout(timeout);
+    }
+    
+    if (room && selectedOption !== null && myProgress > 0 && !isAdvancing) {
+      const isHost = room.hostId === myId;
+      const oppProgress = isHost ? room.guestProgress : room.hostProgress;
+      
+      // If opponent has caught up to our progress
+      if (oppProgress >= myProgress) {
+        setIsAdvancing(true);
+        const isLast = currentQ === questions.length - 1;
+        
+        timeout = setTimeout(() => {
+          if (isLast) {
+            setIsFinished(true);
+          } else {
+            setCurrentQ(q => q + 1);
+            setSelectedOption(null);
+            setTimeLeft(15);
+            setWaitTimer(0);
+            setIsAdvancing(false); // allow next question advancement
+          }
+        }, 1000); // 1-second delay so you can see your selected answer
+      }
+    }
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    }
+  }, [room, selectedOption, myProgress, isAdvancing, currentQ, questions.length, waitTimer]);
 
   
   useEffect(() => {
+    let mounted = true;
     if (isFinished && winnerId === myId) {
       // Fetch profile to get updated streak
       apiFetch("/api/users/me").then(res => res.json()).then(data => {
-        if (data.success && data.data && data.data.user) {
+        if (mounted && data.success && data.data && data.data.user) {
           const streak = data.data.user.multiplayerStreak || 0;
           setContinuousWins(streak);
           if (streak >= 25) {
@@ -134,6 +209,7 @@ export default function MultiplayerBattleScreen() {
         }
       });
     }
+    return () => { mounted = false; };
   }, [isFinished, winnerId, myId]);
 
   if (!room) return <div className="min-h-screen bg-[#1d0052] flex items-center justify-center"><div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin"/></div>;
@@ -218,66 +294,154 @@ export default function MultiplayerBattleScreen() {
       <main className="flex-1 flex flex-col px-6 py-8 relative z-10">
         {!isFinished ? (
           <div className="flex-1 flex flex-col">
-            <div className="mb-8">
-               <span className="text-[#57fae9] font-bold text-sm tracking-widest uppercase">Question {currentQ + 1}/{questions.length}</span>
+            <div className="mb-8 relative">
+               <div className="flex justify-between items-center mb-2">
+                 <span className="text-[#57fae9] font-bold text-sm tracking-widest uppercase">Question {currentQ + 1}/{questions.length}</span>
+                 <span className={`font-black text-xl px-3 py-1 rounded-full ${timeLeft <= 5 ? 'bg-red-500 animate-pulse' : 'bg-white/20'}`}>
+                   ⏳ {timeLeft}s
+                 </span>
+               </div>
                <h2 className="text-3xl font-black mt-2 leading-tight drop-shadow-md">
                  {questions[currentQ]?.q || ""}
                </h2>
             </div>
             
-            <div className="grid grid-cols-1 gap-4 mt-auto">
-              {questions[currentQ]?.options?.map((opt: string, idx: number) => (
-                <button
-                  key={idx}
-                  onClick={() => handleAnswer(idx)}
-                  className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 active:bg-white/30 text-white font-bold text-xl py-5 px-6 rounded-2xl text-left transition-all active:scale-[0.98]"
-                >
-                  {opt}
-                </button>
-              ))}
+            <div className="grid grid-cols-1 gap-4 mt-auto relative">
+              {questions[currentQ]?.options?.map((opt: string, idx: number) => {
+                const isSelected = selectedOption === idx;
+                const isCorrect = idx === questions[currentQ].a;
+                
+                let btnStyle = "bg-white/10 hover:bg-white/20 border-white/20";
+                if (selectedOption !== null) {
+                   if (isSelected) {
+                      btnStyle = isCorrect ? "bg-[#006a62] border-[#57fae9]" : "bg-[#ba1a1a] border-[#ffb4ab]";
+                   } else if (isCorrect) {
+                      btnStyle = "bg-[#006a62]/50 border-[#57fae9]/50"; 
+                   } else {
+                      btnStyle = "bg-white/5 border-white/10 opacity-50";
+                   }
+                }
+
+                return (
+                  <button
+                    key={idx}
+                    disabled={selectedOption !== null}
+                    onClick={() => handleAnswer(idx)}
+                    className={`backdrop-blur-md border text-white font-bold text-xl py-5 px-6 rounded-2xl text-left transition-all ${btnStyle} ${selectedOption === null ? 'active:scale-[0.98]' : ''}`}
+                  >
+                    {opt}
+                  </button>
+                );
+              })}
+              
+              {/* Unobtrusive "Waiting" text that doesn't block the screen */}
+              {selectedOption !== null && (
+                <div className="absolute -bottom-8 w-full text-center animate-pulse">
+                  <span className="text-white/60 font-bold text-sm">Waiting for {oppName}...</span>
+                </div>
+              )}
             </div>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center animate-in zoom-in duration-500">
+          <div className="flex-1 flex flex-col items-center justify-center text-center animate-in zoom-in duration-500 overflow-y-auto pt-10">
             {winnerId === myId ? (
               <>
                 <motion.div 
                   animate={{ scale: [1, 1.2, 1], rotate: [0, 5, -5, 0] }}
                   transition={{ repeat: Infinity, duration: 2 }}
-                  className="w-32 h-32 mb-6 bg-gradient-to-br from-[#ffd700] to-[#ff8c00] rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(255,215,0,0.6)]"
+                  className="w-24 h-24 mb-4 bg-gradient-to-br from-[#ffd700] to-[#ff8c00] rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(255,215,0,0.6)]"
                 >
-                  <Trophy size={64} color="white" />
+                  <Trophy size={48} color="white" />
                 </motion.div>
-                <h2 className="text-5xl font-black text-white mb-2 drop-shadow-lg">VICTORY!</h2>
-                <p className="text-xl text-[#57fae9] font-bold mb-8">You crushed your opponent.</p>
-                <div className="bg-white/10 px-6 py-4 rounded-2xl border border-white/20 mb-8">
-                  <p className="text-white/80 font-bold uppercase text-sm mb-1">Win Streak</p>
-                  <p className="text-3xl font-black text-[#ff9f43]">{continuousWins} 🔥</p>
-                </div>
+                <h2 className="text-4xl font-black text-white mb-1 drop-shadow-lg">VICTORY!</h2>
+                <p className="text-lg text-[#57fae9] font-bold mb-4">You crushed your opponent.</p>
               </>
-            ) : winnerId === null ? (
+            ) : winnerId === null || winnerId === "tie" ? (
               <>
-                <div className="w-24 h-24 mb-6 bg-white/10 rounded-full flex items-center justify-center border-4 border-white/20 animate-pulse">
-                  <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin"/>
-                </div>
-                <h2 className="text-3xl font-black text-white mb-2">Waiting...</h2>
-                <p className="text-white/70">Let's see if your opponent beats your time!</p>
+                {winnerId === null ? (
+                  <>
+                    <div className="w-16 h-16 mb-4 bg-white/10 rounded-full flex items-center justify-center border-4 border-white/20 animate-pulse">
+                      <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"/>
+                    </div>
+                    <h2 className="text-3xl font-black text-white mb-2">Calculating...</h2>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="text-4xl font-black text-white mb-2">IT'S A TIE!</h2>
+                  </>
+                )}
               </>
             ) : (
               <>
-                <div className="w-32 h-32 mb-6 bg-white/10 rounded-full flex items-center justify-center border-4 border-[#ba1a1a]">
-                  <X size={64} color="#ba1a1a" />
+                <div className="w-24 h-24 mb-4 bg-white/10 rounded-full flex items-center justify-center border-4 border-[#ba1a1a]">
+                  <X size={48} color="#ba1a1a" />
                 </div>
-                <h2 className="text-5xl font-black text-white mb-2">DEFEAT</h2>
-                <p className="text-[#ba1a1a] font-bold text-xl mb-8">Your opponent was faster!</p>
-                <p className="text-white/50 font-bold">Streak lost.</p>
+                <h2 className="text-4xl font-black text-white mb-1">DEFEAT</h2>
+                <p className="text-[#ba1a1a] font-bold text-lg mb-4">Your opponent was faster!</p>
               </>
+            )}
+
+            {/* Detailed Post-Game Scoreboard */}
+            {winnerId !== null && (
+               <div className="w-full bg-white/10 rounded-2xl border border-white/20 p-5 mb-4 flex flex-col gap-3 shadow-xl text-left">
+                 <h3 className="text-sm font-black text-[#ff9f43] tracking-widest uppercase text-center mb-1">Final Result</h3>
+                 
+                 <div className="flex justify-between font-bold text-xs uppercase text-white/50 border-b border-white/10 pb-2">
+                    <span className="w-1/3 text-center">Q#</span>
+                    <span className="w-1/3 text-center">{myName || "You"}</span>
+                    <span className="w-1/3 text-center">{oppName || "Opp"}</span>
+                 </div>
+                 
+                 {questions.map((_, i) => {
+                    const myT = isHost ? (room.hostTimes?.[i] || 0) : (room.guestTimes?.[i] || 0);
+                    const oppT = isHost ? (room.guestTimes?.[i] || 0) : (room.hostTimes?.[i] || 0);
+                    
+                    const myC = isHost ? (room.hostCorrects?.[i] || false) : (room.guestCorrects?.[i] || false);
+                    const oppC = isHost ? (room.guestCorrects?.[i] || false) : (room.hostCorrects?.[i] || false);
+                    
+                    // Winner logic for UI highlight: Correct answer wins. If both correct, lower time wins.
+                    let iWonT = false;
+                    let oppWonT = false;
+                    
+                    if (myC && !oppC) iWonT = true;
+                    else if (!myC && oppC) oppWonT = true;
+                    else if (myC && oppC) {
+                       if (myT < oppT) iWonT = true;
+                       else if (oppT < myT) oppWonT = true;
+                    }
+
+                    return (
+                      <div key={i} className="flex justify-between items-center text-sm font-bold border-b border-white/5 pb-1">
+                        <span className="w-1/3 text-center text-white/70">Q{i + 1}</span>
+                        <span className={`w-1/3 text-center ${iWonT ? 'text-[#57fae9]' : 'text-white'}`}>
+                           {myC ? '✅' : '❌'} {myT}s
+                        </span>
+                        <span className={`w-1/3 text-center ${oppWonT ? 'text-[#ff9f43]' : 'text-white'}`}>
+                           {oppC ? '✅' : '❌'} {oppT}s
+                        </span>
+                      </div>
+                    )
+                 })}
+                 
+                 <div className="flex justify-between font-black text-lg pt-2 mt-2 border-t border-white/30">
+                    <span className="w-1/3 text-center text-white/70">Total</span>
+                    <span className="w-1/3 text-center text-[#57fae9]">{myScore} pts</span>
+                    <span className="w-1/3 text-center text-[#ff9f43]">{oppScore} pts</span>
+                 </div>
+               </div>
+            )}
+            
+            {winnerId === myId && (
+               <div className="bg-white/10 px-6 py-3 rounded-2xl border border-white/20 mb-6 w-full shadow-lg">
+                  <p className="text-white/80 font-bold uppercase text-xs mb-1">Win Streak</p>
+                  <p className="text-2xl font-black text-[#ff9f43]">{continuousWins} 🔥</p>
+               </div>
             )}
             
             {winnerId !== null && !showRewardModal && (
               <button 
                 onClick={() => navigate("/multiplayer-hub")}
-                className="w-full max-w-[250px] bg-white text-[#141779] py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-gray-100 mt-6 shadow-[0_4px_15px_rgba(255,255,255,0.3)]"
+                className="w-full max-w-[250px] bg-white text-[#141779] py-3 rounded-2xl font-black uppercase tracking-widest hover:bg-gray-100 shadow-[0_4px_15px_rgba(255,255,255,0.3)] mb-4"
               >
                 Back to Arena
               </button>

@@ -136,11 +136,8 @@ export default function RewardScreen() {
   useEffect(() => {
      if (isRevealed) {
        if (rewardType === "coins" || rewardType === "boss") {
-           apiFetch("/api/users/add-coins", {
-               method: "POST",
-               headers: { "Content-Type": "application/json" },
-               body: JSON.stringify({ coins: amount })
-           });
+           // Rewards are already granted securely by the backend logic when the event occurred.
+           // We just display the success visual here.
        } else if (rewardType === "badge") {
            apiFetch("/api/users/add-badge", {
                method: "POST",
@@ -152,8 +149,8 @@ export default function RewardScreen() {
   }, [rewardType, amount, isRevealed]);
 
   const handleCollect = () => {
-     if (returnTo) navigate(returnTo, { state: navState });
-     else navigate(-1);
+     if (returnTo) navigate(returnTo, { state: navState, replace: true });
+     else navigate('/', { replace: true });
   };
 
   const particles = Array.from({ length: 30 }).map((_, i) => ({
@@ -193,10 +190,8 @@ export default function RewardScreen() {
       ))}
 
       {/* Header */}
-      <header className="flex items-center justify-between px-6 pt-10 relative z-10">
-        <button onClick={handleCollect} className="hover:opacity-80 transition-opacity">
-          <X size={24} color="rgba(255,255,255,0.5)" />
-        </button>
+      <header className="flex items-center justify-between px-6 pt-10 relative z-10 h-16">
+        <div className="w-6" /> {/* Spacer for symmetry */}
         
         {isRevealed && (
           <div className="flex items-center gap-2">

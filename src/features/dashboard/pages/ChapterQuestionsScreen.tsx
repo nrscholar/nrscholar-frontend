@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Lightbulb, Check, X as XIcon } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-
+import Particles, { initParticlesEngine } from "@tsparticles/react";
+import { loadSlim } from "@tsparticles/slim";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowLeft, Check, X as XIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
+import DragonCharacter from "../../../components/DragonCharacter";
 
 const OPTION_LABELS = ["A", "B", "C", "D"];
 
@@ -21,6 +23,12 @@ export default function ChapterQuestionsScreen() {
   const [sessionCorrect, setSessionCorrect] = useState(0);
   const [basketCount, setBasketCount] = useState(0);
   const [userAnswers, setUserAnswers] = useState<any[]>([]);
+  const [particlesInit, setParticlesInit] = useState(false);
+  const [showSparkle, setShowSparkle] = useState(false);
+
+  useEffect(() => {
+    initParticlesEngine(async (engine) => { await loadSlim(engine); }).then(() => setParticlesInit(true));
+  }, []);
 
   const [questionsData, setQuestionsData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,8 +47,9 @@ export default function ChapterQuestionsScreen() {
         const qJson = await qRes.json();
         const pJson = await pRes.json();
         
+        let filtered: any[] = [];
         if (qJson.success && qJson.data) {
-          let filtered = qJson.data;
+          filtered = qJson.data;
           if (level === "easy") filtered = qJson.data.slice(0, 6);
           else if (level === "medium") filtered = qJson.data.slice(6, 12);
           else if (level === "hard") filtered = qJson.data.slice(12, 20);
@@ -49,9 +58,26 @@ export default function ChapterQuestionsScreen() {
         }
         if (pJson.success && pJson.data) {
           if (!pJson.data.completed) {
-            setCurrentQ(pJson.data.currentQ || 0);
-            setScore(pJson.data.score || 0);
-            setUserAnswers(pJson.data.answers || []);
+            const savedQ = pJson.data.currentQ || 0;
+            if (filtered.length > 0 && savedQ >= filtered.length) {
+              // User finished questions but didn't beat boss, take them straight to boss
+              const chapterNameParam = searchParams.get("chapterName");
+              const nameQuery = chapterNameParam ? `&chapterName=${encodeURIComponent(chapterNameParam)}` : "";
+              const finalDest = `/chapter-levels?chapterId=${chapterId}${nameQuery}`;
+              const finalReturnUrl = encodeURIComponent(`/evolution?returnTo=${encodeURIComponent(finalDest)}`);
+              
+              sessionStorage.setItem("lastSessionAnswers", JSON.stringify(pJson.data.answers || []));
+              
+              navigate(`/boss-battle?worldId=w1&chapterId=${chapterId}&difficulty=${level}&returnTo=${finalReturnUrl}`, {
+                state: { userAnswers: pJson.data.answers || [] },
+                replace: true
+              });
+              return;
+            } else {
+              setCurrentQ(savedQ);
+              setScore(pJson.data.score || 0);
+              setUserAnswers(pJson.data.answers || []);
+            }
           }
         }
       } catch (e) {
@@ -101,6 +127,9 @@ export default function ChapterQuestionsScreen() {
       if (isCorrect) {
         setScore((s) => s + 1);
         setSessionCorrect((s) => s + 1);
+        // ✨ Trigger sparkle burst!
+        setShowSparkle(true);
+        setTimeout(() => setShowSparkle(false), 1500);
       }
       
       setUserAnswers(prev => {
@@ -160,7 +189,7 @@ export default function ChapterQuestionsScreen() {
               currentQ: total, // we might want to store more complex state if they do it linearly, but this is fine for now
               score: score,
               answers: userAnswers,
-              completed: true
+              completed: false
             })
           });
         } catch (e) {
@@ -177,7 +206,8 @@ export default function ChapterQuestionsScreen() {
         sessionStorage.setItem("lastSessionAnswers", JSON.stringify(userAnswers));
         
         navigate(`/boss-battle?worldId=w1&chapterId=${chapterId}&difficulty=${level}&returnTo=${finalReturnUrl}`, {
-          state: { userAnswers }
+          state: { userAnswers },
+          replace: true
         });
       }
     }
@@ -199,7 +229,7 @@ export default function ChapterQuestionsScreen() {
       })
     }).catch(() => {});
     
-    navigate("/practice/chapters");
+    navigate("/practice/chapters", { replace: true });
   };
 
   if (loading) {
@@ -228,7 +258,31 @@ export default function ChapterQuestionsScreen() {
     : "SEE RESULTS 🏆";
 
   return (
-    <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col pb-24 relative">
+    <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col pb-24 relative overflow-hidden">
+      
+      {/* ✨ Magic Sparkle Burst on Correct Answer */}
+      {showSparkle && particlesInit && (
+        <Particles
+          id="quiz-sparkle"
+          options={{
+            background: { color: { value: "transparent" } },
+            fpsLimit: 60,
+            emitters: { position: { x: 20, y: 80 }, rate: { quantity: 15, delay: 0 }, life: { count: 1 } },
+            particles: {
+              color: { value: ["#ffcc00", "#ff69b4", "#58cc02", "#00e5ff", "#e040fb"] },
+              move: { enable: true, speed: { min: 3, max: 8 }, direction: "top-right" as const, outModes: { default: "out" as const } },
+              number: { value: 0 },
+              opacity: { value: { min: 0.5, max: 1 }, animation: { enable: true, speed: 3, startValue: "max" as const, destroy: "min" as const } },
+              shape: { type: ["star", "circle"] },
+              size: { value: { min: 3, max: 8 } },
+              life: { duration: { value: 1.5 }, count: 1 },
+            },
+            detectRetina: true,
+          }}
+          className="absolute inset-0 z-[30] pointer-events-none"
+        />
+      )}
+
       {/* Quit Modal Overlay */}
       {showQuitModal && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center px-6 backdrop-blur-sm">
@@ -295,13 +349,10 @@ export default function ChapterQuestionsScreen() {
         {/* Mascot Question Area (Duolingo Style) */}
         <div className="flex items-end gap-4 mb-8 mt-4 px-2 relative z-10">
            <div className="relative">
-             <motion.div 
-                animate={{ y: [0, -5, 0] }}
-                transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
-                className="text-[70px] drop-shadow-lg z-10 relative"
-             >
-                🐉
-             </motion.div>
+             <DragonCharacter
+                state={confirmed ? (isCorrect ? 'attack' : 'hurt') : 'idle'}
+                className="w-[70px] h-[70px]"
+              />
 
              {/* Floating XP Animation */}
              <AnimatePresence>
@@ -453,8 +504,8 @@ export default function ChapterQuestionsScreen() {
             disabled={interactionType === "mcq" && selected === null && !confirmed}
             onClick={handleConfirm}
             className={`w-full py-[16px] rounded-2xl flex items-center justify-center transition-all ${
-              !confirmed && selected === null ? 'bg-[#e5e5e5] text-[#afafaf]' :
-              !confirmed && selected !== null ? 'bg-[#141779] text-white shadow-[0_4px_0_#0b0d4d] hover:bg-[#1a1e9e] active:translate-y-[4px] active:shadow-none active:mt-1' :
+              !confirmed && interactionType === "mcq" && selected === null ? 'bg-[#e5e5e5] text-[#afafaf]' :
+              !confirmed ? 'bg-[#141779] text-white shadow-[0_4px_0_#0b0d4d] hover:bg-[#1a1e9e] active:translate-y-[4px] active:shadow-none active:mt-1' :
               isCorrect ? 'bg-[#30007f] text-white shadow-[0_4px_0_#1d0052] hover:bg-[#3f00a8] active:translate-y-[4px] active:shadow-none active:mt-1' :
               'bg-[#ba1a1a] text-white shadow-[0_4px_0_#93000a] hover:bg-[#d92222] active:translate-y-[4px] active:shadow-none active:mt-1'
             }`}
@@ -463,8 +514,8 @@ export default function ChapterQuestionsScreen() {
               {confirmed ? 'CONTINUE' : 'CHECK'}
             </span>
           </button>
-        </div>
       </div>
+        </div>
     </div>
   );
 }

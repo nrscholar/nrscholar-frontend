@@ -1,7 +1,7 @@
+import { motion } from "framer-motion";
+import { ArrowLeft, ArrowRight, AtSign, Rocket } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Rocket, AtSign, ArrowRight, ArrowLeft } from "lucide-react";
-import { motion } from "framer-motion";
 
 export default function ForgotPasswordScreen() {
   const navigate = useNavigate();
@@ -69,7 +69,7 @@ export default function ForgotPasswordScreen() {
         <div className="flex flex-col items-center mb-6 text-center">
           <h1 className="text-[26px] font-bold text-[#141779] tracking-[-0.5px]">Forgot Password?</h1>
           <p className="text-base text-[#767683] font-medium mt-2 max-w-[280px]">
-            Enter your email and we'll send you a link to reset your secret key.
+            Enter your email and we'll send you a link to reset your password.
           </p>
         </div>
 
@@ -91,7 +91,7 @@ export default function ForgotPasswordScreen() {
             <AtSign size={20} color="#767683" className="absolute left-4" />
             <input
               type="email"
-              placeholder="Explorer Email"
+              placeholder="Enter Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full h-14 bg-[#eceef0] rounded-full pl-12 pr-4 text-base font-medium text-[#191c1e] focus:outline-none focus:ring-2 focus:ring-[#141779] transition-shadow placeholder:text-[#767683]"

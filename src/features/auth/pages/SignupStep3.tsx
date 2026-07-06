@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Rocket, User, Lock, Shield, Eye, EyeOff, CheckCircle2, Circle } from "lucide-react";
+import { Rocket, ArrowLeft, User, Lock, Shield, Eye, EyeOff, CheckCircle2, Circle } from "lucide-react";
 import { apiFetch } from "../../../api";
 
 
@@ -94,14 +94,14 @@ export default function SignupStep3Screen() {
       <div className="absolute top-40 -right-20 w-[200px] h-[200px] bg-[rgba(191,194,255,0.2)] rounded-full blur-xl pointer-events-none" />
 
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 bg-[rgba(247,249,251,0.8)] border-b border-[rgba(255,255,255,0.2)] sticky top-0 z-40 backdrop-blur-md">
+      <header className="flex items-center px-6 py-4 bg-[rgba(247,249,251,0.8)] border-b border-[rgba(255,255,255,0.2)] sticky top-0 z-40 backdrop-blur-md">
         <div className="flex items-center gap-2">
+          <button onClick={() => navigate(`/signup-step2?${searchParams.toString()}`)} className="w-10 h-10 -ml-2 rounded-full bg-[#e0e0ff] flex items-center justify-center hover:opacity-80 transition-opacity">
+            <ArrowLeft size={24} color="#141779" />
+          </button>
           <Rocket size={28} color="#141779" />
           <h1 className="text-[22px] font-bold text-[#141779] tracking-[-0.5px]">Studysaathy</h1>
         </div>
-        <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-[#e0e0ff] flex items-center justify-center hover:opacity-80 transition-opacity">
-          <User size={24} color="#141779" />
-        </button>
       </header>
 
       <main className="px-6 pt-8 flex flex-col items-center w-full max-w-[430px] mx-auto relative z-10">
@@ -212,7 +212,7 @@ export default function SignupStep3Screen() {
               <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
               <>
-                <span className="text-white text-xl font-bold">Ready for Liftoff!</span>
+                <span className="text-white text-xl font-bold">Submit</span>
                 <Rocket size={22} color="white" />
               </>
             )}

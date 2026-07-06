@@ -1,3 +1,11 @@
+let refreshPromise: Promise<any> | null = null;
+
+function redirectToLogin() {
+  localStorage.removeItem("userToken");
+  localStorage.removeItem("refreshToken");
+  window.dispatchEvent(new Event("force-logout"));
+}
+
 export async function apiFetch(url: string, options: RequestInit = {}) {
   let token = localStorage.getItem("userToken");
   
@@ -8,20 +16,29 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
   const lang = localStorage.getItem("i18nextLng") || "en";
   headers.set("Accept-Language", lang);
 
-  let response = await fetch(url, { ...options, headers });
+  let response;
+  try {
+    response = await fetch(url, { ...options, headers });
+  } catch (e) {
+    console.error("Network error", e);
+    // Return a fake response to avoid crashing UI components
+    return new Response(JSON.stringify({ success: false, message: "Network Error" }), { status: 503, headers: { "Content-Type": "application/json" }});
+  }
 
   if (response.status === 401) {
     const refreshToken = localStorage.getItem("refreshToken");
     if (refreshToken) {
       try {
-        const refreshResponse = await fetch("/api/users/refresh", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refreshToken })
-        });
+        if (!refreshPromise) {
+          refreshPromise = fetch("/api/users/refresh", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ refreshToken })
+          }).then(res => res.json()).finally(() => { refreshPromise = null; });
+        }
         
-        const refreshData = await refreshResponse.json();
-        if (refreshData.success) {
+        const refreshData = await refreshPromise;
+        if (refreshData && refreshData.success) {
           token = refreshData.data.token;
           localStorage.setItem("userToken", token!);
           localStorage.setItem("refreshToken", refreshData.data.refreshToken);
@@ -29,19 +46,13 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
           headers.set("Authorization", `Bearer ${token}`);
           response = await fetch(url, { ...options, headers });
         } else {
-          // Refresh failed, clear tokens
-          localStorage.removeItem("userToken");
-          localStorage.removeItem("refreshToken");
-          window.location.href = "/login";
+          redirectToLogin();
         }
       } catch (e) {
-        localStorage.removeItem("userToken");
-        localStorage.removeItem("refreshToken");
-        window.location.href = "/login";
+        redirectToLogin();
       }
     } else {
-      localStorage.removeItem("userToken");
-      window.location.href = "/login";
+      redirectToLogin();
     }
   }
 
