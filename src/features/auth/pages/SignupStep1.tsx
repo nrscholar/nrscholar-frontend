@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Rocket, ArrowLeft, User, AtSign } from "lucide-react";
+import { Rocket, ArrowLeft, User, Phone } from "lucide-react";
 
 export default function SignupStep1Screen() {
   const navigate = useNavigate();
@@ -66,18 +66,18 @@ export default function SignupStep1Screen() {
               </div>
             </div>
 
-            {/* Email */}
+            {/* Mobile Number */}
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-[#767683] ml-1">Email or Phone</label>
+              <label className="text-sm font-semibold text-[#767683] ml-1">Mobile Number</label>
               <div className="relative flex items-center">
                 <input
-                  type="email"
-                  placeholder="Enter Email"
+                  type="tel"
+                  placeholder="Enter Mobile Number"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full h-14 bg-white rounded-full pl-6 pr-14 text-base font-medium text-[#191c1e] border border-[#c7c5d4] focus:outline-none focus:border-[#141779] transition-colors placeholder:text-[#c7c5d4]"
                 />
-                <AtSign size={22} color="#c7c5d4" className="absolute right-5" />
+                <Phone size={22} color="#c7c5d4" className="absolute right-5" />
               </div>
             </div>
             

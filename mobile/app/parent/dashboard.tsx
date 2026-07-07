@@ -72,6 +72,9 @@ export default function ParentDashboard() {
     try {
       const userRes = await authApi.getMe();
       if (userRes.success) setUser(userRes.data);
+      
+      const repRes = await parentApi.getReport();
+      if (repRes.success) setReport(repRes.data);
     } catch (e) {
       console.log("Parent load error:", e);
     } finally {
@@ -252,16 +255,16 @@ export default function ParentDashboard() {
           {/* Today's Stats & Current City */}
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
-              <Text style={[styles.statNum, { color: C.secondary }]}>45m</Text>
+              <Text style={[styles.statNum, { color: C.secondary }]}>{report?.todayTimeMinutes || 0}m</Text>
               <Text style={styles.statLabel}>Today's Time</Text>
             </View>
             <View style={styles.statBox}>
-              <Text style={[styles.statNum, { color: C.tertiary }]}>35</Text>
+              <Text style={[styles.statNum, { color: C.tertiary }]}>{report?.todaySolved || 0}</Text>
               <Text style={styles.statLabel}>Solved Today</Text>
             </View>
             <View style={styles.statBox}>
-              <Text style={[styles.statNum, { color: C.primary }]}>{currentCityName}</Text>
-              <Text style={styles.statLabel}>Current City</Text>
+              <Text style={[styles.statNum, { color: C.primary }]}>{report?.todayConfidenceScore || 0}%</Text>
+              <Text style={styles.statLabel}>Confidence Score</Text>
             </View>
           </View>
 
@@ -383,7 +386,7 @@ export default function ParentDashboard() {
           <TouchableOpacity 
             style={[styles.glassCard, styles.activityCard]}
             activeOpacity={0.8}
-            onPress={() => router.push('/parent/assessment-summary')}
+            onPress={() => router.push('/parent/assessment-history')}
           >
             <View style={styles.activityLeft}>
               <MaterialIcons name="schedule" size={24} color={C.outline} />

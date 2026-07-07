@@ -98,7 +98,7 @@ export default function ParentSettings() {
         </button>
       </header>
 
-      <main className="p-6 flex flex-col gap-6 pb-20">
+      <main className="p-6 flex flex-col gap-6 max-w-2xl mx-auto pb-20 w-full">
         {/* Screen Time Section */}
         <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-6 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_4px_10px_rgba(0,0,0,0.04)]">
           <div className="flex justify-between items-center mb-5">
@@ -162,8 +162,8 @@ export default function ParentSettings() {
         </div>
 
         {/* Bento Grid Controls */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-4.5 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_4px_10px_rgba(0,0,0,0.04)] flex flex-col items-center text-center gap-2.5">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_4px_10px_rgba(0,0,0,0.04)] flex flex-col items-center text-center gap-2.5">
             <div className="w-12 h-12 rounded-full bg-[#57fae9] flex items-center justify-center">
               <ShieldCheck size={24} color="#006a62" />
             </div>
@@ -171,7 +171,7 @@ export default function ParentSettings() {
             <CustomSwitch checked={kidSafeMode} onChange={setKidSafeMode} />
           </div>
 
-          <button className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-4.5 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_4px_10px_rgba(0,0,0,0.04)] flex flex-col items-center text-center gap-2.5 hover:bg-white transition-colors">
+          <button className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_4px_10px_rgba(0,0,0,0.04)] flex flex-col items-center text-center gap-2.5 hover:bg-white transition-colors">
             <div className="w-12 h-12 rounded-full bg-[#bfc2ff] flex items-center justify-center">
               <Lock size={24} color="#141779" />
             </div>
@@ -181,7 +181,7 @@ export default function ParentSettings() {
             </div>
           </button>
 
-          <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-4.5 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_4px_10px_rgba(0,0,0,0.04)] flex flex-col items-center text-center gap-2.5">
+          <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_4px_10px_rgba(0,0,0,0.04)] flex flex-col items-center text-center gap-2.5">
             <div className="w-12 h-12 rounded-full bg-[#ffe0b2] flex items-center justify-center">
               <Film size={24} color="#f57c00" />
             </div>
@@ -192,7 +192,7 @@ export default function ParentSettings() {
             }} />
           </div>
 
-          <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-4.5 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_4px_10px_rgba(0,0,0,0.04)] flex flex-col items-center text-center gap-2.5">
+          <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_4px_10px_rgba(0,0,0,0.04)] flex flex-col items-center text-center gap-2.5">
             <div className="w-12 h-12 rounded-full bg-[#e3f2fd] flex items-center justify-center">
               <MessageSquare size={24} color="#1976d2" />
             </div>
@@ -203,7 +203,7 @@ export default function ParentSettings() {
             }} />
           </div>
 
-          <button onClick={() => navigate("/parent/subscription")} className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-4.5 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_4px_10px_rgba(0,0,0,0.04)] flex flex-col items-center text-center gap-2.5 hover:bg-white transition-colors">
+          <button onClick={() => navigate("/parent/subscription")} className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_4px_10px_rgba(0,0,0,0.04)] flex flex-col items-center text-center gap-2.5 hover:bg-white transition-colors">
             <div className="w-12 h-12 rounded-full bg-[#fff9c4] flex items-center justify-center">
               <CreditCard size={24} color="#fbc02d" />
             </div>
@@ -213,7 +213,7 @@ export default function ParentSettings() {
             </div>
           </button>
 
-          <button className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-4.5 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_4px_10px_rgba(0,0,0,0.04)] flex flex-col items-center text-center gap-2.5 hover:bg-white transition-colors">
+          <button className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_4px_10px_rgba(0,0,0,0.04)] flex flex-col items-center text-center gap-2.5 hover:bg-white transition-colors">
             <div className="w-12 h-12 rounded-full bg-[#f8bbd0] flex items-center justify-center">
               <HelpCircle size={24} color="#c2185b" />
             </div>

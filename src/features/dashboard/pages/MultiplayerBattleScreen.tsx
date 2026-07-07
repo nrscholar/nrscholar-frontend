@@ -147,7 +147,7 @@ export default function MultiplayerBattleScreen() {
 
   // Synchronous Advancement logic
   useEffect(() => {
-    let timeout: NodeJS.Timeout;
+    let timeout: ReturnType<typeof setTimeout>;
     
     // Auto-advance if opponent disconnects/AFKs for >15 seconds
     if (waitTimer > 15 && selectedOption !== null && !isAdvancing) {

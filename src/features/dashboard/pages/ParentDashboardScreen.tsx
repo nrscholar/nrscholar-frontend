@@ -17,6 +17,7 @@ export default function ParentDashboardScreen() {
   const [risks, setRisks] = useState("Slight drop in engagement this week.");
   const [todayTime, setTodayTime] = useState(0);
   const [solvedToday, setSolvedToday] = useState(0);
+  const [todayConfidenceScore, setTodayConfidenceScore] = useState(0);
 
   useEffect(() => {
     async function loadUserData() {
@@ -40,6 +41,7 @@ export default function ParentDashboardScreen() {
             if (repJson.data.risks) setRisks(repJson.data.risks);
             if (repJson.data.todayTimeMinutes !== undefined) setTodayTime(repJson.data.todayTimeMinutes);
             if (repJson.data.todaySolved !== undefined) setSolvedToday(repJson.data.todaySolved);
+            if (repJson.data.todayConfidenceScore !== undefined) setTodayConfidenceScore(repJson.data.todayConfidenceScore);
           }
         } catch(e) {}
 
@@ -111,8 +113,8 @@ export default function ParentDashboardScreen() {
               <span className="text-xs font-semibold text-[#767683] mt-0.5">Solved Today</span>
             </div>
             <div className="flex-1 bg-[rgba(242,244,246,0.5)] rounded-xl p-2 flex flex-col items-center justify-center">
-              <span className="text-base font-bold text-[#141779] text-center">{currentCityName}</span>
-              <span className="text-xs font-semibold text-[#767683] mt-0.5">Current City</span>
+              <span className="text-2xl font-bold text-[#141779] text-center">{todayConfidenceScore}%</span>
+              <span className="text-xs font-semibold text-[#767683] mt-0.5">Confidence</span>
             </div>
           </div>
 
@@ -131,7 +133,7 @@ export default function ParentDashboardScreen() {
         </div>
 
         {/* Learning DNA */}
-        <div className="flex flex-col gap-3">
+        <div id="dna-section" className="flex flex-col gap-3">
           <h3 className="text-sm font-semibold text-[#464652] px-1">Cognitive Strengths & Weaknesses</h3>
           
           <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.4)] border-l-4 border-l-[#006a62]">
@@ -240,7 +242,7 @@ export default function ParentDashboardScreen() {
               <span className="text-sm font-semibold text-[#464652]">Settings</span>
             </button>
             <button 
-              onClick={() => navigate('/assessment-summary')}
+              onClick={() => navigate('/parent/learning-dna')}
               className="flex-1 bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.4)] flex items-center gap-3 hover:bg-white transition-colors"
             >
               <div className="w-8 h-8 rounded-full bg-[#006a62] flex items-center justify-center">
@@ -251,7 +253,7 @@ export default function ParentDashboardScreen() {
           </div>
 
           <button 
-            onClick={() => navigate('/assessment-summary')}
+            onClick={() => navigate('/parent/roadmap')}
             className="w-full bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.4)] flex justify-between items-center hover:bg-white transition-colors"
           >
             <div className="flex items-center gap-3">

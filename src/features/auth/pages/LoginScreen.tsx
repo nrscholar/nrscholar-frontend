@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Rocket, BookOpen, AtSign, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Rocket, BookOpen, Phone, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function LoginScreen() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -13,8 +13,8 @@ export default function LoginScreen() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !password.trim()) {
-      setErrorMsg("Please enter your email and password.");
+    if (!mobile.trim() || !password.trim()) {
+      setErrorMsg("Please enter your mobile number and password.");
       return;
     }
     setErrorMsg("");
@@ -26,7 +26,7 @@ export default function LoginScreen() {
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ mobile, password })
       });
       const data = await response.json();
       setLoading(false);
@@ -90,12 +90,12 @@ export default function LoginScreen() {
         {/* Login Fields */}
         <form onSubmit={handleLogin} className="w-full max-w-[340px] flex flex-col gap-4 mb-6">
           <div className="relative flex items-center">
-            <AtSign size={20} color="#767683" className="absolute left-4" />
+            <Phone size={20} color="#767683" className="absolute left-4" />
             <input
-              type="email"
-              placeholder="Enter Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="tel"
+              placeholder="Enter Mobile Number"
+              value={mobile}
+              onChange={(e) => setMobile(e.target.value)}
               className="w-full h-14 bg-[#eceef0] rounded-full pl-12 pr-4 text-base font-medium text-[#191c1e] focus:outline-none focus:ring-2 focus:ring-[#141779] transition-shadow placeholder:text-[#767683]"
               required
             />
