@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, VolumeX, Heart, Star, ShieldCheck, Gift, Ear, Sparkles, BookOpen, Lock, TrendingUp, Users, Settings } from "lucide-react";
+import { Menu, VolumeX, Heart, Star, ShieldCheck, Gift, Ear, Sparkles, BookOpen, Lock, TrendingUp, Users, Settings, ArrowLeft } from "lucide-react";
 import { apiFetch } from "../../../api";
 
 export default function ParentChallengesScreen() {
@@ -53,8 +53,8 @@ export default function ParentChallengesScreen() {
       {/* Top App Bar */}
       <header className="w-full top-0 z-50 bg-[rgba(247,249,251,0.8)] backdrop-blur-lg flex justify-between items-center px-6 py-4">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/parent/dashboard')} className="hover:opacity-80 transition-opacity">
-            <Menu className="text-[#141779] font-bold" size={24} />
+          <button onClick={() => navigate(-1)} className="p-1 -ml-1 hover:bg-[#e0e3e5] rounded-full transition-colors">
+            <ArrowLeft className="text-[#141779] font-bold" size={24} />
           </button>
           <h1 className="text-xl font-bold text-[#141779]">Growth Challenges</h1>
         </div>

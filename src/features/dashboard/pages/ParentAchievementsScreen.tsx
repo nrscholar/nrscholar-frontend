@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, Globe, BookOpen, Flame, Lock, GraduationCap, Users, X, TrendingUp, Settings } from "lucide-react";
+import { Bell, Globe, BookOpen, Flame, Lock, GraduationCap, Users, X, TrendingUp, Settings, ArrowLeft } from "lucide-react";
 import { apiFetch } from "../../../api";
 
 export default function ParentAchievementsScreen() {
@@ -106,6 +106,9 @@ export default function ParentAchievementsScreen() {
       {/* Top App Bar */}
       <header className="fixed top-0 w-full z-50 bg-[rgba(247,249,251,0.8)] backdrop-blur-lg border-b border-[#c7c5d4]/30 shadow-sm flex items-center justify-between px-6 py-4">
         <div className="flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="p-1 -ml-1 hover:bg-[#e0e3e5] rounded-full transition-colors">
+            <ArrowLeft className="text-[#141779] font-bold" size={24} />
+          </button>
           <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#141779]/20">
             <img 
               alt="User Profile" 
@@ -113,7 +116,7 @@ export default function ParentAchievementsScreen() {
               src="https://lh3.googleusercontent.com/aida-public/AB6AXuC9JzpVuteLhnBmiRka1Pw7sOhA3jsE1Zn0vKjGHb1PC2lOUIJHYy7DL9s3F4MPBK0JAg6m9Vy17DJFKVI1L4hFeaav-1fNzAW6AwLOohI3hsbUcv4Ee56iFKwGbpiZzK6hunCaJNJyZ6IFIlifZHcOkry0SpStAklSQAycDOSc-zHKuaodDemfTodaYrM0_VBmeyOX3cXzGV_N9ekKi0ugCna0gA9nSrDpDOoGnCbGHBsQF4zj8r9bzThYRkzxW9ujcYa2IT9hMg"
             />
           </div>
-          <h1 className="text-xl font-bold text-[#141779] tracking-tight">Studysaathy</h1>
+          <h1 className="text-xl font-bold text-[#141779] tracking-tight">Achievements</h1>
         </div>
         <button className="text-[#141779] hover:bg-[#e6e8ea] transition-colors p-2 rounded-full active:scale-95">
           <Bell size={24} />

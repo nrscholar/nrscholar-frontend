@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Lightbulb, Flame, ShieldCheck, BookOpen, Heart, Brain, CheckCircle, Star, Zap } from "lucide-react";
+import { Lightbulb, Flame, ShieldCheck, BookOpen, Heart, Brain, CheckCircle, Star, Zap, ArrowLeft } from "lucide-react";
 import { apiFetch } from "../../../api";
 
 export default function ParentDailyTipScreen() {
@@ -75,8 +75,8 @@ export default function ParentDailyTipScreen() {
       {/* Top Navigation */}
       <header className="fixed top-0 w-full z-50 bg-[rgba(247,249,251,0.8)] backdrop-blur-lg border-b-[1.5px] border-white/20 shadow-[0_4px_30px_rgba(0,0,0,0.1)] flex items-center justify-between px-6 h-16">
         <div className="flex items-center gap-2">
-          <button onClick={() => navigate('/parent/dashboard')} className="hover:opacity-80 transition-opacity">
-            <span className="material-symbols-outlined text-[#141779] text-2xl" style={{fontVariationSettings: "'FILL' 1"}}>rocket_launch</span>
+          <button onClick={() => navigate(-1)} className="p-1 hover:bg-[#e0e3e5] rounded-full transition-colors">
+            <ArrowLeft size={24} color="#141779" />
           </button>
           <h1 className="text-[20px] font-bold text-[#141779] tracking-tight">Cosmic Explorer Parent</h1>
         </div>

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Rocket, Star, Check, Sparkles, Brain, Lock, Trophy, BookOpen, TrendingUp, Users, Settings, Play } from "lucide-react";
+import { Rocket, Star, Check, Sparkles, Brain, Lock, Trophy, BookOpen, TrendingUp, Users, Settings, Play, ArrowLeft, Home, BarChart2 } from "lucide-react";
 
 export default function ParentRoadmapScreen() {
   const navigate = useNavigate();
@@ -48,12 +48,12 @@ export default function ParentRoadmapScreen() {
       {/* TopAppBar Navigation */}
       <header className="fixed top-0 w-full z-50 bg-[rgba(247,249,251,0.8)] backdrop-blur-xl border-b border-[rgba(199,197,212,0.3)] shadow-sm flex justify-between items-center px-6 h-16">
         <div className="flex items-center gap-3">
-          <Rocket size={24} color="#141779" />
+          <button onClick={() => navigate(-1)} className="p-1 hover:bg-[rgba(20,23,121,0.05)] rounded-full transition-colors active:scale-95">
+            <ArrowLeft size={24} color="#141779" />
+          </button>
+          <Rocket size={20} color="#141779" />
           <h1 className="text-xl font-bold text-[#141779]">Growth Journey</h1>
         </div>
-        <button onClick={() => navigate('/parent')} className="active:scale-95 transition-transform duration-200 hover:opacity-80">
-          <Star size={24} color="#141779" />
-        </button>
       </header>
 
       {/* Main Content Area */}
@@ -153,34 +153,20 @@ export default function ParentRoadmapScreen() {
         </button>
       </main>
 
-      {/* Bottom Nav */}
-      <nav className="fixed bottom-0 w-full z-50 rounded-t-3xl bg-[rgba(236,238,240,0.9)] backdrop-blur-2xl border-t border-white/20 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] flex justify-around items-center px-4 h-[80px]">
-        {/* Lessons */}
-        <div 
-          onClick={() => navigate('/parent/lessons')}
-          className="flex flex-col items-center justify-center text-[#464652] cursor-pointer hover:bg-[rgba(230,232,234,0.5)] transition-all px-5 py-2 rounded-full active:scale-90"
-        >
-          <BookOpen size={24} />
-          <span className="text-[11px] font-bold uppercase tracking-widest mt-1">Lessons</span>
-        </div>
-        {/* Growth (Active) */}
-        <div className="flex flex-col items-center justify-center text-[#141779] bg-[rgba(20,23,121,0.1)] rounded-full px-5 py-2 cursor-pointer active:scale-90 transition-all">
-          <TrendingUp size={24} />
-          <span className="text-[11px] font-bold uppercase tracking-widest mt-1">Growth</span>
-        </div>
-        {/* Community */}
-        <div className="flex flex-col items-center justify-center text-[#464652] cursor-pointer hover:bg-[rgba(230,232,234,0.5)] transition-all px-5 py-2 rounded-full active:scale-90">
-          <Users size={24} />
-          <span className="text-[11px] font-bold uppercase tracking-widest mt-1">Community</span>
-        </div>
-        {/* Settings */}
-        <div 
-          onClick={() => navigate('/parent/settings')}
-          className="flex flex-col items-center justify-center text-[#464652] cursor-pointer hover:bg-[rgba(230,232,234,0.5)] transition-all px-5 py-2 rounded-full active:scale-90"
-        >
-          <Settings size={24} />
-          <span className="text-[11px] font-bold uppercase tracking-widest mt-1">Settings</span>
-        </div>
+      {/* Floating Bottom Glassmorphic Navigation Bar */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center px-4 py-3 bg-[rgba(255,255,255,0.4)] backdrop-blur-xl border-t-[1.5px] border-[rgba(255,255,255,0.4)] rounded-t-[24px] shadow-[0_-8px_32px_rgba(0,0,0,0.05)]">
+        <button onClick={() => navigate('/parent')} className="flex flex-col items-center justify-center gap-1 py-1.5 px-4 rounded-full transition-all duration-300 bg-[#57fae9] text-[#007168] shadow-sm scale-105">
+          <Home size={20} strokeWidth={2.5} />
+          <span className="text-[10px] font-bold tracking-wide">Home</span>
+        </button>
+        <button onClick={() => navigate('/parent/reports')} className="flex flex-col items-center justify-center gap-1 py-1.5 px-4 rounded-full transition-all duration-300 text-[#464652] hover:text-[#007168]">
+          <BarChart2 size={20} strokeWidth={2} />
+          <span className="text-[10px] font-bold tracking-wide">Reports</span>
+        </button>
+        <button onClick={() => navigate('/parent/controls')} className="flex flex-col items-center justify-center gap-1 py-1.5 px-4 rounded-full transition-all duration-300 text-[#464652] hover:text-[#007168]">
+          <Settings size={20} strokeWidth={2} />
+          <span className="text-[10px] font-bold tracking-wide">Controls</span>
+        </button>
       </nav>
     </div>
   );

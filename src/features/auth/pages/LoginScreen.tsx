@@ -26,7 +26,7 @@ export default function LoginScreen() {
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ mobile, password })
+        body: JSON.stringify({ mobile: mobile, password })
       });
       const data = await response.json();
       setLoading(false);

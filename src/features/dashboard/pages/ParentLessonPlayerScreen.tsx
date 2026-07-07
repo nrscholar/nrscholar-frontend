@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { X, CheckCircle, ShieldCheck, Star, Brain, Check, MessageCircle, Volume2, UserCheck, Flame, BookOpen, Search, MonitorOff, Clock } from "lucide-react";
+import { X, CheckCircle, ShieldCheck, Star, Brain, Check, MessageCircle, Volume2, UserCheck, Flame, BookOpen, Search, MonitorOff, Clock, ArrowLeft } from "lucide-react";
 
 export default function ParentLessonPlayerScreen() {
   const navigate = useNavigate();
@@ -478,7 +478,7 @@ export default function ParentLessonPlayerScreen() {
       {/* Progress Header */}
       <header className="px-5 py-4 pt-6 flex items-center gap-4 relative z-50">
         <button onClick={() => navigate(-1)} className="p-2 hover:bg-[#e0e3e5] rounded-full transition-colors">
-          <X size={24} className="text-[#464652]" />
+          <ArrowLeft size={24} className="text-[#464652]" />
         </button>
         <div className="flex-1 h-3 bg-[#e0e3e5] rounded-full overflow-hidden">
           <div 

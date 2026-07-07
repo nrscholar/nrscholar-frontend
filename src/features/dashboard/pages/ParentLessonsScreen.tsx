@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, Search, BookOpen, TrendingUp, Users, Settings, Plus, PlayCircle } from "lucide-react";
+import { Menu, Search, BookOpen, TrendingUp, Users, Settings, Plus, PlayCircle, ArrowLeft } from "lucide-react";
 import { apiFetch } from "../../../api";
 
 export default function ParentLessonsScreen() {
@@ -46,8 +46,8 @@ export default function ParentLessonsScreen() {
       {/* TopAppBar Navigation */}
       <header className="bg-[rgba(247,249,251,0.8)] backdrop-blur-lg border-b border-white/20 w-full top-0 z-50 flex justify-between items-center px-6 py-4 sticky">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/parent')} className="p-1 -ml-1 hover:opacity-80 transition-opacity">
-            <Menu size={24} color="#141779" />
+          <button onClick={() => navigate(-1)} className="p-1 -ml-1 hover:bg-[rgba(20,23,121,0.05)] rounded-full transition-colors">
+            <ArrowLeft size={24} color="#141779" />
           </button>
           <h1 className="text-xl font-bold text-[#141779]">Daily Parenting Lessons</h1>
         </div>

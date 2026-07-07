@@ -34,6 +34,7 @@ export default function MultiplayerBattleScreen() {
   const [winnerId, setWinnerId] = useState<string | null>(null);
   const [showRewardModal, setShowRewardModal] = useState(false);
   const [continuousWins, setContinuousWins] = useState(0);
+  const [checkingReward, setCheckingReward] = useState(false);
 
   // Sync state
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -198,13 +199,17 @@ export default function MultiplayerBattleScreen() {
   useEffect(() => {
     let mounted = true;
     if (isFinished && winnerId === myId) {
+      setCheckingReward(true);
       // Fetch profile to get updated streak
       apiFetch("/api/users/me").then(res => res.json()).then(data => {
-        if (mounted && data.success && data.data && data.data.user) {
-          const streak = data.data.user.multiplayerStreak || 0;
-          setContinuousWins(streak);
-          if (streak >= 25) {
-            setShowRewardModal(true);
+        if (mounted) {
+          setCheckingReward(false);
+          if (data.success && data.data && data.data.user) {
+            const streak = data.data.user.multiplayerStreak || 0;
+            setContinuousWins(streak);
+            if (streak >= 25) {
+              setShowRewardModal(true);
+            }
           }
         }
       });
@@ -441,9 +446,10 @@ export default function MultiplayerBattleScreen() {
             {winnerId !== null && !showRewardModal && (
               <button 
                 onClick={() => navigate("/multiplayer-hub")}
-                className="w-full max-w-[250px] bg-white text-[#141779] py-3 rounded-2xl font-black uppercase tracking-widest hover:bg-gray-100 shadow-[0_4px_15px_rgba(255,255,255,0.3)] mb-4"
+                disabled={checkingReward}
+                className="w-full max-w-[250px] bg-white text-[#141779] py-3 rounded-2xl font-black uppercase tracking-widest hover:bg-gray-100 shadow-[0_4px_15px_rgba(255,255,255,0.3)] mb-4 disabled:opacity-50"
               >
-                Back to Arena
+                {checkingReward ? "Checking rewards..." : "Back to Arena"}
               </button>
             )}
           </div>

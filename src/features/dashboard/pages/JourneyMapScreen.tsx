@@ -125,30 +125,30 @@ export default function JourneyMapScreen() {
       <div className="relative w-full max-w-[430px] h-screen bg-surface-bright flex flex-col overflow-hidden shadow-2xl">
         
         {/* TopAppBar */}
-        <header className="fixed top-0 w-full max-w-[430px] z-50 flex justify-between items-center px-6 py-4 bg-surface/80 dark:bg-surface-dim/80 backdrop-blur-lg border-b-[1.5px] border-outline-variant/30 shadow-sm">
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigate('/home')} className="p-1 hover:opacity-80 transition-opacity">
+        <header className="fixed top-0 w-full max-w-[430px] z-50 flex justify-between items-center px-4 py-4 bg-surface/80 dark:bg-surface-dim/80 backdrop-blur-lg border-b-[1.5px] border-outline-variant/30 shadow-sm gap-2">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <button onClick={() => navigate('/home')} className="p-1 hover:opacity-80 transition-opacity shrink-0">
               <span className="material-symbols-outlined text-primary">arrow_back</span>
             </button>
-            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary">
+            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary shrink-0">
               <img alt="User Profile" className="w-full h-full object-cover" src={`https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`}/>
             </div>
-            <div>
-              <h1 className="font-display text-label-lg font-bold text-primary">{username}</h1>
+            <div className="flex-1 min-w-0">
+              <h1 className="font-display text-label-lg font-bold text-primary truncate">{username}</h1>
               <div className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-[14px] text-secondary" style={{fontVariationSettings: "'FILL' 1"}}>stars</span>
-                <p className="text-[10px] font-bold text-on-surface-variant">Explorer Lvl 1</p>
+                <span className="material-symbols-outlined text-[14px] text-secondary shrink-0" style={{fontVariationSettings: "'FILL' 1"}}>stars</span>
+                <p className="text-[10px] font-bold text-on-surface-variant truncate">Explorer Lvl 1</p>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 bg-surface-container px-3 py-1.5 rounded-full">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-1 bg-surface-container px-2.5 py-1.5 rounded-full whitespace-nowrap">
               <span className="material-symbols-outlined text-[16px] text-orange-500" style={{fontVariationSettings: "'FILL' 1"}}>local_fire_department</span>
-              <span className="text-label-sm font-bold">{xp >= 1000 ? `${(xp/1000).toFixed(1)}k` : xp} XP</span>
+              <span className="text-[11px] font-bold">{xp >= 1000 ? `${(xp/1000).toFixed(1)}k` : xp} XP</span>
             </div>
-            <div className="flex items-center gap-1 bg-surface-container px-3 py-1.5 rounded-full">
+            <div className="flex items-center gap-1 bg-surface-container px-2.5 py-1.5 rounded-full whitespace-nowrap">
               <span className="material-symbols-outlined text-[16px] text-yellow-500" style={{fontVariationSettings: "'FILL' 1"}}>monetization_on</span>
-              <span className="text-label-sm font-bold">{coins}</span>
+              <span className="text-[11px] font-bold">{coins}</span>
             </div>
           </div>
         </header>
