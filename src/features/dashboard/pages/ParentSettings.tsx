@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Bell, Timer, BookOpen, ShieldCheck, Lock, Film, MessageSquare, CreditCard, HelpCircle, Trash2 } from "lucide-react";
+import { ArrowLeft, Bell, Timer, BookOpen, ShieldCheck, Lock, Film, MessageSquare, CreditCard, HelpCircle, Trash2, Save } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "../../../api";
 
@@ -8,16 +8,29 @@ function CustomSwitch({ checked, onChange }: { checked: boolean, onChange: (v: b
   return (
     <button
       onClick={() => onChange(!checked)}
-      className={`relative w-12 h-7 rounded-full flex items-center px-0.5 transition-colors duration-200 ${checked ? 'bg-[#006a62]' : 'bg-[#d8dadc]'}`}
+      className={`relative w-14 h-8 rounded-full flex items-center px-1 transition-all duration-300 ${checked ? 'bg-gradient-to-r from-[#006a62] to-[#009b8f]' : 'bg-[#d8dadc]'}`}
     >
       <motion.div
-        animate={{ x: checked ? 20 : 2 }}
+        animate={{ x: checked ? 24 : 0 }}
         transition={{ type: "spring", stiffness: 500, damping: 30 }}
-        className="w-[22px] h-[22px] bg-white rounded-full shadow-sm"
+        className="w-[24px] h-[24px] bg-white rounded-full shadow-md"
       />
     </button>
   );
 }
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+};
 
 export default function ParentSettings() {
   const navigate = useNavigate();
@@ -68,7 +81,7 @@ export default function ParentSettings() {
       });
       const json = await res.json();
       if (json.success) {
-        setToastMessage("Journey reset successfully!");
+        setToastMessage("Journey reset successfully! 🚀");
         setShowResetModal(false);
         setTimeout(() => {
           navigate("/home");
@@ -87,24 +100,36 @@ export default function ParentSettings() {
   const isScreenTimeOn = screenTimeMinutes < 9999;
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] font-sans">
-      <header className="flex items-center justify-between px-5 h-16 bg-[rgba(247,249,251,0.8)] border-b-[1.5px] border-[rgba(255,255,255,0.2)] sticky top-0 z-40 backdrop-blur-md">
-        <button onClick={() => navigate(-1)} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors">
-          <ArrowLeft size={24} color="#141779" />
+    <div className="min-h-screen bg-gradient-to-b from-[#f0f4f8] to-[#e6eef5] font-sans pb-24 overflow-x-hidden">
+      {/* Dynamic Header */}
+      <header className="flex items-center justify-between px-6 h-20 bg-white/60 backdrop-blur-xl border-b border-white/40 sticky top-0 z-40 shadow-sm">
+        <button onClick={() => navigate(-1)} className="w-11 h-11 flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-gray-50 hover:scale-105 active:scale-95 transition-all">
+          <ArrowLeft size={22} className="text-[#141779]" />
         </button>
-        <h1 className="text-xl font-bold text-[#141779]">Settings</h1>
-        <button className="w-10 h-10 flex items-center justify-center">
-          <Bell size={24} color="#141779" />
+        <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#141779] to-[#30007f]">Settings</h1>
+        <button className="w-11 h-11 flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-gray-50 hover:scale-105 active:scale-95 transition-all">
+          <Bell size={22} className="text-[#141779]" />
         </button>
       </header>
 
-      <main className="p-6 flex flex-col gap-6 max-w-2xl mx-auto pb-20 w-full">
+      <motion.main 
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="px-6 pt-8 flex flex-col gap-8 max-w-3xl mx-auto w-full"
+      >
         {/* Screen Time Section */}
-        <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-6 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_4px_10px_rgba(0,0,0,0.04)]">
-          <div className="flex justify-between items-center mb-5">
-            <div className="flex items-center gap-2">
-              <Timer size={22} color="#006a62" />
-              <h2 className="text-lg font-bold text-[#141779]">Screen Time</h2>
+        <motion.div variants={itemVariants} className="bg-white/70 backdrop-blur-md rounded-3xl p-7 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#006a62]/10 to-transparent rounded-bl-full pointer-events-none transition-transform group-hover:scale-110 duration-500" />
+          <div className="flex justify-between items-center mb-6 relative z-10">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#006a62]/20 to-[#006a62]/5 flex items-center justify-center">
+                <Timer size={24} color="#006a62" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-[#141779]">Screen Time Limit</h2>
+                <p className="text-sm text-[#767683] mt-0.5">Manage app usage duration</p>
+              </div>
             </div>
             <CustomSwitch checked={isScreenTimeOn} onChange={(v) => {
               const val = v ? 60 : 9999;
@@ -113,9 +138,9 @@ export default function ParentSettings() {
             }} />
           </div>
           
-          <div className="flex gap-2.5">
+          <div className="flex gap-3 relative z-10">
             {[
-              { label: "30 Mins", value: 30 },
+              { label: "30 Min", value: 30 },
               { label: "1 Hour", value: 60 },
               { label: "Unlimited", value: 9999 }
             ].map((btn) => {
@@ -127,117 +152,99 @@ export default function ParentSettings() {
                     setScreenTimeMinutes(btn.value);
                     updateSetting("screenTimeMinutes", btn.value);
                   }}
-                  className={`flex-1 py-3 rounded-full border-2 transition-colors ${
-                    isActive ? 'border-[#006a62] bg-[rgba(0,106,98,0.1)]' : 'border-[#c7c5d4] bg-transparent'
+                  className={`flex-1 py-3.5 rounded-2xl border-2 transition-all duration-300 ${
+                    isActive 
+                      ? 'border-[#006a62] bg-[#006a62] shadow-lg shadow-[#006a62]/20 scale-[1.02]' 
+                      : 'border-[#e0e3e5] bg-white hover:border-[#006a62]/50 hover:bg-[#f8fafc]'
                   }`}
                 >
-                  <span className={`text-sm ${isActive ? 'font-bold text-[#006a62]' : 'font-semibold text-[#767683]'}`}>
+                  <span className={`text-[15px] ${isActive ? 'font-bold text-white' : 'font-semibold text-[#464652]'}`}>
                     {btn.label}
                   </span>
                 </button>
               );
             })}
           </div>
-        </div>
+        </motion.div>
 
         {/* Subject Restrictions */}
-        <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-6 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_4px_10px_rgba(0,0,0,0.04)]">
-          <div className="flex items-center gap-2 mb-4">
-            <BookOpen size={22} color="#006a62" />
-            <h2 className="text-lg font-bold text-[#141779]">Subject Restrictions</h2>
+        <motion.div variants={itemVariants} className="bg-white/70 backdrop-blur-md rounded-3xl p-7 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#30007f]/20 to-[#30007f]/5 flex items-center justify-center">
+              <BookOpen size={24} color="#30007f" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-[#141779]">Subject Focus</h2>
+              <p className="text-sm text-[#767683] mt-0.5">Restrict access to certain subjects</p>
+            </div>
           </div>
           
           <div className="flex flex-col gap-3">
             {[
-              { label: "Mathematics", state: mathRestricted, set: setMathRestricted },
-              { label: "Science & Tech", state: scienceRestricted, set: setScienceRestricted },
-              { label: "Language Arts", state: languageRestricted, set: setLanguageRestricted }
+              { label: "Mathematics", state: mathRestricted, set: setMathRestricted, icon: "➗" },
+              { label: "Science & Tech", state: scienceRestricted, set: setScienceRestricted, icon: "🔬" },
+              { label: "Language Arts", state: languageRestricted, set: setLanguageRestricted, icon: "📚" }
             ].map((subject, i) => (
-              <div key={i} className="flex justify-between items-center p-4 bg-[rgba(255,255,255,0.5)] rounded-xl">
-                <span className="text-base font-medium text-[#191c1e]">{subject.label}</span>
+              <div key={i} className="flex justify-between items-center p-4 bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">{subject.icon}</span>
+                  <span className="text-base font-bold text-[#191c1e]">{subject.label}</span>
+                </div>
                 <CustomSwitch checked={subject.state} onChange={subject.set} />
               </div>
             ))}
           </div>
-        </div>
+        </motion.div>
 
-        {/* Bento Grid Controls */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_4px_10px_rgba(0,0,0,0.04)] flex flex-col items-center text-center gap-2.5">
-            <div className="w-12 h-12 rounded-full bg-[#57fae9] flex items-center justify-center">
-              <ShieldCheck size={24} color="#006a62" />
-            </div>
-            <span className="text-sm font-bold text-[#141779]">Kid-Safe Mode</span>
-            <CustomSwitch checked={kidSafeMode} onChange={setKidSafeMode} />
-          </div>
+        {/* Premium Bento Grid Controls */}
+        <motion.div variants={itemVariants} className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          {[
+            { title: "Kid-Safe Mode", icon: ShieldCheck, color: "#006a62", bg: "#ccf4f0", state: kidSafeMode, set: setKidSafeMode, type: 'switch' },
+            { title: "Edu Reels", icon: Film, color: "#f57c00", bg: "#ffe0b2", state: allowReels, set: (v: boolean) => { setAllowReels(v); updateSetting("allowReels", v); }, type: 'switch' },
+            { title: "AI Teacher", icon: MessageSquare, color: "#1976d2", bg: "#e3f2fd", state: allowChat, set: (v: boolean) => { setAllowChat(v); updateSetting("allowChat", v); }, type: 'switch' },
+            { title: "Update Pin", desc: "Change Access", icon: Lock, color: "#30007f", bg: "#e6e0ff", type: 'button' },
+            { title: "Premium Plans", desc: "Free Plan", icon: CreditCard, color: "#b28900", bg: "#fff9c4", action: () => navigate("/parent/subscription"), type: 'button' },
+            { title: "Support", desc: "Get Help", icon: HelpCircle, color: "#c2185b", bg: "#f8bbd0", type: 'button' }
+          ].map((item, i) => (
+            <motion.div 
+              key={i} 
+              whileHover={{ y: -4 }}
+              onClick={item.action}
+              className={`bg-white/80 backdrop-blur-md rounded-3xl p-5 border border-white/80 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col items-center text-center gap-3 transition-all ${item.type === 'button' ? 'cursor-pointer hover:shadow-lg' : ''}`}
+            >
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner" style={{ backgroundColor: item.bg }}>
+                <item.icon size={26} color={item.color} strokeWidth={2.5} />
+              </div>
+              <div className="flex flex-col items-center gap-2 w-full">
+                <span className="text-[15px] font-bold text-[#141779] leading-tight">{item.title}</span>
+                {item.type === 'switch' ? (
+                  <CustomSwitch checked={item.state!} onChange={item.set!} />
+                ) : (
+                  <span className="text-[13px] font-semibold text-[#767683] bg-gray-100 px-3 py-1 rounded-full">{item.desc}</span>
+                )}
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
 
-          <button className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_4px_10px_rgba(0,0,0,0.04)] flex flex-col items-center text-center gap-2.5 hover:bg-white transition-colors">
-            <div className="w-12 h-12 rounded-full bg-[#bfc2ff] flex items-center justify-center">
-              <Lock size={24} color="#141779" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-bold text-[#141779]">Update Pin</span>
-              <span className="text-xs font-semibold text-[#767683]">Change Access</span>
-            </div>
-          </button>
-
-          <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_4px_10px_rgba(0,0,0,0.04)] flex flex-col items-center text-center gap-2.5">
-            <div className="w-12 h-12 rounded-full bg-[#ffe0b2] flex items-center justify-center">
-              <Film size={24} color="#f57c00" />
-            </div>
-            <span className="text-sm font-bold text-[#141779]">Edu Reels</span>
-            <CustomSwitch checked={allowReels} onChange={(v) => {
-              setAllowReels(v);
-              updateSetting("allowReels", v);
-            }} />
-          </div>
-
-          <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_4px_10px_rgba(0,0,0,0.04)] flex flex-col items-center text-center gap-2.5">
-            <div className="w-12 h-12 rounded-full bg-[#e3f2fd] flex items-center justify-center">
-              <MessageSquare size={24} color="#1976d2" />
-            </div>
-            <span className="text-sm font-bold text-[#141779]">AI Teacher</span>
-            <CustomSwitch checked={allowChat} onChange={(v) => {
-              setAllowChat(v);
-              updateSetting("allowChat", v);
-            }} />
-          </div>
-
-          <button onClick={() => navigate("/parent/subscription")} className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_4px_10px_rgba(0,0,0,0.04)] flex flex-col items-center text-center gap-2.5 hover:bg-white transition-colors">
-            <div className="w-12 h-12 rounded-full bg-[#fff9c4] flex items-center justify-center">
-              <CreditCard size={24} color="#fbc02d" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-bold text-[#141779]">Premium Plans</span>
-              <span className="text-xs font-semibold text-[#767683]">Free Plan</span>
-            </div>
-          </button>
-
-          <button className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_4px_10px_rgba(0,0,0,0.04)] flex flex-col items-center text-center gap-2.5 hover:bg-white transition-colors">
-            <div className="w-12 h-12 rounded-full bg-[#f8bbd0] flex items-center justify-center">
-              <HelpCircle size={24} color="#c2185b" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-bold text-[#141779]">Support & Help</span>
-              <span className="text-xs font-semibold text-[#767683]">Request Logs</span>
-            </div>
-          </button>
-        </div>
-
-        {/* Reset Journey Section */}
-        <button 
+        {/* Danger Zone: Reset Journey */}
+        <motion.button 
+          variants={itemVariants}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
           onClick={() => setShowResetModal(true)}
-          className="bg-[rgba(255,218,214,0.2)] rounded-2xl p-6 border-[1.5px] border-[rgba(186,26,26,0.3)] shadow-[0_4px_10px_rgba(0,0,0,0.04)] flex items-center gap-3 text-left hover:bg-[rgba(255,218,214,0.4)] transition-colors"
+          className="bg-gradient-to-r from-red-50 to-rose-50 rounded-3xl p-6 border-2 border-red-100 shadow-sm flex items-center gap-4 text-left group overflow-hidden relative"
         >
-          <div className="w-12 h-12 rounded-full bg-[#ffdad6] flex items-center justify-center shrink-0">
-            <Trash2 size={24} color="#ba1a1a" />
+          <div className="absolute inset-0 bg-gradient-to-r from-red-100/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <div className="w-14 h-14 rounded-2xl bg-red-100 flex items-center justify-center shrink-0 shadow-inner group-hover:bg-red-200 transition-colors z-10">
+            <Trash2 size={26} className="text-red-600" />
           </div>
-          <div className="flex-1">
-            <h2 className="text-[18px] font-bold text-[#ba1a1a]">Reset Learning Journey</h2>
-            <p className="text-[13px] font-semibold text-[#464652] mt-0.5">Clear all coins, progress, and battle history</p>
+          <div className="flex-1 z-10">
+            <h2 className="text-lg font-bold text-red-700">Factory Reset Journey</h2>
+            <p className="text-sm font-medium text-red-900/60 mt-1">Erase all coins, progress, and battle history permanently</p>
           </div>
-        </button>
-      </main>
+        </motion.button>
+      </motion.main>
 
       {/* Reset Modal */}
       <AnimatePresence>
@@ -246,35 +253,37 @@ export default function ParentSettings() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-[rgba(0,0,0,0.5)] z-50 flex items-center justify-center p-6"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-6"
           >
             <motion.div 
-              initial={{ scale: 0.95, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 20 }}
-              className="bg-white rounded-[24px] p-6 w-full max-w-[340px] flex flex-col items-center shadow-[0_8px_16px_rgba(0,0,0,0.15)] relative"
+              initial={{ scale: 0.9, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.9, y: 20, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              className="bg-white rounded-[32px] p-8 w-full max-w-[360px] flex flex-col items-center shadow-2xl relative overflow-hidden"
             >
-              <div className="w-16 h-16 rounded-full bg-[#ffdad6] flex items-center justify-center mb-4">
-                <Trash2 size={32} color="#ba1a1a" />
+              <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-red-500 to-rose-600" />
+              <div className="w-20 h-20 rounded-full bg-red-50 flex items-center justify-center mb-5 ring-8 ring-red-50/50">
+                <Trash2 size={36} className="text-red-600" />
               </div>
-              <h2 className="text-[18px] font-bold text-[#191c1e] text-center leading-6 mb-3">
-                Are you sure you want to reset this journey as it lost all the data?
+              <h2 className="text-xl font-extrabold text-[#191c1e] text-center mb-3">
+                Wipe All Data?
               </h2>
-              <p className="text-sm text-[#464652] text-center leading-5 mb-6">
-                This will permanently delete all coins, learning progress, level achievements, completed chapters, and badges. This cannot be undone.
+              <p className="text-[15px] text-[#464652] text-center leading-relaxed mb-8">
+                This action is <span className="font-bold text-red-600">irreversible</span>. It will permanently delete all coins, level achievements, completed chapters, and badges.
               </p>
-              <div className="flex w-full gap-3">
-                <button 
-                  onClick={() => setShowResetModal(false)}
-                  className="flex-1 py-3.5 rounded-xl border-2 border-[#c7c5d4] flex items-center justify-center hover:bg-gray-50 transition-colors"
-                >
-                  <span className="text-[15px] font-semibold text-[#464652]">Cancel</span>
-                </button>
+              <div className="flex flex-col w-full gap-3">
                 <button 
                   onClick={handleResetJourney}
-                  className="flex-1 py-3.5 rounded-xl bg-[#ba1a1a] flex items-center justify-center hover:opacity-90 transition-opacity"
+                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 shadow-lg shadow-red-500/30 transition-all flex items-center justify-center"
                 >
-                  <span className="text-[15px] font-bold text-white">Yes, Reset</span>
+                  <span className="text-[16px] font-bold text-white tracking-wide">Yes, Wipe Data</span>
+                </button>
+                <button 
+                  onClick={() => setShowResetModal(false)}
+                  className="w-full py-4 rounded-2xl bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center"
+                >
+                  <span className="text-[16px] font-bold text-[#464652]">Cancel</span>
                 </button>
               </div>
             </motion.div>
@@ -283,11 +292,19 @@ export default function ParentSettings() {
       </AnimatePresence>
 
       {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 bg-[#323232] text-white px-5 py-3 rounded-lg flex items-center gap-3 z-50 shadow-lg min-w-max">
-          <span className="text-sm font-medium tracking-wide">{toastMessage}</span>
-        </div>
-      )}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-gray-900/90 backdrop-blur-md text-white px-6 py-4 rounded-2xl flex items-center gap-3 z-50 shadow-2xl min-w-max border border-gray-700/50"
+          >
+            <Save size={20} className="text-green-400" />
+            <span className="text-[15px] font-semibold tracking-wide">{toastMessage}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

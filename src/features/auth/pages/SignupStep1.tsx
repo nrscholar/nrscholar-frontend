@@ -6,10 +6,10 @@ export default function SignupStep1Screen() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [fullName, setFullName] = useState(searchParams.get("fullName") || "");
-  const [email, setEmail] = useState(searchParams.get("email") || "");
+  const [mobile, setMobile] = useState(searchParams.get("mobile") || "");
 
   const handleNext = () => {
-    navigate(`/signup-step2?fullName=${encodeURIComponent(fullName)}&email=${encodeURIComponent(email)}`);
+    navigate(`/signup-step2?fullName=${encodeURIComponent(fullName)}&mobile=${encodeURIComponent(mobile)}`);
   };
 
   return (
@@ -73,8 +73,8 @@ export default function SignupStep1Screen() {
                 <input
                   type="tel"
                   placeholder="Enter Mobile Number"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={mobile}
+                  onChange={(e) => setMobile(e.target.value)}
                   className="w-full h-14 bg-white rounded-full pl-6 pr-14 text-base font-medium text-[#191c1e] border border-[#c7c5d4] focus:outline-none focus:border-[#141779] transition-colors placeholder:text-[#c7c5d4]"
                 />
                 <Phone size={22} color="#c7c5d4" className="absolute right-5" />
@@ -86,8 +86,8 @@ export default function SignupStep1Screen() {
           {/* Primary Action */}
           <button
             onClick={handleNext}
-            disabled={!fullName || !email}
-            className={`w-full h-14 bg-[#141779] rounded-full flex items-center justify-center gap-3 shadow-[0_4px_15px_rgba(20,23,121,0.3)] transition-opacity ${(!fullName || !email) ? 'opacity-70 cursor-not-allowed' : 'hover:opacity-90'}`}
+            disabled={!fullName || !mobile}
+            className={`w-full h-14 bg-[#141779] rounded-full flex items-center justify-center gap-3 shadow-[0_4px_15px_rgba(20,23,121,0.3)] transition-opacity ${(!fullName || !mobile) ? 'opacity-70 cursor-not-allowed' : 'hover:opacity-90'}`}
           >
             <span className="text-white text-lg font-semibold">Next Step</span>
             <Rocket size={22} color="white" />

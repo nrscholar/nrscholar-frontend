@@ -14,6 +14,8 @@ export default function ChaptersScreen() {
   const subjectName = searchParams.get("subjectName") || "Solar System";
 
   const [loading, setLoading] = useState(true);
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [activeSubject, setActiveSubject] = useState<any>(null);
   const [chapters, setChapters] = useState<any[]>([]);
   const [completedChapters, setCompletedChapters] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -24,18 +26,29 @@ export default function ChaptersScreen() {
   };
   
   useEffect(() => {
-    const fetchChapters = async () => {
+    const fetchSubjects = async () => {
       try {
-        // Fetch subjects first to get a subjectId
         const subRes = await apiFetch("/api/practice/subjects");
         const subData = await subRes.json();
-        let sId = "sub1";
         if (subData.success && subData.data.length > 0) {
-          sId = subData.data[0]._id;
+          setSubjects(subData.data);
+          setActiveSubject(subData.data[0]);
         }
+      } catch (e) {
+        console.error("Failed to fetch subjects");
+      }
+    };
+    fetchSubjects();
+  }, []);
 
+  useEffect(() => {
+    if (!activeSubject) return;
+    
+    const fetchChapters = async () => {
+      setLoading(true);
+      try {
         const [chRes, pRes] = await Promise.all([
-          apiFetch(`/api/practice/chapters/${sId}`),
+          apiFetch(`/api/practice/chapters/${activeSubject._id}`),
           apiFetch(`/api/practice/chapter-progress`)
         ]);
         
@@ -44,7 +57,10 @@ export default function ChaptersScreen() {
 
         if (chData.success) {
           setChapters(chData.data);
+        } else {
+          setChapters([]);
         }
+        
         if (pData.success && pData.data) {
           const completedIds = pData.data
             .filter((p: any) => p.completed)
@@ -58,7 +74,7 @@ export default function ChaptersScreen() {
       }
     };
     fetchChapters();
-  }, []);
+  }, [activeSubject]);
 
   const totalChapters = chapters.length;
   // A chapter is only fully complete if the legacy exact match exists OR the hard level boss is beaten
@@ -75,18 +91,38 @@ export default function ChaptersScreen() {
   return (
     <div className="min-h-screen bg-[#f7f9fb] font-sans pb-10">
       {/* TopAppBar */}
-      <header className="flex items-center justify-between px-6 h-16 bg-[rgba(247,249,251,0.8)] border-b border-[rgba(255,255,255,0.2)] sticky top-0 z-50 backdrop-blur-sm">
-        <button onClick={() => navigate("/home")} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors">
-          <ArrowLeft size={24} color="#141779" />
-        </button>
-        <h1 className="text-2xl font-bold text-[#141779]">{subjectName}</h1>
-        <button onClick={() => navigate("/profile")} className="w-10 h-10 rounded-full border-2 border-white bg-[#2d328f] overflow-hidden hover:opacity-80 transition-opacity">
-          <img
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDfj2X6XyApFBA2pBstnJTUCQiXa_6N8Aa5HyJFbmRfUns_QavfAGtkXx8Pf9gAdVWNo3VoZXk0XS5RlpTEZJmYXcySbZBisguP11eKxfswie0FivmvHgHxqpwrdPD_6XhBsZLkcBiKxRDQCmpAU26LfuGIYTvoA2rGBiUGUb2qCMzBmEvvu51A5cZKjZZZOLRCzskphl1WwKDNlmaTHLMDhpMTRg9nS0X6MSpqoK1pDZc_46uN3YyhgErTKiS9ZZf3EcwelgfWVg"
-            alt="Avatar"
-            className="w-full h-full object-cover"
-          />
-        </button>
+      <header className="flex flex-col bg-[rgba(247,249,251,0.8)] border-b border-[rgba(255,255,255,0.2)] sticky top-0 z-50 backdrop-blur-sm">
+        <div className="flex items-center justify-between px-6 h-16">
+          <button onClick={() => navigate("/home")} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors">
+            <ArrowLeft size={24} color="#141779" />
+          </button>
+          <h1 className="text-xl font-bold text-[#141779]">Learning Path</h1>
+          <button onClick={() => navigate("/profile")} className="w-10 h-10 rounded-full border-2 border-white bg-[#2d328f] overflow-hidden hover:opacity-80 transition-opacity">
+            <img
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDfj2X6XyApFBA2pBstnJTUCQiXa_6N8Aa5HyJFbmRfUns_QavfAGtkXx8Pf9gAdVWNo3VoZXk0XS5RlpTEZJmYXcySbZBisguP11eKxfswie0FivmvHgHxqpwrdPD_6XhBsZLkcBiKxRDQCmpAU26LfuGIYTvoA2rGBiUGUb2qCMzBmEvvu51A5cZKjZZZOLRCzskphl1WwKDNlmaTHLMDhpMTRg9nS0X6MSpqoK1pDZc_46uN3YyhgErTKiS9ZZf3EcwelgfWVg"
+              alt="Avatar"
+              className="w-full h-full object-cover"
+            />
+          </button>
+        </div>
+        
+        {/* Subject Selector Tabs */}
+        {subjects.length > 0 && (
+          <div className="flex overflow-x-auto hide-scrollbar px-6 pb-3 gap-3">
+            {subjects.map((sub) => {
+              const isActive = activeSubject?._id === sub._id;
+              return (
+                <button
+                  key={sub._id}
+                  onClick={() => setActiveSubject(sub)}
+                  className={`px-5 py-2 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${isActive ? 'bg-[#141779] text-white shadow-md' : 'bg-white text-[#767683] border border-[#e0e3e5] hover:border-[#141779]'}`}
+                >
+                  {sub.name}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </header>
 
       <main className="px-6 pt-6 flex flex-col gap-6">
@@ -128,62 +164,69 @@ export default function ChaptersScreen() {
 
             {/* Chapter List */}
             <div className="flex flex-col gap-4">
-              {chapters.map((chap, index) => {
-                const isCompleted = isChapterCompleted(chap._id);
-                const isCurrent = !isCompleted && index === currentChapterIndex;
-                const status = isCompleted ? "completed" : isCurrent ? "current" : "locked";
-                const IconComponent = chapterIcons[index % chapterIcons.length];
+              {chapters.length === 0 ? (
+                <div className="flex flex-col items-center justify-center bg-[rgba(255,255,255,0.7)] rounded-2xl p-8 border-[1.5px] border-[rgba(255,255,255,0.8)] text-center mt-4">
+                  <Rocket size={40} color="#c7c5d4" className="mb-3" />
+                  <p className="text-[#767683] font-medium">New chapters for {activeSubject?.name} are launching soon!</p>
+                </div>
+              ) : (
+                chapters.map((chap, index) => {
+                  const isCompleted = isChapterCompleted(chap._id);
+                  const isCurrent = !isCompleted && index === currentChapterIndex;
+                  const status = isCompleted ? "completed" : isCurrent ? "current" : "locked";
+                  const IconComponent = chapterIcons[index % chapterIcons.length];
 
-                if (status === "completed") {
+                  if (status === "completed") {
+                    return (
+                      <button key={chap._id} onClick={() => navigate(`/chapter-levels?chapterId=${chap._id}&chapterName=${encodeURIComponent(chap.name)}`)} className="flex items-center gap-4 bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.8)] text-left hover:bg-white transition-colors w-full">
+                        <div className="w-12 h-12 rounded-full bg-[rgba(0,106,98,0.1)] border border-[rgba(0,106,98,0.2)] flex items-center justify-center shrink-0">
+                          <IconComponent size={24} color="#006a62" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-xs font-bold text-[#006a62] tracking-[1px] mb-0.5 uppercase">CHAPTER {index + 1}</p>
+                          <h3 className="text-lg font-medium text-[#141779]">{chap.name}</h3>
+                        </div>
+                        <CheckCircle size={24} color="#006a62" />
+                      </button>
+                    );
+                  }
+
+                  if (status === "current") {
+                    return (
+                      <div key={chap._id} onClick={() => navigate(`/chapter-levels?chapterId=${chap._id}&chapterName=${encodeURIComponent(chap.name)}`)} className="relative flex items-center gap-4 bg-[rgba(87,250,233,0.3)] rounded-2xl p-4 border-2 border-[rgba(0,106,98,0.3)] overflow-hidden shadow-[0_4px_10px_rgba(0,0,0,0.1)] cursor-pointer hover:opacity-90">
+                        <motion.div
+                          animate={{ scale: [1, 1.05, 1] }}
+                          transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                          className="absolute -top-8 -right-8 w-24 h-24 rounded-full bg-[rgba(0,106,98,0.05)]"
+                        />
+                        <div className="w-12 h-12 rounded-full bg-[#006a62] flex items-center justify-center shrink-0 shadow-[0_4px_8px_rgba(0,0,0,0.3)] z-10">
+                          <IconComponent size={24} color="white" />
+                        </div>
+                        <div className="flex-1 z-10">
+                          <p className="text-xs font-bold text-[#006a62] tracking-[1px] mb-0.5 uppercase">CHAPTER {index + 1}</p>
+                          <h3 className="text-lg font-bold text-[#141779]">{chap.name}</h3>
+                        </div>
+                        <button onClick={(e) => { e.stopPropagation(); navigate(`/chapter-levels?chapterId=${chap._id}&chapterName=${encodeURIComponent(chap.name)}`); }} className="bg-[#141779] px-6 py-2 rounded-full z-10 hover:opacity-90 transition-opacity">
+                          <span className="text-white text-sm font-semibold">Start</span>
+                        </button>
+                      </div>
+                    );
+                  }
+
                   return (
-                    <button key={chap._id} onClick={() => navigate(`/chapter-levels?chapterId=${chap._id}&chapterName=${encodeURIComponent(chap.name)}`)} className="flex items-center gap-4 bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.8)] text-left hover:bg-white transition-colors w-full">
-                      <div className="w-12 h-12 rounded-full bg-[rgba(0,106,98,0.1)] border border-[rgba(0,106,98,0.2)] flex items-center justify-center shrink-0">
-                        <IconComponent size={24} color="#006a62" />
+                    <div key={chap._id} onClick={() => showToast(`Complete Chapter ${currentChapterIndex + 1} to unlock!`)} className="flex items-center gap-4 bg-[#f2f4f6] opacity-60 rounded-2xl p-4 border border-[rgba(118,118,131,0.1)] cursor-pointer">
+                      <div className="w-12 h-12 rounded-full bg-[rgba(118,118,131,0.1)] flex items-center justify-center shrink-0">
+                        <IconComponent size={24} color="#767683" />
                       </div>
                       <div className="flex-1">
-                        <p className="text-xs font-bold text-[#006a62] tracking-[1px] mb-0.5 uppercase">CHAPTER {index + 1}</p>
-                        <h3 className="text-lg font-medium text-[#141779]">{chap.name}</h3>
+                        <p className="text-xs font-bold text-[#767683] tracking-[1px] mb-0.5 uppercase">CHAPTER {index + 1}</p>
+                        <h3 className="text-lg font-medium text-[#464652]">{chap.name}</h3>
                       </div>
-                      <CheckCircle size={24} color="#006a62" />
-                    </button>
-                  );
-                }
-
-                if (status === "current") {
-                  return (
-                    <div key={chap._id} onClick={() => navigate(`/chapter-levels?chapterId=${chap._id}&chapterName=${encodeURIComponent(chap.name)}`)} className="relative flex items-center gap-4 bg-[rgba(87,250,233,0.3)] rounded-2xl p-4 border-2 border-[rgba(0,106,98,0.3)] overflow-hidden shadow-[0_4px_10px_rgba(0,0,0,0.1)] cursor-pointer hover:opacity-90">
-                      <motion.div
-                        animate={{ scale: [1, 1.05, 1] }}
-                        transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-                        className="absolute -top-8 -right-8 w-24 h-24 rounded-full bg-[rgba(0,106,98,0.05)]"
-                      />
-                      <div className="w-12 h-12 rounded-full bg-[#006a62] flex items-center justify-center shrink-0 shadow-[0_4px_8px_rgba(0,0,0,0.3)] z-10">
-                        <IconComponent size={24} color="white" />
-                      </div>
-                      <div className="flex-1 z-10">
-                        <p className="text-xs font-bold text-[#006a62] tracking-[1px] mb-0.5 uppercase">CHAPTER {index + 1}</p>
-                        <h3 className="text-lg font-bold text-[#141779]">{chap.name}</h3>
-                      </div>
-                      <button onClick={(e) => { e.stopPropagation(); navigate(`/chapter-levels?chapterId=${chap._id}&chapterName=${encodeURIComponent(chap.name)}`); }} className="bg-[#141779] px-6 py-2 rounded-full z-10 hover:opacity-90 transition-opacity">
-                        <span className="text-white text-sm font-semibold">Start</span>
-                      </button>
+                      <Lock size={24} color="#767683" />
                     </div>
                   );
-                }
-
-                return (
-                  <div key={chap._id} onClick={() => showToast(`Complete Chapter ${currentChapterIndex + 1} to unlock!`)} className="flex items-center gap-4 bg-[#f2f4f6] opacity-60 rounded-2xl p-4 border border-[rgba(118,118,131,0.1)] cursor-pointer">
-                    <div className="w-12 h-12 rounded-full bg-[rgba(118,118,131,0.1)] flex items-center justify-center shrink-0">
-                      <IconComponent size={24} color="#767683" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-xs font-bold text-[#767683] tracking-[1px] mb-0.5 uppercase">CHAPTER {index + 1}</p>
-                      <h3 className="text-lg font-medium text-[#464652]">{chap.name}</h3>
-                    </div>
-                    <Lock size={24} color="#767683" />
-                  </div>
-                );
-              })}
+                })
+              )}
             </div>
           </>
         )}

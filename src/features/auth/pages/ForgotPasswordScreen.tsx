@@ -5,15 +5,15 @@ import { useNavigate } from "react-router-dom";
 
 export default function ForgotPasswordScreen() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [mobile, setMobile] = useState("");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) {
-      setErrorMsg("Please enter your email.");
+    if (!mobile.trim()) {
+      setErrorMsg("Please enter your registered mobile number.");
       setMsg("");
       return;
     }
@@ -22,14 +22,22 @@ export default function ForgotPasswordScreen() {
     setLoading(true);
 
     try {
-      // Mock API call
-      setTimeout(() => {
-        setLoading(false);
-        setMsg("Password reset link sent to your email!");
-        setTimeout(() => navigate("/login"), 3000);
-      }, 1500);
+      const response = await fetch("/api/users/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mobile: mobile.trim() }),
+      });
+      const data = await response.json();
+      setLoading(false);
+      
+      if (data.success) {
+        setMsg(data.message || "Request submitted. Please check your phone.");
+        setTimeout(() => navigate("/login"), 4000);
+      } else {
+        setErrorMsg(data.message || "Something went wrong. Please try again.");
+      }
     } catch (e) {
-      setErrorMsg("Unable to connect. Please try again.");
+      setErrorMsg("Unable to connect. Is the server running?");
       setLoading(false);
     }
   };
@@ -69,7 +77,7 @@ export default function ForgotPasswordScreen() {
         <div className="flex flex-col items-center mb-6 text-center">
           <h1 className="text-[26px] font-bold text-[#141779] tracking-[-0.5px]">Forgot Password?</h1>
           <p className="text-base text-[#767683] font-medium mt-2 max-w-[280px]">
-            Enter your email and we'll send you a link to reset your password.
+            Enter your registered mobile number and we'll help you reset your password.
           </p>
         </div>
 
@@ -90,10 +98,10 @@ export default function ForgotPasswordScreen() {
           <div className="relative flex items-center">
             <AtSign size={20} color="#767683" className="absolute left-4" />
             <input
-              type="email"
-              placeholder="Enter Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="tel"
+              placeholder="Enter Mobile Number"
+              value={mobile}
+              onChange={(e) => setMobile(e.target.value)}
               className="w-full h-14 bg-[#eceef0] rounded-full pl-12 pr-4 text-base font-medium text-[#191c1e] focus:outline-none focus:ring-2 focus:ring-[#141779] transition-shadow placeholder:text-[#767683]"
               required
             />

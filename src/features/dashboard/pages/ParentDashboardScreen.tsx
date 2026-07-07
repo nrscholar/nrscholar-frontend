@@ -112,22 +112,18 @@ export default function ParentDashboardScreen() {
               <span className="text-2xl font-bold text-[#30007f]">{solvedToday}</span>
               <span className="text-xs font-semibold text-[#767683] mt-0.5">Solved Today</span>
             </div>
-            <div className="flex-1 bg-[rgba(242,244,246,0.5)] rounded-xl p-2 flex flex-col items-center justify-center">
-              <span className="text-2xl font-bold text-[#141779] text-center">{todayConfidenceScore}%</span>
-              <span className="text-xs font-semibold text-[#767683] mt-0.5">Confidence</span>
-            </div>
           </div>
 
           <div className="w-full">
             <div className="flex justify-between items-center mb-1.5">
-              <span className="text-[11px] font-bold text-[#141779]">JOURNEY PROGRESS</span>
-              <span className="text-[11px] font-bold text-[#141779]">{fuel} / {targetFuel} Fuel</span>
+              <span className="text-[11px] font-bold text-[#141779]">DAILY CONFIDENCE SCORE</span>
+              <span className="text-[11px] font-bold text-[#141779]">{todayConfidenceScore}%</span>
             </div>
             <div className="h-2 bg-[rgba(20,23,121,0.1)] rounded-full overflow-hidden mb-1.5">
-              <div className="h-full bg-[#006a62] transition-all" style={{ width: `${fuelPercentage}%` }} />
+              <div className="h-full bg-[#30007f] transition-all" style={{ width: `${todayConfidenceScore}%` }} />
             </div>
             <p className="text-[11px] text-[#767683]">
-              {currentCityName} ➡️ {nextCityName} ({fuelNeeded} Fuel remaining)
+              Based on today's correct answers ({solvedToday} attempts)
             </p>
           </div>
         </div>

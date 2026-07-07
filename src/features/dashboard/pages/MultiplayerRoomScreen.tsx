@@ -18,6 +18,10 @@ export default function MultiplayerRoomScreen() {
         setRoom(data.data);
         if (data.data.status === "playing") {
           navigate(`/multiplayer-battle/${roomId}`);
+        } else if (data.data.status === "ready") {
+          // Both players are in, automatically start the battle!
+          apiFetch(`/api/multiplayer/room/${roomId}/start`, { method: "POST" })
+            .catch(err => console.error("Failed to auto-start room:", err));
         }
       } else {
         setError(data.message || "Room not found");
@@ -29,7 +33,7 @@ export default function MultiplayerRoomScreen() {
 
   useEffect(() => {
     fetchRoomStatus();
-    const interval = setInterval(fetchRoomStatus, 3000); // poll every 3 seconds
+    const interval = setInterval(fetchRoomStatus, 2000); // poll every 2 seconds for faster transition
     return () => clearInterval(interval);
   }, [roomId, navigate]);
 

@@ -32,7 +32,7 @@ export default function SignupStep3Screen() {
     setErrorMsg("");
 
     const fullName = searchParams.get("fullName") || "";
-    const email = searchParams.get("email") || "";
+    const mobile = searchParams.get("mobile") || "";
     const childName = searchParams.get("childName") || "";
     const age = searchParams.get("age") || "";
     const selectedClass = searchParams.get("selectedClass") || "";
@@ -40,7 +40,7 @@ export default function SignupStep3Screen() {
 
     const finalData = {
       fullName,
-      email,
+      mobile,
       password,
       childName,
       childAge: age,
@@ -59,7 +59,7 @@ export default function SignupStep3Screen() {
         },
         body: JSON.stringify({
           fullName,
-          email,
+          mobile,
           password,
           childName,
           childAge: age ? parseInt(age, 10) : null,

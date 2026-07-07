@@ -1,22 +1,36 @@
-import { useState, useEffect } from "react";
+import { AlertCircle, ArrowLeft, CheckCircle, Delete } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle, AlertCircle, Delete } from "lucide-react";
+import { apiFetch } from "../../../api";
 
 export default function ParentalGateScreen() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"loading" | "set" | "enter">("loading");
+  const [mode, setMode] = useState<"loading" | "set" | "enter" | "reset-step1" | "reset-step2">("loading");
   const [pin, setPin] = useState("");
+  const [tempPin, setTempPin] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotMobile, setForgotMobile] = useState("");
+  const [forgotPassword, setForgotPassword] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
-    // Check local storage for PIN
-    const savedPin = localStorage.getItem("studysaathy_parent_pin");
-    if (savedPin) {
-      setMode("enter");
-    } else {
-      setMode("set");
+    async function checkPinStatus() {
+      try {
+        const res = await apiFetch("/api/parent/controls");
+        const json = await res.json();
+        if (json.success && json.data?.isPinSet) {
+          setMode("enter");
+        } else {
+          setMode("set");
+        }
+      } catch (err) {
+        console.error("Failed to check PIN status", err);
+        setMode("set");
+      }
     }
+    checkPinStatus();
   }, []);
 
   const addPin = (digit: string) => {
@@ -26,6 +40,22 @@ export default function ParentalGateScreen() {
       
       if (mode === "enter" && nextPin.length === 4) {
         validatePin(nextPin);
+      } else if (mode === "reset-step1" && nextPin.length === 4) {
+        setTempPin(nextPin);
+        setTimeout(() => {
+          setPin("");
+          setMode("reset-step2");
+        }, 300);
+      } else if (mode === "reset-step2" && nextPin.length === 4) {
+        if (nextPin === tempPin) {
+          doResetPin(nextPin);
+        } else {
+          setErrorMsg("PINs do not match. Try again.");
+          setTimeout(() => {
+            setPin("");
+            setMode("reset-step1");
+          }, 1000);
+        }
       }
     }
   };
@@ -35,23 +65,107 @@ export default function ParentalGateScreen() {
     setErrorMsg("");
   };
 
-  const validatePin = (enteredPin: string) => {
-    const savedPin = localStorage.getItem("studysaathy_parent_pin");
-    if (enteredPin === savedPin) {
-      setSuccessMsg("Access Granted");
-      setTimeout(() => navigate("/parent/dashboard"), 1000);
-    } else {
-      setErrorMsg("Incorrect PIN");
+  const validatePin = async (enteredPin: string) => {
+    try {
+      const res = await apiFetch("/api/parent/verify-pin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin: enteredPin })
+      });
+      const json = await res.json();
+      
+      if (json.success) {
+        setSuccessMsg("Access Granted");
+        setTimeout(() => navigate("/parent/dashboard"), 1000);
+      } else {
+        const errorDetail = typeof json.detail === 'string' ? json.detail : (json.detail ? JSON.stringify(json.detail) : "");
+        setErrorMsg(json.message || errorDetail || "Incorrect PIN");
+        setTimeout(() => setPin(""), 1000);
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || "Verification Failed");
       setTimeout(() => setPin(""), 1000);
     }
   };
 
-  const handleSetPin = () => {
+  const handleSetPin = async () => {
     if (pin.length === 4) {
-      localStorage.setItem("studysaathy_parent_pin", pin);
-      setSuccessMsg("PIN Set Successfully!");
-      setTimeout(() => navigate("/parent/dashboard"), 1000);
+      try {
+        const res = await apiFetch("/api/parent/set-pin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pin })
+        });
+        const json = await res.json();
+        
+        if (json.success) {
+          setSuccessMsg("PIN Set Successfully!");
+          setTimeout(() => navigate("/parent/dashboard"), 1000);
+        } else {
+          const errorDetail = typeof json.detail === 'string' ? json.detail : (json.detail ? JSON.stringify(json.detail) : "");
+          setErrorMsg(json.message || errorDetail || "Failed to set PIN");
+        }
+      } catch (err: any) {
+        setErrorMsg(err.message || "Failed to set PIN");
+      }
     }
+  };
+
+  const doResetPin = async (newPin: string) => {
+    try {
+      const res = await apiFetch("/api/parent/set-pin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin: newPin })
+      });
+      const json = await res.json();
+      
+      if (json.success) {
+        setSuccessMsg("PIN Reset Successfully!");
+        setTimeout(() => navigate("/parent/dashboard"), 1000);
+      } else {
+        const errorDetail = typeof json.detail === 'string' ? json.detail : (json.detail ? JSON.stringify(json.detail) : "");
+        setErrorMsg(json.message || errorDetail || "Failed to reset PIN");
+        setTimeout(() => { setPin(""); setMode("reset-step1"); }, 1000);
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to reset PIN");
+      setTimeout(() => { setPin(""); setMode("reset-step1"); }, 1000);
+    }
+  };
+
+  const handleVerifyCredentials = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsVerifying(true);
+    setErrorMsg("");
+    try {
+      const res = await apiFetch("/api/users/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mobile: forgotMobile, password: forgotPassword })
+      });
+      const json = await res.json();
+      
+      if (json.success) {
+        setShowForgotModal(false);
+        setForgotMobile("");
+        setForgotPassword("");
+        setSuccessMsg("Identity Verified! Enter new PIN.");
+        setPin("");
+        setMode("reset-step1");
+        setTimeout(() => setSuccessMsg(""), 3000);
+      } else {
+        setErrorMsg(json.message || "Invalid mobile number or password.");
+      }
+    } catch (err) {
+      setErrorMsg("Network error verifying identity.");
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleForgotPin = () => {
+    setShowForgotModal(true);
   };
 
   if (mode === "loading") return <div className="min-h-screen bg-[#f7f9fb]" />;
@@ -77,12 +191,16 @@ export default function ParentalGateScreen() {
         
         <div className="text-center mb-8">
           <h2 className="text-2xl font-bold text-[#141779] mb-2">
-            {mode === "set" ? "Set Parent PIN" : "Enter Parent PIN"}
+            {mode === "set" ? "Set Parent PIN" : 
+             mode === "enter" ? "Enter Parent PIN" : 
+             mode === "reset-step1" ? "Enter New PIN" : 
+             "Confirm New PIN"}
           </h2>
           <p className="text-sm font-medium text-[#464652] max-w-[280px]">
-            {mode === "set"
-              ? "Create a 4-digit security code to keep parental controls secure."
-              : "Enter your 4-digit security code to access parental controls."}
+            {mode === "set" ? "Create a 4-digit security code to keep parental controls secure." : 
+             mode === "enter" ? "Enter your 4-digit security code to access parental controls." : 
+             mode === "reset-step1" ? "Enter your new 4-digit PIN." : 
+             "Re-enter your new 4-digit PIN to confirm."}
           </p>
         </div>
 
@@ -166,12 +284,61 @@ export default function ParentalGateScreen() {
 
         {/* Forgot Link for Enter Mode */}
         {mode === "enter" && (
-          <button className="mt-8 text-[#141779] text-sm font-bold hover:underline">
+          <button 
+            onClick={handleForgotPin}
+            className="mt-8 text-[#141779] text-sm font-bold hover:underline"
+          >
             Forgot PIN?
           </button>
         )}
 
       </main>
+
+      {/* Forgot PIN Modal */}
+      {showForgotModal && (
+        <div className="absolute inset-0 z-[100] flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl w-full max-w-[340px] p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+            <h3 className="text-xl font-bold text-[#141779] mb-2">Verify Identity</h3>
+            <p className="text-sm text-[#464652] mb-6">Enter your account credentials to reset the Parent PIN.</p>
+            
+            <form onSubmit={handleVerifyCredentials} className="flex flex-col gap-4">
+              <input
+                type="tel"
+                placeholder="Mobile Number"
+                value={forgotMobile}
+                onChange={(e) => setForgotMobile(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-[#d8dadc] focus:outline-none focus:border-[#006a62] focus:ring-1 focus:ring-[#006a62]"
+                required
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                value={forgotPassword}
+                onChange={(e) => setForgotPassword(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-[#d8dadc] focus:outline-none focus:border-[#006a62] focus:ring-1 focus:ring-[#006a62]"
+                required
+              />
+              
+              <div className="flex flex-col gap-3 mt-4">
+                <button
+                  type="submit"
+                  disabled={isVerifying || !forgotMobile || !forgotPassword}
+                  className="w-full py-3.5 rounded-xl font-bold text-white bg-[#006a62] disabled:opacity-50 transition-opacity flex items-center justify-center"
+                >
+                  {isVerifying ? "Verifying..." : "Verify"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowForgotModal(false)}
+                  className="w-full py-3.5 rounded-xl font-bold text-[#464652] hover:bg-[#f7f9fb] transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

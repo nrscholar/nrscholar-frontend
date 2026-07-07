@@ -5,6 +5,7 @@ import Layout from "./components/Layout";
 // Auth feature pages
 import ForgotPasswordScreen from "../features/auth/pages/ForgotPasswordScreen";
 import LoginScreen from "../features/auth/pages/LoginScreen";
+import NotFoundScreen from "./NotFoundScreen";
 import ParentalGateScreen from "../features/auth/pages/ParentalGateScreen";
 import SignupStep1Screen from "../features/auth/pages/SignupStep1";
 import SignupStep2Screen from "../features/auth/pages/SignupStep2";
@@ -130,7 +131,7 @@ function App() {
             <Route path="/multiplayer-battle/:roomId" element={<MultiplayerBattleScreen />} />
           </Route>
           
-          <Route path="*" element={<Navigate to="/home" replace />} />
+          <Route path="*" element={<NotFoundScreen />} />
         </Routes>
       </Suspense>
     </BrowserRouter>
