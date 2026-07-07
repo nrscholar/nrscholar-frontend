@@ -151,8 +151,8 @@ export default function ParentDashboardScreen() {
           <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-[#006a62]/10 to-transparent rounded-bl-full pointer-events-none transition-transform group-hover:scale-110 duration-500" />
           <div className="flex justify-between items-start mb-4 gap-2 relative z-10">
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-bold text-[#464652] tracking-[1px] mb-1">STUDENT PROFILE</p>
-              <h2 className="text-2xl font-bold text-[#141779] truncate">{childName}'s Journey</h2>
+              <p className="text-xs font-bold text-[#464652] tracking-[1px] mb-1">STUDENT PROFILE</p>
+              <h2 className="text-[26px] font-bold text-[#141779] truncate">{childName}'s Journey</h2>
             </div>
             <div className="bg-[#57fae9] px-3 py-1 rounded-full whitespace-nowrap shrink-0">
               <span className="text-xs font-bold text-[#007168]">Lvl {userLevel} Explorer</span>
@@ -162,20 +162,20 @@ export default function ParentDashboardScreen() {
           <div className="flex gap-3 mb-5 mt-2">
             <div className="flex-1 bg-gradient-to-br from-[rgba(255,255,255,0.9)] to-[rgba(255,255,255,0.5)] rounded-[18px] p-4 flex flex-col items-center justify-center border border-[rgba(255,255,255,0.6)] shadow-[0_8px_20px_rgba(0,106,98,0.04)] relative overflow-hidden hover:scale-[1.02] transition-transform">
               <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-[#006a62]/10 to-transparent rounded-bl-full" />
-              <span className="text-3xl font-black text-[#006a62] drop-shadow-sm mb-1">{todayTime}<span className="text-lg">m</span></span>
-              <span className="text-[10px] font-bold text-[#767683] uppercase tracking-widest">Today's Time</span>
+              <span className="text-4xl font-black text-[#006a62] drop-shadow-sm mb-1">{todayTime}<span className="text-xl">m</span></span>
+              <span className="text-[11px] font-bold text-[#767683] uppercase tracking-widest">Today's Time</span>
             </div>
             <div className="flex-1 bg-gradient-to-br from-[rgba(255,255,255,0.9)] to-[rgba(255,255,255,0.5)] rounded-[18px] p-4 flex flex-col items-center justify-center border border-[rgba(255,255,255,0.6)] shadow-[0_8px_20px_rgba(48,0,127,0.04)] relative overflow-hidden hover:scale-[1.02] transition-transform">
               <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-[#30007f]/10 to-transparent rounded-bl-full" />
-              <span className="text-3xl font-black text-[#30007f] drop-shadow-sm mb-1">{solvedToday}</span>
-              <span className="text-[10px] font-bold text-[#767683] uppercase tracking-widest">Solved Today</span>
+              <span className="text-4xl font-black text-[#30007f] drop-shadow-sm mb-1">{solvedToday}</span>
+              <span className="text-[11px] font-bold text-[#767683] uppercase tracking-widest">Solved Today</span>
             </div>
           </div>
 
           <div className="w-full">
             <div className="flex justify-between items-center mb-2">
-              <span className="text-[11px] font-bold text-[#141779] tracking-wider">DAILY CONFIDENCE SCORE</span>
-              <span className="text-[13px] font-black text-[#141779]">{todayConfidenceScore}%</span>
+              <span className="text-[12px] font-bold text-[#141779] tracking-wider">DAILY CONFIDENCE SCORE</span>
+              <span className="text-[15px] font-black text-[#141779]">{todayConfidenceScore}%</span>
             </div>
             <div className="h-3 bg-[rgba(20,23,121,0.06)] rounded-full overflow-hidden mb-2 shadow-inner relative">
               <div 
@@ -185,7 +185,7 @@ export default function ParentDashboardScreen() {
                 <div className="absolute top-0 right-0 bottom-0 w-12 bg-gradient-to-l from-white/30 to-transparent" />
               </div>
             </div>
-            <p className="text-[10px] text-[#767683] font-semibold">
+            <p className="text-xs text-[#767683] font-semibold">
               Based on today's correct answers ({solvedToday} attempts)
             </p>
           </div>
@@ -194,28 +194,28 @@ export default function ParentDashboardScreen() {
         {/* Learning DNA */}
         <div id="dna-section" className="flex flex-col gap-3">
           <div className="flex items-center justify-between px-1">
-            <h3 className="text-sm font-semibold text-[#464652]">Cognitive Strengths & Weaknesses</h3>
+            <h3 className="text-[16px] font-semibold text-[#464652]">Cognitive Strengths & Weaknesses</h3>
           </div>
           
           <button onClick={() => setModalType("strengths")} className="text-left w-full bg-white/70 backdrop-blur-md rounded-[20px] p-5 border border-white/60 shadow-[0_4px_20px_rgba(0,0,0,0.03)] border-l-[5px] border-l-[#006a62] hover:bg-white hover:shadow-lg transition-all">
-            <h4 className="text-[14px] font-bold text-[#006a62] mb-1">💪 Strengths (Fast Processor)</h4>
-            <p className="text-[13px] text-[#464652]">{strengths}</p>
+            <h4 className="text-[16px] font-bold text-[#006a62] mb-1">💪 Strengths (Fast Processor)</h4>
+            <p className="text-[14px] text-[#464652]">{strengths}</p>
           </button>
 
           <button onClick={() => setModalType("weaknesses")} className="text-left w-full bg-white/70 backdrop-blur-md rounded-[20px] p-5 border border-white/60 shadow-[0_4px_20px_rgba(0,0,0,0.03)] border-l-[5px] border-l-[#ba1a1a] hover:bg-white hover:shadow-lg transition-all">
-            <h4 className="text-[14px] font-bold text-[#ba1a1a] mb-1">⚠️ Weaknesses / Review Needed</h4>
-            <p className="text-[13px] text-[#464652]">{weaknesses}</p>
+            <h4 className="text-[16px] font-bold text-[#ba1a1a] mb-1">⚠️ Weaknesses / Review Needed</h4>
+            <p className="text-[14px] text-[#464652]">{weaknesses}</p>
           </button>
 
           <div className="bg-white/70 backdrop-blur-md rounded-[20px] p-5 border border-white/60 shadow-[0_4px_20px_rgba(0,0,0,0.03)] border-l-[5px] border-l-[#141779]">
-            <h4 className="text-[14px] font-bold text-[#141779] mb-1">🔔 Risk Alerts</h4>
-            <p className="text-[13px] text-[#464652]">{risks}</p>
+            <h4 className="text-[16px] font-bold text-[#141779] mb-1">🔔 Risk Alerts</h4>
+            <p className="text-[14px] text-[#464652]">{risks}</p>
           </div>
         </div>
 
         {/* Parent Learning Section */}
         <div className="flex flex-col gap-3">
-          <h3 className="text-sm font-semibold text-[#464652] px-1">Parent Learning</h3>
+          <h3 className="text-[16px] font-semibold text-[#464652] px-1">Parent Learning</h3>
           <div className="grid grid-cols-2 gap-3">
             <button 
               onClick={() => navigate('/parent/daily-tip')}
@@ -227,10 +227,10 @@ export default function ParentDashboardScreen() {
               </div>
               <div className="relative z-10">
                 <div className="flex items-center gap-1.5 mb-0.5">
-                  <h3 className="text-[13px] font-bold text-[#141779] leading-tight">Daily Tip</h3>
-                  <span className="bg-[#006a62] text-white text-[8px] px-1.5 py-0.5 rounded-full uppercase font-bold tracking-tighter">Hot</span>
+                  <h3 className="text-[15px] font-bold text-[#141779] leading-tight">Daily Tip</h3>
+                  <span className="bg-[#006a62] text-white text-[9px] px-1.5 py-0.5 rounded-full uppercase font-bold tracking-tighter">Hot</span>
                 </div>
-                <p className="text-[10px] text-[#767683] font-semibold leading-tight">Quick family harmony ideas.</p>
+                <p className="text-xs text-[#767683] font-medium leading-tight mt-1">Quick family harmony ideas.</p>
               </div>
             </button>
             
@@ -244,10 +244,10 @@ export default function ParentDashboardScreen() {
               </div>
               <div className="relative z-10">
                 <div className="flex items-center gap-1.5 mb-0.5">
-                  <h3 className="text-[13px] font-bold text-[#141779] leading-tight">Lessons</h3>
-                  <span className="bg-[#30007f] text-white text-[8px] px-1.5 py-0.5 rounded-full uppercase font-bold tracking-tighter">New</span>
+                  <h3 className="text-[15px] font-bold text-[#141779] leading-tight">Lessons</h3>
+                  <span className="bg-[#30007f] text-white text-[9px] px-1.5 py-0.5 rounded-full uppercase font-bold tracking-tighter">New</span>
                 </div>
-                <p className="text-[10px] text-[#767683] font-semibold leading-tight">Bite-sized parent growth.</p>
+                <p className="text-xs text-[#767683] font-medium leading-tight mt-1">Bite-sized parent growth.</p>
               </div>
             </button>
 
@@ -297,7 +297,7 @@ export default function ParentDashboardScreen() {
               <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
                 <Settings size={20} className="text-gray-600" />
               </div>
-              <span className="text-[14px] font-bold text-[#141779]">Settings</span>
+              <span className="text-[16px] font-bold text-[#141779]">Settings</span>
             </button>
             <button 
               onClick={() => navigate('/parent/learning-dna')}
@@ -306,7 +306,7 @@ export default function ParentDashboardScreen() {
               <div className="w-10 h-10 rounded-xl bg-[#ccf4f0] flex items-center justify-center">
                 <BrainCircuit size={20} className="text-[#006a62]" />
               </div>
-              <span className="text-[14px] font-bold text-[#141779]">DNA</span>
+              <span className="text-[16px] font-bold text-[#141779]">DNA</span>
             </button>
           </div>
 
@@ -319,8 +319,8 @@ export default function ParentDashboardScreen() {
                 <Clock size={24} className="text-[#30007f]" />
               </div>
               <div className="text-left">
-                <h4 className="text-[14px] font-bold text-[#141779] mb-0.5">Last Activity</h4>
-                <p className="text-[13px] font-medium text-[#767683]">{lastActivity}</p>
+                <h4 className="text-[16px] font-bold text-[#141779] mb-0.5">Last Activity</h4>
+                <p className="text-[14px] font-medium text-[#767683]">{lastActivity}</p>
               </div>
             </div>
             <ChevronRight size={24} className="text-[#141779] group-hover:translate-x-1 transition-transform" />
