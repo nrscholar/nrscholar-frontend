@@ -28,3 +28,8 @@ body {
   50% { filter: drop-shadow(0 0 15px rgba(87, 250, 233, 0.9)); }
 }
 .no-scrollbar::-webkit-scrollbar { display: none; }
+
+@keyframes shimmer {
+  100% { transform: translateX(100%) rotate(45deg); }
+}
+

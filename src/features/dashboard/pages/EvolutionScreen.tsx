@@ -1,7 +1,8 @@
+import { Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
+import InteractiveCompanion from "../../../components/InteractiveCompanion";
 
 export default function EvolutionScreen() {
   const navigate = useNavigate();
@@ -39,14 +40,13 @@ export default function EvolutionScreen() {
 
   const { xp = 0, percentage = 0, stage = 1, stageName = "Egg" } = evoData || {};
 
-  // Determine Emoji based on stage
-  let avatar = "🥚";
+  // Determine Dragon properties based on stage
+  let dragonScale = 1;
   let bgGradient = "from-surface-container to-surface-container-highest";
-  if (stage === 2) { avatar = "🐣"; bgGradient = "from-[#fdfcfb] to-[#e2d1c3]"; }
-  if (stage === 3) { avatar = "🦎"; bgGradient = "from-[#a8ff78] to-[#78ffd6]"; }
-  if (stage === 4) { avatar = "🐉"; bgGradient = "from-[#ff9966] to-[#ff5e62]"; }
-  if (stage === 5) { avatar = "🔥"; bgGradient = "from-[#f12711] to-[#f5af19]"; }
-  if (stage === 6) { avatar = "✨🐲✨"; bgGradient = "from-[#8E2DE2] to-[#4A00E0]"; }
+  if (stage === 2) { dragonScale = 1; bgGradient = "from-[#fdfcfb] to-[#e2d1c3]"; }
+  if (stage === 3) { dragonScale = 1.3; bgGradient = "from-[#a8ff78] to-[#78ffd6]"; }
+  if (stage === 4) { dragonScale = 1.6; bgGradient = "from-[#ff9966] to-[#ff5e62]"; }
+  if (stage >= 5) { dragonScale = 2.0; bgGradient = "from-[#8E2DE2] to-[#4A00E0]"; }
 
   return (
     <div className="min-h-screen bg-background text-on-surface flex flex-col items-center">
@@ -117,7 +117,9 @@ export default function EvolutionScreen() {
                 )}
               </svg>
             ) : (
-              <span className={`drop-shadow-2xl ${stage === 1 ? 'animate-bounce' : ''}`}>{avatar}</span>
+              <div className="absolute inset-0 flex items-center justify-center p-2">
+                <InteractiveCompanion scale={dragonScale} />
+              </div>
             )}
             
             {stage >= 3 && (

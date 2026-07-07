@@ -7,6 +7,7 @@ export default function ParentDashboardScreen() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [childName, setChildName] = useState("Explorer");
+  const [parentPhoto, setParentPhoto] = useState("");
   const [userLevel, setUserLevel] = useState(1);
   const [fuel, setFuel] = useState(350);
   const targetFuel = 500;
@@ -32,6 +33,7 @@ export default function ParentDashboardScreen() {
         if (json.success && json.data?.user) {
           const user = json.data.user;
           setChildName(user.childName || "Explorer");
+          setParentPhoto(user.parentPhoto || "");
           setUserLevel(user.level || 1);
           setFuel(user.fuel || 0);
         }
@@ -130,11 +132,17 @@ export default function ParentDashboardScreen() {
             <ArrowLeft size={22} className="text-[#141779]" />
           </button>
           <div className="w-10 h-10 rounded-full border-2 border-[rgba(20,23,121,0.2)] overflow-hidden">
-            <img 
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuAIUh4mbkBc6p_INhz-RWpzD4E3i4upVIc85YORgArLaPQ-BpyKd__tr7dbgfBFON8CX9MoGTqr0kcDDq0wnqD7D2wSKwaeRjLNdhKTgqAdjxgrdeLOomzwwsL7MiSJ73kYyX4HhssxDlub28Yv1esVfCT5acshzaqsFjNxs7Jo7a1_eZ_-9Pg92fxcErBbW9jY4sd3EZjPVQftnKZa0dNPXJq7tNYuHG7Qb3PWg_UCPSCOyK2eylBugrfkFvCBSoxYXEcgXCaDjA" 
-              alt="Profile"
-              className="w-full h-full object-cover"
-            />
+            {parentPhoto ? (
+              <img 
+                src={parentPhoto} 
+                alt="Profile"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-[#141779]/10 flex items-center justify-center text-lg">
+                👨‍👩‍👦
+              </div>
+            )}
           </div>
           <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#141779] to-[#30007f]">Parent Space</h1>
         </div>

@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { AnimatePresence, motion, Variants } from "framer-motion";
+import { ArrowLeft, Bell, BookOpen, Camera, CreditCard, Film, HelpCircle, Lock, MessageSquare, Save, ShieldCheck, Timer, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Bell, Timer, BookOpen, ShieldCheck, Lock, Film, MessageSquare, CreditCard, HelpCircle, Trash2, Save } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "../../../api";
 
 function CustomSwitch({ checked, onChange }: { checked: boolean, onChange: (v: boolean) => void }) {
@@ -19,7 +19,7 @@ function CustomSwitch({ checked, onChange }: { checked: boolean, onChange: (v: b
   );
 }
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
@@ -27,7 +27,7 @@ const containerVariants = {
   }
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 20 },
   show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
 };
@@ -43,6 +43,7 @@ export default function ParentSettings() {
   const [allowChat, setAllowChat] = useState(true);
   const [showResetModal, setShowResetModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [parentPhoto, setParentPhoto] = useState<string>("");
 
   useEffect(() => {
     async function loadControls() {
@@ -55,12 +56,41 @@ export default function ParentSettings() {
           setAllowChat(pc.allowChat);
           setScreenTimeMinutes(pc.screenTimeMinutes || 60);
         }
+        
+        // Load parent photo from profile
+        const profileRes = await apiFetch("/api/users/me");
+        const profileJson = await profileRes.json();
+        if (profileJson.success && profileJson.data?.user?.parentPhoto) {
+          setParentPhoto(profileJson.data.user.parentPhoto);
+        }
       } catch (err) {
         console.error("Failed to load parental controls", err);
       }
     }
     loadControls();
   }, []);
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const base64Str = event.target?.result as string;
+        setParentPhoto(base64Str);
+        try {
+          await apiFetch("/api/users/profile", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ parentPhoto: base64Str })
+          });
+          setToastMessage("Profile photo updated!");
+          setTimeout(() => setToastMessage(null), 3000);
+        } catch (err) {
+          console.error("Failed to upload photo", err);
+        }
+      };
+      reader.readAsDataURL(e.target.files[0]);
+    }
+  };
 
   const updateSetting = async (key: string, value: any) => {
     try {
@@ -81,6 +111,7 @@ export default function ParentSettings() {
       });
       const json = await res.json();
       if (json.success) {
+        localStorage.removeItem("userData");
         setToastMessage("Journey reset successfully! 🚀");
         setShowResetModal(false);
         setTimeout(() => {
@@ -118,6 +149,34 @@ export default function ParentSettings() {
         animate="show"
         className="px-6 pt-8 flex flex-col gap-8 max-w-3xl mx-auto w-full"
       >
+        {/* Parent Profile Section */}
+        <motion.div variants={itemVariants} className="bg-white/70 backdrop-blur-md rounded-3xl p-7 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative overflow-hidden group flex items-center gap-5">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#30007f]/10 to-transparent rounded-bl-full pointer-events-none transition-transform group-hover:scale-110 duration-500" />
+          <div className="relative z-10 w-20 h-20 rounded-full border-4 border-white shadow-lg bg-gray-100 flex items-center justify-center text-3xl overflow-hidden cursor-pointer group/photo">
+            {parentPhoto ? (
+              <img src={parentPhoto} alt="Parent" className="w-full h-full object-cover" />
+            ) : (
+              <span>👨‍👩‍👦</span>
+            )}
+            <label htmlFor="parent-photo-upload" className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/photo:opacity-100 transition-opacity cursor-pointer">
+              <Camera size={24} color="white" />
+            </label>
+            <input 
+              id="parent-photo-upload" 
+              type="file" 
+              accept="image/*" 
+              onChange={handlePhotoUpload} 
+              className="hidden" 
+            />
+          </div>
+          <div className="relative z-10 flex-1">
+            <h2 className="text-2xl font-black text-[#141779]">Parent Profile</h2>
+            <p className="text-sm font-semibold text-[#767683] mt-1 flex items-center gap-1">
+              <ShieldCheck size={16} className="text-[#006a62]" /> Secure Admin Area
+            </p>
+          </div>
+        </motion.div>
+
         {/* Screen Time Section */}
         <motion.div variants={itemVariants} className="bg-white/70 backdrop-blur-md rounded-3xl p-7 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#006a62]/10 to-transparent rounded-bl-full pointer-events-none transition-transform group-hover:scale-110 duration-500" />

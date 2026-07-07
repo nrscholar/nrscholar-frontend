@@ -15,24 +15,34 @@ const ScratchCard = ({ width, height, onReveal, children }: any) => {
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
     
-    // Create silver metallic gradient
+    // Create a magical holographic blue/purple gradient
     const gradient = ctx.createLinearGradient(0, 0, width, height);
-    gradient.addColorStop(0, '#e0e0e0');
-    gradient.addColorStop(0.3, '#ffffff');
-    gradient.addColorStop(0.5, '#b3b3b3');
-    gradient.addColorStop(0.7, '#ffffff');
-    gradient.addColorStop(1, '#e0e0e0');
+    gradient.addColorStop(0, '#7b2cbf');
+    gradient.addColorStop(0.3, '#9d4edd');
+    gradient.addColorStop(0.6, '#00bbf9');
+    gradient.addColorStop(0.8, '#00f5d4');
+    gradient.addColorStop(1, '#9d4edd');
     
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, width, height);
     
+    // Add subtle noise texture
+    for(let i=0; i<1500; i++) {
+      ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)';
+      ctx.fillRect(Math.random() * width, Math.random() * height, 2, 2);
+    }
+    
     // Add pattern/text
-    ctx.fillStyle = '#666666';
-    ctx.font = '900 24px sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '900 28px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,0.4)';
+    ctx.shadowBlur = 6;
     ctx.fillText('SCRATCH', width / 2, height / 2 - 15);
+    ctx.font = '700 18px sans-serif';
     ctx.fillText('TO REVEAL!', width / 2, height / 2 + 15);
+    ctx.shadowBlur = 0; // reset
   }, [width, height]);
 
   const scratch = (clientX: number, clientY: number) => {
@@ -107,7 +117,7 @@ const ScratchCard = ({ width, height, onReveal, children }: any) => {
           ref={canvasRef}
           width={width}
           height={height}
-          className="absolute inset-0 z-50 cursor-crosshair rounded-2xl shadow-[0_10px_20px_rgba(0,0,0,0.3)] transition-opacity duration-500 ease-out"
+          className="absolute inset-0 z-50 cursor-crosshair rounded-[30px] shadow-[0_15px_30px_rgba(0,0,0,0.5)] transition-opacity duration-700 ease-out border-4 border-white/20"
           style={{ touchAction: 'none' }}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
@@ -160,6 +170,19 @@ export default function RewardScreen() {
     size: Math.random() * 3 + 1,
   }));
 
+  const floatingEmojisList = ["🚀", "🦄", "🌟", "🏎️", "🐶", "🐱", "🎮", "🎈", "🍭", "💎", "🦁", "🏎️", "🌟", "🎈", "🦊", "🦕"];
+  const floatingEmojis = React.useMemo(() => {
+    return floatingEmojisList.map((emoji, idx) => ({
+      id: idx,
+      emoji: emoji,
+      startX: Math.random() * 100,
+      startY: Math.random() * 100,
+      duration: 15 + Math.random() * 15,
+      delay: Math.random() * 5,
+      size: 24 + Math.random() * 24
+    }));
+  }, []);
+
   let title = "Bonus Reward!";
   let subtitle = `You earned ${amount} coins for answering 5 in a row!`;
   let tagText = "COIN BONUS";
@@ -178,7 +201,32 @@ export default function RewardScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#141779] to-[#0c0e35] relative overflow-hidden font-sans">
+    <div className="min-h-screen bg-[#07051a] relative overflow-hidden font-sans">
+      
+      {/* Dynamic Magical Background Effects */}
+      <div className="absolute top-[-20%] left-[-10%] w-[400px] h-[400px] bg-[#7b2cbf] rounded-full blur-[120px] opacity-40 pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-[#00f5d4] rounded-full blur-[150px] opacity-20 pointer-events-none" />
+      <div className="absolute top-[40%] left-[30%] w-[300px] h-[300px] bg-[#00bbf9] rounded-full blur-[140px] opacity-20 pointer-events-none" />
+      
+      {/* Floating Emojis (Stars, Animals, Cars, etc.) */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-20">
+        {floatingEmojis.map((item) => (
+          <motion.div
+            key={item.id}
+            initial={{ x: `${item.startX}vw`, y: `${item.startY}vh`, opacity: 0.5 }}
+            animate={{ 
+              x: [`${item.startX}vw`, `${item.startX + 10}vw`, `${item.startX - 5}vw`, `${item.startX}vw`],
+              y: [`${item.startY}vh`, `${item.startY - 15}vh`, `${item.startY + 10}vh`, `${item.startY}vh`],
+              rotate: [0, 20, -20, 0]
+            }}
+            transition={{ duration: item.duration, delay: item.delay, repeat: Infinity, ease: "linear" }}
+            className="absolute"
+            style={{ fontSize: item.size }}
+          >
+            {item.emoji}
+          </motion.div>
+        ))}
+      </div>
       
       {/* Background Particles (Only show when revealed) */}
       {isRevealed && particles.map((p) => (
@@ -257,9 +305,10 @@ export default function RewardScreen() {
             <motion.div
               animate={isRevealed ? { scale: [1, 1.05, 1] } : {}}
               transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-              className="w-full h-full rounded-2xl border-[1.5px] border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.08)] flex items-center justify-center overflow-hidden shadow-[0_20px_25px_rgba(0,0,0,0.5)] relative"
+              className="w-full h-full rounded-[30px] border-[3px] border-[#00f5d4] bg-gradient-to-br from-[#2a2d7c] to-[#141779] flex items-center justify-center overflow-hidden shadow-[0_0_40px_rgba(0,245,212,0.4)] relative"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-[rgba(20,23,121,0.4)] to-transparent" />
+              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30 mix-blend-overlay" />
+              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent rotate-45 translate-x-[-100%] animate-[shimmer_2s_infinite]" />
               <img
                 src={iconUrl}
                 alt="Reward"

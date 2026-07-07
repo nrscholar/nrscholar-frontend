@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, UserRound, GraduationCap, Cake, BookOpen, Save } from "lucide-react";
+import { ArrowLeft, UserRound, GraduationCap, Cake, BookOpen, Save, Camera } from "lucide-react";
 import { apiFetch } from "../../../api";
 
 export default function EditProfileScreen() {
@@ -13,6 +13,17 @@ export default function EditProfileScreen() {
   const [childClass, setChildClass] = useState("");
   const [childAge, setChildAge] = useState("");
   const [childBoard, setChildBoard] = useState("");
+  const [childPhoto, setChildPhoto] = useState("");
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setChildPhoto(event.target?.result as string);
+      };
+      reader.readAsDataURL(e.target.files[0]);
+    }
+  };
 
   const classes = ["Nursery", "KG", "Class 1", "Class 2", "Class 3", "Class 4", "Class 5"];
   const ages = ["4 Years", "5 Years", "6 Years", "7 Years", "8 Years", "9 Years", "10 Years"];
@@ -34,6 +45,7 @@ export default function EditProfileScreen() {
           setChildClass(data.data.user.childClass || "");
           setChildAge(data.data.user.childAge ? `${data.data.user.childAge} Years` : "");
           setChildBoard(data.data.user.childBoard || "");
+          setChildPhoto(data.data.user.childPhoto || "");
         }
       } catch (e) {
         console.error("Failed to fetch profile");
@@ -55,7 +67,8 @@ export default function EditProfileScreen() {
           childName,
           childClass,
           childAge: ageNum,
-          childBoard
+          childBoard,
+          childPhoto
         })
       });
       const data = await res.json();
@@ -100,6 +113,30 @@ export default function EditProfileScreen() {
           )}
 
           <form onSubmit={handleSave} className="flex flex-col gap-5">
+            {/* Photo Upload Section */}
+            <div className="flex flex-col items-center mb-2 relative">
+              <div className="relative w-24 h-24 rounded-full border-4 border-white shadow-[0_4px_15px_rgba(0,0,0,0.1)] bg-gray-100 flex items-center justify-center overflow-hidden">
+                {childPhoto ? (
+                  <img src={childPhoto} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(childName || "Kid")}&background=random`} alt="Avatar" className="w-full h-full object-cover" />
+                )}
+                <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
+                  <label htmlFor="photo-upload" className="cursor-pointer w-full h-full flex items-center justify-center">
+                    <Camera size={24} color="white" />
+                  </label>
+                </div>
+              </div>
+              <input 
+                id="photo-upload" 
+                type="file" 
+                accept="image/*" 
+                onChange={handlePhotoUpload} 
+                className="hidden" 
+              />
+              <span className="text-xs font-bold text-[#767683] mt-2">Tap photo to edit</span>
+            </div>
+
             <div className="flex flex-col gap-2">
               <label className="text-sm font-semibold text-[#767683] ml-2">Explorer Name</label>
               <div className="relative flex items-center">

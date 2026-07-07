@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Star, Zap, MapPin, ChevronRight, BookOpen, Map, Bookmark, Shield, Gift, CheckCircle, Target } from "lucide-react";
 import { motion } from "framer-motion";
+import { Bookmark, BookOpen, CheckCircle, ChevronRight, Gift, Map, MapPin, Shield, Star, Target, Zap } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
 
 
@@ -17,6 +17,7 @@ export default function HomeScreen() {
   const [fuel, setFuel] = useState(0);
   const [coins, setCoins] = useState(0);
   const [childName, setChildName] = useState("Explorer");
+  const [childPhoto, setChildPhoto] = useState("");
   const [userLevel, setUserLevel] = useState(1);
   const [streakDays, setStreakDays] = useState(0);
 
@@ -41,6 +42,7 @@ export default function HomeScreen() {
           setFuel(u.fuel || 0);
           setCoins(u.coins || 0);
           setChildName(u.childName || "Explorer");
+          setChildPhoto(u.childPhoto || "");
           setUserLevel(u.level || 1);
           setStreakDays(u.streakDays || 0);
           localStorage.setItem("userData", JSON.stringify(u));
@@ -58,6 +60,7 @@ export default function HomeScreen() {
         setFuel(u.fuel || 0);
         setCoins(u.coins || 0);
         setChildName(u.childName || "Explorer");
+        setChildPhoto(u.childPhoto || "");
         setUserLevel(u.level || 1);
         setStreakDays(u.streakDays || 0);
       } catch(e) {}
@@ -154,11 +157,19 @@ export default function HomeScreen() {
             onClick={() => navigate("/profile")}
             className="w-11 h-11 rounded-full border-2 border-[#57fae9] overflow-hidden hover:opacity-80 transition-opacity"
           >
-            <img 
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuBySqOarQl_2QVMKQTFpIrfA6OyfRZa9AKi8XKC9IGfZrvtKhpfK50qr2C021sWBJ4nrt0PSTlZCZIPfb1FZzw8-lzBzH3AdnYjbinFoSubThNCyCIVSq4FeMaZFFtiJrvEnmI5zoeY6Ja-QTw5pisfB-TapQ0bYU_nKHb-tlGCN5GN8P5XG_PmreHw5L4xfIueUcuPpfMr-wiA80WIOqC14mkhMFWLMK5dxuYsdrVAKpMwOMDnjPhW2QxcQO_U_QuqT65VvcP3wA" 
-              alt="Avatar"
-              className="w-full h-full object-cover"
-            />
+            {childPhoto ? (
+              <img 
+                src={childPhoto} 
+                alt="Avatar"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <img 
+                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(childName || "Kid")}&background=random`} 
+                alt="Avatar"
+                className="w-full h-full object-cover"
+              />
+            )}
           </button>
           <div>
             <h1 className="text-lg font-bold text-[#141779] leading-tight">{childName}</h1>
@@ -209,7 +220,7 @@ export default function HomeScreen() {
 
         {/* MAIN HERO SECTION: Large Journey Progress Card */}
         <button
-          onClick={() => navigate("/practice/chapters")}
+          onClick={() => navigate("/practice/journey-map")}
           className="w-full text-left bg-gradient-to-br from-[#e0f7f6] to-[#ffffff] rounded-[24px] p-5 border-[1.5px] border-[rgba(255,255,255,0.5)] shadow-[0_6px_16px_rgba(0,0,0,0.05)] relative z-10 hover:shadow-md transition-shadow"
         >
           <p className="text-[9px] font-bold text-[#141779] tracking-[2px] text-center mb-2">CURRENT ROUTE</p>

@@ -120,45 +120,54 @@ export default function InventoryScreen() {
     }
   };
 
-  const [citiesList, setCitiesList] = useState<any[]>([]);
+  const [citiesData, setCitiesData] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchCities = async () => {
       try {
         const response = await apiFetch("/api/practice/cities");
         const data = await response.json();
-        if (data.success) {
-          setCitiesList(data.data.map((c: any) => c.name));
+        if (data.success && data.data.length > 0) {
+          setCitiesData(data.data);
+        } else {
+          // fallback
+          setCitiesData([
+            { name: "Egg Village", requiredFuel: 0 },
+            { name: "Forest Kingdom", requiredFuel: 50 },
+            { name: "Magic Desert", requiredFuel: 250 },
+            { name: "Ice Kingdom", requiredFuel: 1000 },
+            { name: "Dragon Mountain", requiredFuel: 2500 },
+          ]);
         }
       } catch (e) {}
     };
     fetchCities();
   }, []);
 
-  const CITIES_LIST = citiesList.length > 0 ? citiesList : [
-    "Ahmedabad", "Gandhinagar", "Mehsana", "Patan", "Vadodara",
-    "Surat", "Dwarka", "Somnath", "Kutch"
-  ];
+  const cities = citiesData.map((cityData, index) => {
+    const isUnlocked = fuel >= (cityData.requiredFuel || 0);
+    const isCurrent = isUnlocked && (index === citiesData.length - 1 || fuel < (citiesData[index+1]?.requiredFuel || 0));
 
-  const currentUnlockedIndex = Math.max(0, Math.floor(fuel / 500));
-
-  const cities = CITIES_LIST.map((cityName, index) => {
     let status = "Locked 🔒";
     let rating = "☆☆☆☆☆";
-    if (index < currentUnlockedIndex) {
-      status = "Unlocked 🎉";
-      rating = "★★★★☆";
-    } else if (index === currentUnlockedIndex) {
+    
+    if (isCurrent) {
       status = "Current Location 📍";
       rating = "★★★★★";
+    } else if (isUnlocked) {
+      status = "Unlocked 🎉";
+      rating = "★★★★☆";
     }
+
     return {
       id: String(index),
-      name: cityName,
+      name: cityData.name,
       status,
       rating
     };
   });
+
+
 
   const badges = userBadges.map((b, i) => ({
     id: String(i),

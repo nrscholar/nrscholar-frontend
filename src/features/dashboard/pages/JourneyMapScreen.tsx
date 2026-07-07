@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface City {
   _id?: string;
@@ -117,8 +118,40 @@ export default function JourneyMapScreen() {
     );
   }
 
-  const maxFuel = 5000;
-  const progressPercent = Math.min(Math.round((fuel / maxFuel) * 100), 100);
+  // Determine Dragon Stage based on fuel
+  let dragonStage = "Egg";
+  let dragonImage = "/images/dragons/egg.png";
+  let dragonMessage = "Keep learning to hatch your egg!";
+  let dragonNextGoal = 10;
+  let dragonScale = "1";
+
+  if (fuel >= 1000) {
+    dragonStage = "Elder Dragon";
+    dragonImage = "/images/dragons/adult.png";
+    dragonMessage = "Your dragon is legendary!";
+    dragonNextGoal = 2500;
+    dragonScale = "1.2";
+  } else if (fuel >= 250) {
+    dragonStage = "Teen Dragon";
+    dragonImage = "/images/dragons/teen.png";
+    dragonMessage = "Your dragon is learning to fly!";
+    dragonNextGoal = 1000;
+    dragonScale = "1.1";
+  } else if (fuel >= 50) {
+    dragonStage = "Baby Dragon";
+    dragonImage = "/images/dragons/baby.png";
+    dragonMessage = "Your dragon hatched! Keep feeding it fuel!";
+    dragonNextGoal = 250;
+    dragonScale = "1.05";
+  } else if (fuel >= 10) {
+    dragonStage = "Cracking Egg";
+    dragonImage = "/images/dragons/cracked.png";
+    dragonMessage = "It's hatching! Just a bit more fuel!";
+    dragonNextGoal = 50;
+    dragonScale = "1.02";
+  }
+
+  const dragonProgress = Math.min(100, Math.round((fuel / dragonNextGoal) * 100));
 
   return (
     <div className="bg-background text-on-surface flex items-center justify-center min-h-screen">
@@ -150,21 +183,62 @@ export default function JourneyMapScreen() {
               <span className="material-symbols-outlined text-[16px] text-yellow-500" style={{fontVariationSettings: "'FILL' 1"}}>monetization_on</span>
               <span className="text-[11px] font-bold">{coins}</span>
             </div>
+            <div className="flex items-center gap-1 bg-surface-container px-2.5 py-1.5 rounded-full whitespace-nowrap">
+              <span className="material-symbols-outlined text-[16px] text-primary" style={{fontVariationSettings: "'FILL' 1"}}>local_gas_station</span>
+              <span className="text-[11px] font-bold">{fuel}</span>
+            </div>
           </div>
         </header>
 
         {/* Main Map Content Area */}
         <main className="flex-1 mt-20 mb-24 overflow-y-auto no-scrollbar relative px-6 py-4">
-          <div className="glass-card rounded-xl p-4 mb-6 flex justify-between items-center">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">Current Expedition</p>
-              <h2 className="font-headline text-headline-md text-primary">Map Explorer</h2>
+          
+          {/* Dynamic Dragon Pet Widget */}
+          <div 
+            onClick={() => navigate('/evolution')}
+            className="bg-gradient-to-br from-primary-container to-secondary-container rounded-3xl p-5 mb-8 shadow-[0_8px_30px_rgba(0,106,98,0.2)] border border-white/40 flex flex-col items-center relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform group"
+          >
+            <div className="absolute top-2 right-4 flex items-center gap-1 bg-white/40 px-2 py-1 rounded-full group-hover:bg-white/60 transition-colors">
+              <span className="text-[10px] font-bold text-primary tracking-widest uppercase">Tap to View</span>
+              <span className="material-symbols-outlined text-[12px] text-primary">open_in_new</span>
             </div>
-            <div className="text-right">
-              <p className="text-label-sm font-bold text-secondary">{progressPercent}% Completed</p>
-              <div className="w-24 h-2 bg-surface-container-highest rounded-full mt-1 overflow-hidden">
-                <div className="h-full bg-secondary-fixed transition-all duration-500" style={{width: `${progressPercent}%`}}></div>
-              </div>
+            
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 blur-2xl rounded-full translate-x-10 -translate-y-10"></div>
+            
+            <h2 className="text-sm font-black uppercase tracking-widest text-primary mb-1 mt-2">My Dragon Companion</h2>
+            <p className="text-xs font-bold text-on-surface-variant mb-4">{dragonMessage}</p>
+            
+            <div className="w-32 h-32 bg-white/50 rounded-full flex items-center justify-center p-2 mb-4 shadow-inner ring-4 ring-white relative z-10 overflow-hidden">
+              <AnimatePresence mode="wait">
+                <motion.img 
+                  key={dragonStage}
+                  src={dragonImage} 
+                  alt={dragonStage} 
+                  initial={{ scale: 0.5, opacity: 0, rotate: -20 }}
+                  animate={{ 
+                    scale: fuel < 50 ? [1, 1.05, 1] : 1,
+                    rotate: fuel < 50 ? [0, -5, 5, -5, 0] : 0,
+                    opacity: 1 
+                  }}
+                  exit={{ scale: 1.5, opacity: 0, filter: "brightness(2)" }}
+                  transition={{ 
+                    duration: fuel < 50 ? 2 : 0.5, 
+                    repeat: fuel < 50 ? Infinity : 0,
+                    ease: "easeInOut"
+                  }}
+                  className={`w-full h-full object-cover rounded-full shadow-lg ${fuel >= 50 && fuel < 250 ? 'animate-[bounce_3s_infinite]' : ''} ${fuel >= 250 ? 'animate-[pulse_4s_infinite]' : ''}`}
+                />
+              </AnimatePresence>
+            </div>
+            
+            <h3 className="text-xl font-black text-primary mb-2">{dragonStage}</h3>
+            
+            <div className="w-full bg-white/60 rounded-full h-3 overflow-hidden shadow-inner flex mb-1">
+              <div className="h-full bg-gradient-to-r from-orange-400 to-yellow-400 transition-all duration-1000" style={{width: `${dragonProgress}%`}}></div>
+            </div>
+            <div className="w-full flex justify-between px-1">
+              <span className="text-[10px] font-bold text-on-surface-variant">{fuel} Fuel</span>
+              <span className="text-[10px] font-bold text-on-surface-variant">Next: {dragonNextGoal}</span>
             </div>
           </div>
 
@@ -196,12 +270,15 @@ export default function JourneyMapScreen() {
               if (city.unlocked) {
                 return (
                   <div key={idx} className={`relative z-10 w-full flex justify-center ${translateClass}`}>
-                    <div className="glass-card p-4 rounded-2xl w-64 border-l-4 border-secondary-fixed shadow-lg glow-pulse cursor-pointer active:scale-95 transition-all">
+                    <div 
+                      onClick={() => navigate(`/boss-battle?worldId=${city._id || 'w1'}&difficulty=hard&returnTo=/practice/journey-map`)}
+                      className="glass-card p-4 rounded-2xl w-64 border-l-4 border-secondary-fixed shadow-[0_4px_20px_rgba(0,106,98,0.2)] hover:scale-105 cursor-pointer active:scale-95 transition-all group"
+                    >
                       <div className="flex justify-between items-start mb-2">
-                        <span className="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-2 py-0.5 rounded-full">UNLOCKED</span>
+                        <span className="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-2 py-0.5 rounded-full group-hover:bg-secondary-fixed transition-colors">UNLOCKED</span>
                         <span className="material-symbols-outlined text-secondary-fixed text-xl" style={{fontVariationSettings: "'FILL' 1"}}>check_circle</span>
                       </div>
-                      <h3 className="font-headline text-body-lg font-bold text-primary mb-1">{city.name}</h3>
+                      <h3 className="font-headline text-body-lg font-bold text-primary mb-1 group-hover:text-secondary-fixed transition-colors">{city.name}</h3>
                       <p className="text-label-sm text-on-surface-variant mb-3">{idx === 0 ? "The journey begins here..." : "Completed area"}</p>
                       <div className="flex items-center gap-3 bg-surface-container/50 p-2 rounded-lg">
                         <div className="w-10 h-10 bg-white rounded-md flex items-center justify-center text-2xl">{uiCity.emoji}</div>
@@ -251,7 +328,10 @@ export default function JourneyMapScreen() {
 
               return (
                 <div key={idx} className={`relative z-10 w-full flex justify-center ${translateClass} opacity-60`}>
-                  <div className={`glass-card p-4 rounded-2xl w-64 ${idx % 2 === 0 ? 'grayscale-[0.5]' : 'grayscale'}`}>
+                  <div 
+                    onClick={() => alert(`You need ${city.requiredFuel - fuel} more Fuel to unlock ${city.name}!`)}
+                    className={`glass-card p-4 rounded-2xl w-64 cursor-pointer hover:opacity-100 transition-opacity ${idx % 2 === 0 ? 'grayscale-[0.5]' : 'grayscale'}`}
+                  >
                     <div className="flex justify-between items-start mb-2">
                       <span className="bg-surface-container-highest text-on-surface-variant text-[10px] font-bold px-2 py-0.5 rounded-full">LOCKED</span>
                       <div className="flex items-center gap-1 text-on-surface-variant">
@@ -274,44 +354,6 @@ export default function JourneyMapScreen() {
             })}
           </div>
         </main>
-
-        {/* Stats Overlay */}
-        <div className="fixed bottom-24 w-full max-w-[430px] px-6 pointer-events-none z-40">
-          <div className="pointer-events-auto glass-card p-4 rounded-2xl flex items-center justify-center shadow-2xl ring-1 ring-white/50">
-            <div 
-              className="flex items-center gap-3 cursor-pointer hover:opacity-80 active:scale-95 transition-all"
-              onClick={() => navigate('/evolution')}
-            >
-              <div className="w-12 h-12 bg-primary-container rounded-xl flex items-center justify-center text-primary-fixed-dim">
-                <span className="material-symbols-outlined text-3xl" style={{fontVariationSettings: "'FILL' 1"}}>egg</span>
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-tighter">Dragon Evolution</p>
-                <p className="text-body-md font-bold text-primary">Tap to View</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom NavBar */}
-        <nav className="fixed bottom-0 w-full max-w-[430px] z-50 flex justify-around items-center px-4 pb-6 pt-2 bg-surface/80 dark:bg-surface-dim/80 backdrop-blur-xl border-t-[1.5px] border-outline-variant/30 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-          <div className="flex flex-col items-center justify-center bg-secondary-container dark:bg-secondary-fixed text-on-secondary-container dark:text-on-secondary-fixed rounded-full px-4 py-1.5 transition-all active:scale-90 duration-200">
-            <span className="material-symbols-outlined" style={{fontVariationSettings: "'FILL' 1"}}>map</span>
-            <span className="font-label text-label-sm font-bold">Map</span>
-          </div>
-          <div onClick={() => navigate('/home')} className="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-4 py-1.5 hover:text-secondary active:scale-90 transition-transform duration-200 cursor-pointer">
-            <span className="material-symbols-outlined">explore</span>
-            <span className="font-label text-label-sm font-bold">Quests</span>
-          </div>
-          <div onClick={() => alert('Feature coming soon!')} className="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-4 py-1.5 hover:text-secondary active:scale-90 transition-transform duration-200 cursor-pointer">
-            <span className="material-symbols-outlined">backpack</span>
-            <span className="font-label text-label-sm font-bold">Backpack</span>
-          </div>
-          <div onClick={() => alert('Feature coming soon!')} className="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-4 py-1.5 hover:text-secondary active:scale-90 transition-transform duration-200 cursor-pointer">
-            <span className="material-symbols-outlined">group</span>
-            <span className="font-label text-label-sm font-bold">Friends</span>
-          </div>
-        </nav>
       </div>
     </div>
   );

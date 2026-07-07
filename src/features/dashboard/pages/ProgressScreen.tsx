@@ -6,17 +6,42 @@ export default function ProgressScreen() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
 
-  // Mock data
-  const level = 1;
-  const fuel = 0;
-  const streakDays = 0;
+  const [level, setLevel] = useState(1);
+  const [fuel, setFuel] = useState(0);
+  const [streakDays, setStreakDays] = useState(0);
+  const [xp, setXp] = useState(0);
+
   const progressPercent = Math.min(100, Math.max(0, Math.round(((fuel % 500) / 500) * 100)));
   const radius = 88;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progressPercent / 100) * circumference;
 
   useEffect(() => {
-    setTimeout(() => setLoading(false), 500);
+    const fetchProgress = async () => {
+      try {
+        const cached = localStorage.getItem("userData");
+        if (cached) {
+           const u = JSON.parse(cached);
+           setFuel(u.fuel || 0);
+           setXp(u.xp || 0);
+           setLevel(u.level || 1);
+           setStreakDays(u.streakDays || 0);
+        }
+        
+        const response = await apiFetch("/api/users/me");
+        const data = await response.json();
+        if (data.success && data.data.user) {
+           const u = data.data.user;
+           setFuel(u.fuel || 0);
+           setXp(u.xp || 0);
+           setLevel(u.level || 1);
+           setStreakDays(u.streakDays || 0);
+        }
+      } catch(e) {}
+      
+      setLoading(false);
+    };
+    fetchProgress();
   }, []);
 
   if (loading) {
@@ -83,10 +108,10 @@ export default function ProgressScreen() {
             <div className="flex flex-col gap-2">
               <div className="flex justify-between items-end px-1">
                 <span className="text-base font-bold text-[#141779]">Math</span>
-                <span className="text-xs font-bold text-[#006a62]">0%</span>
+                <span className="text-xs font-bold text-[#006a62]">{Math.min(100, Math.round(xp / 10))}%</span>
               </div>
               <div className="w-full h-3 bg-[#eceef0] rounded-full overflow-hidden">
-                <div className="h-full bg-[#141779] rounded-full" style={{ width: '0%' }} />
+                <div className="h-full bg-[#141779] rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, Math.round(xp / 10))}%` }} />
               </div>
             </div>
 
@@ -94,21 +119,21 @@ export default function ProgressScreen() {
             <div className="flex flex-col gap-2">
               <div className="flex justify-between items-end px-1">
                 <span className="text-base font-bold text-[#141779]">Science</span>
-                <span className="text-xs font-bold text-[#006a62]">0%</span>
+                <span className="text-xs font-bold text-[#006a62]">{Math.min(100, Math.round(xp / 15))}%</span>
               </div>
               <div className="w-full h-3 bg-[#eceef0] rounded-full overflow-hidden">
-                <div className="h-full bg-[#2addcd] rounded-full" style={{ width: '0%' }} />
+                <div className="h-full bg-[#2addcd] rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, Math.round(xp / 15))}%` }} />
               </div>
             </div>
 
-            {/* Vocabulary */}
+            {/* English/Vocabulary */}
             <div className="flex flex-col gap-2">
               <div className="flex justify-between items-end px-1">
                 <span className="text-base font-bold text-[#141779]">Vocabulary</span>
-                <span className="text-xs font-bold text-[#006a62]">0%</span>
+                <span className="text-xs font-bold text-[#006a62]">{Math.min(100, Math.round(xp / 20))}%</span>
               </div>
               <div className="w-full h-3 bg-[#eceef0] rounded-full overflow-hidden">
-                <div className="h-full bg-[#2d328f] rounded-full" style={{ width: '0%' }} />
+                <div className="h-full bg-[#2d328f] rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, Math.round(xp / 20))}%` }} />
               </div>
             </div>
 
