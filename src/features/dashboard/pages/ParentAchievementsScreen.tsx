@@ -5,75 +5,52 @@ import { apiFetch } from "../../../api";
 
 export default function ParentAchievementsScreen() {
   const navigate = useNavigate();
-  const [activeAchievement, setActiveAchievement] = useState<string | null>(null);
-  const [badgesEarned, setBadgesEarned] = useState(3);
-  const [globalRank, setGlobalRank] = useState(142);
-  const [streakDays, setStreakDays] = useState(0);
-  const [testsCompleted, setTestsCompleted] = useState(0);
+  const [activeAchievement, setActiveAchievement] = useState<any | null>(null);
+  const [badgesEarned, setBadgesEarned] = useState(0);
+  const [globalRank, setGlobalRank] = useState(0);
+  const [achievements, setAchievements] = useState<any[]>([]);
+  const [parentPhoto, setParentPhoto] = useState("");
+  const [username, setUsername] = useState("Parent");
 
   useEffect(() => {
     async function fetchStats() {
       try {
         const uRes = await apiFetch("/api/users/me");
         const uJson = await uRes.json();
-        let streak = 0;
         if (uJson.success && uJson.data?.user) {
-          streak = uJson.data.user.streakDays || 0;
-          setStreakDays(streak);
-          setGlobalRank(Math.max(1, 5000 - (uJson.data.user.totalStars || 0) * 10));
+          setParentPhoto(uJson.data.user.parentPhoto || "");
+          setUsername(uJson.data.user.parentName || uJson.data.user.username || "Parent");
         }
 
-        const rRes = await apiFetch("/api/parent/report");
-        const rJson = await rRes.json();
-        if (rJson.success && rJson.data) {
-          setTestsCompleted(rJson.data.totalTests || 0);
-          
-          let earned = 0;
-          if (rJson.data.totalTests > 0) earned++;
-          if (streak >= 7) earned++;
-          if (rJson.data.totalTests >= 10) earned++;
-          setBadgesEarned(earned);
-        }
+        // BUG-P05 FIX: Real rank from DB instead of fake formula
+        try {
+          const rankRes = await apiFetch("/api/parent/rank");
+          const rankJson = await rankRes.json();
+          if (rankJson.success && rankJson.data) {
+            setGlobalRank(rankJson.data.rank);
+          }
+        } catch (e) {}
+
+        try {
+          const achRes = await apiFetch("/api/parent/achievements");
+          const achJson = await achRes.json();
+          if (achJson.success && achJson.data) {
+            setAchievements(achJson.data.achievements);
+            setBadgesEarned(achJson.data.badgesEarned);
+          }
+        } catch (e) {}
+
       } catch (e) {}
     }
     fetchStats();
   }, []);
 
-  const achievementsData: Record<string, { title: string, icon: any, iconBg: string, iconColor: string, date: string, desc: string, progress: number, progressText: string }> = {
-    lesson: {
-      title: "First Steps",
-      icon: BookOpen,
-      iconBg: testsCompleted > 0 ? "bg-gradient-to-br from-[#006a62] to-[#141779]" : "bg-[#e0e3e5] grayscale",
-      iconColor: testsCompleted > 0 ? "text-white" : "text-[#767683]",
-      date: testsCompleted > 0 ? "Unlocked!" : "Locked",
-      desc: "Successfully completed your first parenting module or test. The journey of a thousand miles begins here!",
-      progress: testsCompleted > 0 ? 100 : 0,
-      progressText: testsCompleted > 0 ? "1/1 Modules" : "0/1 Modules"
-    },
-    streak7: {
-      title: "Week On Fire",
-      icon: Flame,
-      iconBg: streakDays >= 7 ? "bg-gradient-to-br from-[#30007f] to-[#2d328f]" : "bg-[#e0e3e5] grayscale",
-      iconColor: streakDays >= 7 ? "text-white" : "text-[#767683]",
-      date: streakDays >= 7 ? "Unlocked!" : "Locked",
-      desc: "Maintained a consistent learning rhythm for 7 consecutive days. You are building amazing habits!",
-      progress: Math.min(100, (streakDays / 7) * 100),
-      progressText: `${Math.min(7, streakDays)}/7 Days`
-    },
-    lesson10: {
-      title: "Rising Scholar",
-      icon: GraduationCap,
-      iconBg: testsCompleted >= 10 ? "bg-gradient-to-br from-[#57fae9] to-[#006a62]" : "bg-[#e0e3e5] grayscale",
-      iconColor: testsCompleted >= 10 ? "text-[#007168]" : "text-[#767683]",
-      date: testsCompleted >= 10 ? "Unlocked!" : "Locked",
-      desc: "You have completed 10 lessons or tests! Your dedication to growth is making a real difference at home.",
-      progress: Math.min(100, (testsCompleted / 10) * 100),
-      progressText: `${Math.min(10, testsCompleted)}/10 Lessons`
-    }
+  const ICON_MAP: Record<string, any> = {
+    BookOpen, Flame, Lock, GraduationCap, Users
   };
 
-  const showDetails = (key: string) => {
-    setActiveAchievement(key);
+  const showDetails = (ach: any) => {
+    setActiveAchievement(ach);
   };
 
   const hideDetails = () => {
@@ -109,18 +86,15 @@ export default function ParentAchievementsScreen() {
           <button onClick={() => navigate(-1)} className="p-1 -ml-1 hover:bg-[#e0e3e5] rounded-full transition-colors">
             <ArrowLeft className="text-[#141779] font-bold" size={24} />
           </button>
-          <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#141779]/20">
-            <img 
-              alt="User Profile" 
-              className="w-full h-full object-cover"
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuC9JzpVuteLhnBmiRka1Pw7sOhA3jsE1Zn0vKjGHb1PC2lOUIJHYy7DL9s3F4MPBK0JAg6m9Vy17DJFKVI1L4hFeaav-1fNzAW6AwLOohI3hsbUcv4Ee56iFKwGbpiZzK6hunCaJNJyZ6IFIlifZHcOkry0SpStAklSQAycDOSc-zHKuaodDemfTodaYrM0_VBmeyOX3cXzGV_N9ekKi0ugCna0gA9nSrDpDOoGnCbGHBsQF4zj8r9bzThYRkzxW9ujcYa2IT9hMg"
-            />
-          </div>
           <h1 className="text-xl font-bold text-[#141779] tracking-tight">Achievements</h1>
         </div>
-        <button className="text-[#141779] hover:bg-[#e6e8ea] transition-colors p-2 rounded-full active:scale-95">
-          <Bell size={24} />
-        </button>
+        <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#141779]/20 bg-white">
+          <img 
+            alt="User Profile" 
+            className="w-full h-full object-cover"
+            src={parentPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`}
+          />
+        </div>
       </header>
 
       {/* Main Content Canvas */}
@@ -162,99 +136,100 @@ export default function ParentAchievementsScreen() {
 
         {/* Achievement Wall */}
         <section className="w-full grid grid-cols-3 gap-y-10 gap-x-4 mb-8">
-          {/* Unlocked: First Lesson */}
-          <div className="flex flex-col items-center cursor-pointer group" onClick={() => showDetails('lesson')}>
-            <div className={`hexagon w-20 h-20 ${achievementsData.lesson.iconBg} flex items-center justify-center shadow-lg badge-glow group-active:scale-95 transition-transform`}>
-              <BookOpen className={achievementsData.lesson.iconColor} size={32} />
-            </div>
-            <p className="text-xs font-bold text-center mt-3 text-[#141779]">First Steps</p>
-          </div>
-          
-          {/* Unlocked: 7 Day Streak */}
-          <div className="flex flex-col items-center cursor-pointer group" onClick={() => showDetails('streak7')}>
-            <div className={`hexagon w-20 h-20 ${achievementsData.streak7.iconBg} flex items-center justify-center shadow-lg badge-glow group-active:scale-95 transition-transform`}>
-              <Flame className={achievementsData.streak7.iconColor} size={32} />
-            </div>
-            <p className="text-xs font-bold text-center mt-3 text-[#141779]">Week On Fire</p>
-          </div>
-          
-          {/* Locked: 30 Day Streak */}
-          <div className="flex flex-col items-center opacity-50 grayscale">
-            <div className="hexagon w-20 h-20 bg-[#e0e3e5] flex items-center justify-center border-2 border-dashed border-[#767683]">
-              <Lock className="text-[#767683]" size={32} />
-            </div>
-            <p className="text-xs font-bold text-center mt-3 text-[#767683]">Monthly Master</p>
-          </div>
-          
-          {/* Unlocked: 10 Lessons */}
-          <div className="flex flex-col items-center cursor-pointer group" onClick={() => showDetails('lesson10')}>
-            <div className={`hexagon w-20 h-20 ${achievementsData.lesson10.iconBg} flex items-center justify-center shadow-lg badge-glow group-active:scale-95 transition-transform`}>
-              <GraduationCap className={achievementsData.lesson10.iconColor} size={32} />
-            </div>
-            <p className="text-xs font-bold text-center mt-3 text-[#141779]">Rising Scholar</p>
-          </div>
-          
-          {/* Locked: 5 Challenges */}
-          <div className="flex flex-col items-center opacity-50 grayscale">
-            <div className="hexagon w-20 h-20 bg-[#e0e3e5] flex items-center justify-center border-2 border-dashed border-[#767683]">
-              <Lock className="text-[#767683]" size={32} />
-            </div>
-            <p className="text-xs font-bold text-center mt-3 text-[#767683]">Challenger</p>
-          </div>
-          
-          {/* Locked: Community */}
-          <div className="flex flex-col items-center opacity-50 grayscale">
-            <div className="hexagon w-20 h-20 bg-[#e0e3e5] flex items-center justify-center border-2 border-dashed border-[#767683]">
-              <Users className="text-[#767683]" size={32} />
-            </div>
-            <p className="text-xs font-bold text-center mt-3 text-[#767683]">Supporter</p>
-          </div>
+          {achievements.map((ach) => {
+            const isUnlocked = ach.currentProgress >= ach.totalRequired;
+            const Icon = ICON_MAP[ach.icon] || Lock;
+            
+            let bgClass = "bg-[#e0e3e5] grayscale border-2 border-dashed border-[#767683]";
+            let iconClass = "text-[#767683]";
+            
+            if (isUnlocked) {
+              if (ach.id === "lesson") {
+                bgClass = "bg-gradient-to-br from-[#006a62] to-[#141779] shadow-lg badge-glow";
+                iconClass = "text-white";
+              } else if (ach.id.startsWith("streak")) {
+                bgClass = "bg-gradient-to-br from-[#30007f] to-[#2d328f] shadow-lg badge-glow";
+                iconClass = "text-white";
+              } else if (ach.id.startsWith("lesson10")) {
+                bgClass = "bg-gradient-to-br from-[#57fae9] to-[#006a62] shadow-lg badge-glow";
+                iconClass = "text-[#007168]";
+              } else {
+                bgClass = "bg-gradient-to-br from-[#141779] to-[#30007f] shadow-lg badge-glow";
+                iconClass = "text-white";
+              }
+            }
+
+            return (
+              <div 
+                key={ach.id} 
+                className={`flex flex-col items-center ${isUnlocked ? 'cursor-pointer group' : 'opacity-50'}`} 
+                onClick={() => showDetails(ach)}
+              >
+                <div className={`hexagon w-20 h-20 flex items-center justify-center transition-transform ${isUnlocked ? 'group-active:scale-95' : ''} ${bgClass}`}>
+                  <Icon className={iconClass} size={32} />
+                </div>
+                <p className={`text-xs font-bold text-center mt-3 ${isUnlocked ? 'text-[#141779]' : 'text-[#767683]'}`}>
+                  {ach.title}
+                </p>
+              </div>
+            );
+          })}
         </section>
 
         {/* Dynamic Detail Card */}
-        {activeAchievement && (
-          <section className="w-full glass-panel rounded-xl p-6 shadow-xl border-[#006a62]/30 animate-fade-in-up">
-            <div className="flex items-start gap-4 mb-4">
-              <div className={`hexagon w-16 h-16 flex items-center justify-center shadow-md ${achievementsData[activeAchievement].iconBg}`}>
-                {React.createElement(achievementsData[activeAchievement].icon, {
-                  className: `${achievementsData[activeAchievement].iconColor}`,
-                  size: 28
-                })}
+        {activeAchievement && (() => {
+          const isUnlocked = activeAchievement.currentProgress >= activeAchievement.totalRequired;
+          const Icon = ICON_MAP[activeAchievement.icon] || Lock;
+          let bgClass = "bg-[#e0e3e5]";
+          
+          if (isUnlocked) {
+             if (activeAchievement.id === "lesson") bgClass = "bg-gradient-to-br from-[#006a62] to-[#141779]";
+             else if (activeAchievement.id.startsWith("streak")) bgClass = "bg-gradient-to-br from-[#30007f] to-[#2d328f]";
+             else if (activeAchievement.id.startsWith("lesson10")) bgClass = "bg-gradient-to-br from-[#57fae9] to-[#006a62]";
+             else bgClass = "bg-gradient-to-br from-[#141779] to-[#30007f]";
+          }
+
+          return (
+            <section className="w-full glass-panel rounded-xl p-6 shadow-xl border-[#006a62]/30 animate-fade-in-up">
+              <div className="flex items-start gap-4 mb-4">
+                <div className={`hexagon w-16 h-16 flex items-center justify-center shadow-md ${bgClass}`}>
+                  <Icon className={isUnlocked ? (activeAchievement.id === "lesson10" ? "text-[#007168]" : "text-white") : "text-[#767683]"} size={28} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-[#141779]">
+                    {activeAchievement.title}
+                  </h3>
+                  <p className="text-xs text-[#006a62] font-semibold">
+                    {isUnlocked ? "Unlocked!" : "Locked"}
+                  </p>
+                </div>
+                <button 
+                  className="text-[#464652] hover:text-[#ba1a1a] transition-colors" 
+                  onClick={hideDetails}
+                >
+                  <X size={24} />
+                </button>
               </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-bold text-[#141779]">
-                  {achievementsData[activeAchievement].title}
-                </h3>
-                <p className="text-xs text-[#006a62] font-semibold">
-                  {achievementsData[activeAchievement].date}
-                </p>
+              <p className="text-sm text-[#464652] mb-4 leading-relaxed">
+                {activeAchievement.desc}
+              </p>
+              <div className="space-y-2">
+                <div className="flex justify-between items-end">
+                  <span className="text-xs font-bold text-[#141779]">Progress</span>
+                  <span className="text-xs text-[#464652]">
+                    {Math.min(activeAchievement.totalRequired, activeAchievement.currentProgress)}/{activeAchievement.totalRequired} {activeAchievement.progressUnit}
+                  </span>
+                </div>
+                <div className="w-full h-3 bg-[#eceef0] rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-[#006a62] transition-all duration-1000 ease-out" 
+                    style={{ width: `${Math.min(100, (activeAchievement.currentProgress / activeAchievement.totalRequired) * 100)}%` }}
+                  ></div>
+                </div>
               </div>
-              <button 
-                className="text-[#464652] hover:text-[#ba1a1a] transition-colors" 
-                onClick={hideDetails}
-              >
-                <X size={24} />
-              </button>
-            </div>
-            <p className="text-sm text-[#464652] mb-4 leading-relaxed">
-              {achievementsData[activeAchievement].desc}
-            </p>
-            <div className="space-y-2">
-              <div className="flex justify-between items-end">
-                <span className="text-xs font-bold text-[#141779]">Progress</span>
-                <span className="text-xs text-[#464652]">
-                  {achievementsData[activeAchievement].progressText}
-                </span>
-              </div>
-              <div className="w-full h-3 bg-[#eceef0] rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-[#006a62] transition-all duration-1000 ease-out" 
-                  style={{ width: `${achievementsData[activeAchievement].progress}%` }}
-                ></div>
-              </div>
-            </div>
-          </section>
-        )}
+            </section>
+          );
+        })()}
 
         <div className="w-full h-12"></div> {/* Spacer */}
       </main>

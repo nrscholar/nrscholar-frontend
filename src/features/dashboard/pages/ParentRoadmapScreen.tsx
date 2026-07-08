@@ -227,7 +227,7 @@ export default function ParentRoadmapScreen() {
 
       {/* Floating Bottom Glassmorphic Navigation Bar */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center px-4 py-3 bg-white/60 backdrop-blur-xl border-t border-white/60 shadow-[0_-8px_32px_rgba(0,0,0,0.05)]">
-        <button onClick={() => navigate('/parent')} className="flex flex-col items-center justify-center gap-1 py-1.5 px-4 rounded-full transition-all duration-300 text-[#464652] hover:text-[#007168]">
+        <button onClick={() => navigate('/parent/dashboard')} className="flex flex-col items-center justify-center gap-1 py-1.5 px-4 rounded-full transition-all duration-300 text-[#464652] hover:text-[#007168]">
           <Home size={20} strokeWidth={2} />
           <span className="text-[10px] font-bold tracking-wide">Home</span>
         </button>

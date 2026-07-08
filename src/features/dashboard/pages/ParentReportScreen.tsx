@@ -144,24 +144,26 @@ export default function ParentReportScreen() {
                   </div>
                   <div>
                     <h2 className="text-lg font-bold text-[#191c1e]">This Month</h2>
-                    <p className="text-xs text-[#767683]">October 2026 Overview</p>
+                    <p className="text-xs text-[#767683]">{new Date().toLocaleString('default', { month: 'long', year: 'numeric' })} Overview</p>
                   </div>
                 </div>
                 
                 <div className="flex justify-between items-center bg-[#f2f4f6] p-4 rounded-xl border border-gray-100 mb-4">
                   <div className="text-center">
                     <p className="text-[10px] font-bold text-[#767683] uppercase">Active Days</p>
-                    <p className="text-2xl font-bold text-[#141779]">21<span className="text-lg text-gray-400">/30</span></p>
+                    <p className="text-2xl font-bold text-[#141779]">
+                      {reportData?.monthlyStats?.activeDays ?? 0}<span className="text-lg text-gray-400">/{reportData?.monthlyStats?.totalDaysInMonth ?? 30}</span>
+                    </p>
                   </div>
                   <div className="w-[1px] h-10 bg-gray-300"></div>
                   <div className="text-center">
                     <p className="text-[10px] font-bold text-[#767683] uppercase">Hours</p>
-                    <p className="text-2xl font-bold text-[#006a62]">12.5</p>
+                    <p className="text-2xl font-bold text-[#006a62]">{reportData?.monthlyStats?.timeHours ?? 0}</p>
                   </div>
                   <div className="w-[1px] h-10 bg-gray-300"></div>
                   <div className="text-center">
                     <p className="text-[10px] font-bold text-[#767683] uppercase">Bosses Defeated</p>
-                    <p className="text-2xl font-bold text-[#ba1a1a]">4</p>
+                    <p className="text-2xl font-bold text-[#ba1a1a]">{reportData?.monthlyStats?.bossesDefeated ?? 0}</p>
                   </div>
                 </div>
 
@@ -169,7 +171,7 @@ export default function ParentReportScreen() {
                   <AlertTriangle size={20} className="text-orange-600 shrink-0 mt-0.5" />
                   <div>
                     <p className="text-xs font-bold text-orange-800">Attention Needed</p>
-                    <p className="text-[11px] text-orange-700 mt-0.5">{reportData?.weaknesses || "Geometry scores have dropped by 12% this week. We recommend scheduling a quick review session."}</p>
+                    <p className="text-[11px] text-orange-700 mt-0.5">{reportData?.weaknesses || "Keep practicing to identify areas needing improvement."}</p>
                   </div>
                 </div>
               </div>
@@ -180,17 +182,15 @@ export default function ParentReportScreen() {
                   <div className="min-w-[100px] bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-100 p-3 rounded-xl flex flex-col items-center justify-center text-center">
                     <Trophy size={28} className="text-yellow-600 mb-2" />
                     <p className="text-xs font-bold text-yellow-800">Math Whiz</p>
-                    <p className="text-[9px] text-yellow-600">Oct 12</p>
+                    <p className="text-[9px] text-yellow-600">Recent</p>
                   </div>
                   <div className="min-w-[100px] bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 p-3 rounded-xl flex flex-col items-center justify-center text-center">
                     <Star size={28} className="text-blue-600 mb-2" />
                     <p className="text-xs font-bold text-blue-800">7-Day Streak</p>
-                    <p className="text-[9px] text-blue-600">Oct 10</p>
                   </div>
                   <div className="min-w-[100px] bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100 p-3 rounded-xl flex flex-col items-center justify-center text-center">
                     <CheckCircle size={28} className="text-green-600 mb-2" />
-                    <p className="text-xs font-bold text-green-800">Flawless</p>
-                    <p className="text-[9px] text-green-600">Oct 05</p>
+                    <p className="text-xs font-bold text-green-800">Consistent</p>
                   </div>
                 </div>
               </div>
@@ -207,40 +207,56 @@ export default function ParentReportScreen() {
                   </div>
                   <div>
                     <h2 className="text-lg font-bold text-[#191c1e]">6-Month Trend</h2>
-                    <p className="text-xs text-[#767683]">May - October 2026</p>
+                    <p className="text-xs text-[#767683]">Accuracy score per month</p>
                   </div>
                 </div>
 
                 <div className="h-40 flex items-end justify-between gap-2 px-2 border-b border-gray-200 pb-2 mb-4">
-                  {/* Mock Bar Chart */}
-                  {[45, 60, 55, 80, 75, 95].map((height, i) => (
+                  {(reportData?.sixMonthTrend ?? [{month:'',score:0},{month:'',score:0},{month:'',score:0},{month:'',score:0},{month:'',score:0},{month:'',score:0}]).map((m: any, i: number) => (
                     <div key={i} className="flex flex-col items-center flex-1 gap-2">
-                      <div className="w-full bg-[#30007f] rounded-t-md opacity-80" style={{ height: `${height}%` }}></div>
-                      <span className="text-[9px] font-bold text-[#767683]">M{i+1}</span>
+                      <div
+                        className="w-full bg-[#30007f] rounded-t-md opacity-80 transition-all duration-700"
+                        style={{ height: `${Math.max(4, m.score)}%` }}
+                      ></div>
+                      <span className="text-[9px] font-bold text-[#767683]">{m.month}</span>
                     </div>
                   ))}
                 </div>
-                <p className="text-sm font-bold text-[#464652] text-center mb-1">Upward Trajectory! 🚀</p>
-                <p className="text-xs text-[#767683] text-center">Engagement has increased by 40% compared to the first month.</p>
+                {(() => {
+                  const trend = reportData?.sixMonthTrend ?? [];
+                  if (trend.length < 2) return <p className="text-xs text-[#767683] text-center">Complete more quests to build your trend!</p>;
+                  const first = trend[0]?.score ?? 0;
+                  const last = trend[trend.length - 1]?.score ?? 0;
+                  const diff = last - first;
+                  return (
+                    <>
+                      <p className="text-sm font-bold text-[#464652] text-center mb-1">{diff >= 0 ? `Upward Trajectory! 🚀` : `Keep Going! 💪`}</p>
+                      <p className="text-xs text-[#767683] text-center">
+                        Accuracy {diff >= 0 ? 'increased' : 'changed'} by {Math.abs(diff)}% over 6 months.
+                      </p>
+                    </>
+                  );
+                })()}
               </div>
 
               <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-5 border-[1.5px] border-[rgba(255,255,255,0.4)] shadow-[0_4px_20px_rgba(20,23,121,0.05)]">
                 <h3 className="text-sm font-bold text-[#191c1e] mb-3">Skill Evolution</h3>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100 shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <Target size={18} className="text-green-600"/>
-                      <span className="text-xs font-bold text-[#464652]">Algebra Concepts</span>
+                  {(reportData?.subjectBreakdown ?? []).slice(0,3).map((sb: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100 shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <Target size={18} className="text-green-600"/>
+                        <span className="text-xs font-bold text-[#464652]">{sb.subject}</span>
+                      </div>
+                      <span className={`text-xs font-bold px-2 py-1 rounded-md ${
+                        sb.accuracy >= 80 ? 'text-green-600 bg-green-50' :
+                        sb.accuracy >= 60 ? 'text-blue-600 bg-blue-50' : 'text-orange-600 bg-orange-50'
+                      }`}>{sb.accuracy >= 80 ? 'Mastered' : sb.accuracy >= 60 ? 'Improving' : 'Needs Work'}</span>
                     </div>
-                    <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-md">Mastered</span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100 shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <Target size={18} className="text-blue-600"/>
-                      <span className="text-xs font-bold text-[#464652]">Physics Basics</span>
-                    </div>
-                    <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md">Improving</span>
-                  </div>
+                  ))}
+                  {(!reportData?.subjectBreakdown || reportData.subjectBreakdown.length === 0) && (
+                    <p className="text-xs text-[#767683]">Complete more quests to see skill evolution!</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -253,22 +269,22 @@ export default function ParentReportScreen() {
                 <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#141779] to-[#006a62] flex items-center justify-center mx-auto mb-3 shadow-lg">
                   <Award size={32} color="white" />
                 </div>
-                <h2 className="text-xl font-bold text-[#191c1e]">2026 Annual Review</h2>
-                <p className="text-xs text-[#767683] mb-5">Top 5% of all scholars globally.</p>
+                <h2 className="text-xl font-bold text-[#191c1e]">{new Date().getFullYear()} Annual Review</h2>
+                <p className="text-xs text-[#767683] mb-5">Your learning journey so far</p>
                 
                 <div className="grid grid-cols-2 gap-4 text-left">
                   <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
                     <p className="text-[10px] font-bold text-indigo-800 uppercase mb-1">Total Hours</p>
-                    <p className="text-2xl font-bold text-indigo-900">142</p>
+                    <p className="text-2xl font-bold text-indigo-900">{reportData?.yearlyStats?.timeHours ?? 0}</p>
                   </div>
                   <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
                     <p className="text-[10px] font-bold text-emerald-800 uppercase mb-1">Levels Gained</p>
-                    <p className="text-2xl font-bold text-emerald-900">18</p>
+                    <p className="text-2xl font-bold text-emerald-900">{reportData?.yearlyStats?.levelsGained ?? 0}</p>
                   </div>
                   <div className="bg-purple-50 p-4 rounded-xl border border-purple-100 col-span-2 flex items-center justify-between">
                     <div>
                       <p className="text-[10px] font-bold text-purple-800 uppercase mb-1">Questions Solved</p>
-                      <p className="text-2xl font-bold text-purple-900">14,500+</p>
+                      <p className="text-2xl font-bold text-purple-900">{(reportData?.yearlyStats?.questionsSolved ?? 0).toLocaleString()}</p>
                     </div>
                     <BookOpenCheck size={36} className="text-purple-300" />
                   </div>
@@ -281,7 +297,7 @@ export default function ParentReportScreen() {
                   <h3 className="text-sm font-bold">Strengths & Recommendation</h3>
                 </div>
                 <p className="text-xs text-indigo-100 leading-relaxed">
-                  {reportData?.strengths || "Based on the extraordinary progress in Science and Math, we recommend enrolling in the Advanced STEM track next year to keep the challenge rating optimal."}
+                  {reportData?.strengths || "Keep learning and exploring to unlock personalised recommendations!"}
                 </p>
               </div>
             </div>

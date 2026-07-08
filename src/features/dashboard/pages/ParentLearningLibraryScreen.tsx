@@ -71,9 +71,6 @@ export default function ParentLearningLibraryScreen() {
           </div>
           <h1 className="text-xl font-bold text-[#141779]">Library</h1>
         </div>
-        <button className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-[#141779]/10 transition-colors active:scale-95">
-          <Bell size={22} className="text-[#141779]" />
-        </button>
       </header>
 
       {/* Main Content Area */}
@@ -136,7 +133,7 @@ export default function ParentLearningLibraryScreen() {
             // Completed UI
             if (topic.status === "completed") {
               return (
-                <div key={topic.topicId} onClick={() => navigate(`/parent/lessons/player?id=${topic.topicId === "1" ? "listening" : "focus"}`)} className="flex items-center gap-4 p-4 bg-white/70 backdrop-blur-xl border border-white/40 rounded-2xl shadow-sm group active:scale-[0.98] transition-all cursor-pointer">
+                <div key={topic.topicId} onClick={() => navigate(`/parent/lessons/player?id=${topic.topicId}`)} className="flex items-center gap-4 p-4 bg-white/70 backdrop-blur-xl border border-white/40 rounded-2xl shadow-sm group active:scale-[0.98] transition-all cursor-pointer">
                   <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-[#57fae9]/30 flex-shrink-0">
                     <img className="w-full h-full object-cover opacity-80" alt={topic.title} src={imageUrl} />
                     <div className="absolute inset-0 flex items-center justify-center bg-[#006a62]/20">
@@ -161,12 +158,9 @@ export default function ParentLearningLibraryScreen() {
             // Active UI
             if (topic.status === "active") {
               return (
-                <div key={topic.topicId} onClick={() => navigate(`/parent/lessons/player?id=${topic.topicId === "21" ? "focus" : "listening"}`)} className="flex items-center gap-4 p-4 bg-white border-2 border-[#141779]/20 rounded-2xl shadow-md group active:scale-[0.98] transition-all cursor-pointer relative overflow-hidden">
-                  <div className="absolute top-0 right-0 bg-[#2d328f] px-3 py-1 rounded-bl-lg">
-                    <span className="text-[10px] font-bold text-white uppercase tracking-wider">Current</span>
-                  </div>
-                  <div className="w-20 h-20 rounded-xl overflow-hidden bg-[#e0e0ff] flex-shrink-0">
-                    <img className="w-full h-full object-cover" alt={topic.title} src={imageUrl} />
+                <div key={topic.topicId} onClick={() => navigate(`/parent/lessons/player?id=${topic.topicId}`)} className="flex items-center gap-4 p-4 bg-white border border-[#c7c5d4]/40 hover:border-[#141779]/30 rounded-2xl shadow-sm group active:scale-[0.98] transition-all cursor-pointer">
+                  <div className="w-20 h-20 rounded-xl overflow-hidden bg-[#e0e0ff] flex-shrink-0 relative group-hover:shadow-md transition-shadow">
+                    <img className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={topic.title} src={imageUrl} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start">
@@ -176,14 +170,13 @@ export default function ParentLearningLibraryScreen() {
                     <h3 className="font-bold text-[#191c1e] leading-tight">{topic.title}</h3>
                     <div className="flex items-center gap-3 mt-2">
                       <span className="flex items-center gap-1 text-[11px] font-semibold text-[#767683]"><Clock size={12} /> {topic.duration || 5} min</span>
-                      <span className="flex items-center gap-1 text-[11px] font-semibold text-[#767683]"><StarHalf size={12} fill="currentColor" /> Intermediate</span>
                     </div>
                   </div>
                 </div>
               );
             }
 
-            // Other Lessons (Locked)
+            // Locked UI
             return (
               <div key={topic.topicId} className="flex items-center gap-4 p-4 bg-[#f2f4f6]/50 rounded-2xl opacity-70 grayscale-[0.3] group transition-all">
                 <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-[#eceef0] flex-shrink-0">
@@ -209,24 +202,37 @@ export default function ParentLearningLibraryScreen() {
         </section>
       </main>
 
-      {/* Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 w-full z-50 rounded-t-3xl bg-[rgba(236,238,240,0.9)] backdrop-blur-2xl border-t border-white/20 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] flex justify-around items-center px-4 h-[80px]">
-        <div className="flex flex-col items-center justify-center text-[#141779] bg-[rgba(20,23,121,0.1)] rounded-full px-5 py-2 cursor-pointer active:scale-90 transition-all">
-          <BookOpen size={24} />
-          <span className="text-[11px] font-bold uppercase tracking-widest mt-1">Lessons</span>
-        </div>
-        <div onClick={() => navigate('/parent/roadmap')} className="flex flex-col items-center justify-center text-[#464652] cursor-pointer hover:bg-[rgba(230,232,234,0.5)] transition-all px-5 py-2 rounded-full active:scale-90">
-          <TrendingUp size={24} />
-          <span className="text-[11px] font-bold uppercase tracking-widest mt-1">Growth</span>
-        </div>
-        <div className="flex flex-col items-center justify-center text-[#464652] cursor-pointer hover:bg-[rgba(230,232,234,0.5)] transition-all px-5 py-2 rounded-full active:scale-90">
-          <Users size={24} />
-          <span className="text-[11px] font-bold uppercase tracking-widest mt-1">Community</span>
-        </div>
-        <div onClick={() => navigate('/parent/settings')} className="flex flex-col items-center justify-center text-[#464652] cursor-pointer hover:bg-[rgba(230,232,234,0.5)] transition-all px-5 py-2 rounded-full active:scale-90">
-          <Settings size={24} />
-          <span className="text-[11px] font-bold uppercase tracking-widest mt-1">Settings</span>
-        </div>
+      {/* Bottom Nav */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center px-4 py-3 bg-white/60 backdrop-blur-xl border-t border-white/60 shadow-[0_-8px_32px_rgba(0,0,0,0.05)]">
+        {/* Lessons (Active) */}
+        <button className="flex flex-col items-center justify-center gap-1 py-1.5 px-4 rounded-full transition-all duration-300 bg-[#57fae9] text-[#007168] shadow-sm scale-105 cursor-pointer">
+          <BookOpen size={20} strokeWidth={2.5} />
+          <span className="text-[10px] font-bold tracking-wide">Lessons</span>
+        </button>
+        {/* Growth */}
+        <button
+          onClick={() => navigate('/parent/roadmap')}
+          className="flex flex-col items-center justify-center gap-1 py-1.5 px-4 rounded-full transition-all duration-300 text-[#464652] hover:text-[#007168] cursor-pointer"
+        >
+          <TrendingUp size={20} strokeWidth={2} />
+          <span className="text-[10px] font-bold tracking-wide">Growth</span>
+        </button>
+        {/* Community */}
+        <button
+          onClick={() => alert("Community features are coming soon!")}
+          className="flex flex-col items-center justify-center gap-1 py-1.5 px-4 rounded-full transition-all duration-300 text-[#464652] hover:text-[#007168] cursor-pointer opacity-80"
+        >
+          <Users size={20} strokeWidth={2} />
+          <span className="text-[10px] font-bold tracking-wide">Community</span>
+        </button>
+        {/* Settings */}
+        <button
+          onClick={() => navigate('/parent/settings')}
+          className="flex flex-col items-center justify-center gap-1 py-1.5 px-4 rounded-full transition-all duration-300 text-[#464652] hover:text-[#007168] cursor-pointer"
+        >
+          <Settings size={20} strokeWidth={2} />
+          <span className="text-[10px] font-bold tracking-wide">Settings</span>
+        </button>
       </nav>
       
     </div>
