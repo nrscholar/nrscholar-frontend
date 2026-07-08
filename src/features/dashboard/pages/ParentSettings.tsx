@@ -137,7 +137,7 @@ export default function ParentSettings() {
         <button onClick={() => navigate(-1)} className="w-11 h-11 flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-gray-50 hover:scale-105 active:scale-95 transition-all">
           <ArrowLeft size={22} className="text-[#141779]" />
         </button>
-        <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#141779] to-[#30007f]">Settings</h1>
+        <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#141779] to-[#30007f]">Settings</h1>
         <button className="w-11 h-11 flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-gray-50 hover:scale-105 active:scale-95 transition-all">
           <Bell size={22} className="text-[#141779]" />
         </button>
@@ -170,7 +170,7 @@ export default function ParentSettings() {
             />
           </div>
           <div className="relative z-10 flex-1">
-            <h2 className="text-2xl font-black text-[#141779]">Parent Profile</h2>
+            <h2 className="text-2xl font-bold text-[#141779]">Parent Profile</h2>
             <p className="text-sm font-semibold text-[#767683] mt-1 flex items-center gap-1">
               <ShieldCheck size={16} className="text-[#006a62]" /> Secure Admin Area
             </p>
@@ -325,7 +325,7 @@ export default function ParentSettings() {
               <div className="w-20 h-20 rounded-full bg-red-50 flex items-center justify-center mb-5 ring-8 ring-red-50/50">
                 <Trash2 size={36} className="text-red-600" />
               </div>
-              <h2 className="text-xl font-extrabold text-[#191c1e] text-center mb-3">
+              <h2 className="text-xl font-bold text-[#191c1e] text-center mb-3">
                 Wipe All Data?
               </h2>
               <p className="text-[15px] text-[#464652] text-center leading-relaxed mb-8">

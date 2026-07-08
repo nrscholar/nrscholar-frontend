@@ -85,17 +85,17 @@ export default function ParentReportScreen() {
                 <div className="grid grid-cols-2 gap-3 mb-4">
                   <div className="bg-[#f2f4f6] p-3 rounded-xl border border-gray-100">
                     <p className="text-[10px] font-bold text-[#464652] uppercase mb-1">Time Spent</p>
-                    <p className="text-2xl font-black text-[#141779]">{reportData?.todayTimeMinutes || 0}<span className="text-sm font-bold text-[#767683]">m</span></p>
+                    <p className="text-2xl font-bold text-[#141779]">{reportData?.todayTimeMinutes || 0}<span className="text-sm font-bold text-[#767683]">m</span></p>
                   </div>
                   <div className="bg-[#f2f4f6] p-3 rounded-xl border border-gray-100">
                     <p className="text-[10px] font-bold text-[#464652] uppercase mb-1">Questions</p>
-                    <p className="text-2xl font-black text-[#006a62]">{reportData?.todaySolved || 0}</p>
+                    <p className="text-2xl font-bold text-[#006a62]">{reportData?.todaySolved || 0}</p>
                   </div>
                 </div>
                 <div className="bg-[#f2f4f6] p-4 rounded-xl border border-gray-100">
                   <div className="flex justify-between items-end mb-2">
                     <p className="text-[10px] font-bold text-[#464652] uppercase">Accuracy Score</p>
-                    <p className="text-2xl font-black text-[#30007f]">{reportData?.todayConfidenceScore || 0}%</p>
+                    <p className="text-2xl font-bold text-[#30007f]">{reportData?.todayConfidenceScore || 0}%</p>
                   </div>
                   <div className="w-full h-3 bg-[rgba(48,0,127,0.1)] rounded-full overflow-hidden">
                     <div className="h-full bg-gradient-to-r from-[#141779] to-[#30007f] rounded-full relative" style={{ width: `${reportData?.todayConfidenceScore || 0}%` }}>
@@ -151,17 +151,17 @@ export default function ParentReportScreen() {
                 <div className="flex justify-between items-center bg-[#f2f4f6] p-4 rounded-xl border border-gray-100 mb-4">
                   <div className="text-center">
                     <p className="text-[10px] font-bold text-[#767683] uppercase">Active Days</p>
-                    <p className="text-2xl font-black text-[#141779]">21<span className="text-lg text-gray-400">/30</span></p>
+                    <p className="text-2xl font-bold text-[#141779]">21<span className="text-lg text-gray-400">/30</span></p>
                   </div>
                   <div className="w-[1px] h-10 bg-gray-300"></div>
                   <div className="text-center">
                     <p className="text-[10px] font-bold text-[#767683] uppercase">Hours</p>
-                    <p className="text-2xl font-black text-[#006a62]">12.5</p>
+                    <p className="text-2xl font-bold text-[#006a62]">12.5</p>
                   </div>
                   <div className="w-[1px] h-10 bg-gray-300"></div>
                   <div className="text-center">
                     <p className="text-[10px] font-bold text-[#767683] uppercase">Bosses Defeated</p>
-                    <p className="text-2xl font-black text-[#ba1a1a]">4</p>
+                    <p className="text-2xl font-bold text-[#ba1a1a]">4</p>
                   </div>
                 </div>
 
@@ -259,16 +259,16 @@ export default function ParentReportScreen() {
                 <div className="grid grid-cols-2 gap-4 text-left">
                   <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
                     <p className="text-[10px] font-bold text-indigo-800 uppercase mb-1">Total Hours</p>
-                    <p className="text-2xl font-black text-indigo-900">142</p>
+                    <p className="text-2xl font-bold text-indigo-900">142</p>
                   </div>
                   <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
                     <p className="text-[10px] font-bold text-emerald-800 uppercase mb-1">Levels Gained</p>
-                    <p className="text-2xl font-black text-emerald-900">18</p>
+                    <p className="text-2xl font-bold text-emerald-900">18</p>
                   </div>
                   <div className="bg-purple-50 p-4 rounded-xl border border-purple-100 col-span-2 flex items-center justify-between">
                     <div>
                       <p className="text-[10px] font-bold text-purple-800 uppercase mb-1">Questions Solved</p>
-                      <p className="text-2xl font-black text-purple-900">14,500+</p>
+                      <p className="text-2xl font-bold text-purple-900">14,500+</p>
                     </div>
                     <BookOpenCheck size={36} className="text-purple-300" />
                   </div>

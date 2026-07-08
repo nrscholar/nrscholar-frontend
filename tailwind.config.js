@@ -56,6 +56,7 @@ export default {
         "error-container": "#ffdad6"
       },
       fontFamily: {
+        "sans": ["Quicksand", "sans-serif"],
         "headline": ["Quicksand"],
         "display": ["Quicksand"],
         "body": ["Quicksand"],

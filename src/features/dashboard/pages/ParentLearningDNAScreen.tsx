@@ -28,7 +28,7 @@ export default function ParentLearningDNAScreen() {
         <button onClick={() => navigate(-1)} className="w-11 h-11 flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-gray-50 hover:scale-105 active:scale-95 transition-all">
           <ArrowLeft size={22} className="text-[#141779]" />
         </button>
-        <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#141779] to-[#30007f]">Learning DNA</h1>
+        <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#141779] to-[#30007f]">Learning DNA</h1>
       </header>
 
       <main className="px-5 pt-6 max-w-lg mx-auto flex flex-col gap-6">

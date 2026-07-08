@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Bell, Settings, BrainCircuit, Clock, ChevronRight, Home, Activity, X, BarChart2 } from "lucide-react";
+import { ArrowLeft, Bell, Settings, BrainCircuit, Clock, ChevronRight, Home, Activity, X, BarChart2, TrendingUp } from "lucide-react";
 import { apiFetch } from "../../../api";
 
 export default function ParentDashboardScreen() {
@@ -13,17 +13,27 @@ export default function ParentDashboardScreen() {
   const targetFuel = 500;
   const currentCityName = "Ahmedabad";
   const nextCityName = "Gandhinagar";
-  const [modalType, setModalType] = useState<"strengths" | "weaknesses" | "graph" | null>(null);
+  const [modalType, setModalType] = useState<"strengths" | "weaknesses" | "risks" | "lastActivity" | "graph" | null>(null);
   const [strengths, setStrengths] = useState("Quick problem solver in Mathematics.");
   const [weaknesses, setWeaknesses] = useState("Needs more practice in Science concepts.");
   const [risks, setRisks] = useState("Slight drop in engagement this week.");
+  const [hasRiskAlert, setHasRiskAlert] = useState(false);
+  const [lastActivityDetails, setLastActivityDetails] = useState<any>(null);
   const [todayTime, setTodayTime] = useState(0);
   const [solvedToday, setSolvedToday] = useState(0);
   const [todayConfidenceScore, setTodayConfidenceScore] = useState(0);
 
   const [weeklyTrend, setWeeklyTrend] = useState<{day: string, score: number}[]>([]);
+  const [mathTrend, setMathTrend] = useState<{day: string, score: number}[]>([]);
+  const [scienceTrend, setScienceTrend] = useState<{day: string, score: number}[]>([]);
+  const [riskTrend, setRiskTrend] = useState<{day: string, score: number}[]>([]);
   const [subjectBreakdown, setSubjectBreakdown] = useState<{subject: string, accuracy: number}[]>([]);
   const [lastActivity, setLastActivity] = useState<string>("Exploring new quests...");
+  const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; score: number; day: string } | null>(null);
+
+  useEffect(() => {
+    setHoveredPoint(null);
+  }, [modalType]);
 
   useEffect(() => {
     async function loadUserData() {
@@ -40,18 +50,23 @@ export default function ParentDashboardScreen() {
         
         // Fetch dashboard extra info dynamically
         try {
-          const repRes = await apiFetch("/api/parent/report");
+          const repRes = await apiFetch("/api/parent/report?simulate_risk=true");
           const repJson = await repRes.json();
           if (repJson.success && repJson.data) {
             if (repJson.data.strengths) setStrengths(repJson.data.strengths);
             if (repJson.data.weaknesses) setWeaknesses(repJson.data.weaknesses);
             if (repJson.data.risks) setRisks(repJson.data.risks);
+            if (repJson.data.hasRiskAlert !== undefined) setHasRiskAlert(repJson.data.hasRiskAlert);
             if (repJson.data.todayTimeMinutes !== undefined) setTodayTime(repJson.data.todayTimeMinutes);
             if (repJson.data.todaySolved !== undefined) setSolvedToday(repJson.data.todaySolved);
             if (repJson.data.todayConfidenceScore !== undefined) setTodayConfidenceScore(repJson.data.todayConfidenceScore);
             if (repJson.data.weeklyTrend) setWeeklyTrend(repJson.data.weeklyTrend);
+            if (repJson.data.mathTrend) setMathTrend(repJson.data.mathTrend);
+            if (repJson.data.scienceTrend) setScienceTrend(repJson.data.scienceTrend);
+            if (repJson.data.riskTrend) setRiskTrend(repJson.data.riskTrend);
             if (repJson.data.subjectBreakdown) setSubjectBreakdown(repJson.data.subjectBreakdown);
             if (repJson.data.lastActivity) setLastActivity(repJson.data.lastActivity);
+            if (repJson.data.lastActivityDetails) setLastActivityDetails(repJson.data.lastActivityDetails);
           }
         } catch(e) {}
 
@@ -68,16 +83,20 @@ export default function ParentDashboardScreen() {
   const fuelPercentage = Math.min(100, Math.max(0, (fuel / targetFuel) * 100));
 
   const generateChartData = (targetAcc?: number) => {
-    if (!weeklyTrend || weeklyTrend.length === 0) return { pathLine: "", pathArea: "", points: [], labels: [] };
+    const trend = modalType === "weaknesses" 
+      ? scienceTrend 
+      : modalType === "strengths" 
+        ? mathTrend 
+        : modalType === "risks"
+          ? riskTrend
+          : weeklyTrend;
+    if (!trend || trend.length === 0) return { pathLine: "", pathArea: "", points: [], labels: [] };
     const width = 300;
     const height = 120;
-    const baseFinalScore = weeklyTrend[weeklyTrend.length - 1].score;
-    const offset = targetAcc !== undefined ? targetAcc - baseFinalScore : 0;
 
-    const points = weeklyTrend.map((t, i) => {
-      const x = (i / (weeklyTrend.length - 1)) * width;
-      let score = t.score + offset;
-      score = Math.max(0, Math.min(100, score)); // clamp
+    const points = trend.map((t, i) => {
+      const x = (i / (trend.length - 1)) * width;
+      const score = Math.max(0, Math.min(100, t.score)); // clamp
       const y = height - (score / 100) * height;
       return { x, y, score: Math.round(score), day: t.day };
     });
@@ -85,7 +104,7 @@ export default function ParentDashboardScreen() {
     const pathLine = `M ${points.map(p => `${p.x},${p.y}`).join(" L ")}`;
     const pathArea = `M 0,${height} L 0,${points[0].y} ${pathLine.substring(1)} L ${width},${height} Z`;
     
-    return { pathLine, pathArea, points, labels: weeklyTrend.map(t => t.day) };
+    return { pathLine, pathArea, points, labels: trend.map(t => t.day) };
   };
 
   let highestSubject = "Math";
@@ -100,15 +119,27 @@ export default function ParentDashboardScreen() {
     lowestAcc = sorted[sorted.length - 1].accuracy;
   }
 
-  const chartTitle = modalType === "strengths" ? highestSubject : modalType === "weaknesses" ? lowestSubject : "Overall Logic & Reasoning";
+  const chartTitle = modalType === "strengths" 
+    ? highestSubject 
+    : modalType === "weaknesses" 
+      ? lowestSubject 
+      : modalType === "risks"
+        ? "Confidence Decline"
+        : "Overall Logic & Reasoning";
+        
   const targetAcc = modalType === "strengths" ? highestAcc : modalType === "weaknesses" ? lowestAcc : undefined;
   
   const chart = generateChartData(targetAcc);
   const currentScore = chart.points.length > 0 ? chart.points[chart.points.length - 1].score : 92;
   const startScore = chart.points.length > 0 ? chart.points[0].score : 65;
   const diff = currentScore - startScore;
-  const diffStr = diff >= 0 ? `+${diff}% this week` : `${diff}% this week`;
-  const chartColor = modalType === "weaknesses" ? "#ba1a1a" : "#006a62";
+  const diffStr = diff >= 0 ? `+${diff}% this period` : `${diff}% this period`;
+  
+  const chartColor = modalType === "weaknesses" 
+    ? "#ba1a1a" 
+    : modalType === "risks"
+      ? "#ba1a1a" // Warning Red for decline risk alert graph!
+      : "#006a62";
 
   if (loading) {
     return (
@@ -144,7 +175,7 @@ export default function ParentDashboardScreen() {
               </div>
             )}
           </div>
-          <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#141779] to-[#30007f]">Parent Space</h1>
+          <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#141779] to-[#30007f]">Parent Space</h1>
         </div>
         <button className="relative w-11 h-11 flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-gray-50 hover:scale-105 active:scale-95 transition-all">
           <Bell size={22} className="text-[#141779]" />
@@ -170,12 +201,12 @@ export default function ParentDashboardScreen() {
           <div className="flex gap-3 mb-5 mt-2">
             <div className="flex-1 bg-gradient-to-br from-[rgba(255,255,255,0.9)] to-[rgba(255,255,255,0.5)] rounded-[18px] p-4 flex flex-col items-center justify-center border border-[rgba(255,255,255,0.6)] shadow-[0_8px_20px_rgba(0,106,98,0.04)] relative overflow-hidden hover:scale-[1.02] transition-transform">
               <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-[#006a62]/10 to-transparent rounded-bl-full" />
-              <span className="text-4xl font-black text-[#006a62] drop-shadow-sm mb-1">{todayTime}<span className="text-xl">m</span></span>
+              <span className="text-4xl font-bold text-[#006a62] drop-shadow-sm mb-1">{todayTime}<span className="text-xl">m</span></span>
               <span className="text-[11px] font-bold text-[#767683] uppercase tracking-widest">Today's Time</span>
             </div>
             <div className="flex-1 bg-gradient-to-br from-[rgba(255,255,255,0.9)] to-[rgba(255,255,255,0.5)] rounded-[18px] p-4 flex flex-col items-center justify-center border border-[rgba(255,255,255,0.6)] shadow-[0_8px_20px_rgba(48,0,127,0.04)] relative overflow-hidden hover:scale-[1.02] transition-transform">
               <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-[#30007f]/10 to-transparent rounded-bl-full" />
-              <span className="text-4xl font-black text-[#30007f] drop-shadow-sm mb-1">{solvedToday}</span>
+              <span className="text-4xl font-bold text-[#30007f] drop-shadow-sm mb-1">{solvedToday}</span>
               <span className="text-[11px] font-bold text-[#767683] uppercase tracking-widest">Solved Today</span>
             </div>
           </div>
@@ -183,7 +214,7 @@ export default function ParentDashboardScreen() {
           <div className="w-full">
             <div className="flex justify-between items-center mb-2">
               <span className="text-[12px] font-bold text-[#141779] tracking-wider">DAILY CONFIDENCE SCORE</span>
-              <span className="text-[15px] font-black text-[#141779]">{todayConfidenceScore}%</span>
+              <span className="text-[15px] font-bold text-[#141779]">{todayConfidenceScore}%</span>
             </div>
             <div className="h-3 bg-[rgba(20,23,121,0.06)] rounded-full overflow-hidden mb-2 shadow-inner relative">
               <div 
@@ -215,10 +246,66 @@ export default function ParentDashboardScreen() {
             <p className="text-[14px] text-[#464652]">{weaknesses}</p>
           </button>
 
-          <div className="bg-white/70 backdrop-blur-md rounded-[20px] p-5 border border-white/60 shadow-[0_4px_20px_rgba(0,0,0,0.03)] border-l-[5px] border-l-[#141779]">
-            <h4 className="text-[16px] font-bold text-[#141779] mb-1">🔔 Risk Alerts</h4>
-            <p className="text-[14px] text-[#464652]">{risks}</p>
-          </div>
+          <button 
+            onClick={() => {
+              if (hasRiskAlert) {
+                setModalType("risks");
+              }
+            }}
+            className={`text-left w-full bg-white/70 backdrop-blur-md rounded-[20px] p-5 border border-white/60 shadow-[0_4px_20px_rgba(0,0,0,0.03)] border-l-[5px] hover:bg-white hover:shadow-lg transition-all ${
+              hasRiskAlert 
+                ? 'border-l-[#ba1a1a] border-[#ba1a1a]/15 shadow-[0_4px_20px_rgba(186,26,26,0.05)] cursor-pointer' 
+                : 'border-l-[#141779] cursor-default'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1.5">
+              <h4 className={`text-[16px] font-bold flex items-center gap-1.5 ${hasRiskAlert ? 'text-[#ba1a1a]' : 'text-[#141779]'}`}>
+                <span>🔔</span> Risk Alerts
+              </h4>
+              {hasRiskAlert && (
+                <span className="text-[10px] font-bold uppercase tracking-wider bg-[#ba1a1a]/10 text-[#ba1a1a] px-2 py-0.5 rounded-full animate-pulse">
+                  High Risk
+                </span>
+              )}
+            </div>
+            <p className="text-[14px] text-[#464652] leading-relaxed">{risks}</p>
+
+            {hasRiskAlert && riskTrend && riskTrend.length > 0 && (
+              <div className="mt-4 pt-3 border-t border-dashed border-gray-100 flex items-center justify-between gap-4">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-bold text-[#767683] uppercase tracking-wider">Decline Trend</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-base font-extrabold text-[#ba1a1a]">{riskTrend[0].score}%</span>
+                    <span className="text-xs text-[#767683]">→</span>
+                    <span className="text-base font-extrabold text-[#ba1a1a]">{riskTrend[riskTrend.length - 1].score}%</span>
+                  </div>
+                </div>
+                <div className="w-28 h-9 shrink-0 flex items-center">
+                  <svg viewBox="0 0 100 30" className="w-full h-full overflow-visible">
+                    <path
+                      d={`M ${riskTrend.map((t, idx) => `${(idx / (riskTrend.length - 1)) * 100},${30 - (t.score / 100) * 25}`).join(" L ")}`}
+                      fill="none"
+                      stroke="#ba1a1a"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    {riskTrend.map((t, idx) => (
+                      <circle
+                        key={idx}
+                        cx={(idx / (riskTrend.length - 1)) * 100}
+                        cy={30 - (t.score / 100) * 25}
+                        r="3.5"
+                        fill={idx === riskTrend.length - 1 ? "#ba1a1a" : "#ffffff"}
+                        stroke="#ba1a1a"
+                        strokeWidth="2"
+                      />
+                    ))}
+                  </svg>
+                </div>
+              </div>
+            )}
+          </button>
         </div>
 
         {/* Parent Learning Section */}
@@ -319,7 +406,7 @@ export default function ParentDashboardScreen() {
           </div>
 
           <button 
-            onClick={() => navigate('/parent/roadmap')}
+            onClick={() => setModalType("lastActivity")}
             className="w-full bg-white/70 backdrop-blur-md rounded-[20px] p-5 border border-white/60 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex justify-between items-center hover:bg-white hover:shadow-lg transition-all group"
           >
             <div className="flex items-center gap-4">
@@ -354,13 +441,14 @@ export default function ParentDashboardScreen() {
       </nav>
 
       {/* Graph Modal */}
-      {modalType && (
+      {modalType && modalType !== "lastActivity" && (
         <div className="fixed inset-0 bg-black/40 z-[100] flex justify-center items-end sm:items-center p-0 sm:p-5 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="bg-[#f7f9fb] w-full sm:w-[400px] max-w-full rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom-10 duration-300">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-lg font-bold text-[#141779]">
                 {modalType === "strengths" ? "Cognitive Strengths" : 
                  modalType === "weaknesses" ? "Areas for Review" : 
+                 modalType === "risks" ? "Confidence Decline Risk" :
                  "Cognitive Profile Graph"}
               </h2>
               <button onClick={() => setModalType(null)} className="p-2 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">
@@ -369,133 +457,186 @@ export default function ParentDashboardScreen() {
             </div>
 
             <div className="mb-6 bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-              <div className="flex justify-between items-end mb-2">
-                <div>
-                  <p className="text-[10px] font-bold text-[#767683] uppercase tracking-wider mb-1">{chartTitle} (7-Day Trend)</p>
-                  <p className="text-3xl font-black" style={{ color: chartColor }}>{currentScore}%</p>
+              {chart.points.length > 0 ? (
+                <>
+                  <div className="flex justify-between items-end mb-2">
+                    <div>
+                      <p className="text-[10px] font-bold text-[#767683] uppercase tracking-wider mb-1">{chartTitle} (7-Day Trend)</p>
+                      <p className="text-3xl font-bold" style={{ color: chartColor }}>{currentScore}%</p>
+                    </div>
+                    <div className={`px-2 py-1 rounded-md text-[10px] font-bold ${diff >= 0 ? 'bg-[#006a62]/10 text-[#006a62]' : 'bg-[#ba1a1a]/10 text-[#ba1a1a]'}`}>
+                      {diffStr}
+                    </div>
+                  </div>
+
+                  {/* Custom SVG Line Graph */}
+                  <div className="relative w-full h-[160px] mt-6">
+                    <svg viewBox="0 0 300 145" className="w-full h-full overflow-visible">
+                      <defs>
+                        <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={chartColor} stopOpacity="0.4" />
+                          <stop offset="100%" stopColor={chartColor} stopOpacity="0" />
+                        </linearGradient>
+                      </defs>
+                      
+                      {/* Grid Lines */}
+                      <line x1="0" y1="0" x2="300" y2="0" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
+                      <line x1="0" y1="60" x2="300" y2="60" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
+                      <line x1="0" y1="120" x2="300" y2="120" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
+
+                      {/* Area Fill */}
+                      <path 
+                        d={chart.pathArea} 
+                        fill="url(#lineGradient)" 
+                        className="animate-in fade-in duration-700"
+                      />
+                      
+                      {/* The Line */}
+                      <path 
+                        d={chart.pathLine} 
+                        fill="none" 
+                        stroke={chartColor} 
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="drop-shadow-sm animate-in slide-in-from-left-4 duration-700"
+                      />
+
+                      {/* Data Points */}
+                      {chart.points.map((p, idx) => (
+                        <circle 
+                          key={idx} 
+                          cx={p.x} 
+                          cy={p.y} 
+                          r={idx === chart.points.length - 1 ? 5 : 4} 
+                          fill={idx === chart.points.length - 1 ? chartColor : "#ffffff"} 
+                          stroke={idx === chart.points.length - 1 ? "#ffffff" : chartColor} 
+                          strokeWidth="2.5" 
+                          className={idx === chart.points.length - 1 ? "animate-pulse" : ""} 
+                        />
+                      ))}
+
+                      {/* Responsive Labels inside SVG */}
+                      {chart.points.map((p, idx) => (
+                        <text
+                          key={`lbl-${idx}`}
+                          x={p.x}
+                          y={140}
+                          textAnchor={idx === 0 ? "start" : idx === chart.points.length - 1 ? "end" : "middle"}
+                          fill={idx === chart.points.length - 1 ? chartColor : "#767683"}
+                          className="text-[9px] font-bold select-none"
+                        >
+                          {p.day}
+                        </text>
+                      ))}
+
+                      {/* Large Transparent Hover/Touch Targets */}
+                      {chart.points.map((p, idx) => (
+                        <circle
+                          key={`hover-${idx}`}
+                          cx={p.x}
+                          cy={p.y}
+                          r={16}
+                          fill="transparent"
+                          className="cursor-pointer"
+                          onMouseEnter={() => setHoveredPoint(p)}
+                          onMouseLeave={() => setHoveredPoint(null)}
+                          onTouchStart={() => setHoveredPoint(p)}
+                        />
+                      ))}
+                    </svg>
+
+                    {/* Tooltip Overlay */}
+                    {hoveredPoint && (
+                      <div 
+                        className="absolute bg-slate-900/90 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg pointer-events-none shadow-md border border-white/10 flex flex-col items-center z-[110] transition-all duration-150 animate-in fade-in zoom-in-95"
+                        style={{ 
+                          left: `${(hoveredPoint.x / 300) * 100}%`, 
+                          top: `${(hoveredPoint.y / 145) * 100 - 8}%`,
+                          transform: "translate(-50%, -100%)"
+                        }}
+                      >
+                        <span className="text-white/60 text-[8px] uppercase tracking-wider mb-0.5">{hoveredPoint.day}</span>
+                        <span className="text-sm font-extrabold">{hoveredPoint.score}%</span>
+                        {/* Caret */}
+                        <div className="w-2 h-2 bg-slate-900/90 rotate-45 absolute bottom-[-4px] left-1/2 -translate-x-1/2 border-r border-b border-white/10" />
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col justify-center items-center h-[180px] text-center p-4 bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
+                  <TrendingUp size={24} className="text-gray-400 mb-2" />
+                  <p className="text-sm font-bold text-[#464652]">Not enough data to show graph</p>
+                  <p className="text-xs text-[#767683] mt-1">Encourage your child to solve quests to generate performance trends!</p>
                 </div>
-                <div className={`px-2 py-1 rounded-md text-[10px] font-bold ${diff >= 0 ? 'bg-[#006a62]/10 text-[#006a62]' : 'bg-[#ba1a1a]/10 text-[#ba1a1a]'}`}>
-                  {diffStr}
-                </div>
-              </div>
-
-              {/* Custom SVG Line Graph */}
-              <div className="relative w-full h-[160px] mt-6">
-                <svg viewBox="0 0 300 120" className="w-full h-full overflow-visible">
-                  <defs>
-                    <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={chartColor} stopOpacity="0.4" />
-                      <stop offset="100%" stopColor={chartColor} stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-                  
-                  {/* Grid Lines */}
-                  <line x1="0" y1="0" x2="300" y2="0" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
-                  <line x1="0" y1="60" x2="300" y2="60" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
-                  <line x1="0" y1="120" x2="300" y2="120" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
-
-                  {/* Area Fill */}
-                  <path 
-                    d={chart.pathArea} 
-                    fill="url(#lineGradient)" 
-                    className="animate-in fade-in duration-700"
-                  />
-                  
-                  {/* The Line */}
-                  <path 
-                    d={chart.pathLine} 
-                    fill="none" 
-                    stroke={chartColor} 
-                    strokeWidth="3.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="drop-shadow-sm animate-in slide-in-from-left-4 duration-700"
-                  />
-
-                  {/* Data Points */}
-                  {chart.points.map((p, idx) => (
-                    <circle 
-                      key={idx} 
-                      cx={p.x} 
-                      cy={p.y} 
-                      r={idx === chart.points.length - 1 ? 5 : 4} 
-                      fill={idx === chart.points.length - 1 ? chartColor : "#ffffff"} 
-                      stroke={idx === chart.points.length - 1 ? "#ffffff" : chartColor} 
-                      strokeWidth="2.5" 
-                      className={idx === chart.points.length - 1 ? "animate-pulse" : ""} 
-                    />
-                  ))}
-                </svg>
-
-                {/* X Axis Labels */}
-                <div className="flex justify-between text-[10px] font-bold text-[#767683] mt-4 px-1">
-                  {chart.labels.map((lbl, idx) => (
-                    <span key={idx} style={{ color: idx === chart.labels.length - 1 ? chartColor : undefined }}>{lbl}</span>
-                  ))}
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Subject Breakdown Bars */}
-            <div className="mt-6 mb-4 space-y-4">
-              <h3 className="text-[13px] font-bold text-[#141779] mb-3 border-b border-gray-100 pb-2">
-                {modalType === "strengths" ? "Top Subjects" : modalType === "weaknesses" ? "Needs Attention" : "Performance by Subject"}
-              </h3>
-              {subjectBreakdown
-                .slice()
-                .filter(sb => {
-                  if (modalType === "strengths") return sb.accuracy >= 70;
-                  if (modalType === "weaknesses") return sb.accuracy < 70;
-                  return true;
-                })
-                .sort((a, b) => {
-                  if (modalType === "weaknesses") return a.accuracy - b.accuracy;
-                  return b.accuracy - a.accuracy;
-                })
-                .map((sb, idx) => {
-                const isStrength = sb.accuracy >= 70;
-                const barColor = isStrength ? "#006a62" : "#ba1a1a";
-                const bgColor = isStrength ? "bg-[#006a62]/10" : "bg-[#ba1a1a]/10";
-                
-                return (
-                  <div key={idx}>
-                    <div className="flex justify-between text-xs font-bold mb-1.5">
-                      <span className={isStrength ? "text-[#006a62]" : "text-[#ba1a1a]"}>
-                        {sb.subject} {isStrength ? "💪" : "⚠️"}
-                      </span>
-                      <span className={isStrength ? "text-[#006a62]" : "text-[#ba1a1a]"}>{sb.accuracy}%</span>
+            {modalType !== "risks" && (
+              <div className="mt-6 mb-4 space-y-4">
+                <h3 className="text-[13px] font-bold text-[#141779] mb-3 border-b border-gray-100 pb-2">
+                  {modalType === "strengths" ? "Top Subjects" : modalType === "weaknesses" ? "Needs Attention" : "Performance by Subject"}
+                </h3>
+                {subjectBreakdown
+                  .slice()
+                  .filter(sb => {
+                    if (modalType === "strengths") return sb.accuracy >= 70;
+                    if (modalType === "weaknesses") return sb.accuracy < 70;
+                    return true;
+                  })
+                  .sort((a, b) => {
+                    if (modalType === "weaknesses") return a.accuracy - b.accuracy;
+                    return b.accuracy - a.accuracy;
+                  })
+                  .map((sb, idx) => {
+                  const isStrength = sb.accuracy >= 70;
+                  const barColor = isStrength ? "#006a62" : "#ba1a1a";
+                  const bgColor = isStrength ? "bg-[#006a62]/10" : "bg-[#ba1a1a]/10";
+                  
+                  return (
+                    <div key={idx}>
+                      <div className="flex justify-between text-xs font-bold mb-1.5">
+                        <span className={isStrength ? "text-[#006a62]" : "text-[#ba1a1a]"}>
+                          {sb.subject} {isStrength ? "💪" : "⚠️"}
+                        </span>
+                        <span className={isStrength ? "text-[#006a62]" : "text-[#ba1a1a]"}>{sb.accuracy}%</span>
+                      </div>
+                      <div className={`h-2.5 w-full ${bgColor} rounded-full overflow-hidden`}>
+                        <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${sb.accuracy}%`, backgroundColor: barColor }} />
+                      </div>
                     </div>
-                    <div className={`h-2.5 w-full ${bgColor} rounded-full overflow-hidden`}>
-                      <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${sb.accuracy}%`, backgroundColor: barColor }} />
-                    </div>
-                  </div>
-                );
-              })}
-              {subjectBreakdown.length === 0 && (
-                <p className="text-xs text-[#767683]">Play more quests to see detailed subject breakdown!</p>
-              )}
-              {subjectBreakdown.length > 0 && 
-               modalType === "weaknesses" && 
-               subjectBreakdown.every(sb => sb.accuracy >= 70) && (
-                <p className="text-xs text-[#006a62] font-semibold bg-[#006a62]/10 p-3 rounded-lg text-center mt-2">
-                  🎉 Fantastic! Your child has no weak subjects right now.
-                </p>
-              )}
-              {subjectBreakdown.length > 0 && 
-               modalType === "strengths" && 
-               subjectBreakdown.every(sb => sb.accuracy < 70) && (
-                <p className="text-xs text-[#ba1a1a] font-semibold bg-[#ba1a1a]/10 p-3 rounded-lg text-center mt-2">
-                  Keep playing to build up strong subjects!
-                </p>
-              )}
-            </div>
+                  );
+                })}
+                {subjectBreakdown.length === 0 && (
+                  <p className="text-xs text-[#767683]">Play more quests to see detailed subject breakdown!</p>
+                )}
+                {subjectBreakdown.length > 0 && 
+                 modalType === "weaknesses" && 
+                 subjectBreakdown.every(sb => sb.accuracy >= 70) && (
+                  <p className="text-xs text-[#006a62] font-semibold bg-[#006a62]/10 p-3 rounded-lg text-center mt-2">
+                    🎉 Fantastic! Your child has no weak subjects right now.
+                  </p>
+                )}
+                {subjectBreakdown.length > 0 && 
+                 modalType === "strengths" && 
+                 subjectBreakdown.every(sb => sb.accuracy < 70) && (
+                  <p className="text-xs text-[#ba1a1a] font-semibold bg-[#ba1a1a]/10 p-3 rounded-lg text-center mt-2">
+                    Keep playing to build up strong subjects!
+                  </p>
+                )}
+              </div>
+            )}
 
             {(() => {
                return (
                  <div className="bg-indigo-50 p-4 rounded-xl shadow-sm border border-indigo-100 mt-4">
                    <p className="text-xs text-[#141779] leading-relaxed">
                      <span className="font-bold text-[#141779]">Actionable Insight: </span> 
-                     {subjectBreakdown.length > 0 ? (
+                     {modalType === "risks" ? (
+                       "Encourage your child, review their recent incorrect attempts, and practice lower-difficulty questions together to help rebuild their learning confidence."
+                     ) : subjectBreakdown.length > 0 ? (
                        modalType === "strengths" ? 
                          `Your child is currently excelling at ${highestSubject}! These strong foundations help boost overall confidence.`
                        : modalType === "weaknesses" ?
@@ -508,6 +649,85 @@ export default function ParentDashboardScreen() {
                  </div>
                );
             })()}
+          </div>
+        </div>
+      )}
+
+      {modalType === "lastActivity" && lastActivityDetails && (
+        <div className="fixed inset-0 bg-black/40 z-[100] flex justify-center items-end sm:items-center p-0 sm:p-5 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-[#f7f9fb] w-full sm:w-[450px] max-w-full rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom-10 duration-300 max-h-[85vh] flex flex-col">
+            <div className="flex justify-between items-center mb-6 shrink-0">
+              <h2 className="text-xl font-bold text-[#141779] flex items-center gap-2">
+                <span>⏱️</span> Last Activity Details
+              </h2>
+              <button onClick={() => setModalType(null)} className="p-2 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">
+                <X size={20} color="#464652" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto pr-1 flex-1 space-y-5 pb-4">
+              {/* Quick Summary Bento Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-center">
+                  <span className="text-[10px] font-bold text-[#767683] uppercase tracking-wider mb-1">Subject & Chapter</span>
+                  <span className="text-sm font-bold text-[#141779] truncate">{lastActivityDetails.chapter}</span>
+                  <span className="text-[11px] font-semibold text-[#006a62] mt-0.5">{lastActivityDetails.subject}</span>
+                </div>
+                <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-center">
+                  <span className="text-[10px] font-bold text-[#767683] uppercase tracking-wider mb-1">Time Spent</span>
+                  <span className="text-xl font-extrabold text-[#30007f]">{lastActivityDetails.timeSpentMinutes} mins</span>
+                </div>
+                <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-center">
+                  <span className="text-[10px] font-bold text-[#767683] uppercase tracking-wider mb-1">Resolved (Correct)</span>
+                  <span className="text-xl font-extrabold text-[#006a62]">{lastActivityDetails.correctAnswers} / {lastActivityDetails.totalQuestions}</span>
+                </div>
+                <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-center">
+                  <span className="text-[10px] font-bold text-[#767683] uppercase tracking-wider mb-1">Incorrect (Wrong)</span>
+                  <span className="text-xl font-extrabold text-[#ba1a1a]">{lastActivityDetails.incorrectAnswers}</span>
+                </div>
+              </div>
+
+              {/* Wrong Questions Tracker */}
+              <div>
+                <h3 className="text-xs font-bold text-[#464652] uppercase tracking-widest mb-3 px-1">Wrong Questions Tracker</h3>
+                {lastActivityDetails.wrongQuestions && lastActivityDetails.wrongQuestions.length > 0 ? (
+                  <div className="space-y-3">
+                    {lastActivityDetails.wrongQuestions.map((q: any, idx: number) => (
+                      <div key={idx} className="bg-white p-4 rounded-2xl border border-red-100 shadow-sm">
+                        <p className="text-sm font-bold text-[#191c1e] mb-2.5">
+                          <span className="text-[#ba1a1a] mr-1">Q{idx+1}.</span> {q.question}
+                        </p>
+                        <div className="space-y-1.5 pt-2 border-t border-gray-50 text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-[#ba1a1a] bg-red-50 px-2 py-0.5 rounded-md">Selected:</span>
+                            <span className="text-gray-600 font-medium">{q.selectedAnswer}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-[#006a62] bg-emerald-50 px-2 py-0.5 rounded-md">Correct:</span>
+                            <span className="text-[#006a62] font-bold">{q.correctAnswer}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 text-center py-5">
+                    <p className="text-sm font-bold text-[#006a62]">🎉 All Questions Resolved Correctly!</p>
+                    <p className="text-xs text-[#006a62]/80 mt-1">Excellent job! Your child got 100% accuracy on this activity.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Actionable Guideline */}
+              <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                <p className="text-xs text-[#141779] leading-relaxed">
+                  <span className="font-bold text-[#141779]">Parent Recommendation: </span>
+                  {lastActivityDetails.incorrectAnswers > 0 
+                    ? "Sit with your child to review the wrong answers. Focus on explaining the core concept rather than just providing the answer."
+                    : "Celebrate this milestone! Praise your child's effort and encourage them to tackle new topics."}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       )}
