@@ -77,12 +77,20 @@ export default function ProfileScreen() {
         {/* Profile Header */}
         <div className="flex flex-col items-center gap-4">
           <div className="relative">
-            <div className="w-32 h-32 rounded-full border-4 border-[#57fae9] overflow-hidden shadow-sm bg-white">
-              <img
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCFdm4gfOE1-GzTC6d-QUoqHFtqi21kkOcBjm9mzoawwKvqW3oQBfSmHbT-V38pzDohty7kgWDihAipg3ey_YbvNuXF6QxrW8sO_5USchFH3L5by9AXnOrxoGmEhz_fXlzMc3XBy9VsCdkrzp_5PqRiHEnNisKzaj-N4ufGtKTHZZuEf5gXUoIRuoYPAuwaMiuJn5w45vOge2n3MW_FnmvdUv0aN3EaojKJWU8AlFpyqn0WDBhYxlDqjha91bzeopk2nHTuUx0S5A"
-                alt="Avatar"
-                className="w-full h-full object-cover"
-              />
+            <div className="w-32 h-32 rounded-full border-4 border-[#57fae9] overflow-hidden shadow-sm bg-white flex items-center justify-center">
+              {user.childPhoto ? (
+                <img
+                  src={user.childPhoto}
+                  alt="Avatar"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <img
+                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user.childName || "Kid")}&background=random`}
+                  alt="Avatar"
+                  className="w-full h-full object-cover"
+                />
+              )}
             </div>
             <div className="absolute -bottom-2 -right-2 bg-[#006a62] px-3 py-1 rounded-full flex items-center gap-1 shadow-sm">
               <Award size={14} color="white" />
@@ -133,7 +141,13 @@ export default function ProfileScreen() {
             className="w-full flex items-center justify-between bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_1px_5px_rgba(0,0,0,0.05)] hover:bg-white transition-colors"
           >
             <div className="flex items-center gap-4">
-              <Users size={24} color="#141779" />
+              {user.parentPhoto ? (
+                <div className="w-7 h-7 rounded-full border border-[rgba(20,23,121,0.2)] overflow-hidden shrink-0">
+                  <img src={user.parentPhoto} alt="Parent" className="w-full h-full object-cover" />
+                </div>
+              ) : (
+                <Users size={24} color="#141779" />
+              )}
               <span className="text-lg font-medium text-[#191c1e]">Parental Controls</span>
             </div>
             <ArrowLeft size={24} color="#767683" className="rotate-180" />
