@@ -15,7 +15,7 @@ export default function InventoryScreen() {
   const [hatchingType, setHatchingType] = useState<string | null>(null);
   const [rewardData, setRewardData] = useState<any>(null);
 
-  const [fuel, setFuel] = useState(0);
+  const [xp, setXp] = useState(0);
   const [coins, setCoins] = useState(0);
   const [userBadges, setUserBadges] = useState<any[]>([]);
 
@@ -28,7 +28,7 @@ export default function InventoryScreen() {
         const data = await response.json();
         if (data.success) {
           const u = data.data.user;
-          setFuel(u.fuel || 0);
+          setXp(u.xp || 0);
           setCoins(u.coins || 0);
           setUserBadges(u.badges || []);
         }
@@ -39,7 +39,7 @@ export default function InventoryScreen() {
     if (cached) {
       try {
         const u = JSON.parse(cached);
-        setFuel(u.fuel || 0);
+        setXp(u.xp || 0);
         setCoins(u.coins || 0);
         setUserBadges(u.badges || []);
       } catch(e) {}
@@ -144,9 +144,12 @@ export default function InventoryScreen() {
     fetchCities();
   }, []);
 
+  const xpThresholds = [0, 1000, 2500, 5000, 10000];
   const cities = citiesData.map((cityData, index) => {
-    const isUnlocked = fuel >= (cityData.requiredFuel || 0);
-    const isCurrent = isUnlocked && (index === citiesData.length - 1 || fuel < (citiesData[index+1]?.requiredFuel || 0));
+    const reqXp = xpThresholds[index] || 0;
+    const nextReqXp = xpThresholds[index + 1] || 99999;
+    const isUnlocked = xp >= reqXp;
+    const isCurrent = isUnlocked && (index === citiesData.length - 1 || xp < nextReqXp);
 
     let status = "Locked 🔒";
     let rating = "☆☆☆☆☆";
@@ -204,8 +207,8 @@ export default function InventoryScreen() {
           <div className="flex-1 bg-[rgba(87,250,233,0.2)] rounded-2xl p-3 flex items-center gap-3">
             <Zap size={28} color="#141779" />
             <div>
-              <p className="text-xl font-bold text-[#141779]">{fuel}</p>
-              <p className="text-[9px] font-bold text-[#767683] tracking-widest">FUEL</p>
+              <p className="text-xl font-bold text-[#141779]">{xp}</p>
+              <p className="text-[9px] font-bold text-[#767683] tracking-widest">XP</p>
             </div>
           </div>
         </div>

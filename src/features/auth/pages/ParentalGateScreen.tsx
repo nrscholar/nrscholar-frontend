@@ -134,8 +134,19 @@ export default function ParentalGateScreen() {
     }
   };
 
-  const handleVerifyCredentials = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleMobileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/\D/g, ""); // Allow only digits
+    if (val.length <= 10) {
+      setForgotMobile(val);
+    }
+  };
+
+  const handleVerifyCredentials = async (e?: React.FormEvent | React.KeyboardEvent) => {
+    if (e) e.preventDefault();
+    if (!/^\d{10}$/.test(forgotMobile)) {
+      setErrorMsg("Mobile number must be exactly 10 digits.");
+      return;
+    }
     setIsVerifying(true);
     setErrorMsg("");
     try {
@@ -161,6 +172,12 @@ export default function ParentalGateScreen() {
       setErrorMsg("Network error verifying identity.");
     } finally {
       setIsVerifying(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && forgotMobile && forgotPassword && !isVerifying) {
+      handleVerifyCredentials(e);
     }
   };
 
@@ -301,12 +318,19 @@ export default function ParentalGateScreen() {
             <h3 className="text-xl font-bold text-[#141779] mb-2">Verify Identity</h3>
             <p className="text-sm text-[#464652] mb-6">Enter your account credentials to reset the Parent PIN.</p>
             
-            <form onSubmit={handleVerifyCredentials} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-4">
               <input
                 type="tel"
                 placeholder="Mobile Number"
                 value={forgotMobile}
-                onChange={(e) => setForgotMobile(e.target.value)}
+                onChange={handleMobileChange}
+                onKeyDown={handleKeyDown}
+                autoComplete="off"
+                maxLength={10}
+                pattern="[0-9]{10}"
+                title="Mobile number must be exactly 10 digits"
+                readOnly
+                onFocus={(e) => e.target.removeAttribute('readOnly')}
                 className="w-full px-4 py-3 rounded-xl border border-[#d8dadc] focus:outline-none focus:border-[#006a62] focus:ring-1 focus:ring-[#006a62]"
                 required
               />
@@ -315,13 +339,18 @@ export default function ParentalGateScreen() {
                 placeholder="Password"
                 value={forgotPassword}
                 onChange={(e) => setForgotPassword(e.target.value)}
+                onKeyDown={handleKeyDown}
+                autoComplete="off"
+                readOnly
+                onFocus={(e) => e.target.removeAttribute('readOnly')}
                 className="w-full px-4 py-3 rounded-xl border border-[#d8dadc] focus:outline-none focus:border-[#006a62] focus:ring-1 focus:ring-[#006a62]"
                 required
               />
               
               <div className="flex flex-col gap-3 mt-4">
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={() => handleVerifyCredentials()}
                   disabled={isVerifying || !forgotMobile || !forgotPassword}
                   className="w-full py-3.5 rounded-xl font-bold text-white bg-[#006a62] disabled:opacity-50 transition-opacity flex items-center justify-center"
                 >
@@ -335,7 +364,7 @@ export default function ParentalGateScreen() {
                   Cancel
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}

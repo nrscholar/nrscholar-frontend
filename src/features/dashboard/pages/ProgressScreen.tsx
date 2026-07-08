@@ -8,11 +8,10 @@ export default function ProgressScreen() {
   const [loading, setLoading] = useState(true);
 
   const [level, setLevel] = useState(1);
-  const [fuel, setFuel] = useState(0);
   const [streakDays, setStreakDays] = useState(0);
   const [xp, setXp] = useState(0);
 
-  const progressPercent = Math.min(100, Math.max(0, Math.round(((fuel % 500) / 500) * 100)));
+  const progressPercent = Math.min(100, Math.max(0, Math.round(((xp % 1000) / 1000) * 100)));
   const radius = 88;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progressPercent / 100) * circumference;
@@ -23,7 +22,6 @@ export default function ProgressScreen() {
         const cached = localStorage.getItem("userData");
         if (cached) {
            const u = JSON.parse(cached);
-           setFuel(u.fuel || 0);
            setXp(u.xp || 0);
            setLevel(u.level || 1);
            setStreakDays(u.streakDays || 0);
@@ -33,7 +31,6 @@ export default function ProgressScreen() {
         const data = await response.json();
         if (data.success && data.data.user) {
            const u = data.data.user;
-           setFuel(u.fuel || 0);
            setXp(u.xp || 0);
            setLevel(u.level || 1);
            setStreakDays(u.streakDays || 0);

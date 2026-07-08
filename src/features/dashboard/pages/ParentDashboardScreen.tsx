@@ -9,10 +9,8 @@ export default function ParentDashboardScreen() {
   const [childName, setChildName] = useState("Explorer");
   const [parentPhoto, setParentPhoto] = useState("");
   const [userLevel, setUserLevel] = useState(1);
-  const [fuel, setFuel] = useState(350);
-  const targetFuel = 500;
-  const currentCityName = "Ahmedabad";
-  const nextCityName = "Gandhinagar";
+  const [xp, setXp] = useState(0);
+
   const [modalType, setModalType] = useState<"strengths" | "weaknesses" | "risks" | "lastActivity" | "graph" | null>(null);
   const [strengths, setStrengths] = useState("Quick problem solver in Mathematics.");
   const [weaknesses, setWeaknesses] = useState("Needs more practice in Science concepts.");
@@ -45,7 +43,7 @@ export default function ParentDashboardScreen() {
           setChildName(user.childName || "Explorer");
           setParentPhoto(user.parentPhoto || "");
           setUserLevel(user.level || 1);
-          setFuel(user.fuel || 0);
+          setXp(user.xp || 0);
         }
         
         // Fetch dashboard extra info dynamically
@@ -78,9 +76,6 @@ export default function ParentDashboardScreen() {
     }
     loadUserData();
   }, []);
-
-  const fuelNeeded = targetFuel - fuel;
-  const fuelPercentage = Math.min(100, Math.max(0, (fuel / targetFuel) * 100));
 
   const generateChartData = (targetAcc?: number) => {
     const trend = modalType === "weaknesses" 

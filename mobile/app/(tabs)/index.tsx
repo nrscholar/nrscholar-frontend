@@ -317,7 +317,7 @@ export default function HomeScreen() {
               </View>
               <View>
                 <Text style={styles.bentoCardTitle}>🗺 My Journey</Text>
-                <Text style={styles.bentoCardSub}>Gujarat Explorer Map</Text>
+                <Text style={styles.bentoCardSub}>Explorer Map</Text>
               </View>
             </TouchableOpacity>
 

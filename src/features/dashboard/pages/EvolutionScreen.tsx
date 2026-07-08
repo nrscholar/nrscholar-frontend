@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import { Sparkles, ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
@@ -41,20 +41,56 @@ export default function EvolutionScreen() {
   const { xp = 0, percentage = 0, stage = 1, stageName = "Egg" } = evoData || {};
 
   // Determine Dragon properties based on stage
-  let dragonScale = 1;
-  let bgGradient = "from-surface-container to-surface-container-highest";
-  if (stage === 2) { dragonScale = 1; bgGradient = "from-[#fdfcfb] to-[#e2d1c3]"; }
-  if (stage === 3) { dragonScale = 1.3; bgGradient = "from-[#a8ff78] to-[#78ffd6]"; }
-  if (stage === 4) { dragonScale = 1.6; bgGradient = "from-[#ff9966] to-[#ff5e62]"; }
-  if (stage >= 5) { dragonScale = 2.0; bgGradient = "from-[#8E2DE2] to-[#4A00E0]"; }
+  let dragonScale = 0.8;
+  let bgGradient = "from-[#fdfcfb] to-[#e2d1c3]";
+  let modelUrl = "/images/dragons/egg.glb";
+  let fallbackUrl = "/images/dragons/egg.png";
+
+  if (stage === 1) {
+    dragonScale = 0.8;
+    bgGradient = "from-[#fdfcfb] to-[#e2d1c3]";
+    modelUrl = "/images/dragons/egg.glb";
+    fallbackUrl = "/images/dragons/egg.png";
+  } else if (stage === 2) {
+    dragonScale = 0.9;
+    bgGradient = "from-[#fef9c3] to-[#fef08a]";
+    modelUrl = "/images/dragons/egg.glb";
+    fallbackUrl = "/images/dragons/cracked.png";
+  } else if (stage === 3) {
+    dragonScale = 1.0;
+    bgGradient = "from-[#dcfce7] to-[#86efac]";
+    modelUrl = "/images/dragons/baby_dragon.glb";
+    fallbackUrl = "/images/dragons/baby.png";
+  } else if (stage === 4) {
+    dragonScale = 1.3;
+    bgGradient = "from-[#ffedd5] to-[#fdbb2d]";
+    modelUrl = "/images/dragons/teen_dragon.glb";
+    fallbackUrl = "/images/dragons/teen.png";
+  } else if (stage === 5) {
+    dragonScale = 1.6;
+    bgGradient = "from-[#ffdad9] to-[#ff8a85]";
+    modelUrl = "/images/dragons/teen_dragon.glb";
+    fallbackUrl = "/images/dragons/teen.png";
+  } else {
+    dragonScale = 2.0;
+    bgGradient = "from-[#e0e7ff] to-[#818cf8]";
+    modelUrl = "/images/dragons/legendary_dragon.glb";
+    fallbackUrl = "/images/dragons/adult.png";
+  }
 
   return (
     <div className="min-h-screen bg-background text-on-surface flex flex-col items-center">
       <div className="w-full max-w-[430px] flex-1 bg-surface-bright flex flex-col shadow-2xl relative overflow-hidden">
         
         {/* Header */}
-        <header className="px-6 pt-10 pb-4 flex items-center justify-center sticky top-0 z-50 bg-surface-bright border-b border-surface-variant/20 shadow-sm">
-          <h1 className="text-[24px] font-black text-[#141779] uppercase tracking-wide">Dragon Evolution</h1>
+        <header className="px-6 pt-10 pb-4 flex items-center sticky top-0 z-50 bg-surface-bright border-b border-surface-variant/20 shadow-sm">
+          <button 
+            onClick={() => returnTo ? navigate(returnTo) : navigate(-1)} 
+            className="p-1 -ml-2 rounded-full hover:bg-surface-container-highest transition-colors"
+          >
+            <ArrowLeft size={24} className="text-[#141779]" />
+          </button>
+          <h1 className="text-[20px] font-black text-[#141779] uppercase tracking-wide flex-1 text-center -mr-6">Dragon Evolution</h1>
         </header>
 
         <main className="flex-1 flex flex-col items-center justify-center p-6 relative">
@@ -64,63 +100,10 @@ export default function EvolutionScreen() {
           </div>
 
           {/* Avatar Container */}
-          <div className={`w-64 h-64 rounded-full bg-gradient-to-br ${bgGradient} flex items-center justify-center text-9xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] relative z-10 border-4 border-white ${stage >= 5 ? 'animate-pulse' : ''}`}>
-            
-            {stage === 1 ? (
-              <svg viewBox="0 0 100 120" className="w-40 h-40 drop-shadow-2xl">
-                {/* Dragon Peeking (only at 95%+) */}
-                <g className={`transition-all duration-1000 ${percentage >= 95 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-                  {/* Dragon Face */}
-                  <circle cx="50" cy="60" r="22" fill="#34d399" />
-                  <circle cx="42" cy="55" r="4" fill="#064e3b" />
-                  <circle cx="58" cy="55" r="4" fill="#064e3b" />
-                  {/* Snout */}
-                  <ellipse cx="50" cy="68" rx="12" ry="8" fill="#10b981" />
-                  <path d="M 45 68 Q 50 72 55 68" stroke="#064e3b" strokeWidth="1.5" fill="none" />
-                </g>
-
-                {percentage < 50 ? (
-                  /* WHOLE EGG (0% to 49%) */
-                  <g>
-                    <path d="M 10 70 C 10 20 30 5 50 5 C 70 5 90 20 90 70 Q 90 115 50 115 Q 10 115 10 70 Z" fill="#fffefc" stroke="#eaddd1" strokeWidth="2" />
-                    {/* Cracks appear progressively */}
-                    {percentage >= 5 && <path d="M 50 5 L 47 20 L 52 30 L 49 45" stroke="#a8a29e" strokeWidth="1.5" fill="none" strokeLinejoin="round" />}
-                    {percentage >= 10 && <path d="M 30 20 L 35 30 L 25 40" stroke="#a8a29e" strokeWidth="1.5" fill="none" strokeLinejoin="round" />}
-                    {percentage >= 15 && <path d="M 70 25 L 65 35 L 75 45" stroke="#a8a29e" strokeWidth="1.5" fill="none" strokeLinejoin="round" />}
-                    {percentage >= 20 && <path d="M 49 45 L 40 55 L 45 65" stroke="#a8a29e" strokeWidth="1.5" fill="none" strokeLinejoin="round" />}
-                    {percentage >= 25 && <path d="M 75 45 L 65 55 L 70 65" stroke="#a8a29e" strokeWidth="1.5" fill="none" strokeLinejoin="round" />}
-                    {percentage >= 30 && <path d="M 25 40 L 35 55 L 20 65" stroke="#a8a29e" strokeWidth="1.5" fill="none" strokeLinejoin="round" />}
-                    {percentage >= 35 && <path d="M 50 115 L 48 100 L 53 90" stroke="#a8a29e" strokeWidth="1.5" fill="none" strokeLinejoin="round" />}
-                    {percentage >= 40 && <path d="M 20 65 L 30 75 L 25 85 L 35 95" stroke="#a8a29e" strokeWidth="1.5" fill="none" strokeLinejoin="round" />}
-                    {percentage >= 45 && <path d="M 70 65 L 60 75 L 65 85 L 55 95" stroke="#a8a29e" strokeWidth="1.5" fill="none" strokeLinejoin="round" />}
-                  </g>
-                ) : (
-                  /* BROKEN EGG (50% to 100%) */
-                  <g>
-                    {/* Bottom Shell */}
-                    <path d="M 10 70 Q 10 115 50 115 Q 90 115 90 70 L 75 62 L 60 72 L 50 60 L 40 72 L 25 62 Z" fill="#fffefc" stroke="#eaddd1" strokeWidth="2" />
-                    
-                    {/* Bottom Cracks */}
-                    <path d="M 50 115 L 48 100 L 53 90 L 50 80" stroke="#a8a29e" strokeWidth="1.5" fill="none" strokeLinejoin="round" />
-                    <path d="M 25 62 L 30 75 L 25 85 L 35 95" stroke="#a8a29e" strokeWidth="1.5" fill="none" strokeLinejoin="round" />
-                    <path d="M 75 62 L 60 75 L 65 85 L 55 95" stroke="#a8a29e" strokeWidth="1.5" fill="none" strokeLinejoin="round" />
-
-                    {/* Top Shell (Moves up at 50%, moves more and rotates at 95%) */}
-                    <g className={`transition-all duration-1000 origin-[80px_30px] ${percentage >= 95 ? '-translate-y-8 rotate-[20deg]' : 'translate-y-0'}`}>
-                      <path d="M 10 70 C 10 20 30 5 50 5 C 70 5 90 20 90 70 L 75 62 L 60 72 L 50 60 L 40 72 L 25 62 Z" fill="#fffefc" stroke="#eaddd1" strokeWidth="2" />
-                      {/* Top Cracks */}
-                      <path d="M 50 5 L 47 20 L 52 30 L 49 45 L 40 55" stroke="#a8a29e" strokeWidth="1.5" fill="none" strokeLinejoin="round" />
-                      <path d="M 30 20 L 35 30 L 25 40" stroke="#a8a29e" strokeWidth="1.5" fill="none" strokeLinejoin="round" />
-                      <path d="M 70 25 L 65 35 L 75 45 L 65 55" stroke="#a8a29e" strokeWidth="1.5" fill="none" strokeLinejoin="round" />
-                    </g>
-                  </g>
-                )}
-              </svg>
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center p-2">
-                <InteractiveCompanion scale={dragonScale} />
-              </div>
-            )}
+          <div className={`w-64 h-64 rounded-full overflow-hidden bg-gradient-to-br ${bgGradient} flex items-center justify-center text-9xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] relative z-10 border-4 border-white ${stage >= 5 ? 'animate-pulse' : ''}`}>
+            <div className="absolute inset-0 flex items-center justify-center p-2 rounded-full overflow-hidden">
+              <InteractiveCompanion scale={dragonScale} url={modelUrl} fallbackImage={fallbackUrl} />
+            </div>
             
             {stage >= 3 && (
               <div className="absolute -inset-4 border-2 border-dashed border-primary/20 rounded-full animate-[spin_10s_linear_infinite]" />

@@ -14,7 +14,7 @@ export default function HomeScreen() {
     i18n.changeLanguage(lng);
   };
 
-  const [fuel, setFuel] = useState(0);
+  const [xp, setXp] = useState(0);
   const [coins, setCoins] = useState(0);
   const [childName, setChildName] = useState("Explorer");
   const [childPhoto, setChildPhoto] = useState("");
@@ -39,7 +39,7 @@ export default function HomeScreen() {
         const data = await response.json();
         if (data.success) {
           const u = data.data.user;
-          setFuel(u.fuel || 0);
+          setXp(u.xp || 0);
           setCoins(u.coins || 0);
           setChildName(u.childName || "Explorer");
           setChildPhoto(u.childPhoto || "");
@@ -57,7 +57,7 @@ export default function HomeScreen() {
     if (cached) {
       try {
         const u = JSON.parse(cached);
-        setFuel(u.fuel || 0);
+        setXp(u.xp || 0);
         setCoins(u.coins || 0);
         setChildName(u.childName || "Explorer");
         setChildPhoto(u.childPhoto || "");
@@ -133,16 +133,25 @@ export default function HomeScreen() {
     "Dragon Mountain"
   ];
 
-  // Calculate destination progress based on fuel
-  const nextLockedIndex = Math.min(CITIES.length - 1, Math.max(1, Math.floor(fuel / 500) + 1));
-  const currentCityName = CITIES[nextLockedIndex - 1] || "Egg Village";
+  // Calculate destination progress based on XP milestones [0, 1000, 2500, 5000, 10000]
+  const xpThresholds = [0, 1000, 2500, 5000, 10000];
+  let currentCityIndex = 0;
+  for (let i = 0; i < xpThresholds.length; i++) {
+    if (xp >= xpThresholds[i]) {
+      currentCityIndex = i;
+    }
+  }
+  const nextLockedIndex = Math.min(CITIES.length - 1, currentCityIndex + 1);
+  const currentCityName = CITIES[currentCityIndex] || "Egg Village";
   const nextCityName = CITIES[nextLockedIndex] || "Forest Kingdom";
-  const targetFuel = nextLockedIndex * 500;
-  const fuelNeeded = Math.max(0, targetFuel - fuel);
-  const prevMilestoneFuel = (nextLockedIndex - 1) * 500;
-  const currentLegFuelTotal = 500;
-  const currentLegFuelEarned = Math.max(0, fuel - prevMilestoneFuel);
-  const fuelPercentage = Math.min(100, Math.max(0, (currentLegFuelEarned / currentLegFuelTotal) * 100));
+  
+  const targetXp = xpThresholds[nextLockedIndex] || 1000;
+  const prevMilestoneXp = xpThresholds[currentCityIndex] || 0;
+  
+  const xpNeeded = Math.max(0, targetXp - xp);
+  const currentLegXpTotal = targetXp - prevMilestoneXp;
+  const currentLegXpEarned = Math.max(0, xp - prevMilestoneXp);
+  const xpPercentage = currentLegXpTotal > 0 ? Math.min(100, Math.max(0, (currentLegXpEarned / currentLegXpTotal) * 100)) : 100;
 
   return (
     <div className="min-h-screen bg-[#f7f9fb] text-[#141779] font-sans relative overflow-x-hidden pb-24">
@@ -200,20 +209,20 @@ export default function HomeScreen() {
           <div className="flex justify-between items-center mb-2">
             <div className="flex items-center gap-1">
               <Zap size={16} fill="#141779" color="#141779" />
-              <span className="text-[10px] font-bold text-[#141779] tracking-[1px]">JOURNEY FUEL</span>
+              <span className="text-[10px] font-bold text-[#141779] tracking-[1px]">JOURNEY PROGRESS</span>
             </div>
-            <span className="text-xs font-bold text-[#141779]">🚂 {fuel} Fuel</span>
+            <span className="text-xs font-bold text-[#141779]">🔥 {xp} XP</span>
           </div>
           <div className="h-2.5 bg-[rgba(20,23,121,0.1)] rounded-full overflow-hidden">
             <div 
               className="h-full rounded-full bg-gradient-to-r from-[#141779] to-[#57fae9] transition-all duration-500"
-              style={{ width: `${fuelPercentage}%` }}
+              style={{ width: `${xpPercentage}%` }}
             />
           </div>
           <div className="flex items-center gap-1 mt-2.5">
             <MapPin size={16} fill="#ff9f43" color="white" />
             <span className="text-[11px] text-[#767683] font-semibold">
-              Next: {nextCityName} • <span className="font-bold text-[#141779]">{fuelNeeded > 0 ? `${fuelNeeded} Fuel Needed` : "Ready!"}</span>
+              Next: {nextCityName} • <span className="font-bold text-[#141779]">{xpNeeded > 0 ? `${xpNeeded} XP Needed` : "Ready!"}</span>
             </span>
           </div>
         </div>
@@ -250,7 +259,7 @@ export default function HomeScreen() {
           </div>
 
           <p className="text-xs font-bold text-[#141779] text-center">
-            {fuelNeeded > 0 ? `Only ${fuelNeeded} Fuel left to reach ${nextCityName}` : `You have reached ${nextCityName}!`}
+            {xpNeeded > 0 ? `Only ${xpNeeded} XP left to reach ${nextCityName}` : `You have reached ${nextCityName}!`}
           </p>
         </button>
 
@@ -299,7 +308,7 @@ export default function HomeScreen() {
               </div>
               <div>
                 <h3 className="text-[13px] font-bold text-[#141779] mb-1">🗺 {t('journey')}</h3>
-                <p className="text-[10px] text-[#767683] font-semibold">Gujarat Explorer Map</p>
+                <p className="text-[10px] text-[#767683] font-semibold">Explorer Map</p>
               </div>
             </button>
 
