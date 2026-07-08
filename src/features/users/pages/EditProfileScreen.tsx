@@ -106,13 +106,12 @@ export default function EditProfileScreen() {
 
       <main className="px-6 pt-8 pb-24 max-w-md mx-auto">
         <div className="bg-[rgba(255,255,255,0.7)] rounded-3xl p-6 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_2px_10px_rgba(0,0,0,0.05)]">
-          {msg && (
-            <div className={`p-3 mb-4 rounded-xl text-center font-bold text-sm ${msg.includes("success") ? "bg-[#d0f0ed] text-[#006a62]" : "bg-[#ffdad6] text-[#ba1a1a]"}`}>
-              {msg}
-            </div>
-          )}
-
           <form onSubmit={handleSave} className="flex flex-col gap-5">
+            {msg && (
+              <div className={`fixed bottom-10 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-lg text-center font-bold text-sm ${msg.includes("success") ? "bg-[#006a62] text-white" : "bg-[#ba1a1a] text-white"} animate-in fade-in slide-in-from-bottom-5`}>
+                {msg}
+              </div>
+            )}
             {/* Photo Upload Section */}
             <div className="flex flex-col items-center mb-2 relative">
               <div className="relative w-24 h-24 rounded-full border-4 border-white shadow-[0_4px_15px_rgba(0,0,0,0.1)] bg-gray-100 flex items-center justify-center overflow-hidden">
