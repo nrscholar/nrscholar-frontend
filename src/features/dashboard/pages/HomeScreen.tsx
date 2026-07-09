@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Bookmark, BookOpen, CheckCircle, ChevronRight, Gift, Map, MapPin, Shield, Star, Target, Zap } from "lucide-react";
+import { Bookmark, BookOpen, CheckCircle, ChevronRight, Gift, Map, MapPin, Shield, Star, Target, Zap, Bell } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -28,6 +28,20 @@ export default function HomeScreen() {
   const [surpriseData, setSurpriseData] = useState<any>(null);
   const [chestTaps, setChestTaps] = useState(0);
   const [mascotMsg, setMascotMsg] = useState("");
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const res = await apiFetch("/api/notifications");
+        const json = await res.json();
+        if (json.success && json.data) {
+          setUnreadCount(json.data.filter((n: any) => !n.isRead).length);
+        }
+      } catch (e) {}
+    };
+    fetchNotifications();
+  }, []);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -190,10 +204,21 @@ export default function HomeScreen() {
         </div>
 
         {/* Currency & Streak Stats */}
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <div className="bg-[rgba(255,159,67,0.15)] px-2.5 py-1.5 rounded-xl flex items-center justify-center">
             <span className="text-xs font-bold text-[#ff9f43]">🔥 {retentionStreak?.currentStreak ?? streakDays} Days</span>
           </div>
+          <button 
+            onClick={() => navigate("/notifications")}
+            className="w-10 h-10 rounded-xl bg-[rgba(20,23,121,0.08)] flex items-center justify-center hover:bg-[rgba(20,23,121,0.15)] transition-all relative shrink-0"
+          >
+            <Bell size={18} className="text-[#141779]" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-bold border-2 border-white">
+                {unreadCount}
+              </span>
+            )}
+          </button>
           <button 
             onClick={() => navigate("/practice/inventory")}
             className="bg-[rgba(255,215,0,0.15)] px-2.5 py-1.5 rounded-xl flex items-center justify-center hover:opacity-80 transition-opacity"

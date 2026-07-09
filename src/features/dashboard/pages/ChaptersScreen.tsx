@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Rocket, Sun, Compass, Globe, Moon, CheckCircle, Lock } from "lucide-react";
+import { ArrowLeft, Rocket, Sun, Compass, Globe, Moon, CheckCircle, Lock, Bell } from "lucide-react";
 import { motion } from "framer-motion";
 import { apiFetch } from "../../../api";
 
@@ -19,6 +19,9 @@ export default function ChaptersScreen() {
   const [chapters, setChapters] = useState<any[]>([]);
   const [completedChapters, setCompletedChapters] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [childName, setChildName] = useState("Kid");
+  const [childPhoto, setChildPhoto] = useState("");
+  const [unreadCount, setUnreadCount] = useState(0);
   
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -27,6 +30,31 @@ export default function ChaptersScreen() {
   
   useEffect(() => {
     const fetchSubjects = async () => {
+      try {
+        const cached = localStorage.getItem("userData");
+        if (cached) {
+          try {
+            const u = JSON.parse(cached);
+            setChildName(u.childName || u.name || "Kid");
+            setChildPhoto(u.childPhoto || u.photo || "");
+          } catch(e) {}
+        }
+        const meRes = await apiFetch("/api/users/me");
+        const meJson = await meRes.json();
+        if (meJson.success && meJson.data?.user) {
+          setChildName(meJson.data.user.childName || meJson.data.user.name || "Kid");
+          setChildPhoto(meJson.data.user.childPhoto || meJson.data.user.photo || "");
+        }
+      } catch (e) {}
+
+      try {
+        const notifRes = await apiFetch("/api/notifications");
+        const notifData = await notifRes.json();
+        if (notifData.success && notifData.data) {
+          setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
+        }
+      } catch (e) {}
+
       try {
         const subRes = await apiFetch("/api/practice/subjects");
         const subData = await subRes.json();
@@ -93,16 +121,42 @@ export default function ChaptersScreen() {
       {/* TopAppBar */}
       <header className="flex flex-col bg-[rgba(247,249,251,0.8)] border-b border-[rgba(255,255,255,0.2)] sticky top-0 z-50 backdrop-blur-sm">
         <div className="flex items-center justify-between px-6 h-16">
-          <button onClick={() => navigate("/home")} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors">
-            <ArrowLeft size={24} color="#141779" />
-          </button>
-          <h1 className="text-xl font-bold text-[#141779]">Learning Path</h1>
-          <button onClick={() => navigate("/profile")} className="w-10 h-10 rounded-full border-2 border-white bg-[#2d328f] overflow-hidden hover:opacity-80 transition-opacity">
-            <img
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDfj2X6XyApFBA2pBstnJTUCQiXa_6N8Aa5HyJFbmRfUns_QavfAGtkXx8Pf9gAdVWNo3VoZXk0XS5RlpTEZJmYXcySbZBisguP11eKxfswie0FivmvHgHxqpwrdPD_6XhBsZLkcBiKxRDQCmpAU26LfuGIYTvoA2rGBiUGUb2qCMzBmEvvu51A5cZKjZZZOLRCzskphl1WwKDNlmaTHLMDhpMTRg9nS0X6MSpqoK1pDZc_46uN3YyhgErTKiS9ZZf3EcwelgfWVg"
-              alt="Avatar"
-              className="w-full h-full object-cover"
-            />
+          <div className="flex items-center gap-3">
+            <button onClick={() => navigate("/home")} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors shrink-0">
+              <ArrowLeft size={24} color="#141779" />
+            </button>
+            <button 
+              onClick={() => navigate("/profile")} 
+              className="w-10 h-10 rounded-full border-2 border-white bg-[#2d328f] overflow-hidden hover:opacity-80 transition-opacity shrink-0"
+            >
+              {childPhoto ? (
+                <img 
+                  src={childPhoto} 
+                  alt="Avatar"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <img 
+                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(childName || "Kid")}&background=random`} 
+                  alt="Avatar"
+                  className="w-full h-full object-cover"
+                />
+              )}
+            </button>
+            <h1 className="text-xl font-bold text-[#141779] whitespace-nowrap">Learning Path</h1>
+          </div>
+
+          {/* Right Side: Bell Icon */}
+          <button 
+            onClick={() => navigate("/notifications")}
+            className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all relative shrink-0"
+          >
+            <Bell size={20} className="text-[#141779]" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-bold border-2 border-white">
+                {unreadCount}
+              </span>
+            )}
           </button>
         </div>
         

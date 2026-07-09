@@ -73,15 +73,16 @@ export default function ParentLessonsScreen() {
           <button onClick={() => navigate('/parent/dashboard')} className="p-1 -ml-1 hover:bg-[rgba(20,23,121,0.05)] rounded-full transition-colors">
             <ArrowLeft size={24} color="#141779" />
           </button>
+          <div className="w-10 h-10 rounded-full border-2 border-[#2d328f] overflow-hidden bg-white">
+            <img
+              alt="Parent Avatar"
+              src={profilePic || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`}
+              className="w-full h-full object-cover"
+            />
+          </div>
           <h1 className="text-xl font-bold text-[#141779]">Daily Parenting Lessons</h1>
         </div>
-        <div className="w-10 h-10 rounded-full border-2 border-[#2d328f] overflow-hidden bg-white">
-          <img
-            alt="Parent Avatar"
-            src={profilePic || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`}
-            className="w-full h-full object-cover"
-          />
-        </div>
+        <div className="w-10 h-10"></div> {/* Spacer for balance */}
       </header>
 
       <main className="flex-1 flex flex-col">

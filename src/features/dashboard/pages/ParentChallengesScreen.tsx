@@ -123,14 +123,17 @@ export default function ParentChallengesScreen() {
           <button onClick={() => navigate('/parent/dashboard')} className="p-1 -ml-1 hover:bg-[#e0e3e5] rounded-full transition-colors">
             <ArrowLeft className="text-[#141779] font-bold" size={24} />
           </button>
+          <div className="w-10 h-10 rounded-full border-2 border-[#e0e0ff] overflow-hidden flex items-center justify-center bg-[#141779]/10">
+            <img 
+              className="w-full h-full object-cover" 
+              alt="Parent Avatar"
+              src={profilePic || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`}
+            />
+          </div>
           <h1 className="text-xl font-bold text-[#141779]">Growth Challenges</h1>
         </div>
-        <button onClick={() => navigate('/parent/settings')} className="w-10 h-10 rounded-full border-2 border-[#e0e0ff] overflow-hidden active:scale-95 transition-transform flex items-center justify-center bg-[#141779]/10">
-          <img 
-            className="w-full h-full object-cover" 
-            alt="Parent Avatar"
-            src={profilePic || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`}
-          />
+        <button onClick={() => navigate('/parent/settings')} className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all">
+          <Settings size={20} className="text-[#141779]" />
         </button>
       </header>
 

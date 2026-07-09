@@ -1,7 +1,7 @@
 import Particles, { initParticlesEngine } from "@tsparticles/react";
 import { loadSlim } from "@tsparticles/slim";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, Check, X as XIcon } from "lucide-react";
+import { ArrowLeft, Check, X as XIcon, Bell } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
@@ -25,6 +25,9 @@ export default function ChapterQuestionsScreen() {
   const [userAnswers, setUserAnswers] = useState<any[]>([]);
   const [particlesInit, setParticlesInit] = useState(false);
   const [showSparkle, setShowSparkle] = useState(false);
+  const [childName, setChildName] = useState("Kid");
+  const [childPhoto, setChildPhoto] = useState("");
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     initParticlesEngine(async (engine) => { await loadSlim(engine); }).then(() => setParticlesInit(true));
@@ -35,6 +38,30 @@ export default function ChapterQuestionsScreen() {
 
   useEffect(() => {
     async function fetchData() {
+      try {
+        const cached = localStorage.getItem("userData");
+        if (cached) {
+          try {
+            const u = JSON.parse(cached);
+            setChildName(u.childName || u.name || "Kid");
+            setChildPhoto(u.childPhoto || u.photo || "");
+          } catch(e) {}
+        }
+        const meRes = await apiFetch("/api/users/me");
+        const meJson = await meRes.json();
+        if (meJson.success && meJson.data?.user) {
+          setChildName(meJson.data.user.childName || meJson.data.user.name || "Kid");
+          setChildPhoto(meJson.data.user.childPhoto || meJson.data.user.photo || "");
+        }
+      } catch (e) {}
+
+      try {
+        const notifRes = await apiFetch("/api/notifications");
+        const notifData = await notifRes.json();
+        if (notifData.success && notifData.data) {
+          setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
+        }
+      } catch (e) {}
       if (!chapterId) {
         setLoading(false);
         return;
@@ -314,16 +341,42 @@ export default function ChapterQuestionsScreen() {
 
       {/* Header */}
       <header className="flex items-center justify-between px-5 py-4 bg-[#f4efff] sticky top-0 z-40">
-        <button onClick={() => setShowQuitModal(true)} className="p-1 hover:opacity-80 transition-opacity">
-          <ArrowLeft size={24} color="#141779" />
-        </button>
-        <h1 className="text-[22px] font-extrabold text-[#141779] truncate px-4">{searchParams.get("chapterName") || "Chapter Challenge"}</h1>
-        <button onClick={() => navigate("/profile")} className="w-10 h-10 shrink-0 rounded-full border-2 border-[#e0e0ff] overflow-hidden bg-[#e0e0ff] hover:opacity-80 transition-opacity">
-          <img
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuB54TLvVhHhiNKXVvuMyYb9hU1tLu3dVcVge7w_oBlMeQRREVTcRFzbvfglC_nLM6Jg0xuSX6ZmilztrbMo5IwZe3V8P8yYpaMdU1Pa50Vfet05pVyvsRGNeXF3pFKsYrpf18J8e-ZWVNiA8IF088KPWKnYhxA0a_cLGhdPgbwqUUPx4rq2oXTqRxs6f-rrdrTd3VL5xkPyM6SfJf9NMzEAtX1Y1eRDJEsGLUbv6KcoHXhgu_0IvxZLOiQEfJX1lKRRe7HU3SsNXQ"
-            alt="Avatar"
-            className="w-full h-full object-cover"
-          />
+        <div className="flex items-center gap-3 min-w-0">
+          <button onClick={() => setShowQuitModal(true)} className="p-1 hover:opacity-80 transition-opacity shrink-0">
+            <ArrowLeft size={24} color="#141779" />
+          </button>
+          <button 
+            onClick={() => navigate("/profile")} 
+            className="w-10 h-10 rounded-full border-2 border-[#e0e0ff] overflow-hidden bg-[#e0e0ff] hover:opacity-80 transition-opacity shrink-0"
+          >
+            {childPhoto ? (
+              <img 
+                src={childPhoto} 
+                alt="Avatar"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <img 
+                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(childName || "Kid")}&background=random`} 
+                alt="Avatar"
+                className="w-full h-full object-cover"
+              />
+            )}
+          </button>
+          <h1 className="text-[22px] font-extrabold text-[#141779] truncate">{searchParams.get("chapterName") || "Chapter Challenge"}</h1>
+        </div>
+
+        {/* Right Side: Bell Icon */}
+        <button 
+          onClick={() => navigate("/notifications")}
+          className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all relative shrink-0"
+        >
+          <Bell size={18} className="text-[#141779]" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-bold border-2 border-white">
+              {unreadCount}
+            </span>
+          )}
         </button>
       </header>
 

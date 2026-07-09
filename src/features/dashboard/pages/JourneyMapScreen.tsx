@@ -22,6 +22,7 @@ export default function JourneyMapScreen() {
   const [username, setUsername] = useState("");
   const [cities, setCities] = useState<City[]>([]);
   const [loading, setLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Mapped UI cities for visual representation
   const uiCities = [
@@ -115,9 +116,18 @@ export default function JourneyMapScreen() {
             unlocked: userXp >= reqXp
           };
         }));
-      } finally {
-        setLoading(false);
       }
+
+      // Fetch unread notifications
+      try {
+        const notifRes = await apiFetch("/api/notifications");
+        const notifData = await notifRes.json();
+        if (notifData.success && notifData.data) {
+          setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
+        }
+      } catch (e) {}
+
+      setLoading(false);
     };
     fetchJourney();
   }, []);
@@ -215,6 +225,17 @@ export default function JourneyMapScreen() {
             </div>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
+            <button 
+              onClick={() => navigate("/notifications")}
+              className="w-9 h-9 rounded-full bg-surface-container flex items-center justify-center hover:opacity-85 transition-all relative shrink-0"
+            >
+              <span className="material-symbols-outlined text-[20px] text-primary">notifications</span>
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4.5 h-4.5 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border-2 border-surface">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
             <div className="flex items-center gap-1 bg-surface-container px-2.5 py-1.5 rounded-full whitespace-nowrap">
               <span className="material-symbols-outlined text-[16px] text-orange-500" style={{fontVariationSettings: "'FILL' 1"}}>local_fire_department</span>
               <span className="text-[11px] font-bold">{xp >= 1000 ? `${(xp/1000).toFixed(1)}k` : xp} XP</span>

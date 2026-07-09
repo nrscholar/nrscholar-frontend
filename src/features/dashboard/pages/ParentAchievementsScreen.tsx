@@ -86,15 +86,16 @@ export default function ParentAchievementsScreen() {
           <button onClick={() => navigate(-1)} className="p-1 -ml-1 hover:bg-[#e0e3e5] rounded-full transition-colors">
             <ArrowLeft className="text-[#141779] font-bold" size={24} />
           </button>
+          <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#141779]/20 bg-white">
+            <img 
+              alt="User Profile" 
+              className="w-full h-full object-cover"
+              src={parentPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`}
+            />
+          </div>
           <h1 className="text-xl font-bold text-[#141779] tracking-tight">Achievements</h1>
         </div>
-        <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#141779]/20 bg-white">
-          <img 
-            alt="User Profile" 
-            className="w-full h-full object-cover"
-            src={parentPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`}
-          />
-        </div>
+        <div className="w-10 h-10"></div> {/* Spacer for balance */}
       </header>
 
       {/* Main Content Canvas */}

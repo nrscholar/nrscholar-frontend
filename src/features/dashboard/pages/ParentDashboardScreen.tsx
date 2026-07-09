@@ -23,6 +23,10 @@ export default function ParentDashboardScreen() {
   const [subjectBreakdown, setSubjectBreakdown] = useState<{ subject: string, accuracy: number }[]>([]);
   const [lastActivity, setLastActivity] = useState<string>("Exploring new quests...");
 
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
   useEffect(() => {
     async function loadUserData() {
       try {
@@ -60,7 +64,30 @@ export default function ParentDashboardScreen() {
       }
     }
     loadUserData();
+    
+    // Fetch notifications
+    const fetchNotifications = async () => {
+      try {
+        const res = await apiFetch("/api/notifications");
+        const json = await res.json();
+        if (json.success && json.data) {
+          setNotifications(json.data);
+          setUnreadCount(json.data.filter((n: any) => !n.isRead).length);
+        }
+      } catch (e) {
+        console.error("Failed to fetch notifications", e);
+      }
+    };
+    fetchNotifications();
   }, []);
+
+  const markAllRead = async () => {
+    try {
+      await apiFetch("/api/notifications/mark-all-read", { method: "POST" });
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+    } catch (e) { }
+  };
 
   const generateChartData = (targetAcc?: number) => {
     if (!weeklyTrend || weeklyTrend.length === 0) return { pathLine: "", pathArea: "", points: [], labels: [] };
@@ -141,9 +168,13 @@ export default function ParentDashboardScreen() {
           </div>
           <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#141779] to-[#30007f]">Parent Space</h1>
         </div>
-        <button className="relative w-11 h-11 flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-gray-50 hover:scale-105 active:scale-95 transition-all">
+        <button onClick={() => { setShowNotifications(true); markAllRead(); }} className="relative w-11 h-11 flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-gray-50 hover:scale-105 active:scale-95 transition-all">
           <Bell size={22} className="text-[#141779]" />
-          <span className="absolute top-2 right-2.5 w-2.5 h-2.5 bg-[#ba1a1a] rounded-full border border-white" />
+          {unreadCount > 0 && (
+            <span className="absolute top-2 right-2.5 w-4 h-4 bg-[#ba1a1a] rounded-full border-2 border-white flex items-center justify-center text-[8px] font-bold text-white">
+              {unreadCount}
+            </span>
+          )}
         </button>
       </header>
 
@@ -506,6 +537,51 @@ export default function ParentDashboardScreen() {
                 </div>
               );
             })()}
+          </div>
+        </div>
+      )}
+
+      {/* Notifications Side Panel / Modal */}
+      {showNotifications && (
+        <div className="fixed inset-0 bg-black/40 z-[100] flex justify-end">
+          <div className="w-full sm:w-[400px] h-full bg-[#f7f9fb] shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200 bg-white">
+              <h2 className="text-xl font-bold text-[#141779] flex items-center gap-2">
+                <Bell size={24} /> Notifications
+              </h2>
+              <button onClick={() => setShowNotifications(false)} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
+                <X size={20} color="#464652" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {notifications.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center opacity-50">
+                  <Bell size={48} className="mb-4 text-gray-400" />
+                  <p className="text-gray-500 font-medium">No recent activity to show.</p>
+                </div>
+              ) : (
+                notifications.map((notif, idx) => {
+                  let icon = "🔔";
+                  let bg = "bg-white";
+                  if (notif.type === "gamification") icon = "🎮";
+                  if (notif.type === "habit") icon = "✨";
+                  if (notif.type === "learning") icon = "📚";
+                  
+                  return (
+                    <div key={idx} className={`p-4 rounded-xl shadow-sm border border-gray-100 flex gap-4 ${bg} hover:shadow-md transition-shadow`}>
+                      <div className="text-2xl pt-1">{icon}</div>
+                      <div>
+                        <h4 className="text-[14px] font-bold text-[#141779] mb-1">{notif.title}</h4>
+                        <p className="text-[12px] text-[#464652] leading-tight">{notif.message}</p>
+                        <p className="text-[10px] text-gray-400 mt-2 font-medium">
+                          {new Date(notif.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
       )}

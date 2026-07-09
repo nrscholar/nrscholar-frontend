@@ -1,10 +1,13 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { apiFetch } from "../../../api";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Bell } from "lucide-react";
 
 export default function WeeklyTestScreen() {
   const navigate = useNavigate();
+  const [childName, setChildName] = useState("Kid");
+  const [childPhoto, setChildPhoto] = useState("");
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const [INFO_CARDS, setInfoCards] = useState([
     { emoji: "⏱️", bg: "#d0f0ed", title: "15 Minutes", sub: "Quick & Fun", offset: false },
@@ -14,6 +17,31 @@ export default function WeeklyTestScreen() {
   
   useEffect(() => {
     async function fetchTest() {
+      try {
+        const cached = localStorage.getItem("userData");
+        if (cached) {
+          try {
+            const u = JSON.parse(cached);
+            setChildName(u.childName || u.name || "Kid");
+            setChildPhoto(u.childPhoto || u.photo || "");
+          } catch(e) {}
+        }
+        const meRes = await apiFetch("/api/users/me");
+        const meJson = await meRes.json();
+        if (meJson.success && meJson.data?.user) {
+          setChildName(meJson.data.user.childName || meJson.data.user.name || "Kid");
+          setChildPhoto(meJson.data.user.childPhoto || meJson.data.user.photo || "");
+        }
+      } catch (e) {}
+
+      try {
+        const notifRes = await apiFetch("/api/notifications");
+        const notifData = await notifRes.json();
+        if (notifData.success && notifData.data) {
+          setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
+        }
+      } catch (e) {}
+
       try {
         const res = await apiFetch("/api/practice/weekly-test");
         const json = await res.json();
@@ -33,14 +61,38 @@ export default function WeeklyTestScreen() {
           <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity">
             <ArrowLeft size={24} color="#141779" />
           </button>
-          <h1 className="text-[22px] font-extrabold text-[#141779]">Weekly Quest</h1>
+          <button 
+            onClick={() => navigate("/profile")} 
+            className="w-10 h-10 rounded-full border-2 border-[#e0e0ff] overflow-hidden bg-[#e0e0ff] hover:opacity-80 transition-opacity shrink-0"
+          >
+            {childPhoto ? (
+              <img 
+                src={childPhoto} 
+                alt="Avatar"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <img 
+                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(childName || "Kid")}&background=random`} 
+                alt="Avatar"
+                className="w-full h-full object-cover"
+              />
+            )}
+          </button>
+          <h1 className="text-[22px] font-extrabold text-[#141779] whitespace-nowrap">Weekly Quest</h1>
         </div>
-        <button onClick={() => navigate("/profile")} className="w-10 h-10 rounded-full border-2 border-[#e0e0ff] overflow-hidden bg-[#e0e0ff] hover:opacity-80 transition-opacity">
-          <img
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDAKpSAluWywp3vdD2mwMWzOmh1M2-26A0Q1Hd3GWlgSKixYxQz78sPhRMymy2vFlwgX07glcvgPYkGRAhIYNlpdcDEjJBAK5ELpJCuM-8qkswYzIY28VN1yaieXrQ8PtFjqu4nM8EnvsHQorCB8l1TqsH1J4aLniQ5KgYTdJYKkdkXEsRcxSSP2UFgHy2t2BWgmKvOoQqKoXuV_yIRW518Sn1qEO7wKGvfQ5FiWCyRPyOn1qB5mw3E1iS0wPrek4CiBJVwGgxelg"
-            alt="Avatar"
-            className="w-full h-full object-cover"
-          />
+
+        {/* Right Side: Bell Icon */}
+        <button 
+          onClick={() => navigate("/notifications")}
+          className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all relative shrink-0"
+        >
+          <Bell size={18} className="text-[#141779]" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-bold border-2 border-white">
+              {unreadCount}
+            </span>
+          )}
         </button>
       </header>
 
