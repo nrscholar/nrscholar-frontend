@@ -11,6 +11,7 @@ export default function HabitsScreen() {
 
   const [habit, setHabit] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
   
   useEffect(() => {
     const fetchHabit = async () => {
@@ -26,7 +27,17 @@ export default function HabitsScreen() {
         setLoading(false);
       }
     };
+    const fetchNotifications = async () => {
+      try {
+        const res = await apiFetch("/api/notifications");
+        const json = await res.json();
+        if (json.success && json.data) {
+          setUnreadCount(json.data.filter((n: any) => !n.isRead).length);
+        }
+      } catch (e) {}
+    };
     fetchHabit();
+    fetchNotifications();
   }, []);
 
   const handleComplete = () => {
@@ -60,8 +71,16 @@ export default function HabitsScreen() {
           </button>
           <h1 className="text-2xl font-bold text-[#141779] tracking-[-0.5px]">Studysaathy</h1>
         </div>
-        <button onClick={() => navigate("/notifications")} className="p-1 hover:bg-gray-100 rounded-full transition-colors">
-          <Bell size={24} color="#141779" />
+        <button 
+          onClick={() => navigate("/notifications")} 
+          className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all relative shrink-0"
+        >
+          <Bell size={20} className="text-[#141779]" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-bold border-2 border-white">
+              {unreadCount}
+            </span>
+          )}
         </button>
       </header>
 

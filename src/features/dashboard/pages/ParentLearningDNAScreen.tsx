@@ -28,6 +28,13 @@ export default function ParentLearningDNAScreen() {
         <button onClick={() => navigate(-1)} className="w-11 h-11 flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-gray-50 hover:scale-105 active:scale-95 transition-all">
           <ArrowLeft size={22} className="text-[#141779]" />
         </button>
+        <div className="w-10 h-10 rounded-full border-2 border-[#141779]/20 overflow-hidden bg-white shrink-0">
+          <img 
+            alt="User Profile" 
+            className="w-full h-full object-cover"
+            src={`https://ui-avatars.com/api/?name=Parent&background=random`}
+          />
+        </div>
         <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#141779] to-[#30007f]">Learning DNA</h1>
       </header>
 

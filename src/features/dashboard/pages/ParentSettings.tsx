@@ -134,10 +134,19 @@ export default function ParentSettings() {
     <div className="min-h-screen bg-gradient-to-b from-[#f0f4f8] to-[#e6eef5] font-sans pb-24 overflow-x-hidden">
       {/* Dynamic Header */}
       <header className="flex items-center justify-between px-6 h-20 bg-white/60 backdrop-blur-xl border-b border-white/40 sticky top-0 z-40 shadow-sm">
-        <button onClick={() => navigate(-1)} className="w-11 h-11 flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-gray-50 hover:scale-105 active:scale-95 transition-all">
-          <ArrowLeft size={22} className="text-[#141779]" />
-        </button>
-        <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#141779] to-[#30007f]">Settings</h1>
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="w-11 h-11 flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-gray-50 hover:scale-105 active:scale-95 transition-all">
+            <ArrowLeft size={22} className="text-[#141779]" />
+          </button>
+          <div className="w-10 h-10 rounded-full border-2 border-[#141779]/20 overflow-hidden bg-white shrink-0">
+            <img 
+              alt="User Profile" 
+              className="w-full h-full object-cover"
+              src={parentPhoto || `https://ui-avatars.com/api/?name=Parent&background=random`}
+            />
+          </div>
+          <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#141779] to-[#30007f]">Settings</h1>
+        </div>
         <button className="w-11 h-11 flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-gray-50 hover:scale-105 active:scale-95 transition-all">
           <Bell size={22} className="text-[#141779]" />
         </button>

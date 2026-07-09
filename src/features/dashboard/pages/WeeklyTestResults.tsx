@@ -1,6 +1,8 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, RotateCcw, Home } from "lucide-react";
+import { ArrowLeft, RotateCcw, Home, Bell } from "lucide-react";
 import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { apiFetch } from "../../../api";
 
 const SKILLS = [
   { icon: "➕", label: "Quick Addition", xp: "+15 XP", xpColor: "text-[#30007f]", progress: 0.8, progressColor: "bg-[#30007f]", iconBg: "bg-[#e8ddff]" },
@@ -33,20 +35,80 @@ export default function WeeklyTestResultsScreen() {
   const msg = getScoreMessage(score, total);
   const buddyMsg = getBuddyMessage(score, total);
 
+  const [childName, setChildName] = useState("Kid");
+  const [childPhoto, setChildPhoto] = useState("");
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const cached = localStorage.getItem("userData");
+        if (cached) {
+          try {
+            const u = JSON.parse(cached);
+            setChildName(u.childName || u.name || "Kid");
+            setChildPhoto(u.childPhoto || u.photo || "");
+          } catch(e) {}
+        }
+        const meRes = await apiFetch("/api/users/me");
+        const meJson = await meRes.json();
+        if (meJson.success && meJson.data?.user) {
+          setChildName(meJson.data.user.childName || meJson.data.user.name || "Kid");
+          setChildPhoto(meJson.data.user.childPhoto || meJson.data.user.photo || "");
+        }
+      } catch (e) {}
+
+      try {
+        const notifRes = await apiFetch("/api/notifications");
+        const notifData = await notifRes.json();
+        if (notifData.success && notifData.data) {
+          setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
+        }
+      } catch (e) {}
+    }
+    loadData();
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#f4efff] font-sans pb-10">
       {/* Header */}
       <header className="flex items-center justify-between px-5 py-4 bg-[#f4efff] sticky top-0 z-40">
-        <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity">
-          <ArrowLeft size={24} color="#141779" />
-        </button>
-        <h1 className="text-[22px] font-extrabold text-[#141779]">Weekly Quest</h1>
-        <button onClick={() => navigate("/profile")} className="w-10 h-10 rounded-full border-2 border-[#e0e0ff] overflow-hidden bg-[#e0e0ff] hover:opacity-80 transition-opacity">
-          <img
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuCbMGIP1JI2ES3lYlVp4vXmvghuvTPOk7bddbFh6hjZ3k7q0zytf93j0LON0VAT4hn24LGgLq3oyDEhIDaEecT43AcjtvopMCW1WGUBMNsgJgZeAirgFrx5UbhN8UCcqjYkYInJMwnrl7ineg2tPQas-QEadIAzndqR79gKwmzKCoMp2FuMREXQaws-7Sw3rnrx7Wavk1KBCTNm2aWdltBEtx3PFXIiyC-fT7nzzRW9-8r0AggIFYPxE-3jNeHFIsAQPkeim7oFvw"
-            alt="Avatar"
-            className="w-full h-full object-cover"
-          />
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity">
+            <ArrowLeft size={24} color="#141779" />
+          </button>
+          <button 
+            onClick={() => navigate("/profile")} 
+            className="w-10 h-10 rounded-full border-2 border-[#e0e0ff] overflow-hidden bg-[#e0e0ff] hover:opacity-80 transition-opacity shrink-0"
+          >
+            {childPhoto ? (
+              <img 
+                src={childPhoto} 
+                alt="Avatar"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <img 
+                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(childName || "Kid")}&background=random`} 
+                alt="Avatar"
+                className="w-full h-full object-cover"
+              />
+            )}
+          </button>
+          <h1 className="text-[22px] font-extrabold text-[#141779] whitespace-nowrap">Weekly Quest</h1>
+        </div>
+
+        {/* Right Side: Bell Icon */}
+        <button 
+          onClick={() => navigate("/notifications")}
+          className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all relative shrink-0"
+        >
+          <Bell size={18} className="text-[#141779]" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-bold border-2 border-white">
+              {unreadCount}
+            </span>
+          )}
         </button>
       </header>
 

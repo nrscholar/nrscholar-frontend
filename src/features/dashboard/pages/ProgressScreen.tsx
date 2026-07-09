@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, UserCircle, Award, Flame } from "lucide-react";
+import { ArrowLeft, UserCircle, Award, Flame, Bell } from "lucide-react";
 import { apiFetch } from "../../../api";
 
 export default function ProgressScreen() {
@@ -10,6 +10,9 @@ export default function ProgressScreen() {
   const [level, setLevel] = useState(1);
   const [streakDays, setStreakDays] = useState(0);
   const [xp, setXp] = useState(0);
+  const [username, setUsername] = useState("Explorer");
+  const [userPhoto, setUserPhoto] = useState("");
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const progressPercent = Math.min(100, Math.max(0, Math.round(((xp % 1000) / 1000) * 100)));
   const radius = 88;
@@ -25,6 +28,8 @@ export default function ProgressScreen() {
            setXp(u.xp || 0);
            setLevel(u.level || 1);
            setStreakDays(u.streakDays || 0);
+           setUsername(u.childName || u.name || "Explorer");
+           setUserPhoto(u.childPhoto || u.photo || "");
         }
         
         const response = await apiFetch("/api/users/me");
@@ -34,8 +39,18 @@ export default function ProgressScreen() {
            setXp(u.xp || 0);
            setLevel(u.level || 1);
            setStreakDays(u.streakDays || 0);
+           setUsername(u.childName || u.name || "Explorer");
+           setUserPhoto(u.childPhoto || u.photo || "");
         }
       } catch(e) {}
+
+      try {
+        const notifRes = await apiFetch("/api/notifications");
+        const notifData = await notifRes.json();
+        if (notifData.success && notifData.data) {
+          setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
+        }
+      } catch (e) {}
       
       setLoading(false);
     };
@@ -54,12 +69,42 @@ export default function ProgressScreen() {
     <div className="min-h-screen bg-[#f7f9fb] font-sans pb-24">
       {/* TopAppBar */}
       <header className="flex items-center justify-between px-6 py-4 bg-[rgba(247,249,251,0.8)] border-b border-[rgba(255,255,255,0.2)] sticky top-0 z-50 backdrop-blur-sm">
-        <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity">
-          <ArrowLeft size={24} color="#141779" />
-        </button>
-        <h1 className="text-2xl font-bold text-[#141779] tracking-[-0.5px]">My Progress</h1>
-        <button onClick={() => navigate("/profile")} className="p-1 hover:opacity-80 transition-opacity">
-          <UserCircle size={28} color="#141779" />
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity">
+            <ArrowLeft size={24} color="#141779" />
+          </button>
+          <button 
+            onClick={() => navigate("/profile")}
+            className="w-10 h-10 rounded-full border-2 border-[#57fae9] overflow-hidden bg-white shrink-0 active:scale-95 transition-all"
+          >
+            {userPhoto ? (
+              <img 
+                src={userPhoto} 
+                alt="Avatar"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <img 
+                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`} 
+                alt="Avatar"
+                className="w-full h-full object-cover"
+              />
+            )}
+          </button>
+          <h1 className="text-2xl font-bold text-[#141779] tracking-[-0.5px]">My Progress</h1>
+        </div>
+        
+        {/* Right side: Bell icon */}
+        <button 
+          onClick={() => navigate("/notifications")}
+          className="w-11 h-11 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all relative"
+        >
+          <Bell size={20} className="text-[#141779]" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-bold border-2 border-white">
+              {unreadCount}
+            </span>
+          )}
         </button>
       </header>
 

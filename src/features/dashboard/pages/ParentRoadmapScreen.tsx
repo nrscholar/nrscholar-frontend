@@ -91,8 +91,15 @@ export default function ParentRoadmapScreen() {
           <button onClick={() => navigate(-1)} className="p-1 hover:bg-[rgba(20,23,121,0.05)] rounded-full transition-colors active:scale-95">
             <ArrowLeft size={24} color="#141779" />
           </button>
-          <Rocket size={20} color="#141779" />
-          <h1 className="text-xl font-bold text-[#141779]">Growth Journey</h1>
+          <div className="w-10 h-10 rounded-full border-2 border-[#141779]/20 overflow-hidden bg-white shrink-0">
+            <img 
+              alt="User Profile" 
+              className="w-full h-full object-cover"
+              src={`https://ui-avatars.com/api/?name=Parent&background=random`}
+            />
+          </div>
+          <Rocket size={20} color="#141779" className="hidden sm:block" />
+          <h1 className="text-xl font-bold text-[#141779] whitespace-nowrap">Growth Journey</h1>
         </div>
       </header>
 

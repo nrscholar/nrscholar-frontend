@@ -40,6 +40,13 @@ export default function ParentReportScreen() {
         <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity">
           <ArrowLeft size={24} color="#141779" />
         </button>
+        <div className="w-10 h-10 rounded-full border-2 border-[#141779]/20 overflow-hidden bg-white shrink-0">
+          <img 
+            alt="User Profile" 
+            className="w-full h-full object-cover"
+            src={`https://ui-avatars.com/api/?name=Parent&background=random`}
+          />
+        </div>
         <h1 className="text-[22px] font-bold text-[#141779]">Learning Reports</h1>
       </header>
 
