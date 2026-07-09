@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Star, Award, Zap, Users, HelpCircle, LogOut, User } from "lucide-react";
+import { ArrowLeft, Zap, Coins, Flame, Users, HelpCircle, LogOut, User, Award } from "lucide-react";
 import { apiFetch } from "../../../api";
+import { useTranslation } from "react-i18next";
 
 
 export default function ProfileScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [loading] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
@@ -69,7 +71,7 @@ export default function ProfileScreen() {
         <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity">
           <ArrowLeft size={24} color="#141779" />
         </button>
-        <h1 className="text-2xl font-bold text-[#141779]">Profile</h1>
+        <h1 className="text-2xl font-bold text-[#141779]">{t('profile')}</h1>
         <div className="w-8" /> {/* Spacer */}
       </header>
 
@@ -94,32 +96,32 @@ export default function ProfileScreen() {
             </div>
             <div className="absolute -bottom-2 -right-2 bg-[#006a62] px-3 py-1 rounded-full flex items-center gap-1 shadow-sm">
               <Award size={14} color="white" />
-              <span className="text-xs font-bold text-white tracking-widest">LVL {user.level}</span>
+              <span className="text-xs font-bold text-white tracking-widest">{t('lvl')} {user.level}</span>
             </div>
           </div>
 
           <div className="text-center">
             <h2 className="text-3xl font-bold text-[#141779] tracking-tight">{user.childName}</h2>
-            <p className="text-base font-medium text-[#464652]">Explorer Extraordinaire</p>
+            <p className="text-base font-medium text-[#464652]">{t('explorer_extraordinaire')}</p>
           </div>
         </div>
 
         {/* Stats Row */}
         <div className="flex gap-3">
           <div className="flex-1 bg-[rgba(255,255,255,0.7)] rounded-2xl p-3 flex flex-col items-center border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_1px_5px_rgba(0,0,0,0.05)]">
-            <Star size={24} color="#006a62" className="mb-1" />
-            <span className="text-2xl font-bold text-[#141779]">{user.totalStars}</span>
-            <span className="text-xs font-bold text-[#464652] tracking-[1px] uppercase">Stars</span>
-          </div>
-          <div className="flex-1 bg-[rgba(255,255,255,0.7)] rounded-2xl p-3 flex flex-col items-center border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_1px_5px_rgba(0,0,0,0.05)]">
-            <Award size={24} color="#006a62" className="mb-1" />
-            <span className="text-2xl font-bold text-[#141779]">{(user.badges || []).length}</span>
-            <span className="text-xs font-bold text-[#464652] tracking-[1px] uppercase">Badges</span>
-          </div>
-          <div className="flex-1 bg-[rgba(255,255,255,0.7)] rounded-2xl p-3 flex flex-col items-center border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_1px_5px_rgba(0,0,0,0.05)]">
             <Zap size={24} color="#006a62" className="mb-1" />
-            <span className="text-2xl font-bold text-[#141779]">{user.streakDays}</span>
-            <span className="text-xs font-bold text-[#464652] tracking-[1px] uppercase">Streak</span>
+            <span className="text-2xl font-bold text-[#141779]">{user.xp || 0}</span>
+            <span className="text-xs font-bold text-[#464652] tracking-[1px] uppercase">POINTS</span>
+          </div>
+          <div className="flex-1 bg-[rgba(255,255,255,0.7)] rounded-2xl p-3 flex flex-col items-center border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_1px_5px_rgba(0,0,0,0.05)]">
+            <Coins size={24} color="#006a62" className="mb-1" />
+            <span className="text-2xl font-bold text-[#141779]">{user.coins || 0}</span>
+            <span className="text-xs font-bold text-[#464652] tracking-[1px] uppercase">COINS</span>
+          </div>
+          <div className="flex-1 bg-[rgba(255,255,255,0.7)] rounded-2xl p-3 flex flex-col items-center border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_1px_5px_rgba(0,0,0,0.05)]">
+            <Flame size={24} color="#006a62" className="mb-1" />
+            <span className="text-2xl font-bold text-[#141779]">{user.streakDays || 0}</span>
+            <span className="text-xs font-bold text-[#464652] tracking-[1px] uppercase">{t('streak')}</span>
           </div>
         </div>
 
@@ -131,7 +133,7 @@ export default function ProfileScreen() {
           >
             <div className="flex items-center gap-4">
               <User size={24} color="#141779" />
-              <span className="text-lg font-medium text-[#191c1e]">Edit Profile</span>
+              <span className="text-lg font-medium text-[#191c1e]">{t('edit_profile')}</span>
             </div>
             <ArrowLeft size={24} color="#767683" className="rotate-180" />
           </button>
@@ -148,7 +150,7 @@ export default function ProfileScreen() {
               ) : (
                 <Users size={24} color="#141779" />
               )}
-              <span className="text-lg font-medium text-[#191c1e]">Parental Controls</span>
+              <span className="text-lg font-medium text-[#191c1e]">{t('parental_controls')}</span>
             </div>
             <ArrowLeft size={24} color="#767683" className="rotate-180" />
           </button>
@@ -159,7 +161,7 @@ export default function ProfileScreen() {
           >
             <div className="flex items-center gap-4">
               <HelpCircle size={24} color="#141779" />
-              <span className="text-lg font-medium text-[#191c1e]">Help Center</span>
+              <span className="text-lg font-medium text-[#191c1e]">{t('help_center')}</span>
             </div>
             <ArrowLeft size={24} color="#767683" className="rotate-180" />
           </button>
@@ -170,14 +172,14 @@ export default function ProfileScreen() {
           >
             <div className="flex items-center gap-4">
               <LogOut size={24} color="#ba1a1a" />
-              <span className="text-lg font-medium text-[#ba1a1a]">Logout</span>
+              <span className="text-lg font-medium text-[#ba1a1a]">{t('logout')}</span>
             </div>
           </button>
         </div>
 
         {/* Language Selection */}
         <div className="bg-white rounded-[20px] p-4 flex flex-col gap-3 border-[1.5px] border-[#eef0f2] shadow-sm relative z-10 mt-2">
-          <h3 className="text-[15px] font-bold text-[#141779]">App Language</h3>
+          <h3 className="text-[15px] font-bold text-[#141779]">{t('app_language')}</h3>
           <div className="flex gap-2">
             <button 
               onClick={() => { localStorage.setItem('i18nextLng', 'en'); window.location.reload(); }}
@@ -205,22 +207,22 @@ export default function ProfileScreen() {
       {showLogoutModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-5">
           <div className="bg-white w-full max-w-sm rounded-[24px] p-6 shadow-2xl">
-            <h3 className="text-xl font-bold text-[#141779] text-center mb-2">Logout</h3>
+            <h3 className="text-xl font-bold text-[#141779] text-center mb-2">{t('logout')}</h3>
             <p className="text-sm text-[#464652] text-center mb-6">
-              Are you sure you want to log out of StudySaathy?
+              {t('logout_confirm_message')}
             </p>
             <div className="flex flex-col gap-3">
               <button 
                 onClick={handleLogout}
                 className="w-full py-3.5 bg-[#ba1a1a] text-white rounded-xl font-bold text-sm shadow-md hover:bg-red-700 transition-colors"
               >
-                Yes, Log Out
+                {t('yes_logout')}
               </button>
               <button 
                 onClick={() => setShowLogoutModal(false)}
                 className="w-full py-3.5 bg-[#f0f2f5] text-[#141779] rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors"
               >
-                Cancel
+                {t('cancel')}
               </button>
             </div>
           </div>

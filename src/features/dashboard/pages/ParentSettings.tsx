@@ -366,10 +366,10 @@ export default function ParentSettings() {
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-gray-900/90 backdrop-blur-md text-white px-6 py-4 rounded-2xl flex items-center gap-3 z-50 shadow-2xl min-w-max border border-gray-700/50"
+            className="fixed bottom-10 left-4 right-4 mx-auto w-fit max-w-[400px] bg-gray-900/90 backdrop-blur-md text-white px-6 py-4 rounded-2xl flex items-center justify-center gap-3 z-50 shadow-2xl border border-gray-700/50"
           >
-            <Save size={20} className="text-green-400" />
-            <span className="text-[15px] font-semibold tracking-wide">{toastMessage}</span>
+            <Save size={20} className="text-green-400 shrink-0" />
+            <span className="text-[15px] font-semibold tracking-wide text-center leading-tight">{toastMessage}</span>
           </motion.div>
         )}
       </AnimatePresence>

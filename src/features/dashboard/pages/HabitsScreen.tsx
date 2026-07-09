@@ -12,6 +12,7 @@ export default function HabitsScreen() {
   const [habit, setHabit] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
   
   useEffect(() => {
     const fetchHabit = async () => {
@@ -20,6 +21,7 @@ export default function HabitsScreen() {
         const data = await response.json();
         if (data.success) {
           setHabit(data.data);
+          setCompleted(data.data.isCompletedToday || false);
         }
       } catch (e) {
         console.error("Failed to fetch daily habit");
@@ -40,11 +42,27 @@ export default function HabitsScreen() {
     fetchNotifications();
   }, []);
 
-  const handleComplete = () => {
-    setCompleted(true);
-    setTimeout(() => {
-      setShowModal(true);
-    }, 500);
+  const handleComplete = async () => {
+    if (!habit || completed) return;
+    setSubmitting(true);
+    try {
+      const response = await apiFetch("/api/practice/habits/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ habitId: habit._id, isCompleted: true })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setCompleted(true);
+        setTimeout(() => {
+          setShowModal(true);
+        }, 500);
+      }
+    } catch (e) {
+      console.error("Failed to complete habit", e);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -58,18 +76,11 @@ export default function HabitsScreen() {
         <div className="flex items-center gap-3">
           <button 
             onClick={() => navigate(-1)} 
-            className="w-10 h-10 rounded-full border-2 border-[rgba(0,106,98,0.2)] relative overflow-hidden flex items-center justify-center hover:opacity-80 transition-opacity"
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
-            <img
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqeAKVn9xa7Ti_J8T-zoZ3ynEZ6mJOWr0fMC42PX8I9NluRtuKibMc07OBY583RokuTgs1t8fEYpqU7uqvKxqNxx9vdeohuaGmnpD-5dtpQwq1M0G8Dp5y7iG3PIL4AElV-CqOp3hfgcWIGlmuas0t5yK4wk1BAZfqt2JN1U3nlvcTTfDxN-6pkHO6S_QogXJjJZf63EkXyTVE2N2e66-WDtl-X9bncG9ElpwT4DLKy-Q1KgiI6K7yOW-IZw7jpf3ZkMJzou82Pg"
-              alt="Avatar"
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-[rgba(0,0,0,0.3)] flex items-center justify-center">
-              <ArrowLeft size={16} color="white" />
-            </div>
+            <ArrowLeft size={24} color="#141779" />
           </button>
-          <h1 className="text-2xl font-bold text-[#141779] tracking-[-0.5px]">Studysaathy</h1>
+          <h1 className="text-xl font-bold text-[#141779]">Good Habits</h1>
         </div>
         <button 
           onClick={() => navigate("/notifications")} 
@@ -144,19 +155,25 @@ export default function HabitsScreen() {
 
               {/* Interaction Button */}
               <button
-                disabled={completed || !habit}
+                disabled={completed || !habit || submitting}
                 onClick={handleComplete}
-                className={`w-full py-4 rounded-full flex items-center justify-center gap-2 shadow-[0_4px_10px_rgba(20,23,121,0.3)] transition-colors ${
-                  completed ? 'bg-[#006a62]' : 'bg-[#141779] hover:opacity-90'
+                className={`w-full py-4 rounded-full flex items-center justify-center gap-2 shadow-[0_4px_10px_rgba(20,23,121,0.3)] transition-all ${
+                  completed ? 'bg-[#f0f0f0] border-2 border-[#e0e3e5] shadow-none cursor-not-allowed' : 'bg-[#141779] hover:opacity-90 active:scale-[0.98]'
                 }`}
               >
-                <span className="text-sm font-semibold text-white">
-                  {completed ? `Brilliant! +${habit?.rewardPoints || 10} Points` : "Complete Story"}
-                </span>
-                {completed ? (
-                  <CheckCircle2 size={20} color="white" />
+                {submitting ? (
+                  <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  <PartyPopper size={20} color="white" />
+                  <>
+                    <span className={`text-base font-bold ${completed ? 'text-[#767683]' : 'text-white'}`}>
+                      {completed ? `Claimed +${habit?.rewardPoints || 10} Points` : "Complete Story"}
+                    </span>
+                    {completed ? (
+                      <CheckCircle2 size={22} color="#767683" />
+                    ) : (
+                      <PartyPopper size={22} color="white" />
+                    )}
+                  </>
                 )}
               </button>
             </>

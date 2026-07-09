@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, UserCircle, Award, Flame, Bell } from "lucide-react";
+import { ArrowLeft, UserCircle, Award, Flame,Bell } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
 
 export default function ProgressScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
 
   const [level, setLevel] = useState(1);
@@ -135,22 +137,22 @@ export default function ProgressScreen() {
               />
             </svg>
             <div className="flex flex-col items-center justify-center">
-              <span className="text-xs font-bold text-[#464652] uppercase tracking-[1px]">LEVEL</span>
+              <span className="text-xs font-bold text-[#464652] uppercase tracking-[1px]">{t('level')}</span>
               <span className="text-4xl font-bold text-[#141779] my-0.5">{level}</span>
-              <span className="text-sm font-semibold text-[#006a62] mt-1">{progressPercent}% to Next</span>
+              <span className="text-sm font-semibold text-[#006a62] mt-1">{progressPercent}{t('percent_to_next')}</span>
             </div>
           </div>
         </div>
 
         {/* Mid Section: Subject Mastery */}
         <div className="flex flex-col gap-4">
-          <h2 className="text-sm font-semibold text-[#464652] tracking-[1px] px-1">SUBJECT MASTERY</h2>
+          <h2 className="text-sm font-semibold text-[#464652] tracking-[1px] px-1">{t('subject_mastery')}</h2>
           <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-6 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_2px_10px_rgba(0,0,0,0.05)] flex flex-col gap-5">
             
             {/* Math */}
             <div className="flex flex-col gap-2">
               <div className="flex justify-between items-end px-1">
-                <span className="text-base font-bold text-[#141779]">Math</span>
+                <span className="text-base font-bold text-[#141779]">{t('math')}</span>
                 <span className="text-xs font-bold text-[#006a62]">{Math.min(100, Math.round(xp / 10))}%</span>
               </div>
               <div className="w-full h-3 bg-[#eceef0] rounded-full overflow-hidden">
@@ -161,7 +163,7 @@ export default function ProgressScreen() {
             {/* Science */}
             <div className="flex flex-col gap-2">
               <div className="flex justify-between items-end px-1">
-                <span className="text-base font-bold text-[#141779]">Science</span>
+                <span className="text-base font-bold text-[#141779]">{t('science')}</span>
                 <span className="text-xs font-bold text-[#006a62]">{Math.min(100, Math.round(xp / 15))}%</span>
               </div>
               <div className="w-full h-3 bg-[#eceef0] rounded-full overflow-hidden">
@@ -172,7 +174,7 @@ export default function ProgressScreen() {
             {/* English/Vocabulary */}
             <div className="flex flex-col gap-2">
               <div className="flex justify-between items-end px-1">
-                <span className="text-base font-bold text-[#141779]">Vocabulary</span>
+                <span className="text-base font-bold text-[#141779]">{t('vocabulary')}</span>
                 <span className="text-xs font-bold text-[#006a62]">{Math.min(100, Math.round(xp / 20))}%</span>
               </div>
               <div className="w-full h-3 bg-[#eceef0] rounded-full overflow-hidden">
@@ -185,21 +187,21 @@ export default function ProgressScreen() {
 
         {/* Bottom Section: Recent Achievements */}
         <div className="flex flex-col gap-4">
-          <h2 className="text-sm font-semibold text-[#464652] tracking-[1px] px-1">RECENT ACHIEVEMENTS</h2>
+          <h2 className="text-sm font-semibold text-[#464652] tracking-[1px] px-1">{t('recent_achievements')}</h2>
           <div className="flex gap-4">
             
             <button className="flex-1 bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_2px_10px_rgba(0,0,0,0.05)] flex flex-col items-center gap-3 hover:bg-white transition-colors">
               <div className="w-12 h-12 rounded-full bg-[#e0e0ff] flex items-center justify-center">
                 <Award size={28} color="#141779" />
               </div>
-              <span className="text-sm font-semibold text-[#191c1e] text-center">Math Ace</span>
+              <span className="text-sm font-semibold text-[#191c1e] text-center">{t('math_ace')}</span>
             </button>
 
             <button className="flex-1 bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_2px_10px_rgba(0,0,0,0.05)] flex flex-col items-center gap-3 hover:bg-white transition-colors">
               <div className="w-12 h-12 rounded-full bg-[#57fae9] flex items-center justify-center">
                 <Flame size={28} color="#006a62" />
               </div>
-              <span className="text-sm font-semibold text-[#191c1e] text-center">{streakDays} Day Streak</span>
+              <span className="text-sm font-semibold text-[#191c1e] text-center">{t('day_streak', { days: streakDays })}</span>
             </button>
 
           </div>

@@ -174,11 +174,11 @@ export default function HomeScreen() {
       <div className="absolute bottom-[20%] -left-[25%] w-[320px] h-[320px] rounded-full bg-[rgba(20,23,121,0.05)] pointer-events-none" />
 
       {/* Top Section */}
-      <header className="flex items-center justify-between px-6 py-4 bg-[rgba(247,249,251,0.8)] border-b-[1.5px] border-[rgba(255,255,255,0.2)] sticky top-0 z-50 backdrop-blur-md pt-8">
-        <div className="flex items-center gap-3">
+      <header className="flex items-center justify-between px-4 sm:px-6 py-4 bg-[rgba(247,249,251,0.8)] border-b-[1.5px] border-[rgba(255,255,255,0.2)] sticky top-0 z-50 backdrop-blur-md pt-8 gap-2">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           <button 
             onClick={() => navigate("/profile")}
-            className="w-11 h-11 rounded-full border-2 border-[#57fae9] overflow-hidden hover:opacity-80 transition-opacity"
+            className="w-11 h-11 rounded-full border-2 border-[#57fae9] overflow-hidden hover:opacity-80 transition-opacity shrink-0"
           >
             {childPhoto ? (
               <img 
@@ -194,19 +194,19 @@ export default function HomeScreen() {
               />
             )}
           </button>
-          <div>
-            <h1 className="text-lg font-bold text-[#141779] leading-tight">{childName}</h1>
+          <div className="flex flex-col min-w-0">
+            <h1 className="text-lg font-bold text-[#141779] leading-tight truncate">{childName}</h1>
             <div className="flex items-center gap-1 mt-0.5">
-              <Star size={14} fill="#006a62" color="#006a62" />
-              <span className="text-[11px] text-[#767683] font-semibold">Explorer Level {userLevel}</span>
+              <Star size={14} fill="#006a62" color="#006a62" className="shrink-0" />
+              <span className="text-[11px] text-[#767683] font-semibold truncate">{t('explorer_level')} {userLevel}</span>
             </div>
           </div>
         </div>
 
         {/* Currency & Streak Stats */}
-        <div className="flex items-center gap-2">
-          <div className="bg-[rgba(255,159,67,0.15)] px-2.5 py-1.5 rounded-xl flex items-center justify-center">
-            <span className="text-xs font-bold text-[#ff9f43]">🔥 {retentionStreak?.currentStreak ?? streakDays} Days</span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className="h-10 bg-[rgba(255,159,67,0.15)] px-2.5 rounded-xl flex items-center justify-center whitespace-nowrap">
+            <span className="text-xs font-bold text-[#ff9f43]">🔥 {retentionStreak?.currentStreak ?? streakDays}</span>
           </div>
           <button 
             onClick={() => navigate("/notifications")}
@@ -221,7 +221,7 @@ export default function HomeScreen() {
           </button>
           <button 
             onClick={() => navigate("/practice/inventory")}
-            className="bg-[rgba(255,215,0,0.15)] px-2.5 py-1.5 rounded-xl flex items-center justify-center hover:opacity-80 transition-opacity"
+            className="h-10 bg-[rgba(255,215,0,0.15)] px-2.5 rounded-xl flex items-center justify-center hover:opacity-80 transition-opacity whitespace-nowrap shrink-0"
           >
             <span className="text-xs font-bold text-[#141779]">🪙 {coins}</span>
           </button>
@@ -234,7 +234,7 @@ export default function HomeScreen() {
           <div className="flex justify-between items-center mb-2">
             <div className="flex items-center gap-1">
               <Zap size={16} fill="#141779" color="#141779" />
-              <span className="text-[10px] font-bold text-[#141779] tracking-[1px]">JOURNEY PROGRESS</span>
+              <span className="text-[10px] font-bold text-[#141779] tracking-[1px]">{t('journey_progress')}</span>
             </div>
             <span className="text-xs font-bold text-[#141779]">🔥 {xp} XP</span>
           </div>
@@ -247,7 +247,7 @@ export default function HomeScreen() {
           <div className="flex items-center gap-1 mt-2.5">
             <MapPin size={16} fill="#ff9f43" color="white" />
             <span className="text-[11px] text-[#767683] font-semibold">
-              Next: {nextCityName} • <span className="font-bold text-[#141779]">{xpNeeded > 0 ? `${xpNeeded} XP Needed` : "Ready!"}</span>
+              {t('next')}: {t(nextCityName.toLowerCase().replace(' ', '_'))} • <span className="font-bold text-[#141779]">{xpNeeded > 0 ? `${xpNeeded} ${t('xp_needed')}` : t('ready')}</span>
             </span>
           </div>
         </div>
@@ -257,11 +257,11 @@ export default function HomeScreen() {
           onClick={() => navigate("/practice/journey-map")}
           className="w-full text-left bg-gradient-to-br from-[#e0f7f6] to-[#ffffff] rounded-[24px] p-5 border-[1.5px] border-[rgba(255,255,255,0.5)] shadow-[0_6px_16px_rgba(0,0,0,0.05)] relative z-10 hover:shadow-md transition-shadow"
         >
-          <p className="text-[9px] font-bold text-[#141779] tracking-[2px] text-center mb-2">CURRENT ROUTE</p>
+          <p className="text-[9px] font-bold text-[#141779] tracking-[2px] text-center mb-2">{t('current_route')}</p>
           <div className="flex justify-center items-center gap-3 mb-5">
-            <span className="text-[22px] font-bold text-[#141779]">{currentCityName}</span>
+            <span className="text-[22px] font-bold text-[#141779]">{t(currentCityName.toLowerCase().replace(' ', '_'))}</span>
             <ChevronRight size={18} color="#141779" />
-            <span className="text-[22px] font-bold text-[#141779]">{nextCityName}</span>
+            <span className="text-[22px] font-bold text-[#141779]">{t(nextCityName.toLowerCase().replace(' ', '_'))}</span>
           </div>
 
           {/* Map Progress Track with Learning Train */}
@@ -284,13 +284,13 @@ export default function HomeScreen() {
           </div>
 
           <p className="text-xs font-bold text-[#141779] text-center">
-            {xpNeeded > 0 ? `Only ${xpNeeded} XP left to reach ${nextCityName}` : `You have reached ${nextCityName}!`}
+            {xpNeeded > 0 ? t('only_xp_left', { xp: xpNeeded, city: t(nextCityName.toLowerCase().replace(' ', '_')) }) : t('reached_city', { city: t(nextCityName.toLowerCase().replace(' ', '_')) })}
           </p>
         </button>
 
         {/* QUICK ACTIONS BENTO GRID */}
         <div className="flex flex-col gap-[14px] relative z-10">
-          <h2 className="text-[10px] font-bold text-[#767683] tracking-[1.5px] px-1">EXPLORER MISSION CONTROLS 13</h2>
+          <h2 className="text-[10px] font-bold text-[#767683] tracking-[1.5px] px-1">{t('explorer_mission_controls')} 13</h2>
           
           <div className="grid grid-cols-2 gap-3">
             {/* Continue Learning */}
@@ -303,7 +303,7 @@ export default function HomeScreen() {
               </div>
               <div>
                 <h3 className="text-[13px] font-bold text-[#141779] mb-1">📚 {t('continue_learning')}</h3>
-                <p className="text-[10px] text-[#767683] font-semibold">Math & Science Quests</p>
+                <p className="text-[10px] text-[#767683] font-semibold">{t('math_science_quests')}</p>
               </div>
             </button>
 
@@ -317,7 +317,7 @@ export default function HomeScreen() {
               </div>
               <div>
                 <h3 className="text-[13px] font-bold text-[#141779] mb-1">⭐ {t('good_habits')}</h3>
-                <p className="text-[10px] text-[#767683] font-semibold">Daily lessons & rewards</p>
+                <p className="text-[10px] text-[#767683] font-semibold">{t('daily_lessons_rewards')}</p>
               </div>
             </button>
           </div>
@@ -333,7 +333,7 @@ export default function HomeScreen() {
               </div>
               <div>
                 <h3 className="text-[13px] font-bold text-[#141779] mb-1">🗺 {t('journey')}</h3>
-                <p className="text-[10px] text-[#767683] font-semibold">Explorer Map</p>
+                <p className="text-[10px] text-[#767683] font-semibold">{t('explorer_map')}</p>
               </div>
             </button>
 
@@ -346,8 +346,8 @@ export default function HomeScreen() {
                 <Bookmark size={24} color="#ff6b6b" />
               </div>
               <div>
-                <h3 className="text-[13px] font-bold text-[#141779] mb-1">🏆 My Collections</h3>
-                <p className="text-[10px] text-[#767683] font-semibold">Unlocked Cards & Badges</p>
+                <h3 className="text-[13px] font-bold text-[#141779] mb-1">🏆 {t('my_collections')}</h3>
+                <p className="text-[10px] text-[#767683] font-semibold">{t('unlocked_cards_badges')}</p>
               </div>
             </button>
           </div>
@@ -362,8 +362,8 @@ export default function HomeScreen() {
                 <span className="text-2xl">⚔️</span>
               </div>
               <div className="text-left">
-                <h3 className="text-[16px] font-black text-white uppercase tracking-wider mb-0.5">Shadow Arena (1v1)</h3>
-                <p className="text-[11px] text-[#57fae9] font-bold">Challenge friends. Win 25 for physical prize!</p>
+                <h3 className="text-[16px] font-black text-white uppercase tracking-wider mb-0.5">{t('shadow_arena')}</h3>
+                <p className="text-[11px] text-[#57fae9] font-bold">{t('challenge_friends')}</p>
               </div>
             </div>
             <div className="bg-white/20 p-2 rounded-full">
@@ -378,10 +378,10 @@ export default function HomeScreen() {
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-2">
                 <Target size={20} className="text-[#ff6b6b]" />
-                <h2 className="text-[15px] font-bold text-[#141779]">Daily Missions</h2>
+                <h2 className="text-[15px] font-bold text-[#141779]">{t('daily_missions')}</h2>
               </div>
               <span className="text-[11px] font-bold text-[#767683] bg-gray-100 px-2 py-1 rounded-full">
-                {missions.filter(m => m.status === 'completed').length}/{missions.length} Done
+                {missions.filter(m => m.status === 'completed').length}/{missions.length} {t('done')}
               </span>
             </div>
             
@@ -412,8 +412,8 @@ export default function HomeScreen() {
                         {mission.title}
                       </h3>
                       <p className="text-[11px] text-[#767683] font-semibold mt-0.5 flex items-center gap-2">
-                        <span>🪙 +{mission.coin_reward || mission.coinReward} Coins</span>
-                        <span>⭐ +{mission.xp_reward || mission.xpReward} XP</span>
+                        <span>🪙 +{mission.coin_reward || mission.coinReward} {t('coins')}</span>
+                        <span>⭐ +{mission.xp_reward || mission.xpReward} {t('xp')}</span>
                       </p>
                     </div>
                   </div>
@@ -437,7 +437,7 @@ export default function HomeScreen() {
             <Shield size={24} color="#141779" />
             <div className="text-left">
               <h3 className="text-[15px] font-bold text-[#141779]">{t('parent_space')}</h3>
-              <p className="text-[11px] text-[#767683] font-semibold">View stats, DNA, & reports</p>
+              <p className="text-[11px] text-[#767683] font-semibold">{t('view_stats_dna')}</p>
             </div>
           </div>
           <ChevronRight size={24} color="#141779" />
@@ -487,7 +487,7 @@ export default function HomeScreen() {
             transition={{ type: "spring", bounce: 0.6 }}
             className="text-center flex flex-col items-center"
           >
-            <h2 className="text-3xl font-bold text-white mb-8 animate-pulse text-center">A Wild Surprise<br/>Appeared!</h2>
+            <h2 className="text-3xl font-bold text-white mb-8 animate-pulse text-center">{t('wild_surprise')}</h2>
             <motion.button
               onClick={() => {
                  if(chestTaps === 0) {
@@ -516,7 +516,7 @@ export default function HomeScreen() {
               )}
             </motion.button>
             <p className="text-white mt-12 font-bold text-xl bg-[rgba(255,255,255,0.2)] px-6 py-3 rounded-full shadow-[0_0_15px_rgba(255,255,255,0.3)] animate-pulse">
-              {chestTaps === 1 ? "Opening..." : "Tap to open!"}
+              {chestTaps === 1 ? t('opening') : t('tap_to_open')}
             </p>
           </motion.div>
         </div>
@@ -539,8 +539,8 @@ export default function HomeScreen() {
             >
               🎉
             </motion.span>
-            <h2 className="text-3xl font-bold text-[#141779] mb-2">Surprise Reward!</h2>
-            <p className="text-[#767683] font-semibold mb-6">The magic chest gave you something special.</p>
+            <h2 className="text-3xl font-bold text-[#141779] mb-2">{t('surprise_reward')}</h2>
+            <p className="text-[#767683] font-semibold mb-6">{t('magic_chest_gave_you')}</p>
             
             <motion.div 
               initial={{ y: 20, opacity: 0 }}

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sparkles, User, PlusCircle, Send, ArrowLeft, Bell } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
 
 type Message = {
@@ -10,34 +11,35 @@ type Message = {
   image?: string;
 };
 
-const INITIAL_MESSAGES: Message[] = [
+const getInitialMessages = (t: any): Message[] => [
   {
     id: "1",
     role: "ai",
-    text: "Hello Explorer! I'm Saathy, your learning guide. Ready to discover something new in the cosmos today?",
+    text: t('saathy_intro'),
   },
   {
     id: "2",
     role: "user",
-    text: "Can you help me understand how black holes work?",
+    text: t('sample_question'),
   },
   {
     id: "3",
     role: "ai",
-    text: "Great question! Think of a black hole like a cosmic vacuum cleaner with infinite power. Here's a look at one:\n\nNothing, not even light, can escape it! 🌌",
+    text: t('saathy_response'),
     image: "https://lh3.googleusercontent.com/aida-public/AB6AXuCVAgNd_cTSl56KCFiHwrwHqEQRcO6tGMF09vih5dHm0-eEAxzfgWsdBmLofUdrO4BvNBcESoTnk3Q0JnIy0QWd5UoGUi9j89EDyyIec6oKxuw4tOMNr6VvpEuuG0WpCgMMRug-QfUauVWGPD8331mNsZXE_NgfQY6RUS6_FJRIcOUUi9JWX7AqN2hDl49HUMCS8Nslczuc0IFPVBJDHkvmzIXe7xwlqeXjHaJ0Fw9rLRcUcd9-pRz8W9QId6_VaT7RbyJlR3t7uw",
   },
 ];
 
-const QUICK_REPLIES = [
-  "🚀 How do they form?",
-  "✨ Show more pics",
-  "🔭 Who found them?",
+const getQuickReplies = (t: any) => [
+  t('quick_reply_1'),
+  t('quick_reply_2'),
+  t('quick_reply_3'),
 ];
 
 export default function ChatScreen() {
   const navigate = useNavigate();
-  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
+  const { t } = useTranslation();
+  const [messages, setMessages] = useState<Message[]>(getInitialMessages(t));
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -78,7 +80,7 @@ export default function ChatScreen() {
         {
           id: Date.now().toString(),
           role: "ai",
-          text: data.message || "That's a very curious question! Let's explore that together. ✨"
+          text: data.message || t('saathy_fallback')
         }
       ]);
     } catch (err) {
@@ -89,7 +91,7 @@ export default function ChatScreen() {
         {
           id: Date.now().toString(),
           role: "ai",
-          text: "I am having trouble connecting to my galaxy servers right now. Please try again! 🌌"
+          text: t('saathy_error')
         }
       ]);
     }
@@ -101,16 +103,9 @@ export default function ChatScreen() {
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-4 bg-[rgba(247,249,251,0.8)] border-b border-[rgba(255,255,255,0.4)] sticky top-0 z-50 backdrop-blur-md">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity hidden">
+          <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity">
             <ArrowLeft size={24} color="#141779" />
           </button>
-          <div className="w-10 h-10 rounded-full border-2 border-[#57fae9] overflow-hidden bg-[#2d328f]">
-            <img 
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqzZgKYqkAFvG1duOpGq-qgFWHO1DbEeOPWvesdsngc_j-_EF3XW414Dw5lkQGx3OgT6vwuTPpx1AxS8j7wttjRXRmYzdNJa3A-wAJk6WAQF0nzjFs8sprRCjUTgIsy5Q7fI_RSFoZTBBfyYDmM9uWVPCPKuVvTcmzatUW1k8LDumDgYsJsAAa5gid0w8V2ugKrU7W2fOLth7ZzeE4VbEFWvD_IKJ_d7SOx773lqHSS52YQlHYGdixtpMMnnCOXDMBEdUjRCgdQQ" 
-              alt="Avatar"
-              className="w-full h-full object-cover"
-            />
-          </div>
           <h1 className="text-2xl font-bold text-[#141779]">Studysaathy</h1>
         </div>
         <button className="p-2 hover:bg-[rgba(20,23,121,0.05)] rounded-full transition-colors">
@@ -181,7 +176,7 @@ export default function ChatScreen() {
         
         {/* Quick Replies */}
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide mb-2">
-          {QUICK_REPLIES.map((reply, i) => (
+          {getQuickReplies(t).map((reply, i) => (
             <button
               key={i}
               onClick={() => handleSend(reply)}
@@ -199,7 +194,7 @@ export default function ChatScreen() {
           </button>
           <input
             type="text"
-            placeholder="Ask Saathy anything..."
+            placeholder={t('ask_saathy')}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}

@@ -1,16 +1,18 @@
 import { Link, useLocation, Outlet } from "react-router-dom";
 import { Home, MessageSquare, BookOpen, BarChart2, User } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export default function Layout() {
   const location = useLocation();
   const currentPath = location.pathname;
+  const { t } = useTranslation();
 
   const navItems = [
-    { path: "/home", label: "Home", icon: Home },
-    { path: "/chat", label: "AI Chat", icon: MessageSquare },
-    { path: "/practice/chapters", label: "Library", icon: BookOpen },
-    { path: "/progress", label: "Progress", icon: BarChart2 },
-    { path: "/profile", label: "Profile", icon: User },
+    { path: "/home", label: t('home'), icon: Home },
+    { path: "/chat", label: t('ai_chat_nav'), icon: MessageSquare },
+    { path: "/practice/chapters", label: t('library'), icon: BookOpen },
+    { path: "/progress", label: t('progress'), icon: BarChart2 },
+    { path: "/profile", label: t('profile'), icon: User },
   ];
 
   return (

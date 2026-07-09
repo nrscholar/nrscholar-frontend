@@ -35,6 +35,10 @@ export default function MultiplayerBattleScreen() {
   const [showRewardModal, setShowRewardModal] = useState(false);
   const [continuousWins, setContinuousWins] = useState(0);
   const [checkingReward, setCheckingReward] = useState(false);
+  const [showQuitModal, setShowQuitModal] = useState(false);
+  const [opponentQuit, setOpponentQuit] = useState(false);
+  const [quitCount, setQuitCount] = useState(0);
+  const [myStreak, setMyStreak] = useState(0);
 
   // Sync state
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -64,6 +68,12 @@ export default function MultiplayerBattleScreen() {
       try {
         const u = JSON.parse(userData);
         setMyId(u._id || u.id); // depending on how _id is stored
+        apiFetch("/api/users/me").then(res => res.json()).then(data => {
+            if (data.success && data.data && data.data.user) {
+                setQuitCount(data.data.user.multiplayerQuitCount || 0);
+                setMyStreak(data.data.user.multiplayerStreak || 0);
+            }
+        }).catch(console.error);
       } catch(e) {}
     }
   }, []);
@@ -77,6 +87,8 @@ export default function MultiplayerBattleScreen() {
         if (data.data.status === "finished") {
           setIsFinished(true);
           setWinnerId(data.data.winnerId);
+        } else if (data.data.status === "opponent_quit") {
+          setOpponentQuit(true);
         }
       }
     } catch (e) {
@@ -148,13 +160,11 @@ export default function MultiplayerBattleScreen() {
 
   // Synchronous Advancement logic
   useEffect(() => {
-    let timeout: ReturnType<typeof setTimeout>;
-    
     // Auto-advance if opponent disconnects/AFKs for >15 seconds
     if (waitTimer > 15 && selectedOption !== null && !isAdvancing) {
        setIsAdvancing(true);
        const isLast = currentQ === questions.length - 1;
-       timeout = setTimeout(() => {
+       setTimeout(() => {
           if (isLast) {
             setIsFinished(true);
           } else {
@@ -165,7 +175,7 @@ export default function MultiplayerBattleScreen() {
             setIsAdvancing(false);
           }
        }, 500);
-       return () => clearTimeout(timeout);
+       return;
     }
     
     if (room && selectedOption !== null && myProgress > 0 && !isAdvancing) {
@@ -177,7 +187,7 @@ export default function MultiplayerBattleScreen() {
         setIsAdvancing(true);
         const isLast = currentQ === questions.length - 1;
         
-        timeout = setTimeout(() => {
+        setTimeout(() => {
           if (isLast) {
             setIsFinished(true);
           } else {
@@ -189,9 +199,6 @@ export default function MultiplayerBattleScreen() {
           }
         }, 1000); // 1-second delay so you can see your selected answer
       }
-    }
-    return () => {
-      if (timeout) clearTimeout(timeout);
     }
   }, [room, selectedOption, myProgress, isAdvancing, currentQ, questions.length, waitTimer]);
 
@@ -240,7 +247,7 @@ export default function MultiplayerBattleScreen() {
       {/* VS Header with Progress Bars */}
       <header className="px-4 py-4 relative z-10 bg-[#0b0d4d]/80 backdrop-blur-md shadow-lg border-b border-white/10">
         <div className="flex justify-between items-center mb-4">
-          <button onClick={() => navigate("/home")} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors">
+          <button onClick={() => setShowQuitModal(true)} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors">
              <X size={20} color="white" />
           </button>
           <span className="text-white/50 text-xs font-bold uppercase tracking-widest">Live Battle</span>
@@ -252,7 +259,7 @@ export default function MultiplayerBattleScreen() {
           <div className="flex-1 flex flex-col items-start gap-2">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full border-2 border-[#57fae9] overflow-hidden bg-white">
-                <img src={myAvatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=Me"} className="w-full h-full object-cover" />
+                <img src={myAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${myName || 'Me'}`} className="w-full h-full object-cover" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
@@ -276,7 +283,7 @@ export default function MultiplayerBattleScreen() {
           <div className="flex-1 flex flex-col items-end gap-2">
             <div className="flex items-center gap-3 flex-row-reverse">
               <div className="w-12 h-12 rounded-full border-2 border-[#ff9f43] overflow-hidden bg-white">
-                <img src={oppAvatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=Opp"} className="w-full h-full object-cover" />
+                <img src={oppAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${oppName || 'Opp'}`} className="w-full h-full object-cover" />
               </div>
               <div className="text-right">
                 <div className="flex items-center gap-2 justify-end">
@@ -439,7 +446,7 @@ export default function MultiplayerBattleScreen() {
             {winnerId === myId && (
                <div className="bg-white/10 px-6 py-3 rounded-2xl border border-white/20 mb-6 w-full shadow-lg">
                   <p className="text-white/80 font-bold uppercase text-xs mb-1">Win Streak</p>
-                  <p className="text-2xl font-black text-[#ff9f43]">{continuousWins} 🔥</p>
+                  <p className="text-2xl font-black text-[#ff9f43]">{continuousWins} ⚔️</p>
                </div>
             )}
             
@@ -480,6 +487,81 @@ export default function MultiplayerBattleScreen() {
                 className="w-full bg-[#ff9f43] text-white py-4 rounded-xl font-black uppercase text-lg shadow-[0_4px_0_#d17e30] active:translate-y-[4px] active:shadow-none transition-all"
               >
                 Claim My Prize!
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* QUIT CONFIRMATION MODAL */}
+      <AnimatePresence>
+        {showQuitModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
+            <motion.div 
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              className="bg-[#141779] rounded-[24px] p-6 w-full max-w-sm flex flex-col items-center text-center shadow-2xl border border-white/20"
+            >
+              <div className="w-16 h-16 rounded-full bg-[#ba1a1a]/20 flex items-center justify-center mb-4">
+                <X size={32} color="#ffb4ab" />
+              </div>
+              <h2 className="text-2xl font-black text-white mb-2">Are you sure?</h2>
+              <p className="text-white/70 font-semibold mb-6">
+                {myStreak === 0
+                  ? "If you leave now, you will lose the game and be penalized 100 coins!"
+                  : quitCount === 0 
+                  ? "If you leave now, you will lose the game! This is your first warning, so your streak is safe."
+                  : quitCount === 1 
+                  ? "If you leave now, you will lose the game and your win streak will decrease by 1!"
+                  : "If you leave now, you will lose the game and your win streak will be completely reset!"}
+              </p>
+              
+              <div className="flex gap-3 w-full">
+                <button 
+                  onClick={() => setShowQuitModal(false)}
+                  className="flex-1 bg-white/10 text-white py-3 rounded-xl font-bold hover:bg-white/20 transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={async () => {
+                    setShowQuitModal(false);
+                    try {
+                      await apiFetch(`/api/multiplayer/room/${roomId}/quit`, { method: "POST" });
+                    } catch(e) {}
+                    navigate("/home");
+                  }}
+                  className="flex-1 bg-[#ba1a1a] text-white py-3 rounded-xl font-bold hover:bg-[#ba1a1a]/80 transition-all"
+                >
+                  Yes, Quit
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* OPPONENT QUIT MODAL */}
+      <AnimatePresence>
+        {opponentQuit && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
+            <motion.div 
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-[#141779] rounded-[24px] p-6 w-full max-w-sm flex flex-col items-center text-center shadow-2xl border border-[#57fae9]"
+            >
+              <div className="text-[60px] mb-2">🏃‍♂️💨</div>
+              <h2 className="text-2xl font-black text-white mb-2 uppercase">Opponent Fled!</h2>
+              <p className="text-[#57fae9] font-bold mb-6">
+                Your opponent left the game. You win by default!
+              </p>
+              
+              <button 
+                onClick={() => navigate("/multiplayer-hub")}
+                className="w-full bg-[#57fae9] text-[#141779] py-3 rounded-xl font-black uppercase tracking-wider hover:bg-[#57fae9]/80 transition-all"
+              >
+                Back to Arena
               </button>
             </motion.div>
           </div>

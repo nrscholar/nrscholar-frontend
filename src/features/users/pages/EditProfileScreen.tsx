@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, UserRound, GraduationCap, Cake, BookOpen, Save, Camera } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
 
 export default function EditProfileScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [msg, setMsg] = useState("");
@@ -74,13 +76,13 @@ export default function EditProfileScreen() {
       const data = await res.json();
       if (data.success) {
         localStorage.setItem("userData", JSON.stringify(data.data.user));
-        setMsg("Profile updated successfully!");
+        setMsg(t('profile_updated_successfully'));
         setTimeout(() => navigate(-1), 1500);
       } else {
-        setMsg(data.message || "Failed to update profile.");
+        setMsg(data.message || t('failed_to_update_profile'));
       }
     } catch (e) {
-      setMsg("Failed to update profile.");
+      setMsg(t('failed_to_update_profile'));
     } finally {
       setLoading(false);
     }
@@ -100,7 +102,7 @@ export default function EditProfileScreen() {
         <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity">
           <ArrowLeft size={24} color="#141779" />
         </button>
-        <h1 className="text-2xl font-bold text-[#141779]">Edit Profile</h1>
+        <h1 className="text-2xl font-bold text-[#141779]">{t('edit_profile')}</h1>
         <div className="w-8" />
       </header>
 
@@ -133,11 +135,11 @@ export default function EditProfileScreen() {
                 onChange={handlePhotoUpload} 
                 className="hidden" 
               />
-              <span className="text-xs font-bold text-[#767683] mt-2">Tap photo to edit</span>
+              <span className="text-xs font-bold text-[#767683] mt-2">{t('tap_photo_to_edit')}</span>
             </div>
 
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-[#767683] ml-2">Explorer Name</label>
+              <label className="text-sm font-semibold text-[#767683] ml-2">{t('explorer_name')}</label>
               <div className="relative flex items-center">
                 <UserRound size={22} color="#006a62" className="absolute left-4" />
                 <input
@@ -150,7 +152,7 @@ export default function EditProfileScreen() {
             </div>
 
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-[#767683] ml-2">Education Board</label>
+              <label className="text-sm font-semibold text-[#767683] ml-2">{t('education_board')}</label>
               <div className="relative flex items-center">
                 <BookOpen size={22} color="#006a62" className="absolute left-4" />
                 <select
@@ -158,7 +160,7 @@ export default function EditProfileScreen() {
                   onChange={(e) => setChildBoard(e.target.value)}
                   className="w-full h-14 bg-white rounded-full pl-12 pr-6 text-base font-medium text-[#191c1e] border-2 border-transparent focus:border-[#141779] outline-none appearance-none"
                 >
-                  <option value="" disabled>Select Board</option>
+                  <option value="" disabled>{t('select_board')}</option>
                   {boards.map(b => <option key={b} value={b}>{b}</option>)}
                 </select>
               </div>
@@ -166,7 +168,7 @@ export default function EditProfileScreen() {
 
             <div className="flex gap-3">
               <div className="flex flex-col gap-2 flex-1">
-                <label className="text-sm font-semibold text-[#767683] ml-2">Class/Grade</label>
+                <label className="text-sm font-semibold text-[#767683] ml-2">{t('class_grade')}</label>
                 <div className="relative flex items-center">
                   <GraduationCap size={22} color="#30007f" className="absolute left-4" />
                   <select
@@ -174,14 +176,14 @@ export default function EditProfileScreen() {
                     onChange={(e) => setChildClass(e.target.value)}
                     className="w-full h-14 bg-white rounded-full pl-10 pr-2 text-base font-medium text-[#191c1e] border-2 border-transparent focus:border-[#141779] outline-none appearance-none"
                   >
-                    <option value="" disabled>Select</option>
+                    <option value="" disabled>{t('select')}</option>
                     {classes.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
               </div>
 
               <div className="flex flex-col gap-2 flex-1">
-                <label className="text-sm font-semibold text-[#767683] ml-2">Age</label>
+                <label className="text-sm font-semibold text-[#767683] ml-2">{t('age')}</label>
                 <div className="relative flex items-center">
                   <Cake size={22} color="#141779" className="absolute left-4" />
                   <select
@@ -189,7 +191,7 @@ export default function EditProfileScreen() {
                     onChange={(e) => setChildAge(e.target.value)}
                     className="w-full h-14 bg-white rounded-full pl-10 pr-2 text-base font-medium text-[#191c1e] border-2 border-transparent focus:border-[#141779] outline-none appearance-none"
                   >
-                    <option value="" disabled>Select</option>
+                    <option value="" disabled>{t('select')}</option>
                     {ages.map(a => <option key={a} value={a}>{a}</option>)}
                   </select>
                 </div>
@@ -198,7 +200,7 @@ export default function EditProfileScreen() {
 
             {/* Language Selection */}
             <div className="flex flex-col gap-2 mt-2">
-              <label className="text-sm font-semibold text-[#767683] ml-2">App Language</label>
+              <label className="text-sm font-semibold text-[#767683] ml-2">{t('app_language')}</label>
               <div className="flex gap-2">
                 <button 
                   type="button"
@@ -229,7 +231,7 @@ export default function EditProfileScreen() {
               disabled={loading}
               className="mt-4 w-full h-14 bg-[#141779] rounded-full flex items-center justify-center gap-3 shadow-[0_4px_15px_rgba(20,23,121,0.3)] hover:opacity-90 transition-opacity disabled:opacity-70"
             >
-              <span className="text-white text-lg font-semibold">{loading ? "Saving..." : "Save Profile"}</span>
+              <span className="text-white text-lg font-semibold">{loading ? t('saving') : t('save_profile')}</span>
               {!loading && <Save size={22} color="white" />}
             </button>
           </form>

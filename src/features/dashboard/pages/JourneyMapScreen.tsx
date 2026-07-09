@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import { motion, AnimatePresence } from "framer-motion";
 import InteractiveCompanion from "../../../components/InteractiveCompanion";
@@ -16,10 +16,14 @@ interface City {
 
 export default function JourneyMapScreen() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [fuel, setFuel] = useState(0);
   const [xp, setXp] = useState(0);
   const [coins, setCoins] = useState(0);
   const [username, setUsername] = useState("");
+  const [childPhoto, setChildPhoto] = useState("");
+  const [userLevel, setUserLevel] = useState(1);
   const [cities, setCities] = useState<City[]>([]);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -28,9 +32,14 @@ export default function JourneyMapScreen() {
   const uiCities = [
     { name: "Egg Village", emoji: "🥚", fallbackXp: 0, reward: "Dragon Egg", rewardColor: "text-secondary-fixed" },
     { name: "Forest Kingdom", emoji: "🐉", fallbackXp: 1000, reward: "Baby Dragon", rewardColor: "text-primary" },
-    { name: "Magic Desert", emoji: "🔥", fallbackXp: 2500, reward: "Phoenix", rewardColor: "text-outline" },
-    { name: "Ice Kingdom", emoji: "❄️", fallbackXp: 5000, reward: "Ice Dragon", rewardColor: "text-outline" },
-    { name: "Dragon Mountain", emoji: "🏔️", fallbackXp: 10000, reward: "Legendary Dragon", rewardColor: "text-on-surface-variant" },
+    { name: "Magic Desert", emoji: "🔥", fallbackXp: 2500, reward: "Fire Dragon", rewardColor: "text-orange-500" },
+    { name: "Ice Kingdom", emoji: "❄️", fallbackXp: 5000, reward: "Ice Dragon", rewardColor: "text-blue-500" },
+    { name: "Dragon Mountain", emoji: "🏔️", fallbackXp: 10000, reward: "Legendary Dragon", rewardColor: "text-purple-500" },
+    { name: "Cloud City", emoji: "☁️", fallbackXp: 15000, reward: "Sky Dragon", rewardColor: "text-sky-500" },
+    { name: "Crystal Caves", emoji: "💎", fallbackXp: 20000, reward: "Crystal Dragon", rewardColor: "text-teal-400" },
+    { name: "Underworld", emoji: "🌋", fallbackXp: 30000, reward: "Shadow Dragon", rewardColor: "text-red-600" },
+    { name: "Starry Sky", emoji: "⭐", fallbackXp: 40000, reward: "Star Dragon", rewardColor: "text-yellow-400" },
+    { name: "Galactic Core", emoji: "🌌", fallbackXp: 50000, reward: "Cosmic Dragon", rewardColor: "text-indigo-500" },
   ];
 
   useEffect(() => {
@@ -51,6 +60,8 @@ export default function JourneyMapScreen() {
             userXp = uData.data.user.xp || 1200; // default for visual
             userCoins = uData.data.user.coins || 450;
             userName = uData.data.user.name || "Explorer";
+            setChildPhoto(uData.data.user.childPhoto || "");
+            setUserLevel(uData.data.user.level || 1);
           }
         } catch (e) {}
       }
@@ -73,7 +84,7 @@ export default function JourneyMapScreen() {
       setCoins(userCoins);
       setUsername(userName);
 
-      const xpThresholds = [0, 1000, 2500, 5000, 10000];
+      const xpThresholds = [0, 1000, 2500, 5000, 10000, 15000, 20000, 30000, 40000, 50000];
 
       // Fetch cities
       try {
@@ -132,6 +143,17 @@ export default function JourneyMapScreen() {
     fetchJourney();
   }, []);
 
+  useEffect(() => {
+    if (!loading && location.state?.scrollTo !== undefined) {
+      setTimeout(() => {
+        const el = document.getElementById(`city-${location.state.scrollTo}`);
+        if (el && scrollRef.current) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 300);
+    }
+  }, [loading, location.state]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -148,58 +170,89 @@ export default function JourneyMapScreen() {
   let dragonNextGoal = 2000;
   let companionScale = 0.8;
 
-  if (xp >= 10000) {
+  if (xp >= 50000) {
+    dragonStage = "Cosmic Dragon";
+    dragonModelUrl = "/images/dragons/legendary_dragon.glb";
+    dragonFallbackImage = "/images/dragons/adult.png";
+    dragonMessage = "You control the galaxy!";
+    dragonNextGoal = 50000;
+    companionScale = 1.5;
+  } else if (xp >= 40000) {
+    dragonStage = "Star Dragon";
+    dragonModelUrl = "/images/dragons/legendary_dragon.glb";
+    dragonFallbackImage = "/images/dragons/adult.png";
+    dragonMessage = "A star is born!";
+    dragonNextGoal = 50000;
+    companionScale = 1.45;
+  } else if (xp >= 30000) {
+    dragonStage = "Shadow Dragon";
+    dragonModelUrl = "/images/dragons/legendary_dragon.glb";
+    dragonFallbackImage = "/images/dragons/adult.png";
+    dragonMessage = "Ruler of the underworld!";
+    dragonNextGoal = 40000;
+    companionScale = 1.4;
+  } else if (xp >= 20000) {
+    dragonStage = "Crystal Dragon";
+    dragonModelUrl = "/images/dragons/legendary_dragon.glb";
+    dragonFallbackImage = "/images/dragons/adult.png";
+    dragonMessage = "Shining brighter than ever!";
+    dragonNextGoal = 30000;
+    companionScale = 1.35;
+  } else if (xp >= 15000) {
+    dragonStage = "Sky Dragon";
+    dragonModelUrl = "/images/dragons/legendary_dragon.glb";
+    dragonFallbackImage = "/images/dragons/adult.png";
+    dragonMessage = "Master of the skies!";
+    dragonNextGoal = 20000;
+    companionScale = 1.3;
+  } else if (xp >= 10000) {
     dragonStage = "Legendary Dragon";
     dragonModelUrl = "/images/dragons/legendary_dragon.glb";
     dragonFallbackImage = "/images/dragons/adult.png";
     dragonMessage = "Amazing! Your dragon is legendary!";
-    dragonNextGoal = 10000;
-    companionScale = 1.3;
-  } else if (xp >= 8000) {
-    dragonStage = "Fire Dragon";
+    dragonNextGoal = 15000;
+    companionScale = 1.25;
+  } else if (xp >= 5000) {
+    dragonStage = "Ice Dragon";
     dragonModelUrl = "/images/dragons/teen_dragon.glb";
     dragonFallbackImage = "/images/dragons/teen.png";
     dragonMessage = "Your dragon is growing fast!";
     dragonNextGoal = 10000;
     companionScale = 1.2;
-  } else if (xp >= 6000) {
-    dragonStage = "Adult Dragon";
+  } else if (xp >= 2500) {
+    dragonStage = "Fire Dragon";
     dragonModelUrl = "/images/dragons/teen_dragon.glb";
     dragonFallbackImage = "/images/dragons/teen.png";
     dragonMessage = "Your dragon is learning to fly!";
-    dragonNextGoal = 8000;
+    dragonNextGoal = 5000;
     companionScale = 1.1;
-  } else if (xp >= 4000) {
+  } else if (xp >= 1000) {
     dragonStage = "Baby Dragon";
     dragonModelUrl = "/images/dragons/baby_dragon.glb";
     dragonFallbackImage = "/images/dragons/baby.png";
     dragonMessage = "Your dragon hatched! Keep learning!";
-    dragonNextGoal = 6000;
+    dragonNextGoal = 2500;
     companionScale = 0.9;
-  } else if (xp >= 2000) {
-    dragonStage = "Hatching Companion";
-    dragonModelUrl = "/images/dragons/egg.glb";
-    dragonFallbackImage = "/images/dragons/cracked.png";
-    dragonMessage = "It's hatching! Just a bit more learning!";
-    dragonNextGoal = 4000;
-    companionScale = 0.85;
   } else {
-    // Stage 1 (xp < 2000)
-    if (xp >= 1000) {
-      dragonStage = "Cracking Egg";
-      dragonFallbackImage = "/images/dragons/cracked.png";
-      dragonMessage = "The egg is starting to crack!";
-    } else {
-      dragonStage = "Dragon Egg";
-      dragonFallbackImage = "/images/dragons/egg.png";
-      dragonMessage = "Keep learning to start cracking your egg!";
-    }
+    dragonStage = "Dragon Egg";
     dragonModelUrl = "/images/dragons/egg.glb";
-    dragonNextGoal = 2000;
+    dragonFallbackImage = "/images/dragons/egg.png";
+    dragonMessage = "Keep learning to start cracking your egg!";
+    dragonNextGoal = 1000;
     companionScale = 0.8;
   }
 
-  const startXpOfStage = xp >= 10000 ? 10000 : xp >= 8000 ? 8000 : xp >= 6000 ? 6000 : xp >= 4000 ? 4000 : xp >= 2000 ? 2000 : 0;
+  let startXpOfStage = 0;
+  if (xp >= 50000) startXpOfStage = 50000;
+  else if (xp >= 40000) startXpOfStage = 40000;
+  else if (xp >= 30000) startXpOfStage = 30000;
+  else if (xp >= 20000) startXpOfStage = 20000;
+  else if (xp >= 15000) startXpOfStage = 15000;
+  else if (xp >= 10000) startXpOfStage = 10000;
+  else if (xp >= 5000) startXpOfStage = 5000;
+  else if (xp >= 2500) startXpOfStage = 2500;
+  else if (xp >= 1000) startXpOfStage = 1000;
+
   const stageRange = dragonNextGoal - startXpOfStage;
   const dragonProgress = stageRange > 0 ? Math.min(100, Math.round(((xp - startXpOfStage) / stageRange) * 100)) : 100;
 
@@ -214,13 +267,17 @@ export default function JourneyMapScreen() {
               <span className="material-symbols-outlined text-primary">arrow_back</span>
             </button>
             <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary shrink-0">
-              <img alt="User Profile" className="w-full h-full object-cover" src={`https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`}/>
+              {childPhoto ? (
+                <img alt="User Profile" className="w-full h-full object-cover" src={childPhoto}/>
+              ) : (
+                <img alt="User Profile" className="w-full h-full object-cover" src={`https://ui-avatars.com/api/?name=${encodeURIComponent(username || "Kid")}&background=random`}/>
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <h1 className="font-display text-label-lg font-bold text-primary truncate">{username}</h1>
               <div className="flex items-center gap-1">
                 <span className="material-symbols-outlined text-[14px] text-secondary shrink-0" style={{fontVariationSettings: "'FILL' 1"}}>stars</span>
-                <p className="text-[10px] font-bold text-on-surface-variant truncate">Explorer Lvl 1</p>
+                <p className="text-[10px] font-bold text-on-surface-variant truncate">Explorer Lvl {userLevel}</p>
               </div>
             </div>
           </div>
@@ -280,10 +337,15 @@ export default function JourneyMapScreen() {
             </div>
           </div>
 
-          <div className="relative min-h-[800px] py-10 flex flex-col items-center gap-16">
-            <svg className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none">
-              <line x1="50%" y1="0" x2="50%" y2="100%" stroke="#e0e3e5" strokeDasharray="8" strokeWidth="4" />
-            </svg>
+          <div ref={scrollRef} className="relative min-h-[800px] py-10 flex flex-col items-center gap-16">
+            <div 
+              className="absolute top-0 bottom-0 left-1/2 w-[160px] -ml-[80px] pointer-events-none z-0"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='160' height='300' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M 80 0 C 180 75, 180 75, 80 150 C -20 225, -20 225, 80 300' fill='none' stroke='%23cbd5e1' stroke-width='4' stroke-dasharray='10 10' stroke-linecap='round'/%3E%3C/svg%3E")`,
+                backgroundRepeat: 'repeat-y',
+                backgroundPosition: 'center top'
+              }}
+            ></div>
 
             {cities.map((city, idx) => {
               const uiCity = uiCities[Math.min(idx, uiCities.length - 1)];
@@ -294,8 +356,8 @@ export default function JourneyMapScreen() {
               if (isUltimate) {
                 const canPlay = isNext || city.unlocked;
                 return (
-                  <div key={idx} className={`relative z-10 w-full flex justify-center opacity-${canPlay ? '100' : '30'} mb-10`}>
-                    <div className="glass-card p-6 rounded-3xl w-72 text-center border-2 border-dashed border-outline-variant transition-all">
+                  <div key={idx} id={`city-${idx}`} className={`relative z-10 w-full flex justify-center mb-10 ${!canPlay ? 'grayscale' : ''}`}>
+                    <div className="glass-card bg-white dark:bg-surface p-6 rounded-3xl w-72 text-center border-2 border-dashed border-outline-variant transition-all">
                       <div className="w-16 h-16 bg-surface-container mx-auto rounded-full flex items-center justify-center mb-4 text-3xl">{uiCity.emoji}</div>
                       <h3 className="font-headline text-headline-md font-bold text-on-surface-variant mb-2">{city.name}</h3>
                       <p className="text-label-sm text-outline mb-4">The Final Legend awaits...</p>
@@ -307,9 +369,10 @@ export default function JourneyMapScreen() {
 
               if (city.unlocked) {
                 return (
-                  <div key={idx} className={`relative z-10 w-full flex justify-center ${translateClass}`}>
+                  <div key={idx} id={`city-${idx}`} className={`relative z-10 w-full flex justify-center ${translateClass}`}>
                     <div 
-                      className="glass-card p-4 rounded-2xl w-64 border-l-4 border-secondary-fixed shadow-[0_4px_20px_rgba(0,106,98,0.2)] transition-all group"
+                      onClick={() => navigate('/evolution')}
+                      className="glass-card bg-white dark:bg-surface p-4 rounded-2xl w-64 border-l-4 border-secondary-fixed shadow-[0_4px_20px_rgba(0,106,98,0.2)] transition-all group cursor-pointer active:scale-95"
                     >
                       <div className="flex justify-between items-start mb-2">
                         <span className="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-2 py-0.5 rounded-full">UNLOCKED</span>
@@ -332,9 +395,9 @@ export default function JourneyMapScreen() {
               if (isNext) {
                 const progressToNext = Math.min((xp / city.requiredXp) * 100, 100);
                 return (
-                  <div key={idx} className={`relative z-10 w-full flex justify-center ${translateClass}`}>
+                  <div key={idx} id={`city-${idx}`} className={`relative z-10 w-full flex justify-center ${translateClass}`}>
                     <div 
-                      className="glass-card p-4 rounded-2xl w-64 border-l-4 border-primary shadow-lg ring-2 ring-primary/20 transition-all group"
+                      className="glass-card bg-white dark:bg-surface p-4 rounded-2xl w-64 border-l-4 border-primary shadow-lg ring-2 ring-primary/20 transition-all group"
                     >
                       <div className="flex justify-between items-start mb-2">
                         <span className="bg-primary-fixed text-on-primary-fixed text-[10px] font-bold px-2 py-0.5 rounded-full">IN PROGRESS</span>
@@ -360,9 +423,9 @@ export default function JourneyMapScreen() {
               }
 
               return (
-                <div key={idx} className={`relative z-10 w-full flex justify-center ${translateClass} opacity-60`}>
+                <div key={idx} id={`city-${idx}`} className={`relative z-10 w-full flex justify-center ${translateClass}`}>
                   <div 
-                    className={`glass-card p-4 rounded-2xl w-64 ${idx % 2 === 0 ? 'grayscale-[0.5]' : 'grayscale'}`}
+                    className={`glass-card bg-white dark:bg-surface p-4 rounded-2xl w-64 ${idx % 2 === 0 ? 'grayscale-[0.5]' : 'grayscale'}`}
                   >
                     <div className="flex justify-between items-start mb-2">
                       <span className="bg-surface-container-highest text-on-surface-variant text-[10px] font-bold px-2 py-0.5 rounded-full">LOCKED</span>

@@ -12,12 +12,14 @@ export default function MultiplayerHubScreen() {
   const [chapter, setChapter] = useState("Mix Chapters");
   const [chaptersList, setChaptersList] = useState<string[]>([]);
   const [myClass, setMyClass] = useState("Class 1");
+  const [myCoins, setMyCoins] = useState(0);
   const [isChapterDropdownOpen, setIsChapterDropdownOpen] = useState(false);
 
   useEffect(() => {
     apiFetch("/api/users/me").then(r => r.json()).then(d => {
-      if (d.success && d.data?.user?.childClass) {
-        setMyClass(d.data.user.childClass);
+      if (d.success && d.data?.user) {
+        if (d.data.user.childClass) setMyClass(d.data.user.childClass);
+        setMyCoins(d.data.user.coins || 0);
       }
     });
   }, []);
@@ -34,6 +36,10 @@ export default function MultiplayerHubScreen() {
   }, [subject, myClass]);
 
   const handleCreateRoom = async () => {
+    if (myCoins < 100) {
+      setError("Not enough coins! First complete a chapter to earn coins, then play Arena.");
+      return;
+    }
     setLoading(true);
     setError("");
     try {
@@ -56,6 +62,10 @@ export default function MultiplayerHubScreen() {
   };
 
   const handleJoinRoom = async () => {
+    if (myCoins < 100) {
+      setError("Not enough coins! First complete a chapter to earn coins, then play Arena.");
+      return;
+    }
     if (joinCode.length < 6) {
       setError("Code must be at least 6 characters");
       return;

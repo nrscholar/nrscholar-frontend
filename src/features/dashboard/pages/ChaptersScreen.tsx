@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Rocket, Sun, Compass, Globe, Moon, CheckCircle, Lock, Bell } from "lucide-react";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
 
 
@@ -9,6 +10,7 @@ const chapterIcons = [Rocket, Sun, Compass, Globe, Moon];
 
 export default function ChaptersScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const subjectName = searchParams.get("subjectName") || "Solar System";
@@ -190,8 +192,8 @@ export default function ChaptersScreen() {
             <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-6 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_2px_10px_rgba(0,0,0,0.05)] flex flex-col gap-4">
               <div className="flex justify-between items-end">
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-[#767683] mb-1">Mission Progress</p>
-                  <h2 className="text-2xl font-bold text-[#141779]">{completedChaptersCount}/{totalChapters} Chapters Complete</h2>
+                  <p className="text-sm font-semibold text-[#767683] mb-1">{t('mission_progress')}</p>
+                  <h2 className="text-2xl font-bold text-[#141779]">{t('chapters_complete', { completed: completedChaptersCount, total: totalChapters })}</h2>
                 </div>
                 <div className="relative w-12 h-12 rounded-full border-4 border-[rgba(0,106,98,0.2)] flex items-center justify-center">
                   <span className="text-xs font-bold text-[#006a62]">{Math.round(progressPercent)}%</span>
@@ -221,7 +223,7 @@ export default function ChaptersScreen() {
               {chapters.length === 0 ? (
                 <div className="flex flex-col items-center justify-center bg-[rgba(255,255,255,0.7)] rounded-2xl p-8 border-[1.5px] border-[rgba(255,255,255,0.8)] text-center mt-4">
                   <Rocket size={40} color="#c7c5d4" className="mb-3" />
-                  <p className="text-[#767683] font-medium">New chapters for {activeSubject?.name} are launching soon!</p>
+                  <p className="text-[#767683] font-medium">{t('new_chapters_launching_soon', { subject: activeSubject?.name })}</p>
                 </div>
               ) : (
                 chapters.map((chap, index) => {
@@ -237,7 +239,7 @@ export default function ChaptersScreen() {
                           <IconComponent size={24} color="#006a62" />
                         </div>
                         <div className="flex-1">
-                          <p className="text-xs font-bold text-[#006a62] tracking-[1px] mb-0.5 uppercase">CHAPTER {index + 1}</p>
+                          <p className="text-xs font-bold text-[#006a62] tracking-[1px] mb-0.5 uppercase">{t('chapter')} {index + 1}</p>
                           <h3 className="text-lg font-medium text-[#141779]">{chap.name}</h3>
                         </div>
                         <CheckCircle size={24} color="#006a62" />
@@ -257,23 +259,23 @@ export default function ChaptersScreen() {
                           <IconComponent size={24} color="white" />
                         </div>
                         <div className="flex-1 z-10">
-                          <p className="text-xs font-bold text-[#006a62] tracking-[1px] mb-0.5 uppercase">CHAPTER {index + 1}</p>
+                          <p className="text-xs font-bold text-[#006a62] tracking-[1px] mb-0.5 uppercase">{t('chapter')} {index + 1}</p>
                           <h3 className="text-lg font-bold text-[#141779]">{chap.name}</h3>
                         </div>
                         <button onClick={(e) => { e.stopPropagation(); navigate(`/chapter-levels?chapterId=${chap._id}&chapterName=${encodeURIComponent(chap.name)}`); }} className="bg-[#141779] px-6 py-2 rounded-full z-10 hover:opacity-90 transition-opacity">
-                          <span className="text-white text-sm font-semibold">Start</span>
+                          <span className="text-white text-sm font-semibold">{t('start')}</span>
                         </button>
                       </div>
                     );
                   }
 
                   return (
-                    <div key={chap._id} onClick={() => showToast(`Complete Chapter ${currentChapterIndex + 1} to unlock!`)} className="flex items-center gap-4 bg-[#f2f4f6] opacity-60 rounded-2xl p-4 border border-[rgba(118,118,131,0.1)] cursor-pointer">
+                    <div key={chap._id} onClick={() => showToast(t('complete_chapter_to_unlock', { chapter: currentChapterIndex + 1 }))} className="flex items-center gap-4 bg-[#f2f4f6] opacity-60 rounded-2xl p-4 border border-[rgba(118,118,131,0.1)] cursor-pointer">
                       <div className="w-12 h-12 rounded-full bg-[rgba(118,118,131,0.1)] flex items-center justify-center shrink-0">
                         <IconComponent size={24} color="#767683" />
                       </div>
                       <div className="flex-1">
-                        <p className="text-xs font-bold text-[#767683] tracking-[1px] mb-0.5 uppercase">CHAPTER {index + 1}</p>
+                        <p className="text-xs font-bold text-[#767683] tracking-[1px] mb-0.5 uppercase">{t('chapter')} {index + 1}</p>
                         <h3 className="text-lg font-medium text-[#464652]">{chap.name}</h3>
                       </div>
                       <Lock size={24} color="#767683" />

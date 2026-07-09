@@ -92,7 +92,7 @@ export default function MultiplayerRoomScreen() {
             {/* Player 1 */}
             <div className="flex flex-col items-center">
               <div className="w-20 h-20 rounded-full bg-[#57fae9] border-4 border-white overflow-hidden shadow-[0_0_15px_rgba(87,250,233,0.5)]">
-                 <img src={room.hostAvatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=P1"} alt="Host" className="w-full h-full object-cover" />
+                 <img src={room.hostAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${room.hostName || 'Host'}`} alt="Host" className="w-full h-full object-cover" />
               </div>
               <p className="mt-3 text-white font-bold max-w-[80px] text-center truncate">{room.hostName}</p>
               <span className="text-[10px] bg-[rgba(255,255,255,0.2)] px-2 py-1 rounded mt-1 text-white font-bold uppercase">Host</span>
@@ -104,7 +104,7 @@ export default function MultiplayerRoomScreen() {
             <div className="flex flex-col items-center">
               <div className={`w-20 h-20 rounded-full border-4 ${room.guestId ? 'bg-[#ff9f43] border-white shadow-[0_0_15px_rgba(255,159,67,0.5)]' : 'bg-[rgba(255,255,255,0.1)] border-[rgba(255,255,255,0.2)] border-dashed flex items-center justify-center'} overflow-hidden`}>
                  {room.guestId ? (
-                   <img src={room.guestAvatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=P2"} alt="Guest" className="w-full h-full object-cover" />
+                   <img src={room.guestAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${room.guestName || 'Guest'}`} alt="Guest" className="w-full h-full object-cover" />
                  ) : (
                    <span className="text-white opacity-50 text-xs font-bold text-center">Waiting...</span>
                  )}

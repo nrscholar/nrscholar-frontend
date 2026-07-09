@@ -1,15 +1,59 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Rocket, ArrowLeft, User, Phone } from "lucide-react";
+import { apiFetch } from "../../../api";
 
 export default function SignupStep1Screen() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [fullName, setFullName] = useState(searchParams.get("fullName") || "");
   const [mobile, setMobile] = useState(searchParams.get("mobile") || "");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleNext = () => {
-    navigate(`/signup-step2?fullName=${encodeURIComponent(fullName)}&mobile=${encodeURIComponent(mobile)}`);
+  const validateMobile = (mobile: string) => {
+    // Check for exactly 10 digits
+    const regex = /^\d{10}$/;
+    return regex.test(mobile);
+  };
+
+  const handleNext = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fullName.trim()) {
+      setErrorMsg("Please enter your name");
+      return;
+    }
+    if (!validateMobile(mobile)) {
+      setErrorMsg("Please enter a valid mobile number (10 digits)");
+      return;
+    }
+    
+    setErrorMsg("");
+    setLoading(true);
+    
+    try {
+      const response = await apiFetch("/api/users/check-mobile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mobile })
+      });
+      const data = await response.json();
+      setLoading(false);
+      
+      if (response.status === 422 || (data.detail && data.detail === "Invalid mobile number format")) {
+        setErrorMsg("Invalid mobile number format");
+        return;
+      }
+      
+      if (data.exists) {
+        setErrorMsg("Mobile number already registered");
+      } else {
+        navigate(`/signup-step2?fullName=${encodeURIComponent(fullName)}&mobile=${encodeURIComponent(mobile)}`);
+      }
+    } catch (e) {
+      setLoading(false);
+      setErrorMsg("Unable to connect. Is the server running?");
+    }
   };
 
   return (
@@ -49,7 +93,13 @@ export default function SignupStep1Screen() {
             </p>
           </div>
 
-          <form className="flex flex-col gap-5 mb-6">
+          {errorMsg && (
+            <div className="w-full bg-[#ffdad6] text-[#ba1a1a] text-sm font-semibold p-3 rounded-xl mb-6 text-center">
+              {errorMsg}
+            </div>
+          )}
+
+          <form className="flex flex-col gap-5 mb-6" onSubmit={handleNext}>
             
             {/* Parent Name */}
             <div className="flex flex-col gap-2">
@@ -74,23 +124,34 @@ export default function SignupStep1Screen() {
                   type="tel"
                   placeholder="Enter Mobile Number"
                   value={mobile}
-                  onChange={(e) => setMobile(e.target.value)}
+                  maxLength={10}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setMobile(val);
+                  }}
                   className="w-full h-14 bg-white rounded-full pl-6 pr-14 text-base font-medium text-[#191c1e] border border-[#c7c5d4] focus:outline-none focus:border-[#141779] transition-colors placeholder:text-[#c7c5d4]"
                 />
                 <Phone size={22} color="#c7c5d4" className="absolute right-5" />
               </div>
             </div>
             
+            <button type="submit" className="hidden" />
           </form>
 
           {/* Primary Action */}
           <button
             onClick={handleNext}
-            disabled={!fullName || !mobile}
-            className={`w-full h-14 bg-[#141779] rounded-full flex items-center justify-center gap-3 shadow-[0_4px_15px_rgba(20,23,121,0.3)] transition-opacity ${(!fullName || !mobile) ? 'opacity-70 cursor-not-allowed' : 'hover:opacity-90'}`}
+            disabled={!fullName || !mobile || loading}
+            className={`w-full h-14 bg-[#141779] rounded-full flex items-center justify-center gap-3 shadow-[0_4px_15px_rgba(20,23,121,0.3)] transition-opacity ${(!fullName || !mobile || loading) ? 'opacity-70 cursor-not-allowed' : 'hover:opacity-90'}`}
           >
-            <span className="text-white text-lg font-semibold">Next Step</span>
-            <Rocket size={22} color="white" />
+            {loading ? (
+              <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <>
+                <span className="text-white text-lg font-semibold">Next Step</span>
+                <Rocket size={22} color="white" />
+              </>
+            )}
           </button>
         </div>
 

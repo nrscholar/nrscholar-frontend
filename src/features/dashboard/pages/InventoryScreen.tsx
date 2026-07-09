@@ -20,6 +20,10 @@ export default function InventoryScreen() {
   const [userBadges, setUserBadges] = useState<any[]>([]);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  useEffect(() => {
     const fetchProfile = async () => {
       const token = localStorage.getItem("userToken");
       if (!token) return;
@@ -76,6 +80,7 @@ export default function InventoryScreen() {
     try {
       const res = await apiFetch("/api/retention/fragments/combine", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fragment_type: type })
       });
       if (res.ok) {
@@ -101,6 +106,7 @@ export default function InventoryScreen() {
     try {
       const res = await apiFetch("/api/retention/mystery-box/open", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ box_type: type })
       });
       if (res.ok) {
@@ -111,6 +117,26 @@ export default function InventoryScreen() {
           setOpeningBox(null);
           // Refetch boxes
           setMysteryBoxes(prev => ({...prev, [type]: Math.max(0, (prev[type] || 0) - 1)}));
+
+          if (data.type === 'coins') {
+            setCoins(prev => prev + data.amount);
+            const stored = localStorage.getItem("userData");
+            if (stored) {
+              const u = JSON.parse(stored);
+              u.coins = (u.coins || 0) + data.amount;
+              localStorage.setItem("userData", JSON.stringify(u));
+            }
+          } else if (data.type === 'xp') {
+            setXp(prev => prev + data.amount);
+            const stored = localStorage.getItem("userData");
+            if (stored) {
+              const u = JSON.parse(stored);
+              u.xp = (u.xp || 0) + data.amount;
+              localStorage.setItem("userData", JSON.stringify(u));
+            }
+          } else if (data.type === 'fragment') {
+            apiFetch("/api/retention/fragments").then(r => r.json()).then(f => setFragments(f)).catch(() => {});
+          }
         }, 1500);
       } else {
         setOpeningBox(null);
@@ -144,7 +170,7 @@ export default function InventoryScreen() {
     fetchCities();
   }, []);
 
-  const xpThresholds = [0, 1000, 2500, 5000, 10000];
+  const xpThresholds = [0, 1000, 2500, 5000, 10000, 15000, 20000, 30000, 40000, 50000];
   const cities = citiesData.map((cityData, index) => {
     const reqXp = xpThresholds[index] || 0;
     const nextReqXp = xpThresholds[index + 1] || 99999;
@@ -152,21 +178,16 @@ export default function InventoryScreen() {
     const isCurrent = isUnlocked && (index === citiesData.length - 1 || xp < nextReqXp);
 
     let status = "Locked 🔒";
-    let rating = "☆☆☆☆☆";
-    
     if (isCurrent) {
       status = "Current Location 📍";
-      rating = "★★★★★";
     } else if (isUnlocked) {
-      status = "Unlocked 🎉";
-      rating = "★★★★☆";
+      status = "Completed 🎉";
     }
 
     return {
       id: String(index),
       name: cityData.name,
-      status,
-      rating
+      status
     };
   });
 
@@ -179,11 +200,6 @@ export default function InventoryScreen() {
     desc: b.description || "Earned achievement",
     color: i % 2 === 0 ? "#ffd700" : "#2addcd"
   }));
-
-  const items = [
-    { id: "1", name: "Explorer Hat", icon: Package, type: "Avatar Item" },
-    { id: "2", name: "Double XP", icon: Zap, type: "XP Booster" },
-  ];
 
   return (
     <div className="min-h-screen bg-[#f7f9fb] font-sans pb-24">
@@ -215,13 +231,13 @@ export default function InventoryScreen() {
       </header>
 
       <div className="px-5 mt-4">
-        <div className="flex bg-white p-1.5 rounded-xl border border-[#f0f0f0] overflow-x-auto gap-2 scrollbar-hide">
-          {["Mystery Boxes", "Dragon Academy", "Badges", "Cities", "Items"].map((tab) => (
+        <div className="grid grid-cols-2 gap-2 bg-white p-2 rounded-2xl border border-[#f0f0f0] shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+          {["Mystery Boxes", "Dragon Academy", "Cities", "Badges"].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab as any)}
-              className={`flex-none px-4 py-2 rounded-lg text-sm font-bold transition-colors whitespace-nowrap ${
-                activeTab === tab ? "bg-[#141779] text-white" : "text-[#767683] hover:bg-gray-50"
+              className={`py-2.5 px-1 rounded-xl text-[13px] font-bold transition-all ${
+                activeTab === tab ? "bg-[#141779] text-white shadow-md" : "text-[#767683] hover:bg-gray-50"
               }`}
             >
               {tab}
@@ -232,52 +248,62 @@ export default function InventoryScreen() {
 
       <main className="px-5 mt-6">
         {activeTab === "Badges" && (
-          <div className="grid grid-cols-2 gap-3">
-            {badges.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div key={item.id} className="bg-white rounded-2xl p-4 flex flex-col items-center border border-[#f0f0f0] gap-2">
-                  <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: `${item.color}15` }}>
-                    <Icon size={32} color={item.color} />
-                  </div>
-                  <h3 className="text-sm font-bold text-[#141779] text-center">{item.name}</h3>
-                  <p className="text-xs text-[#767683] text-center">{item.desc}</p>
-                </div>
-              );
-            })}
-          </div>
+          <>
+            {badges.length === 0 ? (
+              <div className="bg-white rounded-[24px] p-8 flex flex-col items-center border-2 border-[#f0f0f0] border-dashed">
+                <Shield size={48} color="#d1d5db" className="mb-3 opacity-50" />
+                <h3 className="text-lg font-bold text-[#141779] text-center mb-1">No Badges Yet</h3>
+                <p className="text-sm font-medium text-[#767683] text-center max-w-[220px] leading-relaxed">
+                  Keep exploring and opening Epic Mystery Boxes to find rare badges!
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {badges.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <div key={item.id} className="bg-white rounded-2xl p-4 flex flex-col items-center border border-[#f0f0f0] gap-2 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+                      <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: `${item.color}15` }}>
+                        <Icon size={32} color={item.color} />
+                      </div>
+                      <h3 className="text-sm font-bold text-[#141779] text-center leading-tight">{item.name}</h3>
+                      <p className="text-[11px] font-medium text-[#767683] text-center leading-snug">{item.desc}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
 
         {activeTab === "Cities" && (
-          <div className="flex flex-col gap-3">
-            {cities.map((item) => (
-              <div key={item.id} className="bg-white rounded-2xl p-4 flex items-center justify-between border border-[#f0f0f0]">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[rgba(20,23,121,0.05)] flex items-center justify-center">
-                    <MapPin size={20} color="#141779" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-[#141779]">{item.name}</h3>
-                    <p className="text-xs font-semibold text-[#006a62]">{item.status}</p>
-                  </div>
-                </div>
-                <span className="text-[#ffd700] text-lg tracking-widest">{item.rating}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {activeTab === "Items" && (
-          <div className="grid grid-cols-2 gap-3">
-            {items.map((item) => {
-              const Icon = item.icon;
+          <div className="flex flex-col relative pb-8 pt-4 px-2">
+            {/* Connection Line */}
+            <div className="absolute left-[35px] top-10 bottom-12 w-1 bg-[#eef0f2] -z-10 rounded-full" />
+            
+            {cities.map((item, index) => {
+              const isLocked = item.status.includes('Locked');
+              const isCurrent = item.status.includes('Current');
               return (
-                <div key={item.id} className="bg-white rounded-2xl p-4 flex flex-col items-center border border-[#f0f0f0] gap-2">
-                  <div className="w-16 h-16 rounded-full bg-[rgba(20,23,121,0.05)] flex items-center justify-center">
-                    <Icon size={32} color="#141779" />
+                <div 
+                  key={item.id} 
+                  onClick={() => navigate("/practice/journey-map", { state: { scrollTo: index } })}
+                  className={`flex items-center gap-4 mb-6 relative cursor-pointer active:scale-95 transition-transform ${isLocked ? 'opacity-60 grayscale-[0.5]' : ''}`}
+                >
+                  <div className={`w-14 h-14 rounded-full border-4 flex items-center justify-center shrink-0 z-10 transition-all ${
+                    isCurrent ? 'bg-[#57fae9] border-white shadow-[0_4px_16px_rgba(87,250,233,0.6)] scale-110' : 
+                    isLocked ? 'bg-gray-100 border-white text-gray-400' : 'bg-[#141779] border-white text-[#57fae9] shadow-md'
+                  }`}>
+                    <MapPin size={24} color={isCurrent ? '#141779' : isLocked ? '#a1a1aa' : '#57fae9'} />
                   </div>
-                  <h3 className="text-sm font-bold text-[#141779] text-center">{item.name}</h3>
-                  <p className="text-xs text-[#767683] text-center">{item.type}</p>
+                  <div className="bg-white rounded-2xl p-4 flex-1 border border-[#f0f0f0] shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+                    <h3 className="text-[15px] font-bold text-[#141779] mb-1">{item.name}</h3>
+                    <div className="flex items-center justify-between">
+                      <p className={`text-[10px] font-bold uppercase tracking-[1px] ${isCurrent ? 'text-[#006a62]' : isLocked ? 'text-gray-400' : 'text-[#141779]'}`}>
+                        {item.status}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               );
             })}
