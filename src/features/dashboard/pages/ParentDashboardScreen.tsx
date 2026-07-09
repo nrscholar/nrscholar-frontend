@@ -95,15 +95,15 @@ export default function ParentDashboardScreen() {
     lowestAcc = sorted[sorted.length - 1].accuracy;
   }
 
-  const chartTitle = modalType === "strengths" ? highestSubject : modalType === "weaknesses" ? lowestSubject : "Overall Logic & Reasoning";
-  const targetAcc = modalType === "strengths" ? highestAcc : modalType === "weaknesses" ? lowestAcc : undefined;
+  const chartTitle = modalType === "strengths" ? highestSubject : modalType === "weaknesses" ? lowestSubject : modalType === "risks" ? "Confidence Decline" : "Overall Logic & Reasoning";
+  const targetAcc = modalType === "strengths" ? highestAcc : modalType === "weaknesses" ? lowestAcc : modalType === "risks" ? undefined : undefined;
 
   const chart = generateChartData(targetAcc);
   const currentScore = chart.points.length > 0 ? chart.points[chart.points.length - 1].score : 92;
   const startScore = chart.points.length > 0 ? chart.points[0].score : 65;
   const diff = currentScore - startScore;
   const diffStr = diff >= 0 ? `+${diff}% this week` : `${diff}% this week`;
-  const chartColor = modalType === "weaknesses" ? "#ba1a1a" : "#006a62";
+  const chartColor = modalType === "weaknesses" ? "#ba1a1a" : modalType === "risks" ? "#ff5e00" : "#006a62";
 
   if (loading) {
     return (
@@ -210,10 +210,10 @@ export default function ParentDashboardScreen() {
             <p className="text-[14px] text-[#464652]">{weaknesses}</p>
           </button>
 
-          <div className="bg-white/70 backdrop-blur-md rounded-[20px] p-5 border border-white/60 shadow-[0_4px_20px_rgba(0,0,0,0.03)] border-l-[5px] border-l-[#141779]">
-            <h4 className="text-[16px] font-bold text-[#141779] mb-1">🔔 Risk Alerts</h4>
+          <button onClick={() => setModalType("risks")} className="text-left w-full bg-white/70 backdrop-blur-md rounded-[20px] p-5 border border-white/60 shadow-[0_4px_20px_rgba(0,0,0,0.03)] border-l-[5px] border-l-[#ff5e00] hover:bg-white hover:shadow-lg transition-all">
+            <h4 className="text-[16px] font-bold text-[#ff5e00] mb-1">🔔 Risk Alerts</h4>
             <p className="text-[14px] text-[#464652]">{risks}</p>
-          </div>
+          </button>
         </div>
 
         {/* Parent Learning Section */}
@@ -356,6 +356,7 @@ export default function ParentDashboardScreen() {
               <h2 className="text-lg font-bold text-[#141779]">
                 {modalType === "strengths" ? "Cognitive Strengths" :
                   modalType === "weaknesses" ? "Areas for Review" :
+                  modalType === "risks" ? "Confidence Decline Risk" :
                     "Cognitive Profile Graph"}
               </h2>
               <button onClick={() => setModalType(null)} className="p-2 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">
@@ -434,7 +435,7 @@ export default function ParentDashboardScreen() {
             {/* Subject Breakdown Bars */}
             <div className="mt-6 mb-4 space-y-4">
               <h3 className="text-[13px] font-bold text-[#141779] mb-3 border-b border-gray-100 pb-2">
-                {modalType === "strengths" ? "Top Subjects" : modalType === "weaknesses" ? "Needs Attention" : "Performance by Subject"}
+                {modalType === "strengths" ? "Top Subjects" : modalType === "weaknesses" ? "Needs Attention" : modalType === "risks" ? "At-Risk Subjects" : "Performance by Subject"}
               </h3>
               {subjectBreakdown
                 .slice()
@@ -490,7 +491,9 @@ export default function ParentDashboardScreen() {
                 <div className="bg-indigo-50 p-4 rounded-xl shadow-sm border border-indigo-100 mt-4">
                   <p className="text-xs text-[#141779] leading-relaxed">
                     <span className="font-bold text-[#141779]">Actionable Insight: </span>
-                    {subjectBreakdown.length > 0 ? (
+                    {modalType === "risks" ? (
+                      <>Noticeable decline in confidence recently. We recommend a <strong>15-minute review session</strong> today focusing on basics, avoiding complex new quests to rebuild {childName}'s confidence slowly.</>
+                    ) : subjectBreakdown.length > 0 ? (
                       modalType === "strengths" ?
                         `Your child is currently excelling at ${highestSubject}! These strong foundations help boost overall confidence.`
                         : modalType === "weaknesses" ?
