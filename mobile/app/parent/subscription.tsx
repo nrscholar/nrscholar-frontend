@@ -130,7 +130,7 @@ export default function ParentSubscriptionScreen() {
           {/* Header Section */}
           <View style={styles.heroSection}>
             <Text style={styles.heroTitle}>Choose Your Plan</Text>
-            <Text style={styles.heroSub}>Unlock full potential with StudySaathy Pro.</Text>
+            <Text style={styles.heroSub}>Unlock full potential with NR Scholar Pro.</Text>
           </View>
 
           {/* Billing Toggle */}

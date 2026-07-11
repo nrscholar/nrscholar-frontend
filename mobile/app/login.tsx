@@ -95,7 +95,7 @@ export default function LoginScreen() {
             <View style={styles.logoBox}>
               <MaterialIcons name="menu-book" size={32} color="#ffffff" />
             </View>
-            <Text style={styles.titleText}>Studysaathy</Text>
+            <Text style={styles.titleText}>NR Scholar</Text>
             <Text style={styles.subtitleText}>Welcome back</Text>
           </View>
 

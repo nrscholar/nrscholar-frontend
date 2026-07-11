@@ -62,22 +62,22 @@ export default function HomeScreen() {
             setStreakDays(u.streakDays ?? 0);
             
             // Sync to local AsyncStorage so other pages can read the updated values instantly
-            await AsyncStorage.setItem("studysaathy_fuel", String(u.fuel ?? 350));
-            await AsyncStorage.setItem("studysaathy_coins", String(u.coins ?? 420));
-            await AsyncStorage.setItem("studysaathy_level", String(u.level ?? 1));
-            await AsyncStorage.setItem("studysaathy_childName", u.childName || "Explorer");
+            await AsyncStorage.setItem("nrscholar_fuel", String(u.fuel ?? 350));
+            await AsyncStorage.setItem("nrscholar_coins", String(u.coins ?? 420));
+            await AsyncStorage.setItem("nrscholar_level", String(u.level ?? 1));
+            await AsyncStorage.setItem("nrscholar_childName", u.childName || "Explorer");
           } else {
             // Fallback to local storage if API call fails
-            const storedFuel = await AsyncStorage.getItem("studysaathy_fuel");
+            const storedFuel = await AsyncStorage.getItem("nrscholar_fuel");
             if (storedFuel !== null) setFuel(Number(storedFuel));
             
-            const storedCoins = await AsyncStorage.getItem("studysaathy_coins");
+            const storedCoins = await AsyncStorage.getItem("nrscholar_coins");
             if (storedCoins !== null) setCoins(Number(storedCoins));
 
-            const storedLevel = await AsyncStorage.getItem("studysaathy_level");
+            const storedLevel = await AsyncStorage.getItem("nrscholar_level");
             if (storedLevel !== null) setLevel(Number(storedLevel));
 
-            const storedName = await AsyncStorage.getItem("studysaathy_childName");
+            const storedName = await AsyncStorage.getItem("nrscholar_childName");
             if (storedName !== null) setChildName(storedName);
           }
         } catch (e) {

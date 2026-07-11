@@ -132,7 +132,7 @@ export default function AssessmentSummary() {
         <TouchableOpacity style={styles.iconBtn}>
           <MaterialIcons name="menu" size={24} color={C.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Studysaathy</Text>
+        <Text style={styles.headerTitle}>NR Scholar</Text>
         <View style={styles.avatarContainer}>
           <Image
             source={{ uri: "https://lh3.googleusercontent.com/aida-public/AB6AXuDPi330Jn0m4Ju-QdTyxElmKEzS1nvZXgLAUHgkcNZ9oDk1LWGslJRxi9Gp57yzRvs7gZoIuC3Nhuh1HsMVlYVxj93yJo_RavUo85gHvTsBuic6vl8zGcYonFP4bfQLsMx83i_Gq2Ka1yV_p0I8anRK9yJgn7Vfo2rLoKxCDpx-YZ5eHc2zqYcUTsi2qplbVnpM5PzFxVkkOZFtx86zCQJf_RyQkl_LgxogY7aw88XZ3BM8BbWILHWDY3oWI002qj_WgT5tJ8Uxxw" }}

@@ -230,8 +230,8 @@ export default function BossBattleScreen() {
 
     try {
       // Award +1000 Coins, +500 Fuel (equivalent to XP)
-      const currentFuel = await AsyncStorage.getItem("studysaathy_fuel");
-      const currentCoins = await AsyncStorage.getItem("studysaathy_coins");
+      const currentFuel = await AsyncStorage.getItem("nrscholar_fuel");
+      const currentCoins = await AsyncStorage.getItem("nrscholar_coins");
 
       const parsedFuel = currentFuel ? Number(currentFuel) : 350;
       const parsedCoins = currentCoins ? Number(currentCoins) : 420;
@@ -240,16 +240,16 @@ export default function BossBattleScreen() {
       const newCoins = parsedCoins + (currentBoss.rewardCoins || 1000);
       const newLevel = Math.max(1, Math.floor(newFuel / 500) + 1);
 
-      await AsyncStorage.setItem("studysaathy_fuel", String(newFuel));
-      await AsyncStorage.setItem("studysaathy_coins", String(newCoins));
-      await AsyncStorage.setItem("studysaathy_level", String(newLevel));
+      await AsyncStorage.setItem("nrscholar_fuel", String(newFuel));
+      await AsyncStorage.setItem("nrscholar_coins", String(newCoins));
+      await AsyncStorage.setItem("nrscholar_level", String(newLevel));
 
       // Award badge
-      const storedBadges = await AsyncStorage.getItem("studysaathy_badges");
+      const storedBadges = await AsyncStorage.getItem("nrscholar_badges");
       const badgesList = storedBadges ? JSON.parse(storedBadges) : [];
       if (!badgesList.includes(currentBoss.badge)) {
         badgesList.push(currentBoss.badge);
-        await AsyncStorage.setItem("studysaathy_badges", JSON.stringify(badgesList));
+        await AsyncStorage.setItem("nrscholar_badges", JSON.stringify(badgesList));
       }
 
       // Sync with database

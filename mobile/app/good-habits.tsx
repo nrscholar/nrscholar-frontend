@@ -84,7 +84,7 @@ export default function HabitsScreen() {
               <MaterialIcons name="arrow-back" size={16} color={C.white} />
             </View>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Studysaathy</Text>
+          <Text style={styles.headerTitle}>NR Scholar</Text>
         </View>
         <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7} onPress={() => router.push("/notifications")}>
           <MaterialIcons name="notifications" size={24} color={C.primary} />

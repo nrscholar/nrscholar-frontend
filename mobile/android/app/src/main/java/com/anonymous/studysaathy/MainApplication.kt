@@ -1,4 +1,4 @@
-package com.anonymous.studysaathy
+package com.anonymous.nrscholar
 
 import android.app.Application
 import android.content.res.Configuration

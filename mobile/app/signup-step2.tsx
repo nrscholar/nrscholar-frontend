@@ -124,7 +124,7 @@ export default function SignupStep2Screen() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <MaterialIcons name="rocket-launch" size={28} color="#141779" />
-          <Text style={styles.headerTitle}>Studysaathy</Text>
+          <Text style={styles.headerTitle}>NR Scholar</Text>
         </View>
         {/* Close/Back button */}
         <TouchableOpacity 

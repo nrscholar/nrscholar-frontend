@@ -454,9 +454,11 @@ export default function HomeScreen() {
           <motion.div 
             initial={{ opacity: 0, scale: 0.8, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="bg-white text-[#141779] text-xs font-bold px-4 py-2 rounded-[16px] shadow-lg mb-2 relative border-2 border-[#57fae9]"
+            onClick={() => navigate('/evolution')}
+            className="bg-white text-[#141779] text-xs font-bold px-4 py-2 rounded-[16px] shadow-lg mb-2 relative border-2 border-[#57fae9] flex items-center gap-2 cursor-pointer hover:bg-gray-50 active:scale-95 transition-all"
           >
-            {mascotMsg}
+            <span>{mascotMsg}</span>
+            <span className="text-[9px] bg-[#141779] text-[#57fae9] px-1.5 py-0.5 rounded-full whitespace-nowrap">Visit ➜</span>
             <div className="absolute -bottom-2 right-4 w-4 h-4 bg-white border-b-2 border-r-2 border-[#57fae9] transform rotate-45"></div>
           </motion.div>
         )}
@@ -555,7 +557,29 @@ export default function HomeScreen() {
 
             <button 
               onClick={() => { 
-                if (surpriseData.reward_type === 'coins') setCoins(c => c + surpriseData.amount);
+                if (surpriseData.reward_type === 'coins') {
+                  setCoins(c => {
+                    const newCoins = c + surpriseData.amount;
+                    const cached = localStorage.getItem("userData");
+                    if (cached) {
+                      const u = JSON.parse(cached);
+                      u.coins = newCoins;
+                      localStorage.setItem("userData", JSON.stringify(u));
+                    }
+                    return newCoins;
+                  });
+                } else if (surpriseData.reward_type === 'xp') {
+                  setXp(x => {
+                    const newXp = x + surpriseData.amount;
+                    const cached = localStorage.getItem("userData");
+                    if (cached) {
+                      const u = JSON.parse(cached);
+                      u.xp = newXp;
+                      localStorage.setItem("userData", JSON.stringify(u));
+                    }
+                    return newXp;
+                  });
+                }
                 setSurpriseData(null); 
               }}
               className="w-full bg-[#141779] text-white font-bold py-4 rounded-[16px] hover:opacity-90 active:scale-95 transition-all text-xl shadow-[0_4px_12px_rgba(20,23,121,0.2)]"

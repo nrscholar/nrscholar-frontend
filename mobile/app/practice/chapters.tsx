@@ -53,7 +53,7 @@ export default function ChaptersScreen() {
     useCallback(() => {
       const loadProgress = async () => {
         try {
-          const storedCompleted = await AsyncStorage.getItem("studysaathy_completed_chapters");
+          const storedCompleted = await AsyncStorage.getItem("nrscholar_completed_chapters");
           if (storedCompleted !== null) {
             setCompletedChapters(JSON.parse(storedCompleted));
           }

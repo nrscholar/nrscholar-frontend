@@ -199,7 +199,7 @@ export default function ParentalGateScreen() {
           <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity">
             <ArrowLeft size={24} color="#141779" />
           </button>
-          <h1 className="text-2xl font-bold text-[#141779] tracking-tight">Studysaathy</h1>
+          <h1 className="text-2xl font-bold text-[#141779] tracking-tight">NR Scholar</h1>
         </div>
       </header>
 

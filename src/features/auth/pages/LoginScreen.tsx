@@ -77,7 +77,7 @@ export default function LoginScreen() {
           <div className="w-16 h-16 bg-[#141779] rounded-2xl flex items-center justify-center mb-3 shadow-[0_0_20px_rgba(87,250,233,0.3)]">
             <BookOpen size={32} color="white" />
           </div>
-          <h1 className="text-[26px] font-bold text-[#141779] tracking-[-0.5px]">Studysaathy</h1>
+          <h1 className="text-[26px] font-bold text-[#141779] tracking-[-0.5px]">NR Scholar</h1>
           <p className="text-base text-[#767683] font-medium mt-1">Welcome back</p>
         </div>
 

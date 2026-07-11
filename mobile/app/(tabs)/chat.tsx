@@ -278,7 +278,7 @@ export default function ChatScreen() {
                 style={styles.headerAvatar}
               />
             </View>
-            <Text style={styles.headerTitle}>Studysaathy</Text>
+            <Text style={styles.headerTitle}>NR Scholar</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.notificationBtn} onPress={() => router.push("/notifications")}>
             <MaterialIcons name="notifications" size={24} color={C.onSurfaceVariant} />

@@ -13,7 +13,7 @@ import { Platform } from "react-native";
 const HOST_IP = "192.168.1.46";
 export const BASE_URL = Platform.OS === "web" ? "http://localhost:5000" : `http://${HOST_IP}:5000`;
 
-const TOKEN_KEY = "studysaathy_token";
+const TOKEN_KEY = "nrscholar_token";
 
 // ── Token helpers ─────────────────────────────────────────────────────────────
 

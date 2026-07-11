@@ -56,9 +56,9 @@ export default function JourneyMapScreen() {
           const uRes = await apiFetch("/api/users/me");
           const uData = await uRes.json();
           if (uData.success) {
-            userFuel = uData.data.user.fuel || 0;
-            userXp = uData.data.user.xp || 1200; // default for visual
-            userCoins = uData.data.user.coins || 450;
+            userFuel = uData.data.user.fuel !== undefined ? uData.data.user.fuel : 0;
+            userXp = uData.data.user.xp !== undefined ? uData.data.user.xp : 0; // Fixed default
+            userCoins = uData.data.user.coins !== undefined ? uData.data.user.coins : 0;
             userName = uData.data.user.name || "Explorer";
             setChildPhoto(uData.data.user.childPhoto || "");
             setUserLevel(uData.data.user.level || 1);
@@ -67,15 +67,15 @@ export default function JourneyMapScreen() {
       }
       
       // Fallback
-      if (userXp === 0) {
+      if (userXp === undefined || userXp === null) {
         const cached = localStorage.getItem("userData");
         if (cached) {
           try {
             const u = JSON.parse(cached);
-            userFuel = u.fuel || 0;
+            userFuel = u.fuel !== undefined ? u.fuel : 0;
             userName = u.name || "Explorer";
-            userXp = u.xp || 1200;
-            userCoins = u.coins || 450;
+            userXp = u.xp !== undefined ? u.xp : 0;
+            userCoins = u.coins !== undefined ? u.coins : 0;
           } catch(e) {}
         }
       }
@@ -234,9 +234,21 @@ export default function JourneyMapScreen() {
     dragonNextGoal = 2500;
     companionScale = 0.9;
   } else {
-    dragonStage = "Dragon Egg";
+    const percentage = (xp / 1000) * 100;
+    if (percentage >= 95) {
+      dragonStage = "Hatching Dragon";
+      dragonFallbackImage = "/images/dragons/cracked.png";
+    } else if (percentage >= 50) {
+      dragonStage = "Broken Egg";
+      dragonFallbackImage = "/images/dragons/cracked.png";
+    } else if (percentage >= 15) {
+      dragonStage = "Cracking Egg";
+      dragonFallbackImage = "/images/dragons/cracked.png";
+    } else {
+      dragonStage = "Dragon Egg";
+      dragonFallbackImage = "/images/dragons/egg.png";
+    }
     dragonModelUrl = "/images/dragons/egg.glb";
-    dragonFallbackImage = "/images/dragons/egg.png";
     dragonMessage = "Keep learning to start cracking your egg!";
     dragonNextGoal = 1000;
     companionScale = 0.8;

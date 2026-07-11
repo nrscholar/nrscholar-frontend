@@ -106,7 +106,7 @@ export default function ChatScreen() {
           <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity">
             <ArrowLeft size={24} color="#141779" />
           </button>
-          <h1 className="text-2xl font-bold text-[#141779]">Studysaathy</h1>
+          <h1 className="text-2xl font-bold text-[#141779]">NR Scholar</h1>
         </div>
         <button className="p-2 hover:bg-[rgba(20,23,121,0.05)] rounded-full transition-colors">
           <Bell size={24} color="#464652" />

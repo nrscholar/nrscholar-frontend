@@ -249,23 +249,23 @@ export default function SessionScreen() {
     let newCoins = 420 + earnedCoins;
     let newLevel = 1;
     try {
-      const currentFuel = await AsyncStorage.getItem("studysaathy_fuel");
+      const currentFuel = await AsyncStorage.getItem("nrscholar_fuel");
       newFuel = (currentFuel ? Number(currentFuel) : 350) + earnedFuel;
-      await AsyncStorage.setItem("studysaathy_fuel", String(newFuel));
+      await AsyncStorage.setItem("nrscholar_fuel", String(newFuel));
       
-      const currentCoins = await AsyncStorage.getItem("studysaathy_coins");
+      const currentCoins = await AsyncStorage.getItem("nrscholar_coins");
       newCoins = (currentCoins ? Number(currentCoins) : 420) + earnedCoins;
-      await AsyncStorage.setItem("studysaathy_coins", String(newCoins));
+      await AsyncStorage.setItem("nrscholar_coins", String(newCoins));
 
       newLevel = Math.max(1, Math.floor(newFuel / 500) + 1);
-      await AsyncStorage.setItem("studysaathy_level", String(newLevel));
+      await AsyncStorage.setItem("nrscholar_level", String(newLevel));
 
       if (chapterId) {
-        const storedCompleted = await AsyncStorage.getItem("studysaathy_completed_chapters");
+        const storedCompleted = await AsyncStorage.getItem("nrscholar_completed_chapters");
         const completedList = storedCompleted ? JSON.parse(storedCompleted) : [];
         if (!completedList.includes(chapterId)) {
           completedList.push(chapterId);
-          await AsyncStorage.setItem("studysaathy_completed_chapters", JSON.stringify(completedList));
+          await AsyncStorage.setItem("nrscholar_completed_chapters", JSON.stringify(completedList));
         }
       }
 
@@ -417,7 +417,7 @@ export default function SessionScreen() {
           <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7} onPress={() => router.back()}>
             <MaterialIcons name="arrow-back" size={24} color={C.primary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Studysaathy</Text>
+          <Text style={styles.headerTitle}>NR Scholar</Text>
           <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7}>
             <MaterialIcons name="track-changes" size={24} color={C.primary} />
           </TouchableOpacity>

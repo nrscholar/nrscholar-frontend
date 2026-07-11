@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, BarChart2, Calendar, Clock, TrendingUp, AlertTriangle, CheckCircle, Calculator, Atom, BookOpen, Star, Target, Lightbulb, Trophy, Award, BookOpenCheck, Loader2 } from "lucide-react";
 import { apiFetch } from "../../../api";
@@ -8,6 +8,83 @@ export default function ParentReportScreen() {
   const [activeTab, setActiveTab] = useState("daily");
   const [reportData, setReportData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const svgRef = useRef<SVGSVGElement | null>(null);
+
+  // Daily timeline history helpers
+  const dailyHistory = reportData?.dailyTimelineHistory || [];
+
+  // Chart dimensions & calculations
+  const chartWidth = 500;
+  const chartHeight = 220;
+  const paddingLeft = 40;
+  const paddingRight = 20;
+  const paddingTop = 20;
+  const paddingBottom = 30;
+
+  const getX = (index: number) => {
+    if (dailyHistory.length <= 1) return paddingLeft;
+    return paddingLeft + index * (chartWidth - paddingLeft - paddingRight) / (dailyHistory.length - 1);
+  };
+
+  const getY = (score: number) => {
+    return paddingTop + (100 - score) * (chartHeight - paddingTop - paddingBottom) / 100;
+  };
+
+  const masteryPath = dailyHistory.map((pt: any, i: number) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(pt.masteryScore)}`).join(' ');
+  const weaknessPath = dailyHistory.map((pt: any, i: number) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(pt.weaknessScore)}`).join(' ');
+  const riskPath = dailyHistory.map((pt: any, i: number) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(pt.riskIndex)}`).join(' ');
+
+  const masteryAreaPath = dailyHistory.length > 0 
+    ? `${masteryPath} L ${getX(dailyHistory.length - 1)} ${chartHeight - paddingBottom} L ${getX(0)} ${chartHeight - paddingBottom} Z` 
+    : '';
+
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
+    if (!svgRef.current || dailyHistory.length === 0) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const mouseX = ((e.clientX - rect.left) / rect.width) * chartWidth;
+    
+    // Find closest data point
+    let closestIndex = 0;
+    let minDiff = Infinity;
+    for (let i = 0; i < dailyHistory.length; i++) {
+      const diff = Math.abs(getX(i) - mouseX);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestIndex = i;
+      }
+    }
+    setHoveredIndex(closestIndex);
+  };
+
+  // Radar chart helpers
+  const getRadarPoint = (cx: number, cy: number, r: number, angleDegrees: number) => {
+    const angleRadians = (angleDegrees * Math.PI) / 180;
+    return {
+      x: cx + r * Math.cos(angleRadians),
+      y: cy + r * Math.sin(angleRadians)
+    };
+  };
+
+  const getLabelPos = (cx: number, cy: number, r: number, angleDegrees: number) => {
+    const angleRadians = (angleDegrees * Math.PI) / 180;
+    // push out slightly more for safety
+    const extra = 22;
+    return {
+      x: cx + (r + extra) * Math.cos(angleRadians),
+      y: cy + (r + extra) * Math.sin(angleRadians)
+    };
+  };
+
+  const dna = reportData?.learningDnaRadar || { accuracy: 75, speed: 70, resilience: 65, consistency: 60, retention: 70 };
+  const dnaAngles = [
+    { val: dna.accuracy, ang: -90, label: "Accuracy" },
+    { val: dna.speed, ang: -18, label: "Speed" },
+    { val: dna.resilience, ang: 54, label: "Challenge" },
+    { val: dna.consistency, ang: 126, label: "Consistency" },
+    { val: dna.retention, ang: 198, label: "Retention" }
+  ];
 
   useEffect(() => {
     async function loadReport() {
@@ -110,6 +187,291 @@ export default function ParentReportScreen() {
                     </div>
                   </div>
                   <p className="text-xs text-[#767683] mt-2">{reportData?.risks || "+5% higher than yesterday"}</p>
+                </div>
+              </div>
+
+              {/* Daily Learning DNA & Risk Trend Chart */}
+              <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-5 border-[1.5px] border-[rgba(255,255,255,0.4)] shadow-[0_4px_20px_rgba(20,23,121,0.05)]">
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingUp size={20} color="#141779" />
+                  <h3 className="text-sm font-bold text-[#191c1e]">Daily Mastery & Risk Trend</h3>
+                </div>
+                
+                {dailyHistory.length === 0 ? (
+                  <div className="py-10 text-center text-xs text-[#767683]">Solve questions to begin generating trend analytics.</div>
+                ) : (
+                  <div className="relative">
+                    {/* Color legends */}
+                    <div className="flex items-center justify-center gap-4 mb-4 text-[10px] font-bold text-[#464652]">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#00bbf9]" />
+                        <span>Mastery Index</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#f39c12]" />
+                        <span>Review Focus</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#ba1a1a]" />
+                        <span>Proactive Risk Index</span>
+                      </div>
+                    </div>
+
+                    <svg 
+                      ref={svgRef}
+                      viewBox="0 0 500 220" 
+                      className="w-full overflow-visible select-none cursor-pointer"
+                      onMouseMove={handleMouseMove}
+                      onMouseLeave={() => setHoveredIndex(null)}
+                    >
+                      <defs>
+                        <linearGradient id="masteryGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#00bbf9" stopOpacity="0.2"/>
+                          <stop offset="100%" stopColor="#00bbf9" stopOpacity="0.0"/>
+                        </linearGradient>
+                        <linearGradient id="riskGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#ba1a1a" stopOpacity="0.1"/>
+                          <stop offset="100%" stopColor="#ba1a1a" stopOpacity="0.0"/>
+                        </linearGradient>
+                      </defs>
+
+                      {/* Horizontal Grid lines */}
+                      {[0, 25, 50, 75, 100].map((val) => (
+                        <g key={val}>
+                          <line 
+                            x1={paddingLeft} 
+                            y1={getY(val)} 
+                            x2={chartWidth - paddingRight} 
+                            y2={getY(val)} 
+                            stroke="#eef0f2" 
+                            strokeWidth="1.5"
+                          />
+                          <text 
+                            x={paddingLeft - 8} 
+                            y={getY(val) + 4} 
+                            textAnchor="end" 
+                            className="text-[10px] font-bold fill-[#767683]"
+                          >
+                            {val}%
+                          </text>
+                        </g>
+                      ))}
+
+                      {/* Area gradients */}
+                      {masteryAreaPath && (
+                        <path d={masteryAreaPath} fill="url(#masteryGrad)" />
+                      )}
+
+                      {/* Line paths */}
+                      <path 
+                        d={masteryPath} 
+                        fill="none" 
+                        stroke="#00bbf9" 
+                        strokeWidth="3" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round"
+                      />
+                      <path 
+                        d={weaknessPath} 
+                        fill="none" 
+                        stroke="#f39c12" 
+                        strokeWidth="2.5" 
+                        strokeDasharray="4,4"
+                        strokeLinecap="round" 
+                        strokeLinejoin="round"
+                      />
+                      <path 
+                        d={riskPath} 
+                        fill="none" 
+                        stroke="#ba1a1a" 
+                        strokeWidth="3" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round"
+                      />
+
+                      {/* Interactive hover guide line & dots */}
+                      {hoveredIndex !== null && dailyHistory[hoveredIndex] && (
+                        <g>
+                          <line 
+                            x1={getX(hoveredIndex)} 
+                            y1={paddingTop} 
+                            x2={getX(hoveredIndex)} 
+                            y2={chartHeight - paddingBottom} 
+                            stroke="#141779" 
+                            strokeWidth="1.5" 
+                            strokeDasharray="3,3"
+                            opacity="0.6"
+                          />
+                          
+                          {/* Highlight circles */}
+                          <circle 
+                            cx={getX(hoveredIndex)} 
+                            cy={getY(dailyHistory[hoveredIndex].masteryScore)} 
+                            r="6" 
+                            fill="#00bbf9" 
+                            stroke="#fff" 
+                            strokeWidth="2" 
+                          />
+                          <circle 
+                            cx={getX(hoveredIndex)} 
+                            cy={getY(dailyHistory[hoveredIndex].weaknessScore)} 
+                            r="5" 
+                            fill="#f39c12" 
+                            stroke="#fff" 
+                            strokeWidth="1.5" 
+                          />
+                          <circle 
+                            cx={getX(hoveredIndex)} 
+                            cy={getY(dailyHistory[hoveredIndex].riskIndex)} 
+                            r="6" 
+                            fill="#ba1a1a" 
+                            stroke="#fff" 
+                            strokeWidth="2" 
+                          />
+                        </g>
+                      )}
+
+                      {/* Data Dots (Static) */}
+                      {hoveredIndex === null && dailyHistory.map((pt: any, i: number) => (
+                        <g key={i}>
+                          <circle cx={getX(i)} cy={getY(pt.masteryScore)} r="4" fill="#00bbf9" />
+                          <circle cx={getX(i)} cy={getY(pt.riskIndex)} r="4" fill="#ba1a1a" />
+                        </g>
+                      ))}
+
+                      {/* X-axis dates */}
+                      {dailyHistory.map((pt: any, i: number) => (
+                        <text 
+                          key={i} 
+                          x={getX(i)} 
+                          y={chartHeight - paddingBottom + 18} 
+                          textAnchor="middle" 
+                          className="text-[10px] font-bold fill-[#464652]"
+                        >
+                          {pt.date}
+                        </text>
+                      ))}
+                    </svg>
+
+                    {/* Floating Tooltip Card */}
+                    <div className={`mt-3 p-3 bg-white/80 border border-gray-100 rounded-xl shadow-sm transition-all duration-200 ${
+                      hoveredIndex !== null ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'
+                    }`}>
+                      {hoveredIndex !== null && dailyHistory[hoveredIndex] && (
+                        <div>
+                          <div className="flex justify-between items-center mb-1.5">
+                            <span className="text-[11px] font-bold text-[#141779]">DNA Timeline Details ({dailyHistory[hoveredIndex].date})</span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 text-center">
+                            <div className="bg-[#f0f9ff] p-1.5 rounded-lg border border-blue-50">
+                              <p className="text-[9px] font-bold text-blue-800 uppercase">Mastery</p>
+                              <p className="text-sm font-bold text-blue-900">{dailyHistory[hoveredIndex].masteryScore}%</p>
+                            </div>
+                            <div className="bg-[#fffbeb] p-1.5 rounded-lg border border-amber-50">
+                              <p className="text-[9px] font-bold text-amber-800 uppercase">Focus Area</p>
+                              <p className="text-sm font-bold text-amber-900">{dailyHistory[hoveredIndex].weaknessScore}%</p>
+                            </div>
+                            <div className="bg-[#fef2f2] p-1.5 rounded-lg border border-rose-50">
+                              <p className="text-[9px] font-bold text-rose-800 uppercase">Risk Index</p>
+                              <p className={`text-sm font-bold ${
+                                dailyHistory[hoveredIndex].riskIndex >= 50 ? 'text-red-700' :
+                                dailyHistory[hoveredIndex].riskIndex >= 25 ? 'text-orange-600' : 'text-green-600'
+                              }`}>{dailyHistory[hoveredIndex].riskIndex}%</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Cognitive Mastery Radar Chart */}
+              <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-5 border-[1.5px] border-[rgba(255,255,255,0.4)] shadow-[0_4px_20px_rgba(20,23,121,0.05)] flex flex-col items-center">
+                <div className="flex items-center gap-2 mb-2 w-full">
+                  <Award size={20} color="#141779" />
+                  <h3 className="text-sm font-bold text-[#191c1e] w-full text-left">Learning DNA Profile</h3>
+                </div>
+                <p className="text-[11px] text-[#767683] mb-4 w-full text-left">Multidimensional cognitive mapping based on daily questions.</p>
+
+                <div className="relative w-full max-w-[280px]">
+                  <svg viewBox="0 0 300 240" className="w-full overflow-visible">
+                    {/* Concentric grid lines */}
+                    {[20, 40, 60, 80].map((r, idx) => (
+                      <polygon 
+                        key={idx}
+                        points={[-90, -18, 54, 126, 198].map(ang => {
+                          const pt = getRadarPoint(150, 110, r, ang);
+                          return `${pt.x},${pt.y}`;
+                        }).join(' ')}
+                        fill="none"
+                        stroke="#eef0f2"
+                        strokeWidth="1.5"
+                      />
+                    ))}
+
+                    {/* Outer axis lines */}
+                    {[-90, -18, 54, 126, 198].map((ang, idx) => {
+                      const pt = getRadarPoint(150, 110, 80, ang);
+                      return (
+                        <line 
+                          key={idx}
+                          x1="150" 
+                          y1="110" 
+                          x2={pt.x} 
+                          y2={pt.y} 
+                          stroke="#eef0f2" 
+                          strokeWidth="1.5"
+                        />
+                      );
+                    })}
+
+                    {/* Child DNA Polygon */}
+                    <polygon 
+                      points={dnaAngles.map(item => {
+                        const pt = getRadarPoint(150, 110, (item.val / 100) * 80, item.ang);
+                        return `${pt.x},${pt.y}`;
+                      }).join(' ')}
+                      fill="rgba(0, 187, 249, 0.25)"
+                      stroke="#00bbf9"
+                      strokeWidth="2.5"
+                    />
+
+                    {/* Polygon dots */}
+                    {dnaAngles.map((item, idx) => {
+                      const pt = getRadarPoint(150, 110, (item.val / 100) * 80, item.ang);
+                      return (
+                        <circle 
+                          key={idx}
+                          cx={pt.x} 
+                          cy={pt.y} 
+                          r="4" 
+                          fill="#141779" 
+                          stroke="#fff" 
+                          strokeWidth="1.5"
+                        />
+                      );
+                    })}
+
+                    {/* Labels */}
+                    {dnaAngles.map((item, idx) => {
+                      const pos = getLabelPos(150, 110, 80, item.ang);
+                      return (
+                        <text 
+                          key={idx}
+                          x={pos.x}
+                          y={pos.y + 4}
+                          textAnchor={
+                            item.ang === -90 ? "middle" :
+                            (item.ang === -18 || item.ang === 54) ? "start" : "end"
+                          }
+                          className="text-[10px] font-bold fill-[#141779]"
+                        >
+                          {item.label} ({item.val}%)
+                        </text>
+                      );
+                    })}
+                  </svg>
                 </div>
               </div>
 

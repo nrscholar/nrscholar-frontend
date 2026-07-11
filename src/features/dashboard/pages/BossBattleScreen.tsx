@@ -161,12 +161,13 @@ export default function BossBattleScreen() {
                     const existingAnswers = location.state?.userAnswers || [];
                     const rewindAnswers = existingAnswers.slice(0, 9);
                     const rewindScore = rewindAnswers.filter((a: any) => a?.isCorrect).length;
+                    const level = searchParams.get("difficulty") || "easy";
     
                     apiFetch("/api/practice/chapter-progress", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({
-                        chapterId,
+                        chapterId: `${chapterId}_${level}`,
                         currentQ: 9, // Rewind to 10th question
                         score: rewindScore,
                         completed: false,

@@ -182,28 +182,28 @@ export default function MyJourneyMap() {
             if (userRes.success && userRes.data?.user) {
               const u = userRes.data.user;
               currentFuel = u.fuel ?? 350;
-              await AsyncStorage.setItem("studysaathy_fuel", String(currentFuel));
-              await AsyncStorage.setItem("studysaathy_coins", String(u.coins ?? 420));
-              await AsyncStorage.setItem("studysaathy_level", String(u.level ?? 1));
+              await AsyncStorage.setItem("nrscholar_fuel", String(currentFuel));
+              await AsyncStorage.setItem("nrscholar_coins", String(u.coins ?? 420));
+              await AsyncStorage.setItem("nrscholar_level", String(u.level ?? 1));
             } else {
-              const storedFuel = await AsyncStorage.getItem("studysaathy_fuel");
+              const storedFuel = await AsyncStorage.getItem("nrscholar_fuel");
               if (storedFuel !== null) {
                 currentFuel = Number(storedFuel);
               }
             }
           } catch {
-            const storedFuel = await AsyncStorage.getItem("studysaathy_fuel");
+            const storedFuel = await AsyncStorage.getItem("nrscholar_fuel");
             if (storedFuel !== null) {
               currentFuel = Number(storedFuel);
             }
           }
 
-          const storedCities = await AsyncStorage.getItem("studysaathy_unlocked_cities");
+          const storedCities = await AsyncStorage.getItem("nrscholar_unlocked_cities");
           let unlockedList = ["Ahmedabad"];
           if (storedCities !== null) {
             unlockedList = JSON.parse(storedCities);
           } else {
-            await AsyncStorage.setItem("studysaathy_unlocked_cities", JSON.stringify(unlockedList));
+            await AsyncStorage.setItem("nrscholar_unlocked_cities", JSON.stringify(unlockedList));
           }
 
           // Let's check if the fuel enables unlocking new cities dynamically
@@ -225,7 +225,7 @@ export default function MyJourneyMap() {
           });
 
           if (newlyUnlockedCity && isMounted) {
-            await AsyncStorage.setItem("studysaathy_unlocked_cities", JSON.stringify(unlockedList));
+            await AsyncStorage.setItem("nrscholar_unlocked_cities", JSON.stringify(unlockedList));
             setCelebratingCity(newlyUnlockedCity);
             setCelebrationVisible(true);
           }
@@ -300,10 +300,10 @@ export default function MyJourneyMap() {
     const newFuel = fuel + 150;
     setFuel(newFuel);
     try {
-      await AsyncStorage.setItem("studysaathy_fuel", String(newFuel));
+      await AsyncStorage.setItem("nrscholar_fuel", String(newFuel));
       
       const newLevel = Math.max(1, Math.floor(newFuel / 500) + 1);
-      await AsyncStorage.setItem("studysaathy_level", String(newLevel));
+      await AsyncStorage.setItem("nrscholar_level", String(newLevel));
 
       // Sync stats dynamically to the database
       try {
@@ -313,7 +313,7 @@ export default function MyJourneyMap() {
       }
       
       let newlyUnlockedCity: City | null = null;
-      const storedCities = await AsyncStorage.getItem("studysaathy_unlocked_cities");
+      const storedCities = await AsyncStorage.getItem("nrscholar_unlocked_cities");
       let unlockedList = storedCities ? JSON.parse(storedCities) : ["Ahmedabad"];
 
       const updatedCities = cities.map((city, idx) => {
@@ -330,7 +330,7 @@ export default function MyJourneyMap() {
       });
 
       if (newlyUnlockedCity) {
-        await AsyncStorage.setItem("studysaathy_unlocked_cities", JSON.stringify(unlockedList));
+        await AsyncStorage.setItem("nrscholar_unlocked_cities", JSON.stringify(unlockedList));
         setCities(updatedCities);
         setCelebratingCity(newlyUnlockedCity);
         setCelebrationVisible(true);

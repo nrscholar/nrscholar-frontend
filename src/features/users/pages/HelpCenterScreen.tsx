@@ -78,7 +78,7 @@ export default function HelpCenterScreen() {
 
         <div className="mt-8">
           <button 
-            onClick={() => window.location.href = "mailto:support@studysaathy.com"}
+            onClick={() => window.location.href = "mailto:support@nrscholar.com"}
             className="w-full flex items-center justify-center gap-3 bg-[#141779] text-white py-4 rounded-2xl font-bold shadow-md hover:bg-[#1a1e9c] transition-colors"
           >
             <Mail size={20} />

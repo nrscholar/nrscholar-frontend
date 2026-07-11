@@ -519,7 +519,7 @@ export default function ChapterQuestionsScreen() {
         </div>
       </main>
 
-      {/* DUOLINGO STYLE FEEDBACK FOOTER (With StudySaathy Colors) */}
+      {/* DUOLINGO STYLE FEEDBACK FOOTER (With NR Scholar Colors) */}
       <div className={`fixed bottom-0 left-0 right-0 transition-colors duration-300 z-50 ${
         !confirmed ? 'bg-white border-t-2 border-gray-200' :
         isCorrect ? 'bg-[#e8ddff] border-t-2 border-[#d0bbf2]' :

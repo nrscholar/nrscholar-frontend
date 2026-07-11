@@ -26,8 +26,8 @@
         <action android:name="android.intent.action.VIEW"/>
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
-        <data android:scheme="studysaathy"/>
-        <data android:scheme="exp+studysaathy"/>
+        <data android:scheme="nrscholar"/>
+        <data android:scheme="exp+nrscholar"/>
       </intent-filter>
     </activity>
   </application>

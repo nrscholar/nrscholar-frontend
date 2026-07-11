@@ -96,7 +96,7 @@ export default function PracticeScreen() {
             <TouchableOpacity style={styles.menuBtn}>
               <MaterialIcons name="menu" size={24} color={C.primary} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>StudySaathy</Text>
+            <Text style={styles.headerTitle}>NR Scholar</Text>
           </View>
           <View style={styles.headerAvatarContainer}>
             <Image

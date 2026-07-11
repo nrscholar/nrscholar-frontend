@@ -50,30 +50,52 @@ export default function EvolutionScreen() {
     dragonScale = 0.8;
     bgGradient = "from-[#fdfcfb] to-[#e2d1c3]";
     modelUrl = "/images/dragons/egg.glb";
-    fallbackUrl = "/images/dragons/egg.png";
+    fallbackUrl = (stageName === "Cracking Egg" || stageName === "Broken Egg" || stageName === "Hatching Dragon")
+      ? "/images/dragons/cracked.png"
+      : "/images/dragons/egg.png";
   } else if (stage === 2) {
     dragonScale = 0.9;
-    bgGradient = "from-[#fef9c3] to-[#fef08a]";
-    modelUrl = "/images/dragons/egg.glb";
-    fallbackUrl = "/images/dragons/cracked.png";
-  } else if (stage === 3) {
-    dragonScale = 1.0;
     bgGradient = "from-[#dcfce7] to-[#86efac]";
     modelUrl = "/images/dragons/baby_dragon.glb";
     fallbackUrl = "/images/dragons/baby.png";
-  } else if (stage === 4) {
-    dragonScale = 1.3;
+  } else if (stage === 3) {
+    dragonScale = 1.1;
     bgGradient = "from-[#ffedd5] to-[#fdbb2d]";
     modelUrl = "/images/dragons/teen_dragon.glb";
     fallbackUrl = "/images/dragons/teen.png";
-  } else if (stage === 5) {
-    dragonScale = 1.6;
-    bgGradient = "from-[#ffdad9] to-[#ff8a85]";
+  } else if (stage === 4) {
+    dragonScale = 1.2;
+    bgGradient = "from-[#e0f2fe] to-[#7dd3fc]";
     modelUrl = "/images/dragons/teen_dragon.glb";
     fallbackUrl = "/images/dragons/teen.png";
+  } else if (stage === 5) {
+    dragonScale = 1.25;
+    bgGradient = "from-[#f3e8ff] to-[#c084fc]";
+    modelUrl = "/images/dragons/legendary_dragon.glb";
+    fallbackUrl = "/images/dragons/adult.png";
+  } else if (stage === 6) {
+    dragonScale = 1.3;
+    bgGradient = "from-[#bae6fd] to-[#38bdf8]";
+    modelUrl = "/images/dragons/legendary_dragon.glb";
+    fallbackUrl = "/images/dragons/adult.png";
+  } else if (stage === 7) {
+    dragonScale = 1.35;
+    bgGradient = "from-[#ccfbf1] to-[#2dd4bf]";
+    modelUrl = "/images/dragons/legendary_dragon.glb";
+    fallbackUrl = "/images/dragons/adult.png";
+  } else if (stage === 8) {
+    dragonScale = 1.4;
+    bgGradient = "from-[#fee2e2] to-[#ef4444]";
+    modelUrl = "/images/dragons/legendary_dragon.glb";
+    fallbackUrl = "/images/dragons/adult.png";
+  } else if (stage === 9) {
+    dragonScale = 1.45;
+    bgGradient = "from-[#fef9c3] to-[#eab308]";
+    modelUrl = "/images/dragons/legendary_dragon.glb";
+    fallbackUrl = "/images/dragons/adult.png";
   } else {
-    dragonScale = 2.0;
-    bgGradient = "from-[#e0e7ff] to-[#818cf8]";
+    dragonScale = 1.5;
+    bgGradient = "from-[#e0e7ff] to-[#6366f1]";
     modelUrl = "/images/dragons/legendary_dragon.glb";
     fallbackUrl = "/images/dragons/adult.png";
   }
@@ -128,7 +150,7 @@ export default function EvolutionScreen() {
 
             <div className="flex justify-between items-center text-xs text-outline font-medium">
               <span>{xp} XP Earned</span>
-              <span>10,000 XP for Max</span>
+              <span>{stage === 10 ? "Max Stage Reached!" : `${evoData?.nextStageXp?.toLocaleString() || 50000} XP for Next Stage`}</span>
             </div>
           </div>
           

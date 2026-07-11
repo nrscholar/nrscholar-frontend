@@ -236,7 +236,7 @@ export default function ParentalGateScreen() {
           >
             <MaterialIcons name="arrow-back" size={24} color={C.primary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Studysaathy</Text>
+          <Text style={styles.headerTitle}>NR Scholar</Text>
           <View style={{ width: 40 }} />
         </View>
       </View>

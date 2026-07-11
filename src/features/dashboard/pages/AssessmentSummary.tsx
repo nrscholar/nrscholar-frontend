@@ -192,7 +192,7 @@ export default function AssessmentSummary() {
         <button className="p-1 hover:opacity-80 transition-opacity">
           <Menu size={24} color="#141779" />
         </button>
-        <h1 className="text-xl font-bold text-[#141779] tracking-[-0.5px]">Studysaathy</h1>
+        <h1 className="text-xl font-bold text-[#141779] tracking-[-0.5px]">NR Scholar</h1>
         <div className="w-8 h-8 rounded-full bg-[#2d328f] overflow-hidden">
           <img
             src="https://lh3.googleusercontent.com/aida-public/AB6AXuDPi330Jn0m4Ju-QdTyxElmKEzS1nvZXgLAUHgkcNZ9oDk1LWGslJRxi9Gp57yzRvs7gZoIuC3Nhuh1HsMVlYVxj93yJo_RavUo85gHvTsBuic6vl8zGcYonFP4bfQLsMx83i_Gq2Ka1yV_p0I8anRK9yJgn7Vfo2rLoKxCDpx-YZ5eHc2zqYcUTsi2qplbVnpM5PzFxVkkOZFtx86zCQJf_RyQkl_LgxogY7aw88XZ3BM8BbWILHWDY3oWI002qj_WgT5tJ8Uxxw"

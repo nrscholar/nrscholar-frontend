@@ -23,7 +23,7 @@ export default function ParentSubscriptionScreen() {
         {/* Header Section */}
         <div className="flex flex-col items-center mb-6">
           <h2 className="text-[28px] font-bold text-[#191c1e] mb-2 text-center">Choose Your Plan</h2>
-          <p className="text-base font-medium text-[#464652] text-center">Unlock full potential with StudySaathy Pro.</p>
+          <p className="text-base font-medium text-[#464652] text-center">Unlock full potential with NR Scholar Pro.</p>
         </div>
 
         {/* Billing Toggle */}

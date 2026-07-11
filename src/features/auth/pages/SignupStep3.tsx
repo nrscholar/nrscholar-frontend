@@ -100,7 +100,7 @@ export default function SignupStep3Screen() {
             <ArrowLeft size={24} color="#141779" />
           </button>
           <Rocket size={28} color="#141779" />
-          <h1 className="text-[22px] font-bold text-[#141779] tracking-[-0.5px]">Studysaathy</h1>
+          <h1 className="text-[22px] font-bold text-[#141779] tracking-[-0.5px]">NR Scholar</h1>
         </div>
       </header>
 

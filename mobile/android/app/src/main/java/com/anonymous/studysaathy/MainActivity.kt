@@ -1,4 +1,4 @@
-package com.anonymous.studysaathy
+package com.anonymous.nrscholar
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

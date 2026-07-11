@@ -1,6 +1,6 @@
 /**
  * notifications.ts
- * Central in-app notification system for StudySaathy.
+ * Central in-app notification system for NR Scholar.
  *
  * Provides:
  *  - In-app notification store (saved to AsyncStorage)
@@ -29,7 +29,7 @@ export interface AppNotification {
 // ── In-Memory Store ───────────────────────────────────────────────────────────
 // We keep everything in memory for simplicity, persisting to AsyncStorage optionally.
 
-const STORE_KEY = "studysaathy_notifications";
+const STORE_KEY = "nrscholar_notifications";
 let _listeners: Array<() => void> = [];
 let _notifications: AppNotification[] = [];
 

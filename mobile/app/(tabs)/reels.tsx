@@ -64,7 +64,7 @@ export default function TasksScreen() {
               source={{ uri: "https://lh3.googleusercontent.com/aida-public/AB6AXuDdtG-mTIj_Rfk67hRqHhpCaqyR7xsHMrotItaidGvdxfeeHgQJxuRiCVpXULU83xDTATGjaxUu5iwAad07wqQCCbC4TeEuysIHjtPyfmwCkSM_EnrgTTYYK9BFEmp-FK-qKxsobdXbmCFKSsncwFeE597KWLYJp2_6LRE0_aVoqXiykaS2kGNDOwOwFLKtpyAhOWBRJwvr6RzLmHp5ifhc97yHERbFpJHQ4aZN9Zwyu_s2UewiZQ4zTFn283RXebEtu0PqyfeaEA" }}
               style={styles.avatar}
             />
-            <Text style={styles.headerTitle}>Studysaathy</Text>
+            <Text style={styles.headerTitle}>NR Scholar</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.notificationBtn} onPress={() => router.push("/notifications")}>
             <MaterialIcons name="notifications" size={24} color={C.primary} />

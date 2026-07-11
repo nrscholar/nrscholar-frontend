@@ -66,7 +66,7 @@ export default function SubscriptionScreen() {
           >
             <MaterialIcons name="close" size={24} color={C.primary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Studysaathy</Text>
+          <Text style={styles.headerTitle}>NR Scholar</Text>
           <View style={{ width: 40 }} /> {/* Spacer for centering */}
         </View>
       </View>
