@@ -9,9 +9,7 @@ import * as SecureStore from "expo-secure-store";
 // We use your machine's local IP address (extracted from Expo logs) to connect to the backend.
 import { Platform } from "react-native";
 
-// Fallback to localhost on web, otherwise use the machine IP
-const HOST_IP = "192.168.1.46";
-export const BASE_URL = Platform.OS === "web" ? "http://localhost:5000" : `http://${HOST_IP}:5000`;
+export const BASE_URL = "https://nrscholar-backend.onrender.com";
 
 const TOKEN_KEY = "nrscholar_token";
 
