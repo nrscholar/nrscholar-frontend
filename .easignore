@@ -1,0 +1,8 @@
+mobile/node_modules/
+mobile/.expo/
+mobile/android/app/build/
+mobile/android/build/
+mobile/ios/build/
+node_modules/
+.expo/
+*.local
