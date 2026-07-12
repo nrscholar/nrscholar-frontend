@@ -1,5 +1,15 @@
+# Ignore web frontend
+../src/
+../public/
+../dist/
+
+# Ignore node_modules
 node_modules/
+../node_modules/
+
+# Ignore build/temp files
 .expo/
+../.expo/
 android/app/build/
 android/build/
 ios/build/

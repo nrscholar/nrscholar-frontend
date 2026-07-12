@@ -1,8 +1,16 @@
+# Ignore web frontend
+src/
+public/
+dist/
+
+# Ignore node_modules
+node_modules/
 mobile/node_modules/
+
+# Ignore build/temp files
+.expo/
 mobile/.expo/
 mobile/android/app/build/
 mobile/android/build/
 mobile/ios/build/
-node_modules/
-.expo/
 *.local
