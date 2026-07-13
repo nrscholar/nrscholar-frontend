@@ -18,13 +18,13 @@
         "buildType": "apk"
       },
       "env": {
-        "NODE_ENV": "production"
+        "NODE_ENV": "development"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "NODE_ENV": "production"
+        "NODE_ENV": "development"
       }
     }
   },
