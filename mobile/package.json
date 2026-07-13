@@ -63,6 +63,11 @@
     "eslint-config-expo": "~10.0.0",
     "typescript": "~5.9.2"
   },
+  "resolutions": {
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "@expo/fingerprint": "0.15.5"
+  },
   "private": true,
   "engines": {
     "node": ">=18.0.0"
