@@ -26,3 +26,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Mobile specific ignores
+mobile/jdk-17/
+mobile/build_log*.txt
+mobile/eas_build_log.txt
+mobile/scratch_log.gz
+
