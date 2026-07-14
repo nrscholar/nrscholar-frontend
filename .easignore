@@ -1,7 +1,7 @@
 # Ignore web frontend
-src/
-public/
-dist/
+/src/
+/public/
+/dist/
 
 # Ignore node_modules
 node_modules/
