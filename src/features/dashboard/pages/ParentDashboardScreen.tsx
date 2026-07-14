@@ -42,7 +42,8 @@ export default function ParentDashboardScreen() {
 
         // Fetch dashboard extra info dynamically
         try {
-          const repRes = await apiFetch("/api/parent/report");
+          const tzOffset = -new Date().getTimezoneOffset();
+          const repRes = await apiFetch(`/api/parent/report?tz_offset_minutes=${tzOffset}`);
           const repJson = await repRes.json();
           if (repJson.success && repJson.data) {
             if (repJson.data.strengths) setStrengths(repJson.data.strengths);

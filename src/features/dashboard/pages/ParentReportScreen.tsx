@@ -12,8 +12,16 @@ export default function ParentReportScreen() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
 
-  // Daily timeline history helpers
+  // Timeline history helpers
   const dailyHistory = reportData?.dailyTimelineHistory || [];
+  const monthlyHistory = reportData?.monthlyTimelineHistory || [];
+  const sixMonthHistory = reportData?.sixMonthTimelineHistory || [];
+  const yearlyHistory = reportData?.yearlyTimelineHistory || [];
+  
+  let chartHistory = dailyHistory;
+  if (activeTab === "monthly") chartHistory = monthlyHistory;
+  if (activeTab === "6month") chartHistory = sixMonthHistory;
+  if (activeTab === "yearly") chartHistory = yearlyHistory;
 
   // Chart dimensions & calculations
   const chartWidth = 500;
@@ -24,31 +32,31 @@ export default function ParentReportScreen() {
   const paddingBottom = 30;
 
   const getX = (index: number) => {
-    if (dailyHistory.length <= 1) return paddingLeft;
-    return paddingLeft + index * (chartWidth - paddingLeft - paddingRight) / (dailyHistory.length - 1);
+    if (chartHistory.length <= 1) return paddingLeft;
+    return paddingLeft + index * (chartWidth - paddingLeft - paddingRight) / (chartHistory.length - 1);
   };
 
   const getY = (score: number) => {
     return paddingTop + (100 - score) * (chartHeight - paddingTop - paddingBottom) / 100;
   };
 
-  const masteryPath = dailyHistory.map((pt: any, i: number) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(pt.masteryScore)}`).join(' ');
-  const weaknessPath = dailyHistory.map((pt: any, i: number) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(pt.weaknessScore)}`).join(' ');
-  const riskPath = dailyHistory.map((pt: any, i: number) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(pt.riskIndex)}`).join(' ');
+  const masteryPath = chartHistory.map((pt: any, i: number) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(pt.masteryScore)}`).join(' ');
+  const weaknessPath = chartHistory.map((pt: any, i: number) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(pt.weaknessScore)}`).join(' ');
+  const riskPath = chartHistory.map((pt: any, i: number) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(pt.riskIndex)}`).join(' ');
 
-  const masteryAreaPath = dailyHistory.length > 0 
-    ? `${masteryPath} L ${getX(dailyHistory.length - 1)} ${chartHeight - paddingBottom} L ${getX(0)} ${chartHeight - paddingBottom} Z` 
+  const masteryAreaPath = chartHistory.length > 0 
+    ? `${masteryPath} L ${getX(chartHistory.length - 1)} ${chartHeight - paddingBottom} L ${getX(0)} ${chartHeight - paddingBottom} Z` 
     : '';
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
-    if (!svgRef.current || dailyHistory.length === 0) return;
+    if (!svgRef.current || chartHistory.length === 0) return;
     const rect = svgRef.current.getBoundingClientRect();
     const mouseX = ((e.clientX - rect.left) / rect.width) * chartWidth;
     
     // Find closest data point
     let closestIndex = 0;
     let minDiff = Infinity;
-    for (let i = 0; i < dailyHistory.length; i++) {
+    for (let i = 0; i < chartHistory.length; i++) {
       const diff = Math.abs(getX(i) - mouseX);
       if (diff < minDiff) {
         minDiff = diff;
@@ -152,20 +160,19 @@ export default function ParentReportScreen() {
         </div>
 
         <div className="flex flex-col gap-5">
-          {/* DAILY TAB */}
-          {activeTab === "daily" && (
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 flex flex-col gap-5">
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 flex flex-col gap-5">
               
-              <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-5 border-[1.5px] border-[rgba(255,255,255,0.4)] shadow-[0_4px_20px_rgba(20,23,121,0.05)]">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-[rgba(0,106,98,0.1)] flex items-center justify-center">
-                    <Clock size={20} color="#006a62" />
+              {activeTab === "daily" && (
+                <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-5 border-[1.5px] border-[rgba(255,255,255,0.4)] shadow-[0_4px_20px_rgba(20,23,121,0.05)]">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-full bg-[rgba(0,106,98,0.1)] flex items-center justify-center">
+                      <Clock size={20} color="#006a62" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-[#191c1e]">Today's Activity</h2>
+                      <p className="text-xs text-[#767683]">Great focus today!</p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-[#191c1e]">Today's Activity</h2>
-                    <p className="text-xs text-[#767683]">Great focus today!</p>
-                  </div>
-                </div>
                 <div className="grid grid-cols-2 gap-3 mb-4">
                   <div className="bg-[#f2f4f6] p-3 rounded-xl border border-gray-100">
                     <p className="text-[10px] font-bold text-[#464652] uppercase mb-1">Time Spent</p>
@@ -189,15 +196,62 @@ export default function ParentReportScreen() {
                   <p className="text-xs text-[#767683] mt-2">{reportData?.risks || "+5% higher than yesterday"}</p>
                 </div>
               </div>
+              )}
 
-              {/* Daily Learning DNA & Risk Trend Chart */}
+              {activeTab === "monthly" && (
+                <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-5 border-[1.5px] border-[rgba(255,255,255,0.4)] shadow-[0_4px_20px_rgba(20,23,121,0.05)]">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[rgba(0,106,98,0.1)] flex items-center justify-center">
+                      <Calendar size={20} color="#006a62" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-[#191c1e]">Monthly Progress</h2>
+                      <p className="text-xs text-[#767683]">Mastery trend over the last 30 days</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "6month" && (
+                <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-5 border-[1.5px] border-[rgba(255,255,255,0.4)] shadow-[0_4px_20px_rgba(20,23,121,0.05)]">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[rgba(48,0,127,0.1)] flex items-center justify-center">
+                      <TrendingUp size={20} color="#30007f" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-[#191c1e]">6-Month Progress</h2>
+                      <p className="text-xs text-[#767683]">Mastery trend over the last 180 days</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "yearly" && (
+                <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-5 border-[1.5px] border-[rgba(255,255,255,0.4)] shadow-[0_4px_20px_rgba(20,23,121,0.05)]">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[rgba(20,23,121,0.1)] flex items-center justify-center">
+                      <Award size={20} color="#141779" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-[#191c1e]">Yearly Progress</h2>
+                      <p className="text-xs text-[#767683]">Mastery trend over the last 365 days</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Learning DNA & Risk Trend Chart */}
               <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-5 border-[1.5px] border-[rgba(255,255,255,0.4)] shadow-[0_4px_20px_rgba(20,23,121,0.05)]">
                 <div className="flex items-center gap-2 mb-3">
                   <TrendingUp size={20} color="#141779" />
-                  <h3 className="text-sm font-bold text-[#191c1e]">Daily Mastery & Risk Trend</h3>
+                  <h3 className="text-sm font-bold text-[#191c1e]">{
+                    activeTab === "monthly" ? "30-Day Mastery & Risk Trend" : 
+                    activeTab === "6month" ? "180-Day Mastery & Risk Trend" :
+                    activeTab === "yearly" ? "365-Day Mastery & Risk Trend" : "Daily Mastery & Risk Trend"
+                  }</h3>
                 </div>
                 
-                {dailyHistory.length === 0 ? (
+                {chartHistory.length === 0 ? (
                   <div className="py-10 text-center text-xs text-[#767683]">Solve questions to begin generating trend analytics.</div>
                 ) : (
                   <div className="relative">
@@ -290,7 +344,7 @@ export default function ParentReportScreen() {
                       />
 
                       {/* Interactive hover guide line & dots */}
-                      {hoveredIndex !== null && dailyHistory[hoveredIndex] && (
+                      {hoveredIndex !== null && chartHistory[hoveredIndex] && (
                         <g>
                           <line 
                             x1={getX(hoveredIndex)} 
@@ -306,7 +360,7 @@ export default function ParentReportScreen() {
                           {/* Highlight circles */}
                           <circle 
                             cx={getX(hoveredIndex)} 
-                            cy={getY(dailyHistory[hoveredIndex].masteryScore)} 
+                            cy={getY(chartHistory[hoveredIndex].masteryScore)} 
                             r="6" 
                             fill="#00bbf9" 
                             stroke="#fff" 
@@ -314,7 +368,7 @@ export default function ParentReportScreen() {
                           />
                           <circle 
                             cx={getX(hoveredIndex)} 
-                            cy={getY(dailyHistory[hoveredIndex].weaknessScore)} 
+                            cy={getY(chartHistory[hoveredIndex].weaknessScore)} 
                             r="5" 
                             fill="#f39c12" 
                             stroke="#fff" 
@@ -322,7 +376,7 @@ export default function ParentReportScreen() {
                           />
                           <circle 
                             cx={getX(hoveredIndex)} 
-                            cy={getY(dailyHistory[hoveredIndex].riskIndex)} 
+                            cy={getY(chartHistory[hoveredIndex].riskIndex)} 
                             r="6" 
                             fill="#ba1a1a" 
                             stroke="#fff" 
@@ -332,7 +386,7 @@ export default function ParentReportScreen() {
                       )}
 
                       {/* Data Dots (Static) */}
-                      {hoveredIndex === null && dailyHistory.map((pt: any, i: number) => (
+                      {hoveredIndex === null && chartHistory.map((pt: any, i: number) => (
                         <g key={i}>
                           <circle cx={getX(i)} cy={getY(pt.masteryScore)} r="4" fill="#00bbf9" />
                           <circle cx={getX(i)} cy={getY(pt.riskIndex)} r="4" fill="#ba1a1a" />
@@ -340,7 +394,7 @@ export default function ParentReportScreen() {
                       ))}
 
                       {/* X-axis dates */}
-                      {dailyHistory.map((pt: any, i: number) => (
+                      {chartHistory.map((pt: any, i: number) => (
                         <text 
                           key={i} 
                           x={getX(i)} 
@@ -353,35 +407,33 @@ export default function ParentReportScreen() {
                       ))}
                     </svg>
 
-                    {/* Floating Tooltip Card */}
-                    <div className={`mt-3 p-3 bg-white/80 border border-gray-100 rounded-xl shadow-sm transition-all duration-200 ${
-                      hoveredIndex !== null ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'
-                    }`}>
-                      {hoveredIndex !== null && dailyHistory[hoveredIndex] && (
-                        <div>
-                          <div className="flex justify-between items-center mb-1.5">
-                            <span className="text-[11px] font-bold text-[#141779]">DNA Timeline Details ({dailyHistory[hoveredIndex].date})</span>
+                    {/* Custom tooltip */}
+                    {hoveredIndex !== null && chartHistory[hoveredIndex] && (
+                      <div 
+                        className="absolute bg-white p-3 rounded-xl shadow-xl border border-gray-100 z-10 w-40 animate-in fade-in zoom-in duration-200"
+                        style={{
+                          left: `${Math.max(10, Math.min(100, (getX(hoveredIndex) / chartWidth) * 100))}%`,
+                          top: '20px',
+                          transform: 'translateX(-50%)'
+                        }}
+                      >
+                        <p className="text-xs font-bold text-[#141779] mb-2">{chartHistory[hoveredIndex].date}</p>
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[10px]">
+                            <span className="text-[#00bbf9] font-bold">Mastery</span>
+                            <span className="font-bold text-[#191c1e]">{chartHistory[hoveredIndex].masteryScore}</span>
                           </div>
-                          <div className="grid grid-cols-3 gap-2 text-center">
-                            <div className="bg-[#f0f9ff] p-1.5 rounded-lg border border-blue-50">
-                              <p className="text-[9px] font-bold text-blue-800 uppercase">Mastery</p>
-                              <p className="text-sm font-bold text-blue-900">{dailyHistory[hoveredIndex].masteryScore}%</p>
-                            </div>
-                            <div className="bg-[#fffbeb] p-1.5 rounded-lg border border-amber-50">
-                              <p className="text-[9px] font-bold text-amber-800 uppercase">Focus Area</p>
-                              <p className="text-sm font-bold text-amber-900">{dailyHistory[hoveredIndex].weaknessScore}%</p>
-                            </div>
-                            <div className="bg-[#fef2f2] p-1.5 rounded-lg border border-rose-50">
-                              <p className="text-[9px] font-bold text-rose-800 uppercase">Risk Index</p>
-                              <p className={`text-sm font-bold ${
-                                dailyHistory[hoveredIndex].riskIndex >= 50 ? 'text-red-700' :
-                                dailyHistory[hoveredIndex].riskIndex >= 25 ? 'text-orange-600' : 'text-green-600'
-                              }`}>{dailyHistory[hoveredIndex].riskIndex}%</p>
-                            </div>
+                          <div className="flex justify-between text-[10px]">
+                            <span className="text-[#f39c12] font-bold">Review</span>
+                            <span className="font-bold text-[#191c1e]">{chartHistory[hoveredIndex].weaknessScore}</span>
+                          </div>
+                          <div className="flex justify-between text-[10px]">
+                            <span className="text-[#ba1a1a] font-bold">Risk</span>
+                            <span className="font-bold text-[#191c1e]">{chartHistory[hoveredIndex].riskIndex}</span>
                           </div>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -499,8 +551,7 @@ export default function ParentReportScreen() {
                   })}
                 </div>
               </div>
-            </div>
-          )}
+
 
           {/* MONTHLY TAB */}
           {activeTab === "monthly" && (
@@ -566,48 +617,8 @@ export default function ParentReportScreen() {
             </div>
           )}
 
-          {/* 6 MONTH TAB */}
           {activeTab === "6month" && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 flex flex-col gap-5">
-              <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-5 border-[1.5px] border-[rgba(255,255,255,0.4)] shadow-[0_4px_20px_rgba(20,23,121,0.05)]">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-[rgba(48,0,127,0.1)] flex items-center justify-center">
-                    <TrendingUp size={20} color="#30007f" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-[#191c1e]">6-Month Trend</h2>
-                    <p className="text-xs text-[#767683]">Accuracy score per month</p>
-                  </div>
-                </div>
-
-                <div className="h-40 flex items-end justify-between gap-2 px-2 border-b border-gray-200 pb-2 mb-4">
-                  {(reportData?.sixMonthTrend ?? [{month:'',score:0},{month:'',score:0},{month:'',score:0},{month:'',score:0},{month:'',score:0},{month:'',score:0}]).map((m: any, i: number) => (
-                    <div key={i} className="flex flex-col items-center flex-1 gap-2">
-                      <div
-                        className="w-full bg-[#30007f] rounded-t-md opacity-80 transition-all duration-700"
-                        style={{ height: `${Math.max(4, m.score)}%` }}
-                      ></div>
-                      <span className="text-[9px] font-bold text-[#767683]">{m.month}</span>
-                    </div>
-                  ))}
-                </div>
-                {(() => {
-                  const trend = reportData?.sixMonthTrend ?? [];
-                  if (trend.length < 2) return <p className="text-xs text-[#767683] text-center">Complete more quests to build your trend!</p>;
-                  const first = trend[0]?.score ?? 0;
-                  const last = trend[trend.length - 1]?.score ?? 0;
-                  const diff = last - first;
-                  return (
-                    <>
-                      <p className="text-sm font-bold text-[#464652] text-center mb-1">{diff >= 0 ? `Upward Trajectory! 🚀` : `Keep Going! 💪`}</p>
-                      <p className="text-xs text-[#767683] text-center">
-                        Accuracy {diff >= 0 ? 'increased' : 'changed'} by {Math.abs(diff)}% over 6 months.
-                      </p>
-                    </>
-                  );
-                })()}
-              </div>
-
               <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-5 border-[1.5px] border-[rgba(255,255,255,0.4)] shadow-[0_4px_20px_rgba(20,23,121,0.05)]">
                 <h3 className="text-sm font-bold text-[#191c1e] mb-3">Skill Evolution</h3>
                 <div className="space-y-3">
@@ -631,7 +642,6 @@ export default function ParentReportScreen() {
             </div>
           )}
 
-          {/* YEARLY TAB */}
           {activeTab === "yearly" && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 flex flex-col gap-5">
               <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-5 border-[1.5px] border-[rgba(255,255,255,0.4)] shadow-[0_4px_20px_rgba(20,23,121,0.05)] text-center">
@@ -640,7 +650,6 @@ export default function ParentReportScreen() {
                 </div>
                 <h2 className="text-xl font-bold text-[#191c1e]">{new Date().getFullYear()} Annual Review</h2>
                 <p className="text-xs text-[#767683] mb-5">Your learning journey so far</p>
-                
                 <div className="grid grid-cols-2 gap-4 text-left">
                   <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
                     <p className="text-[10px] font-bold text-indigo-800 uppercase mb-1">Total Hours</p>
@@ -659,7 +668,6 @@ export default function ParentReportScreen() {
                   </div>
                 </div>
               </div>
-
               <div className="bg-gradient-to-br from-[#141779] to-[#30007f] rounded-2xl p-5 shadow-lg text-white">
                 <div className="flex items-center gap-2 mb-2">
                   <Lightbulb size={20} className="text-yellow-400" />
@@ -672,6 +680,7 @@ export default function ParentReportScreen() {
             </div>
           )}
         </div>
+      </div>
       </main>
       )}
     </div>

@@ -29,7 +29,10 @@ export default function KidsActivityScreen() {
       try {
         setLoading(true);
         // Fetching real data from the backend
-        const res = await apiFetch("/api/parent/activities");
+        // Pass browser timezone offset so server computes "today" in local time
+        const tzOffset = -new Date().getTimezoneOffset(); // positive for east of UTC (IST = +330)
+        const res = await apiFetch(`/api/parent/activities?tz_offset_minutes=${tzOffset}`);
+
         if (res.ok) {
           const json = await res.json();
           if (json.success && json.data) {

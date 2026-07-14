@@ -23,6 +23,7 @@ export default function ChapterQuestionsScreen() {
   const [sessionCorrect, setSessionCorrect] = useState(0);
   const [basketCount, setBasketCount] = useState(0);
   const [userAnswers, setUserAnswers] = useState<any[]>([]);
+  const [answeredThisSession, setAnsweredThisSession] = useState(0);
   const [particlesInit, setParticlesInit] = useState(false);
   const [showSparkle, setShowSparkle] = useState(false);
   const [childName, setChildName] = useState("Kid");
@@ -150,16 +151,20 @@ export default function ChapterQuestionsScreen() {
   }
 
   const submitActivityLog = async (answersToSubmit: any[]) => {
+    // Only log if new questions were actually answered in this session
+    if (answeredThisSession === 0) return;
     try {
       const tQ = questionsData.length;
-      const cQ = answersToSubmit.filter(a => a?.isCorrect).length;
-      const timeTaken = answersToSubmit.reduce((acc, a) => acc + (a?.timeSpent || 0), 0);
-      const details = answersToSubmit.filter(a => a).map(a => ({
+      // Only count answers from this session (the last answeredThisSession entries)
+      const sessionAnswers = answersToSubmit.filter(a => a != null).slice(-answeredThisSession);
+      const cQ = sessionAnswers.filter(a => a?.isCorrect).length;
+      const timeTaken = sessionAnswers.reduce((acc, a) => acc + (a?.timeSpent || 0), 0);
+      const details = sessionAnswers.map(a => ({
          questionText: a.questionText || "Question",
          isCorrect: !!a.isCorrect,
          timeSpent: a.timeSpent || 0
       }));
-      
+
       await apiFetch("/api/parent/activities", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -181,6 +186,7 @@ export default function ChapterQuestionsScreen() {
     if (interactionType === "mcq" && selected === null) return;
     if (!confirmed) {
       setConfirmed(true);
+      setAnsweredThisSession(prev => prev + 1);
       const timeSpent = Math.floor((Date.now() - questionStartTime) / 1000);
       if (isCorrect) {
         setScore((s) => s + 1);
