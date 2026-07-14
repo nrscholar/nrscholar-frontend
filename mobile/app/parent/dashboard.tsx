@@ -20,6 +20,8 @@ import NotificationBell from "../components/NotificationBell";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import { MaterialIcons } from "@expo/vector-icons";
+import Svg, { Path, Circle, Line, Defs, LinearGradient as SvgLinearGradient, Stop } from "react-native-svg";
+import { LinearGradient } from "expo-linear-gradient";
 
 const { width } = Dimensions.get("window");
 
@@ -61,6 +63,7 @@ export default function ParentDashboard() {
   const [reportLoading, setReportLoading] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [modalType, setModalType] = useState<"strengths" | "weaknesses" | "risks" | null>(null);
 
   // ── Load Data ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -188,6 +191,40 @@ export default function ParentDashboard() {
     }
   };
 
+  const generateChartData = (type: "strengths" | "weaknesses" | "risks") => {
+    let trend = report?.weeklyTrend || [];
+    if (type === "strengths" && report?.mathTrend) trend = report.mathTrend;
+    if (type === "weaknesses" && report?.scienceTrend) trend = report.scienceTrend;
+    if (type === "risks" && report?.riskTrend) trend = report.riskTrend;
+
+    if (!trend || trend.length === 0) {
+      trend = [
+        { day: "Mon", score: 60 },
+        { day: "Tue", score: 65 },
+        { day: "Wed", score: 75 },
+        { day: "Thu", score: 80 },
+        { day: "Fri", score: 85 },
+        { day: "Sat", score: 90 },
+        { day: "Sun", score: 92 }
+      ];
+    }
+
+    const widthVal = 300;
+    const heightVal = 120;
+
+    const points = trend.map((t: any, i: number) => {
+      const x = (i / (trend.length - 1)) * widthVal;
+      const score = Math.max(0, Math.min(100, t.score)); // clamp
+      const y = heightVal - (score / 100) * heightVal;
+      return { x, y, score: Math.round(score), day: t.day };
+    });
+
+    const pathLine = points.length > 0 ? `M ${points.map((p: any) => `${p.x},${p.y}`).join(" L ")}` : "";
+    const pathArea = points.length > 0 ? `M 0,${heightVal} L 0,${points[0].y} ${pathLine.substring(1)} L ${widthVal},${heightVal} Z` : "";
+
+    return { pathLine, pathArea, points, labels: trend.map((t: any) => t.day) };
+  };
+
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: C.surface }]}>
@@ -287,32 +324,53 @@ export default function ParentDashboard() {
         <View style={{ marginTop: 24 }}>
           <Text style={styles.sectionTitle}>Cognitive Strengths & Weaknesses</Text>
           <View style={{ gap: 12 }}>
-            <View style={[styles.glassCard, { borderLeftWidth: 4, borderLeftColor: C.secondary, padding: 12 }]}>
-              <Text style={{ fontSize: 13, fontWeight: "700", color: C.secondary, marginBottom: 4 }}>
-                💪 Strengths (Fast Processor)
-              </Text>
+            <TouchableOpacity 
+              style={[styles.glassCard, { borderLeftWidth: 4, borderLeftColor: C.secondary, padding: 12 }]}
+              activeOpacity={0.8}
+              onPress={() => setModalType("strengths")}
+            >
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: C.secondary, marginBottom: 4 }}>
+                  💪 Strengths (Fast Processor)
+                </Text>
+                <MaterialIcons name="chevron-right" size={18} color={C.secondary} />
+              </View>
               <Text style={{ fontSize: 12, color: C.onSurfaceVariant }}>
-                Visual Apple Math Quest, shape recognition, and spatial logic calculations.
+                {report?.strengths || "Not enough data yet. Start solving questions to analyze strengths."}
               </Text>
-            </View>
+            </TouchableOpacity>
 
-            <View style={[styles.glassCard, { borderLeftWidth: 4, borderLeftColor: C.error, padding: 12 }]}>
-              <Text style={{ fontSize: 13, fontWeight: "700", color: C.error, marginBottom: 4 }}>
-                ⚠️ Weaknesses / Review Needed
-              </Text>
+            <TouchableOpacity 
+              style={[styles.glassCard, { borderLeftWidth: 4, borderLeftColor: C.error, padding: 12 }]}
+              activeOpacity={0.8}
+              onPress={() => setModalType("weaknesses")}
+            >
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: C.error, marginBottom: 4 }}>
+                  ⚠️ Weaknesses / Review Needed
+                </Text>
+                <MaterialIcons name="chevron-right" size={18} color={C.error} />
+              </View>
               <Text style={{ fontSize: 12, color: C.onSurfaceVariant }}>
-                Reading comprehension speed under timed math questions.
+                {report?.weaknesses || "Not enough data yet. Start solving questions to analyze weaknesses."}
               </Text>
-            </View>
+            </TouchableOpacity>
 
-            <View style={[styles.glassCard, { borderLeftWidth: 4, borderLeftColor: C.primary, padding: 12 }]}>
-              <Text style={{ fontSize: 13, fontWeight: "700", color: C.primary, marginBottom: 4 }}>
-                🔔 Risk Alerts
-              </Text>
+            <TouchableOpacity 
+              style={[styles.glassCard, { borderLeftWidth: 4, borderLeftColor: C.primary, padding: 12 }]}
+              activeOpacity={0.8}
+              onPress={() => setModalType("risks")}
+            >
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: C.primary, marginBottom: 4 }}>
+                  🔔 Risk Alerts
+                </Text>
+                <MaterialIcons name="chevron-right" size={18} color={C.primary} />
+              </View>
               <Text style={{ fontSize: 12, color: C.onSurfaceVariant }}>
-                No critical drops. Attention level remains consistent over the past 7 days.
+                {report?.risks || "No critical drops. Attention level remains consistent over the past 7 days."}
               </Text>
-            </View>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -320,26 +378,29 @@ export default function ParentDashboard() {
         <View style={{ marginTop: 24 }}>
           <Text style={styles.sectionTitle}>Weekly Progress & Monthly Growth</Text>
           <View style={[styles.glassCard, { padding: 16, gap: 16 }]}>
-            {/* Weekly bar chart mock */}
+            {/* Weekly bar chart */}
             <View>
               <Text style={{ fontSize: 12, fontWeight: "700", color: C.primary, marginBottom: 12 }}>
-                Weekly Solving Time (Min)
+                Weekly Performance Trend (%)
               </Text>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", height: 80 }}>
-                {[
-                  { day: "Mon", min: 30 },
-                  { day: "Tue", min: 45 },
-                  { day: "Wed", min: 20 },
-                  { day: "Thu", min: 60 },
-                  { day: "Fri", min: 40 },
-                  { day: "Sat", min: 15 },
-                  { day: "Sun", min: 45 },
-                ].map((item) => (
-                  <View key={item.day} style={{ alignItems: "center" }}>
-                    <View style={{ height: item.min, width: 12, backgroundColor: C.primary, borderRadius: 6 }} />
-                    <Text style={{ fontSize: 10, color: C.outline, marginTop: 4 }}>{item.day}</Text>
-                  </View>
-                ))}
+                {(report?.weeklyTrend || [
+                  { day: "Mon", score: 60 },
+                  { day: "Tue", score: 65 },
+                  { day: "Wed", score: 75 },
+                  { day: "Thu", score: 80 },
+                  { day: "Fri", score: 85 },
+                  { day: "Sat", score: 90 },
+                  { day: "Sun", score: 92 },
+                ]).map((item: any) => {
+                  const barHeight = Math.max(5, Math.round((item.score / 100) * 60));
+                  return (
+                    <View key={item.day} style={{ alignItems: "center" }}>
+                      <View style={{ height: barHeight, width: 12, backgroundColor: C.primary, borderRadius: 6 }} />
+                      <Text style={{ fontSize: 10, color: C.outline, marginTop: 4 }}>{item.day}</Text>
+                    </View>
+                  );
+                })}
               </View>
             </View>
 
@@ -353,6 +414,102 @@ export default function ParentDashboard() {
                 <Text style={{ fontSize: 13, fontWeight: "700", color: C.secondary }}>+24% (Explorer Lvl {userLevel})</Text>
               </View>
             </View>
+          </View>
+        </View>
+
+        {/* Parent Learning Section */}
+        <View style={{ marginTop: 24 }}>
+          <Text style={styles.sectionTitle}>Parent Learning</Text>
+          <View style={{ flexDirection: "row", gap: 12, marginBottom: 12 }}>
+            <TouchableOpacity
+              style={[styles.glassCard, { flex: 1, padding: 14, minHeight: 110, justifyContent: "space-between" }]}
+              activeOpacity={0.8}
+              onPress={() => router.push({
+                pathname: "/practice/webview" as any,
+                params: { path: "/parent/daily-tip" }
+              })}
+            >
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(0, 106, 98, 0.1)", alignItems: "center", justifyContent: "center" }}>
+                  <MaterialIcons name="lightbulb" size={18} color={C.secondary} />
+                </View>
+                <View style={{ backgroundColor: C.secondary, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                  <Text style={{ fontSize: 8, fontWeight: "900", color: C.white }}>HOT</Text>
+                </View>
+              </View>
+              <View>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: C.primary }}>Daily Tip</Text>
+                <Text style={{ fontSize: 10, color: C.outline, marginTop: 2 }}>Quick family ideas</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.glassCard, { flex: 1, padding: 14, minHeight: 110, justifyContent: "space-between" }]}
+              activeOpacity={0.8}
+              onPress={() => router.push({
+                pathname: "/practice/webview" as any,
+                params: { path: "/parent/lessons" }
+              })}
+            >
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(20, 23, 121, 0.1)", alignItems: "center", justifyContent: "center" }}>
+                  <MaterialIcons name="menu-book" size={18} color={C.primary} />
+                </View>
+                <View style={{ backgroundColor: C.tertiary, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                  <Text style={{ fontSize: 8, fontWeight: "900", color: C.white }}>NEW</Text>
+                </View>
+              </View>
+              <View>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: C.primary }}>Lessons</Text>
+                <Text style={{ fontSize: 10, color: C.outline, marginTop: 2 }}>Bite-sized growth</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <TouchableOpacity
+              style={[styles.glassCard, { flex: 1, padding: 14, minHeight: 110, justifyContent: "space-between" }]}
+              activeOpacity={0.8}
+              onPress={() => router.push({
+                pathname: "/practice/webview" as any,
+                params: { path: "/parent/challenges" }
+              })}
+            >
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(48, 0, 127, 0.1)", alignItems: "center", justifyContent: "center" }}>
+                  <MaterialIcons name="star" size={18} color={C.tertiary} />
+                </View>
+                <View style={{ backgroundColor: C.error, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                  <Text style={{ fontSize: 8, fontWeight: "900", color: C.white }}>LIVE</Text>
+                </View>
+              </View>
+              <View>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: C.primary }}>Challenges</Text>
+                <Text style={{ fontSize: 10, color: C.outline, marginTop: 2 }}>Build strong habits</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.glassCard, { flex: 1, padding: 14, minHeight: 110, justifyContent: "space-between" }]}
+              activeOpacity={0.8}
+              onPress={() => router.push({
+                pathname: "/practice/webview" as any,
+                params: { path: "/parent/achievements" }
+              })}
+            >
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(0, 113, 104, 0.1)", alignItems: "center", justifyContent: "center" }}>
+                  <MaterialIcons name="emoji-events" size={18} color={C.onSecondaryContainer} />
+                </View>
+                <View style={{ backgroundColor: C.onSecondaryContainer, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                  <Text style={{ fontSize: 8, fontWeight: "900", color: C.white }}>BADGES</Text>
+                </View>
+              </View>
+              <View>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: C.primary }}>Rewards</Text>
+                <Text style={{ fontSize: 10, color: C.outline, marginTop: 2 }}>View milestones</Text>
+              </View>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -393,6 +550,27 @@ export default function ParentDashboard() {
               <View>
                 <Text style={styles.activityTitle}>Last Activity</Text>
                 <Text style={styles.activityDesc}>Math Apple quest solved • 2 hours ago</Text>
+              </View>
+            </View>
+            <MaterialIcons name="chevron-right" size={24} color={C.primary} />
+          </TouchableOpacity>
+
+          {/* Kids Activity Log Tracker */}
+          <TouchableOpacity 
+            style={[styles.glassCard, styles.activityCard]}
+            activeOpacity={0.8}
+            onPress={() => router.push({
+              pathname: "/practice/webview" as any,
+              params: { path: "/parent/kids-activity" }
+            })}
+          >
+            <View style={styles.activityLeft}>
+              <MaterialIcons name="timeline" size={24} color={C.secondary} />
+              <View>
+                <Text style={styles.activityTitle}>Kids Activity Tracker</Text>
+                <Text style={styles.activityDesc}>
+                  {report?.lastActivity || "Monitor child's detailed activity logs"}
+                </Text>
               </View>
             </View>
             <MaterialIcons name="chevron-right" size={24} color={C.primary} />
@@ -492,6 +670,164 @@ export default function ParentDashboard() {
             )}
           </ScrollView>
         </SafeAreaView>
+      </Modal>
+
+      {/* ── Cognitive Detail Modals (Strengths, Weaknesses, Risks) ── */}
+      <Modal
+        visible={modalType !== null}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setModalType(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.bottomSheetContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {modalType === "strengths" ? "💪 Cognitive Strengths" :
+                 modalType === "weaknesses" ? "⚠️ Areas for Review" :
+                 "🔔 Risk Alerts"}
+              </Text>
+              <TouchableOpacity onPress={() => setModalType(null)} style={styles.closeModalBtn}>
+                <MaterialIcons name="close" size={24} color={C.onSurfaceVariant} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={styles.bottomSheetScroll} showsVerticalScrollIndicator={false}>
+              {modalType && (() => {
+                const chartData = generateChartData(modalType);
+                const currentScore = chartData.points.length > 0 ? chartData.points[chartData.points.length - 1].score : 92;
+                const startScore = chartData.points.length > 0 ? chartData.points[0].score : 65;
+                const diff = currentScore - startScore;
+                const diffStr = diff >= 0 ? `+${diff}% this week` : `${diff}% this week`;
+                const chartColor = modalType === "weaknesses" ? C.error : modalType === "risks" ? "#ff5e00" : C.secondary;
+
+                let highestSubject = "Math";
+                let lowestSubject = "Science";
+                if (report?.subjectBreakdown && report.subjectBreakdown.length > 0) {
+                  const sorted = [...report.subjectBreakdown].sort((a, b) => b.accuracy - a.accuracy);
+                  highestSubject = sorted[0].subject;
+                  lowestSubject = sorted[sorted.length - 1].subject;
+                }
+
+                return (
+                  <View style={{ gap: 16 }}>
+                    {/* Trend Graph Box */}
+                    <View style={[styles.glassCard, { padding: 16 }]}>
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 12 }}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 10, fontWeight: "700", color: C.outline, textTransform: "uppercase" }}>
+                            {modalType === "strengths" ? highestSubject : modalType === "weaknesses" ? lowestSubject : "Confidence Level"} Trend (7-Day)
+                          </Text>
+                          <Text style={{ fontSize: 28, fontWeight: "800", color: chartColor, marginTop: 4 }}>{currentScore}%</Text>
+                        </View>
+                        <View style={{ backgroundColor: diff >= 0 ? "rgba(0, 106, 98, 0.1)" : "rgba(186, 26, 26, 0.1)", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                          <Text style={{ fontSize: 10, fontWeight: "700", color: diff >= 0 ? C.secondary : C.error }}>
+                            {diffStr}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Custom SVG Line Graph */}
+                      <View style={{ width: "100%", height: 120, marginTop: 12 }}>
+                        <Svg width="100%" height="100%" viewBox="0 0 300 120">
+                          <Defs>
+                            <SvgLinearGradient id="modalLineGradient" x1="0" y1="0" x2="0" y2="1">
+                              <Stop offset="0%" stopColor={chartColor} stopOpacity="0.3" />
+                              <Stop offset="100%" stopColor={chartColor} stopOpacity="0" />
+                            </SvgLinearGradient>
+                          </Defs>
+
+                          {/* Grid Lines */}
+                          <Line x1="0" y1="0" x2="300" y2="0" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
+                          <Line x1="0" y1="60" x2="300" y2="60" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
+                          <Line x1="0" y1="120" x2="300" y2="120" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
+
+                          {/* Area Path */}
+                          {chartData.pathArea ? (
+                            <Path d={chartData.pathArea} fill="url(#modalLineGradient)" />
+                          ) : null}
+
+                          {/* Line Path */}
+                          {chartData.pathLine ? (
+                            <Path d={chartData.pathLine} fill="none" stroke={chartColor} strokeWidth="3" strokeLinecap="round" />
+                          ) : null}
+
+                          {/* Data Circles */}
+                          {chartData.points.map((p: any, idx: number) => (
+                            <Circle
+                              key={idx}
+                              cx={p.x}
+                              cy={p.y}
+                              r={idx === chartData.points.length - 1 ? 5 : 3.5}
+                              fill={idx === chartData.points.length - 1 ? chartColor : "#ffffff"}
+                              stroke={chartColor}
+                              strokeWidth="2"
+                            />
+                          ))}
+                        </Svg>
+                        {/* X-Axis Labels */}
+                        <View style={{ flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 4, marginTop: 6 }}>
+                          {chartData.labels.map((lbl: string, idx: number) => (
+                            <Text key={idx} style={{ fontSize: 9, fontWeight: "700", color: idx === chartData.labels.length - 1 ? chartColor : C.outline }}>
+                              {lbl}
+                            </Text>
+                          ))}
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Subject Breakdown Progress Bars */}
+                    {modalType !== "risks" && (
+                      <View style={[styles.glassCard, { padding: 16 }]}>
+                        <Text style={{ fontSize: 13, fontWeight: "700", color: C.primary, marginBottom: 12 }}>
+                          {modalType === "strengths" ? "Top Subjects Mastery" : "Subject Areas Needing Review"}
+                        </Text>
+                        <View style={{ gap: 12 }}>
+                          {(report?.subjectBreakdown || [])
+                            .filter((sb: any) => modalType === "strengths" ? sb.accuracy >= 70 : sb.accuracy < 70)
+                            .map((sb: any, idx: number) => {
+                              const isStr = sb.accuracy >= 70;
+                              const col = isStr ? C.secondary : C.error;
+                              return (
+                                <View key={idx}>
+                                  <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
+                                    <Text style={{ fontSize: 12, fontWeight: "600", color: col }}>{sb.subject} {isStr ? "💪" : "⚠️"}</Text>
+                                    <Text style={{ fontSize: 12, fontWeight: "700", color: col }}>{sb.accuracy}%</Text>
+                                  </View>
+                                  <View style={{ height: 6, backgroundColor: "rgba(0,0,0,0.05)", borderRadius: 3, overflow: "hidden" }}>
+                                    <View style={{ height: "100%", width: `${sb.accuracy}%`, backgroundColor: col }} />
+                                  </View>
+                                </View>
+                              );
+                            })}
+                          {(!report?.subjectBreakdown || report.subjectBreakdown.length === 0) && (
+                            <Text style={{ fontSize: 12, color: C.outline }}>Play more quests to populate subject metrics!</Text>
+                          )}
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Actionable Insight Box */}
+                    <View style={{ backgroundColor: "rgba(20, 23, 121, 0.05)", borderRadius: 12, padding: 16, borderLeftWidth: 4, borderLeftColor: C.primary }}>
+                      <Text style={{ fontSize: 12, fontWeight: "700", color: C.primary, marginBottom: 4 }}>Actionable Insight</Text>
+                      <Text style={{ fontSize: 12, color: C.primaryContainer, lineHeight: 16 }}>
+                        {modalType === "risks" ? (
+                          `Noticeable decline in confidence recently. We recommend a 15-minute review session today focusing on basics, avoiding complex new quests to rebuild ${childName}'s confidence slowly.`
+                        ) : (report?.subjectBreakdown && report.subjectBreakdown.length > 0) ? (
+                          modalType === "strengths" ?
+                          `Your child is currently excelling at ${highestSubject}! These strong foundations help boost overall confidence.` :
+                          `They should give more attention to ${lowestSubject} to build a more balanced cognitive profile.`
+                        ) : (
+                          `${diff >= 0 ? 'Consistent upward trend this week!' : 'Noticed a slight dip recently.'} Focus on standard curriculum exercises.`
+                        )}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })()}
+            </ScrollView>
+          </View>
+        </View>
       </Modal>
 
     </View>
@@ -903,5 +1239,23 @@ const styles = StyleSheet.create({
     color: C.onSurfaceVariant, 
     fontSize: 15, 
     fontWeight: "600" 
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    justifyContent: "flex-end",
+  },
+  bottomSheetContainer: {
+    backgroundColor: "#f7f9fb",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "85%",
+    paddingBottom: 20,
+  },
+  bottomSheetScroll: {
+    padding: 20,
+  },
+  closeModalBtn: {
+    padding: 4,
   },
 });

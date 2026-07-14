@@ -46,6 +46,7 @@ export default function HomeScreen() {
   const [childName, setChildName] = useState("Explorer");
   const [userLevel, setLevel] = useState(1);
   const [streakDays, setStreakDays] = useState(7);
+  const [mascotMsg, setMascotMsg] = useState("");
 
   useFocusEffect(
     useCallback(() => {
@@ -338,6 +339,34 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        {/* Multiplayer Challenge (Shadow Arena) */}
+        <TouchableOpacity
+          onPress={() => router.push({
+            pathname: "/practice/webview" as any,
+            params: { path: "/multiplayer-hub" }
+          })}
+          style={styles.shadowArenaCard}
+          activeOpacity={0.85}
+        >
+          <LinearGradient
+            colors={["#141779", "#30007f"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.shadowArenaGradient}
+          >
+            <View style={styles.shadowArenaLeft}>
+              <View style={styles.shadowArenaIconBox}>
+                <Text style={{ fontSize: 22 }}>⚔️</Text>
+              </View>
+              <View>
+                <Text style={styles.shadowArenaTitle}>SHADOW ARENA</Text>
+                <Text style={styles.shadowArenaSub}>Challenge Friends 1v1</Text>
+              </View>
+            </View>
+            <MaterialIcons name="chevron-right" size={24} color="#57fae9" />
+          </LinearGradient>
+        </TouchableOpacity>
+
         {/* Parent Portal Access Card */}
         <TouchableOpacity
           style={styles.parentPortalCard}
@@ -354,6 +383,41 @@ export default function HomeScreen() {
           <MaterialIcons name="chevron-right" size={24} color={C.primary} />
         </TouchableOpacity>
       </ScrollView>
+
+      {/* FLOATING INTERACTIVE MASCOT */}
+      <View style={styles.mascotContainer}>
+        {mascotMsg ? (
+          <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={() => router.push({
+              pathname: "/practice/webview" as any,
+              params: { path: "/evolution" }
+            })}
+            style={styles.speechBubble}
+          >
+            <Text style={styles.speechText}>{mascotMsg}</Text>
+            <Text style={styles.speechVisit}>Visit ➜</Text>
+            <View style={styles.speechArrow} />
+          </TouchableOpacity>
+        ) : null}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => {
+            const quotes = [
+              "You're doing great! 🚀",
+              "Did you check your missions? 🎯",
+              "Keep up the streak! 🔥",
+              "I smell mystery boxes... 📦",
+              "Let's learn something new! 📚"
+            ];
+            setMascotMsg(quotes[Math.floor(Math.random() * quotes.length)]);
+            setTimeout(() => setMascotMsg(""), 3500);
+          }}
+          style={styles.mascotButton}
+        >
+          <Text style={{ fontSize: 32 }}>🐉</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -654,5 +718,114 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: C.outline,
     fontWeight: "600",
+  },
+  shadowArenaCard: {
+    borderRadius: 20,
+    overflow: "hidden",
+    shadowColor: "#141779",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  shadowArenaGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 20,
+  },
+  shadowArenaLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
+  shadowArenaIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+  },
+  shadowArenaTitle: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: C.white,
+    letterSpacing: 1,
+  },
+  shadowArenaSub: {
+    fontSize: 11,
+    color: "#57fae9",
+    fontWeight: "700",
+    marginTop: 2,
+  },
+  mascotContainer: {
+    position: "absolute",
+    bottom: 24,
+    right: 24,
+    alignItems: "center",
+    zIndex: 999,
+  },
+  mascotButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: C.white,
+    borderWidth: 2,
+    borderColor: C.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  speechBubble: {
+    backgroundColor: C.white,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+    marginBottom: 8,
+    borderWidth: 2,
+    borderColor: C.secondaryContainer,
+    position: "relative",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  speechText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: C.primary,
+  },
+  speechVisit: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: C.onSecondaryContainer,
+    backgroundColor: C.primary,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  speechArrow: {
+    position: "absolute",
+    bottom: -6,
+    right: 20,
+    width: 12,
+    height: 12,
+    backgroundColor: C.white,
+    borderBottomWidth: 2,
+    borderRightWidth: 2,
+    borderColor: C.secondaryContainer,
+    transform: [{ rotate: "45deg" }],
   },
 });
