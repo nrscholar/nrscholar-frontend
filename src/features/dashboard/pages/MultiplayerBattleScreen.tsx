@@ -39,6 +39,7 @@ export default function MultiplayerBattleScreen() {
   const [opponentQuit, setOpponentQuit] = useState(false);
   const [quitCount, setQuitCount] = useState(0);
   const [myStreak, setMyStreak] = useState(0);
+  const [userAnswers, setUserAnswers] = useState<any[]>([]);
 
   // Sync state
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -128,6 +129,13 @@ export default function MultiplayerBattleScreen() {
     
     setMyScore(newScore);
     
+    const newAnswer = {
+        questionText: questions[currentQ].q,
+        isCorrect,
+        timeSpent: timeTaken
+    };
+    setUserAnswers(prev => [...prev, newAnswer]);
+    
     const isLast = currentQ === questions.length - 1;
     const newProgress = Math.round(((currentQ + 1) / questions.length) * 100);
     
@@ -203,8 +211,40 @@ export default function MultiplayerBattleScreen() {
   }, [room, selectedOption, myProgress, isAdvancing, currentQ, questions.length, waitTimer]);
 
   
+  const submitActivityLog = async (answersToSubmit: any[]) => {
+      try {
+          if (!answersToSubmit.length) return;
+          const tQ = answersToSubmit.length;
+          const cQ = answersToSubmit.filter(a => a?.isCorrect).length;
+          const timeTaken = answersToSubmit.reduce((acc, a) => acc + (a?.timeSpent || 0), 0);
+          const details = answersToSubmit.map(a => ({
+             questionText: a.questionText || "Question",
+             isCorrect: !!a.isCorrect,
+             timeSpent: a.timeSpent || 0
+          }));
+          
+          await apiFetch("/api/parent/activities", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                  title: `1v1 Live Battle vs ${oppName || 'Opponent'}`,
+                  type: "multiplayer",
+                  timeTaken,
+                  correctQuestions: cQ,
+                  totalQuestions: tQ,
+                  details
+              })
+          });
+      } catch (e) {
+          console.error("Failed to submit activity log", e);
+      }
+  };
+
   useEffect(() => {
     let mounted = true;
+    if (isFinished) {
+      submitActivityLog(userAnswers).catch(() => {});
+    }
     if (isFinished && winnerId === myId) {
       setCheckingReward(true);
       // Fetch profile to get updated streak
@@ -222,7 +262,7 @@ export default function MultiplayerBattleScreen() {
       });
     }
     return () => { mounted = false; };
-  }, [isFinished, winnerId, myId]);
+  }, [isFinished, winnerId, myId, userAnswers]);
 
   if (!room) return <div className="min-h-screen bg-[#1d0052] flex items-center justify-center"><div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin"/></div>;
 
@@ -528,6 +568,7 @@ export default function MultiplayerBattleScreen() {
                   onClick={async () => {
                     setShowQuitModal(false);
                     try {
+                      await submitActivityLog(userAnswers);
                       await apiFetch(`/api/multiplayer/room/${roomId}/quit`, { method: "POST" });
                     } catch(e) {}
                     navigate("/home");

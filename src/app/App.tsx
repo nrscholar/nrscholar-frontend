@@ -46,6 +46,7 @@ import RecapScreen from "../features/dashboard/pages/RecapScreen";
 import RewardScreen from "../features/dashboard/pages/RewardScreen";
 import ScanAndLearn from "../features/dashboard/pages/ScanAndLearn";
 import ScanHistory from "../features/dashboard/pages/ScanHistory";
+import KidsActivityScreen from "../features/dashboard/pages/KidsActivityScreen";
 import WeeklyTestScreen from "../features/dashboard/pages/WeeklyTest";
 import WeeklyTestQuestionsScreen from "../features/dashboard/pages/WeeklyTestQuestions";
 import WeeklyTestResultsScreen from "../features/dashboard/pages/WeeklyTestResults";
@@ -115,6 +116,7 @@ function App() {
             <Route path="/parent/learning-library" element={<ParentLearningLibraryScreen />} />
             <Route path="/parent/lessons/player" element={<ParentLessonPlayerScreen />} />
             <Route path="/parent/roadmap" element={<ParentRoadmapScreen />} />
+            <Route path="/parent/kids-activity" element={<KidsActivityScreen />} />
             <Route path="/parent/settings" element={<ParentSettings />} />
             <Route path="/parent/subscription" element={<ParentSubscriptionScreen />} />
             <Route path="/parent/learning-dna" element={<ParentLearningDNAScreen />} />

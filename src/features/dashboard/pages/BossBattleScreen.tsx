@@ -40,6 +40,42 @@ export default function BossBattleScreen() {
   const [lossOverlay, setLossOverlay] = useState({ show: false, xpLoss: 0 });
   const [particlesInit, setParticlesInit] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  
+  const [questionStartTime, setQuestionStartTime] = useState(Date.now());
+  const [userAnswers, setUserAnswers] = useState<any[]>([]);
+
+  useEffect(() => {
+    setQuestionStartTime(Date.now());
+  }, [currentQIndex]);
+
+  const submitActivityLog = async (answersToSubmit: any[]) => {
+      try {
+          if (!answersToSubmit.length) return;
+          const tQ = answersToSubmit.length;
+          const cQ = answersToSubmit.filter(a => a?.isCorrect).length;
+          const timeTaken = answersToSubmit.reduce((acc, a) => acc + (a?.timeSpent || 0), 0);
+          const details = answersToSubmit.map(a => ({
+             questionText: a.questionText || "Question",
+             isCorrect: !!a.isCorrect,
+             timeSpent: a.timeSpent || 0
+          }));
+          
+          await apiFetch("/api/parent/activities", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                  title: `${searchParams.get("difficulty") || "Easy"} Boss Battle`,
+                  type: "battle",
+                  timeTaken,
+                  correctQuestions: cQ,
+                  totalQuestions: tQ,
+                  details
+              })
+          });
+      } catch (e) {
+          console.error("Failed to submit activity log", e);
+      }
+  };
 
   useEffect(() => {
     initParticlesEngine(async (engine) => { await loadSlim(engine); }).then(() => setParticlesInit(true));
@@ -94,6 +130,15 @@ export default function BossBattleScreen() {
     
     setActionResult(isCorrect ? "correct" : "wrong");
 
+    const timeSpent = Math.floor((Date.now() - questionStartTime) / 1000);
+    const newAnswer = {
+        questionText: currentQ.question,
+        isCorrect,
+        timeSpent
+    };
+    const newAnswers = [...userAnswers, newAnswer];
+    setUserAnswers(newAnswers);
+
     // Optimistically update health for immediate animation
     setBattleData(prev => ({
         ...prev,
@@ -141,6 +186,8 @@ export default function BossBattleScreen() {
                   })
                 }).catch(console.error);
             }
+            
+            submitActivityLog(newAnswers).catch(() => {});
 
             // Wait 2s for confetti to show, then navigate
             setTimeout(() => {
@@ -152,6 +199,8 @@ export default function BossBattleScreen() {
             }, 1000);
           } else if (status === "LOST") {
             setLossOverlay({ show: true, xpLoss: json.data.xpLoss || -30 });
+            
+            submitActivityLog(newAnswers).catch(() => {});
             
             // Wait 3 seconds to show the animation, then navigate
             setTimeout(() => {
@@ -331,7 +380,7 @@ export default function BossBattleScreen() {
       {/* Top App Bar (HUD Style) */}
       <header className="fixed top-0 w-full z-50 flex items-center justify-between px-6 h-16 bg-white/30 backdrop-blur-md border-b border-white/40">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-white flex items-center justify-center active:scale-90 transition-transform shadow-sm">
+          <button onClick={async () => { await submitActivityLog(userAnswers); navigate(-1); }} className="w-10 h-10 rounded-full bg-white flex items-center justify-center active:scale-90 transition-transform shadow-sm">
             <ArrowLeft className="text-[#141779]" size={24} />
           </button>
           <div className="flex flex-col">

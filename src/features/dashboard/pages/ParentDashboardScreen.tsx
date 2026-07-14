@@ -345,7 +345,7 @@ export default function ParentDashboardScreen() {
           </div>
 
           <button
-            onClick={() => navigate('/parent/roadmap')}
+            onClick={() => navigate('/parent/kids-activity')}
             className="w-full bg-white/70 backdrop-blur-md rounded-[20px] p-5 border border-white/60 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex justify-between items-center hover:bg-white hover:shadow-lg transition-all group"
           >
             <div className="flex items-center gap-4">
@@ -353,7 +353,7 @@ export default function ParentDashboardScreen() {
                 <Clock size={24} className="text-[#30007f]" />
               </div>
               <div className="text-left">
-                <h4 className="text-[16px] font-bold text-[#141779] mb-0.5">Last Activity</h4>
+                <h4 className="text-[16px] font-bold text-[#141779] mb-0.5">Kids Activity</h4>
                 <p className="text-[14px] font-medium text-[#767683]">{lastActivity}</p>
               </div>
             </div>

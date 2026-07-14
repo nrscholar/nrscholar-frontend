@@ -28,6 +28,7 @@ export default function ChapterQuestionsScreen() {
   const [childName, setChildName] = useState("Kid");
   const [childPhoto, setChildPhoto] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
+  const [questionStartTime, setQuestionStartTime] = useState(Date.now());
 
   useEffect(() => {
     initParticlesEngine(async (engine) => { await loadSlim(engine); }).then(() => setParticlesInit(true));
@@ -124,6 +125,7 @@ export default function ChapterQuestionsScreen() {
     if (q?.interaction?.type === "drag_objects") {
       setBasketCount(q.interaction.details.initialCount || 0);
     }
+    setQuestionStartTime(Date.now());
   }, [currentQ, q]);
 
   const questionText = q?.interaction?.details?.question || q?.question || "Loading...";
@@ -147,10 +149,39 @@ export default function ChapterQuestionsScreen() {
     isCorrect = selected === correctIndex;
   }
 
+  const submitActivityLog = async (answersToSubmit: any[]) => {
+    try {
+      const tQ = questionsData.length;
+      const cQ = answersToSubmit.filter(a => a?.isCorrect).length;
+      const timeTaken = answersToSubmit.reduce((acc, a) => acc + (a?.timeSpent || 0), 0);
+      const details = answersToSubmit.filter(a => a).map(a => ({
+         questionText: a.questionText || "Question",
+         isCorrect: !!a.isCorrect,
+         timeSpent: a.timeSpent || 0
+      }));
+      
+      await apiFetch("/api/parent/activities", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+              title: searchParams.get("chapterName") || "Chapter Challenge",
+              type: "quiz",
+              timeTaken,
+              correctQuestions: cQ,
+              totalQuestions: tQ,
+              details
+          })
+      });
+    } catch (e) {
+      console.error("Failed to submit activity log", e);
+    }
+  };
+
   const handleConfirm = async () => {
     if (interactionType === "mcq" && selected === null) return;
     if (!confirmed) {
       setConfirmed(true);
+      const timeSpent = Math.floor((Date.now() - questionStartTime) / 1000);
       if (isCorrect) {
         setScore((s) => s + 1);
         setSessionCorrect((s) => s + 1);
@@ -170,7 +201,8 @@ export default function ChapterQuestionsScreen() {
           correctAnswer,
           correctIndex,
           targetCount,
-          objectEmoji
+          objectEmoji,
+          timeSpent
         };
         return next;
       });
@@ -223,6 +255,8 @@ export default function ChapterQuestionsScreen() {
           console.error("Failed to save progress", e);
         }
         
+        await submitActivityLog(userAnswers);
+        
         // Final Boss Battle for this Level, which then returns to Assessment Summary or Chapter Levels
         const chapterNameParam = searchParams.get("chapterName");
         const nameQuery = chapterNameParam ? `&chapterName=${encodeURIComponent(chapterNameParam)}` : "";
@@ -256,6 +290,7 @@ export default function ChapterQuestionsScreen() {
       })
     }).catch(() => {});
     
+    await submitActivityLog(userAnswers);
     navigate("/practice/chapters", { replace: true });
   };
 
