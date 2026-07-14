@@ -95,7 +95,7 @@ export interface AuthData {
   user: {
     id: string;
     fullName: string;
-    email: string;
+    mobile: string;
     childName: string | null;
     childAge: number | null;
     childClass: string | null;
@@ -106,15 +106,15 @@ export interface AuthData {
 }
 
 export const authApi = {
-  login: (email: string, password: string) =>
+  login: (mobile: string, password: string) =>
     apiRequest<AuthData>("/api/users/login", {
       method: "POST",
-      body: { email, password },
+      body: { mobile, password },
     }),
 
   signup: (data: {
     fullName: string;
-    email: string;
+    mobile: string;
     password: string;
     childName?: string;
     childAge?: number;

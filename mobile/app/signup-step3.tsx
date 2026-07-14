@@ -49,11 +49,11 @@ export default function SignupStep3Screen() {
       return;
     }
 
-    const { fullName, email, childName, age, selectedClass } = params;
+    const { fullName, mobile, childName, age, selectedClass } = params;
 
     const finalData = {
       fullName: String(fullName),
-      email: String(email),
+      mobile: String(mobile),
       password,
       childName: childName ? String(childName) : undefined,
       childAge: age ? Number(age) : undefined,

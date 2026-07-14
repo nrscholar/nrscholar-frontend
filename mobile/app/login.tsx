@@ -24,7 +24,7 @@ const TOP_SECTION_HEIGHT = height * 0.4; // 40% for top section
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -38,13 +38,13 @@ export default function LoginScreen() {
   };
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      showToast("Please enter your email and password.");
+    if (!mobile.trim() || !password.trim()) {
+      showToast("Please enter your mobile number and password.");
       return;
     }
     try {
       setLoading(true);
-      const res = await authApi.login(email.trim(), password);
+      const res = await authApi.login(mobile.trim(), password);
       if (res.success && res.data) {
         await saveToken(res.data.token);
         showToast("Login Successful!", "success");
@@ -102,15 +102,15 @@ export default function LoginScreen() {
           {/* Login Fields */}
           <View style={styles.formContainer}>
             <View style={styles.inputWrapper}>
-              <MaterialIcons name="alternate-email" size={22} color="#767683" style={styles.inputIconLeft} />
+              <MaterialIcons name="phone" size={22} color="#767683" style={styles.inputIconLeft} />
               <TextInput
                 style={styles.input}
-                placeholder="Enter Email"
+                placeholder="Enter Mobile Number"
                 placeholderTextColor="#767683"
-                value={email}
-                onChangeText={setEmail}
+                value={mobile}
+                onChangeText={setMobile}
                 autoCapitalize="none"
-                keyboardType="email-address"
+                keyboardType="phone-pad"
               />
             </View>
 

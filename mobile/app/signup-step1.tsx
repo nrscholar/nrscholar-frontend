@@ -18,12 +18,12 @@ import { LinearGradient } from "expo-linear-gradient";
 export default function SignupStep1Screen() {
   const router = useRouter();
   const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
+  const [mobile, setMobile] = useState("");
 
   const handleNext = () => {
     router.push({
       pathname: "/signup-step2",
-      params: { fullName, email },
+      params: { fullName, mobile },
     });
   };
 
@@ -100,27 +100,27 @@ export default function SignupStep1Screen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Email or Phone</Text>
+                <Text style={styles.inputLabel}>Mobile Number</Text>
                 <View style={styles.inputWrapper}>
                   <TextInput
                     style={styles.input}
-                    placeholder="hello@voyage.com"
+                    placeholder="e.g. 9876543210"
                     placeholderTextColor="#c7c5d4"
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
+                    value={mobile}
+                    onChangeText={setMobile}
+                    keyboardType="phone-pad"
                     autoCapitalize="none"
                   />
-                  <MaterialIcons name="alternate-email" size={22} color="#c7c5d4" style={styles.inputIcon} />
+                  <MaterialIcons name="phone" size={22} color="#c7c5d4" style={styles.inputIcon} />
                 </View>
               </View>
             </View>
 
             {/* Primary Action */}
             <TouchableOpacity 
-              style={[styles.nextButton, (!fullName || !email) && { opacity: 0.7 }]}
+              style={[styles.nextButton, (!fullName || !mobile) && { opacity: 0.7 }]}
               onPress={handleNext}
-              disabled={!fullName || !email}
+              disabled={!fullName || !mobile}
               activeOpacity={0.8}
             >
               <Text style={styles.nextButtonText}>Next Step</Text>
