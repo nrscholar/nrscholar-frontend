@@ -135,7 +135,8 @@ export default function KidsActivityScreen() {
                 }
                 return acc;
               }, {} as Record<string, { label: string, activities: any[], totalTime: number }>)
-            ).map(([dateLabel, group], groupIdx) => {
+            ).map(([dateLabel, groupObj], groupIdx) => {
+              const group = groupObj as { label: string, activities: any[], totalTime: number };
               const isOpen = openDateLabel === null ? groupIdx === 0 : openDateLabel === dateLabel;
               
               return (
