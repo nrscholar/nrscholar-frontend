@@ -22,8 +22,11 @@ import * as Sharing from "expo-sharing";
 import { MaterialIcons } from "@expo/vector-icons";
 import Svg, { Path, Circle, Line, Defs, LinearGradient as SvgLinearGradient, Stop } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
+import { ProgressBar } from "../../components/ui/progress-bar";
 
 const { width } = Dimensions.get("window");
+
+
 
 const C = {
   primary: "#141779",
@@ -236,19 +239,27 @@ export default function ParentDashboard() {
   const fuel = user?.user?.fuel ?? user?.fuel ?? 350;
   const userLevel = user?.user?.level ?? user?.level ?? 1;
   const childName = user?.user?.childName ?? user?.childName ?? "Aarav";
-  const currentCityIndex = Math.max(0, Math.min(8, Math.floor(fuel / 500)));
-  const nextCityIndex = Math.min(8, currentCityIndex + 1);
-  const cities = ["Ahmedabad", "Gandhinagar", "Mehsana", "Patan", "Vadodara", "Surat", "Rajkot", "Dwarka", "Somnath"];
+  const cities = ["Egg Village", "Forest Kingdom", "Magic Desert", "Ice Kingdom", "Dragon Mountain"];
+  const xpThresholds = [0, 1000, 2500, 5000, 10000];
   
-  const currentCityName = cities[currentCityIndex] || "Ahmedabad";
-  const nextCityName = cities[nextCityIndex] || "Gandhinagar";
+  let currentCityIndex = 0;
+  for (let i = 0; i < xpThresholds.length; i++) {
+    if (fuel >= xpThresholds[i]) {
+      currentCityIndex = i;
+    }
+  }
   
-  const targetFuel = nextCityIndex * 500;
+  const nextCityIndex = Math.min(cities.length - 1, currentCityIndex + 1);
+  const currentCityName = cities[currentCityIndex] || "Egg Village";
+  const nextCityName = cities[nextCityIndex] || "Forest Kingdom";
+  
+  const targetFuel = xpThresholds[nextCityIndex] || 1000;
+  const prevMilestoneFuel = xpThresholds[currentCityIndex] || 0;
+  
   const fuelNeeded = Math.max(0, targetFuel - fuel);
-  const prevMilestoneFuel = currentCityIndex * 500;
-  const currentLegFuelTotal = 500;
+  const currentLegFuelTotal = targetFuel - prevMilestoneFuel;
   const currentLegFuelEarned = Math.max(0, fuel - prevMilestoneFuel);
-  const fuelPercentage = Math.min(100, Math.max(0, (currentLegFuelEarned / currentLegFuelTotal) * 100));
+  const fuelPercentage = currentLegFuelTotal > 0 ? Math.min(100, Math.max(0, (currentLegFuelEarned / currentLegFuelTotal) * 100)) : 100;
 
   return (
     <View style={styles.root}>
@@ -306,17 +317,23 @@ export default function ParentDashboard() {
           </View>
 
           {/* Journey Fuel Progress */}
-          <View style={{ marginTop: 16 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
-              <Text style={{ fontSize: 11, fontWeight: "700", color: C.primary }}>JOURNEY PROGRESS</Text>
-              <Text style={{ fontSize: 11, fontWeight: "700", color: C.primary }}>{fuel} / {targetFuel} Fuel</Text>
+          <View style={[{ marginTop: 16, backgroundColor: C.white, borderRadius: 20, padding: 16, borderWidth: 1.5, borderColor: "#f0f0f0", elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4 }]}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <MaterialIcons name="flash-on" size={16} color={C.primary} />
+                <Text style={{ fontSize: 10, fontWeight: "700", color: C.primary, letterSpacing: 1 }}>JOURNEY PROGRESS</Text>
+              </View>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: C.primary }}>🔥 {fuel} XP</Text>
             </View>
-            <View style={{ height: 8, backgroundColor: "rgba(20, 23, 121, 0.1)", borderRadius: 4, overflow: "hidden" }}>
-              <View style={{ height: "100%", width: `${fuelPercentage}%`, backgroundColor: C.secondary }} />
+            
+            <ProgressBar progress={fuelPercentage} colors={[C.primary, C.secondaryContainer]} />
+            
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 10 }}>
+              <MaterialIcons name="location-on" size={16} color="#ff9f43" />
+              <Text style={{ fontSize: 11, color: C.outline, fontWeight: "600" }}>
+                Next: {nextCityName} • <Text style={{ fontWeight: "700", color: C.primary }}>{fuelNeeded > 0 ? `${fuelNeeded} XP Needed` : "Ready"}</Text>
+              </Text>
             </View>
-            <Text style={{ fontSize: 11, color: C.outline, marginTop: 6 }}>
-              {currentCityName} ➡️ {nextCityName} ({fuelNeeded} Fuel remaining)
-            </Text>
           </View>
         </View>
 
@@ -543,13 +560,15 @@ export default function ParentDashboard() {
           <TouchableOpacity 
             style={[styles.glassCard, styles.activityCard]}
             activeOpacity={0.8}
-            onPress={() => router.push('/parent/assessment-history')}
+            onPress={() => router.push('/parent/kids-activity' as any)}
           >
             <View style={styles.activityLeft}>
               <MaterialIcons name="schedule" size={24} color={C.outline} />
               <View>
                 <Text style={styles.activityTitle}>Last Activity</Text>
-                <Text style={styles.activityDesc}>Math Apple quest solved • 2 hours ago</Text>
+                <Text style={styles.activityDesc}>
+                  {report?.lastActivity || "No recent activity yet"}
+                </Text>
               </View>
             </View>
             <MaterialIcons name="chevron-right" size={24} color={C.primary} />
@@ -559,10 +578,7 @@ export default function ParentDashboard() {
           <TouchableOpacity 
             style={[styles.glassCard, styles.activityCard]}
             activeOpacity={0.8}
-            onPress={() => router.push({
-              pathname: "/practice/webview" as any,
-              params: { path: "/parent/kids-activity" }
-            })}
+            onPress={() => router.push('/parent/kids-activity' as any)}
           >
             <View style={styles.activityLeft}>
               <MaterialIcons name="timeline" size={24} color={C.secondary} />

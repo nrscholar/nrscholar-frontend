@@ -12,7 +12,7 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
-import { practiceApi, QuestionData, authApi } from "../services/api";
+import { practiceApi, QuestionData, authApi, parentApi } from "../services/api";
 import { notifyTestCleared } from "../services/notifications";
 import { DraggableOption } from "../components/DraggableOption";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -302,9 +302,44 @@ export default function SessionScreen() {
     }
 
     try {
+      const sessionStartRef = Date.now();
       await practiceApi.submitResult(String(chapterId), questions.length, tc, tracker);
       const score = Math.round((tc / questions.length) * 100);
       const chapter = String(chapterName || "the chapter");
+
+      // ── Log activity to parent dashboard ──────────────────────────────────
+      try {
+        const sessionEndTime = Date.now();
+        const timeTakenSeconds = Math.max(60, Math.round((sessionEndTime - sessionStartRef) / 1000));
+
+        // Build per-question details from the full questions list
+        const correctSet = new Set(
+          tracker.map((t: any) => String(t.questionId))
+        );
+        const details = questions.map((qs) => {
+          const qTextLocal =
+            qs.interaction?.details?.question || qs.question || "Practice Question";
+          const isCorrectLocal = !correctSet.has(String(qs._id));
+          return {
+            questionText: qTextLocal,
+            isCorrect: isCorrectLocal,
+            timeSpent: Math.max(10, Math.round(timeTakenSeconds / questions.length)),
+          };
+        });
+
+        await parentApi.logActivity({
+          title: `${chapter} Practice`,
+          type: "quiz",
+          timeTaken: timeTakenSeconds,
+          correctQuestions: tc,
+          totalQuestions: questions.length,
+          details,
+        });
+      } catch (logErr) {
+        console.warn("Activity log failed (non-critical):", logErr);
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
       try {
         const userRes = await authApi.getMe();
         const childName = userRes.data?.childName || userRes.data?.fullName || "Your child";

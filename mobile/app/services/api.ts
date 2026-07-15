@@ -263,6 +263,19 @@ export const parentApi = {
 
   resetJourney: () =>
     apiRequest("/api/parent/reset-journey", { method: "POST", auth: true }),
+
+  getActivities: (tzOffsetMinutes?: number) =>
+    apiRequest("/api/parent/activities" + (tzOffsetMinutes !== undefined ? `?tz_offset_minutes=${tzOffsetMinutes}` : ""), { auth: true }),
+
+  logActivity: (data: {
+    title: string;
+    type: string;
+    timeTaken: number;
+    correctQuestions: number;
+    totalQuestions: number;
+    details: { questionText: string; isCorrect: boolean; timeSpent: number }[];
+  }) =>
+    apiRequest("/api/parent/activities", { method: "POST", auth: true, body: data }),
 };
 
 // ── Scan & Learn API ──────────────────────────────────────────────────────────

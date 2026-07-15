@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { authApi } from "../services/api";
+import { ProgressBar } from "../../components/ui/progress-bar";
 
 const { width } = Dimensions.get("window");
 
@@ -38,7 +39,6 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
 
   // Anim values
-  const trainTranslateX = useRef(new Animated.Value(0)).current;
   const trainTranslateY = useRef(new Animated.Value(0)).current;
 
   const [fuel, setFuel] = useState(350);
@@ -110,24 +110,11 @@ export default function HomeScreen() {
   const prevMilestoneFuel = (nextLockedIndex - 1) * 500;
   const currentLegFuelTotal = 500;
   const currentLegFuelEarned = Math.max(0, fuel - prevMilestoneFuel);
-  const fuelPercentage = Math.min(100, Math.max(0, (currentLegFuelEarned / currentLegFuelTotal) * 100));
+  const currentLegFuelPercentage = Math.min(100, Math.max(0, (currentLegFuelEarned / currentLegFuelTotal) * 100));
 
   useEffect(() => {
-    // Train route sliding animation
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(trainTranslateX, {
-          toValue: width * 0.45,
-          duration: 4000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(trainTranslateX, {
-          toValue: 0,
-          duration: 4000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
+    // Train route sliding animation removed to make it dynamic based on fuel
+
 
     // Train bobbing/jitter
     Animated.loop(
@@ -200,14 +187,12 @@ export default function HomeScreen() {
             </View>
             <Text style={styles.fuelValue}>🚂 {fuel} Fuel</Text>
           </View>
-          <View style={styles.progressTrack}>
-            <LinearGradient
-              colors={[C.primary, C.secondaryContainer]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={[styles.progressFill, { width: `${fuelPercentage}%` }]}
-            />
-          </View>
+          <ProgressBar
+            progress={currentLegFuelPercentage}
+            colors={[C.primary, C.secondaryContainer]}
+            trackStyle={styles.progressTrack}
+            fillStyle={styles.progressFill}
+          />
           <View style={styles.destinationAlertRow}>
             <MaterialIcons name="pin-drop" size={16} color={C.orange} />
             <Text style={styles.destinationText}>
@@ -245,8 +230,9 @@ export default function HomeScreen() {
                 style={[
                   styles.trainWrapper,
                   {
+                    left: `${currentLegFuelPercentage}%`,
                     transform: [
-                      { translateX: trainTranslateX },
+                      { translateX: -15 },
                       { translateY: trainTranslateY },
                     ],
                   },
