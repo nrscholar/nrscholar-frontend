@@ -178,10 +178,14 @@ export default function BossBattleScreen() {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
-                    chapterId: `${chapterId}_${level}`,
+                    chapterId: chapterId,
                     currentQ: 10,
                     score: existingAnswers.length,
                     completed: true,
+                    readingCompleted: true,
+                    questionsCompleted: true,
+                    bossCompleted: true,
+                    chapterCompleted: true,
                     answers: existingAnswers
                   })
                 }).catch(console.error);
@@ -216,22 +220,26 @@ export default function BossBattleScreen() {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({
-                        chapterId: `${chapterId}_${level}`,
+                        chapterId: chapterId,
                         currentQ: 9, // Rewind to 10th question
                         score: rewindScore,
                         completed: false,
+                        readingCompleted: true,
+                        questionsCompleted: false,
+                        bossCompleted: false,
+                        chapterCompleted: false,
                         answers: rewindAnswers
                       })
                     }).then(() => {
-                        const returnDest = chapterName ? `/chapter-levels?chapterId=${chapterId}&chapterName=${encodeURIComponent(chapterName)}` : `/chapter-levels?chapterId=${chapterId}`;
+                        const returnDest = `/practice/chapters`;
                         navigate(returnDest, { replace: true });
                     }).catch(() => {
-                        navigate("/practice/journey-map", { replace: true });
+                        navigate("/practice/chapters", { replace: true });
                     });
                 } else if (returnTo) {
                    navigate(returnTo, { state: location.state, replace: true });
                 } else {
-                   navigate("/practice/journey-map", { replace: true });
+                   navigate("/practice/chapters", { replace: true });
                 }
             }, 3000);
           } else {

@@ -290,7 +290,7 @@ export default function HomeScreen() {
 
         {/* QUICK ACTIONS BENTO GRID */}
         <div className="flex flex-col gap-[14px] relative z-10">
-          <h2 className="text-[10px] font-bold text-[#767683] tracking-[1.5px] px-1">{t('explorer_mission_controls')} 13</h2>
+          <h2 className="text-[10px] font-bold text-[#767683] tracking-[1.5px] px-1">{t('explorer_mission_controls')}   </h2>
           
           <div className="grid grid-cols-2 gap-3">
             {/* Continue Learning */}
@@ -350,6 +350,8 @@ export default function HomeScreen() {
                 <p className="text-[10px] text-[#767683] font-semibold">{t('unlocked_cards_badges')}</p>
               </div>
             </button>
+
+
           </div>
 
           {/* Multiplayer Challenge */}

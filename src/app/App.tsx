@@ -18,7 +18,6 @@ import ProfileScreen from "../features/users/pages/ProfileScreen";
 
 // Dashboard feature pages
 import AssessmentSummary from "../features/dashboard/pages/AssessmentSummary";
-import ChapterLevelsScreen from "../features/dashboard/pages/ChapterLevelsScreen";
 import ChapterQuestionsScreen from "../features/dashboard/pages/ChapterQuestionsScreen";
 import ChaptersScreen from "../features/dashboard/pages/ChaptersScreen";
 import ChatScreen from "../features/dashboard/pages/ChatScreen";
@@ -54,7 +53,9 @@ const BossBattleScreen = lazy(() => import("../features/dashboard/pages/BossBatt
 const MultiplayerHubScreen = lazy(() => import("../features/dashboard/pages/MultiplayerHubScreen"));
 const MultiplayerRoomScreen = lazy(() => import("../features/dashboard/pages/MultiplayerRoomScreen"));
 const MultiplayerBattleScreen = lazy(() => import("../features/dashboard/pages/MultiplayerBattleScreen"));
-
+const TextbookSubjectsScreen = lazy(() => import("../features/dashboard/pages/TextbookSubjectsScreen"));
+const TextbookChaptersScreen = lazy(() => import("../features/dashboard/pages/TextbookChaptersScreen"));
+const ChapterReaderScreen = lazy(() => import("../features/dashboard/pages/ChapterReaderScreen"));
 const AuthHandler = () => {
   const navigate = useNavigate();
   useEffect(() => {
@@ -100,7 +101,7 @@ function App() {
             <Route path="/edit-profile" element={<EditProfileScreen />} />
             <Route path="/assessment-summary" element={<AssessmentSummary />} />
             <Route path="/scan-and-learn" element={<ScanAndLearn />} />
-            <Route path="/chapter-levels" element={<ChapterLevelsScreen />} />
+            <Route path="/chapter-reader" element={<ChapterReaderScreen />} />
             <Route path="/chapter-questions" element={<ChapterQuestionsScreen />} />
             <Route path="/practice/inventory" element={<InventoryScreen />} />
             <Route path="/practice/journey-map" element={<JourneyMapScreen />} />
@@ -133,6 +134,9 @@ function App() {
             <Route path="/multiplayer-hub" element={<MultiplayerHubScreen />} />
             <Route path="/multiplayer-room/:roomId" element={<MultiplayerRoomScreen />} />
             <Route path="/multiplayer-battle/:roomId" element={<MultiplayerBattleScreen />} />
+            <Route path="/textbook/subjects" element={<TextbookSubjectsScreen />} />
+            <Route path="/textbook/chapters" element={<TextbookChaptersScreen />} />
+            <Route path="/textbook/reader" element={<ChapterReaderScreen />} />
           </Route>
           
           <Route path="*" element={<NotFoundScreen />} />

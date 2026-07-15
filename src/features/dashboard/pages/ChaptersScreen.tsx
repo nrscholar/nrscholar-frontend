@@ -20,10 +20,14 @@ export default function ChaptersScreen() {
   const [activeSubject, setActiveSubject] = useState<any>(null);
   const [chapters, setChapters] = useState<any[]>([]);
   const [completedChapters, setCompletedChapters] = useState<string[]>([]);
+  const [chapterProgressMap, setChapterProgressMap] = useState<Record<string, any>>({});
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [childName, setChildName] = useState("Kid");
   const [childPhoto, setChildPhoto] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
+  const [expandedChapter, setExpandedChapter] = useState<string | null>(null);
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [questionsLoading, setQuestionsLoading] = useState(false);
   
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -92,8 +96,16 @@ export default function ChaptersScreen() {
         }
         
         if (pData.success && pData.data) {
+          const progMap: Record<string, any> = {};
+          pData.data.forEach((p: any) => {
+            // handle legacy completed status as chapterCompleted
+            if (p.completed && !p.chapterCompleted) p.chapterCompleted = true;
+            progMap[p.chapterId] = p;
+          });
+          setChapterProgressMap(progMap);
+          
           const completedIds = pData.data
-            .filter((p: any) => p.completed)
+            .filter((p: any) => p.chapterCompleted || p.completed)
             .map((p: any) => p.chapterId);
           setCompletedChapters(completedIds);
         }
@@ -113,6 +125,29 @@ export default function ChaptersScreen() {
   const progressPercent = totalChapters > 0 ? (completedChaptersCount / totalChapters) * 100 : 0;
   
   const currentChapterIndex = chapters.findIndex(ch => !isChapterCompleted(ch._id));
+
+  const handleToggleChapter = async (chapterId: string, chapterName: string) => {
+    const isCompleted = isChapterCompleted(chapterId);
+    
+    if (isCompleted) {
+      if (expandedChapter === chapterId) {
+        setExpandedChapter(null);
+      } else {
+        setExpandedChapter(chapterId);
+      }
+      return;
+    }
+
+    const progress = chapterProgressMap[chapterId] || {};
+    
+    if (!progress.readingCompleted) {
+      navigate(`/chapter-reader?chapterId=${chapterId}&title=${encodeURIComponent(chapterName)}`);
+    } else if (!progress.questionsCompleted) {
+      navigate(`/chapter-questions?chapterId=${chapterId}&chapterName=${encodeURIComponent(chapterName)}`);
+    } else if (!progress.bossCompleted) {
+      navigate(`/boss-battle?worldId=w1&chapterId=${chapterId}&difficulty=easy&returnTo=/practice/journey-map`);
+    }
+  };
 
   const radius = 20;
   const circumference = 2 * Math.PI * radius;
@@ -231,54 +266,89 @@ export default function ChaptersScreen() {
                   const isCurrent = !isCompleted && index === currentChapterIndex;
                   const status = isCompleted ? "completed" : isCurrent ? "current" : "locked";
                   const IconComponent = chapterIcons[index % chapterIcons.length];
+                  
+                  const isExpanded = expandedChapter === chap._id;
+                  
+                  // Question accordion render function for completed chapter
+                  const renderQuestions = () => (
+                    isExpanded && (
+                      <div className="mt-4 pt-4 border-t border-[rgba(0,0,0,0.05)] w-full text-left">
+                        <div className="flex flex-col gap-3">
+                          <button onClick={(e) => { e.stopPropagation(); navigate(`/chapter-reader?chapterId=${chap._id}&title=${encodeURIComponent(chap.name)}`); }} className="bg-white border-2 border-[#141779] text-[#141779] px-4 py-2 rounded-xl hover:bg-gray-50 transition-all font-bold text-sm w-full text-left flex justify-between">
+                            <span>Read PDF</span>
+                            <span>→</span>
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); navigate(`/chapter-questions?chapterId=${chap._id}&chapterName=${encodeURIComponent(chap.name)}`); }} className="bg-white border-2 border-[#141779] text-[#141779] px-4 py-2 rounded-xl hover:bg-gray-50 transition-all font-bold text-sm w-full text-left flex justify-between">
+                            <span>Practice Questions</span>
+                            <span>→</span>
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); navigate(`/boss-battle?worldId=w1&chapterId=${chap._id}&difficulty=easy&returnTo=/practice/journey-map`); }} className="bg-white border-2 border-[#141779] text-[#141779] px-4 py-2 rounded-xl hover:bg-gray-50 transition-all font-bold text-sm w-full text-left flex justify-between">
+                            <span>Boss Round</span>
+                            <span>→</span>
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  );
 
                   if (status === "completed") {
                     return (
-                      <button key={chap._id} onClick={() => navigate(`/chapter-levels?chapterId=${chap._id}&chapterName=${encodeURIComponent(chap.name)}`)} className="flex items-center gap-4 bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.8)] text-left hover:bg-white transition-colors w-full">
-                        <div className="w-12 h-12 rounded-full bg-[rgba(0,106,98,0.1)] border border-[rgba(0,106,98,0.2)] flex items-center justify-center shrink-0">
-                          <IconComponent size={24} color="#006a62" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-xs font-bold text-[#006a62] tracking-[1px] mb-0.5 uppercase">{t('chapter')} {index + 1}</p>
-                          <h3 className="text-lg font-medium text-[#141779]">{chap.name}</h3>
-                        </div>
-                        <CheckCircle size={24} color="#006a62" />
-                      </button>
+                      <div key={chap._id} className={`flex flex-col bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.8)] ${isExpanded ? 'shadow-md' : 'hover:bg-white'} transition-all w-full`}>
+                        <button onClick={() => handleToggleChapter(chap._id, chap.name)} className="flex items-center gap-4 text-left w-full">
+                          <div className="w-12 h-12 rounded-full bg-[rgba(0,106,98,0.1)] border border-[rgba(0,106,98,0.2)] flex items-center justify-center shrink-0">
+                            <IconComponent size={24} color="#006a62" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-xs font-bold text-[#006a62] tracking-[1px] mb-0.5 uppercase">{t('chapter')} {index + 1}</p>
+                            <h3 className="text-lg font-medium text-[#141779]">{chap.name}</h3>
+                          </div>
+                          <CheckCircle size={24} color="#006a62" />
+                        </button>
+                        {renderQuestions()}
+                      </div>
                     );
                   }
 
                   if (status === "current") {
                     return (
-                      <div key={chap._id} onClick={() => navigate(`/chapter-levels?chapterId=${chap._id}&chapterName=${encodeURIComponent(chap.name)}`)} className="relative flex items-center gap-4 bg-[rgba(87,250,233,0.3)] rounded-2xl p-4 border-2 border-[rgba(0,106,98,0.3)] overflow-hidden shadow-[0_4px_10px_rgba(0,0,0,0.1)] cursor-pointer hover:opacity-90">
-                        <motion.div
-                          animate={{ scale: [1, 1.05, 1] }}
-                          transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-                          className="absolute -top-8 -right-8 w-24 h-24 rounded-full bg-[rgba(0,106,98,0.05)]"
-                        />
-                        <div className="w-12 h-12 rounded-full bg-[#006a62] flex items-center justify-center shrink-0 shadow-[0_4px_8px_rgba(0,0,0,0.3)] z-10">
-                          <IconComponent size={24} color="white" />
+                      <div key={chap._id} className={`flex flex-col relative bg-[rgba(87,250,233,0.3)] rounded-2xl p-4 border-2 border-[rgba(0,106,98,0.3)] overflow-hidden shadow-[0_4px_10px_rgba(0,0,0,0.1)] transition-all ${isExpanded ? 'ring-2 ring-[#006a62]' : 'hover:opacity-95'}`}>
+                        {!isExpanded && (
+                            <motion.div
+                            animate={{ scale: [1, 1.05, 1] }}
+                            transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                            className="absolute -top-8 -right-8 w-24 h-24 rounded-full bg-[rgba(0,106,98,0.05)] pointer-events-none"
+                            />
+                        )}
+                        <div onClick={() => handleToggleChapter(chap._id, chap.name)} className="flex items-center gap-4 cursor-pointer relative z-10 w-full">
+                            <div className="w-12 h-12 rounded-full bg-[#006a62] flex items-center justify-center shrink-0 shadow-[0_4px_8px_rgba(0,0,0,0.3)]">
+                            <IconComponent size={24} color="white" />
+                            </div>
+                            <div className="flex-1">
+                            <p className="text-xs font-bold text-[#006a62] tracking-[1px] mb-0.5 uppercase">{t('chapter')} {index + 1}</p>
+                            <h3 className="text-lg font-bold text-[#141779]">{chap.name}</h3>
+                            </div>
+                            {!isExpanded && (
+                                <button onClick={(e) => { e.stopPropagation(); handleToggleChapter(chap._id, chap.name); }} className="bg-[#141779] px-6 py-2 rounded-full hover:opacity-90 transition-opacity">
+                                <span className="text-white text-sm font-semibold">{t('start')}</span>
+                                </button>
+                            )}
                         </div>
-                        <div className="flex-1 z-10">
-                          <p className="text-xs font-bold text-[#006a62] tracking-[1px] mb-0.5 uppercase">{t('chapter')} {index + 1}</p>
-                          <h3 className="text-lg font-bold text-[#141779]">{chap.name}</h3>
-                        </div>
-                        <button onClick={(e) => { e.stopPropagation(); navigate(`/chapter-levels?chapterId=${chap._id}&chapterName=${encodeURIComponent(chap.name)}`); }} className="bg-[#141779] px-6 py-2 rounded-full z-10 hover:opacity-90 transition-opacity">
-                          <span className="text-white text-sm font-semibold">{t('start')}</span>
-                        </button>
                       </div>
                     );
                   }
 
                   return (
-                    <div key={chap._id} onClick={() => showToast(t('complete_chapter_to_unlock', { chapter: currentChapterIndex + 1 }))} className="flex items-center gap-4 bg-[#f2f4f6] opacity-60 rounded-2xl p-4 border border-[rgba(118,118,131,0.1)] cursor-pointer">
-                      <div className="w-12 h-12 rounded-full bg-[rgba(118,118,131,0.1)] flex items-center justify-center shrink-0">
-                        <IconComponent size={24} color="#767683" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-xs font-bold text-[#767683] tracking-[1px] mb-0.5 uppercase">{t('chapter')} {index + 1}</p>
-                        <h3 className="text-lg font-medium text-[#464652]">{chap.name}</h3>
-                      </div>
-                      <Lock size={24} color="#767683" />
+                    <div key={chap._id} className={`flex flex-col bg-[#f2f4f6] opacity-60 rounded-2xl p-4 border border-[rgba(118,118,131,0.1)] transition-all`}>
+                      <button onClick={() => { if(!isExpanded) showToast(t('complete_chapter_to_unlock', { chapter: currentChapterIndex + 1 })); }} className="flex items-center gap-4 text-left w-full cursor-pointer">
+                          <div className="w-12 h-12 rounded-full bg-[rgba(118,118,131,0.1)] flex items-center justify-center shrink-0">
+                            <IconComponent size={24} color="#767683" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-xs font-bold text-[#767683] tracking-[1px] mb-0.5 uppercase">{t('chapter')} {index + 1}</p>
+                            <h3 className="text-lg font-medium text-[#464652]">{chap.name}</h3>
+                          </div>
+                          <Lock size={24} color="#767683" />
+                      </button>
                     </div>
                   );
                 })

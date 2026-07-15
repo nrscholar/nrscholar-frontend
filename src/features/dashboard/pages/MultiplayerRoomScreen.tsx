@@ -79,16 +79,22 @@ export default function MultiplayerRoomScreen() {
       </header>
 
       <main className="px-6 flex-1 flex flex-col items-center justify-center relative z-10">
-        <div className="bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] backdrop-blur-md rounded-[32px] p-8 w-full max-w-sm flex flex-col items-center">
+          <div className="bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] backdrop-blur-md rounded-[32px] p-8 w-full max-w-sm flex flex-col items-center">
           <p className="text-[#a4a8f0] font-bold text-sm mb-2 uppercase tracking-wider">Room Code</p>
-          <div className="bg-white px-6 py-4 rounded-2xl flex items-center gap-4 mb-8 shadow-[0_0_20px_rgba(255,255,255,0.2)]">
+          <div className="bg-white px-6 py-4 rounded-2xl flex items-center gap-4 mb-4 shadow-[0_0_20px_rgba(255,255,255,0.2)]">
             <span className="text-4xl font-black text-[#141779] tracking-[8px]">{room.code}</span>
             <button onClick={copyCode} className="p-2 bg-[#f4efff] rounded-xl hover:bg-[#e8ddff] transition-colors">
               {copied ? <CheckCircle size={24} color="#006a62" /> : <Copy size={24} color="#141779" />}
             </button>
           </div>
 
-          <div className="w-full flex items-center justify-between mt-4">
+          {room.guestJoinError && (
+            <div className="bg-[#ffdad6] text-[#ba1a1a] px-4 py-3 rounded-xl text-sm font-bold w-full text-center mb-6 animate-pulse">
+              {room.guestJoinError}
+            </div>
+          )}
+
+          <div className="w-full flex items-center justify-between mt-2">
             {/* Player 1 */}
             <div className="flex flex-col items-center">
               <div className="w-20 h-20 rounded-full bg-[#57fae9] border-4 border-white overflow-hidden shadow-[0_0_15px_rgba(87,250,233,0.5)]">
