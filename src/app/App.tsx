@@ -73,6 +73,17 @@ const ProtectedRoute = () => {
 };
 
 function App() {
+  // Intercept token from query parameter (passed from mobile webview)
+  const params = new URLSearchParams(window.location.search);
+  const urlToken = params.get("token");
+  if (urlToken) {
+    localStorage.setItem("userToken", urlToken);
+    params.delete("token");
+    const cleanSearch = params.toString();
+    const newUrl = window.location.pathname + (cleanSearch ? `?${cleanSearch}` : "") + window.location.hash;
+    window.history.replaceState({}, "", newUrl);
+  }
+
   return (
     <BrowserRouter>
       <AuthHandler />

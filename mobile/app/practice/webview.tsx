@@ -30,7 +30,11 @@ export default function WebViewScreen() {
     );
   }
 
-  const url = `${WEBAPP_URL}${path || "/home"}`;
+  let url = `${WEBAPP_URL}${path || "/home"}`;
+  if (token) {
+    const separator = url.includes("?") ? "&" : "?";
+    url = `${url}${separator}token=${encodeURIComponent(token)}`;
+  }
 
   // Inject token into localStorage before page contents load so user is auto-authorized
   const injectedJS = token
