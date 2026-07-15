@@ -85,6 +85,22 @@ export default function ParentLessonPlayerScreen() {
   const renderSlide = (slide: any) => {
     const IconComponent = slide.icon ? (Icons as any)[slide.icon] : null;
 
+    if (slide.type === 'metadata_intro') {
+      return (
+        <div className="text-center h-full flex flex-col justify-center items-center">
+          {slide.imageUrl && (
+            <img src={slide.imageUrl} alt={slide.title} className="w-full h-56 object-cover rounded-3xl shadow-md mb-8" />
+          )}
+          <h4 className="text-[#006a62] font-bold tracking-widest uppercase mb-3 text-sm">{slide.category}</h4>
+          <h2 className="text-3xl font-bold text-[#141779] mb-4">{slide.title}</h2>
+          <div className="flex items-center justify-center gap-6 text-[#767683] font-medium mt-4">
+            {slide.xp && <span className="flex items-center gap-1"><Icons.Star size={18} className="text-[#ffb300]" /> {slide.xp} XP</span>}
+            {slide.duration && <span className="flex items-center gap-1"><Icons.Clock size={18} /> {slide.duration} min</span>}
+          </div>
+        </div>
+      );
+    }
+
     if (slide.type === 'info') {
       return (
         <div className="text-center">
