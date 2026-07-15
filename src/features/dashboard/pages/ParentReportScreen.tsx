@@ -473,33 +473,38 @@ export default function ParentReportScreen() {
             )}
             {subjects.map((s: any, idx: number) => {
               const col = SUBJECT_COLORS[idx % SUBJECT_COLORS.length];
-              const isExpanded = expandedSubject === s.subjectId;
-              const subjChapters = chaptersBySubject[s.subjectId] || [];
+              const isExpanded = expandedSubject === s.subject;
+              const subjChapters = chaptersBySubject[s.subject] || [];
+              const accuracy = s.accuracy ?? 0;
+              const progress = s.progress ?? accuracy;
+              const correctAnswers = s.correctAnswers ?? "—";
+              const wrongAnswers = s.wrongAnswers ?? "—";
+              const bossSuccessRate = s.bossSuccessRate != null ? `${s.bossSuccessRate}%` : "—";
               return (
-                <Card key={s.subjectId}>
+                <Card key={s.subject || idx}>
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <h3 className="text-sm font-bold text-[#141779]">{s.subject}</h3>
-                      <p className="text-[10px] text-[#767683]">{s.chaptersCompleted}/{s.totalChapters} chapters completed</p>
+                      <p className="text-[10px] text-[#767683]">{s.chaptersCompleted ?? 0}/{s.totalChapters ?? "?"} chapters completed</p>
                     </div>
-                    <span className={`text-xs font-black px-2.5 py-1 rounded-full ${s.accuracy >= 80 ? "bg-green-100 text-green-700" : s.accuracy >= 60 ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"}`}>
-                      {s.accuracy}% acc
+                    <span className={`text-xs font-black px-2.5 py-1 rounded-full ${accuracy >= 80 ? "bg-green-100 text-green-700" : accuracy >= 60 ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"}`}>
+                      {accuracy}% acc
                     </span>
                   </div>
 
                   <div className="mb-1 flex justify-between">
                     <span className="text-[10px] font-bold text-[#464652]">Progress</span>
-                    <span className="text-[10px] font-bold text-[#141779]">{s.progress}%</span>
+                    <span className="text-[10px] font-bold text-[#141779]">{progress}%</span>
                   </div>
-                  <ProgressBar value={s.progress} color={col.bar} />
+                  <ProgressBar value={progress} color={col.bar} />
 
                   <div className="grid grid-cols-3 gap-2 mt-3">
-                    <StatBox label="Correct" value={s.correctAnswers} color="text-[#006a62]" />
-                    <StatBox label="Wrong"   value={s.wrongAnswers}   color="text-[#ba1a1a]" />
-                    <StatBox label="Boss"    value={`${s.bossSuccessRate}%`} color="text-[#30007f]" />
+                    <StatBox label="Correct" value={correctAnswers} color="text-[#006a62]" />
+                    <StatBox label="Wrong"   value={wrongAnswers}   color="text-[#ba1a1a]" />
+                    <StatBox label="Boss"    value={bossSuccessRate} color="text-[#30007f]" />
                   </div>
 
-                  {s.monthImprovement !== null && s.monthImprovement !== undefined && (
+                  {s.monthImprovement != null && (
                     <div className={`mt-3 rounded-xl p-2.5 flex justify-between items-center ${s.monthImprovement >= 0 ? "bg-green-50 border border-green-100" : "bg-red-50 border border-red-100"}`}>
                       <span className="text-[10px] font-bold text-[#464652]">Month vs Last Month</span>
                       <span className={`text-xs font-black ${s.monthImprovement >= 0 ? "text-green-700" : "text-red-700"}`}>
@@ -509,7 +514,7 @@ export default function ParentReportScreen() {
                   )}
 
                   {subjChapters.length > 0 && (
-                    <button onClick={() => setExpandedSubject(isExpanded ? null : s.subjectId)}
+                    <button onClick={() => setExpandedSubject(isExpanded ? null : s.subject)}
                       className="mt-3 w-full flex items-center justify-center gap-1 text-[11px] font-bold text-[#141779] py-2 bg-[#f2f4f6] rounded-xl hover:bg-gray-100 transition-colors">
                       {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                       {isExpanded ? "Hide" : "Show"} Chapters ({subjChapters.length})
@@ -519,7 +524,7 @@ export default function ParentReportScreen() {
                   {isExpanded && (
                     <div className="mt-3 flex flex-col gap-2">
                       {subjChapters.map((ch: any, ci: number) => (
-                        <div key={ci} className="flex items-center justify-between bg-[#f2f4f6] rounded-xl p-3">
+                        <div key={ch.id || ci} className="flex items-center justify-between bg-[#f2f4f6] rounded-xl p-3">
                           <div className="flex items-center gap-2">
                             {ch.status === "Completed"
                               ? <CheckCircle size={16} className="text-green-600 shrink-0" />
@@ -529,9 +534,9 @@ export default function ParentReportScreen() {
                             <div>
                               <p className="text-xs font-bold text-[#141779]">{ch.name}</p>
                               <div className="flex gap-1 mt-0.5 flex-wrap">
-                                {ch.readingCompleted    && <span className="text-[8px] bg-blue-100   text-blue-700   rounded px-1 font-bold">📖 Read</span>}
-                                {ch.questionsCompleted  && <span className="text-[8px] bg-green-100  text-green-700  rounded px-1 font-bold">✅ Q&amp;A</span>}
-                                {ch.bossCompleted       && <span className="text-[8px] bg-purple-100 text-purple-700 rounded px-1 font-bold">🏆 Boss</span>}
+                                {ch.readingCompleted   && <span className="text-[8px] bg-blue-100   text-blue-700   rounded px-1 font-bold">📖 Read</span>}
+                                {ch.questionsCompleted && <span className="text-[8px] bg-green-100  text-green-700  rounded px-1 font-bold">✅ Q&A</span>}
+                                {ch.bossCompleted      && <span className="text-[8px] bg-purple-100 text-purple-700 rounded px-1 font-bold">🏆 Boss</span>}
                               </div>
                             </div>
                           </div>

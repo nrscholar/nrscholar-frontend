@@ -40,7 +40,18 @@ export default function HomeScreen() {
         }
       } catch (e) {}
     };
+    const fetchMascotNarration = async () => {
+      try {
+        const res = await apiFetch("/api/dashboard/mascot-narration");
+        const json = await res.json();
+        if (json.success && json.narration) {
+          setMascotMsg(json.narration);
+          setTimeout(() => setMascotMsg(""), 8000);
+        }
+      } catch (e) {}
+    };
     fetchNotifications();
+    fetchMascotNarration();
   }, []);
 
   useEffect(() => {
@@ -87,8 +98,8 @@ export default function HomeScreen() {
         const msRes = await apiFetch("/api/retention/missions/today");
         if (msRes.ok) {
           const msData = await msRes.json();
-          if (msData && Array.isArray(msData.missions)) {
-            setMissions(msData.missions);
+          if (msData && Array.isArray(msData)) {
+            setMissions(msData);
           }
         }
         
@@ -465,16 +476,25 @@ export default function HomeScreen() {
           </motion.div>
         )}
         <button 
-          onClick={() => {
-            const quotes = [
-              "You're doing great! 🚀", 
-              "Did you check your missions? 🎯", 
-              "Keep up the streak! 🔥", 
-              "I smell mystery boxes... 📦",
-              "Let's learn something new! 📚"
-            ];
-            setMascotMsg(quotes[Math.floor(Math.random() * quotes.length)]);
-            setTimeout(() => setMascotMsg(""), 3500);
+          onClick={async () => {
+            try {
+              const res = await apiFetch("/api/dashboard/mascot-narration");
+              const json = await res.json();
+              if (json.success && json.narration) {
+                setMascotMsg(json.narration);
+                setTimeout(() => setMascotMsg(""), 5000);
+              }
+            } catch (e) {
+              const quotes = [
+                "You're doing great! 🚀", 
+                "Did you check your missions? 🎯", 
+                "Keep up the streak! 🔥", 
+                "I smell mystery boxes... 📦",
+                "Let's learn something new! 📚"
+              ];
+              setMascotMsg(quotes[Math.floor(Math.random() * quotes.length)]);
+              setTimeout(() => setMascotMsg(""), 3500);
+            }
           }}
           className="bg-white rounded-full w-14 h-14 shadow-[0_4px_15px_rgba(0,0,0,0.15)] border-2 border-[#141779] flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
         >

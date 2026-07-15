@@ -187,7 +187,7 @@ export default function ParentLessonsScreen() {
           <TrendingUp size={20} strokeWidth={2} />
           <span className="text-[10px] font-bold tracking-wide">Growth</span>
         </button>
-        {/* Community */}
+        {/* Community - Hidden until built
         <button
           onClick={() => alert("Community features are coming soon!")}
           className="flex flex-col items-center justify-center gap-1 py-1.5 px-4 rounded-full transition-all duration-300 text-[#464652] hover:text-[#007168] cursor-pointer opacity-80"
@@ -195,6 +195,7 @@ export default function ParentLessonsScreen() {
           <Users size={20} strokeWidth={2} />
           <span className="text-[10px] font-bold tracking-wide">Community</span>
         </button>
+        */}
         {/* Settings */}
         <button
           onClick={() => navigate('/parent/settings')}

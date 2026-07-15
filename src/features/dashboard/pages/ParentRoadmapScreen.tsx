@@ -227,7 +227,7 @@ export default function ParentRoadmapScreen() {
         </div>
 
         {/* Floating Action Button */}
-        <button className="fixed bottom-24 right-6 w-14 h-14 bg-[#141779] text-white rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-transform z-40 hover:bg-[#30007f]">
+        <button onClick={() => navigate('/parent/lessons')} className="fixed bottom-24 right-6 w-14 h-14 bg-[#141779] text-white rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-transform z-40 hover:bg-[#30007f]">
           <Play size={24} fill="currentColor" />
         </button>
       </main>
