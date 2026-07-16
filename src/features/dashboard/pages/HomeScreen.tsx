@@ -40,7 +40,18 @@ export default function HomeScreen() {
         }
       } catch (e) {}
     };
+    const fetchMascotNarration = async () => {
+      try {
+        const res = await apiFetch("/api/dashboard/mascot-narration");
+        const json = await res.json();
+        if (json.success && json.narration) {
+          setMascotMsg(json.narration);
+          setTimeout(() => setMascotMsg(""), 8000);
+        }
+      } catch (e) {}
+    };
     fetchNotifications();
+    fetchMascotNarration();
   }, []);
 
   useEffect(() => {
@@ -87,8 +98,8 @@ export default function HomeScreen() {
         const msRes = await apiFetch("/api/retention/missions/today");
         if (msRes.ok) {
           const msData = await msRes.json();
-          if (msData && Array.isArray(msData.missions)) {
-            setMissions(msData.missions);
+          if (msData && Array.isArray(msData)) {
+            setMissions(msData);
           }
         }
         
@@ -164,8 +175,8 @@ export default function HomeScreen() {
   
   const xpNeeded = Math.max(0, targetXp - xp);
   const currentLegXpTotal = targetXp - prevMilestoneXp;
-  const currentLegXpEarned = Math.max(0, xp - prevMilestoneXp);
-  const xpPercentage = currentLegXpTotal > 0 ? Math.min(100, Math.max(0, (currentLegXpEarned / currentLegXpTotal) * 100)) : 100;
+  const currentLegXpPercentage = targetXp > 0 ? Math.min(100, Math.max(0, (xp / targetXp) * 100)) : 100;
+
 
   return (
     <div className="min-h-screen bg-[#f7f9fb] text-[#141779] font-sans relative overflow-x-hidden pb-24">
@@ -238,10 +249,14 @@ export default function HomeScreen() {
             </div>
             <span className="text-xs font-bold text-[#141779]">🔥 {xp} XP</span>
           </div>
-          <div className="h-2.5 bg-[rgba(20,23,121,0.1)] rounded-full overflow-hidden">
-            <div 
-              className="h-full rounded-full bg-gradient-to-r from-[#141779] to-[#57fae9] transition-all duration-500"
-              style={{ width: `${xpPercentage}%` }}
+          {/* XP Progress Bar */}
+          <div className="w-full h-3 rounded-full overflow-hidden bg-[rgba(20,23,121,0.10)] mt-1 mb-0.5">
+            <div
+              className="h-full rounded-full transition-all duration-700"
+              style={{
+                width: `${currentLegXpPercentage}%`,
+                background: "linear-gradient(to right, #141779, #57fae9)"
+              }}
             />
           </div>
           <div className="flex items-center gap-1 mt-2.5">
@@ -268,19 +283,16 @@ export default function HomeScreen() {
           <div className="h-16 flex items-center bg-[rgba(255,255,255,0.6)] rounded-2xl border border-[#e0f2f1] relative overflow-hidden mb-4 px-5">
             <div className="h-0.5 border-t-2 border-dashed border-[#141779] opacity-50 w-full" />
             
-            <motion.div 
-              className="absolute left-5"
-              animate={{ x: [0, 150, 0] }}
-              transition={{ repeat: Infinity, duration: 8, ease: "linear" }}
-            >
+            <div className="absolute inset-0 px-5 flex items-center">
+              <div style={{ width: `${currentLegXpPercentage}%`, transition: 'width 1s ease-in-out' }} />
               <motion.div
                 animate={{ y: [-3, 0, -3] }}
                 transition={{ repeat: Infinity, duration: 1, ease: "easeInOut" }}
-                className="bg-[#141779] rounded-[10px] p-2 border-[1.5px] border-[#57fae9]"
+                className="bg-[#141779] rounded-[10px] p-2 border-[1.5px] border-[#57fae9] -ml-5 shadow-sm"
               >
                 <div className="w-6 h-6 flex items-center justify-center text-white">🚂</div>
               </motion.div>
-            </motion.div>
+            </div>
           </div>
 
           <p className="text-xs font-bold text-[#141779] text-center">
@@ -290,7 +302,7 @@ export default function HomeScreen() {
 
         {/* QUICK ACTIONS BENTO GRID */}
         <div className="flex flex-col gap-[14px] relative z-10">
-          <h2 className="text-[10px] font-bold text-[#767683] tracking-[1.5px] px-1">{t('explorer_mission_controls')} 13</h2>
+          <h2 className="text-[10px] font-bold text-[#767683] tracking-[1.5px] px-1">{t('explorer_mission_controls')}   </h2>
           
           <div className="grid grid-cols-2 gap-3">
             {/* Continue Learning */}
@@ -350,6 +362,8 @@ export default function HomeScreen() {
                 <p className="text-[10px] text-[#767683] font-semibold">{t('unlocked_cards_badges')}</p>
               </div>
             </button>
+
+
           </div>
 
           {/* Multiplayer Challenge */}
@@ -463,16 +477,25 @@ export default function HomeScreen() {
           </motion.div>
         )}
         <button 
-          onClick={() => {
-            const quotes = [
-              "You're doing great! 🚀", 
-              "Did you check your missions? 🎯", 
-              "Keep up the streak! 🔥", 
-              "I smell mystery boxes... 📦",
-              "Let's learn something new! 📚"
-            ];
-            setMascotMsg(quotes[Math.floor(Math.random() * quotes.length)]);
-            setTimeout(() => setMascotMsg(""), 3500);
+          onClick={async () => {
+            try {
+              const res = await apiFetch("/api/dashboard/mascot-narration");
+              const json = await res.json();
+              if (json.success && json.narration) {
+                setMascotMsg(json.narration);
+                setTimeout(() => setMascotMsg(""), 5000);
+              }
+            } catch (e) {
+              const quotes = [
+                "You're doing great! 🚀", 
+                "Did you check your missions? 🎯", 
+                "Keep up the streak! 🔥", 
+                "I smell mystery boxes... 📦",
+                "Let's learn something new! 📚"
+              ];
+              setMascotMsg(quotes[Math.floor(Math.random() * quotes.length)]);
+              setTimeout(() => setMascotMsg(""), 3500);
+            }
           }}
           className="bg-white rounded-full w-14 h-14 shadow-[0_4px_15px_rgba(0,0,0,0.15)] border-2 border-[#141779] flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
         >

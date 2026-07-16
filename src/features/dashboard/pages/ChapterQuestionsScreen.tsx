@@ -23,6 +23,7 @@ export default function ChapterQuestionsScreen() {
   const [sessionCorrect, setSessionCorrect] = useState(0);
   const [basketCount, setBasketCount] = useState(0);
   const [userAnswers, setUserAnswers] = useState<any[]>([]);
+  const [answeredThisSession, setAnsweredThisSession] = useState(0);
   const [particlesInit, setParticlesInit] = useState(false);
   const [showSparkle, setShowSparkle] = useState(false);
   const [childName, setChildName] = useState("Kid");
@@ -70,33 +71,27 @@ export default function ChapterQuestionsScreen() {
       try {
         const [qRes, pRes] = await Promise.all([
           apiFetch(`/api/practice/questions/${chapterId}`),
-          apiFetch(`/api/practice/chapter-progress/${chapterId}_${level}`)
+          apiFetch(`/api/practice/chapter-progress/${chapterId}`)
         ]);
         const qJson = await qRes.json();
         const pJson = await pRes.json();
         
         let filtered: any[] = [];
         if (qJson.success && qJson.data) {
-          filtered = qJson.data;
-          if (level === "easy") filtered = qJson.data.slice(0, 6);
-          else if (level === "medium") filtered = qJson.data.slice(6, 12);
-          else if (level === "hard") filtered = qJson.data.slice(12, 20);
-          
+          // Take first 15 questions for the linear flow
+          filtered = qJson.data.slice(0, 15);
           setQuestionsData(filtered);
         }
         if (pJson.success && pJson.data) {
-          if (!pJson.data.completed) {
+          if (!pJson.data.questionsCompleted) {
             const savedQ = pJson.data.currentQ || 0;
             if (filtered.length > 0 && savedQ >= filtered.length) {
               // User finished questions but didn't beat boss, take them straight to boss
-              const chapterNameParam = searchParams.get("chapterName");
-              const nameQuery = chapterNameParam ? `&chapterName=${encodeURIComponent(chapterNameParam)}` : "";
-              const finalDest = `/chapter-levels?chapterId=${chapterId}${nameQuery}`;
-              const finalReturnUrl = encodeURIComponent(`/evolution?returnTo=${encodeURIComponent(finalDest)}`);
+              const finalReturnUrl = encodeURIComponent(`/practice/chapters`);
               
               sessionStorage.setItem("lastSessionAnswers", JSON.stringify(pJson.data.answers || []));
               
-              navigate(`/boss-battle?worldId=w1&chapterId=${chapterId}&difficulty=${level}&returnTo=${finalReturnUrl}`, {
+              navigate(`/boss-battle?worldId=w1&chapterId=${chapterId}&difficulty=easy&returnTo=${finalReturnUrl}`, {
                 state: { userAnswers: pJson.data.answers || [] },
                 replace: true
               });
@@ -128,12 +123,12 @@ export default function ChapterQuestionsScreen() {
     setQuestionStartTime(Date.now());
   }, [currentQ, q]);
 
-  const questionText = q?.interaction?.details?.question || q?.question || "Loading...";
+  const questionText = q?.interaction?.details?.question || q?.question || q?.text || "Loading...";
   const interactionType = q?.interaction?.type || "mcq";
 
   // MCQ
   const optionsList = q?.interaction?.details?.options || q?.options || [];
-  const correctAnswer = q?.interaction?.details?.answer || q?.answer || "";
+  const correctAnswer = q?.interaction?.details?.answer || q?.answer || q?.correctAnswer || "";
   const correctIndex = optionsList?.findIndex((opt: string) => opt === correctAnswer) ?? 0;
   
   // Drag
@@ -150,16 +145,20 @@ export default function ChapterQuestionsScreen() {
   }
 
   const submitActivityLog = async (answersToSubmit: any[]) => {
+    // Only log if new questions were actually answered in this session
+    if (answeredThisSession === 0) return;
     try {
       const tQ = questionsData.length;
-      const cQ = answersToSubmit.filter(a => a?.isCorrect).length;
-      const timeTaken = answersToSubmit.reduce((acc, a) => acc + (a?.timeSpent || 0), 0);
-      const details = answersToSubmit.filter(a => a).map(a => ({
+      // Only count answers from this session (the last answeredThisSession entries)
+      const sessionAnswers = answersToSubmit.filter(a => a != null).slice(-answeredThisSession);
+      const cQ = sessionAnswers.filter(a => a?.isCorrect).length;
+      const timeTaken = sessionAnswers.reduce((acc, a) => acc + (a?.timeSpent || 0), 0);
+      const details = sessionAnswers.map(a => ({
          questionText: a.questionText || "Question",
          isCorrect: !!a.isCorrect,
          timeSpent: a.timeSpent || 0
       }));
-      
+
       await apiFetch("/api/parent/activities", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -181,6 +180,7 @@ export default function ChapterQuestionsScreen() {
     if (interactionType === "mcq" && selected === null) return;
     if (!confirmed) {
       setConfirmed(true);
+      setAnsweredThisSession(prev => prev + 1);
       const timeSpent = Math.floor((Date.now() - questionStartTime) / 1000);
       if (isCorrect) {
         setScore((s) => s + 1);
@@ -224,11 +224,13 @@ export default function ChapterQuestionsScreen() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            chapterId: `${chapterId}_${level}`,
+            chapterId: chapterId,
             currentQ: nextQ,
             score: score,
             answers: userAnswers,
-            completed: false
+            completed: false,
+            readingCompleted: true,
+            questionsCompleted: false
           })
         }).catch(() => {});
 
@@ -244,29 +246,24 @@ export default function ChapterQuestionsScreen() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              chapterId: `${chapterId}_${level}`,
-              currentQ: total, // we might want to store more complex state if they do it linearly, but this is fine for now
+              chapterId: chapterId,
+              currentQ: total,
               score: score,
               answers: userAnswers,
-              completed: false
+              completed: false,
+              readingCompleted: true,
+              questionsCompleted: true
             })
           });
         } catch (e) {
           console.error("Failed to save progress", e);
         }
         
-        await submitActivityLog(userAnswers);
-        
-        // Final Boss Battle for this Level, which then returns to Assessment Summary or Chapter Levels
-        const chapterNameParam = searchParams.get("chapterName");
-        const nameQuery = chapterNameParam ? `&chapterName=${encodeURIComponent(chapterNameParam)}` : "";
-        
-        const finalDest = `/chapter-levels?chapterId=${chapterId}${nameQuery}`;
-        const finalReturnUrl = encodeURIComponent(`/evolution?returnTo=${encodeURIComponent(finalDest)}`);
+        const finalReturnUrl = encodeURIComponent(`/practice/chapters`);
         
         sessionStorage.setItem("lastSessionAnswers", JSON.stringify(userAnswers));
         
-        navigate(`/boss-battle?worldId=w1&chapterId=${chapterId}&difficulty=${level}&returnTo=${finalReturnUrl}`, {
+        navigate(`/boss-battle?worldId=w1&chapterId=${chapterId}&difficulty=easy&returnTo=${finalReturnUrl}`, {
           state: { userAnswers },
           replace: true
         });
@@ -282,11 +279,13 @@ export default function ChapterQuestionsScreen() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        chapterId: `${chapterId}_${level}`,
+        chapterId: chapterId,
         currentQ,
         score: score,
         answers: userAnswers,
-        completed: false
+        completed: false,
+        readingCompleted: true,
+        questionsCompleted: false
       })
     }).catch(() => {});
     

@@ -15,7 +15,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import Svg, { Circle } from "react-native-svg";
-import { authApi } from "../services/api";
+import { authApi, parentApi } from "../services/api";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -41,6 +41,8 @@ export default function LearningDNA() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [user, setUser] = React.useState<any>(null);
+  const [report, setReport] = React.useState<any>(null);
+  const [reportLoading, setReportLoading] = React.useState(true);
 
   // Ring configurations
   const radius1 = 80; // Practice
@@ -51,9 +53,14 @@ export default function LearningDNA() {
   const circ2 = 2 * Math.PI * radius2;
   const circ3 = 2 * Math.PI * radius3;
 
-  const target1 = circ1 * (1 - 0.91);
-  const target2 = circ2 * (1 - 0.82);
-  const target3 = circ3 * (1 - 0.54);
+  // Extract scores dynamically from backend report
+  const val1 = report?.learningDnaRadar?.consistency ?? 91;
+  const val2 = report?.learningDnaRadar?.accuracy ?? 82;
+  const val3 = report?.learningDnaRadar?.speed ?? 54;
+
+  const target1 = circ1 * (1 - val1 / 100);
+  const target2 = circ2 * (1 - val2 / 100);
+  const target3 = circ3 * (1 - val3 / 100);
 
   const anim1 = useRef(new Animated.Value(circ1)).current;
   const anim2 = useRef(new Animated.Value(circ2)).current;
@@ -63,23 +70,23 @@ export default function LearningDNA() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    const loadUser = async () => {
+    const loadAll = async () => {
       try {
-        const res = await authApi.getMe();
-        if (res.success) {
-          setUser(res.data?.user || res.data);
+        const userRes = await authApi.getMe();
+        if (userRes.success) {
+          setUser(userRes.data?.user || userRes.data);
+        }
+        const repRes = await parentApi.getReport();
+        if (repRes.success && repRes.data) {
+          setReport(repRes.data);
         }
       } catch (err) {
-        console.error("Failed to load user in learning-dna", err);
+        console.error("Failed to load report in learning-dna", err);
+      } finally {
+        setReportLoading(false);
       }
     };
-    loadUser();
-
-    Animated.parallel([
-      Animated.timing(anim1, { toValue: target1, duration: 1500, useNativeDriver: true }),
-      Animated.timing(anim2, { toValue: target2, duration: 1500, useNativeDriver: true }),
-      Animated.timing(anim3, { toValue: target3, duration: 1500, useNativeDriver: true }),
-    ]).start();
+    loadAll();
 
     Animated.loop(
       Animated.sequence([
@@ -87,7 +94,15 @@ export default function LearningDNA() {
         Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
       ])
     ).start();
-  }, [anim1, anim2, anim3, pulseAnim]);
+  }, [pulseAnim]);
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(anim1, { toValue: target1, duration: 1500, useNativeDriver: true }),
+      Animated.timing(anim2, { toValue: target2, duration: 1500, useNativeDriver: true }),
+      Animated.timing(anim3, { toValue: target3, duration: 1500, useNativeDriver: true }),
+    ]).start();
+  }, [report, val1, val2, val3]);
 
   return (
     <View style={styles.container}>
@@ -141,21 +156,21 @@ export default function LearningDNA() {
                 <View style={[styles.legendDot, { backgroundColor: C.secondary }]} />
                 <View style={styles.legendTextWrap}>
                   <Text style={styles.legendLabel}>Practice Learning</Text>
-                  <Text style={[styles.legendValue, { color: C.secondary }]}>91%</Text>
+                  <Text style={[styles.legendValue, { color: C.secondary }]}>{val1}%</Text>
                 </View>
               </View>
               <View style={styles.legendItem}>
                 <View style={[styles.legendDot, { backgroundColor: C.primary }]} />
                 <View style={styles.legendTextWrap}>
                   <Text style={styles.legendLabel}>Visual Learning</Text>
-                  <Text style={[styles.legendValue, { color: C.primary }]}>82%</Text>
+                  <Text style={[styles.legendValue, { color: C.primary }]}>{val2}%</Text>
                 </View>
               </View>
               <View style={styles.legendItem}>
                 <View style={[styles.legendDot, { backgroundColor: C.onPrimaryContainer }]} />
                 <View style={styles.legendTextWrap}>
                   <Text style={styles.legendLabel}>Reading Learning</Text>
-                  <Text style={[styles.legendValue, { color: C.onPrimaryContainer }]}>54%</Text>
+                  <Text style={[styles.legendValue, { color: C.onPrimaryContainer }]}>{val3}%</Text>
                 </View>
               </View>
             </View>
@@ -169,12 +184,16 @@ export default function LearningDNA() {
             <View style={styles.statCard}>
               <MaterialIcons name="timer" size={24} color={C.secondary} />
               <Text style={styles.statLabel}>Attention Span</Text>
-              <Text style={styles.statValue}>14 min</Text>
+              <Text style={styles.statValue}>
+                {report?.learningDnaRadar?.resilience ? Math.round(report.learningDnaRadar.resilience / 5) + 8 : 14} min
+              </Text>
             </View>
             <View style={styles.statCard}>
               <MaterialIcons name="speed" size={24} color={C.primary} />
               <Text style={styles.statLabel}>Learning Speed</Text>
-              <Text style={styles.statValue}>Above Avg</Text>
+              <Text style={styles.statValue}>
+                {report?.learningDnaRadar?.speed >= 80 ? "Fast" : report?.learningDnaRadar?.speed >= 60 ? "Above Avg" : "Average"}
+              </Text>
             </View>
             <View style={[styles.statCard, styles.statCardFull]}>
               <View style={styles.statRowLabel}>
@@ -217,7 +236,7 @@ export default function LearningDNA() {
                 style={styles.aiImage} 
               />
               <Text style={styles.aiQuote}>
-                "{user?.childName || "Explorer"}, your cognitive pattern shows exceptional retention during evening hours when solving hands-on challenges. Focus on visual simulators to maximize your 82% visual bias."
+                "{user?.childName || "Explorer"}, your cognitive pattern shows exceptional retention during evening hours when solving hands-on challenges. Focus on visual simulators to maximize your {val2}% visual bias."
               </Text>
             </View>
           </View>

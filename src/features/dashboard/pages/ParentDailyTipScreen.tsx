@@ -50,7 +50,7 @@ export default function ParentDailyTipScreen() {
     return Math.floor(250 * Math.pow(1.5, lvl - 3));
   }
 
-  const roadmapXp = totalStars * 10;
+  const roadmapXp = xp;
   const stageName =
     roadmapXp >= 5000 ? "Master Parent" :
     roadmapXp >= 2500 ? "Mindful Parent" :
@@ -130,8 +130,8 @@ export default function ParentDailyTipScreen() {
         if (uJson.success && uJson.data?.user) {
           const u = uJson.data.user;
           setChildName(u.childName || "Explorer");
-          setParentLevel(u.level || 1);
-          setXp(u.xp || 0);
+          setParentLevel(u.parentLevel || 1);
+          setXp(u.parentXp || 0);
           setTotalStars(u.totalStars || 0);
           setStreak(u.streakDays || 0);
         }
@@ -167,7 +167,7 @@ export default function ParentDailyTipScreen() {
       // 5. Daily tip from backend
       try {
         setTipLoading(true);
-        const tRes  = await apiFetch("/api/practice/habits/daily");
+        const tRes  = await apiFetch("/api/parent/daily-tip");
         const tJson = await tRes.json();
         if (tJson.success && tJson.data) {
           setTip(tJson.data);

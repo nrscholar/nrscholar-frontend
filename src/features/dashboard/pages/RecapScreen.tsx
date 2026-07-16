@@ -1,11 +1,25 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { apiFetch } from "../../../api";
 
 export default function RecapScreen() {
   const navigate = useNavigate();
-  // Using a mock state to mirror the react native empty default
-  const [wrongs] = useState<any[]>([]);
+  const [wrongs, setWrongs] = useState<any[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await apiFetch("/api/practice/recap");
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          setWrongs(json.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch recap questions", err);
+      }
+    })();
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#f4efff] font-sans">

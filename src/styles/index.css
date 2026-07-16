@@ -29,7 +29,57 @@ body {
 }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 
+/* ── XP / Journey progress bar ───────────────────────────────────────────── */
+.xp-progress-bar {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 10px;
+  border-radius: 9999px;
+  overflow: hidden;
+  display: block;
+  border: none;
+  background: transparent;
+}
+/* Track (background) */
+.xp-progress-bar::-webkit-progress-bar {
+  background: rgba(20, 23, 121, 0.1);
+  border-radius: 9999px;
+}
+/* Filled value — gradient left → right */
+.xp-progress-bar::-webkit-progress-value {
+  background: linear-gradient(to right, #141779, #57fae9);
+  border-radius: 9999px;
+  transition: width 0.5s ease;
+}
+/* Firefox */
+.xp-progress-bar::-moz-progress-bar {
+  background: linear-gradient(to right, #141779, #57fae9);
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+
 @keyframes shimmer {
   100% { transform: translateX(100%) rotate(45deg); }
 }
 
+/* Custom Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(244, 239, 255, 0.8);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #a5a9e3;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #141779;
+}

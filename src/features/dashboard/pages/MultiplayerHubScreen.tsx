@@ -1,12 +1,20 @@
-import { ArrowLeft, Book, ChevronDown, Globe, Microscope, Shapes, Swords, Trophy, Users } from "lucide-react";
+import { ArrowLeft, Book, ChevronDown, Globe, Microscope, Shapes, Swords, Trophy, Users, Lock, BookOpen } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
 
+const getSubjectStyle = (name: string) => {
+  const n = name.toLowerCase();
+  if (n.includes("math")) return { icon: Shapes, color: "text-[#ff9f43]", bg: "bg-[rgba(255,159,67,0.1)]", border: "border-[#ff9f43]" };
+  if (n.includes("sci")) return { icon: Microscope, color: "text-[#57fae9]", bg: "bg-[rgba(87,250,233,0.1)]", border: "border-[#57fae9]" };
+  if (n.includes("eng") || n.includes("hind")) return { icon: Book, color: "text-[#a4a8f0]", bg: "bg-[rgba(164,168,240,0.1)]", border: "border-[#a4a8f0]" };
+  if (n.includes("soc") || n.includes("env")) return { icon: Globe, color: "text-[#ffb4ab]", bg: "bg-[rgba(255,180,171,0.1)]", border: "border-[#ffb4ab]" };
+  return { icon: BookOpen, color: "text-[#141779]", bg: "bg-[rgba(20,23,121,0.1)]", border: "border-[#141779]" };
+};
+
 export default function MultiplayerHubScreen() {
   const navigate = useNavigate();
   const [joinCode, setJoinCode] = useState("");
-  const [subject, setSubject] = useState("Mathematics");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [chapter, setChapter] = useState("Mix Chapters");
@@ -15,6 +23,12 @@ export default function MultiplayerHubScreen() {
   const [myCoins, setMyCoins] = useState(0);
   const [isChapterDropdownOpen, setIsChapterDropdownOpen] = useState(false);
 
+  // Dynamic Subjects & Chapter Locks
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [activeSubject, setActiveSubject] = useState<any>(null);
+  const [practiceChapters, setPracticeChapters] = useState<any[]>([]);
+  const [completedChapterIds, setCompletedChapterIds] = useState<string[]>([]);
+
   useEffect(() => {
     apiFetch("/api/users/me").then(r => r.json()).then(d => {
       if (d.success && d.data?.user) {
@@ -22,18 +36,61 @@ export default function MultiplayerHubScreen() {
         setMyCoins(d.data.user.coins || 0);
       }
     });
+
+    apiFetch("/api/practice/subjects")
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && d.data && d.data.length > 0) {
+          setSubjects(d.data);
+          setActiveSubject(d.data[0]);
+        }
+      });
   }, []);
 
   useEffect(() => {
-    apiFetch(`/api/multiplayer/chapters?subject=${encodeURIComponent(subject)}&class_name=${encodeURIComponent(myClass)}`)
-      .then(r => r.json())
-      .then(d => {
-        if (d.success && d.data) {
-          setChaptersList(d.data);
-          if (!d.data.includes(chapter)) setChapter("Mix Chapters");
-        }
-      });
-  }, [subject, myClass]);
+    if (!activeSubject) return;
+
+    // Fetch Practice Chapters & Progress
+    Promise.all([
+      apiFetch(`/api/practice/chapters/${activeSubject._id}`),
+      apiFetch(`/api/practice/chapter-progress`)
+    ]).then(async ([chRes, pRes]) => {
+      const chData = await chRes.json();
+      const pData = await pRes.json();
+
+      let fetchedChapters: any[] = [];
+      if (chData.success) {
+        fetchedChapters = chData.data;
+        setPracticeChapters(fetchedChapters);
+      } else {
+        setPracticeChapters([]);
+      }
+
+      if (pData.success && pData.data) {
+        const completedIds = pData.data
+          .filter((p: any) => p.chapterCompleted || p.completed)
+          .map((p: any) => p.chapterId);
+        setCompletedChapterIds(completedIds);
+      } else {
+        setCompletedChapterIds([]);
+      }
+
+      // Populate chaptersList directly from practiceChapters so all subjects work
+      const chapterNames = fetchedChapters.map(c => c.name);
+      setChaptersList(chapterNames);
+      
+      if (!chapterNames.includes(chapter) && chapter !== "Mix Chapters") {
+        setChapter("Mix Chapters");
+      }
+    }).catch(() => {});
+  }, [activeSubject, myClass]);
+
+  const isChapterUnlocked = (chName: string) => {
+    if (chName === "Mix Chapters" || chName === "Mix Chapters (All)") return true;
+    const pracCh = practiceChapters.find(p => p.name === chName);
+    if (!pracCh) return true; // If missing from practice list, fallback to unlocked
+    return completedChapterIds.includes(pracCh._id) || completedChapterIds.includes(`${pracCh._id}_hard`);
+  };
 
   const handleCreateRoom = async () => {
     if (myCoins < 100) {
@@ -46,7 +103,7 @@ export default function MultiplayerHubScreen() {
       const res = await apiFetch("/api/multiplayer/room/create", { 
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subject, chapter })
+        body: JSON.stringify({ subject: activeSubject?.name || "Mathematics", chapter })
       });
       const data = await res.json();
       if (data.success && data.data) {
@@ -120,27 +177,26 @@ export default function MultiplayerHubScreen() {
           <div className="bg-white p-5 rounded-[24px] border-2 border-[#d0d0d0] shadow-sm flex flex-col gap-4">
             <label className="text-[#141779] font-bold text-sm uppercase">Select Subject</label>
             <div className="grid grid-cols-2 gap-3 mt-1">
-              {[
-                { id: "Mathematics", icon: Shapes, color: "text-[#ff9f43]", bg: "bg-[rgba(255,159,67,0.1)]", border: "border-[#ff9f43]" },
-                { id: "Science", icon: Microscope, color: "text-[#57fae9]", bg: "bg-[rgba(87,250,233,0.1)]", border: "border-[#57fae9]" },
-                { id: "English", icon: Book, color: "text-[#a4a8f0]", bg: "bg-[rgba(164,168,240,0.1)]", border: "border-[#a4a8f0]" },
-                { id: "Social Studies", icon: Globe, color: "text-[#ffb4ab]", bg: "bg-[rgba(255,180,171,0.1)]", border: "border-[#ffb4ab]" }
-              ].map(subj => {
-                const isSelected = subject === subj.id;
-                const Icon = subj.icon;
+              {subjects.map(subj => {
+                const isSelected = activeSubject?._id === subj._id;
+                const style = getSubjectStyle(subj.name);
+                const Icon = style.icon;
                 return (
                   <button
-                    key={subj.id}
-                    onClick={() => setSubject(subj.id)}
+                    key={subj._id}
+                    onClick={() => {
+                      setActiveSubject(subj);
+                      setChapter("Mix Chapters"); // reset chapter
+                    }}
                     className={`flex flex-col items-center justify-center gap-2 p-3 rounded-2xl border-2 transition-all duration-200 ${
                       isSelected 
-                      ? `${subj.bg} ${subj.border} shadow-[0_4px_12px_rgba(0,0,0,0.1)] scale-105` 
+                      ? `${style.bg} ${style.border} shadow-[0_4px_12px_rgba(0,0,0,0.1)] scale-105` 
                       : 'bg-white border-[#e0e0e0] opacity-70 hover:opacity-100'
                     }`}
                   >
-                    <Icon size={28} className={isSelected ? subj.color : "text-[#767683]"} />
-                    <span className={`text-xs font-bold uppercase tracking-wider ${isSelected ? subj.color : "text-[#767683]"}`}>
-                      {subj.id}
+                    <Icon size={28} className={isSelected ? style.color : "text-[#767683]"} />
+                    <span className={`text-xs font-bold uppercase tracking-wider ${isSelected ? style.color : "text-[#767683]"}`}>
+                      {subj.name}
                     </span>
                   </button>
                 )
@@ -170,17 +226,30 @@ export default function MultiplayerHubScreen() {
                         >
                           Mix Chapters (All)
                         </div>
-                        {chaptersList.map(c => (
-                          <div
-                            key={c}
-                            onClick={() => { setChapter(c); setIsChapterDropdownOpen(false); }}
-                            className={`px-5 py-4 text-[15px] font-bold cursor-pointer transition-colors border-b border-[#f0f0f0] last:border-0 ${
-                              chapter === c ? 'bg-[#141779] text-white' : 'text-[#464652] hover:bg-[#f4efff]'
-                            }`}
-                          >
-                            {c}
-                          </div>
-                        ))}
+                        {chaptersList.map(c => {
+                          const unlocked = isChapterUnlocked(c);
+                          return (
+                            <div
+                              key={c}
+                              onClick={() => { 
+                                if (unlocked) {
+                                  setChapter(c); 
+                                  setIsChapterDropdownOpen(false); 
+                                } else {
+                                  setError("Please first complete this chapter in your learning path to unlock it in the Arena!");
+                                  setTimeout(() => setError(""), 4000);
+                                }
+                              }}
+                              className={`px-5 py-4 text-[15px] font-bold cursor-pointer transition-colors border-b border-[#f0f0f0] last:border-0 flex items-center justify-between ${
+                                !unlocked ? 'bg-gray-50 text-gray-400' :
+                                chapter === c ? 'bg-[#141779] text-white' : 'text-[#464652] hover:bg-[#f4efff]'
+                              }`}
+                            >
+                              <span className="truncate pr-2">{c}</span>
+                              {!unlocked && <Lock size={16} className="shrink-0 text-gray-400" />}
+                            </div>
+                          )
+                        })}
                       </div>
                     </div>
                   )}

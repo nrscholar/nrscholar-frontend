@@ -65,6 +65,12 @@ export async function apiRequest<T = any>(
       "Bypass-Tunnel-Reminder": "true", // Required to skip the localtunnel warning HTML screen on first request
     };
 
+    if (method.toUpperCase() === "GET") {
+      headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+      headers["Pragma"] = "no-cache";
+      headers["Expires"] = "0";
+    }
+
     if (auth) {
       const token = await getToken();
       if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -263,6 +269,19 @@ export const parentApi = {
 
   resetJourney: () =>
     apiRequest("/api/parent/reset-journey", { method: "POST", auth: true }),
+
+  getActivities: (tzOffsetMinutes?: number) =>
+    apiRequest("/api/parent/activities" + (tzOffsetMinutes !== undefined ? `?tz_offset_minutes=${tzOffsetMinutes}` : ""), { auth: true }),
+
+  logActivity: (data: {
+    title: string;
+    type: string;
+    timeTaken: number;
+    correctQuestions: number;
+    totalQuestions: number;
+    details: { questionText: string; isCorrect: boolean; timeSpent: number }[];
+  }) =>
+    apiRequest("/api/parent/activities", { method: "POST", auth: true, body: data }),
 };
 
 // ── Scan & Learn API ──────────────────────────────────────────────────────────
