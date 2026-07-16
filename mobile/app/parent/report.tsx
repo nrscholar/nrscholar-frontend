@@ -14,7 +14,7 @@ import {
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
-import Svg, { Circle, Line, Path, Defs, LinearGradient as SvgLinearGradient, Stop } from "react-native-svg";
+import Svg, { Circle, Line, Path, Defs, LinearGradient as SvgLinearGradient, Stop, Text as SvgText } from "react-native-svg";
 import { authApi, parentApi } from "../services/api";
 
 const { width } = Dimensions.get("window");
@@ -221,7 +221,7 @@ export default function StudentReport() {
                         stroke="#eef0f2" 
                         strokeWidth="1"
                       />
-                      <Text 
+                      <SvgText 
                         x={paddingLeft - 6} 
                         y={getY(val) + 3} 
                         textAnchor="end" 
@@ -230,7 +230,7 @@ export default function StudentReport() {
                         fill={C.outline}
                       >
                         {val}%
-                      </Text>
+                      </SvgText>
                     </g>
                   ))}
 
