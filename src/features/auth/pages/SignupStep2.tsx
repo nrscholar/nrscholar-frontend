@@ -77,8 +77,8 @@ export default function SignupStep2Screen() {
   const [age, setAge] = useState(searchParams.get("age") || "");
   const [selectedBoard, setSelectedBoard] = useState(searchParams.get("board") || "");
 
-  const classes = ["Nursery", "KG", "Class 1", "Class 2", "Class 3", "Class 4", "Class 5"];
-  const ages = ["4 Years", "5 Years", "6 Years", "7 Years", "8 Years", "9 Years", "10 Years"];
+  const classes = ["Nursery", "KG", "Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"];
+  const ages = ["4 Years", "5 Years", "6 Years", "7 Years", "8 Years", "9 Years", "10 Years", "11 Years", "12 Years", "13 Years", "14 Years", "15 Years"];
   const boards = ["CBSE (NCERT)", "ICSE", "State Board", "IB", "IGCSE"];
 
   const handleNext = () => {

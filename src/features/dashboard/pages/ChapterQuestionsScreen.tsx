@@ -18,6 +18,7 @@ export default function ChapterQuestionsScreen() {
 
   const [currentQ, setCurrentQ] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
+  const [textAnswer, setTextAnswer] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [score, setScore] = useState(0);
   const [sessionCorrect, setSessionCorrect] = useState(0);
@@ -137,9 +138,13 @@ export default function ChapterQuestionsScreen() {
   const totalDraggables = dragDetails.draggablesCount || 6;
   const objectEmoji = dragDetails.objectEmoji || "🍎";
 
+  const isTextInput = interactionType === "mcq" && optionsList.length === 0;
+
   let isCorrect = false;
   if (interactionType === "drag_objects") {
     isCorrect = basketCount === targetCount;
+  } else if (isTextInput) {
+    isCorrect = textAnswer.trim().toLowerCase() === String(correctAnswer).trim().toLowerCase();
   } else {
     isCorrect = selected === correctIndex;
   }
@@ -177,7 +182,8 @@ export default function ChapterQuestionsScreen() {
   };
 
   const handleConfirm = async () => {
-    if (interactionType === "mcq" && selected === null) return;
+    if (interactionType === "mcq" && !isTextInput && selected === null) return;
+    if (isTextInput && textAnswer.trim() === "" && !confirmed) return;
     if (!confirmed) {
       setConfirmed(true);
       setAnsweredThisSession(prev => prev + 1);
@@ -194,7 +200,7 @@ export default function ChapterQuestionsScreen() {
         const next = [...prev];
         next[currentQ] = {
           isCorrect,
-          selected: interactionType === "mcq" ? selected : basketCount,
+          selected: interactionType === "drag_objects" ? basketCount : isTextInput ? textAnswer.trim() : selected,
           interactionType,
           questionText,
           optionsList,
@@ -237,6 +243,7 @@ export default function ChapterQuestionsScreen() {
         // Store nextQ state first
         setCurrentQ(nextQ);
         setSelected(null);
+        setTextAnswer("");
         setConfirmed(false);
 
       } else {
@@ -471,7 +478,7 @@ export default function ChapterQuestionsScreen() {
 
         {/* Interactive Area */}
         <div className="mb-7">
-          {interactionType === "mcq" && (
+          {interactionType === "mcq" && !isTextInput && (
             <div className="grid grid-cols-2 gap-3.5">
               {optionsList && optionsList.map((opt: string, idx: number) => {
                 let btnClass = "bg-white border-2 border-gray-200 border-b-[4px] active:border-b-2 active:translate-y-[2px] active:mt-[2px] active:mb-[-2px]";
@@ -509,6 +516,30 @@ export default function ChapterQuestionsScreen() {
                   </button>
                 );
               })}
+            </div>
+          )}
+
+          {isTextInput && (
+            <div className="w-full flex flex-col justify-center mt-4 mb-4 gap-3">
+              <input
+                type="text"
+                value={textAnswer}
+                onChange={(e) => {
+                  if (!confirmed) setTextAnswer(e.target.value);
+                }}
+                disabled={confirmed}
+                placeholder="Type your answer here..."
+                className={`w-full p-4 rounded-2xl border-2 font-bold text-lg outline-none transition-all ${
+                  confirmed ? (isCorrect ? 'bg-[#e8ddff] border-[#30007f] text-[#1d0052]' : 'bg-[#ffdad6] border-[#ba1a1a] text-[#ba1a1a]')
+                  : 'bg-white border-gray-200 text-[#4b4b4b] focus:border-[#141779] shadow-sm'
+                }`}
+              />
+              {confirmed && !isCorrect && (
+                <div className="w-full p-4 rounded-xl bg-white border-2 border-[#ba1a1a] text-[#ba1a1a] font-bold text-center flex items-center justify-center gap-2 shadow-sm animate-in fade-in slide-in-from-top-2">
+                  <span className="text-[#58cc02]">✓</span>
+                  <span>Correct Answer: {correctAnswer}</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -588,10 +619,10 @@ export default function ChapterQuestionsScreen() {
           </AnimatePresence>
 
           <button
-            disabled={interactionType === "mcq" && selected === null && !confirmed}
+            disabled={(interactionType === "mcq" && !isTextInput && selected === null && !confirmed) || (isTextInput && textAnswer.trim() === "" && !confirmed)}
             onClick={handleConfirm}
             className={`w-full py-[16px] rounded-2xl flex items-center justify-center transition-all ${
-              !confirmed && interactionType === "mcq" && selected === null ? 'bg-[#e5e5e5] text-[#afafaf]' :
+              (!confirmed && interactionType === "mcq" && !isTextInput && selected === null) || (!confirmed && isTextInput && textAnswer.trim() === "") ? 'bg-[#e5e5e5] text-[#afafaf]' :
               !confirmed ? 'bg-[#141779] text-white shadow-[0_4px_0_#0b0d4d] hover:bg-[#1a1e9e] active:translate-y-[4px] active:shadow-none active:mt-1' :
               isCorrect ? 'bg-[#30007f] text-white shadow-[0_4px_0_#1d0052] hover:bg-[#3f00a8] active:translate-y-[4px] active:shadow-none active:mt-1' :
               'bg-[#ba1a1a] text-white shadow-[0_4px_0_#93000a] hover:bg-[#d92222] active:translate-y-[4px] active:shadow-none active:mt-1'

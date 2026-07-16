@@ -1,12 +1,18 @@
 import { ArrowLeft, Maximize2, Minimize2, ChevronLeft, ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+
+const pdfOptions = {
+  cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
+  cMapPacked: true,
+  standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
+};
 
 export default function ChapterReaderScreen() {
   const navigate = useNavigate();
@@ -18,23 +24,12 @@ export default function ChapterReaderScreen() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [markingComplete, setMarkingComplete] = useState(false);
 
-  // We construct the PDF URL using the token so the backend allows it
-  const token = localStorage.getItem("userToken");
-  
-  // Note: Using iframe to display PDF natively. Most modern browsers have built-in PDF viewers.
-  // For a production mobile app (e.g. React Native/Capacitor), a dedicated PDF library might be needed.
-  // We use the full API URL, ensuring auth headers or passing token in query if needed by backend.
-  // However, since backend uses Depends(get_current_user_from_token) which usually checks Authorization header,
-  // we might need to pass token in URL if iframe doesn't send headers.
-  // Assuming our backend auth can check query param `token` as fallback for streaming endpoints.
-  
-  // A common trick is to fetch the blob via apiFetch and create an object URL
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [numPages, setNumPages] = useState<number>();
   const [pageNumber, setPageNumber] = useState<number>(1);
 
-  useState(() => {
+  useEffect(() => {
     async function loadPdf() {
       try {
         if (!chapterId) return;
@@ -51,7 +46,11 @@ export default function ChapterReaderScreen() {
       }
     }
     loadPdf();
-  });
+    
+    return () => {
+      if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+    };
+  }, [chapterId]);
 
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
@@ -131,18 +130,21 @@ export default function ChapterReaderScreen() {
           <div className="flex-1 overflow-auto flex flex-col items-center justify-center p-4 pb-32 z-10">
             <Document 
               file={pdfUrl} 
+              options={pdfOptions}
               onLoadSuccess={({ numPages }) => setNumPages(numPages)}
               loading={
                 <div className="w-12 h-12 border-4 border-white border-t-[#141779] rounded-full animate-spin mt-20 shadow-md" />
               }
             >
-              <Page 
-                pageNumber={pageNumber} 
-                renderTextLayer={false}
-                renderAnnotationLayer={false}
-                width={Math.min(window.innerWidth - 32, 600)}
-                className="bg-white rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(20,23,121,0.2)] border-8 border-white/60 backdrop-blur-sm transition-all duration-300 hover:scale-[1.01]"
-              />
+              <div className="bg-white rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(20,23,121,0.2)] border-8 border-white/60 backdrop-blur-sm transition-all duration-300 hover:scale-[1.01]">
+                <Page 
+                  pageNumber={pageNumber} 
+                  renderTextLayer={false}
+                  renderAnnotationLayer={true}
+                  devicePixelRatio={1}
+                  width={Math.min(window.innerWidth - 32, 600)}
+                />
+              </div>
             </Document>
           </div>
         ) : (
