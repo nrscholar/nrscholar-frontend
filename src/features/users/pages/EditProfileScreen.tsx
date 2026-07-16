@@ -1,8 +1,74 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, UserRound, GraduationCap, Cake, BookOpen, Save, Camera } from "lucide-react";
+import { ArrowLeft, UserRound, GraduationCap, Cake, BookOpen, Save, Camera, ChevronDown, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "../../../api";
+
+const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect, placeholder }: any) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="flex flex-col gap-2 flex-1 relative">
+      <label className="text-sm font-semibold text-[#767683] ml-2">{label}</label>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full h-14 bg-white rounded-full pl-12 pr-10 text-base font-medium text-[#191c1e] border-2 border-transparent focus:border-[#141779] outline-none flex items-center justify-start text-left relative"
+      >
+        <div className="absolute left-4 z-10 flex items-center h-full top-0">
+          <Icon size={22} color={iconColor} />
+        </div>
+        <span className={`truncate ${value ? "text-[#191c1e]" : "text-[#c7c5d4]"}`}>
+          {value || placeholder}
+        </span>
+        <ChevronDown size={24} color="#767683" className="absolute right-3" />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-[rgba(0,0,0,0.5)] z-50 flex items-center justify-center p-6"
+              onClick={() => setIsOpen(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="w-full max-w-[320px] bg-white rounded-3xl p-6 max-h-[60vh] flex flex-col"
+                onClick={e => e.stopPropagation()}
+              >
+                <h3 className="text-xl font-bold text-[#141779] mb-4 text-center">Select</h3>
+                <div className="overflow-y-auto pr-2">
+                  {options.map((opt: string) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => {
+                        onSelect(opt);
+                        setIsOpen(false);
+                      }}
+                      className="w-full flex items-center justify-between py-4 border-b border-[#f2f4f6] last:border-0"
+                    >
+                      <span className={`text-base ${value === opt ? 'font-bold text-[#141779]' : 'font-medium text-[#464652]'}`}>
+                        {opt}
+                      </span>
+                      {value === opt && <Check size={20} color="#141779" />}
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
 
 export default function EditProfileScreen() {
   const navigate = useNavigate();
@@ -151,51 +217,36 @@ export default function EditProfileScreen() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-[#767683] ml-2">{t('education_board')}</label>
-              <div className="relative flex items-center">
-                <BookOpen size={22} color="#006a62" className="absolute left-4" />
-                <select
-                  value={childBoard}
-                  onChange={(e) => setChildBoard(e.target.value)}
-                  className="w-full h-14 bg-white rounded-full pl-12 pr-6 text-base font-medium text-[#191c1e] border-2 border-transparent focus:border-[#141779] outline-none appearance-none"
-                >
-                  <option value="" disabled>{t('select_board')}</option>
-                  {boards.map(b => <option key={b} value={b}>{b}</option>)}
-                </select>
-              </div>
-            </div>
+            <CustomDropdown
+              label={t('education_board')}
+              icon={BookOpen}
+              iconColor="#006a62"
+              value={childBoard}
+              options={boards}
+              onSelect={setChildBoard}
+              placeholder={t('select_board')}
+            />
 
-            <div className="flex gap-3">
-              <div className="flex flex-col gap-2 flex-1">
-                <label className="text-sm font-semibold text-[#767683] ml-2">{t('class_grade')}</label>
-                <div className="relative flex items-center">
-                  <GraduationCap size={22} color="#30007f" className="absolute left-4" />
-                  <select
-                    value={childClass}
-                    onChange={(e) => setChildClass(e.target.value)}
-                    className="w-full h-14 bg-white rounded-full pl-10 pr-2 text-base font-medium text-[#191c1e] border-2 border-transparent focus:border-[#141779] outline-none appearance-none"
-                  >
-                    <option value="" disabled>{t('select')}</option>
-                    {classes.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-              </div>
+            <div className="flex gap-3 w-full">
+              <CustomDropdown
+                label={t('class_grade')}
+                icon={GraduationCap}
+                iconColor="#30007f"
+                value={childClass}
+                options={classes}
+                onSelect={setChildClass}
+                placeholder={t('select')}
+              />
 
-              <div className="flex flex-col gap-2 flex-1">
-                <label className="text-sm font-semibold text-[#767683] ml-2">{t('age')}</label>
-                <div className="relative flex items-center">
-                  <Cake size={22} color="#141779" className="absolute left-4" />
-                  <select
-                    value={childAge}
-                    onChange={(e) => setChildAge(e.target.value)}
-                    className="w-full h-14 bg-white rounded-full pl-10 pr-2 text-base font-medium text-[#191c1e] border-2 border-transparent focus:border-[#141779] outline-none appearance-none"
-                  >
-                    <option value="" disabled>{t('select')}</option>
-                    {ages.map(a => <option key={a} value={a}>{a}</option>)}
-                  </select>
-                </div>
-              </div>
+              <CustomDropdown
+                label={t('age')}
+                icon={Cake}
+                iconColor="#141779"
+                value={childAge}
+                options={ages}
+                onSelect={setChildAge}
+                placeholder={t('select')}
+              />
             </div>
 
             {/* Language Selection */}
