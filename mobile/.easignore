@@ -14,3 +14,12 @@ android/app/build/
 android/build/
 ios/build/
 *.local
+
+# Ignore local JDK
+jdk-17/
+jdk-*/
+
+# Ignore logs & output
+*.txt
+*.log
+*.gz
