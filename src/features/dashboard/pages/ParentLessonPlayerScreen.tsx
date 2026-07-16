@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { X, CheckCircle, ArrowLeft } from "lucide-react";
 import * as Icons from "lucide-react";
@@ -17,6 +17,9 @@ export default function ParentLessonPlayerScreen() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [missionAccepted, setMissionAccepted] = useState(false);
   const [animateIn, setAnimateIn] = useState(true);
+  const [completing, setCompleting] = useState(false);
+
+  const transitioningRef = useRef(false);
 
   useEffect(() => {
     const fetchLesson = async () => {
@@ -41,18 +44,26 @@ export default function ParentLessonPlayerScreen() {
   const progress = (currentStep / (totalSteps - 1 || 1)) * 100;
 
   const nextStep = () => {
+    if (transitioningRef.current) return;
     if (currentStep < totalSteps - 1) {
+      transitioningRef.current = true;
       setAnimateIn(false);
       setTimeout(() => {
-        setCurrentStep(prev => prev + 1);
+        setCurrentStep(prev => {
+          const next = prev + 1;
+          return next < totalSteps ? next : prev;
+        });
         setSelectedOption(null);
         setShowFeedback(false);
         setAnimateIn(true);
+        transitioningRef.current = false;
       }, 300);
     }
   };
 
   const handleCompleteLesson = async () => {
+    if (completing) return;
+    setCompleting(true);
     try {
       await apiFetch('/api/parent/learning-library/complete', {
         method: 'POST',

@@ -65,6 +65,12 @@ export async function apiRequest<T = any>(
       "Bypass-Tunnel-Reminder": "true", // Required to skip the localtunnel warning HTML screen on first request
     };
 
+    if (method.toUpperCase() === "GET") {
+      headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+      headers["Pragma"] = "no-cache";
+      headers["Expires"] = "0";
+    }
+
     if (auth) {
       const token = await getToken();
       if (token) headers["Authorization"] = `Bearer ${token}`;

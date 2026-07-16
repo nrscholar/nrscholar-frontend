@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
   StatusBar,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import { parentApi, authApi } from "../services/api";
 import NotificationBell from "../components/NotificationBell";
 import * as Print from "expo-print";
@@ -68,13 +69,20 @@ export default function ParentDashboard() {
   const [downloading, setDownloading] = useState(false);
   const [modalType, setModalType] = useState<"strengths" | "weaknesses" | "risks" | null>(null);
 
-  // ── Load Data ──────────────────────────────────────────────────────────────
+  const userRef = useRef(user);
   useEffect(() => {
-    loadAll();
-  }, []);
+    userRef.current = user;
+  }, [user]);
 
-  const loadAll = async () => {
-    setLoading(true);
+  // ── Load Data ──────────────────────────────────────────────────────────────
+  useFocusEffect(
+    useCallback(() => {
+      loadAll(!!userRef.current);
+    }, [])
+  );
+
+  const loadAll = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const userRes = await authApi.getMe();
       if (userRes.success) setUser(userRes.data);
@@ -84,7 +92,7 @@ export default function ParentDashboard() {
     } catch (e) {
       console.log("Parent load error:", e);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 

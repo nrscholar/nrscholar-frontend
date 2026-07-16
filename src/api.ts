@@ -16,6 +16,14 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
   const lang = localStorage.getItem("i18nextLng") || "en";
   headers.set("Accept-Language", lang);
 
+  // Prevent browser/WebView caching on API requests
+  const reqMethod = (options.method || "GET").toUpperCase();
+  if (reqMethod === "GET") {
+    headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
+    headers.set("Pragma", "no-cache");
+    headers.set("Expires", "0");
+  }
+
   let response;
   try {
     response = await fetch(url, { ...options, headers });

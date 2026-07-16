@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   StatusBar,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { parentApi } from "../services/api";
 
@@ -142,7 +143,15 @@ export default function KidsActivityScreen() {
   const [totalSessions, setTotalSessions] = useState(0);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const loadActivities = useCallback(async () => {
+  const hasDataRef = useRef(false);
+  useEffect(() => {
+    if (sections.length > 0) {
+      hasDataRef.current = true;
+    }
+  }, [sections]);
+
+  const loadActivities = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const tzOffset = -new Date().getTimezoneOffset(); // e.g. IST = +330
       const res = await parentApi.getActivities(tzOffset);
@@ -157,14 +166,16 @@ export default function KidsActivityScreen() {
     } catch (e) {
       console.error("Failed to fetch activities", e);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
       setRefreshing(false);
     }
   }, []);
 
-  useEffect(() => {
-    loadActivities();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadActivities(hasDataRef.current);
+    }, [loadActivities])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
