@@ -23,22 +23,23 @@ export default function InventoryScreen() {
     window.scrollTo(0, 0);
   }, []);
 
+  const fetchProfile = async () => {
+    const token = localStorage.getItem("userToken");
+    if (!token) return;
+    try {
+      const response = await apiFetch("/api/users/me", {});
+      const data = await response.json();
+      if (data.success) {
+        const u = data.data.user;
+        setXp(u.xp || 0);
+        setCoins(u.coins || 0);
+        setUserBadges(u.badges || []);
+        localStorage.setItem("userData", JSON.stringify(u));
+      }
+    } catch (e) {}
+  };
+
   useEffect(() => {
-    const fetchProfile = async () => {
-      const token = localStorage.getItem("userToken");
-      if (!token) return;
-      try {
-        const response = await apiFetch("/api/users/me", {});
-        const data = await response.json();
-        if (data.success) {
-          const u = data.data.user;
-          setXp(u.xp || 0);
-          setCoins(u.coins || 0);
-          setUserBadges(u.badges || []);
-        }
-      } catch (e) {}
-    };
-    
     const cached = localStorage.getItem("userData");
     if (cached) {
       try {
@@ -137,6 +138,8 @@ export default function InventoryScreen() {
           } else if (data.type === 'fragment') {
             apiFetch("/api/retention/fragments").then(r => r.json()).then(f => setFragments(f)).catch(() => {});
           }
+          // Refetch profile to sync levels and stats with backend
+          fetchProfile();
         }, 1500);
       } else {
         setOpeningBox(null);

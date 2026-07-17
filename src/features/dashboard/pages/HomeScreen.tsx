@@ -105,7 +105,11 @@ export default function HomeScreen() {
         
         // IMPORTANT: Update the streak BEFORE fetching it
         try {
-          await apiFetch("/api/retention/streak/update", { method: "POST" });
+          const streakUpRes = await apiFetch("/api/retention/streak/update", { method: "POST" });
+          if (streakUpRes.ok) {
+            // Refetch profile to display new XP/coins from daily login on-the-spot
+            fetchProfile();
+          }
         } catch(e) {}
         
         const stRes = await apiFetch("/api/retention/streak");

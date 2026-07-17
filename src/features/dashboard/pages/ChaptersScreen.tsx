@@ -66,10 +66,20 @@ export default function ChaptersScreen() {
         const subData = await subRes.json();
         if (subData.success && subData.data.length > 0) {
           setSubjects(subData.data);
-          setActiveSubject(subData.data[0]);
+          const savedSubjectId = sessionStorage.getItem("activeSubjectId");
+          const found = subData.data.find((s: any) => s._id === savedSubjectId);
+          if (found) {
+            setActiveSubject(found);
+          } else {
+            setActiveSubject(subData.data[0]);
+            sessionStorage.setItem("activeSubjectId", subData.data[0]._id);
+          }
+        } else {
+          setLoading(false);
         }
       } catch (e) {
         console.error("Failed to fetch subjects");
+        setLoading(false);
       }
     };
     fetchSubjects();
@@ -205,7 +215,10 @@ export default function ChaptersScreen() {
               return (
                 <button
                   key={sub._id}
-                  onClick={() => setActiveSubject(sub)}
+                  onClick={() => {
+                    setActiveSubject(sub);
+                    sessionStorage.setItem("activeSubjectId", sub._id);
+                  }}
                   className={`px-5 py-2 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${isActive ? 'bg-[#141779] text-white shadow-md' : 'bg-white text-[#767683] border border-[#e0e3e5] hover:border-[#141779]'}`}
                 >
                   {sub.name}

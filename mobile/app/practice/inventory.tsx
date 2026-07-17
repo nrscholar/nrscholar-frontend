@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { width } = Dimensions.get("window");
 
@@ -31,6 +32,22 @@ export default function RewardInventory() {
   const insets = useSafeAreaInsets();
 
   const [activeTab, setActiveTab] = useState<"Badges" | "Cities" | "Items">("Badges");
+  const [coins, setCoins] = useState(420);
+  const [fuel, setFuel] = useState(350);
+
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const storedCoins = await AsyncStorage.getItem("nrscholar_coins");
+        if (storedCoins !== null) setCoins(Number(storedCoins));
+        const storedFuel = await AsyncStorage.getItem("nrscholar_fuel");
+        if (storedFuel !== null) setFuel(Number(storedFuel));
+      } catch (e) {
+        console.error("Failed to load inventory stats", e);
+      }
+    };
+    loadStats();
+  }, []);
 
   const badges = [
     { id: "1", name: "Heritage Explorer", icon: "workspace-premium", desc: "Unlocked Ahmedabad", color: "#ffd700" },
@@ -70,14 +87,14 @@ export default function RewardInventory() {
           <View style={styles.currencyCard}>
             <Text style={styles.coinLogo}>₵</Text>
             <View>
-              <Text style={styles.currencyVal}>420</Text>
+              <Text style={styles.currencyVal}>{coins}</Text>
               <Text style={styles.currencyLbl}>COINS</Text>
             </View>
           </View>
           <View style={[styles.currencyCard, { backgroundColor: "rgba(87, 250, 233, 0.2)" }]}>
             <MaterialIcons name="bolt" size={24} color={C.primary} />
             <View>
-              <Text style={styles.currencyVal}>350</Text>
+              <Text style={styles.currencyVal}>{fuel}</Text>
               <Text style={styles.currencyLbl}>FUEL</Text>
             </View>
           </View>
