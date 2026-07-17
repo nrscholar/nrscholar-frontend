@@ -59,7 +59,7 @@ export default function JourneyMapScreen() {
             userFuel = uData.data.user.fuel !== undefined ? uData.data.user.fuel : 0;
             userXp = uData.data.user.xp !== undefined ? uData.data.user.xp : 0; // Fixed default
             userCoins = uData.data.user.coins !== undefined ? uData.data.user.coins : 0;
-            userName = uData.data.user.name || "Explorer";
+            userName = uData.data.user.childName || uData.data.user.fullName || "Explorer";
             setChildPhoto(uData.data.user.childPhoto || "");
             setUserLevel(uData.data.user.level || 1);
           }
@@ -67,15 +67,17 @@ export default function JourneyMapScreen() {
       }
       
       // Fallback
-      if (userXp === undefined || userXp === null) {
+      if (userXp === undefined || userXp === null || userName === "Explorer") {
         const cached = localStorage.getItem("userData");
         if (cached) {
           try {
             const u = JSON.parse(cached);
             userFuel = u.fuel !== undefined ? u.fuel : 0;
-            userName = u.name || "Explorer";
+            userName = u.childName || u.fullName || u.name || "Explorer";
             userXp = u.xp !== undefined ? u.xp : 0;
             userCoins = u.coins !== undefined ? u.coins : 0;
+            setChildPhoto(u.childPhoto || "");
+            setUserLevel(u.level || 1);
           } catch(e) {}
         }
       }

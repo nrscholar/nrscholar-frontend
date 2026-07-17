@@ -151,11 +151,11 @@ export default function ChaptersScreen() {
     const progress = chapterProgressMap[chapterId] || {};
     
     if (!progress.readingCompleted) {
-      navigate(`/chapter-reader?chapterId=${chapterId}&title=${encodeURIComponent(chapterName)}`);
+      navigate(`/chapter-reader?chapterId=${chapterId}&title=${encodeURIComponent(chapterName)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}`);
     } else if (!progress.questionsCompleted) {
-      navigate(`/chapter-questions?chapterId=${chapterId}&chapterName=${encodeURIComponent(chapterName)}`);
+      navigate(`/chapter-questions?chapterId=${chapterId}&chapterName=${encodeURIComponent(chapterName)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}`);
     } else if (!progress.bossCompleted) {
-      navigate(`/boss-battle?worldId=w1&chapterId=${chapterId}&difficulty=easy&returnTo=/practice/journey-map`);
+      navigate(`/boss-battle?worldId=w1&chapterId=${chapterId}&difficulty=easy&returnTo=/practice/journey-map&chapterName=${encodeURIComponent(chapterName)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}`);
     }
   };
 
@@ -287,15 +287,15 @@ export default function ChaptersScreen() {
                     isExpanded && (
                       <div className="mt-4 pt-4 border-t border-[rgba(0,0,0,0.05)] w-full text-left">
                         <div className="flex flex-col gap-3">
-                          <button onClick={(e) => { e.stopPropagation(); navigate(`/chapter-reader?chapterId=${chap._id}&title=${encodeURIComponent(chap.name)}`); }} className="bg-white border-2 border-[#141779] text-[#141779] px-4 py-2 rounded-xl hover:bg-gray-50 transition-all font-bold text-sm w-full text-left flex justify-between">
+                          <button onClick={(e) => { e.stopPropagation(); navigate(`/chapter-reader?chapterId=${chap._id}&title=${encodeURIComponent(`${index + 1}. ${chap.name}`)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}`); }} className="bg-white border-2 border-[#141779] text-[#141779] px-4 py-2 rounded-xl hover:bg-gray-50 transition-all font-bold text-sm w-full text-left flex justify-between">
                             <span>Read PDF</span>
                             <span>→</span>
                           </button>
-                          <button onClick={(e) => { e.stopPropagation(); navigate(`/chapter-questions?chapterId=${chap._id}&chapterName=${encodeURIComponent(chap.name)}`); }} className="bg-white border-2 border-[#141779] text-[#141779] px-4 py-2 rounded-xl hover:bg-gray-50 transition-all font-bold text-sm w-full text-left flex justify-between">
+                          <button onClick={(e) => { e.stopPropagation(); navigate(`/chapter-questions?chapterId=${chap._id}&chapterName=${encodeURIComponent(`${index + 1}. ${chap.name}`)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}`); }} className="bg-white border-2 border-[#141779] text-[#141779] px-4 py-2 rounded-xl hover:bg-gray-50 transition-all font-bold text-sm w-full text-left flex justify-between">
                             <span>Practice Questions</span>
                             <span>→</span>
                           </button>
-                          <button onClick={(e) => { e.stopPropagation(); navigate(`/boss-battle?worldId=w1&chapterId=${chap._id}&difficulty=easy&returnTo=/practice/journey-map`); }} className="bg-white border-2 border-[#141779] text-[#141779] px-4 py-2 rounded-xl hover:bg-gray-50 transition-all font-bold text-sm w-full text-left flex justify-between">
+                          <button onClick={(e) => { e.stopPropagation(); navigate(`/boss-battle?worldId=w1&chapterId=${chap._id}&difficulty=easy&returnTo=/practice/journey-map&subjectName=${encodeURIComponent(activeSubject?.name || "")}&chapterName=${encodeURIComponent(`${index + 1}. ${chap.name}`)}`); }} className="bg-white border-2 border-[#141779] text-[#141779] px-4 py-2 rounded-xl hover:bg-gray-50 transition-all font-bold text-sm w-full text-left flex justify-between">
                             <span>Boss Round</span>
                             <span>→</span>
                           </button>
@@ -307,7 +307,7 @@ export default function ChaptersScreen() {
                   if (status === "completed") {
                     return (
                       <div key={chap._id} className={`flex flex-col bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.8)] ${isExpanded ? 'shadow-md' : 'hover:bg-white'} transition-all w-full`}>
-                        <button onClick={() => handleToggleChapter(chap._id, chap.name)} className="flex items-center gap-4 text-left w-full">
+                        <button onClick={() => handleToggleChapter(chap._id, `${index + 1}. ${chap.name}`)} className="flex items-center gap-4 text-left w-full">
                           <div className="w-12 h-12 rounded-full bg-[rgba(0,106,98,0.1)] border border-[rgba(0,106,98,0.2)] flex items-center justify-center shrink-0">
                             <IconComponent size={24} color="#006a62" />
                           </div>
@@ -332,7 +332,7 @@ export default function ChaptersScreen() {
                             className="absolute -top-8 -right-8 w-24 h-24 rounded-full bg-[rgba(0,106,98,0.05)] pointer-events-none"
                             />
                         )}
-                        <div onClick={() => handleToggleChapter(chap._id, chap.name)} className="flex items-center gap-4 cursor-pointer relative z-10 w-full">
+                        <div onClick={() => handleToggleChapter(chap._id, `${index + 1}. ${chap.name}`)} className="flex items-center gap-4 cursor-pointer relative z-10 w-full">
                             <div className="w-12 h-12 rounded-full bg-[#006a62] flex items-center justify-center shrink-0 shadow-[0_4px_8px_rgba(0,0,0,0.3)]">
                             <IconComponent size={24} color="white" />
                             </div>
@@ -341,7 +341,7 @@ export default function ChaptersScreen() {
                             <h3 className="text-lg font-bold text-[#141779]">{chap.name}</h3>
                             </div>
                             {!isExpanded && (
-                                <button onClick={(e) => { e.stopPropagation(); handleToggleChapter(chap._id, chap.name); }} className="bg-[#141779] px-6 py-2 rounded-full hover:opacity-90 transition-opacity">
+                                <button onClick={(e) => { e.stopPropagation(); handleToggleChapter(chap._id, `${index + 1}. ${chap.name}`); }} className="bg-[#141779] px-6 py-2 rounded-full hover:opacity-90 transition-opacity">
                                 <span className="text-white text-sm font-semibold">{t('start')}</span>
                                 </button>
                             )}

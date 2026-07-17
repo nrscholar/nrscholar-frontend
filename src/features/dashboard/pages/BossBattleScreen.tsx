@@ -64,12 +64,14 @@ export default function BossBattleScreen() {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                  title: `${searchParams.get("difficulty") || "Easy"} Boss Battle`,
+                  title: `${searchParams.get("chapterName") || ""} ${searchParams.get("difficulty") || "easy"} Boss Battle`.trim(),
                   type: "battle",
                   timeTaken,
                   correctQuestions: cQ,
                   totalQuestions: tQ,
-                  details
+                  details,
+                  chapter: searchParams.get("chapterName") || undefined,
+                  subject: searchParams.get("subjectName") || undefined
               })
           });
       } catch (e) {
@@ -92,6 +94,8 @@ export default function BossBattleScreen() {
         const bodyData = { 
             worldId,
             chapterId,
+            chapterName: searchParams.get("chapterName") || undefined,
+            subjectName: searchParams.get("subjectName") || undefined,
             difficulty
         };
         

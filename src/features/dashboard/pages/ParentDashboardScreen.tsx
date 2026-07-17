@@ -28,23 +28,29 @@ export default function ParentDashboardScreen() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    async function loadUserData() {
+    async function loadData() {
       try {
-        const res = await apiFetch("/api/users/me");
-        const json = await res.json();
-        if (json.success && json.data?.user) {
-          const user = json.data.user;
-          setChildName(user.childName || "Explorer");
-          setParentPhoto(user.parentPhoto || "");
-          setUserLevel(user.level || 1);
-          setXp(user.xp || 0);
+        const tzOffset = -new Date().getTimezoneOffset();
+        
+        const [userRes, reportRes, notifRes] = await Promise.all([
+          apiFetch("/api/users/me").catch(() => null),
+          apiFetch(`/api/parent/report?tz_offset_minutes=${tzOffset}`).catch(() => null),
+          apiFetch("/api/notifications").catch(() => null)
+        ]);
+
+        if (userRes) {
+          const json = await userRes.json();
+          if (json.success && json.data?.user) {
+            const user = json.data.user;
+            setChildName(user.childName || "Explorer");
+            setParentPhoto(user.parentPhoto || "");
+            setUserLevel(user.level || 1);
+            setXp(user.xp || 0);
+          }
         }
 
-        // Fetch dashboard extra info dynamically
-        try {
-          const tzOffset = -new Date().getTimezoneOffset();
-          const repRes = await apiFetch(`/api/parent/report?tz_offset_minutes=${tzOffset}`);
-          const repJson = await repRes.json();
+        if (reportRes) {
+          const repJson = await reportRes.json();
           if (repJson.success && repJson.data) {
             if (repJson.data.strengths) setStrengths(repJson.data.strengths);
             if (repJson.data.weaknesses) setWeaknesses(repJson.data.weaknesses);
@@ -56,7 +62,15 @@ export default function ParentDashboardScreen() {
             if (repJson.data.subjectBreakdown) setSubjectBreakdown(repJson.data.subjectBreakdown);
             if (repJson.data.lastActivity) setLastActivity(repJson.data.lastActivity);
           }
-        } catch (e) { }
+        }
+
+        if (notifRes) {
+          const notifJson = await notifRes.json();
+          if (notifJson.success && notifJson.data) {
+            setNotifications(notifJson.data);
+            setUnreadCount(notifJson.data.filter((n: any) => !n.isRead).length);
+          }
+        }
 
       } catch (err) {
         console.error("Failed to load user info", err);
@@ -64,22 +78,7 @@ export default function ParentDashboardScreen() {
         setLoading(false);
       }
     }
-    loadUserData();
-    
-    // Fetch notifications
-    const fetchNotifications = async () => {
-      try {
-        const res = await apiFetch("/api/notifications");
-        const json = await res.json();
-        if (json.success && json.data) {
-          setNotifications(json.data);
-          setUnreadCount(json.data.filter((n: any) => !n.isRead).length);
-        }
-      } catch (e) {
-        console.error("Failed to fetch notifications", e);
-      }
-    };
-    fetchNotifications();
+    loadData();
   }, []);
 
   const markAllRead = async () => {

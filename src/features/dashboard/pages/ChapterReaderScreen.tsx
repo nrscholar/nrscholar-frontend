@@ -20,6 +20,7 @@ export default function ChapterReaderScreen() {
   const searchParams = new URLSearchParams(location.search);
   const chapterId = searchParams.get("chapterId");
   const title = searchParams.get("title") || "Chapter Reader";
+  const subjectName = searchParams.get("subjectName") || "";
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [markingComplete, setMarkingComplete] = useState(false);
@@ -71,10 +72,10 @@ export default function ChapterReaderScreen() {
           readingCompleted: true
         })
       });
-      navigate(`/chapter-questions?chapterId=${chapterId}&chapterName=${encodeURIComponent(title)}`, { replace: true });
+      navigate(`/chapter-questions?chapterId=${chapterId}&chapterName=${encodeURIComponent(title)}&subjectName=${encodeURIComponent(subjectName)}`, { replace: true });
     } catch (error) {
       console.error("Error saving progress:", error);
-      navigate(`/chapter-questions?chapterId=${chapterId}&chapterName=${encodeURIComponent(title)}`, { replace: true });
+      navigate(`/chapter-questions?chapterId=${chapterId}&chapterName=${encodeURIComponent(title)}&subjectName=${encodeURIComponent(subjectName)}`, { replace: true });
     } finally {
       setMarkingComplete(false);
     }

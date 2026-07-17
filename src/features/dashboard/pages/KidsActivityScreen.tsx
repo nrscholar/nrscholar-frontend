@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Clock, CheckCircle2, ShieldAlert, Star, TrendingUp, Search, Calendar, FileText, Activity, X, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle2, ShieldAlert, Star, TrendingUp, Search, Calendar, FileText, Activity, X, ChevronDown, ChevronUp, BookOpen, Layers } from "lucide-react";
 import { apiFetch } from "../../../api";
 
 export default function KidsActivityScreen() {
@@ -83,7 +83,7 @@ export default function KidsActivityScreen() {
       <main className="px-5 pt-6 relative z-10">
         
         {/* Analytics Summary Card */}
-        <div className="bg-white/70 backdrop-blur-md rounded-[24px] p-6 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] mb-8 flex items-center justify-between">
+        <div className="bg-white/70 backdrop-blur-md rounded-[20px] p-5 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] mb-5 flex items-center justify-between">
           <div>
             <h2 className="text-[14px] font-bold text-[#767683] uppercase tracking-wider mb-1">Weekly Engagement</h2>
             <div className="flex items-baseline gap-2">
@@ -143,11 +143,11 @@ export default function KidsActivityScreen() {
               const isOpen = openDateLabel === null ? groupIdx === 0 : openDateLabel === dateLabel;
               
               return (
-                <div key={dateLabel} className="mb-6 bg-white/70 backdrop-blur-md rounded-[20px] border border-white/60 shadow-[0_4px_20px_rgba(0,0,0,0.03)] overflow-hidden transition-all duration-300">
+                <div key={dateLabel} className="mb-3 bg-white/70 backdrop-blur-md rounded-[16px] border border-white/60 shadow-[0_4px_20px_rgba(0,0,0,0.03)] overflow-hidden transition-all duration-300">
                   {/* Accordion Header */}
                   <button 
                     onClick={() => setOpenDateLabel(isOpen ? "" : dateLabel)}
-                    className="w-full px-5 py-4 flex items-center justify-between hover:bg-white/50 transition-colors"
+                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/50 transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <Calendar className="text-[#141779]" size={20} />
@@ -168,12 +168,12 @@ export default function KidsActivityScreen() {
                   
                   {/* Accordion Body */}
                   {isOpen && (
-                    <div className="p-5 pt-2 border-t border-gray-100/50 bg-white/30">
-                      <div className="relative pl-6 pt-4 before:content-[''] before:absolute before:left-[11px] before:top-6 before:bottom-2 before:w-[2px] before:bg-gradient-to-b before:from-[#141779]/30 before:to-transparent">
+                    <div className="p-4 pt-1 border-t border-gray-100/50 bg-white/30">
+                      <div className="relative pl-6 pt-2 before:content-[''] before:absolute before:left-[11px] before:top-4 before:bottom-2 before:w-[2px] before:bg-gradient-to-b before:from-[#141779]/30 before:to-transparent">
                         {group.activities.map((activity: any, index: number) => {
                           const { icon, bgColor } = getIconData(activity.type);
                           return (
-                            <div key={activity.id || `${groupIdx}-${index}`} className="relative mb-6 group animate-in slide-in-from-bottom-2 fade-in duration-300" style={{ animationDelay: `${index * 50}ms`, animationFillMode: "backwards" }}>
+                            <div key={activity.id || `${groupIdx}-${index}`} className="relative mb-4 group animate-in slide-in-from-bottom-2 fade-in duration-300" style={{ animationDelay: `${index * 50}ms`, animationFillMode: "backwards" }}>
                               
                               {/* Timeline Dot */}
                               <div className={`absolute -left-[25px] w-8 h-8 rounded-full ${bgColor} border-[2px] border-white shadow-sm flex items-center justify-center z-10 group-hover:scale-110 transition-transform`}>
@@ -183,37 +183,55 @@ export default function KidsActivityScreen() {
                               {/* Content Card */}
                               <div 
                                 onClick={() => activity.details && setSelectedActivity(activity)}
-                                className={`ml-8 bg-white/90 rounded-[16px] p-4 border border-white/60 shadow-sm hover:shadow-md transition-all ${activity.details ? 'cursor-pointer hover:scale-[1.01]' : 'cursor-default'}`}
+                                className={`ml-7 bg-white/90 rounded-[14px] p-3 border border-white/60 shadow-sm hover:shadow-md transition-all ${activity.details ? 'cursor-pointer hover:scale-[1.01]' : 'cursor-default'}`}
                               >
-                                <div className="flex justify-between items-start mb-2">
-                                  <h3 className="text-[15px] font-bold text-[#141779] pr-4">{activity.title}</h3>
-                                  <span className="text-[11px] font-bold text-[#767683] whitespace-nowrap bg-gray-100/80 px-2 py-1 rounded-md flex items-center gap-1">
-                                    <Clock size={11} /> {activity.time || (activity.createdAt ? new Date(activity.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now")}
-                                  </span>
+                                <div className="flex justify-between items-start mb-1">
+                                  <h3 className="text-[14px] font-bold text-[#141779] pr-3 leading-tight">{activity.title}</h3>
+                                  <div className="flex flex-col items-end gap-1 shrink-0">
+                                    <span className="text-[10px] font-bold text-[#767683] whitespace-nowrap bg-gray-100/80 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                      <Clock size={10} /> {activity.time || (activity.createdAt ? new Date(activity.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now")}
+                                    </span>
+                                    {activity.subject && (
+                                      <span className="text-[11px] font-extrabold text-[#767683] uppercase tracking-wide">
+                                        {activity.subject}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
+
+
                                 
                                 {activity.description && (
-                                  <p className="text-[13px] text-[#464652] font-medium leading-snug mb-3">
+                                  <p className="text-[12px] text-[#464652] font-medium leading-snug mb-2">
                                     {activity.description}
                                   </p>
                                 )}
                                 
                                 <div className="flex flex-wrap items-center gap-2 mt-1">
                                   {activity.correctQuestions !== undefined && activity.totalQuestions !== undefined && (
-                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#007168]/10 text-[#007168]">
+                                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-[#007168]/10 text-[#007168]">
                                       <CheckCircle2 size={12} />
-                                      <span className="text-[12px] font-extrabold tracking-wide">
+                                      <span className="text-[11px] font-extrabold tracking-wide">
                                         {activity.correctQuestions}/{activity.totalQuestions}
                                       </span>
                                     </div>
                                   )}
                                   
                                   {activity.timeTaken !== undefined && (
-                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#30007f]/10 text-[#30007f]">
+                                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-[#30007f]/10 text-[#30007f]">
                                       <Clock size={12} />
-                                      <span className="text-[12px] font-extrabold tracking-wide">
+                                      <span className="text-[11px] font-extrabold tracking-wide">
                                         {formatTime(activity.timeTaken)}
                                       </span>
+                                    </div>
+                                  )}
+                                  
+                                  {activity.chapter && (
+                                    <div className="ml-auto flex items-center gap-2">
+                                      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#e31b54]/10 text-[#e31b54]">
+                                        <Layers size={10} />
+                                        <span className="text-[10px] font-extrabold uppercase tracking-wide truncate max-w-[100px]">{activity.chapter}</span>
+                                      </div>
                                     </div>
                                   )}
                                 </div>

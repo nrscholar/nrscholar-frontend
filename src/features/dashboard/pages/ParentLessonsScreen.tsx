@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, Search, BookOpen, TrendingUp, Users, Settings, Plus, PlayCircle, ArrowLeft } from "lucide-react";
+import { Menu, Search, BookOpen, TrendingUp, Users, Settings, Plus, PlayCircle, ArrowLeft, Lock } from "lucide-react";
 import { apiFetch } from "../../../api";
 
 export default function ParentLessonsScreen() {
@@ -41,11 +41,25 @@ export default function ParentLessonsScreen() {
           setUsername(json.data.user.parentName || json.data.user.username || "Parent");
           setProfilePic(json.data.user.parentPhoto || "");
         }
-      } catch (e) { }
+      } catch (e) {
+        console.error("Failed to fetch user data", e);
+      }
     };
     fetchLibrary();
     fetchUser();
   }, []);
+
+  const unlockedTopicIds = new Set<string>();
+  const seenCategories = new Set<string>();
+  allTopics.forEach(topic => {
+    if (topic.status !== "completed") {
+      const cat = topic.category || "Other";
+      if (!seenCategories.has(cat)) {
+        seenCategories.add(cat);
+        unlockedTopicIds.add(topic.topicId);
+      }
+    }
+  });
 
   return (
     <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans pb-24 overflow-x-hidden relative">
@@ -118,17 +132,7 @@ export default function ParentLessonsScreen() {
           </div>
         </section>
 
-        {/* Search Bar */}
-        <section className="px-6 py-2">
-          <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#767683]" size={20} />
-            <input
-              type="text"
-              className="w-full bg-[#f2f4f6] border-none rounded-full py-4 pl-12 pr-6 text-base focus:ring-2 focus:ring-[rgba(0,106,98,0.3)] transition-all outline-none"
-              placeholder="Search for lessons..."
-            />
-          </div>
-        </section>
+
 
         {/* Categories Chips */}
         <section className="py-4">
@@ -152,33 +156,43 @@ export default function ParentLessonsScreen() {
             <button onClick={() => navigate('/parent/learning-library')} className="text-[#006a62] font-bold text-sm hover:underline">See All</button>
           </div>
           <div className="grid grid-cols-2 gap-4 px-6 pb-4">
-            {allTopics.filter(t => t.status !== "locked" && t.status !== "completed" && (activeFilter === "For You" || t.category === activeFilter)).slice(0, 8).map((topic) => (
-              <div
-                key={topic.topicId}
-                onClick={() => navigate(`/parent/lessons/player?id=${topic.topicId}`)}
-                className="w-full flex flex-col rounded-2xl overflow-hidden glass-card group cursor-pointer transition-all hover:shadow-xl active:scale-[0.98]"
-              >
-                <div className="relative h-28 md:h-36 overflow-hidden bg-gray-200">
-                  <img
-                    alt={topic.title}
-                    src={topic.imageUrl}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                  <div className="absolute top-2 left-2 bg-[#57fae9] text-[#007168] px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm">+{topic.xp || 30} XP</div>
-                  <div className="absolute bottom-2 right-2 bg-black/40 backdrop-blur-md text-white px-2 py-0.5 rounded-full text-[10px]">{topic.duration || 3} min</div>
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <PlayCircle size={48} className="text-white drop-shadow-lg" />
+            {allTopics
+              .filter(t => unlockedTopicIds.has(t.topicId) && (activeFilter === "For You" || t.category === activeFilter))
+              .map((topic, index) => {
+                const isLocked = false;
+                return (
+                  <div
+                    key={topic.topicId}
+                    onClick={() => !isLocked && navigate(`/parent/lessons/player?id=${topic.topicId}`)}
+                    className={`w-full flex flex-col rounded-2xl overflow-hidden glass-card group transition-all ${isLocked ? 'opacity-70 grayscale' : 'cursor-pointer hover:shadow-xl active:scale-[0.98]'}`}
+                  >
+                    <div className="relative h-28 md:h-36 overflow-hidden bg-gray-200">
+                      <img
+                        alt={topic.title}
+                        src={topic.imageUrl}
+                        className={`w-full h-full object-cover ${!isLocked ? 'group-hover:scale-110' : ''} transition-transform duration-700`}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                      <div className="absolute top-2 left-2 bg-[#57fae9] text-[#007168] px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm">+{topic.xp || 30} XP</div>
+                      <div className="absolute bottom-2 right-2 bg-black/40 backdrop-blur-md text-white px-2 py-0.5 rounded-full text-[10px]">{topic.duration || 3} min</div>
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        {!isLocked && <PlayCircle size={48} className="text-white drop-shadow-lg" />}
+                      </div>
+                      {isLocked && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
+                          <Lock size={32} className="text-white drop-shadow-md" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-3 bg-white/50 backdrop-blur-md">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[#006a62] text-[9px] font-bold uppercase tracking-widest">{topic.category}</span>
+                      </div>
+                      <h4 className="text-[14px] font-bold text-[#141779] leading-tight line-clamp-2">{topic.title}</h4>
+                    </div>
                   </div>
-                </div>
-                <div className="p-3 bg-white/50 backdrop-blur-md">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[#006a62] text-[9px] font-bold uppercase tracking-widest">{topic.category}</span>
-                  </div>
-                  <h4 className="text-[14px] font-bold text-[#141779] leading-tight line-clamp-2">{topic.title}</h4>
-                </div>
-              </div>
-            ))}
+                );
+              })}
           </div>
         </section>
       </main>

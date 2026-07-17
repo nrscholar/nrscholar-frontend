@@ -19,30 +19,37 @@ export default function ParentChallengesScreen() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const resUser = await apiFetch("/api/users/me");
-        const jsonUser = await resUser.json();
-        if (jsonUser.success && jsonUser.data?.user) {
-          setLevel(jsonUser.data.user.parentLevel || 1);
-          setStreak(jsonUser.data.user.streakDays || 0);
-          setTotalXP(jsonUser.data.user.parentXp || 0);
-          setUsername(jsonUser.data.user.parentName || jsonUser.data.user.username || "Parent");
-          setProfilePic(jsonUser.data.user.parentPhoto || "");
+        const [resUser, resChal] = await Promise.all([
+          apiFetch("/api/users/me").catch(() => null),
+          apiFetch("/api/parent/challenges").catch(() => null)
+        ]);
+
+        if (resUser) {
+          const jsonUser = await resUser.json();
+          if (jsonUser.success && jsonUser.data?.user) {
+            setLevel(jsonUser.data.user.parentLevel || 1);
+            setStreak(jsonUser.data.user.streakDays || 0);
+            setTotalXP(jsonUser.data.user.parentXp || 0);
+            setUsername(jsonUser.data.user.parentName || jsonUser.data.user.username || "Parent");
+            setProfilePic(jsonUser.data.user.parentPhoto || "");
+          }
         }
         
-        const resChal = await apiFetch("/api/parent/challenges");
-        const jsonChal = await resChal.json();
-        if (jsonChal.success && jsonChal.data) {
-          setChallenges(jsonChal.data.challenges);
-          setUpcoming(jsonChal.data.upcoming);
-          setActiveCount(jsonChal.data.activeCount);
-          setTotalActive(jsonChal.data.totalActive);
-          
-          const newClaimState: any = {};
-          jsonChal.data.challenges.forEach((c: any) => {
-             if (c.claimed) newClaimState[c.id] = "claimed";
-             else newClaimState[c.id] = "idle";
-          });
-          setClaimState(newClaimState);
+        if (resChal) {
+          const jsonChal = await resChal.json();
+          if (jsonChal.success && jsonChal.data) {
+            setChallenges(jsonChal.data.challenges);
+            setUpcoming(jsonChal.data.upcoming);
+            setActiveCount(jsonChal.data.activeCount);
+            setTotalActive(jsonChal.data.totalActive);
+            
+            const newClaimState: any = {};
+            jsonChal.data.challenges.forEach((c: any) => {
+               if (c.claimed) newClaimState[c.id] = "claimed";
+               else newClaimState[c.id] = "idle";
+            });
+            setClaimState(newClaimState);
+          }
         }
       } catch (e) {}
     }

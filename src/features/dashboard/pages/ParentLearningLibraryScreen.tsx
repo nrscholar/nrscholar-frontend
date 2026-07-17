@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, Search, CheckCircle, Clock, Star, StarHalf, Lock, BookOpen, TrendingUp, Users, Settings, ArrowLeft } from "lucide-react";
+import { Bell, Search, CheckCircle, Clock, Star, StarHalf, Lock, BookOpen, TrendingUp, Users, Settings, ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
 import { apiFetch } from "../../../api";
 
 const filters = [
-  "All", 
+  "All",
+  "Completed",
   "Communication", 
   "Anger Management", 
   "Focus", 
@@ -23,6 +24,19 @@ export default function ParentLearningLibraryScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [topics, setTopics] = useState<any[]>([]);
   const [progress, setProgress] = useState({ completed: 0, total: 100 });
+  const [showMore, setShowMore] = useState(false);
+
+  const categoryStats = topics.reduce((acc, topic) => {
+    const cat = topic.category || "Other";
+    if (!acc[cat]) {
+      acc[cat] = { completed: 0, total: 0 };
+    }
+    acc[cat].total += 1;
+    if (topic.status === "completed") {
+      acc[cat].completed += 1;
+    }
+    return acc;
+  }, {} as Record<string, { completed: number; total: number }>);
 
   useEffect(() => {
     const fetchLibrary = async () => {
@@ -41,9 +55,27 @@ export default function ParentLearningLibraryScreen() {
   }, []);
 
   const filteredTopics = topics.filter(topic => {
+    if (activeFilter === "Completed") {
+      return topic.status === "completed" && topic.title.toLowerCase().includes(searchQuery.toLowerCase());
+    }
+    if (topic.status === "completed") {
+      return false;
+    }
     const matchesFilter = activeFilter === "All" || topic.category === activeFilter;
     const matchesSearch = topic.title.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesFilter && matchesSearch;
+  });
+
+  const unlockedTopicIds = new Set<string>();
+  const seenCategories = new Set<string>();
+  topics.forEach(topic => {
+    if (topic.status !== "completed") {
+      const cat = topic.category || "Other";
+      if (!seenCategories.has(cat)) {
+        seenCategories.add(cat);
+        unlockedTopicIds.add(topic.topicId);
+      }
+    }
   });
 
   return (
@@ -91,6 +123,30 @@ export default function ParentLearningLibraryScreen() {
               <div className="h-full bg-[#006a62] rounded-full shadow-[0_0_8px_rgba(0,106,98,0.4)]" style={{ width: `${(progress.completed / progress.total) * 100}%` }}></div>
             </div>
             <p className="text-xs mt-2 text-[#767683] font-medium italic">{progress.total - progress.completed} more lessons to reach Master Parent level!</p>
+            
+            <div className="mt-3 pt-3 border-t border-[#141779]/10">
+              <button 
+                onClick={() => setShowMore(!showMore)} 
+                className="w-full flex items-center justify-between text-sm font-bold text-[#141779] active:scale-95 transition-all outline-none"
+              >
+                <span>{showMore ? "Hide Details" : "Show More Details"}</span>
+                {showMore ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </button>
+              
+              {showMore && (
+                <div className="mt-3 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                  {Object.entries(categoryStats).map(([category, stats]: [string, any]) => (
+                    <div key={category} className="flex justify-between items-center text-sm">
+                      <span className="text-[#464652] font-medium">{category}</span>
+                      <span className="text-[#006a62] font-bold">{stats.completed}/{stats.total} lessons</span>
+                    </div>
+                  ))}
+                  {Object.keys(categoryStats).length === 0 && (
+                    <div className="text-sm text-[#767683] italic">No lessons available.</div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Search Bar */}
@@ -125,7 +181,7 @@ export default function ParentLearningLibraryScreen() {
 
         {/* Lesson List */}
         <section className="space-y-4 pb-8 mt-6">
-          {filteredTopics.map((topic) => {
+          {filteredTopics.map((topic, index) => {
             
             // Image Logic
             const imageUrl = topic.imageUrl;
@@ -156,7 +212,7 @@ export default function ParentLearningLibraryScreen() {
             }
 
             // Active UI
-            if (topic.status === "active") {
+            if (unlockedTopicIds.has(topic.topicId)) {
               return (
                 <div key={topic.topicId} onClick={() => navigate(`/parent/lessons/player?id=${topic.topicId}`)} className="flex items-center gap-4 p-4 bg-white border border-[#c7c5d4]/40 hover:border-[#141779]/30 rounded-2xl shadow-sm group active:scale-[0.98] transition-all cursor-pointer">
                   <div className="w-20 h-20 rounded-xl overflow-hidden bg-[#e0e0ff] flex-shrink-0 relative group-hover:shadow-md transition-shadow">

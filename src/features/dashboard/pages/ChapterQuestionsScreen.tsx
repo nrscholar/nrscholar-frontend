@@ -91,6 +91,7 @@ export default function ChapterQuestionsScreen() {
               const finalReturnUrl = encodeURIComponent(`/practice/chapters`);
               
               sessionStorage.setItem("lastSessionAnswers", JSON.stringify(pJson.data.answers || []));
+              await submitActivityLog(pJson.data.answers || []);
               
               navigate(`/boss-battle?worldId=w1&chapterId=${chapterId}&difficulty=easy&returnTo=${finalReturnUrl}`, {
                 state: { userAnswers: pJson.data.answers || [] },
@@ -173,7 +174,9 @@ export default function ChapterQuestionsScreen() {
               timeTaken,
               correctQuestions: cQ,
               totalQuestions: tQ,
-              details
+              details,
+              chapter: searchParams.get("chapterName") || undefined,
+              subject: searchParams.get("subjectName") || undefined
           })
       });
     } catch (e) {
@@ -217,7 +220,12 @@ export default function ChapterQuestionsScreen() {
       apiFetch("/api/world/questions/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ questionId: q?._id || `q_${currentQ}`, isCorrect })
+        body: JSON.stringify({ 
+          questionId: q?._id || `q_${currentQ}`, 
+          isCorrect,
+          chapterName: searchParams.get("chapterName") || undefined,
+          subjectName: searchParams.get("subjectName") || undefined
+        })
       }).catch(e => console.error("Failed to submit for rewards", e));
 
     } else {
@@ -262,6 +270,7 @@ export default function ChapterQuestionsScreen() {
               questionsCompleted: true
             })
           });
+          await submitActivityLog(userAnswers);
         } catch (e) {
           console.error("Failed to save progress", e);
         }
@@ -270,7 +279,7 @@ export default function ChapterQuestionsScreen() {
         
         sessionStorage.setItem("lastSessionAnswers", JSON.stringify(userAnswers));
         
-        navigate(`/boss-battle?worldId=w1&chapterId=${chapterId}&difficulty=easy&returnTo=${finalReturnUrl}`, {
+        navigate(`/boss-battle?worldId=w1&chapterId=${chapterId}&difficulty=easy&returnTo=${finalReturnUrl}&chapterName=${encodeURIComponent(searchParams.get("chapterName") || "")}&subjectName=${encodeURIComponent(searchParams.get("subjectName") || "")}`, {
           state: { userAnswers },
           replace: true
         });
