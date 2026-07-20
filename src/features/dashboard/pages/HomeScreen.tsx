@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Bookmark, BookOpen, CheckCircle, ChevronRight, Gift, Map, MapPin, Shield, Star, Target, Zap, Bell } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -29,6 +29,8 @@ export default function HomeScreen() {
   const [chestTaps, setChestTaps] = useState(0);
   const [mascotMsg, setMascotMsg] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
+  const [hasFreeSpin, setHasFreeSpin] = useState(false);
+  const [showSpinPopup, setShowSpinPopup] = useState(false);
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -126,6 +128,26 @@ export default function HomeScreen() {
             setSurpriseData(surData);
             setChestTaps(0);
           }
+        }
+
+        // Fetch Spin Wheel status
+        try {
+          const spinRes = await apiFetch("/api/retention/spin-wheel/status");
+          if (spinRes.ok) {
+            const spinData = await spinRes.json();
+            if (spinData && spinData.balances) {
+              const dailyCount = spinData.balances.daily_spins_balance || 0;
+              const hasSpin = dailyCount > 0 || (spinData.balances.chapter_spins_balance || 0) > 0 || (spinData.balances.event_spins_balance || 0) > 0 || (spinData.balances.parent_spins_balance || 0) > 0;
+              setHasFreeSpin(hasSpin);
+              
+              if (dailyCount > 0 && sessionStorage.getItem("dailySpinPopupShown") !== "true") {
+                setShowSpinPopup(true);
+                sessionStorage.setItem("dailySpinPopupShown", "true");
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Failed to fetch spin wheel status", e);
         }
       } catch (e) {
         console.error("Failed to fetch retention data", e);
@@ -616,6 +638,65 @@ export default function HomeScreen() {
           </motion.div>
         </div>
       )}
+
+      {/* FLOATING SPIN WHEEL GIFT ICON */}
+      <motion.div
+        className="fixed bottom-40 right-4 z-40"
+        animate={hasFreeSpin ? { scale: [1, 1.15, 1], rotate: [0, 10, -10, 0] } : {}}
+        transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
+      >
+        <button
+          onClick={() => navigate("/daily-rewards")}
+          className={`w-14 h-14 rounded-full shadow-[0_4px_15px_rgba(0,0,0,0.15)] flex items-center justify-center border-2 transition-transform hover:scale-110 active:scale-95 ${
+            hasFreeSpin
+              ? "bg-[#57fae9] border-[#007168] text-[#007168] animate-pulse"
+              : "bg-white border-[#141779] text-[#141779]"
+          }`}
+        >
+          <Gift className="w-7 h-7" />
+        </button>
+      </motion.div>
+
+      {/* DAILY FREE SPIN AUTO-POPUP */}
+      <AnimatePresence>
+        {showSpinPopup && (
+          <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-md flex items-center justify-center p-6">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-gradient-to-br from-[#141779] to-[#07051a] w-full max-w-[360px] p-8 rounded-3xl flex flex-col items-center text-center gap-6 border border-[#57fae9]/30 shadow-[0_0_30px_rgba(87,250,233,0.2)]"
+            >
+              <div className="w-20 h-20 rounded-full bg-[#57fae9]/10 flex items-center justify-center border border-[#57fae9]/30 animate-bounce">
+                <Gift className="w-10 h-10 text-[#57fae9]" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-white">Free Spin Available!</h3>
+                <p className="text-sm text-white/70 mt-2">
+                  You have a free daily spin waiting. Spin the Quantum Wheel to unlock coins, XP, boosters, and legendary companion skins!
+                </p>
+              </div>
+              <div className="flex flex-col gap-2 w-full">
+                <button
+                  onClick={() => {
+                    setShowSpinPopup(false);
+                    navigate("/daily-rewards");
+                  }}
+                  className="w-full py-4 bg-[#57fae9] text-[#007168] font-bold rounded-full hover:bg-[#45e0d0] active:scale-95 transition-all uppercase tracking-wide text-sm"
+                >
+                  Spin Now
+                </button>
+                <button
+                  onClick={() => setShowSpinPopup(false)}
+                  className="w-full py-3 bg-white/5 text-white/50 font-bold rounded-full hover:bg-white/10 active:scale-95 transition-all text-xs"
+                >
+                  Maybe Later
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

@@ -42,6 +42,7 @@ import ParentSettings from "../features/dashboard/pages/ParentSettings";
 import ParentSubscriptionScreen from "../features/dashboard/pages/ParentSubscriptionScreen";
 import ProgressScreen from "../features/dashboard/pages/ProgressScreen";
 import RecapScreen from "../features/dashboard/pages/RecapScreen";
+import DailyRewardsScreen from "../features/dashboard/pages/DailyRewardsScreen";
 import RewardScreen from "../features/dashboard/pages/RewardScreen";
 import ScanAndLearn from "../features/dashboard/pages/ScanAndLearn";
 import ScanHistory from "../features/dashboard/pages/ScanHistory";
@@ -133,6 +134,7 @@ function App() {
             <Route path="/parent/subscription" element={<ParentSubscriptionScreen />} />
             <Route path="/parent/learning-dna" element={<ParentLearningDNAScreen />} />
             <Route path="/practice/reward" element={<RewardScreen />} />
+            <Route path="/daily-rewards" element={<DailyRewardsScreen />} />
             <Route path="/weekly-test" element={<WeeklyTestScreen />} />
             <Route path="/weekly-test-questions" element={<WeeklyTestQuestionsScreen />} />
             <Route path="/weekly-test-results" element={<WeeklyTestResultsScreen />} />

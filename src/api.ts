@@ -62,6 +62,16 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
     } else {
       redirectToLogin();
     }
+  } else if (response.status === 404) {
+    try {
+      const clone = response.clone();
+      const body = await clone.json();
+      if (body.detail === "User not found" || body.message === "User not found") {
+        redirectToLogin();
+      }
+    } catch (err) {
+      // Ignore JSON parsing errors for generic 404s
+    }
   }
 
   return response;

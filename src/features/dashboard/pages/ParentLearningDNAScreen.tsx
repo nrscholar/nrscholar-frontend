@@ -131,6 +131,89 @@ export default function ParentLearningDNAScreen() {
           </div>
         </div>
 
+        {/* Child Psychology & Grit Profiling */}
+        <div>
+          <h3 className="text-[16px] font-semibold text-[#464652] mb-3 px-1">Psychological & Grit DNA</h3>
+          <div className="bg-white/70 backdrop-blur-md rounded-[20px] p-5 border border-white/60 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col gap-5">
+            
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-[#e3f2fd] flex items-center justify-center">
+                <BrainCircuit size={24} className="text-[#1976d2]" />
+              </div>
+              <div className="flex-1">
+                <div className="flex justify-between mb-1.5">
+                  <span className="text-[15px] font-bold text-[#191c1e]">Confidence Level</span>
+                  <span className="text-[15px] font-bold text-[#1976d2]">{dnaData?.metrics?.confidence ?? 75}%</span>
+                </div>
+                <div className="w-full h-2.5 bg-gray-200/60 rounded-full overflow-hidden shadow-inner relative">
+                  <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#1e88e5] to-[#1565c0] rounded-full" style={{ width: `${dnaData?.metrics?.confidence ?? 75}%` }} />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-[#f3e5f5] flex items-center justify-center">
+                <Activity size={24} className="text-[#8e24aa]" />
+              </div>
+              <div className="flex-1">
+                <div className="flex justify-between mb-1.5">
+                  <span className="text-[15px] font-bold text-[#191c1e]">Focus & Attention</span>
+                  <span className="text-[15px] font-bold text-[#8e24aa]">{dnaData?.metrics?.focus ?? 85}%</span>
+                </div>
+                <div className="w-full h-2.5 bg-gray-200/60 rounded-full overflow-hidden shadow-inner relative">
+                  <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#ab47bc] to-[#7b1fa2] rounded-full" style={{ width: `${dnaData?.metrics?.focus ?? 85}%` }} />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-[#efebe9] flex items-center justify-center">
+                <Target size={24} className="text-[#5d4037]" />
+              </div>
+              <div className="flex-1">
+                <div className="flex justify-between mb-1.5">
+                  <span className="text-[15px] font-bold text-[#191c1e]">Resilience & Grit</span>
+                  <span className="text-[15px] font-bold text-[#5d4037]">{dnaData?.metrics?.resilience ?? 70}%</span>
+                </div>
+                <div className="w-full h-2.5 bg-gray-200/60 rounded-full overflow-hidden shadow-inner relative">
+                  <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#8d6e63] to-[#5d4037] rounded-full" style={{ width: `${dnaData?.metrics?.resilience ?? 70}%` }} />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-[#e8f5e9] flex items-center justify-center">
+                <Zap size={24} className="text-[#388e3c]" />
+              </div>
+              <div className="flex-1">
+                <div className="flex justify-between mb-1.5">
+                  <span className="text-[15px] font-bold text-[#191c1e]">Curiosity & Exploration</span>
+                  <span className="text-[15px] font-bold text-[#388e3c]">{dnaData?.metrics?.curiosity ?? 65}%</span>
+                </div>
+                <div className="w-full h-2.5 bg-gray-200/60 rounded-full overflow-hidden shadow-inner relative">
+                  <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#66bb6a] to-[#388e3c] rounded-full" style={{ width: `${dnaData?.metrics?.curiosity ?? 65}%` }} />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-[#fff8e1] flex items-center justify-center">
+                <Zap size={24} className="text-[#fbc02d]" />
+              </div>
+              <div className="flex-1">
+                <div className="flex justify-between mb-1.5">
+                  <span className="text-[15px] font-bold text-[#191c1e]">Consistency & Motivation</span>
+                  <span className="text-[15px] font-bold text-[#fbc02d]">{dnaData?.metrics?.motivation ?? 70}%</span>
+                </div>
+                <div className="w-full h-2.5 bg-gray-200/60 rounded-full overflow-hidden shadow-inner relative">
+                  <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#fdd835] to-[#fbc02d] rounded-full" style={{ width: `${dnaData?.metrics?.motivation ?? 70}%` }} />
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
         {/* Recommendations */}
         <div>
           <h3 className="text-[16px] font-semibold text-[#464652] mb-3 px-1">Actionable Tips</h3>

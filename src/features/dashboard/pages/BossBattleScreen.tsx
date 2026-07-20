@@ -43,6 +43,9 @@ export default function BossBattleScreen() {
   
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
   const [userAnswers, setUserAnswers] = useState<any[]>([]);
+  const [revivalSpins, setRevivalSpins] = useState(0);
+  const [showReviveModal, setShowReviveModal] = useState(false);
+  const [pendingLossData, setPendingLossData] = useState<any>(null);
 
   useEffect(() => {
     setQuestionStartTime(Date.now());
@@ -206,46 +209,23 @@ export default function BossBattleScreen() {
               }
             }, 1000);
           } else if (status === "LOST") {
-            setLossOverlay({ show: true, xpLoss: json.data.xpLoss || -30 });
-            
             submitActivityLog(newAnswers).catch(() => {});
             
-            // Wait 3 seconds to show the animation, then navigate
-            setTimeout(() => {
-                const chapterId = searchParams.get("chapterId");
-                const chapterName = searchParams.get("chapterName");
-                if (chapterId) {
-                    const existingAnswers = location.state?.userAnswers || [];
-                    const rewindAnswers = existingAnswers.slice(0, 9);
-                    const rewindScore = rewindAnswers.filter((a: any) => a?.isCorrect).length;
-                    const level = searchParams.get("difficulty") || "easy";
-    
-                    apiFetch("/api/practice/chapter-progress", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        chapterId: chapterId,
-                        currentQ: 9, // Rewind to 10th question
-                        score: rewindScore,
-                        completed: false,
-                        readingCompleted: true,
-                        questionsCompleted: false,
-                        bossCompleted: false,
-                        chapterCompleted: false,
-                        answers: rewindAnswers
-                      })
-                    }).then(() => {
-                        const returnDest = `/practice/chapters`;
-                        navigate(returnDest, { replace: true });
-                    }).catch(() => {
-                        navigate("/practice/chapters", { replace: true });
-                    });
-                } else if (returnTo) {
-                   navigate(returnTo, { state: location.state, replace: true });
-                } else {
-                   navigate("/practice/chapters", { replace: true });
+            // Fetch current spin status
+            apiFetch("/api/retention/spin-wheel/status")
+              .then(res => res.json())
+              .then(data => {
+                if (data && data.balances) {
+                  setRevivalSpins(data.balances.boss_revival_spins_balance || 0);
                 }
-            }, 3000);
+              })
+              .catch(() => {});
+              
+            setPendingLossData({
+              xpLoss: json.data.xpLoss || -30,
+              newAnswers
+            });
+            setShowReviveModal(true);
           } else {
             setCurrentQIndex(prev => prev + 1);
             setSelected(null);
@@ -261,6 +241,45 @@ export default function BossBattleScreen() {
       isAttackingRef.current = false;
       setActionResult("idle");
     }
+  };
+
+  const handleGiveUp = async () => {
+    setShowReviveModal(false);
+    const xpLoss = pendingLossData?.xpLoss || -30;
+    setLossOverlay({ show: true, xpLoss });
+    
+    setTimeout(() => {
+        const chapterId = searchParams.get("chapterId");
+        if (chapterId) {
+            const existingAnswers = location.state?.userAnswers || [];
+            const rewindAnswers = existingAnswers.slice(0, 9);
+            const rewindScore = rewindAnswers.filter((a: any) => a?.isCorrect).length;
+
+            apiFetch("/api/practice/chapter-progress", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chapterId: chapterId,
+                currentQ: 9, // Rewind to 10th question
+                score: rewindScore,
+                completed: false,
+                readingCompleted: true,
+                questionsCompleted: false,
+                bossCompleted: false,
+                chapterCompleted: false,
+                answers: rewindAnswers
+              })
+            }).then(() => {
+                navigate(`/practice/chapters`, { replace: true });
+            }).catch(() => {
+                navigate("/practice/chapters", { replace: true });
+            });
+        } else if (returnTo) {
+           navigate(returnTo, { state: location.state, replace: true });
+        } else {
+           navigate("/practice/chapters", { replace: true });
+        }
+    }, 3000);
   };
 
   if (loading) {
@@ -512,6 +531,63 @@ export default function BossBattleScreen() {
         <button id="attack-btn" onClick={handleAttack} className="hidden">Attack</button>
       </main>
       
+      {/* Boss Revival Modal */}
+      {showReviveModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md px-6 text-center">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-gradient-to-br from-[#141779] to-[#07051a] border-2 border-[#57fae9]/30 rounded-3xl p-8 max-w-sm w-full shadow-[0_0_50px_rgba(87,250,233,0.25)] flex flex-col items-center gap-6"
+          >
+            <div className="w-20 h-20 rounded-full bg-[#57fae9]/10 border border-[#57fae9]/30 flex items-center justify-center animate-pulse">
+              <Swords className="text-[#57fae9] w-10 h-10 animate-bounce" />
+            </div>
+            <div>
+              <h2 className="text-3xl font-black text-white uppercase tracking-widest">Final Chance!</h2>
+              <p className="text-sm text-white/70 mt-2">
+                You ran out of hearts! Revive using the Revival Wheel to keep your current boss HP progress and fight on!
+              </p>
+            </div>
+            
+            <div className="w-full bg-white/5 rounded-2xl p-4 border border-white/10">
+              <span className="text-xs text-white/50 uppercase font-bold tracking-widest block mb-1">Your Revival Spins</span>
+              <span className="text-3xl font-black text-[#57fae9]">{revivalSpins} Available</span>
+            </div>
+
+            <div className="flex flex-col gap-2 w-full">
+              <button
+                onClick={() => {
+                  if (revivalSpins > 0) {
+                    navigate(`/daily-rewards?type=boss_revival&boss_id=${battleData?.battleId}`);
+                  } else {
+                    // Give them 1 revival spin as defined by: "Available once per boss attempt when hearts reach 0."
+                    apiFetch("/api/retention/spin-wheel/grant", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ spin_type: "boss_revival", amount: 1 })
+                    }).then(() => {
+                      navigate(`/daily-rewards?type=boss_revival&boss_id=${battleData?.battleId}`);
+                    }).catch(() => {
+                      alert("No revival spins available. Ask a parent or complete learning chapters to earn spins!");
+                    });
+                  }
+                }}
+                className="w-full py-4 bg-[#57fae9] text-[#007168] font-bold rounded-full hover:bg-[#45e0d0] active:scale-95 transition-all uppercase tracking-wide text-sm flex items-center justify-center gap-2"
+              >
+                <span>🔥 Spin to Revive</span>
+              </button>
+              
+              <button
+                onClick={handleGiveUp}
+                className="w-full py-3 bg-white/5 text-white/50 font-bold rounded-full hover:bg-white/10 active:scale-95 transition-all text-xs"
+              >
+                Retreat & Lose XP
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {/* Defeat Overlay Animation */}
       {lossOverlay.show && (
         <motion.div 
