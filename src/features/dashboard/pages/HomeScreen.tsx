@@ -31,6 +31,7 @@ export default function HomeScreen() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasFreeSpin, setHasFreeSpin] = useState(false);
   const [showSpinPopup, setShowSpinPopup] = useState(false);
+  const [citiesData, setCitiesData] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -93,9 +94,7 @@ export default function HomeScreen() {
       } catch(e) {}
     }
     
-    const fetchRetentionData = async () => {
-      const token = localStorage.getItem("userToken");
-      if (!token) return;
+    const fetchMissions = async () => {
       try {
         const msRes = await apiFetch("/api/retention/missions/today");
         if (msRes.ok) {
@@ -104,6 +103,14 @@ export default function HomeScreen() {
             setMissions(msData);
           }
         }
+      } catch (e) {}
+    };
+
+    const fetchRetentionData = async () => {
+      const token = localStorage.getItem("userToken");
+      if (!token) return;
+      try {
+        await fetchMissions();
         
         // IMPORTANT: Update the streak BEFORE fetching it
         try {
@@ -118,6 +125,18 @@ export default function HomeScreen() {
         if (stRes.ok) {
           const stData = await stRes.json();
           setRetentionStreak(stData);
+        }
+
+        try {
+          const cRes = await apiFetch("/api/practice/cities");
+          if (cRes.ok) {
+            const cData = await cRes.json();
+            if (cData.success && cData.data) {
+              setCitiesData(cData.data);
+            }
+          }
+        } catch (e) {
+          console.error("Failed to fetch cities", e);
         }
         
         // Fetch Random Unscripted Surprise
@@ -156,48 +175,70 @@ export default function HomeScreen() {
     
     fetchProfile();
     fetchRetentionData();
+
+    // Re-fetch missions whenever the user switches back to this tab/screen
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchMissions();
+        fetchProfile();
+      }
+    };
+    // Also re-fetch on window focus (covers navigating back from another route)
+    const handleFocus = () => {
+      fetchMissions();
+      fetchProfile();
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    // Poll every 10 seconds so missions update quickly after being completed
+    const pollInterval = setInterval(fetchMissions, 10000);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(pollInterval);
+    };
   }, []);
 
   const completeMission = async (missionId: string) => {
     try {
       const res = await apiFetch("/api/retention/missions/complete", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mission_id: missionId })
       });
       if (res.ok) {
         const data = await res.json();
         // Update mission state
-        setMissions(prev => prev.map(m => m.id === missionId ? { ...m, status: 'completed' } : m));
+        setMissions(prev => prev.map(m => (m.id === missionId || m._id === missionId) ? { ...m, status: 'completed' } : m));
         // Add coins and XP visually
         setCoins(prev => prev + (data.coinReward || 0));
+        if (data.xpReward) {
+          setXp(prev => prev + data.xpReward);
+        }
       }
     } catch (e) {
       console.error("Failed to complete mission");
     }
   };
 
-  const CITIES = [
-    "Egg Village",
-    "Forest Kingdom",
-    "Magic Desert",
-    "Ice Kingdom",
-    "Dragon Mountain"
-  ];
-
-  // Calculate destination progress based on XP milestones [0, 1000, 2500, 5000, 10000]
-  const xpThresholds = [0, 1000, 2500, 5000, 10000];
+  // Calculate destination progress based on fetched cities
   let currentCityIndex = 0;
-  for (let i = 0; i < xpThresholds.length; i++) {
-    if (xp >= xpThresholds[i]) {
-      currentCityIndex = i;
+  if (citiesData.length > 0) {
+    for (let i = 0; i < citiesData.length; i++) {
+      if (xp >= (citiesData[i].requiredFuel || 0)) {
+        currentCityIndex = i;
+      }
     }
   }
-  const nextLockedIndex = Math.min(CITIES.length - 1, currentCityIndex + 1);
-  const currentCityName = CITIES[currentCityIndex] || "Egg Village";
-  const nextCityName = CITIES[nextLockedIndex] || "Forest Kingdom";
+
+  const nextLockedIndex = citiesData.length > 0 ? Math.min(citiesData.length - 1, currentCityIndex + 1) : 0;
+  const currentCityName = citiesData.length > 0 ? citiesData[currentCityIndex].name : "Egg Village";
+  const nextCityName = citiesData.length > 0 ? citiesData[nextLockedIndex].name : "Forest Kingdom";
   
-  const targetXp = xpThresholds[nextLockedIndex] || 1000;
-  const prevMilestoneXp = xpThresholds[currentCityIndex] || 0;
+  const targetXp = citiesData.length > 0 ? (citiesData[nextLockedIndex].requiredFuel || 1000) : 1000;
+  const prevMilestoneXp = citiesData.length > 0 ? (citiesData[currentCityIndex].requiredFuel || 0) : 0;
   
   const xpNeeded = Math.max(0, targetXp - xp);
   const currentLegXpTotal = targetXp - prevMilestoneXp;
@@ -245,16 +286,19 @@ export default function HomeScreen() {
           <div className="h-10 bg-[rgba(255,159,67,0.15)] px-2.5 rounded-xl flex items-center justify-center whitespace-nowrap">
             <span className="text-xs font-bold text-[#ff9f43]">🔥 {retentionStreak?.currentStreak ?? streakDays}</span>
           </div>
+          {/* Bell button with badge overlapping the icon top-right */}
           <button 
             onClick={() => navigate("/notifications")}
-            className="w-10 h-10 rounded-xl bg-[rgba(20,23,121,0.08)] flex items-center justify-center hover:bg-[rgba(20,23,121,0.15)] transition-all relative shrink-0"
+            className="w-10 h-10 rounded-xl bg-[rgba(20,23,121,0.08)] flex items-center justify-center hover:bg-[rgba(20,23,121,0.15)] transition-all shrink-0"
           >
-            <Bell size={18} className="text-[#141779]" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-bold border-2 border-white">
-                {unreadCount}
-              </span>
-            )}
+            <div className="relative">
+              <Bell size={18} className="text-[#141779]" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-2 -right-2 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border border-white pointer-events-none z-10">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </div>
           </button>
           <button 
             onClick={() => navigate("/practice/inventory")}
@@ -263,6 +307,7 @@ export default function HomeScreen() {
             <span className="text-xs font-bold text-[#141779]">🪙 {coins}</span>
           </button>
         </div>
+
       </header>
 
       <main className="px-6 pt-6 flex flex-col gap-6">
@@ -458,7 +503,11 @@ export default function HomeScreen() {
                     </div>
                   </div>
                   
-                  {mission.status !== 'completed' && (
+                  {mission.status === 'completed' ? (
+                    <div className="bg-[#e6fcf5] text-[#20c997] text-[11px] font-bold px-4 py-2 rounded-[12px]">
+                      ✓ Completed
+                    </div>
+                  ) : (
                     <div className="bg-[#f0f0f0] text-[#767683] text-[11px] font-bold px-4 py-2 rounded-[12px]">
                       In Progress
                     </div>

@@ -32,6 +32,7 @@ export default function ChapterQuestionsScreen() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
 
+
   useEffect(() => {
     initParticlesEngine(async (engine) => { await loadSlim(engine); }).then(() => setParticlesInit(true));
   }, []);
@@ -228,6 +229,9 @@ export default function ChapterQuestionsScreen() {
         })
       }).catch(e => console.error("Failed to submit for rewards", e));
 
+      // m2 (Answer 10 Questions) is handled server-side in /api/world/questions/submit
+      // which counts DB attempts per day — no need to track here
+
     } else {
       
         if (currentQ < total - 1) {
@@ -265,7 +269,7 @@ export default function ChapterQuestionsScreen() {
               currentQ: total,
               score: score,
               answers: userAnswers,
-              completed: false,
+              completed: true,
               readingCompleted: true,
               questionsCompleted: true
             })
@@ -274,6 +278,9 @@ export default function ChapterQuestionsScreen() {
         } catch (e) {
           console.error("Failed to save progress", e);
         }
+        
+        // m1 (Complete 1 Lesson) is auto-completed server-side via /api/world/questions/submit
+        // and /api/practice/chapter-progress — no need to call it here
         
         const finalReturnUrl = encodeURIComponent(`/practice/chapters`);
         

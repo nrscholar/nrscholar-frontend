@@ -196,14 +196,16 @@ export default function ChaptersScreen() {
           {/* Right Side: Bell Icon */}
           <button 
             onClick={() => navigate("/notifications")}
-            className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all relative shrink-0"
+            className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all shrink-0"
           >
-            <Bell size={20} className="text-[#141779]" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-bold border-2 border-white">
-                {unreadCount}
-              </span>
-            )}
+            <div className="relative">
+              <Bell size={20} className="text-[#141779]" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-4.5 h-4.5 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border border-white pointer-events-none z-10">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </div>
           </button>
         </div>
         

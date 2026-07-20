@@ -298,14 +298,16 @@ export default function JourneyMapScreen() {
           <div className="flex items-center gap-1.5 shrink-0">
             <button 
               onClick={() => navigate("/notifications")}
-              className="w-9 h-9 rounded-full bg-surface-container flex items-center justify-center hover:opacity-85 transition-all relative shrink-0"
+              className="w-9 h-9 rounded-full bg-surface-container flex items-center justify-center hover:opacity-85 transition-all shrink-0"
             >
-              <span className="material-symbols-outlined text-[20px] text-primary">notifications</span>
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4.5 h-4.5 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border-2 border-surface">
-                  {unreadCount}
-                </span>
-              )}
+              <div className="relative">
+                <span className="material-symbols-outlined text-[20px] text-primary">notifications</span>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border border-surface pointer-events-none z-10">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </div>
             </button>
             <div className="flex items-center gap-1 bg-surface-container px-2.5 py-1.5 rounded-full whitespace-nowrap">
               <span className="material-symbols-outlined text-[16px] text-orange-500" style={{fontVariationSettings: "'FILL' 1"}}>local_fire_department</span>
