@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useNavigate } from "react-router-dom";
 import Layout from "./components/Layout";
 
@@ -67,6 +67,84 @@ const AuthHandler = () => {
   return null;
 };
 
+import { apiFetch } from "../api";
+
+const ScreenTimeTracker = () => {
+  const [showWarning, setShowWarning] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
+  const [minutesLeft, setMinutesLeft] = useState<number | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem("userToken");
+    if (!token) return;
+
+    let limitMinutes = 9999;
+    
+    const fetchLimit = async () => {
+      try {
+        const res = await apiFetch("/api/parent/controls");
+        const json = await res.json();
+        if (json.success && json.data?.parentControls?.screenTimeMinutes !== undefined) {
+          limitMinutes = json.data.parentControls.screenTimeMinutes;
+        }
+      } catch (e) {
+        console.error("Failed to fetch screen time limit", e);
+      }
+    };
+
+    fetchLimit();
+
+    const todayStr = new Date().toISOString().split("T")[0];
+    const storageKey = `screenTime_${todayStr}`;
+    
+    const interval = setInterval(() => {
+      if (limitMinutes >= 9999) return;
+      
+      const usedSeconds = parseInt(localStorage.getItem(storageKey) || "0", 10) + 1;
+      localStorage.setItem(storageKey, usedSeconds.toString());
+      
+      const usedMinutes = usedSeconds / 60;
+      const remaining = limitMinutes - usedMinutes;
+      
+      if (remaining <= 0) {
+        setIsLocked(true);
+        setShowWarning(false);
+      } else if (remaining <= 5 && remaining > 0) {
+        setMinutesLeft(Math.ceil(remaining));
+        setShowWarning(true);
+      } else {
+        setShowWarning(false);
+      }
+      
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  if (isLocked) {
+    return (
+      <div className="fixed inset-0 bg-surface/95 dark:bg-surface-dim/95 backdrop-blur-md z-[9999] flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-24 h-24 bg-red-500/20 rounded-full flex items-center justify-center mb-6">
+          <span className="material-symbols-outlined text-red-500 text-6xl" style={{fontVariationSettings: "'FILL' 1"}}>timer_off</span>
+        </div>
+        <h1 className="text-on-surface text-3xl font-black mb-3 font-display">Time's Up!</h1>
+        <p className="text-on-surface-variant text-lg max-w-md font-medium">You've reached your screen time limit for today. Great job learning! Come back tomorrow for more adventures.</p>
+      </div>
+    );
+  }
+
+  if (showWarning) {
+    return (
+      <div className="fixed top-6 left-1/2 -translate-x-1/2 bg-orange-500 text-white px-6 py-3 rounded-full shadow-[0_8px_30px_rgba(249,115,22,0.4)] z-[9999] flex items-center gap-3 animate-bounce border-2 border-white/20">
+        <span className="material-symbols-outlined text-2xl" style={{fontVariationSettings: "'FILL' 1"}}>timer</span>
+        <span className="font-bold text-sm tracking-wide">Only {minutesLeft} {minutesLeft === 1 ? 'minute' : 'minutes'} left for today!</span>
+      </div>
+    );
+  }
+
+  return null;
+};
+
 const ProtectedRoute = () => {
   const token = localStorage.getItem("userToken");
   if (!token) return <Navigate to="/login" replace />;
@@ -88,6 +166,7 @@ function App() {
   return (
     <BrowserRouter>
       <AuthHandler />
+      <ScreenTimeTracker />
       <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#141779]"></div></div>}>
         <Routes>
           <Route path="/" element={<Navigate to="/home" replace />} />

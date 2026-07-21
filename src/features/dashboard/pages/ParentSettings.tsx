@@ -35,12 +35,11 @@ const itemVariants: Variants = {
 export default function ParentSettings() {
   const navigate = useNavigate();
   const [screenTimeMinutes, setScreenTimeMinutes] = useState(60);
-  const [mathRestricted, setMathRestricted] = useState(false);
-  const [scienceRestricted, setScienceRestricted] = useState(false);
-  const [languageRestricted, setLanguageRestricted] = useState(true);
   const [kidSafeMode, setKidSafeMode] = useState(true);
   const [allowReels, setAllowReels] = useState(true);
   const [allowChat, setAllowChat] = useState(true);
+  const [subjects, setSubjects] = useState<string[]>([]);
+  const [restrictedSubjects, setRestrictedSubjects] = useState<Record<string, boolean>>({});
   const [showResetModal, setShowResetModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [parentPhoto, setParentPhoto] = useState<string>("");
@@ -55,6 +54,9 @@ export default function ParentSettings() {
           setAllowReels(pc.allowReels);
           setAllowChat(pc.allowChat);
           setScreenTimeMinutes(pc.screenTimeMinutes || 60);
+          if (pc.restrictedSubjects) {
+            setRestrictedSubjects(pc.restrictedSubjects);
+          }
         }
         
         // Load parent photo from profile
@@ -62,6 +64,30 @@ export default function ParentSettings() {
         const profileJson = await profileRes.json();
         if (profileJson.success && profileJson.data?.user?.parentPhoto) {
           setParentPhoto(profileJson.data.user.parentPhoto);
+        }
+
+        // Fetch subjects
+        const subjRes = await apiFetch("/api/practice/subjects");
+        const subjJson = await subjRes.json();
+        if (subjJson.success && subjJson.data) {
+          const names: string[] = Array.from(new Set(subjJson.data.map((s: any) => s.name)));
+          setSubjects(names);
+          // Initialize restriction state for any new subjects
+          setRestrictedSubjects(prev => {
+            const newState = { ...prev };
+            names.forEach((s: string) => {
+              if (newState[s] === undefined) {
+                // Check if an alias is already restricted
+                const lower = s.toLowerCase();
+                let isRestricted = false;
+                if (lower.includes("math") && (prev["Maths"] || prev["Mathematics"] || prev["Math"])) isRestricted = true;
+                if (lower.includes("sci") && (prev["Science"] || prev["Sci"])) isRestricted = true;
+                if (lower.includes("eng") && (prev["English"] || prev["Eng"])) isRestricted = true;
+                newState[s] = isRestricted;
+              }
+            });
+            return newState;
+          });
         }
       } catch (err) {
         console.error("Failed to load parental controls", err);
@@ -102,6 +128,27 @@ export default function ParentSettings() {
     } catch (err) {
       console.error("Failed to update control", err);
     }
+  };
+
+  const toggleSubjectRestriction = (subject: string, isRestricted: boolean) => {
+    const updated = { ...restrictedSubjects, [subject]: isRestricted };
+    
+    // Auto-map aliases to ensure broad restriction across textbooks and practice
+    const lower = subject.toLowerCase();
+    if (lower.includes("math")) {
+      updated["Maths"] = isRestricted;
+      updated["Mathematics"] = isRestricted;
+      updated["Math"] = isRestricted;
+    } else if (lower.includes("sci")) {
+      updated["Science"] = isRestricted;
+      updated["Sci"] = isRestricted;
+    } else if (lower.includes("eng")) {
+      updated["English"] = isRestricted;
+      updated["Eng"] = isRestricted;
+    }
+
+    setRestrictedSubjects(updated);
+    updateSetting("restrictedSubjects", updated);
   };
 
   const handleResetJourney = async () => {
@@ -248,19 +295,26 @@ export default function ParentSettings() {
           </div>
           
           <div className="flex flex-col gap-3">
-            {[
-              { label: "Mathematics", state: mathRestricted, set: setMathRestricted, icon: "➗" },
-              { label: "Science & Tech", state: scienceRestricted, set: setScienceRestricted, icon: "🔬" },
-              { label: "Language Arts", state: languageRestricted, set: setLanguageRestricted, icon: "📚" }
-            ].map((subject, i) => (
+            {subjects.length > 0 ? subjects.map((subject, i) => (
               <div key={i} className="flex justify-between items-center p-4 bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-3">
-                  <span className="text-xl">{subject.icon}</span>
-                  <span className="text-base font-bold text-[#191c1e]">{subject.label}</span>
+                  <span className="text-xl">
+                    {subject.toLowerCase().includes("math") ? "➗" : 
+                     subject.toLowerCase().includes("science") ? "🔬" : 
+                     subject.toLowerCase().includes("english") || subject.toLowerCase().includes("language") ? "📚" : "📖"}
+                  </span>
+                  <span className="text-base font-bold text-[#191c1e]">{subject}</span>
                 </div>
-                <CustomSwitch checked={subject.state} onChange={subject.set} />
+                <CustomSwitch 
+                  checked={restrictedSubjects[subject] || false} 
+                  onChange={(v) => toggleSubjectRestriction(subject, v)} 
+                />
               </div>
-            ))}
+            )) : (
+              <div className="text-center py-4 text-[#767683] font-medium text-sm">
+                No subjects found for current standard.
+              </div>
+            )}
           </div>
         </motion.div>
 

@@ -191,11 +191,6 @@ export default function KidsActivityScreen() {
                                     <span className="text-[10px] font-bold text-[#767683] whitespace-nowrap bg-gray-100/80 px-2 py-0.5 rounded-md flex items-center gap-1">
                                       <Clock size={10} /> {activity.time || (activity.createdAt ? new Date(activity.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now")}
                                     </span>
-                                    {activity.subject && (
-                                      <span className="text-[11px] font-extrabold text-[#767683] uppercase tracking-wide">
-                                        {activity.subject}
-                                      </span>
-                                    )}
                                   </div>
                                 </div>
 
@@ -226,11 +221,11 @@ export default function KidsActivityScreen() {
                                     </div>
                                   )}
                                   
-                                  {activity.chapter && (
+                                  {activity.subject && (
                                     <div className="ml-auto flex items-center gap-2">
                                       <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#e31b54]/10 text-[#e31b54]">
                                         <Layers size={10} />
-                                        <span className="text-[10px] font-extrabold uppercase tracking-wide truncate max-w-[100px]">{activity.chapter}</span>
+                                        <span className="text-[10px] font-extrabold uppercase tracking-wide truncate max-w-[100px]">{activity.subject}</span>
                                       </div>
                                     </div>
                                   )}

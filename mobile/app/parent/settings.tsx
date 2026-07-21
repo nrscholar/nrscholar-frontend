@@ -106,8 +106,7 @@ export default function ParentSettings() {
   const [scienceRestricted, setScienceRestricted] = useState(false);
   const [languageRestricted, setLanguageRestricted] = useState(true);
 
-  // Kid safe mode mocked state
-  const [kidSafeMode, setKidSafeMode] = useState(true);
+  // HIDDEN: const [kidSafeMode, setKidSafeMode] = useState(true);
 
   // Reset journey state
   const [showResetModal, setShowResetModal] = useState(false);
@@ -546,7 +545,8 @@ export default function ParentSettings() {
 
         {/* Section: Bento Grid Controls */}
         <View style={styles.bentoGrid}>
-          {/* Kid Safe Mode */}
+          {/* HIDDEN: Kid Safe Mode */}
+          {/*
           <View style={styles.bentoCard}>
             <View style={[styles.iconCircle, { backgroundColor: C.secondaryContainer }]}>
               <MaterialIcons name="verified-user" size={24} color={C.secondary} />
@@ -554,6 +554,21 @@ export default function ParentSettings() {
             <Text style={styles.bentoTitle}>Kid-Safe Mode</Text>
             <CustomSwitch value={kidSafeMode} onValueChange={setKidSafeMode} />
           </View>
+          */}
+
+          {/* HIDDEN: Edu Reels */}
+          {/*
+          <View style={styles.bentoCard}>
+            <View style={[styles.iconCircle, { backgroundColor: "#ffe0b2" }]}>
+              <MaterialIcons name="movie" size={24} color="#f57c00" />
+            </View>
+            <Text style={styles.bentoTitle}>Edu Reels</Text>
+            <CustomSwitch 
+              value={controls.allowReels} 
+              onValueChange={(v) => toggleControl("allowReels", v)} 
+            />
+          </View>
+          */}
 
           {/* Update PIN */}
           <TouchableOpacity 
@@ -567,18 +582,6 @@ export default function ParentSettings() {
             <Text style={styles.bentoTitle}>Update Pin</Text>
             <Text style={styles.bentoSub}>Change Access</Text>
           </TouchableOpacity>
-
-          {/* Reels Control */}
-          <View style={styles.bentoCard}>
-            <View style={[styles.iconCircle, { backgroundColor: "#ffe0b2" }]}>
-              <MaterialIcons name="movie" size={24} color="#f57c00" />
-            </View>
-            <Text style={styles.bentoTitle}>Edu Reels</Text>
-            <CustomSwitch 
-              value={controls.allowReels} 
-              onValueChange={(v) => toggleControl("allowReels", v)} 
-            />
-          </View>
 
           {/* Chat Control */}
           <View style={styles.bentoCard}>

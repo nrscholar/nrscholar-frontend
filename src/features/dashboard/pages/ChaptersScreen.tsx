@@ -62,17 +62,35 @@ export default function ChaptersScreen() {
       } catch (e) {}
 
       try {
-        const subRes = await apiFetch("/api/practice/subjects");
+        const [subRes, controlsRes] = await Promise.all([
+          apiFetch("/api/practice/subjects"),
+          apiFetch("/api/parent/controls")
+        ]);
+        
         const subData = await subRes.json();
+        const controlsData = await controlsRes.json();
+        
+        let restricted: Record<string, boolean> = {};
+        if (controlsData.success && controlsData.data?.parentControls?.restrictedSubjects) {
+          restricted = controlsData.data.parentControls.restrictedSubjects;
+        }
+
         if (subData.success && subData.data.length > 0) {
-          setSubjects(subData.data);
-          const savedSubjectId = sessionStorage.getItem("activeSubjectId");
-          const found = subData.data.find((s: any) => s._id === savedSubjectId);
-          if (found) {
-            setActiveSubject(found);
+          const allowedSubjects = subData.data.filter((s: any) => !restricted[s.name]);
+          
+          if (allowedSubjects.length > 0) {
+            setSubjects(allowedSubjects);
+            const savedSubjectId = sessionStorage.getItem("activeSubjectId");
+            const found = allowedSubjects.find((s: any) => s._id === savedSubjectId);
+            if (found) {
+              setActiveSubject(found);
+            } else {
+              setActiveSubject(allowedSubjects[0]);
+              sessionStorage.setItem("activeSubjectId", allowedSubjects[0]._id);
+            }
           } else {
-            setActiveSubject(subData.data[0]);
-            sessionStorage.setItem("activeSubjectId", subData.data[0]._id);
+            setSubjects([]);
+            setLoading(false);
           }
         } else {
           setLoading(false);

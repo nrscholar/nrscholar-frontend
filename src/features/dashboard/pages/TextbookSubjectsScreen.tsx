@@ -12,10 +12,22 @@ export default function TextbookSubjectsScreen() {
   useEffect(() => {
     async function fetchSubjects() {
       try {
-        const res = await apiFetch("/api/textbook/subjects");
-        const json = await res.json();
-        if (json.success && json.data) {
-          setSubjects(json.data);
+        const [subjRes, controlsRes] = await Promise.all([
+          apiFetch("/api/textbook/subjects"),
+          apiFetch("/api/parent/controls")
+        ]);
+        
+        const subjJson = await subjRes.json();
+        const controlsJson = await controlsRes.json();
+        
+        let restricted: Record<string, boolean> = {};
+        if (controlsJson.success && controlsJson.data?.parentControls?.restrictedSubjects) {
+          restricted = controlsJson.data.parentControls.restrictedSubjects;
+        }
+
+        if (subjJson.success && subjJson.data) {
+          const allowedSubjects = subjJson.data.filter((s: string) => !restricted[s]);
+          setSubjects(allowedSubjects);
         }
       } catch (error) {
         console.error("Error fetching textbook subjects:", error);

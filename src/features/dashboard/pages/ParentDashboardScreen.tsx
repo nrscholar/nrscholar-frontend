@@ -148,7 +148,7 @@ export default function ParentDashboardScreen() {
       <div className="absolute bottom-[20%] -left-[20%] w-[400px] h-[400px] rounded-full bg-[rgba(20,23,121,0.08)] blur-[80px] pointer-events-none" />
 
       {/* Top App Bar */}
-      <header className="flex items-center justify-between px-6 h-20 bg-white/60 backdrop-blur-xl border-b border-white/40 sticky top-0 z-50 shadow-sm">
+      <header className="fixed top-0 left-0 right-0 flex items-center justify-between px-6 h-20 bg-white/60 backdrop-blur-xl border-b border-white/40 z-50 shadow-sm">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate("/home")} className="w-11 h-11 flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-gray-50 hover:scale-105 active:scale-95 transition-all">
             <ArrowLeft size={22} className="text-[#141779]" />
@@ -178,7 +178,7 @@ export default function ParentDashboardScreen() {
         </button>
       </header>
 
-      <main className="px-5 pt-6 flex flex-col gap-6">
+      <main className="px-5 pt-[104px] flex flex-col gap-6">
 
         {/* Child Summary Hero */}
         <div className="bg-white/70 backdrop-blur-md rounded-[24px] p-6 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative overflow-hidden group">

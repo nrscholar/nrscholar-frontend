@@ -37,12 +37,25 @@ export default function MultiplayerHubScreen() {
       }
     });
 
-    apiFetch("/api/practice/subjects")
-      .then(r => r.json())
-      .then(d => {
-        if (d.success && d.data && d.data.length > 0) {
-          setSubjects(d.data);
-          setActiveSubject(d.data[0]);
+    Promise.all([
+      apiFetch("/api/practice/subjects"),
+      apiFetch("/api/parent/controls")
+    ])
+      .then(async ([subjRes, controlsRes]) => {
+        const subjData = await subjRes.json();
+        const controlsData = await controlsRes.json();
+
+        let restricted: Record<string, boolean> = {};
+        if (controlsData.success && controlsData.data?.parentControls?.restrictedSubjects) {
+          restricted = controlsData.data.parentControls.restrictedSubjects;
+        }
+
+        if (subjData.success && subjData.data && subjData.data.length > 0) {
+          const allowedSubjects = subjData.data.filter((s: any) => !restricted[s.name]);
+          setSubjects(allowedSubjects);
+          if (allowedSubjects.length > 0) {
+            setActiveSubject(allowedSubjects[0]);
+          }
         }
       });
   }, []);

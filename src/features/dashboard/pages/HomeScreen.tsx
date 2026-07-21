@@ -252,7 +252,7 @@ export default function HomeScreen() {
       <div className="absolute bottom-[20%] -left-[25%] w-[320px] h-[320px] rounded-full bg-[rgba(20,23,121,0.05)] pointer-events-none" />
 
       {/* Top Section */}
-      <header className="flex items-center justify-between px-4 sm:px-6 py-4 bg-[rgba(247,249,251,0.8)] border-b-[1.5px] border-[rgba(255,255,255,0.2)] sticky top-0 z-50 backdrop-blur-md pt-8 gap-2">
+      <header className="fixed top-0 left-0 right-0 flex items-center justify-between px-4 sm:px-6 py-4 bg-[rgba(247,249,251,0.8)] border-b-[1.5px] border-[rgba(255,255,255,0.2)] z-50 backdrop-blur-md gap-2">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <button 
             onClick={() => navigate("/profile")}
@@ -310,7 +310,7 @@ export default function HomeScreen() {
 
       </header>
 
-      <main className="px-6 pt-6 flex flex-col gap-6">
+      <main className="px-6 pt-[100px] flex flex-col gap-6">
         {/* Journey Fuel Bar Card */}
         <div className="bg-white rounded-[20px] p-4 border-[1.5px] border-[#f0f0f0] shadow-sm relative z-10">
           <div className="flex justify-between items-center mb-2">
