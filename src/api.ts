@@ -24,10 +24,16 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
     headers.set("Expires", "0");
   }
 
+  // Add 10-second timeout using AbortController
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
   let response;
   try {
-    response = await fetch(url, { ...options, headers });
+    response = await fetch(url, { ...options, headers, signal: controller.signal });
+    clearTimeout(timeoutId);
   } catch (e) {
+    clearTimeout(timeoutId);
     console.error("Network error", e);
     // Return a fake response to avoid crashing UI components
     return new Response(JSON.stringify({ success: false, message: "Network Error" }), { status: 503, headers: { "Content-Type": "application/json" }});
@@ -38,11 +44,27 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
     if (refreshToken) {
       try {
         if (!refreshPromise) {
-          refreshPromise = fetch("/api/users/refresh", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ refreshToken })
-          }).then(res => res.json()).finally(() => { refreshPromise = null; });
+          refreshPromise = (async () => {
+            const refreshController = new AbortController();
+            const refreshTimeout = setTimeout(() => refreshController.abort(), 10000);
+            try {
+              const res = await fetch("/api/users/refresh", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ refreshToken }),
+                signal: refreshController.signal
+              });
+              clearTimeout(refreshTimeout);
+              if (!res.ok) return { success: false };
+              return await res.json();
+            } catch (err) {
+              clearTimeout(refreshTimeout);
+              console.error("Refresh token request failed", err);
+              return { success: false };
+            } finally {
+              refreshPromise = null;
+            }
+          })();
         }
         
         const refreshData = await refreshPromise;
@@ -52,7 +74,17 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
           localStorage.setItem("refreshToken", refreshData.data.refreshToken);
           
           headers.set("Authorization", `Bearer ${token}`);
-          response = await fetch(url, { ...options, headers });
+          
+          // Re-fetch with timeout
+          const retryController = new AbortController();
+          const retryTimeout = setTimeout(() => retryController.abort(), 10000);
+          try {
+            response = await fetch(url, { ...options, headers, signal: retryController.signal });
+            clearTimeout(retryTimeout);
+          } catch (e) {
+            clearTimeout(retryTimeout);
+            return new Response(JSON.stringify({ success: false, message: "Network Error on Retry" }), { status: 503, headers: { "Content-Type": "application/json" }});
+          }
         } else {
           redirectToLogin();
         }

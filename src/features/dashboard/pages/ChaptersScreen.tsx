@@ -201,7 +201,7 @@ export default function ChaptersScreen() {
             <div className="relative">
               <Bell size={20} className="text-[#141779]" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 w-4.5 h-4.5 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border border-white pointer-events-none z-10">
+                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border border-white pointer-events-none z-10">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
