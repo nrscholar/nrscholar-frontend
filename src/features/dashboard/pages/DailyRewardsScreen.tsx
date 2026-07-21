@@ -42,27 +42,50 @@ export default function DailyRewardsScreen() {
 
   // Default rewards fallback
   const defaultRewards: Reward[] = [
-    { name: "+500 XP", category: "Rare", reward_type: "xp", icon: "stars", color: "#006a62" },
-    { name: "Hint Card", category: "Common", reward_type: "item", icon: "help", color: "#0284c7" },
-    { name: "50 COINS", category: "Common", reward_type: "coins", icon: "token", color: "#0284c7" },
-    { name: "Try Again", category: "Common", reward_type: "none", icon: "refresh", color: "#ba1a1a" },
-    { name: "+100 XP", category: "Common", reward_type: "xp", icon: "stars", color: "#0284c7" },
-    { name: "+200 XP", category: "Rare", reward_type: "xp", icon: "stars", color: "#006a62" },
-    { name: "LEGEND CARD", category: "Legendary", reward_type: "item", icon: "military_tech", color: "#cebdff" },
-    { name: "+50 XP", category: "Common", reward_type: "xp", icon: "stars", color: "#0284c7" }
+    { name: "+500 XP", category: "Rare", reward_type: "xp", icon: "stars", color: "#0f766e" },
+    { name: "Hint Card", category: "Common", reward_type: "item", icon: "help", color: "#2563eb" },
+    { name: "50 COINS", category: "Common", reward_type: "coins", icon: "token", color: "#2563eb" },
+    { name: "Try Again", category: "Common", reward_type: "none", icon: "refresh", color: "#dc2626" },
+    { name: "+100 XP", category: "Common", reward_type: "xp", icon: "stars", color: "#2563eb" },
+    { name: "+200 XP", category: "Rare", reward_type: "xp", icon: "stars", color: "#0f766e" },
+    { name: "LEGEND CARD", category: "Legendary", reward_type: "item", icon: "military_tech", color: "#ea580c" },
+    { name: "+50 XP", category: "Common", reward_type: "xp", icon: "stars", color: "#2563eb" }
   ];
 
   const bossRevivalRewards: Reward[] = [
-    { name: "Recover 1 Heart", category: "Revival", reward_type: "heart", amount: 1, icon: "favorite", color: "#ba1a1a" },
-    { name: "Recover 2 Hearts", category: "Revival", reward_type: "heart", amount: 2, icon: "favorite", color: "#ba1a1a" },
-    { name: "Recover 3 Hearts", category: "Revival", reward_type: "heart", amount: 3, icon: "favorite", color: "#ba1a1a" },
-    { name: "Shield (Next attack)", category: "Revival", reward_type: "shield", amount: 1, icon: "shield", color: "#006a62" },
-    { name: "Double Damage", category: "Revival", reward_type: "double_damage", amount: 1, icon: "swords", color: "#471ba5" }
+    { name: "Recover 1 Heart", category: "Revival", reward_type: "heart", amount: 1, icon: "favorite", color: "#ef4444" },
+    { name: "Recover 2 Hearts", category: "Revival", reward_type: "heart", amount: 2, icon: "favorite", color: "#ef4444" },
+    { name: "Recover 3 Hearts", category: "Revival", reward_type: "heart", amount: 3, icon: "favorite", color: "#ef4444" },
+    { name: "Shield (Next attack)", category: "Revival", reward_type: "shield", amount: 1, icon: "shield", color: "#06b6d4" },
+    { name: "Double Damage", category: "Revival", reward_type: "double_damage", amount: 1, icon: "swords", color: "#f59e0b" }
   ];
 
   useEffect(() => {
     fetchSpinStatus();
   }, []);
+
+  const getShortName = (name: string) => {
+    if (name === "AI Motivation Card") return "AI Motivation";
+    if (name === "Shield (Next attack)") return "Shield";
+    if (name === "Double XP (15m)") return "Double XP";
+    if (name === "Boss Damage Booster") return "Boss Damage";
+    if (name === "Exclusive Profile Theme") return "Profile Theme";
+    if (name === "New Companion Skin") return "Companion Skin";
+    return name;
+  };
+
+  const getFontSizeClass = (name: string) => {
+    const shortName = getShortName(name);
+    const words = shortName.split(" ");
+    const maxLength = Math.max(...words.map(w => w.length));
+    
+    if (maxLength >= 10) {
+      return "text-[7.5px]"; // e.g. MOTIVATION
+    } else if (maxLength >= 8) {
+      return "text-[8.2px]"; // e.g. SCIENTIST
+    }
+    return "text-[9px]";
+  };
 
   const fetchSpinStatus = async () => {
     try {
@@ -83,8 +106,49 @@ export default function DailyRewardsScreen() {
     }
   };
 
+  const interleaveRewards = (rewards: Reward[]): Reward[] => {
+    if (rewards.length <= 2) return rewards;
+
+    // Group rewards by category
+    const groups: { [key: string]: Reward[] } = {};
+    rewards.forEach((r) => {
+      const cat = r.category || "Other";
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push({ ...r });
+    });
+
+    const result: Reward[] = [];
+    const keys = Object.keys(groups);
+    
+    // Sort keys by size of group descending
+    keys.sort((a, b) => groups[b].length - groups[a].length);
+
+    let itemsLeft = true;
+    while (itemsLeft) {
+      itemsLeft = false;
+      for (const key of keys) {
+        if (groups[key].length > 0) {
+          result.push(groups[key].shift()!);
+          itemsLeft = true;
+        }
+      }
+    }
+
+    return result;
+  };
+
   const getDisplayRewards = () => {
-    return spinType === "boss_revival" ? bossRevivalRewards : activeRewards;
+    if (spinType === "boss_revival") {
+      return bossRevivalRewards;
+    }
+    // Filter rewards dynamically by spinType tab if spin_types field is present
+    const filtered = activeRewards.filter((r: any) => 
+      r.spin_types ? r.spin_types.includes(spinType) : true
+    );
+    const pool = filtered.length > 0 ? filtered : activeRewards;
+    
+    // Interleave same-category options so they are not adjacent on the wheel
+    return interleaveRewards(pool);
   };
 
   const getSpinBalance = () => {
@@ -237,12 +301,11 @@ export default function DailyRewardsScreen() {
 
       {/* Tabs for different spin types (Hidden if boss revival) */}
       {spinType !== "boss_revival" && (
-        <div className="flex gap-2 p-2 bg-[#141779]/5 border border-[#141779]/10 rounded-full mt-4 max-w-[400px] w-[90%] mx-auto overflow-x-auto no-scrollbar relative z-10">
+        <div className="flex gap-2 p-2 bg-[#141779]/5 border border-[#141779]/10 rounded-full mt-4 max-w-[360px] w-[90%] mx-auto overflow-x-auto no-scrollbar relative z-10">
           {[
             { id: "daily", label: "Daily" },
             { id: "chapter", label: "Chapter" },
-            { id: "event", label: "Event" },
-            { id: "parent", label: "Parent" }
+            { id: "event", label: "Event" }
           ].map((tab) => {
             const isActive = spinType === tab.id;
             return (
@@ -305,10 +368,10 @@ export default function DailyRewardsScreen() {
               transform: `rotate(${rotation}deg)`,
               transition: isSpinning ? "transform 6.5s cubic-bezier(0.15, 0, 0.15, 1)" : "none"
             }}
-            className="relative w-[85%] h-[85%] rounded-full bg-[#141779] shadow-[0_12px_40px_rgba(20,23,121,0.25)] overflow-hidden border-4 border-white ring-1 ring-black/5"
+            className="relative w-[85%] h-[85%] rounded-full bg-gradient-to-b from-[#1c1b6d] to-[#0c0a3e] shadow-[0_12px_40px_rgba(20,23,121,0.25)] overflow-hidden border-4 border-white ring-1 ring-black/5"
           >
             {/* Draw SVG Slices dynamically */}
-            <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
+            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
               <g>
                 {currentRewards.map((reward, i) => {
                   const angle = segmentAngle;
@@ -331,9 +394,9 @@ export default function DailyRewardsScreen() {
                     <path
                       key={i}
                       d={pathData}
-                      fill={i % 2 === 0 ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.08)"}
-                      stroke="rgba(255,255,255,0.15)"
-                      strokeWidth="0.5"
+                      fill={reward.color + "2e"}
+                      stroke="rgba(255,255,255,0.18)"
+                      strokeWidth="0.8"
                     />
                   );
                 })}
@@ -351,17 +414,17 @@ export default function DailyRewardsScreen() {
                       transform: `rotate(${angle}deg)`,
                       transformOrigin: "50% 50%"
                     }}
-                    className="absolute inset-0 flex flex-col items-center justify-start pt-6 text-center"
+                    className="absolute inset-0 flex flex-col items-center justify-start pt-[22px] text-center"
                   >
                     <span 
-                      className="text-[10px] font-extrabold tracking-wider uppercase mt-1 px-2 py-0.5 rounded-full text-white shadow-md"
+                      className={`font-black tracking-wider uppercase px-2 py-0.5 rounded-full text-white shadow-md select-none max-w-[62px] text-center block leading-[1.1] mx-auto whitespace-normal break-normal ${getFontSizeClass(reward.name)}`}
                       style={{ 
                         backgroundColor: reward.color,
                         border: "1px solid rgba(255,255,255,0.3)",
                         textShadow: "0px 1px 2px rgba(0, 0, 0, 0.8)"
                       }}
                     >
-                      {reward.name}
+                      {getShortName(reward.name)}
                     </span>
                   </div>
                 );

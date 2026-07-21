@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, AtSign, Rocket } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { apiFetch } from "../../../api";
 
 export default function ForgotPasswordScreen() {
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ export default function ForgotPasswordScreen() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/users/forgot-password", {
+      const response = await apiFetch("/api/users/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mobile: mobile.trim() }),
