@@ -1,8 +1,73 @@
 import { AnimatePresence, motion, Variants } from "framer-motion";
-import { ArrowLeft, Bell, BookOpen, Camera, CreditCard, Film, HelpCircle, Lock, MessageSquare, Save, ShieldCheck, Timer, Trash2 } from "lucide-react";
+import { ArrowLeft, Bell, BookOpen, Camera, Save, ShieldCheck, Timer, Trash2, UserRound, GraduationCap, Cake, ChevronDown, Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
+
+const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect, placeholder }: any) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="flex flex-col gap-2 flex-1 relative">
+      <label className="text-sm font-semibold text-[#767683] ml-2">{label}</label>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full h-14 bg-white rounded-2xl pl-12 pr-10 text-base font-medium text-[#191c1e] border-2 border-transparent focus:border-[#141779] outline-none flex items-center justify-start text-left relative shadow-sm hover:shadow-md transition-shadow"
+      >
+        <div className="absolute left-4 z-10 flex items-center h-full top-0">
+          <Icon size={22} color={iconColor} />
+        </div>
+        <span className={`truncate ${value ? "text-[#191c1e]" : "text-[#c7c5d4]"}`}>
+          {value || placeholder}
+        </span>
+        <ChevronDown size={24} color="#767683" className="absolute right-3" />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-[rgba(0,0,0,0.5)] z-50 flex items-center justify-center p-6"
+              onClick={() => setIsOpen(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="w-full max-w-[320px] bg-white rounded-3xl p-6 max-h-[60vh] flex flex-col"
+                onClick={e => e.stopPropagation()}
+              >
+                <h3 className="text-xl font-bold text-[#141779] mb-4 text-center">Select</h3>
+                <div className="overflow-y-auto pr-2">
+                  {options.map((opt: string) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => {
+                        onSelect(opt);
+                        setIsOpen(false);
+                      }}
+                      className="w-full flex items-center justify-between py-4 border-b border-[#f2f4f6] last:border-0"
+                    >
+                      <span className={`text-base ${value === opt ? 'font-bold text-[#141779]' : 'font-medium text-[#464652]'}`}>
+                        {opt}
+                      </span>
+                      {value === opt && <Check size={20} color="#141779" />}
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
 
 function CustomSwitch({ checked, onChange }: { checked: boolean, onChange: (v: boolean) => void }) {
   return (
@@ -43,6 +108,16 @@ export default function ParentSettings() {
   const [showResetModal, setShowResetModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [parentPhoto, setParentPhoto] = useState<string>("");
+  
+  const [childName, setChildName] = useState("");
+  const [childClass, setChildClass] = useState("");
+  const [childAge, setChildAge] = useState("");
+  const [childBoard, setChildBoard] = useState("");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  const classes = ["Nursery", "KG", "Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"];
+  const ages = ["4 Years", "5 Years", "6 Years", "7 Years", "8 Years", "9 Years", "10 Years", "11 Years", "12 Years", "13 Years", "14 Years", "15 Years"];
+  const boards = ["CBSE (NCERT)", "ICSE", "State Board", "IB", "IGCSE"];
 
   useEffect(() => {
     async function loadControls() {
@@ -62,8 +137,12 @@ export default function ParentSettings() {
         // Load parent photo from profile
         const profileRes = await apiFetch("/api/users/me");
         const profileJson = await profileRes.json();
-        if (profileJson.success && profileJson.data?.user?.parentPhoto) {
-          setParentPhoto(profileJson.data.user.parentPhoto);
+        if (profileJson.success && profileJson.data?.user) {
+          setParentPhoto(profileJson.data.user.parentPhoto || "");
+          setChildName(profileJson.data.user.childName || "");
+          setChildClass(profileJson.data.user.childClass || "");
+          setChildAge(profileJson.data.user.childAge ? `${profileJson.data.user.childAge} Years` : "");
+          setChildBoard(profileJson.data.user.childBoard || "");
         }
 
         // Fetch subjects
@@ -115,6 +194,37 @@ export default function ParentSettings() {
         }
       };
       reader.readAsDataURL(e.target.files[0]);
+    }
+  };
+
+  const handleSaveChildProfile = async () => {
+    setIsSavingProfile(true);
+    try {
+      const ageNum = childAge ? parseInt(childAge.split(" ")[0]) : null;
+      const res = await apiFetch("/api/users/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          childName,
+          childClass,
+          childAge: ageNum,
+          childBoard
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        localStorage.setItem("userData", JSON.stringify(data.data.user));
+        setToastMessage("Child profile updated!");
+        setTimeout(() => setToastMessage(null), 3000);
+      } else {
+        setToastMessage(data.message || "Failed to update profile");
+        setTimeout(() => setToastMessage(null), 3000);
+      }
+    } catch (e) {
+      setToastMessage("Failed to update child profile");
+      setTimeout(() => setToastMessage(null), 3000);
+    } finally {
+      setIsSavingProfile(false);
     }
   };
 
@@ -233,6 +343,104 @@ export default function ParentSettings() {
           </div>
         </motion.div>
 
+        {/* Child Profile Settings */}
+        <motion.div variants={itemVariants} className="bg-white/70 backdrop-blur-md rounded-3xl p-7 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#141779]/10 to-transparent rounded-bl-full pointer-events-none transition-transform group-hover:scale-110 duration-500" />
+          <div className="flex items-center gap-3 mb-6 relative z-10">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#141779]/20 to-[#141779]/5 flex items-center justify-center">
+              <UserRound size={24} color="#141779" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-[#141779]">Child Profile</h2>
+              <p className="text-sm text-[#767683] mt-0.5">Manage explorer details & app language</p>
+            </div>
+          </div>
+          
+          <div className="flex flex-col gap-4 relative z-10">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-[#767683] ml-2">Explorer Name</label>
+              <div className="relative flex items-center">
+                <UserRound size={22} color="#006a62" className="absolute left-4 z-10" />
+                <input
+                  type="text"
+                  value={childName}
+                  onChange={(e) => setChildName(e.target.value)}
+                  className="w-full h-14 bg-white rounded-2xl pl-12 pr-6 text-base font-medium text-[#191c1e] border-2 border-transparent focus:border-[#141779] outline-none shadow-sm hover:shadow-md transition-shadow"
+                />
+              </div>
+            </div>
+
+            <CustomDropdown
+              label="Education Board"
+              icon={BookOpen}
+              iconColor="#006a62"
+              value={childBoard}
+              options={boards}
+              onSelect={setChildBoard}
+              placeholder="Select Board"
+            />
+
+            <div className="flex gap-3 w-full">
+              <CustomDropdown
+                label="Class/Grade"
+                icon={GraduationCap}
+                iconColor="#30007f"
+                value={childClass}
+                options={classes}
+                onSelect={setChildClass}
+                placeholder="Select"
+              />
+
+              <CustomDropdown
+                label="Age"
+                icon={Cake}
+                iconColor="#141779"
+                value={childAge}
+                options={ages}
+                onSelect={setChildAge}
+                placeholder="Select"
+              />
+            </div>
+
+            {/* Language Selection */}
+            <div className="flex flex-col gap-2 mt-2">
+              <label className="text-sm font-semibold text-[#767683] ml-2">App Language</label>
+              <div className="flex gap-2">
+                <button 
+                  type="button"
+                  onClick={() => { localStorage.setItem('i18nextLng', 'en'); window.location.reload(); }}
+                  className={`flex-1 py-3 rounded-2xl border-2 ${localStorage.getItem('i18nextLng') === 'en' || !localStorage.getItem('i18nextLng') ? 'bg-[#141779] text-white border-[#141779] shadow-lg shadow-[#141779]/20' : 'bg-white text-[#141779] border-gray-200 hover:bg-gray-50'} text-sm font-bold transition-all`}
+                >
+                  English
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => { localStorage.setItem('i18nextLng', 'hi'); window.location.reload(); }}
+                  className={`flex-1 py-3 rounded-2xl border-2 ${localStorage.getItem('i18nextLng') === 'hi' ? 'bg-[#141779] text-white border-[#141779] shadow-lg shadow-[#141779]/20' : 'bg-white text-[#141779] border-gray-200 hover:bg-gray-50'} text-sm font-bold transition-all`}
+                >
+                  हिन्दी
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => { localStorage.setItem('i18nextLng', 'gu'); window.location.reload(); }}
+                  className={`flex-1 py-3 rounded-2xl border-2 ${localStorage.getItem('i18nextLng') === 'gu' ? 'bg-[#141779] text-white border-[#141779] shadow-lg shadow-[#141779]/20' : 'bg-white text-[#141779] border-gray-200 hover:bg-gray-50'} text-sm font-bold transition-all`}
+                >
+                  ગુજરાતી
+                </button>
+              </div>
+            </div>
+
+            <button
+              onClick={handleSaveChildProfile}
+              disabled={isSavingProfile}
+              className="mt-2 w-full h-14 bg-[#141779] rounded-2xl flex items-center justify-center gap-3 shadow-[0_4px_15px_rgba(20,23,121,0.2)] hover:shadow-[0_6px_20px_rgba(20,23,121,0.3)] hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:hover:translate-y-0"
+            >
+              <span className="text-white text-lg font-semibold">{isSavingProfile ? 'Saving...' : 'Save Profile Details'}</span>
+              {!isSavingProfile && <Save size={20} color="white" />}
+            </button>
+          </div>
+        </motion.div>
+
         {/* Screen Time Section */}
         <motion.div variants={itemVariants} className="bg-white/70 backdrop-blur-md rounded-3xl p-7 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#006a62]/10 to-transparent rounded-bl-full pointer-events-none transition-transform group-hover:scale-110 duration-500" />
@@ -318,38 +526,10 @@ export default function ParentSettings() {
           </div>
         </motion.div>
 
-        {/* Premium Bento Grid Controls */}
-        <motion.div variants={itemVariants} className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          {[
-            { title: "Kid-Safe Mode", icon: ShieldCheck, color: "#006a62", bg: "#ccf4f0", state: kidSafeMode, set: setKidSafeMode, type: 'switch' },
-            { title: "Edu Reels", icon: Film, color: "#f57c00", bg: "#ffe0b2", state: allowReels, set: (v: boolean) => { setAllowReels(v); updateSetting("allowReels", v); }, type: 'switch' },
-            { title: "AI Teacher", icon: MessageSquare, color: "#1976d2", bg: "#e3f2fd", state: allowChat, set: (v: boolean) => { setAllowChat(v); updateSetting("allowChat", v); }, type: 'switch' },
-            { title: "Update Pin", desc: "Change Access", icon: Lock, color: "#30007f", bg: "#e6e0ff", type: 'button' },
-            { title: "Premium Plans", desc: "Free Plan", icon: CreditCard, color: "#b28900", bg: "#fff9c4", action: () => navigate("/parent/subscription"), type: 'button' },
-            { title: "Support", desc: "Get Help", icon: HelpCircle, color: "#c2185b", bg: "#f8bbd0", type: 'button' }
-          ].map((item, i) => (
-            <motion.div 
-              key={i} 
-              whileHover={{ y: -4 }}
-              onClick={item.action}
-              className={`bg-white/80 backdrop-blur-md rounded-3xl p-5 border border-white/80 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col items-center text-center gap-3 transition-all ${item.type === 'button' ? 'cursor-pointer hover:shadow-lg' : ''}`}
-            >
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner" style={{ backgroundColor: item.bg }}>
-                <item.icon size={26} color={item.color} strokeWidth={2.5} />
-              </div>
-              <div className="flex flex-col items-center gap-2 w-full">
-                <span className="text-[15px] font-bold text-[#141779] leading-tight">{item.title}</span>
-                {item.type === 'switch' ? (
-                  <CustomSwitch checked={item.state!} onChange={item.set!} />
-                ) : (
-                  <span className="text-[13px] font-semibold text-[#767683] bg-gray-100 px-3 py-1 rounded-full">{item.desc}</span>
-                )}
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
+        {/* HIDDEN: All Bento Grid Controls — Kid-Safe Mode, Edu Reels, AI Teacher, Premium Plans, Support, Update Pin kept for future use */}
 
-        {/* Danger Zone: Reset Journey */}
+        {/* HIDDEN: Factory Reset Journey — kept for future use */}
+        {/*
         <motion.button 
           variants={itemVariants}
           whileHover={{ scale: 1.01 }}
@@ -366,6 +546,7 @@ export default function ParentSettings() {
             <p className="text-sm font-medium text-red-900/60 mt-1">Erase all coins, progress, and battle history permanently</p>
           </div>
         </motion.button>
+        */}
       </motion.main>
 
       {/* Reset Modal */}

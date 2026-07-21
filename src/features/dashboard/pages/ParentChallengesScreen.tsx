@@ -15,6 +15,7 @@ export default function ParentChallengesScreen() {
   const [upcoming, setUpcoming] = useState<any[]>([]);
   const [activeCount, setActiveCount] = useState(0);
   const [totalActive, setTotalActive] = useState(3);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   
   useEffect(() => {
     async function fetchData() {
@@ -56,14 +57,17 @@ export default function ParentChallengesScreen() {
     fetchData();
   }, []);
 
-  const handleClaim = async (id: string) => {
+  const handleClaim = async (id: string, xp: number) => {
     setClaimState(prev => ({ ...prev, [id]: "processing" }));
     try {
       const res = await apiFetch(`/api/parent/challenges/${id}/claim`, { method: 'POST' });
       const json = await res.json();
       if (json.success) {
         setClaimState(prev => ({ ...prev, [id]: "claimed" }));
-        setTotalXP(prev => prev + 100);
+        setTotalXP(prev => prev + xp);
+        
+        setToastMessage(`🎉 ${xp} XP increased!`);
+        setTimeout(() => setToastMessage(null), 3000);
       } else {
         setClaimState(prev => ({ ...prev, [id]: "idle" }));
       }
@@ -75,19 +79,29 @@ export default function ParentChallengesScreen() {
   const handleIncrement = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     
+    const targetChallenge = challenges.find(c => c.id === id);
+    if (!targetChallenge) return;
+    
+    const willBeCompleted = targetChallenge.completedDays + 1 >= targetChallenge.totalDays;
+
     // Optimistic UI update
     setChallenges(prev => prev.map(c => {
       if (c.id === id) {
-        const newCompleted = c.completedDays + 1;
         return {
           ...c,
-          completedDays: newCompleted,
-          isCompleted: newCompleted >= c.totalDays,
+          completedDays: c.completedDays + 1,
+          isCompleted: willBeCompleted,
           incrementedToday: true
         };
       }
       return c;
     }));
+
+    if (willBeCompleted && upcoming.length > 0) {
+      const nextActive = upcoming[0];
+      setChallenges(prev => [...prev, nextActive]);
+      setUpcoming(prev => prev.slice(1));
+    }
 
     try {
       await apiFetch(`/api/parent/challenges/${id}/increment`, { method: 'POST' });
@@ -123,6 +137,13 @@ export default function ParentChallengesScreen() {
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
+
+      {/* Toast Popup */}
+      {toastMessage && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-[#006a62] text-white px-6 py-3 rounded-full font-bold shadow-2xl transition-all animate-bounce">
+          {toastMessage}
+        </div>
+      )}
 
       {/* Top App Bar */}
       <header className="w-full sticky top-0 z-50 bg-[rgba(247,249,251,0.8)] backdrop-blur-lg flex justify-between items-center px-6 py-4 shadow-sm">
@@ -185,68 +206,9 @@ export default function ParentChallengesScreen() {
         {/* Challenges Grid/List */}
         <div className="flex flex-col gap-4">
           
-          {challenges.map((chal) => {
+          {challenges.filter(c => !c.isCompleted).map((chal) => {
             const Icon = IconMap[chal.icon] || Star;
             const progressPercent = Math.min(100, Math.round((chal.completedDays / chal.totalDays) * 100));
-            const isCompleted = chal.isCompleted;
-            const cState = claimState[chal.id] || "idle";
-
-            if (isCompleted) {
-              return (
-                <div key={chal.id} className="border-2 border-dashed border-[#006a62]/40 bg-[#006a62]/5 rounded-2xl p-5 flex flex-col gap-4">
-                  <div className="flex items-start gap-4 opacity-70">
-                    <div className="w-12 h-12 bg-[#006a62]/20 rounded-full flex items-center justify-center text-[#006a62]">
-                      <Icon size={24} fill="currentColor" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-bold text-[#141779]">{chal.title}</h4>
-                      <p className="text-[#464652] text-sm">{chal.desc}</p>
-                    </div>
-                    <span className="bg-[#006a62] text-white text-[10px] px-2 py-0.5 rounded-full font-bold">COMPLETED</span>
-                  </div>
-                  <div className="flex justify-between items-center bg-[#006a62]/10 p-2 rounded-full px-4 border border-[#006a62]/20">
-                    <div className="flex items-center gap-2">
-                      <Star className="text-[#006a62]" size={18} fill="currentColor" />
-                      <span className="text-xs font-bold text-[#006a62]">+{chal.xp} XP</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <ShieldCheck className="text-[#006a62]" size={18} fill="currentColor" />
-                      <span className="text-xs font-bold text-[#464652]">{chal.badge}</span>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => handleClaim(chal.id)}
-                    disabled={cState !== "idle"}
-                    className={`w-full font-bold py-3 rounded-full shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 ${
-                      cState === "claimed" 
-                        ? "bg-green-600 text-white shadow-green-600/30" 
-                        : cState === "processing"
-                        ? "bg-[#006a62]/70 text-white cursor-wait"
-                        : "bg-[#006a62] text-white shadow-[#006a62]/30"
-                    }`}
-                  >
-                    {cState === "idle" && (
-                      <>
-                        <Sparkles size={20} fill="currentColor" />
-                        CLAIM REWARDS
-                      </>
-                    )}
-                    {cState === "processing" && (
-                      <>
-                        <Sparkles className="animate-spin" size={20} />
-                        PROCESSING...
-                      </>
-                    )}
-                    {cState === "claimed" && (
-                      <>
-                        <ShieldCheck size={20} />
-                        REWARDS CLAIMED!
-                      </>
-                    )}
-                  </button>
-                </div>
-              );
-            }
 
             return (
               <div key={chal.id} className="glass-card rounded-2xl p-5 flex flex-col gap-4 shadow-sm active:scale-95 transition-transform cursor-pointer">
@@ -295,20 +257,91 @@ export default function ParentChallengesScreen() {
           })}
 
           {/* Upcoming Section */}
-          <h3 className="text-lg font-bold text-[#141779] mt-4">Upcoming Challenges</h3>
-          
-          {upcoming.map(uc => (
-            <div key={uc.id} className="bg-[#e0e3e5]/50 border border-[#c7c5d4]/30 rounded-2xl p-5 flex items-center gap-4 grayscale opacity-60">
-              <div className="w-12 h-12 bg-[#767683]/20 rounded-full flex items-center justify-center text-[#767683]">
-                <BookOpen size={24} />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-bold text-[#141779]">{uc.title}</h4>
-                <p className="text-[#464652] text-sm italic">{uc.desc}</p>
-              </div>
-              <Lock className="text-[#767683]" size={24} />
-            </div>
-          ))}
+          {upcoming.length > 0 && (
+            <>
+              <h3 className="text-lg font-bold text-[#141779] mt-4">Upcoming Challenges</h3>
+              
+              {upcoming.map(uc => (
+                <div key={uc.id} className="bg-[#e0e3e5]/50 border border-[#c7c5d4]/30 rounded-2xl p-5 flex items-center gap-4 grayscale opacity-60">
+                  <div className="w-12 h-12 bg-[#767683]/20 rounded-full flex items-center justify-center text-[#767683]">
+                    <BookOpen size={24} />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-[#141779]">{uc.title}</h4>
+                    <p className="text-[#464652] text-sm italic">{uc.desc}</p>
+                  </div>
+                  <Lock className="text-[#767683]" size={24} />
+                </div>
+              ))}
+            </>
+          )}
+
+          {/* Completed Challenges Section */}
+          {challenges.filter(c => c.isCompleted).length > 0 && (
+            <>
+              <h3 className="text-lg font-bold text-[#141779] mt-4">Completed Challenges</h3>
+              
+              {challenges.filter(c => c.isCompleted).map((chal) => {
+                const Icon = IconMap[chal.icon] || Star;
+                const cState = claimState[chal.id] || "idle";
+
+                return (
+                  <div key={chal.id} className="border-2 border-dashed border-[#006a62]/40 bg-[#006a62]/5 rounded-2xl p-5 flex flex-col gap-4">
+                    <div className="flex items-start gap-4 opacity-70">
+                      <div className="w-12 h-12 bg-[#006a62]/20 rounded-full flex items-center justify-center text-[#006a62]">
+                        <Icon size={24} fill="currentColor" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-bold text-[#141779]">{chal.title}</h4>
+                        <p className="text-[#464652] text-sm">{chal.desc}</p>
+                      </div>
+                      <span className="bg-[#006a62] text-white text-[10px] px-2 py-0.5 rounded-full font-bold">COMPLETED</span>
+                    </div>
+                    <div className="flex justify-between items-center bg-[#006a62]/10 p-2 rounded-full px-4 border border-[#006a62]/20">
+                      <div className="flex items-center gap-2">
+                        <Star className="text-[#006a62]" size={18} fill="currentColor" />
+                        <span className="text-xs font-bold text-[#006a62]">+{chal.xp} XP</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className="text-[#006a62]" size={18} fill="currentColor" />
+                        <span className="text-xs font-bold text-[#464652]">{chal.badge}</span>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => handleClaim(chal.id, chal.xp || 200)}
+                      disabled={cState !== "idle"}
+                      className={`w-full font-bold py-3 rounded-full shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 ${
+                        cState === "claimed" 
+                          ? "bg-green-600 text-white shadow-green-600/30" 
+                          : cState === "processing"
+                          ? "bg-[#006a62]/70 text-white cursor-wait"
+                          : "bg-[#006a62] text-white shadow-[#006a62]/30"
+                      }`}
+                    >
+                      {cState === "idle" && (
+                        <>
+                          <Sparkles size={20} fill="currentColor" />
+                          CLAIM REWARDS
+                        </>
+                      )}
+                      {cState === "processing" && (
+                        <>
+                          <Sparkles className="animate-spin" size={20} />
+                          PROCESSING...
+                        </>
+                      )}
+                      {cState === "claimed" && (
+                        <>
+                          <ShieldCheck size={20} />
+                          REWARDS CLAIMED!
+                        </>
+                      )}
+                    </button>
+                  </div>
+                );
+              })}
+            </>
+          )}
 
         </div>
       </main>

@@ -76,9 +76,18 @@ export default function ParentAchievementsScreen() {
             filter: drop-shadow(0 0 8px rgba(0, 106, 98, 0.4));
         }
         .hexagon {
-            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            clip-path: url(#rounded-hex);
         }
       `}</style>
+
+      {/* SVG Definitions for Rounded Hexagon */}
+      <svg width="0" height="0" className="absolute">
+        <defs>
+          <clipPath id="rounded-hex" clipPathUnits="objectBoundingBox">
+            <path d="M0.5,0.03 C0.54,0.03 0.57,0.05 0.59,0.08 L0.95,0.28 C0.98,0.30 1.00,0.33 1.00,0.37 L1.00,0.63 C1.00,0.67 0.98,0.70 0.95,0.72 L0.59,0.92 C0.57,0.95 0.54,0.97 0.50,0.97 C0.46,0.97 0.43,0.95 0.41,0.92 L0.05,0.72 C0.02,0.70 0.00,0.67 0.00,0.63 L0.00,0.37 C0.00,0.33 0.02,0.30 0.05,0.28 L0.41,0.08 C0.43,0.05 0.46,0.03 0.50,0.03 Z" />
+          </clipPath>
+        </defs>
+      </svg>
 
       {/* Top App Bar */}
       <header className="fixed top-0 w-full z-50 bg-[rgba(247,249,251,0.8)] backdrop-blur-lg border-b border-[#c7c5d4]/30 shadow-sm flex items-center justify-between px-6 py-4">

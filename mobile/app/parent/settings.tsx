@@ -543,86 +543,11 @@ export default function ParentSettings() {
           </View>
         </View>
 
-        {/* Section: Bento Grid Controls */}
-        <View style={styles.bentoGrid}>
-          {/* HIDDEN: Kid Safe Mode */}
-          {/*
-          <View style={styles.bentoCard}>
-            <View style={[styles.iconCircle, { backgroundColor: C.secondaryContainer }]}>
-              <MaterialIcons name="verified-user" size={24} color={C.secondary} />
-            </View>
-            <Text style={styles.bentoTitle}>Kid-Safe Mode</Text>
-            <CustomSwitch value={kidSafeMode} onValueChange={setKidSafeMode} />
-          </View>
-          */}
+        {/* HIDDEN: All Bento Grid Controls — Kid Safe Mode, Edu Reels, Update Pin, AI Teacher, Premium Plans, Support kept for future use */}
+        <View style={{ height: 0 }} />
 
-          {/* HIDDEN: Edu Reels */}
-          {/*
-          <View style={styles.bentoCard}>
-            <View style={[styles.iconCircle, { backgroundColor: "#ffe0b2" }]}>
-              <MaterialIcons name="movie" size={24} color="#f57c00" />
-            </View>
-            <Text style={styles.bentoTitle}>Edu Reels</Text>
-            <CustomSwitch 
-              value={controls.allowReels} 
-              onValueChange={(v) => toggleControl("allowReels", v)} 
-            />
-          </View>
-          */}
-
-          {/* Update PIN */}
-          <TouchableOpacity 
-            activeOpacity={0.8} 
-            onPress={handleUpdatePin} 
-            style={styles.bentoCard}
-          >
-            <View style={[styles.iconCircle, { backgroundColor: C.primaryFixedDim }]}>
-              <MaterialIcons name="lock-reset" size={24} color={C.primary} />
-            </View>
-            <Text style={styles.bentoTitle}>Update Pin</Text>
-            <Text style={styles.bentoSub}>Change Access</Text>
-          </TouchableOpacity>
-
-          {/* Chat Control */}
-          <View style={styles.bentoCard}>
-            <View style={[styles.iconCircle, { backgroundColor: "#e3f2fd" }]}>
-              <MaterialIcons name="forum" size={24} color="#1976d2" />
-            </View>
-            <Text style={styles.bentoTitle}>AI Teacher</Text>
-            <CustomSwitch 
-              value={controls.allowChat} 
-              onValueChange={(v) => toggleControl("allowChat", v)} 
-            />
-          </View>
-
-          {/* Subscription Manage */}
-          <TouchableOpacity 
-            activeOpacity={0.8} 
-            onPress={() => router.push("/parent/subscription")} 
-            style={styles.bentoCard}
-          >
-            <View style={[styles.iconCircle, { backgroundColor: "#fff9c4" }]}>
-              <MaterialIcons name="loyalty" size={24} color="#fbc02d" />
-            </View>
-            <Text style={styles.bentoTitle}>Premium Plans</Text>
-            <Text style={styles.bentoSub}>{planLabel}</Text>
-          </TouchableOpacity>
-
-          {/* Support / Help */}
-          <TouchableOpacity 
-            activeOpacity={0.8} 
-            onPress={handleViewSupport} 
-            style={styles.bentoCard}
-          >
-            <View style={[styles.iconCircle, { backgroundColor: "#f8bbd0" }]}>
-              <MaterialIcons name="support-agent" size={24} color="#c2185b" />
-            </View>
-            <Text style={styles.bentoTitle}>Support & Help</Text>
-            <Text style={styles.bentoSub}>Request Logs</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Reset Journey Section */}
+        {/* HIDDEN: Reset Learning Journey */}
+        {/*
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={() => setShowResetModal(true)}
@@ -638,6 +563,7 @@ export default function ParentSettings() {
             </View>
           </View>
         </TouchableOpacity>
+        */}
 
         {/* Visual spacer */}
         <View style={{ height: 40 }} />

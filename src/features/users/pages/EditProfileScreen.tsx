@@ -5,70 +5,7 @@ import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "../../../api";
 
-const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect, placeholder }: any) => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <div className="flex flex-col gap-2 flex-1 relative">
-      <label className="text-sm font-semibold text-[#767683] ml-2">{label}</label>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full h-14 bg-white rounded-full pl-12 pr-10 text-base font-medium text-[#191c1e] border-2 border-transparent focus:border-[#141779] outline-none flex items-center justify-start text-left relative"
-      >
-        <div className="absolute left-4 z-10 flex items-center h-full top-0">
-          <Icon size={22} color={iconColor} />
-        </div>
-        <span className={`truncate ${value ? "text-[#191c1e]" : "text-[#c7c5d4]"}`}>
-          {value || placeholder}
-        </span>
-        <ChevronDown size={24} color="#767683" className="absolute right-3" />
-      </button>
-
-      <AnimatePresence>
-        {isOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-[rgba(0,0,0,0.5)] z-50 flex items-center justify-center p-6"
-              onClick={() => setIsOpen(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                className="w-full max-w-[320px] bg-white rounded-3xl p-6 max-h-[60vh] flex flex-col"
-                onClick={e => e.stopPropagation()}
-              >
-                <h3 className="text-xl font-bold text-[#141779] mb-4 text-center">Select</h3>
-                <div className="overflow-y-auto pr-2">
-                  {options.map((opt: string) => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => {
-                        onSelect(opt);
-                        setIsOpen(false);
-                      }}
-                      className="w-full flex items-center justify-between py-4 border-b border-[#f2f4f6] last:border-0"
-                    >
-                      <span className={`text-base ${value === opt ? 'font-bold text-[#141779]' : 'font-medium text-[#464652]'}`}>
-                        {opt}
-                      </span>
-                      {value === opt && <Check size={20} color="#141779" />}
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
+// CustomDropdown moved to ParentSettings.tsx
 
 export default function EditProfileScreen() {
   const navigate = useNavigate();
@@ -92,10 +29,6 @@ export default function EditProfileScreen() {
       reader.readAsDataURL(e.target.files[0]);
     }
   };
-
-  const classes = ["Nursery", "KG", "Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"];
-  const ages = ["4 Years", "5 Years", "6 Years", "7 Years", "8 Years", "9 Years", "10 Years", "11 Years", "12 Years", "13 Years", "14 Years", "15 Years"];
-  const boards = ["CBSE (NCERT)", "ICSE", "State Board", "IB", "IGCSE"];
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -202,79 +135,6 @@ export default function EditProfileScreen() {
                 className="hidden" 
               />
               <span className="text-xs font-bold text-[#767683] mt-2">{t('tap_photo_to_edit')}</span>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-[#767683] ml-2">{t('explorer_name')}</label>
-              <div className="relative flex items-center">
-                <UserRound size={22} color="#006a62" className="absolute left-4" />
-                <input
-                  type="text"
-                  value={childName}
-                  onChange={(e) => setChildName(e.target.value)}
-                  className="w-full h-14 bg-white rounded-full pl-12 pr-6 text-base font-medium text-[#191c1e] border-2 border-transparent focus:border-[#141779] outline-none"
-                />
-              </div>
-            </div>
-
-            <CustomDropdown
-              label={t('education_board')}
-              icon={BookOpen}
-              iconColor="#006a62"
-              value={childBoard}
-              options={boards}
-              onSelect={setChildBoard}
-              placeholder={t('select_board')}
-            />
-
-            <div className="flex gap-3 w-full">
-              <CustomDropdown
-                label={t('class_grade')}
-                icon={GraduationCap}
-                iconColor="#30007f"
-                value={childClass}
-                options={classes}
-                onSelect={setChildClass}
-                placeholder={t('select')}
-              />
-
-              <CustomDropdown
-                label={t('age')}
-                icon={Cake}
-                iconColor="#141779"
-                value={childAge}
-                options={ages}
-                onSelect={setChildAge}
-                placeholder={t('select')}
-              />
-            </div>
-
-            {/* Language Selection */}
-            <div className="flex flex-col gap-2 mt-2">
-              <label className="text-sm font-semibold text-[#767683] ml-2">{t('app_language')}</label>
-              <div className="flex gap-2">
-                <button 
-                  type="button"
-                  onClick={() => { localStorage.setItem('i18nextLng', 'en'); window.location.reload(); }}
-                  className={`flex-1 py-3 rounded-full border-2 ${localStorage.getItem('i18nextLng') === 'en' || !localStorage.getItem('i18nextLng') ? 'bg-[#141779] text-white border-[#141779]' : 'bg-white text-[#141779] border-gray-200'} text-sm font-bold transition-colors`}
-                >
-                  English
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => { localStorage.setItem('i18nextLng', 'hi'); window.location.reload(); }}
-                  className={`flex-1 py-3 rounded-full border-2 ${localStorage.getItem('i18nextLng') === 'hi' ? 'bg-[#141779] text-white border-[#141779]' : 'bg-white text-[#141779] border-gray-200'} text-sm font-bold transition-colors`}
-                >
-                  हिन्दी
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => { localStorage.setItem('i18nextLng', 'gu'); window.location.reload(); }}
-                  className={`flex-1 py-3 rounded-full border-2 ${localStorage.getItem('i18nextLng') === 'gu' ? 'bg-[#141779] text-white border-[#141779]' : 'bg-white text-[#141779] border-gray-200'} text-sm font-bold transition-colors`}
-                >
-                  ગુજરાતી
-                </button>
-              </div>
             </div>
 
             <button
