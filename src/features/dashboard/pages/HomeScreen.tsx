@@ -156,7 +156,7 @@ export default function HomeScreen() {
             const spinData = await spinRes.json();
             if (spinData && spinData.balances) {
               const dailyCount = spinData.balances.daily_spins_balance || 0;
-              const hasSpin = dailyCount > 0 || (spinData.balances.chapter_spins_balance || 0) > 0 || (spinData.balances.event_spins_balance || 0) > 0 || (spinData.balances.parent_spins_balance || 0) > 0;
+              const hasSpin = dailyCount > 0 || (spinData.balances.chapter_spins_balance || 0) > 0 || (spinData.balances.event_spins_balance || 0) > 0;
               setHasFreeSpin(hasSpin);
               
               if (dailyCount > 0 && sessionStorage.getItem("dailySpinPopupShown") !== "true") {
@@ -181,12 +181,14 @@ export default function HomeScreen() {
       if (document.visibilityState === 'visible') {
         fetchMissions();
         fetchProfile();
+        fetchRetentionData();
       }
     };
     // Also re-fetch on window focus (covers navigating back from another route)
     const handleFocus = () => {
       fetchMissions();
       fetchProfile();
+      fetchRetentionData();
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleFocus);
@@ -691,8 +693,8 @@ export default function HomeScreen() {
       {/* FLOATING SPIN WHEEL GIFT ICON */}
       <motion.div
         className="fixed bottom-40 right-4 z-40"
-        animate={hasFreeSpin ? { scale: [1, 1.15, 1], rotate: [0, 10, -10, 0] } : {}}
-        transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
+        animate={hasFreeSpin ? { scale: [1, 1.15, 1], rotate: [0, 10, -10, 0] } : { scale: 1, rotate: 0 }}
+        transition={hasFreeSpin ? { repeat: Infinity, duration: 2.5, ease: "easeInOut" } : { duration: 0.3 }}
       >
         <button
           onClick={() => navigate("/daily-rewards")}

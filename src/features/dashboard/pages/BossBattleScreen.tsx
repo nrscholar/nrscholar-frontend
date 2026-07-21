@@ -247,6 +247,15 @@ export default function BossBattleScreen() {
     setShowReviveModal(false);
     const xpLoss = pendingLossData?.xpLoss || -30;
     setLossOverlay({ show: true, xpLoss });
+
+    // Notify backend that the player has truly retreated (triggers Boss Retreat notification)
+    if (battleData?.battleId) {
+      apiFetch("/api/world/boss/confirm-retreat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ battleId: battleData.battleId })
+      }).catch(() => {});
+    }
     
     setTimeout(() => {
         const chapterId = searchParams.get("chapterId");
