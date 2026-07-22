@@ -225,7 +225,8 @@ export default function ChapterQuestionsScreen() {
           questionId: q?._id || `q_${currentQ}`, 
           isCorrect,
           chapterName: searchParams.get("chapterName") || undefined,
-          subjectName: searchParams.get("subjectName") || undefined
+          subjectName: searchParams.get("subjectName") || undefined,
+          timeSpent
         })
       }).catch(e => console.error("Failed to submit for rewards", e));
 

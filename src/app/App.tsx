@@ -110,7 +110,11 @@ const ScreenTimeTracker = () => {
     const storageKey = `screenTime_${todayStr}`;
     
     const interval = setInterval(() => {
-      if (limitMinutes >= 9999) return;
+      if (limitMinutes <= 0 || limitMinutes >= 9999) {
+        setIsLocked(false);
+        setShowWarning(false);
+        return;
+      }
       
       const isParent = locationRef.current.startsWith('/parent');
       
@@ -149,14 +153,18 @@ const ScreenTimeTracker = () => {
   if (isLocked) {
     if (!isParentRoute) {
       return (
-        <div className="fixed inset-0 bg-surface/95 dark:bg-surface-dim/95 backdrop-blur-md z-[9999] flex flex-col items-center justify-center p-6 text-center">
-          <div className="w-24 h-24 bg-red-500/20 rounded-full flex items-center justify-center mb-6">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-[9999] flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-24 h-24 bg-red-500/20 rounded-full flex items-center justify-center mb-6 border border-red-500/30">
             <span className="material-symbols-outlined text-red-500 text-6xl" style={{fontVariationSettings: "'FILL' 1"}}>timer_off</span>
           </div>
-          <h1 className="text-on-surface text-3xl font-black mb-3 font-display">Time's Up!</h1>
-          <p className="text-on-surface-variant text-lg max-w-md font-medium">You've reached your screen time limit for today. Today's Time limit had been exceeded.</p>
-          <button onClick={() => window.location.href = '/parent'} className="mt-8 bg-[#141779] text-white px-8 py-3 rounded-full font-bold">
-            Ask Parent to Unlock
+          <h1 className="text-white text-3xl font-black mb-3 font-display">Time's Up!</h1>
+          <p className="text-gray-300 text-lg max-w-md font-medium mb-2">You've reached your screen time limit for today.</p>
+          <p className="text-gray-400 text-sm max-w-md font-medium">To unlock or extend learning time, login as parent below.</p>
+          <button 
+            onClick={() => window.location.href = '/parent/gate'} 
+            className="mt-8 bg-gradient-to-r from-[#006a62] to-[#009b8f] text-white px-8 py-3.5 rounded-full font-bold shadow-lg hover:scale-105 active:scale-95 transition-all text-base flex items-center gap-2"
+          >
+            👨‍👩‍👦 Login as Parent
           </button>
         </div>
       );

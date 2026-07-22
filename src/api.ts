@@ -1,8 +1,14 @@
 let refreshPromise: Promise<any> | null = null;
 
-function redirectToLogin() {
+export function clearAuthSession() {
   localStorage.removeItem("userToken");
   localStorage.removeItem("refreshToken");
+  localStorage.removeItem("userData");
+  sessionStorage.clear();
+}
+
+function redirectToLogin() {
+  clearAuthSession();
   window.dispatchEvent(new Event("force-logout"));
 }
 

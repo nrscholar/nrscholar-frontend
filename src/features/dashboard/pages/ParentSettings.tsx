@@ -96,7 +96,7 @@ const itemVariants: Variants = {
 export default function ParentSettings() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [screenTimeMinutes, setScreenTimeMinutes] = useState(60);
+  const [screenTimeMinutes, setScreenTimeMinutes] = useState(0);
   const [kidSafeMode, setKidSafeMode] = useState(true);
   const [allowReels, setAllowReels] = useState(true);
   const [allowChat, setAllowChat] = useState(true);
@@ -125,7 +125,7 @@ export default function ParentSettings() {
           const pc = json.data.parentControls;
           setAllowReels(pc.allowReels);
           setAllowChat(pc.allowChat);
-          setScreenTimeMinutes(pc.screenTimeMinutes || 60);
+          setScreenTimeMinutes(pc.screenTimeMinutes !== undefined ? pc.screenTimeMinutes : 0);
           if (pc.restrictedSubjects) {
             setRestrictedSubjects(pc.restrictedSubjects);
           }
@@ -269,6 +269,7 @@ export default function ParentSettings() {
       const json = await res.json();
       if (json.success) {
         localStorage.removeItem("userData");
+        sessionStorage.clear();
         setToastMessage("Journey reset successfully! 🚀");
         setShowResetModal(false);
         setTimeout(() => {
@@ -285,7 +286,7 @@ export default function ParentSettings() {
     }
   };
 
-  const isScreenTimeOn = screenTimeMinutes < 9999;
+  const isScreenTimeOn = screenTimeMinutes > 0 && screenTimeMinutes < 9999;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#f0f4f8] to-[#e6eef5] font-sans pb-24 overflow-x-hidden">

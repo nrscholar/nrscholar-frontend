@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Zap, Coins, Flame, Users, HelpCircle, LogOut, User, Award } from "lucide-react";
-import { apiFetch } from "../../../api";
+import { apiFetch, clearAuthSession } from "../../../api";
 import { useTranslation } from "react-i18next";
 
 
@@ -53,6 +53,7 @@ export default function ProfileScreen() {
   }
 
   const handleLogout = () => {
+    clearAuthSession();
     navigate("/login");
   };
 
