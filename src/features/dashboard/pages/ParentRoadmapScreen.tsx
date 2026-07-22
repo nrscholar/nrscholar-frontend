@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Rocket, Star, Check, Sparkles, Brain, Lock, Trophy, BookOpen, TrendingUp, Users, Settings, Play, ArrowLeft, Home, BarChart2 } from "lucide-react";
 import { apiFetch } from "../../../api";
+import { useTranslation } from "react-i18next";
 
 const IconMap: Record<string, any> = {
   Check,
@@ -14,11 +15,19 @@ const IconMap: Record<string, any> = {
 };
 
 export default function ParentRoadmapScreen() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
   
-  const [roadmapData, setRoadmapData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const cachedRoadmap = (() => {
+    try {
+      const raw = sessionStorage.getItem("parent_roadmap_cache");
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  })();
+
+  const [roadmapData, setRoadmapData] = useState<any>(cachedRoadmap);
+  const [loading, setLoading] = useState(!cachedRoadmap);
 
   useEffect(() => {
     async function fetchRoadmap() {
@@ -27,6 +36,7 @@ export default function ParentRoadmapScreen() {
         const json = await res.json();
         if (json.success && json.data) {
           setRoadmapData(json.data);
+          sessionStorage.setItem("parent_roadmap_cache", JSON.stringify(json.data));
         }
       } catch (err) {
         console.error("Failed to load roadmap", err);
@@ -50,8 +60,21 @@ export default function ParentRoadmapScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f9fb] flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-[#141779] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans overflow-hidden">
+        <header className="fixed top-0 w-full z-50 bg-[rgba(247,249,251,0.8)] backdrop-blur-xl border-b border-[rgba(199,197,212,0.3)] shadow-sm flex justify-between items-center px-6 h-16">
+          <div className="flex items-center gap-3 w-full">
+            <div className="w-10 h-10 bg-gray-200 animate-pulse rounded-full"></div>
+            <div className="w-10 h-10 bg-gray-200 animate-pulse rounded-full"></div>
+            <div className="h-6 w-32 bg-gray-200 animate-pulse rounded"></div>
+          </div>
+        </header>
+        <main className="relative h-screen w-full flex flex-col items-center pt-24 pb-20">
+           <div className="flex flex-col gap-16">
+              <div className="bg-gray-200 animate-pulse rounded-[24px] h-32 w-48 -translate-x-6"></div>
+              <div className="bg-gray-200 animate-pulse rounded-[24px] h-40 w-56 translate-x-6"></div>
+              <div className="bg-gray-200 animate-pulse rounded-[24px] h-32 w-48 -translate-x-6"></div>
+           </div>
+        </main>
       </div>
     );
   }
@@ -99,7 +122,7 @@ export default function ParentRoadmapScreen() {
             />
           </div>
           <Rocket size={20} color="#141779" className="hidden sm:block" />
-          <h1 className="text-xl font-bold text-[#141779] whitespace-nowrap">Growth Journey</h1>
+          <h1 className="text-xl font-bold text-[#141779] whitespace-nowrap">{t("growth_journey") || "Growth Journey"}</h1>
         </div>
       </header>
 

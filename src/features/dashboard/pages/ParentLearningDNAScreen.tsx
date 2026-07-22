@@ -5,8 +5,16 @@ import { apiFetch } from "../../../api";
 
 export default function ParentLearningDNAScreen() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [dnaData, setDnaData] = useState<any>(null);
+  
+  const cachedDna = (() => {
+    try {
+      const raw = sessionStorage.getItem("parent_learning_dna_cache");
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  })();
+
+  const [loading, setLoading] = useState(!cachedDna);
+  const [dnaData, setDnaData] = useState<any>(cachedDna);
 
   useEffect(() => {
     (async () => {
@@ -15,6 +23,7 @@ export default function ParentLearningDNAScreen() {
         const json = await res.json();
         if (json.success) {
           setDnaData(json.data);
+          sessionStorage.setItem("parent_learning_dna_cache", JSON.stringify(json.data));
         }
       } catch (err) {
         console.error(err);
@@ -26,8 +35,17 @@ export default function ParentLearningDNAScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f9fb] flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-[#141779] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-[#f7f9fb] px-5 pt-[104px] flex flex-col gap-6 relative">
+        <header className="fixed top-0 left-0 right-0 flex items-center justify-between px-6 h-20 bg-white/60 backdrop-blur-xl border-b border-white/40 z-50">
+          <div className="flex items-center gap-3 w-full">
+            <div className="w-11 h-11 bg-gray-200 animate-pulse rounded-full"></div>
+            <div className="w-10 h-10 bg-gray-200 animate-pulse rounded-full"></div>
+            <div className="h-6 w-40 bg-gray-200 animate-pulse rounded"></div>
+          </div>
+        </header>
+        <div className="bg-gray-200 animate-pulse rounded-[24px] h-40 w-full"></div>
+        <div className="bg-gray-200 animate-pulse rounded-[24px] h-64 w-full"></div>
+        <div className="bg-gray-200 animate-pulse rounded-[24px] h-40 w-full"></div>
       </div>
     );
   }

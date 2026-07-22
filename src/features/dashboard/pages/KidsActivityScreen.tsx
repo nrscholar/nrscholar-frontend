@@ -5,10 +5,18 @@ import { apiFetch } from "../../../api";
 
 export default function KidsActivityScreen() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [activities, setActivities] = useState<any[]>([]);
-  const [engagementHours, setEngagementHours] = useState("0");
-  const [engagementTrend, setEngagementTrend] = useState<number | null>(null);
+
+  const cached = (() => {
+    try {
+      const raw = sessionStorage.getItem("kids_activities_cache");
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  })();
+
+  const [loading, setLoading] = useState(!cached);
+  const [activities, setActivities] = useState<any[]>(cached?.activities || []);
+  const [engagementHours, setEngagementHours] = useState(cached?.engagementHours || "0");
+  const [engagementTrend, setEngagementTrend] = useState<number | null>(cached?.engagementTrend !== undefined ? cached.engagementTrend : null);
   const [selectedActivity, setSelectedActivity] = useState<any>(null);
   const [openDateLabel, setOpenDateLabel] = useState<string | null>(null);
 
@@ -27,7 +35,7 @@ export default function KidsActivityScreen() {
   useEffect(() => {
     async function fetchActivities() {
       try {
-        setLoading(true);
+        if (!cached) setLoading(true);
         // Fetching real data from the backend
         // Pass browser timezone offset so server computes "today" in local time
         const tzOffset = -new Date().getTimezoneOffset(); // positive for east of UTC (IST = +330)
@@ -39,6 +47,11 @@ export default function KidsActivityScreen() {
             setActivities(json.data.activities || []);
             setEngagementHours(json.data.engagementHours || "0");
             setEngagementTrend(json.data.engagementTrend !== undefined ? json.data.engagementTrend : null);
+            sessionStorage.setItem("kids_activities_cache", JSON.stringify({
+              activities: json.data.activities || [],
+              engagementHours: json.data.engagementHours || "0",
+              engagementTrend: json.data.engagementTrend !== undefined ? json.data.engagementTrend : null
+            }));
           }
         }
       } catch (error) {
@@ -83,28 +96,46 @@ export default function KidsActivityScreen() {
       <main className="px-5 pt-6 relative z-10">
         
         {/* Analytics Summary Card */}
-        <div className="bg-white/70 backdrop-blur-md rounded-[20px] p-5 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] mb-5 flex items-center justify-between">
-          <div>
-            <h2 className="text-[14px] font-bold text-[#767683] uppercase tracking-wider mb-1">Weekly Engagement</h2>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-black text-[#141779]">{engagementHours}</span>
-              {engagementTrend !== null && engagementTrend !== undefined && (
-                <span className={`text-[14px] font-bold flex items-center gap-1 ${engagementTrend >= 0 ? 'text-[#007168]' : 'text-[#ba1a1a]'}`}>
-                  {engagementTrend >= 0 ? <TrendingUp size={16} /> : <TrendingUp size={16} className="rotate-180" />} 
-                  {engagementTrend >= 0 ? '+' : ''}{engagementTrend}%
-                </span>
-              )}
+        {loading ? (
+          <div className="bg-white/70 backdrop-blur-md rounded-[20px] p-5 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] mb-5 flex items-center justify-between animate-pulse">
+            <div className="flex-1">
+              <div className="h-3 w-32 bg-gray-200 rounded mb-3"></div>
+              <div className="h-8 w-24 bg-gray-200 rounded"></div>
+            </div>
+            <div className="w-16 h-16 rounded-full bg-gray-200"></div>
+          </div>
+        ) : (
+          <div className="bg-white/70 backdrop-blur-md rounded-[20px] p-5 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] mb-5 flex items-center justify-between">
+            <div>
+              <h2 className="text-[14px] font-bold text-[#767683] uppercase tracking-wider mb-1">Weekly Engagement</h2>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-black text-[#141779]">{engagementHours}</span>
+                {engagementTrend !== null && engagementTrend !== undefined && (
+                  <span className={`text-[14px] font-bold flex items-center gap-1 ${engagementTrend >= 0 ? 'text-[#007168]' : 'text-[#ba1a1a]'}`}>
+                    {engagementTrend >= 0 ? <TrendingUp size={16} /> : <TrendingUp size={16} className="rotate-180" />} 
+                    {engagementTrend >= 0 ? '+' : ''}{engagementTrend}%
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="w-16 h-16 rounded-full bg-[#141779]/10 flex items-center justify-center">
+              <Clock size={28} className="text-[#141779]" />
             </div>
           </div>
-          <div className="w-16 h-16 rounded-full bg-[#141779]/10 flex items-center justify-center">
-            <Clock size={28} className="text-[#141779]" />
-          </div>
-        </div>
+        )}
 
         {/* Timeline */}
         {loading ? (
-          <div className="flex justify-center items-center py-12">
-            <div className="w-10 h-10 border-4 border-[#141779] border-t-transparent rounded-full animate-spin" />
+          <div className="flex flex-col gap-4 mt-2">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="bg-white/70 rounded-[16px] p-4 flex gap-4 animate-pulse">
+                <div className="w-12 h-12 bg-gray-200 rounded-full shrink-0"></div>
+                <div className="flex-1 flex flex-col gap-2 justify-center">
+                  <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : activities.length === 0 ? (
           <div className="text-center py-12 bg-white/50 backdrop-blur-sm rounded-[24px] border border-white/60 shadow-sm">
@@ -243,12 +274,7 @@ export default function KidsActivityScreen() {
           </div>
         )}
         
-        {/* End of timeline indicator */}
-        {!loading && activities.length > 0 && (
-          <div className="text-center mt-6 mb-8">
-            <p className="text-[13px] font-bold text-[#767683]">No more recent activity</p>
-          </div>
-        )}
+        {/* End of timeline indicator removed as requested */}
 
       </main>
 

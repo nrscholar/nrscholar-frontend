@@ -109,6 +109,16 @@
     "select": "પસંદ કરો",
     "age": "ઉંમર",
     "saving": "સાચવી રહ્યા છીએ...",
-    "save_profile": "પ્રોફાઇલ સાચવો"
+    "save_profile": "પ્રોફાઇલ સેવ કરો",
+    "daily_tip": "દૈનિક ટીપ",
+    "lessons": "પાઠ",
+    "challenges": "પડકારો",
+    "rewards": "ઇનામ",
+    "achievements": "સિદ્ધિઓ",
+    "parent_achievements": "વાલીની સિદ્ધિઓ",
+    "parent_space": "પેરેન્ટ સ્પેસ",
+    "student_profile": "વિદ્યાર્થી પ્રોફાઇલ",
+    "journey": "યાત્રા",
+    "growth_journey": "વિકાસ યાત્રા"
   }
 }

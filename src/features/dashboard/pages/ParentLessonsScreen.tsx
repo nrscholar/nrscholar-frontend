@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Menu, Search, BookOpen, TrendingUp, Users, Settings, Plus, PlayCircle, ArrowLeft, Lock } from "lucide-react";
 import { apiFetch } from "../../../api";
+import { useTranslation } from "react-i18next";
 
 export default function ParentLessonsScreen() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [allTopics, setAllTopics] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState("For You");
@@ -94,7 +96,7 @@ export default function ParentLessonsScreen() {
               className="w-full h-full object-cover"
             />
           </div>
-          <h1 className="text-xl font-bold text-[#141779]">Daily Parenting Lessons</h1>
+          <h1 className="text-xl font-bold text-[#141779]">{t("lessons") || "Daily Parenting Lessons"}</h1>
         </div>
         <div className="w-10 h-10"></div> {/* Spacer for balance */}
       </header>

@@ -5,6 +5,7 @@ import {
   Heart, Brain, CheckCircle, Star, Zap, ArrowLeft, Trophy, Target
 } from "lucide-react";
 import { apiFetch } from "../../../api";
+import { useTranslation } from "react-i18next";
 
 interface Tip {
   instead?: string;
@@ -26,21 +27,34 @@ interface Milestone {
 }
 
 export default function ParentDailyTipScreen() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
+  // Cached data helper
+  const cachedTip = (() => {
+    try {
+      const raw = sessionStorage.getItem("parent_daily_tip_cache");
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  })();
+
   // User data
-  const [childName, setChildName] = useState("Explorer");
-  const [parentLevel, setParentLevel] = useState(1);
-  const [childLevel, setChildLevel] = useState(1);
-  const [xp, setXp] = useState(0);
-  const [totalStars, setTotalStars] = useState(0);
-  const [streak, setStreak] = useState(0);
-  const [totalTests, setTotalTests] = useState(0);
-  const [childCity, setChildCity] = useState("Egg Village");
+  const [childName, setChildName] = useState(cachedTip?.childName || "Explorer");
+  const [parentLevel, setParentLevel] = useState(cachedTip?.parentLevel || 1);
+  const [childLevel, setChildLevel] = useState(cachedTip?.childLevel || 1);
+  const [xp, setXp] = useState(cachedTip?.xp || 0);
+  const [totalStars, setTotalStars] = useState(cachedTip?.totalStars || 0);
+  const [streak, setStreak] = useState(cachedTip?.streak || 0);
+  const [totalTests, setTotalTests] = useState(cachedTip?.totalTests || 0);
+  const [childCity, setChildCity] = useState(cachedTip?.childCity || "Egg Village");
 
   // Daily tip from backend
-  const [tip, setTip] = useState<Tip | null>(null);
-  const [tipLoading, setTipLoading] = useState(true);
+  const [tip, setTip] = useState<Tip | null>(cachedTip?.tip || {
+    title: "Be Present & Active",
+    description: "Spend 10 uninterrupted minutes with your child today. Put the phone away, make eye contact, and listen to their thoughts on today's learning.",
+    benefit: "Builds deep trust, emotional security, and boosts learning confidence.",
+  });
+  const [tipLoading, setTipLoading] = useState(!cachedTip);
 
   // ── XP / level helpers ──────────────────────────────────────────────────
   function getXpForLevel(lvl: number): number {
@@ -120,68 +134,82 @@ export default function ParentDailyTipScreen() {
     },
   ];
 
-  // ── Fetch all data ───────────────────────────────────────────────────────
+  // ── Fetch all data in Parallel ──────────────────────────────────────────
   useEffect(() => {
+    window.scrollTo(0, 0);
     async function fetchAll() {
-      try {
-        // 1. User profile
-        const uRes  = await apiFetch("/api/users/me");
-        const uJson = await uRes.json();
-        if (uJson.success && uJson.data?.user) {
-          const u = uJson.data.user;
-          setChildName(u.childName || "Explorer");
-          setParentLevel(u.parentLevel || 1);
-          setXp(u.parentXp || 0);
-          setTotalStars(u.totalStars || 0);
-          setStreak(u.streakDays || 0);
-        }
+      const nextCache: any = cachedTip ? { ...cachedTip } : {};
 
-        // 2. Gamification stats — child level + current city
-        const gRes  = await apiFetch("/api/practice/gamification");
-        const gJson = await gRes.json();
-        if (gJson.success && gJson.data) {
-          setChildLevel(gJson.data.level || 1);
-        }
-
-        // 3. Report for totalTests
-        const rRes  = await apiFetch("/api/parent/report");
-        const rJson = await rRes.json();
-        if (rJson.success && rJson.data) {
-          setTotalTests(rJson.data.totalTests || 0);
-        }
-
-        // 4. Current city from gamification journey
-        try {
-          const cRes  = await apiFetch("/api/practice/cities");
-          const cJson = await cRes.json();
-          if (cJson.success && Array.isArray(cJson.data) && cJson.data.length > 0) {
-            // Find the highest city unlocked based on fuel (use first as current)
-            setChildCity(cJson.data[0]?.name || "Egg Village");
+      // Execute daily-tip API immediately in parallel with stats
+      const tipPromise = apiFetch("/api/parent/daily-tip")
+        .then(res => res.json())
+        .then(tJson => {
+          if (tJson.success && tJson.data) {
+            setTip(tJson.data);
+            nextCache.tip = tJson.data;
           }
-        } catch (_) {}
+        })
+        .catch(() => {})
+        .finally(() => setTipLoading(false));
 
-      } catch (e) {
-        console.error("Failed to fetch user data", e);
-      }
+      const statsPromise = (async () => {
+        try {
+          const [uRes, gRes, rRes, cRes] = await Promise.all([
+            apiFetch("/api/users/me").catch(() => null),
+            apiFetch("/api/practice/gamification").catch(() => null),
+            apiFetch("/api/parent/report").catch(() => null),
+            apiFetch("/api/practice/cities").catch(() => null),
+          ]);
 
-      // 5. Daily tip from backend
-      try {
-        setTipLoading(true);
-        const tRes  = await apiFetch("/api/parent/daily-tip");
-        const tJson = await tRes.json();
-        if (tJson.success && tJson.data) {
-          setTip(tJson.data);
+          if (uRes) {
+            const uJson = await uRes.json();
+            if (uJson.success && uJson.data?.user) {
+              const u = uJson.data.user;
+              setChildName(u.childName || "Explorer");
+              setParentLevel(u.parentLevel || 1);
+              setXp(u.parentXp || 0);
+              setTotalStars(u.totalStars || 0);
+              setStreak(u.streakDays || 0);
+
+              nextCache.childName = u.childName || "Explorer";
+              nextCache.parentLevel = u.parentLevel || 1;
+              nextCache.xp = u.parentXp || 0;
+              nextCache.totalStars = u.totalStars || 0;
+              nextCache.streak = u.streakDays || 0;
+            }
+          }
+
+          if (gRes) {
+            const gJson = await gRes.json();
+            if (gJson.success && gJson.data) {
+              setChildLevel(gJson.data.level || 1);
+              nextCache.childLevel = gJson.data.level || 1;
+            }
+          }
+
+          if (rRes) {
+            const rJson = await rRes.json();
+            if (rJson.success && rJson.data) {
+              setTotalTests(rJson.data.totalTests || 0);
+              nextCache.totalTests = rJson.data.totalTests || 0;
+            }
+          }
+
+          if (cRes) {
+            const cJson = await cRes.json();
+            if (cJson.success && Array.isArray(cJson.data) && cJson.data.length > 0) {
+              const cityName = cJson.data[0]?.name || "Egg Village";
+              setChildCity(cityName);
+              nextCache.childCity = cityName;
+            }
+          }
+        } catch (e) {
+          console.error("Failed to fetch user data", e);
         }
-      } catch (_) {
-        // Fallback tip if backend unavailable
-        setTip({
-          title: "Be Present",
-          description: "Spend 10 uninterrupted minutes with your child today. Put the phone away, make eye contact, and just listen. Small moments build big bonds.",
-          benefit: "Builds deep trust and emotional security in children.",
-        });
-      } finally {
-        setTipLoading(false);
-      }
+      })();
+
+      await Promise.all([tipPromise, statsPromise]);
+      sessionStorage.setItem("parent_daily_tip_cache", JSON.stringify(nextCache));
     }
 
     fetchAll();
@@ -221,7 +249,7 @@ export default function ParentDailyTipScreen() {
         <button onClick={() => navigate(-1)} className="p-1 hover:bg-[#e0e3e5] rounded-full transition-colors">
           <ArrowLeft size={24} color="#141779" />
         </button>
-        <h1 className="text-[18px] font-bold text-[#141779] tracking-tight">Daily Parenting Tips</h1>
+        <h1 className="text-[18px] font-bold text-[#141779] tracking-tight">{t("daily_tip") || "Daily Parenting Tips"}</h1>
       </header>
 
       {/* ── Main ── */}

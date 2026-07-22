@@ -56,8 +56,16 @@ function SectionHeader({ icon, title, subtitle }: { icon: React.ReactNode; title
 export default function ParentReportScreen() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("daily");
-  const [reportData, setReportData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  
+  const cachedReport = (() => {
+    try {
+      const raw = sessionStorage.getItem("parent_report_cache");
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  })();
+
+  const [reportData, setReportData] = useState<any>(cachedReport);
+  const [loading, setLoading] = useState(!cachedReport);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -136,7 +144,10 @@ export default function ParentReportScreen() {
       try {
         const res  = await apiFetch("/api/parent/report");
         const json = await res.json();
-        if (json.success) setReportData(json.data);
+        if (json.success) {
+          setReportData(json.data);
+          sessionStorage.setItem("parent_report_cache", JSON.stringify(json.data));
+        }
       } catch (err) { console.error(err); }
       finally { setLoading(false); }
     })();
@@ -150,9 +161,22 @@ export default function ParentReportScreen() {
   ];
 
   if (loading) return (
-    <div className="min-h-screen bg-[#f7f9fb] flex flex-col items-center justify-center gap-3">
-      <Loader2 size={32} className="animate-spin text-[#141779]" />
-      <p className="text-sm font-bold text-[#464652]">Analysing learning data...</p>
+    <div className="min-h-screen bg-[#f7f9fb] px-5 pt-[104px] flex flex-col gap-5">
+      <header className="fixed top-0 left-0 right-0 flex items-center justify-between px-6 h-16 bg-white/60 backdrop-blur-xl border-b border-white/40 z-50">
+        <div className="flex items-center gap-3 w-full">
+          <div className="w-8 h-8 bg-gray-200 animate-pulse rounded-full"></div>
+          <div className="h-6 w-32 bg-gray-200 animate-pulse rounded"></div>
+        </div>
+      </header>
+      <div className="flex gap-2">
+        <div className="bg-gray-200 animate-pulse rounded-lg h-8 flex-1"></div>
+        <div className="bg-gray-200 animate-pulse rounded-lg h-8 flex-1"></div>
+        <div className="bg-gray-200 animate-pulse rounded-lg h-8 flex-1"></div>
+        <div className="bg-gray-200 animate-pulse rounded-lg h-8 flex-1"></div>
+      </div>
+      <div className="bg-gray-200 animate-pulse rounded-[24px] h-48 w-full"></div>
+      <div className="bg-gray-200 animate-pulse rounded-[24px] h-48 w-full"></div>
+      <div className="bg-gray-200 animate-pulse rounded-[24px] h-48 w-full"></div>
     </div>
   );
 

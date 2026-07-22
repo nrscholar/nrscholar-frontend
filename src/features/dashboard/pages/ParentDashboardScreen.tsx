@@ -2,30 +2,40 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Bell, Settings, BrainCircuit, Clock, ChevronRight, Home, Activity, X, BarChart2 } from "lucide-react";
 import { apiFetch } from "../../../api";
+import { useTranslation } from "react-i18next";
 
 export default function ParentDashboardScreen() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [childName, setChildName] = useState("Explorer");
-  const [parentPhoto, setParentPhoto] = useState("");
-  const [userLevel, setUserLevel] = useState(1);
-  const [xp, setXp] = useState(0);
+
+  const cached = (() => {
+    try {
+      const raw = sessionStorage.getItem("parent_dashboard_cache");
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  })();
+
+  const [loading, setLoading] = useState(!cached);
+  const [childName, setChildName] = useState(cached?.childName || "Explorer");
+  const [parentPhoto, setParentPhoto] = useState(cached?.parentPhoto || "");
+  const [userLevel, setUserLevel] = useState(cached?.userLevel || 1);
+  const [xp, setXp] = useState(cached?.xp || 0);
 
   const [modalType, setModalType] = useState<"strengths" | "weaknesses" | "risks" | "lastActivity" | "graph" | null>(null);
-  const [strengths, setStrengths] = useState("Quick problem solver in Mathematics.");
-  const [weaknesses, setWeaknesses] = useState("Needs more practice in Science concepts.");
-  const [risks, setRisks] = useState("Slight drop in engagement this week.");
-  const [todayTime, setTodayTime] = useState(0);
-  const [solvedToday, setSolvedToday] = useState(0);
-  const [todayConfidenceScore, setTodayConfidenceScore] = useState(0);
+  const [strengths, setStrengths] = useState(cached?.strengths || "Quick problem solver in Mathematics.");
+  const [weaknesses, setWeaknesses] = useState(cached?.weaknesses || "Needs more practice in Science concepts.");
+  const [risks, setRisks] = useState(cached?.risks || "Slight drop in engagement this week.");
+  const [todayTime, setTodayTime] = useState(cached?.todayTime || 0);
+  const [solvedToday, setSolvedToday] = useState(cached?.solvedToday || 0);
+  const [todayConfidenceScore, setTodayConfidenceScore] = useState(cached?.todayConfidenceScore || 0);
 
-  const [weeklyTrend, setWeeklyTrend] = useState<{ day: string, score: number }[]>([]);
-  const [subjectBreakdown, setSubjectBreakdown] = useState<{ subject: string, accuracy: number }[]>([]);
-  const [lastActivity, setLastActivity] = useState<string>("Exploring new quests...");
+  const [weeklyTrend, setWeeklyTrend] = useState<{ day: string, score: number }[]>(cached?.weeklyTrend || []);
+  const [subjectBreakdown, setSubjectBreakdown] = useState<{ subject: string, accuracy: number }[]>(cached?.subjectBreakdown || []);
+  const [lastActivity, setLastActivity] = useState<string>(cached?.lastActivity || "Exploring new quests...");
 
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifications, setNotifications] = useState<any[]>(cached?.notifications || []);
+  const [unreadCount, setUnreadCount] = useState(cached?.unreadCount || 0);
 
   useEffect(() => {
     async function loadData() {
@@ -38,6 +48,8 @@ export default function ParentDashboardScreen() {
           apiFetch("/api/notifications").catch(() => null)
         ]);
 
+        const nextCache: any = cached ? { ...cached } : {};
+
         if (userRes) {
           const json = await userRes.json();
           if (json.success && json.data?.user) {
@@ -46,6 +58,11 @@ export default function ParentDashboardScreen() {
             setParentPhoto(user.parentPhoto || "");
             setUserLevel(user.level || 1);
             setXp(user.xp || 0);
+
+            nextCache.childName = user.childName || "Explorer";
+            nextCache.parentPhoto = user.parentPhoto || "";
+            nextCache.userLevel = user.level || 1;
+            nextCache.xp = user.xp || 0;
           }
         }
 
@@ -61,6 +78,16 @@ export default function ParentDashboardScreen() {
             if (repJson.data.weeklyTrend) setWeeklyTrend(repJson.data.weeklyTrend);
             if (repJson.data.subjectBreakdown) setSubjectBreakdown(repJson.data.subjectBreakdown);
             if (repJson.data.lastActivity) setLastActivity(repJson.data.lastActivity);
+
+            nextCache.strengths = repJson.data.strengths;
+            nextCache.weaknesses = repJson.data.weaknesses;
+            nextCache.risks = repJson.data.risks;
+            nextCache.todayTime = repJson.data.todayTimeMinutes;
+            nextCache.solvedToday = repJson.data.todaySolved;
+            nextCache.todayConfidenceScore = repJson.data.todayConfidenceScore;
+            nextCache.weeklyTrend = repJson.data.weeklyTrend;
+            nextCache.subjectBreakdown = repJson.data.subjectBreakdown;
+            nextCache.lastActivity = repJson.data.lastActivity;
           }
         }
 
@@ -68,9 +95,15 @@ export default function ParentDashboardScreen() {
           const notifJson = await notifRes.json();
           if (notifJson.success && notifJson.data) {
             setNotifications(notifJson.data);
-            setUnreadCount(notifJson.data.filter((n: any) => !n.isRead).length);
+            const uCount = notifJson.data.filter((n: any) => !n.isRead).length;
+            setUnreadCount(uCount);
+
+            nextCache.notifications = notifJson.data;
+            nextCache.unreadCount = uCount;
           }
         }
+
+        sessionStorage.setItem("parent_dashboard_cache", JSON.stringify(nextCache));
 
       } catch (err) {
         console.error("Failed to load user info", err);
@@ -134,8 +167,21 @@ export default function ParentDashboardScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f9fb] flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-[#141779] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-[#f7f9fb] px-5 pt-[104px] flex flex-col gap-6 relative">
+        <header className="fixed top-0 left-0 right-0 flex items-center justify-between px-6 h-20 bg-white/60 backdrop-blur-xl border-b border-white/40 z-50">
+          <div className="flex items-center gap-3 w-full">
+            <div className="w-11 h-11 bg-gray-200 animate-pulse rounded-full"></div>
+            <div className="w-10 h-10 bg-gray-200 animate-pulse rounded-full"></div>
+            <div className="h-6 w-32 bg-gray-200 animate-pulse rounded"></div>
+          </div>
+        </header>
+        <div className="bg-gray-200 animate-pulse rounded-[24px] h-64 w-full"></div>
+        <div className="flex flex-col gap-3">
+          <div className="h-5 w-40 bg-gray-200 animate-pulse rounded"></div>
+          <div className="bg-gray-200 animate-pulse rounded-[20px] h-20 w-full"></div>
+          <div className="bg-gray-200 animate-pulse rounded-[20px] h-20 w-full"></div>
+          <div className="bg-gray-200 animate-pulse rounded-[20px] h-20 w-full"></div>
+        </div>
       </div>
     );
   }
@@ -166,7 +212,7 @@ export default function ParentDashboardScreen() {
               </div>
             )}
           </div>
-          <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#141779] to-[#30007f]">Parent Space</h1>
+          <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#141779] to-[#30007f]">{t("parent_space") || "Parent Space"}</h1>
         </div>
         <button onClick={() => { setShowNotifications(true); markAllRead(); }} className="relative w-11 h-11 flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-gray-50 hover:scale-105 active:scale-95 transition-all">
           <Bell size={22} className="text-[#141779]" />
@@ -185,8 +231,8 @@ export default function ParentDashboardScreen() {
           <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-[#006a62]/10 to-transparent rounded-bl-full pointer-events-none transition-transform group-hover:scale-110 duration-500" />
           <div className="flex justify-between items-start mb-4 gap-2 relative z-10">
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-[#464652] tracking-[1px] mb-1">STUDENT PROFILE</p>
-              <h2 className="text-[26px] font-bold text-[#141779] truncate">{childName}'s Journey</h2>
+              <p className="text-xs font-bold text-[#464652] tracking-[1px] mb-1">{t("student_profile") || "STUDENT PROFILE"}</p>
+              <h2 className="text-[26px] font-bold text-[#141779] truncate">{childName}'s {t("journey") || "Journey"}</h2>
             </div>
             <div className="bg-[#57fae9] px-3 py-1 rounded-full whitespace-nowrap shrink-0">
               <span className="text-xs font-bold text-[#007168]">Lvl {userLevel} Explorer</span>
@@ -261,7 +307,7 @@ export default function ParentDashboardScreen() {
               </div>
               <div className="relative z-10">
                 <div className="flex items-center gap-1.5 mb-0.5">
-                  <h3 className="text-[15px] font-bold text-[#141779] leading-tight">Daily Tip</h3>
+                  <h3 className="text-[15px] font-bold text-[#141779] leading-tight">{t("daily_tip") || "Daily Tip"}</h3>
                   <span className="bg-[#006a62] text-white text-[9px] px-1.5 py-0.5 rounded-full uppercase font-bold tracking-tighter">Hot</span>
                 </div>
                 <p className="text-xs text-[#767683] font-medium leading-tight mt-1">Quick family harmony ideas.</p>
@@ -278,7 +324,7 @@ export default function ParentDashboardScreen() {
               </div>
               <div className="relative z-10">
                 <div className="flex items-center gap-1.5 mb-0.5">
-                  <h3 className="text-[15px] font-bold text-[#141779] leading-tight">Lessons</h3>
+                  <h3 className="text-[15px] font-bold text-[#141779] leading-tight">{t("lessons") || "Lessons"}</h3>
                   <span className="bg-[#30007f] text-white text-[9px] px-1.5 py-0.5 rounded-full uppercase font-bold tracking-tighter">New</span>
                 </div>
                 <p className="text-xs text-[#767683] font-medium leading-tight mt-1">Bite-sized parent growth.</p>
@@ -295,7 +341,7 @@ export default function ParentDashboardScreen() {
               </div>
               <div className="relative z-10">
                 <div className="flex items-center gap-1.5 mb-0.5">
-                  <h3 className="text-[13px] font-bold text-[#141779] leading-tight">Challenges</h3>
+                  <h3 className="text-[13px] font-bold text-[#141779] leading-tight">{t("challenges") || "Challenges"}</h3>
                   <span className="bg-[#ba1a1a] text-white text-[8px] px-1.5 py-0.5 rounded-full uppercase font-bold tracking-tighter">Live</span>
                 </div>
                 <p className="text-[10px] text-[#767683] font-semibold leading-tight">Build strong daily habits.</p>
@@ -312,7 +358,7 @@ export default function ParentDashboardScreen() {
               </div>
               <div className="relative z-10">
                 <div className="flex items-center gap-1.5 mb-0.5">
-                  <h3 className="text-[13px] font-bold text-[#141779] leading-tight">Rewards</h3>
+                  <h3 className="text-[13px] font-bold text-[#141779] leading-tight">{t("rewards") || "Rewards"}</h3>
                   <span className="bg-[#007168] text-white text-[8px] px-1.5 py-0.5 rounded-full uppercase font-bold tracking-tighter">Badges</span>
                 </div>
                 <p className="text-[10px] text-[#767683] font-semibold leading-tight">View your milestones.</p>

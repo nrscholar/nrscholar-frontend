@@ -114,6 +114,16 @@
     "select": "Select",
     "age": "Age",
     "saving": "Saving...",
-    "save_profile": "Save Profile"
+    "save_profile": "Save Profile",
+    "daily_tip": "Daily Tip",
+    "lessons": "Lessons",
+    "challenges": "Challenges",
+    "rewards": "Rewards",
+    "achievements": "Achievements",
+    "parent_achievements": "Parent Achievements",
+    "parent_space": "Parent Space",
+    "student_profile": "STUDENT PROFILE",
+    "journey": "Journey",
+    "growth_journey": "Growth Journey"
   }
 }

@@ -1,5 +1,5 @@
-import { lazy, Suspense, useEffect, useState } from "react";
-import { BrowserRouter, Navigate, Outlet, Route, Routes, useNavigate } from "react-router-dom";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useNavigate, useLocation } from "react-router-dom";
 import Layout from "./components/Layout";
 
 // Auth feature pages
@@ -73,6 +73,12 @@ const ScreenTimeTracker = () => {
   const [showWarning, setShowWarning] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [minutesLeft, setMinutesLeft] = useState<number | null>(null);
+  const location = useLocation();
+  const locationRef = useRef(location.pathname);
+
+  useEffect(() => {
+    locationRef.current = location.pathname;
+  }, [location.pathname]);
 
   useEffect(() => {
     const token = localStorage.getItem("userToken");
@@ -94,14 +100,26 @@ const ScreenTimeTracker = () => {
 
     fetchLimit();
 
+    const handleLimitChange = () => {
+      fetchLimit();
+    };
+
+    window.addEventListener("screenTimeLimitChanged", handleLimitChange);
+
     const todayStr = new Date().toISOString().split("T")[0];
     const storageKey = `screenTime_${todayStr}`;
     
     const interval = setInterval(() => {
       if (limitMinutes >= 9999) return;
       
-      const usedSeconds = parseInt(localStorage.getItem(storageKey) || "0", 10) + 1;
-      localStorage.setItem(storageKey, usedSeconds.toString());
+      const isParent = locationRef.current.startsWith('/parent');
+      
+      // Only increment time if NOT on a parent route
+      let usedSeconds = parseInt(localStorage.getItem(storageKey) || "0", 10);
+      if (!isParent) {
+        usedSeconds += 1;
+        localStorage.setItem(storageKey, usedSeconds.toString());
+      }
       
       const usedMinutes = usedSeconds / 60;
       const remaining = limitMinutes - usedMinutes;
@@ -110,34 +128,46 @@ const ScreenTimeTracker = () => {
         setIsLocked(true);
         setShowWarning(false);
       } else if (remaining <= 5 && remaining > 0) {
+        setIsLocked(false);
         setMinutesLeft(Math.ceil(remaining));
         setShowWarning(true);
       } else {
+        setIsLocked(false);
         setShowWarning(false);
       }
       
     }, 1000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("screenTimeLimitChanged", handleLimitChange);
+    };
   }, []);
 
+  const isParentRoute = location.pathname.startsWith('/parent');
+
   if (isLocked) {
-    return (
-      <div className="fixed inset-0 bg-surface/95 dark:bg-surface-dim/95 backdrop-blur-md z-[9999] flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-24 h-24 bg-red-500/20 rounded-full flex items-center justify-center mb-6">
-          <span className="material-symbols-outlined text-red-500 text-6xl" style={{fontVariationSettings: "'FILL' 1"}}>timer_off</span>
+    if (!isParentRoute) {
+      return (
+        <div className="fixed inset-0 bg-surface/95 dark:bg-surface-dim/95 backdrop-blur-md z-[9999] flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-24 h-24 bg-red-500/20 rounded-full flex items-center justify-center mb-6">
+            <span className="material-symbols-outlined text-red-500 text-6xl" style={{fontVariationSettings: "'FILL' 1"}}>timer_off</span>
+          </div>
+          <h1 className="text-on-surface text-3xl font-black mb-3 font-display">Time's Up!</h1>
+          <p className="text-on-surface-variant text-lg max-w-md font-medium">You've reached your screen time limit for today. Today's Time limit had been exceeded.</p>
+          <button onClick={() => window.location.href = '/parent'} className="mt-8 bg-[#141779] text-white px-8 py-3 rounded-full font-bold">
+            Ask Parent to Unlock
+          </button>
         </div>
-        <h1 className="text-on-surface text-3xl font-black mb-3 font-display">Time's Up!</h1>
-        <p className="text-on-surface-variant text-lg max-w-md font-medium">You've reached your screen time limit for today. Great job learning! Come back tomorrow for more adventures.</p>
-      </div>
-    );
+      );
+    }
   }
 
-  if (showWarning) {
+  if (showWarning && !isParentRoute) {
     return (
-      <div className="fixed top-6 left-1/2 -translate-x-1/2 bg-orange-500 text-white px-6 py-3 rounded-full shadow-[0_8px_30px_rgba(249,115,22,0.4)] z-[9999] flex items-center gap-3 animate-bounce border-2 border-white/20">
-        <span className="material-symbols-outlined text-2xl" style={{fontVariationSettings: "'FILL' 1"}}>timer</span>
-        <span className="font-bold text-sm tracking-wide">Only {minutesLeft} {minutesLeft === 1 ? 'minute' : 'minutes'} left for today!</span>
+      <div className="fixed top-2 left-2 bg-red-600 text-white px-3 py-1.5 rounded-md shadow-md z-[9999] flex items-center gap-1.5">
+        <span className="material-symbols-outlined text-[14px]" style={{fontVariationSettings: "'FILL' 1"}}>timer</span>
+        <span className="font-bold text-[10px] tracking-wide">only {minutesLeft} {minutesLeft === 1 ? 'minute' : 'minutes'} left</span>
       </div>
     );
   }

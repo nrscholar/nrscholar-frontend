@@ -2,8 +2,10 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, Globe, BookOpen, Flame, Lock, GraduationCap, Users, X, TrendingUp, Settings, ArrowLeft } from "lucide-react";
 import { apiFetch } from "../../../api";
+import { useTranslation } from "react-i18next";
 
 export default function ParentAchievementsScreen() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [activeAchievement, setActiveAchievement] = useState<any | null>(null);
   const [badgesEarned, setBadgesEarned] = useState(0);
@@ -102,7 +104,7 @@ export default function ParentAchievementsScreen() {
               src={parentPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`}
             />
           </div>
-          <h1 className="text-xl font-bold text-[#141779] tracking-tight">Achievements</h1>
+          <h1 className="text-xl font-bold text-[#141779] tracking-tight">{t("achievements") || "Achievements"}</h1>
         </div>
         <div className="w-10 h-10"></div> {/* Spacer for balance */}
       </header>
@@ -116,7 +118,7 @@ export default function ParentAchievementsScreen() {
         
         {/* Header Section */}
         <section className="w-full mt-4 mb-6">
-          <h2 className="text-2xl font-bold text-[#141779] mb-4 text-center">Parent Achievements</h2>
+          <h2 className="text-2xl font-bold text-[#141779] mb-4 text-center">{t("parent_achievements") || "Parent Achievements"}</h2>
           <div className="glass-panel rounded-xl p-5 flex justify-around items-center shadow-sm">
             <div className="text-center">
               <p className="text-xs uppercase tracking-widest text-[#464652] mb-1">Badges Earned</p>

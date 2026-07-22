@@ -3,6 +3,7 @@ import { ArrowLeft, Bell, BookOpen, Camera, Save, ShieldCheck, Timer, Trash2, Us
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
+import { useTranslation } from "react-i18next";
 
 const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect, placeholder }: any) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -27,40 +28,35 @@ const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect
       <AnimatePresence>
         {isOpen && (
           <>
+            <div 
+              className="fixed inset-0 z-40" 
+              onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} 
+            />
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-[rgba(0,0,0,0.5)] z-50 flex items-center justify-center p-6"
-              onClick={() => setIsOpen(false)}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-gray-100 z-50 flex flex-col max-h-[250px] overflow-hidden"
             >
-              <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                className="w-full max-w-[320px] bg-white rounded-3xl p-6 max-h-[60vh] flex flex-col"
-                onClick={e => e.stopPropagation()}
-              >
-                <h3 className="text-xl font-bold text-[#141779] mb-4 text-center">Select</h3>
-                <div className="overflow-y-auto pr-2">
-                  {options.map((opt: string) => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => {
-                        onSelect(opt);
-                        setIsOpen(false);
-                      }}
-                      className="w-full flex items-center justify-between py-4 border-b border-[#f2f4f6] last:border-0"
-                    >
-                      <span className={`text-base ${value === opt ? 'font-bold text-[#141779]' : 'font-medium text-[#464652]'}`}>
-                        {opt}
-                      </span>
-                      {value === opt && <Check size={20} color="#141779" />}
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
+              <div className="overflow-y-auto w-full scrollbar-hide">
+                {options.map((opt: string) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelect(opt);
+                      setIsOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between px-5 py-4 border-b border-[#f2f4f6] last:border-0 hover:bg-gray-50 transition-colors"
+                  >
+                    <span className={`text-base ${value === opt ? 'font-bold text-[#141779]' : 'font-medium text-[#464652]'}`}>
+                      {opt}
+                    </span>
+                    {value === opt && <Check size={18} color="#141779" />}
+                  </button>
+                ))}
+              </div>
             </motion.div>
           </>
         )}
@@ -98,6 +94,7 @@ const itemVariants: Variants = {
 };
 
 export default function ParentSettings() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [screenTimeMinutes, setScreenTimeMinutes] = useState(60);
   const [kidSafeMode, setKidSafeMode] = useState(true);
@@ -235,6 +232,9 @@ export default function ParentSettings() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ [key]: value })
       });
+      if (key === "screenTimeMinutes") {
+        window.dispatchEvent(new Event("screenTimeLimitChanged"));
+      }
     } catch (err) {
       console.error("Failed to update control", err);
     }
@@ -302,7 +302,7 @@ export default function ParentSettings() {
               src={parentPhoto || `https://ui-avatars.com/api/?name=Parent&background=random`}
             />
           </div>
-          <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#141779] to-[#30007f]">Settings</h1>
+          <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#141779] to-[#30007f]">{t("settings")}</h1>
         </div>
         <button className="w-11 h-11 flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-gray-50 hover:scale-105 active:scale-95 transition-all">
           <Bell size={22} className="text-[#141779]" />
@@ -343,104 +343,6 @@ export default function ParentSettings() {
           </div>
         </motion.div>
 
-        {/* Child Profile Settings */}
-        <motion.div variants={itemVariants} className="bg-white/70 backdrop-blur-md rounded-3xl p-7 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#141779]/10 to-transparent rounded-bl-full pointer-events-none transition-transform group-hover:scale-110 duration-500" />
-          <div className="flex items-center gap-3 mb-6 relative z-10">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#141779]/20 to-[#141779]/5 flex items-center justify-center">
-              <UserRound size={24} color="#141779" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-[#141779]">Child Profile</h2>
-              <p className="text-sm text-[#767683] mt-0.5">Manage explorer details & app language</p>
-            </div>
-          </div>
-          
-          <div className="flex flex-col gap-4 relative z-10">
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-[#767683] ml-2">Explorer Name</label>
-              <div className="relative flex items-center">
-                <UserRound size={22} color="#006a62" className="absolute left-4 z-10" />
-                <input
-                  type="text"
-                  value={childName}
-                  onChange={(e) => setChildName(e.target.value)}
-                  className="w-full h-14 bg-white rounded-2xl pl-12 pr-6 text-base font-medium text-[#191c1e] border-2 border-transparent focus:border-[#141779] outline-none shadow-sm hover:shadow-md transition-shadow"
-                />
-              </div>
-            </div>
-
-            <CustomDropdown
-              label="Education Board"
-              icon={BookOpen}
-              iconColor="#006a62"
-              value={childBoard}
-              options={boards}
-              onSelect={setChildBoard}
-              placeholder="Select Board"
-            />
-
-            <div className="flex gap-3 w-full">
-              <CustomDropdown
-                label="Class/Grade"
-                icon={GraduationCap}
-                iconColor="#30007f"
-                value={childClass}
-                options={classes}
-                onSelect={setChildClass}
-                placeholder="Select"
-              />
-
-              <CustomDropdown
-                label="Age"
-                icon={Cake}
-                iconColor="#141779"
-                value={childAge}
-                options={ages}
-                onSelect={setChildAge}
-                placeholder="Select"
-              />
-            </div>
-
-            {/* Language Selection */}
-            <div className="flex flex-col gap-2 mt-2">
-              <label className="text-sm font-semibold text-[#767683] ml-2">App Language</label>
-              <div className="flex gap-2">
-                <button 
-                  type="button"
-                  onClick={() => { localStorage.setItem('i18nextLng', 'en'); window.location.reload(); }}
-                  className={`flex-1 py-3 rounded-2xl border-2 ${localStorage.getItem('i18nextLng') === 'en' || !localStorage.getItem('i18nextLng') ? 'bg-[#141779] text-white border-[#141779] shadow-lg shadow-[#141779]/20' : 'bg-white text-[#141779] border-gray-200 hover:bg-gray-50'} text-sm font-bold transition-all`}
-                >
-                  English
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => { localStorage.setItem('i18nextLng', 'hi'); window.location.reload(); }}
-                  className={`flex-1 py-3 rounded-2xl border-2 ${localStorage.getItem('i18nextLng') === 'hi' ? 'bg-[#141779] text-white border-[#141779] shadow-lg shadow-[#141779]/20' : 'bg-white text-[#141779] border-gray-200 hover:bg-gray-50'} text-sm font-bold transition-all`}
-                >
-                  हिन्दी
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => { localStorage.setItem('i18nextLng', 'gu'); window.location.reload(); }}
-                  className={`flex-1 py-3 rounded-2xl border-2 ${localStorage.getItem('i18nextLng') === 'gu' ? 'bg-[#141779] text-white border-[#141779] shadow-lg shadow-[#141779]/20' : 'bg-white text-[#141779] border-gray-200 hover:bg-gray-50'} text-sm font-bold transition-all`}
-                >
-                  ગુજરાતી
-                </button>
-              </div>
-            </div>
-
-            <button
-              onClick={handleSaveChildProfile}
-              disabled={isSavingProfile}
-              className="mt-2 w-full h-14 bg-[#141779] rounded-2xl flex items-center justify-center gap-3 shadow-[0_4px_15px_rgba(20,23,121,0.2)] hover:shadow-[0_6px_20px_rgba(20,23,121,0.3)] hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:hover:translate-y-0"
-            >
-              <span className="text-white text-lg font-semibold">{isSavingProfile ? 'Saving...' : 'Save Profile Details'}</span>
-              {!isSavingProfile && <Save size={20} color="white" />}
-            </button>
-          </div>
-        </motion.div>
-
         {/* Screen Time Section */}
         <motion.div variants={itemVariants} className="bg-white/70 backdrop-blur-md rounded-3xl p-7 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#006a62]/10 to-transparent rounded-bl-full pointer-events-none transition-transform group-hover:scale-110 duration-500" />
@@ -461,33 +363,36 @@ export default function ParentSettings() {
             }} />
           </div>
           
-          <div className="flex gap-3 relative z-10">
-            {[
-              { label: "30 Min", value: 30 },
-              { label: "1 Hour", value: 60 },
-              { label: "Unlimited", value: 9999 }
-            ].map((btn) => {
-              const isActive = (btn.value === 9999 && !isScreenTimeOn) || (isScreenTimeOn && screenTimeMinutes === btn.value);
-              return (
-                <button
-                  key={btn.value}
-                  onClick={() => {
-                    setScreenTimeMinutes(btn.value);
-                    updateSetting("screenTimeMinutes", btn.value);
-                  }}
-                  className={`flex-1 py-3.5 rounded-2xl border-2 transition-all duration-300 ${
-                    isActive 
-                      ? 'border-[#006a62] bg-[#006a62] shadow-lg shadow-[#006a62]/20 scale-[1.02]' 
-                      : 'border-[#e0e3e5] bg-white hover:border-[#006a62]/50 hover:bg-[#f8fafc]'
-                  }`}
-                >
-                  <span className={`text-[15px] ${isActive ? 'font-bold text-white' : 'font-semibold text-[#464652]'}`}>
-                    {btn.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          {isScreenTimeOn ? (
+            <div className="mt-4 relative z-10">
+              <div className="flex justify-between items-end mb-2">
+                <span className="text-3xl font-bold text-[#006a62]">{screenTimeMinutes} <span className="text-sm text-[#767683] font-semibold">Minutes / Day</span></span>
+              </div>
+              <input 
+                type="range" 
+                min="5" 
+                max="120" 
+                step="5" 
+                value={screenTimeMinutes} 
+                onChange={(e) => setScreenTimeMinutes(parseInt(e.target.value))}
+                onMouseUp={() => updateSetting("screenTimeMinutes", screenTimeMinutes)}
+                onTouchEnd={() => updateSetting("screenTimeMinutes", screenTimeMinutes)}
+                className="w-full h-3 bg-[#e0e3e5] rounded-lg appearance-none cursor-pointer accent-[#006a62]"
+              />
+              <div className="flex justify-between text-xs font-bold text-[#c7c5d4] mt-2 px-1">
+                <span>5m</span>
+                <span>30m</span>
+                <span>60m</span>
+                <span>90m</span>
+                <span>120m</span>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4 relative z-10 p-4 bg-gray-50 rounded-2xl border border-gray-100 text-center">
+              <p className="font-bold text-[#464652]">Screen Time is Unlimited</p>
+              <p className="text-sm text-[#767683] mt-1">Your child can use the app without any time restrictions.</p>
+            </div>
+          )}
         </motion.div>
 
         {/* Subject Restrictions */}
@@ -523,6 +428,104 @@ export default function ParentSettings() {
                 No subjects found for current standard.
               </div>
             )}
+          </div>
+        </motion.div>
+
+        {/* Child Profile Settings */}
+        <motion.div variants={itemVariants} className="bg-white/70 backdrop-blur-md rounded-3xl p-7 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#141779]/10 to-transparent rounded-bl-full pointer-events-none transition-transform group-hover:scale-110 duration-500" />
+          <div className="flex items-center gap-3 mb-6 relative z-10">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#141779]/20 to-[#141779]/5 flex items-center justify-center">
+              <UserRound size={24} color="#141779" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-[#141779]">{t("edit_profile")}</h2>
+              <p className="text-sm text-[#767683] mt-0.5">Manage explorer details & app language</p>
+            </div>
+          </div>
+          
+          <div className="flex flex-col gap-4 relative z-10">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-[#767683] ml-2">{t("explorer_name")}</label>
+              <div className="relative flex items-center">
+                <UserRound size={22} color="#006a62" className="absolute left-4 z-10" />
+                <input
+                  type="text"
+                  value={childName}
+                  onChange={(e) => setChildName(e.target.value)}
+                  className="w-full h-14 bg-white rounded-2xl pl-12 pr-6 text-base font-medium text-[#191c1e] border-2 border-transparent focus:border-[#141779] outline-none shadow-sm hover:shadow-md transition-shadow"
+                />
+              </div>
+            </div>
+
+            <CustomDropdown
+              label={t("education_board")}
+              icon={BookOpen}
+              iconColor="#006a62"
+              value={childBoard}
+              options={boards}
+              onSelect={setChildBoard}
+              placeholder={t("select_board")}
+            />
+
+            <div className="flex gap-3 w-full">
+              <CustomDropdown
+                label={t("class_grade")}
+                icon={GraduationCap}
+                iconColor="#30007f"
+                value={childClass}
+                options={classes}
+                onSelect={setChildClass}
+                placeholder={t("select")}
+              />
+
+              <CustomDropdown
+                label={t("age")}
+                icon={Cake}
+                iconColor="#141779"
+                value={childAge}
+                options={ages}
+                onSelect={setChildAge}
+                placeholder={t("select")}
+              />
+            </div>
+
+            {/* Language Selection */}
+            <div className="flex flex-col gap-2 mt-2">
+              <label className="text-sm font-semibold text-[#767683] ml-2">{t("app_language")}</label>
+              <div className="flex gap-2">
+                <button 
+                  type="button"
+                  onClick={() => { localStorage.setItem('i18nextLng', 'en'); window.location.reload(); }}
+                  className={`flex-1 py-3 rounded-2xl border-2 ${localStorage.getItem('i18nextLng') === 'en' || !localStorage.getItem('i18nextLng') ? 'bg-[#141779] text-white border-[#141779] shadow-lg shadow-[#141779]/20' : 'bg-white text-[#141779] border-gray-200 hover:bg-gray-50'} text-sm font-bold transition-all`}
+                >
+                  English
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => { localStorage.setItem('i18nextLng', 'hi'); window.location.reload(); }}
+                  className={`flex-1 py-3 rounded-2xl border-2 ${localStorage.getItem('i18nextLng') === 'hi' ? 'bg-[#141779] text-white border-[#141779] shadow-lg shadow-[#141779]/20' : 'bg-white text-[#141779] border-gray-200 hover:bg-gray-50'} text-sm font-bold transition-all`}
+                >
+                  हिन्दी
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => { localStorage.setItem('i18nextLng', 'gu'); window.location.reload(); }}
+                  className={`flex-1 py-3 rounded-2xl border-2 ${localStorage.getItem('i18nextLng') === 'gu' ? 'bg-[#141779] text-white border-[#141779] shadow-lg shadow-[#141779]/20' : 'bg-white text-[#141779] border-gray-200 hover:bg-gray-50'} text-sm font-bold transition-all`}
+                >
+                  ગુજરાતી
+                </button>
+              </div>
+            </div>
+
+            <button
+              onClick={handleSaveChildProfile}
+              disabled={isSavingProfile}
+              className="mt-2 w-full h-14 bg-[#141779] rounded-2xl flex items-center justify-center gap-3 shadow-[0_4px_15px_rgba(20,23,121,0.2)] hover:shadow-[0_6px_20px_rgba(20,23,121,0.3)] hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:hover:translate-y-0"
+            >
+              <span className="text-white text-lg font-semibold">{isSavingProfile ? t("saving") : t("save_profile")}</span>
+              {!isSavingProfile && <Save size={20} color="white" />}
+            </button>
           </div>
         </motion.div>
 

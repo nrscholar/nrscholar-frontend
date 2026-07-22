@@ -109,6 +109,16 @@
     "select": "चुनें",
     "age": "आयु",
     "saving": "सहेजा जा रहा है...",
-    "save_profile": "प्रोफ़ाइल सहेजें"
+    "save_profile": "प्रोफ़ाइल सहेजें",
+    "daily_tip": "दैनिक टिप",
+    "lessons": "पाठ",
+    "challenges": "चुनौतियां",
+    "rewards": "इनाम",
+    "achievements": "उपलब्धियां",
+    "parent_achievements": "अभिभावक की उपलब्धियां",
+    "parent_space": "पैरेंट स्पेस",
+    "student_profile": "छात्र प्रोफाइल",
+    "journey": "यात्र",
+    "growth_journey": "विकास यात्रा"
   }
 }

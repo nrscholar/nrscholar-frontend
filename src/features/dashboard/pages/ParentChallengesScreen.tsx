@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Menu, VolumeX, Heart, Star, ShieldCheck, Gift, Ear, Sparkles, BookOpen, Lock, TrendingUp, Users, Settings, ArrowLeft } from "lucide-react";
 import { apiFetch } from "../../../api";
+import { useTranslation } from "react-i18next";
 
 export default function ParentChallengesScreen() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [claimState, setClaimState] = useState<Record<string, "idle" | "processing" | "claimed">>({});
   const [level, setLevel] = useState(1);
@@ -158,7 +160,7 @@ export default function ParentChallengesScreen() {
               src={profilePic || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`}
             />
           </div>
-          <h1 className="text-xl font-bold text-[#141779]">Growth Challenges</h1>
+          <h1 className="text-xl font-bold text-[#141779]">{t("challenges") || "Growth Challenges"}</h1>
         </div>
         <button onClick={() => navigate('/parent/settings')} className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all">
           <Settings size={20} className="text-[#141779]" />

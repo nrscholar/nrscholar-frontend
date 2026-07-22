@@ -257,9 +257,14 @@ export default function ParentLessonPlayerScreen() {
 
       <main className="flex-1 px-6 pb-32 flex flex-col justify-center relative z-10">
         {loading ? (
-          <div className="flex flex-col items-center justify-center h-full gap-4 text-[#141779]">
-            <Icons.Loader className="animate-spin" size={32} />
-            <p className="font-bold">Loading Lesson...</p>
+          <div className="flex flex-col items-center justify-center h-full gap-8 w-full max-w-md mx-auto">
+            <div className="w-32 h-32 bg-gray-200 animate-pulse rounded-3xl"></div>
+            <div className="h-8 w-48 bg-gray-200 animate-pulse rounded"></div>
+            <div className="w-full space-y-4">
+              <div className="h-4 w-full bg-gray-200 animate-pulse rounded"></div>
+              <div className="h-4 w-5/6 bg-gray-200 animate-pulse rounded mx-auto"></div>
+              <div className="h-4 w-4/6 bg-gray-200 animate-pulse rounded mx-auto"></div>
+            </div>
           </div>
         ) : !slides.length ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
