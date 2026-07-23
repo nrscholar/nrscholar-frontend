@@ -268,11 +268,10 @@ export default function HomeScreen() {
   const currentCityName = citiesData.length > 0 ? citiesData[currentCityIndex].name : "Egg Village";
   const nextCityName = citiesData.length > 0 ? citiesData[nextLockedIndex].name : "Forest Kingdom";
   
-<<<<<<< Updated upstream
-  const targetXp = citiesData.length > 0 ? (citiesData[nextLockedIndex].requiredFuel || 1000) : 1000;
-  const prevMilestoneXp = citiesData.length > 0 ? (citiesData[currentCityIndex].requiredFuel || 0) : 0;
+  const targetXp = citiesData.length > 0 ? (xpThresholds[nextLockedIndex] || (nextLockedIndex * 5000)) : 1000;
+  const prevMilestoneXp = citiesData.length > 0 ? (xpThresholds[currentCityIndex] || (currentCityIndex * 5000)) : 0;
   const xpNeeded = Math.max(0, targetXp - xp);
-  const currentLegXpTotal = targetXp - prevMilestoneXp;
+  const currentLegXpTotal = Math.max(1, targetXp - prevMilestoneXp);
   
   // Calculate leg percentage: if at initial milestone (e.g. initial 50 XP daily login streak reward), start at 0%
   const xpInLeg = Math.max(0, xp - prevMilestoneXp);
@@ -281,15 +280,6 @@ export default function HomeScreen() {
     rawLegPercentage = 0;
   }
   const currentLegXpPercentage = Math.min(100, Math.max(0, Math.floor(rawLegPercentage)));
-=======
-  const targetXp = citiesData.length > 0 ? (xpThresholds[nextLockedIndex] || (nextLockedIndex * 5000)) : 1000;
-  const prevMilestoneXp = citiesData.length > 0 ? (xpThresholds[currentCityIndex] || (currentCityIndex * 5000)) : 0;
-  
-  const xpNeeded = Math.max(0, targetXp - xp);
-  const currentLegXpTotal = Math.max(1, targetXp - prevMilestoneXp); // Prevent division by zero
-  const xpIntoCurrentLeg = Math.max(0, xp - prevMilestoneXp);
-  const currentLegXpPercentage = targetXp > 0 ? Math.min(100, (xpIntoCurrentLeg / currentLegXpTotal) * 100) : 100;
->>>>>>> Stashed changes
 
 
   return (
