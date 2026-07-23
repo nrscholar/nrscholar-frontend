@@ -53,7 +53,16 @@ export default function HomeScreen() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasFreeSpin, setHasFreeSpin] = useState(false);
   const [showSpinPopup, setShowSpinPopup] = useState(false);
+  const [pendingSpinPopup, setPendingSpinPopup] = useState(false);
   const [citiesData, setCitiesData] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (pendingSpinPopup && !surpriseData) {
+      setShowSpinPopup(true);
+      sessionStorage.setItem("dailySpinPopupShown", "true");
+      setPendingSpinPopup(false);
+    }
+  }, [pendingSpinPopup, surpriseData]);
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -172,8 +181,7 @@ export default function HomeScreen() {
               setHasFreeSpin(hasSpin);
               
               if (dailyCount > 0 && sessionStorage.getItem("dailySpinPopupShown") !== "true") {
-                setShowSpinPopup(true);
-                sessionStorage.setItem("dailySpinPopupShown", "true");
+                setPendingSpinPopup(true);
               }
             }
           }
@@ -242,11 +250,15 @@ export default function HomeScreen() {
     }
   };
 
-  // Calculate destination progress based on fetched cities
+  // XP Thresholds for cities (aligned with JourneyMapScreen)
+  const xpThresholds = [0, 1000, 2500, 5000, 10000, 15000, 20000, 30000, 40000, 50000];
+
+  // Calculate destination progress based on fetched cities and xp thresholds
   let currentCityIndex = 0;
   if (citiesData.length > 0) {
     for (let i = 0; i < citiesData.length; i++) {
-      if (xp >= (citiesData[i].requiredFuel || 0)) {
+      const requiredXp = xpThresholds[i] || (i * 5000); // fallback for any extra cities
+      if (xp >= requiredXp) {
         currentCityIndex = i;
       }
     }
@@ -256,6 +268,7 @@ export default function HomeScreen() {
   const currentCityName = citiesData.length > 0 ? citiesData[currentCityIndex].name : "Egg Village";
   const nextCityName = citiesData.length > 0 ? citiesData[nextLockedIndex].name : "Forest Kingdom";
   
+<<<<<<< Updated upstream
   const targetXp = citiesData.length > 0 ? (citiesData[nextLockedIndex].requiredFuel || 1000) : 1000;
   const prevMilestoneXp = citiesData.length > 0 ? (citiesData[currentCityIndex].requiredFuel || 0) : 0;
   const xpNeeded = Math.max(0, targetXp - xp);
@@ -268,6 +281,15 @@ export default function HomeScreen() {
     rawLegPercentage = 0;
   }
   const currentLegXpPercentage = Math.min(100, Math.max(0, Math.floor(rawLegPercentage)));
+=======
+  const targetXp = citiesData.length > 0 ? (xpThresholds[nextLockedIndex] || (nextLockedIndex * 5000)) : 1000;
+  const prevMilestoneXp = citiesData.length > 0 ? (xpThresholds[currentCityIndex] || (currentCityIndex * 5000)) : 0;
+  
+  const xpNeeded = Math.max(0, targetXp - xp);
+  const currentLegXpTotal = Math.max(1, targetXp - prevMilestoneXp); // Prevent division by zero
+  const xpIntoCurrentLeg = Math.max(0, xp - prevMilestoneXp);
+  const currentLegXpPercentage = targetXp > 0 ? Math.min(100, (xpIntoCurrentLeg / currentLegXpTotal) * 100) : 100;
+>>>>>>> Stashed changes
 
 
   return (

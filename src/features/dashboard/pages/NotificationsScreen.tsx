@@ -63,8 +63,24 @@ export default function NotificationsScreen() {
 
       <main className="px-6 pt-8 flex flex-col gap-6 max-w-[500px] mx-auto">
         {loading ? (
-          <div className="flex justify-center items-center py-20">
-            <div className="w-10 h-10 border-4 border-[#141779] border-t-transparent rounded-full animate-spin" />
+          <div className="relative pl-1 flex flex-col gap-6">
+            <div className="absolute left-[22px] top-0 bottom-0 border-l-2 border-dashed border-[rgba(20,23,121,0.2)] z-0" />
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex items-start gap-4 z-10 relative animate-pulse">
+                <div className="w-10 h-10 rounded-full bg-gray-200 mt-1 shrink-0" />
+                <div className="flex-1 relative">
+                  <div className="absolute -left-[6px] top-5 w-4 h-4 bg-gray-100 rotate-45 z-0" />
+                  <div className="w-full bg-gray-100 rounded-2xl p-4 border-[1.5px] border-white shadow-sm relative z-10">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="h-4 bg-gray-200 rounded w-1/3" />
+                      <div className="h-3 bg-gray-200 rounded w-10" />
+                    </div>
+                    <div className="h-3 bg-gray-200 rounded w-full mb-1" />
+                    <div className="h-3 bg-gray-200 rounded w-2/3" />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">

@@ -159,9 +159,10 @@ export default function MyJourneyMap() {
   const cloudAnim = useRef(new Animated.Value(0)).current;
 
   // Dynamic destination and train calculations
+  const xpThresholds = [0, 1000, 2500, 5000, 10000, 15000, 20000, 30000, 40000];
   const nextLockedCity = cities.find(c => !c.unlocked) || cities[cities.length - 1];
   const nextLockedIndex = cities.findIndex(c => !c.unlocked);
-  const targetFuel = nextLockedIndex !== -1 ? nextLockedIndex * 500 : 500;
+  const targetFuel = nextLockedIndex !== -1 ? (xpThresholds[nextLockedIndex] || (nextLockedIndex * 5000)) : 1000;
   const fuelLeft = Math.max(0, targetFuel - fuel);
 
   // Train position at the last unlocked city
@@ -208,8 +209,9 @@ export default function MyJourneyMap() {
 
           // Let's check if the fuel enables unlocking new cities dynamically
           let newlyUnlockedCity: City | null = null;
+          const xpThresholds = [0, 1000, 2500, 5000, 10000, 15000, 20000, 30000, 40000];
           const updatedCities = CITIES.map((city, idx) => {
-            const requiredFuel = idx * 500;
+            const requiredFuel = xpThresholds[idx] || (idx * 5000);
             const shouldBeUnlocked = currentFuel >= requiredFuel || unlockedList.includes(city.name);
             
             // Check if this city is newly unlocked
@@ -316,8 +318,9 @@ export default function MyJourneyMap() {
       const storedCities = await AsyncStorage.getItem("nrscholar_unlocked_cities");
       let unlockedList = storedCities ? JSON.parse(storedCities) : ["Ahmedabad"];
 
+      const xpThresholds = [0, 1000, 2500, 5000, 10000, 15000, 20000, 30000, 40000];
       const updatedCities = cities.map((city, idx) => {
-        const requiredFuel = idx * 500;
+        const requiredFuel = xpThresholds[idx] || (idx * 5000);
         const shouldBeUnlocked = newFuel >= requiredFuel || city.unlocked;
         if (shouldBeUnlocked && !city.unlocked) {
           if (!unlockedList.includes(city.name)) unlockedList.push(city.name);

@@ -110,6 +110,37 @@ export default function BossBattleScreen() {
         const json = await res.json();
         if (json.success && json.data && json.data.questions && json.data.questions.length > 0) {
           setBattleData(json.data);
+          
+          if (json.data.questions && json.data.questions.length === 0) {
+            // Auto complete if no boss questions
+            const rewardAmt = 1000;
+            if (chapterId) {
+              const existingAnswers = location.state?.userAnswers || [];
+              try {
+                await apiFetch("/api/practice/chapter-progress", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    chapterId: chapterId,
+                    currentQ: 10,
+                    score: existingAnswers.length,
+                    completed: true,
+                    readingCompleted: true,
+                    questionsCompleted: true,
+                    bossCompleted: true,
+                    chapterCompleted: true,
+                    answers: existingAnswers
+                  })
+                });
+              } catch (e) {}
+            }
+            if (returnTo) {
+               navigate(`/practice/reward?type=boss&amount=${rewardAmt}&returnTo=${encodeURIComponent(returnTo)}`, { state: location.state, replace: true });
+            } else {
+               navigate(`/practice/reward?type=coins&amount=${rewardAmt}&returnTo=/practice/journey-map`, { replace: true });
+            }
+            return;
+          }
         } else {
           setBattleData({
             battleId: "demo_b1",

@@ -105,41 +105,60 @@ export default function HabitsScreen() {
 
         {/* Progress Orbit Tracker */}
         <div className="flex justify-center gap-4 w-full">
-          {/* Day 1 */}
-          <div className="flex flex-col items-center gap-1">
-            <div className="w-12 h-12 rounded-full bg-[#57fae9] flex items-center justify-center shadow-[0_0_10px_rgba(87,250,233,0.5)]">
-              <Star size={24} color="#00201d" className="fill-[#00201d]" />
+          {/* Past Day (currentDay - 2) */}
+          {(habit?.currentDay > 2) && (
+            <div className="flex flex-col items-center gap-1">
+              <div className="w-12 h-12 rounded-full bg-[#57fae9] flex items-center justify-center shadow-[0_0_10px_rgba(87,250,233,0.5)]">
+                <Star size={24} color="#00201d" className="fill-[#00201d]" />
+              </div>
+              <span className="text-xs font-bold text-[#464652]">Day {habit.currentDay - 2}</span>
             </div>
-            <span className="text-xs font-bold text-[#464652]">Day 1</span>
-          </div>
-          {/* Day 2 */}
-          <div className="flex flex-col items-center gap-1">
-            <div className="w-12 h-12 rounded-full bg-[#57fae9] flex items-center justify-center shadow-[0_0_10px_rgba(87,250,233,0.5)]">
-              <Star size={24} color="#00201d" className="fill-[#00201d]" />
+          )}
+          
+          {/* Past Day (currentDay - 1) */}
+          {(habit?.currentDay > 1) && (
+            <div className="flex flex-col items-center gap-1">
+              <div className="w-12 h-12 rounded-full bg-[#57fae9] flex items-center justify-center shadow-[0_0_10px_rgba(87,250,233,0.5)]">
+                <Star size={24} color="#00201d" className="fill-[#00201d]" />
+              </div>
+              <span className="text-xs font-bold text-[#464652]">Day {habit.currentDay - 1}</span>
             </div>
-            <span className="text-xs font-bold text-[#464652]">Day 2</span>
-          </div>
-          {/* Today */}
+          )}
+
+          {/* Today (currentDay) */}
           <div className="flex flex-col items-center gap-1">
-            <div className="w-12 h-12 rounded-full border-2 border-dashed border-[#2addcd] flex items-center justify-center">
-              <Heart size={24} color="#2addcd" className="fill-[#2addcd]" />
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+              completed 
+                ? "bg-[#57fae9] shadow-[0_0_10px_rgba(87,250,233,0.5)]" 
+                : "border-2 border-dashed border-[#2addcd]"
+            }`}>
+              {completed ? (
+                <Star size={24} color="#00201d" className="fill-[#00201d]" />
+              ) : (
+                <Heart size={24} color="#2addcd" className="fill-[#2addcd]" />
+              )}
             </div>
             <span className="text-xs font-bold text-[#464652]">Today</span>
           </div>
-          {/* Day 4 */}
+
+          {/* Next Day (currentDay + 1) */}
           <div className="flex flex-col items-center gap-1 opacity-40">
             <div className="w-12 h-12 rounded-full border-2 border-dashed border-[#c7c5d4] flex items-center justify-center">
               <Lock size={24} color="#767683" />
             </div>
-            <span className="text-xs font-bold text-[#464652]">Day 4</span>
+            <span className="text-xs font-bold text-[#464652]">Day {(habit?.currentDay || 1) + 1}</span>
           </div>
         </div>
 
         {/* Daily Lesson Card */}
         <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-6 flex flex-col items-center border-[1.5px] border-[rgba(255,255,255,0.4)] shadow-[0_2px_10px_rgba(0,0,0,0.05)] w-full max-w-[400px]">
           {loading ? (
-            <div className="py-10 flex items-center justify-center">
-              <div className="w-8 h-8 border-4 border-[#141779] border-t-transparent rounded-full animate-spin" />
+            <div className="py-6 flex flex-col items-center justify-center w-full animate-pulse gap-2">
+              <div className="w-16 h-16 bg-gray-200 rounded-2xl mb-4" />
+              <div className="h-6 bg-gray-200 rounded w-2/3 mb-2" />
+              <div className="h-4 bg-gray-200 rounded w-5/6" />
+              <div className="h-4 bg-gray-200 rounded w-4/6 mb-6" />
+              <div className="h-14 w-full bg-gray-200 rounded-full" />
             </div>
           ) : (
             <>
@@ -157,19 +176,23 @@ export default function HabitsScreen() {
               <button
                 disabled={completed || !habit || submitting}
                 onClick={handleComplete}
-                className={`w-full py-4 rounded-full flex items-center justify-center gap-2 shadow-[0_4px_10px_rgba(20,23,121,0.3)] transition-all ${
-                  completed ? 'bg-[#f0f0f0] border-2 border-[#e0e3e5] shadow-none cursor-not-allowed' : 'bg-[#141779] hover:opacity-90 active:scale-[0.98]'
+                className={`w-full py-4 rounded-full flex items-center justify-center gap-2 transition-all ${
+                  completed ? 'border-2 cursor-not-allowed' : 'bg-[#141779] shadow-[0_4px_10px_rgba(20,23,121,0.3)] hover:opacity-90 active:scale-[0.98]'
                 }`}
+                style={completed ? { backgroundColor: '#e6f7ed', borderColor: '#b2ecc6' } : {}}
               >
                 {submitting ? (
                   <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <span className={`text-base font-bold ${completed ? 'text-[#767683]' : 'text-white'}`}>
+                    <span 
+                      className={`text-base font-bold ${completed ? '' : 'text-white'}`}
+                      style={completed ? { color: '#0f7d3d' } : {}}
+                    >
                       {completed ? `Claimed +${habit?.rewardPoints || 10} Points` : "Complete Story"}
                     </span>
                     {completed ? (
-                      <CheckCircle2 size={22} color="#767683" />
+                      <CheckCircle2 size={22} color="#0f7d3d" />
                     ) : (
                       <PartyPopper size={22} color="white" />
                     )}

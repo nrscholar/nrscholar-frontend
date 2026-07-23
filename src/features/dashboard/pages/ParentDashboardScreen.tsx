@@ -65,7 +65,7 @@ export default function ParentDashboardScreen() {
           apiFetch("/api/notifications").catch(() => null)
         ]);
 
-        if (userRes) {
+        if (userRes && userRes.ok) {
           const json = await userRes.json();
           if (json.success && json.data?.user) {
             const user = json.data.user;
@@ -77,7 +77,7 @@ export default function ParentDashboardScreen() {
           }
         }
 
-        if (reportRes) {
+        if (reportRes && reportRes.ok) {
           const repJson = await reportRes.json();
           if (repJson.success && repJson.data) {
             if (repJson.data.strengths) setStrengths(repJson.data.strengths);
@@ -92,7 +92,7 @@ export default function ParentDashboardScreen() {
           }
         }
 
-        if (notifRes) {
+        if (notifRes && notifRes.ok) {
           const notifJson = await notifRes.json();
           if (notifJson.success && notifJson.data) {
             setNotifications(notifJson.data);

@@ -61,8 +61,41 @@ export default function ProgressScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f9fb] flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-[#141779] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-[#f7f9fb] font-sans pb-24 animate-pulse flex flex-col">
+        <header className="flex items-center justify-between px-6 py-4 bg-[rgba(247,249,251,0.8)] border-b border-[rgba(255,255,255,0.2)] sticky top-0 z-50">
+          <div className="flex items-center gap-3 w-full">
+            <div className="w-8 h-8 bg-gray-200 rounded-full shrink-0" />
+            <div className="w-10 h-10 bg-gray-200 rounded-full shrink-0" />
+            <div className="h-6 bg-gray-200 rounded w-1/3" />
+          </div>
+          <div className="w-11 h-11 bg-gray-200 rounded-full shrink-0 ml-2" />
+        </header>
+        <main className="px-6 pt-8 flex flex-col gap-8">
+          <div className="flex items-center justify-center">
+            <div className="w-[192px] h-[192px] bg-gray-200 rounded-full" />
+          </div>
+          <div className="flex flex-col gap-4">
+            <div className="h-4 bg-gray-200 rounded w-1/4 px-1" />
+            <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-6 border-[1.5px] border-[rgba(255,255,255,0.8)] flex flex-col gap-5">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex flex-col gap-2">
+                  <div className="flex justify-between items-end px-1">
+                    <div className="h-4 bg-gray-200 rounded w-1/4" />
+                    <div className="h-3 bg-gray-200 rounded w-10" />
+                  </div>
+                  <div className="w-full h-3 bg-gray-200 rounded-full" />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-col gap-4">
+            <div className="h-4 bg-gray-200 rounded w-1/3 px-1" />
+            <div className="flex gap-4">
+              <div className="flex-1 bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 h-28 border-[1.5px] border-[rgba(255,255,255,0.8)]" />
+              <div className="flex-1 bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 h-28 border-[1.5px] border-[rgba(255,255,255,0.8)]" />
+            </div>
+          </div>
+        </main>
       </div>
     );
   }

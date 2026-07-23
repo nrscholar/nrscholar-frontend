@@ -101,14 +101,21 @@ export default function HomeScreen() {
     "Kutch"
   ];
 
-  // Calculate destination progress based on fuel
-  const nextLockedIndex = Math.min(CITIES.length - 1, Math.max(1, Math.floor(fuel / 500) + 1));
+  // Calculate destination progress based on XP/fuel
+  const xpThresholds = [0, 1000, 2500, 5000, 10000, 15000, 20000, 30000, 40000];
+  let nextLockedIndex = CITIES.length - 1;
+  for (let i = 0; i < CITIES.length; i++) {
+    if (fuel < xpThresholds[i]) {
+      nextLockedIndex = i;
+      break;
+    }
+  }
   const currentCityName = CITIES[nextLockedIndex - 1] || "Ahmedabad";
   const nextCityName = CITIES[nextLockedIndex] || "Gandhinagar";
-  const targetFuel = nextLockedIndex * 500;
+  const targetFuel = xpThresholds[nextLockedIndex] || (nextLockedIndex * 5000);
   const fuelNeeded = Math.max(0, targetFuel - fuel);
-  const prevMilestoneFuel = (nextLockedIndex - 1) * 500;
-  const currentLegFuelTotal = 500;
+  const prevMilestoneFuel = xpThresholds[nextLockedIndex - 1] || 0;
+  const currentLegFuelTotal = Math.max(1, targetFuel - prevMilestoneFuel);
   const currentLegFuelEarned = Math.max(0, fuel - prevMilestoneFuel);
   const currentLegFuelPercentage = Math.min(100, Math.max(0, (currentLegFuelEarned / currentLegFuelTotal) * 100));
 

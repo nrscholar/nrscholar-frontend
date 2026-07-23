@@ -158,8 +158,29 @@ export default function JourneyMapScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="bg-background text-on-surface flex items-center justify-center min-h-screen">
+        <div className="relative w-full max-w-[430px] h-screen bg-surface-bright flex flex-col overflow-hidden shadow-2xl animate-pulse">
+          <header className="fixed top-0 w-full max-w-[430px] z-50 flex justify-between items-center px-4 py-4 bg-surface/80 border-b-[1.5px] border-outline-variant/30 gap-2">
+            <div className="flex items-center gap-2 flex-1">
+              <div className="w-8 h-8 rounded-full bg-surface-container-highest shrink-0" />
+              <div className="w-10 h-10 rounded-full bg-surface-container-highest shrink-0" />
+              <div className="flex-1">
+                <div className="h-4 bg-surface-container-highest rounded w-2/3 mb-1" />
+                <div className="h-3 bg-surface-container-highest rounded w-1/3" />
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <div className="w-9 h-9 rounded-full bg-surface-container-highest" />
+              <div className="w-14 h-8 rounded-full bg-surface-container-highest" />
+              <div className="w-14 h-8 rounded-full bg-surface-container-highest" />
+            </div>
+          </header>
+          <main className="flex-1 mt-20 px-6 py-4 flex flex-col items-center gap-10">
+            <div className="w-full h-[300px] bg-surface-container rounded-3xl" />
+            <div className="w-64 h-32 bg-surface-container rounded-2xl" />
+            <div className="w-64 h-32 bg-surface-container rounded-2xl" />
+          </main>
+        </div>
       </div>
     );
   }

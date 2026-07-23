@@ -84,6 +84,33 @@ export default function ChapterQuestionsScreen() {
           filtered = qJson.data.slice(0, 15);
           setQuestionsData(filtered);
         }
+        
+        if (filtered.length === 0) {
+          try {
+            await apiFetch("/api/practice/chapter-progress", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chapterId: chapterId,
+                currentQ: 0,
+                score: 0,
+                answers: [],
+                completed: true,
+                readingCompleted: true,
+                questionsCompleted: true,
+                bossCompleted: true,
+                chapterCompleted: true
+              })
+            });
+          } catch (e) {}
+          
+          const finalReturnUrl = encodeURIComponent(`/practice/journey-map`);
+          navigate(`/practice/reward?type=coins&amount=100&returnTo=${finalReturnUrl}`, {
+            replace: true
+          });
+          return;
+        }
+
         if (pJson.success && pJson.data) {
           if (!pJson.data.questionsCompleted) {
             const savedQ = pJson.data.currentQ || 0;
@@ -318,9 +345,36 @@ export default function ChapterQuestionsScreen() {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-[#f4efff]">
-      <div className="w-10 h-10 border-4 border-[#141779] border-t-transparent rounded-full animate-spin" />
-    </div>;
+    return (
+      <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col pb-24 relative overflow-hidden">
+        <header className="flex items-center justify-between px-5 py-4 bg-[#f4efff] sticky top-0 z-40 animate-pulse">
+          <div className="flex items-center gap-3 w-full">
+            <div className="w-8 h-8 bg-gray-200 rounded-full shrink-0" />
+            <div className="w-10 h-10 bg-gray-200 rounded-full shrink-0" />
+            <div className="h-6 bg-gray-200 rounded w-1/2" />
+          </div>
+          <div className="w-10 h-10 bg-gray-200 rounded-full shrink-0 ml-2" />
+        </header>
+        <main className="px-6 pt-2 flex-1 flex flex-col animate-pulse">
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-3">
+              <div className="h-6 bg-gray-200 rounded w-1/3" />
+              <div className="h-6 bg-gray-200 rounded-full w-20" />
+            </div>
+            <div className="h-6 bg-gray-200 rounded-full w-full" />
+          </div>
+          <div className="flex items-end gap-4 mb-8 mt-4 px-2">
+            <div className="w-[70px] h-[70px] bg-gray-200 rounded-full shrink-0" />
+            <div className="flex-1 bg-gray-200 h-24 rounded-[24px] rounded-bl-none" />
+          </div>
+          <div className="grid grid-cols-2 gap-3.5">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-16 bg-gray-200 rounded-[16px]" />
+            ))}
+          </div>
+        </main>
+      </div>
+    );
   }
 
   if (questionsData.length === 0) {

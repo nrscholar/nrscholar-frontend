@@ -251,9 +251,32 @@ export default function ChaptersScreen() {
 
       <main className="px-6 pt-6 flex flex-col gap-6">
         {loading ? (
-          <div className="flex justify-center mt-10">
-            <div className="w-8 h-8 border-4 border-[#141779] border-t-transparent rounded-full animate-spin" />
-          </div>
+          <>
+            <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-6 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_2px_10px_rgba(0,0,0,0.05)] flex flex-col gap-4 animate-pulse">
+              <div className="flex justify-between items-end">
+                <div className="flex-1">
+                  <div className="h-3 bg-gray-200 rounded w-1/3 mb-2" />
+                  <div className="h-6 bg-gray-200 rounded w-1/2" />
+                </div>
+                <div className="w-12 h-12 rounded-full border-4 border-gray-200" />
+              </div>
+              <div className="w-full h-2.5 bg-gray-200 rounded-full" />
+            </div>
+            <div className="flex flex-col gap-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex flex-col bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.8)] animate-pulse">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-gray-200 shrink-0" />
+                    <div className="flex-1">
+                      <div className="h-3 bg-gray-200 rounded w-1/4 mb-2" />
+                      <div className="h-5 bg-gray-200 rounded w-2/3" />
+                    </div>
+                    <div className="w-6 h-6 rounded-full bg-gray-200" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         ) : (
           <>
             {/* Progress Summary Card */}
