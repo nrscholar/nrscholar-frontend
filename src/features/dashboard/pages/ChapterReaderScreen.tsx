@@ -72,10 +72,10 @@ export default function ChapterReaderScreen() {
           readingCompleted: true
         })
       });
-      navigate(`/chapter-questions?chapterId=${chapterId}&chapterName=${encodeURIComponent(title)}&subjectName=${encodeURIComponent(subjectName)}`, { replace: true });
+      navigate(`/mission-roadmap?chapterId=${chapterId}&title=${encodeURIComponent(title)}&subjectName=${encodeURIComponent(subjectName)}`, { replace: true });
     } catch (error) {
       console.error("Error saving progress:", error);
-      navigate(`/chapter-questions?chapterId=${chapterId}&chapterName=${encodeURIComponent(title)}&subjectName=${encodeURIComponent(subjectName)}`, { replace: true });
+      navigate(`/mission-roadmap?chapterId=${chapterId}&title=${encodeURIComponent(title)}&subjectName=${encodeURIComponent(subjectName)}`, { replace: true });
     } finally {
       setMarkingComplete(false);
     }

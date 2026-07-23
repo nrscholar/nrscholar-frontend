@@ -119,23 +119,30 @@ export default function InventoryScreen() {
           // Refetch boxes
           setMysteryBoxes(prev => ({...prev, [type]: Math.max(0, (prev[type] || 0) - 1)}));
 
-          if (data.type === 'coins') {
+          if (data.user_coins !== undefined && data.user_coins !== null) {
+            setCoins(data.user_coins);
+          } else if (data.type === 'coins') {
             setCoins(prev => prev + data.amount);
-            const stored = localStorage.getItem("userData");
-            if (stored) {
-              const u = JSON.parse(stored);
-              u.coins = (u.coins || 0) + data.amount;
-              localStorage.setItem("userData", JSON.stringify(u));
-            }
+          }
+
+          if (data.user_xp !== undefined && data.user_xp !== null) {
+            setXp(data.user_xp);
           } else if (data.type === 'xp') {
             setXp(prev => prev + data.amount);
-            const stored = localStorage.getItem("userData");
-            if (stored) {
-              const u = JSON.parse(stored);
-              u.xp = (u.xp || 0) + data.amount;
-              localStorage.setItem("userData", JSON.stringify(u));
-            }
-          } else if (data.type === 'fragment') {
+          }
+
+          const stored = localStorage.getItem("userData");
+          if (stored) {
+            const u = JSON.parse(stored);
+            if (data.user_coins !== undefined) u.coins = data.user_coins;
+            else if (data.type === 'coins') u.coins = (u.coins || 0) + data.amount;
+            if (data.user_xp !== undefined) u.xp = data.user_xp;
+            else if (data.type === 'xp') u.xp = (u.xp || 0) + data.amount;
+            localStorage.setItem("userData", JSON.stringify(u));
+          }
+          window.dispatchEvent(new Event("userDataUpdated"));
+
+          if (data.type === 'fragment') {
             apiFetch("/api/retention/fragments").then(r => r.json()).then(f => setFragments(f)).catch(() => {});
           }
           // Refetch profile to sync levels and stats with backend
@@ -327,8 +334,9 @@ export default function InventoryScreen() {
                 const count = mysteryBoxes[type] || 0;
                 let bgColors = "from-[#f0f0f0] to-[#ffffff]";
                 let borderColor = "border-[#d0d0d0]";
-                if (type === 'rare') { bgColors = "from-[#e0f7fa] to-[#ffffff]"; borderColor = "border-[#00bcd4]"; }
-                if (type === 'epic') { bgColors = "from-[#f3e5f5] to-[#ffffff]"; borderColor = "border-[#9c27b0]"; }
+                let glowShadow = "shadow-[0_4px_16px_rgba(156,163,175,0.25)]";
+                if (type === 'rare') { bgColors = "from-[#e0f7fa] to-[#ffffff]"; borderColor = "border-[#00bcd4]"; glowShadow = "shadow-[0_4px_24px_rgba(0,188,212,0.35)]"; }
+                if (type === 'epic') { bgColors = "from-[#f3e5f5] to-[#ffffff]"; borderColor = "border-[#9c27b0]"; glowShadow = "shadow-[0_4px_28px_rgba(156,39,176,0.4)]"; }
                 
                 return (
                   <motion.div 
@@ -339,7 +347,7 @@ export default function InventoryScreen() {
                       scale: [1, 1.05, 1]
                     } : {}}
                     transition={{ duration: 0.5, repeat: openingBox === type ? Infinity : 0 }}
-                    className={`bg-gradient-to-br ${bgColors} rounded-[20px] p-4 border-2 ${borderColor} flex flex-col items-center relative overflow-hidden shadow-sm`}
+                    className={`bg-gradient-to-br ${bgColors} rounded-[20px] p-4 border-2 ${borderColor} ${glowShadow} flex flex-col items-center relative overflow-hidden transition-shadow`}
                   >
                     <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-3 shadow-inner">
                       <Package size={32} color={type === 'epic' ? '#9c27b0' : type === 'rare' ? '#00bcd4' : '#767683'} />

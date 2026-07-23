@@ -147,33 +147,33 @@ export default function ChaptersScreen() {
   }, [activeSubject]);
 
   const totalChapters = chapters.length;
-  // A chapter is only fully complete if the legacy exact match exists OR the hard level boss is beaten
   const isChapterCompleted = (chapterId: string) => completedChapters.includes(chapterId) || completedChapters.includes(`${chapterId}_hard`);
   const completedChaptersCount = chapters.filter(ch => isChapterCompleted(ch._id)).length;
-  const progressPercent = totalChapters > 0 ? (completedChaptersCount / totalChapters) * 100 : 0;
+  
+  let totalCompletedMissionsCount = 0;
+  chapters.forEach(ch => {
+    const prog = chapterProgressMap[ch._id] || {};
+    const missions = prog.completedMissions || [];
+    if (Array.isArray(missions)) {
+      totalCompletedMissionsCount += missions.length;
+    } else if (prog.chapterCompleted || prog.completed) {
+      totalCompletedMissionsCount += 4;
+    }
+  });
+
+  const totalMissions = Math.max(1, totalChapters * 4);
+  const missionProgressPercent = (totalCompletedMissionsCount / totalMissions) * 100;
+  const chapterProgressPercent = totalChapters > 0 ? (completedChaptersCount / totalChapters) * 100 : 0;
+  const progressPercent = Math.max(missionProgressPercent, chapterProgressPercent);
   
   const currentChapterIndex = chapters.findIndex(ch => !isChapterCompleted(ch._id));
 
   const handleToggleChapter = async (chapterId: string, chapterName: string) => {
-    const isCompleted = isChapterCompleted(chapterId);
-    
-    if (isCompleted) {
-      if (expandedChapter === chapterId) {
-        setExpandedChapter(null);
-      } else {
-        setExpandedChapter(chapterId);
-      }
-      return;
-    }
-
     const progress = chapterProgressMap[chapterId] || {};
-    
     if (!progress.readingCompleted) {
       navigate(`/chapter-reader?chapterId=${chapterId}&title=${encodeURIComponent(chapterName)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}`);
-    } else if (!progress.questionsCompleted) {
-      navigate(`/chapter-questions?chapterId=${chapterId}&chapterName=${encodeURIComponent(chapterName)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}`);
-    } else if (!progress.bossCompleted) {
-      navigate(`/boss-battle?worldId=w1&chapterId=${chapterId}&difficulty=easy&returnTo=/practice/journey-map&chapterName=${encodeURIComponent(chapterName)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}`);
+    } else {
+      navigate(`/mission-roadmap?chapterId=${chapterId}&title=${encodeURIComponent(chapterName)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}`);
     }
   };
 
@@ -260,7 +260,9 @@ export default function ChaptersScreen() {
             <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-6 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_2px_10px_rgba(0,0,0,0.05)] flex flex-col gap-4">
               <div className="flex justify-between items-end">
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-[#767683] mb-1">{t('mission_progress')}</p>
+                  <p className="text-sm font-semibold text-[#767683] mb-1">
+                    {t('mission_progress')} {totalCompletedMissionsCount > 0 && <span className="text-xs font-bold text-[#006a62] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 ml-1">• {totalCompletedMissionsCount} {totalCompletedMissionsCount === 1 ? 'Mission' : 'Missions'} Done</span>}
+                  </p>
                   <h2 className="text-2xl font-bold text-[#141779]">{t('chapters_complete', { completed: completedChaptersCount, total: totalChapters })}</h2>
                 </div>
                 <div className="relative w-12 h-12 rounded-full border-4 border-[rgba(0,106,98,0.2)] flex items-center justify-center">

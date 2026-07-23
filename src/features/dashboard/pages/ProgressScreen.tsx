@@ -144,44 +144,84 @@ export default function ProgressScreen() {
           </div>
         </div>
 
-        {/* Mid Section: Subject Mastery */}
+        {/* Mid Section: Mission Progress Roadmap */}
         <div className="flex flex-col gap-4">
-          <h2 className="text-sm font-semibold text-[#464652] tracking-[1px] px-1">{t('subject_mastery')}</h2>
-          <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-6 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_2px_10px_rgba(0,0,0,0.05)] flex flex-col gap-5">
-            
-            {/* Math */}
-            <div className="flex flex-col gap-2">
-              <div className="flex justify-between items-end px-1">
-                <span className="text-base font-bold text-[#141779]">{t('math')}</span>
-                <span className="text-xs font-bold text-[#006a62]">{Math.min(100, Math.round(xp / 10))}%</span>
-              </div>
-              <div className="w-full h-3 bg-[#eceef0] rounded-full overflow-hidden">
-                <div className="h-full bg-[#141779] rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, Math.round(xp / 10))}%` }} />
-              </div>
-            </div>
+          <div className="flex justify-between items-center px-1">
+            <h2 className="text-sm font-bold text-[#141779] tracking-[1px] uppercase">Active Mission Progression</h2>
+            <button 
+              onClick={() => navigate("/mission-roadmap?chapterId=ch1")}
+              className="text-xs font-bold text-[#006a62] hover:underline"
+            >
+              View Full Map →
+            </button>
+          </div>
 
-            {/* Science */}
-            <div className="flex flex-col gap-2">
-              <div className="flex justify-between items-end px-1">
-                <span className="text-base font-bold text-[#141779]">{t('science')}</span>
-                <span className="text-xs font-bold text-[#006a62]">{Math.min(100, Math.round(xp / 15))}%</span>
-              </div>
-              <div className="w-full h-3 bg-[#eceef0] rounded-full overflow-hidden">
-                <div className="h-full bg-[#2addcd] rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, Math.round(xp / 15))}%` }} />
-              </div>
-            </div>
+          <div className="bg-[rgba(255,255,255,0.8)] backdrop-blur-md rounded-3xl p-6 border-[1.5px] border-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] flex flex-col gap-4">
+            {/* Mission List */}
+            {[
+              { seq: 1, title: "Forest Trail", icon: "🌲", status: "completed", stars: 3 },
+              { seq: 2, title: "Mystic River", icon: "🌊", status: "completed", stars: 3 },
+              { seq: 3, title: "Crystal Cave", icon: "💎", status: "unlocked", stars: 0 },
+              { seq: 4, title: "Royal Castle", icon: "🏰", status: "locked", stars: 0 },
+              { seq: 5, title: "Dragon King Lair", icon: "🐲", status: "locked", stars: 0 },
+            ].map((m) => {
+              const isCompleted = m.status === "completed";
+              const isUnlocked = m.status === "unlocked";
 
-            {/* English/Vocabulary */}
-            <div className="flex flex-col gap-2">
-              <div className="flex justify-between items-end px-1">
-                <span className="text-base font-bold text-[#141779]">{t('vocabulary')}</span>
-                <span className="text-xs font-bold text-[#006a62]">{Math.min(100, Math.round(xp / 20))}%</span>
-              </div>
-              <div className="w-full h-3 bg-[#eceef0] rounded-full overflow-hidden">
-                <div className="h-full bg-[#2d328f] rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, Math.round(xp / 20))}%` }} />
-              </div>
-            </div>
+              return (
+                <div
+                  key={m.seq}
+                  onClick={() => {
+                    if (isUnlocked || isCompleted) {
+                      navigate(`/mission-play?chapterId=ch1&missionSeq=${m.seq}`);
+                    }
+                  }}
+                  className={`p-4 rounded-2xl border flex items-center justify-between transition-all ${
+                    isCompleted
+                      ? "bg-emerald-50/80 border-emerald-200 text-emerald-950 cursor-pointer"
+                      : isUnlocked
+                      ? "bg-amber-50/90 border-amber-300 text-amber-950 ring-2 ring-amber-400/30 cursor-pointer animate-pulse"
+                      : "bg-gray-100/60 border-gray-200 text-gray-400 cursor-not-allowed"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{m.icon}</span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/60">
+                          Mission {m.seq}
+                        </span>
+                        {isCompleted && (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                            Completed ✓
+                          </span>
+                        )}
+                        {isUnlocked && (
+                          <span className="text-[10px] font-bold text-amber-700 bg-amber-200 px-2 py-0.5 rounded-full">
+                            Next Up! 🚀
+                          </span>
+                        )}
+                      </div>
+                      <h4 className="text-sm font-bold mt-1">{m.title}</h4>
+                    </div>
+                  </div>
 
+                  <div className="text-right">
+                    {isCompleted ? (
+                      <div className="flex gap-0.5">
+                        <span className="text-xs font-black text-amber-500">★★★</span>
+                      </div>
+                    ) : isUnlocked ? (
+                      <span className="text-xs font-black text-amber-600 bg-amber-100 px-3 py-1 rounded-xl">
+                        Play
+                      </span>
+                    ) : (
+                      <span className="text-xs font-semibold text-gray-400">Locked 🔒</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 

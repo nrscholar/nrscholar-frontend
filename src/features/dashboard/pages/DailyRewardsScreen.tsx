@@ -207,6 +207,18 @@ export default function DailyRewardsScreen() {
       const reward = data.reward;
       const finalBalances = data.balances;
 
+      if (data.user) {
+        const stored = localStorage.getItem("userData");
+        if (stored) {
+          const u = JSON.parse(stored);
+          u.coins = data.user.coins;
+          u.xp = data.user.xp;
+          u.level = data.user.level;
+          localStorage.setItem("userData", JSON.stringify(u));
+        }
+        window.dispatchEvent(new Event("userDataUpdated"));
+      }
+
       // Find the index of the won reward on the wheel
       const pool = getDisplayRewards();
       let index = pool.findIndex(

@@ -108,13 +108,36 @@ export default function BossBattleScreen() {
           body: JSON.stringify(bodyData)
         });
         const json = await res.json();
-        if (json.success && json.data) {
+        if (json.success && json.data && json.data.questions && json.data.questions.length > 0) {
           setBattleData(json.data);
         } else {
-          console.error("Boss API returned false:", json.message);
+          setBattleData({
+            battleId: "demo_b1",
+            bossName: "Boss Guardian",
+            bossHP: 50,
+            maxHP: 50,
+            playerHearts: 3,
+            questions: [
+              { _id: "b1", question: "Boss Challenge: What is 5 + 5?", options: ["10", "12", "8", "15"], answer: "10" },
+              { _id: "b2", question: "Boss Challenge: What is 10 + 10?", options: ["20", "25", "15", "30"], answer: "20" },
+              { _id: "b3", question: "Boss Challenge: What is 15 + 15?", options: ["30", "35", "25", "40"], answer: "30" }
+            ]
+          });
         }
       } catch (e) {
         console.error("Failed to start boss battle", e);
+        setBattleData({
+          battleId: "demo_b1",
+          bossName: "Boss Guardian",
+          bossHP: 50,
+          maxHP: 50,
+          playerHearts: 3,
+          questions: [
+            { _id: "b1", question: "Boss Challenge: What is 5 + 5?", options: ["10", "12", "8", "15"], answer: "10" },
+            { _id: "b2", question: "Boss Challenge: What is 10 + 10?", options: ["20", "25", "15", "30"], answer: "20" },
+            { _id: "b3", question: "Boss Challenge: What is 15 + 15?", options: ["30", "35", "25", "40"], answer: "30" }
+          ]
+        });
       } finally {
         setLoading(false);
       }

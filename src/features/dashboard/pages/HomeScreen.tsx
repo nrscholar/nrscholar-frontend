@@ -1,9 +1,10 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Bookmark, BookOpen, CheckCircle, ChevronRight, Gift, Map, MapPin, Shield, Star, Target, Zap, Bell } from "lucide-react";
+import { Bookmark, BookOpen, CheckCircle, ChevronRight, Clock, Gift, Map, MapPin, Shield, Star, Target, Zap, Bell, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
+import ChildSwitcherModal from "../../../components/ChildSwitcherModal";
 
 
 export default function HomeScreen() {
@@ -18,11 +19,32 @@ export default function HomeScreen() {
   const [coins, setCoins] = useState(0);
   const [childName, setChildName] = useState("Explorer");
   const [childPhoto, setChildPhoto] = useState("");
+  const [userData, setUserData] = useState<any>(null);
+  const [showSwitcher, setShowSwitcher] = useState(false);
+  const [showDailyMissionModal, setShowDailyMissionModal] = useState(false);
+  const [dailyLimitReached, setDailyLimitReached] = useState(false);
+  const [todayCompletedCount, setTodayCompletedCount] = useState(0);
   const [userLevel, setUserLevel] = useState(1);
   const [streakDays, setStreakDays] = useState(0);
 
   const [missions, setMissions] = useState<any[]>([]);
   const [retentionStreak, setRetentionStreak] = useState<any>(null);
+
+  const fetchMissions = async () => {
+    try {
+      const msRes = await apiFetch("/api/retention/missions/today");
+      if (msRes.ok) {
+        const msData = await msRes.json();
+        if (msData && Array.isArray(msData)) {
+          setMissions(msData);
+        } else if (msData && Array.isArray(msData.missions)) {
+          setMissions(msData.missions);
+          setDailyLimitReached(msData.daily_limit_reached || false);
+          setTodayCompletedCount(msData.today_completed_count || 0);
+        }
+      }
+    } catch (e) {}
+  };
   
   // Unscripted Game Elements
   const [surpriseData, setSurpriseData] = useState<any>(null);
@@ -67,6 +89,7 @@ export default function HomeScreen() {
         const data = await response.json();
         if (data.success) {
           const u = data.data.user;
+          setUserData(u);
           setXp(u.xp || 0);
           setCoins(u.coins || 0);
           setChildName(u.childName || "Explorer");
@@ -85,6 +108,7 @@ export default function HomeScreen() {
     if (cached) {
       try {
         const u = JSON.parse(cached);
+        setUserData(u);
         setXp(u.xp || 0);
         setCoins(u.coins || 0);
         setChildName(u.childName || "Explorer");
@@ -93,18 +117,6 @@ export default function HomeScreen() {
         setStreakDays(u.streakDays || 0);
       } catch(e) {}
     }
-    
-    const fetchMissions = async () => {
-      try {
-        const msRes = await apiFetch("/api/retention/missions/today");
-        if (msRes.ok) {
-          const msData = await msRes.json();
-          if (msData && Array.isArray(msData)) {
-            setMissions(msData);
-          }
-        }
-      } catch (e) {}
-    };
 
     const fetchRetentionData = async () => {
       const token = localStorage.getItem("userToken");
@@ -192,6 +204,7 @@ export default function HomeScreen() {
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleFocus);
+    window.addEventListener('userDataUpdated', fetchProfile);
 
     // Poll every 10 seconds so missions update quickly after being completed
     const pollInterval = setInterval(fetchMissions, 10000);
@@ -199,6 +212,7 @@ export default function HomeScreen() {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('userDataUpdated', fetchProfile);
       clearInterval(pollInterval);
     };
   }, []);
@@ -212,13 +226,16 @@ export default function HomeScreen() {
       });
       if (res.ok) {
         const data = await res.json();
-        // Update mission state
-        setMissions(prev => prev.map(m => (m.id === missionId || m._id === missionId) ? { ...m, status: 'completed' } : m));
-        // Add coins and XP visually
-        setCoins(prev => prev + (data.coinReward || 0));
-        if (data.xpReward) {
-          setXp(prev => prev + data.xpReward);
+        if (data.error) {
+          console.warn(data.error);
+          return;
         }
+        // Add coins and XP visually
+        if (data.coinReward) setCoins(prev => prev + (data.coinReward || 0));
+        if (data.xpReward) setXp(prev => prev + (data.xpReward || 0));
+        
+        // Instantly fetch updated missions so the NEXT mission in sequence populates!
+        fetchMissions();
       }
     } catch (e) {
       console.error("Failed to complete mission");
@@ -241,10 +258,16 @@ export default function HomeScreen() {
   
   const targetXp = citiesData.length > 0 ? (citiesData[nextLockedIndex].requiredFuel || 1000) : 1000;
   const prevMilestoneXp = citiesData.length > 0 ? (citiesData[currentCityIndex].requiredFuel || 0) : 0;
-  
   const xpNeeded = Math.max(0, targetXp - xp);
   const currentLegXpTotal = targetXp - prevMilestoneXp;
-  const currentLegXpPercentage = targetXp > 0 ? Math.min(100, Math.max(0, (xp / targetXp) * 100)) : 100;
+  
+  // Calculate leg percentage: if at initial milestone (e.g. initial 50 XP daily login streak reward), start at 0%
+  const xpInLeg = Math.max(0, xp - prevMilestoneXp);
+  let rawLegPercentage = currentLegXpTotal > 0 ? (xpInLeg / currentLegXpTotal) * 100 : 0;
+  if (currentCityIndex === 0 && xpInLeg <= 50) {
+    rawLegPercentage = 0;
+  }
+  const currentLegXpPercentage = Math.min(100, Math.max(0, Math.floor(rawLegPercentage)));
 
 
   return (
@@ -275,7 +298,17 @@ export default function HomeScreen() {
             )}
           </button>
           <div className="flex flex-col min-w-0">
-            <h1 className="text-lg font-bold text-[#141779] leading-tight truncate">{childName}</h1>
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-lg font-bold text-[#141779] leading-tight truncate">{childName}</h1>
+              <button
+                onClick={() => setShowSwitcher(true)}
+                title="Switch Child Profile"
+                className="p-1 rounded-lg bg-indigo-50 text-[#141779] hover:bg-indigo-100 transition-colors flex items-center gap-1 text-[10px] font-bold border border-indigo-100 shrink-0"
+              >
+                <Users size={12} />
+                <span>Switch</span>
+              </button>
+            </div>
             <div className="flex items-center gap-1 mt-0.5">
               <Star size={14} fill="#006a62" color="#006a62" className="shrink-0" />
               <span className="text-[11px] text-[#767683] font-semibold truncate">{t('explorer_level')} {userLevel}</span>
@@ -459,67 +492,6 @@ export default function HomeScreen() {
           </button>
         </div>
 
-        {/* DAILY MISSIONS WIDGET */}
-        {missions.length > 0 && (
-          <div className="bg-white rounded-[24px] p-5 border-[1.5px] border-[#f0f0f0] shadow-sm relative z-10">
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-2">
-                <Target size={20} className="text-[#ff6b6b]" />
-                <h2 className="text-[15px] font-bold text-[#141779]">{t('daily_missions')}</h2>
-              </div>
-              <span className="text-[11px] font-bold text-[#767683] bg-gray-100 px-2 py-1 rounded-full">
-                {missions.filter(m => m.status === 'completed').length}/{missions.length} {t('done')}
-              </span>
-            </div>
-            
-            <div className="flex flex-col gap-3">
-              {missions.map((mission) => (
-                <motion.div 
-                  key={mission.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  whileHover={{ scale: 1.02 }}
-                  className={`flex items-center justify-between p-3 rounded-[16px] border ${
-                    mission.status === 'completed' 
-                      ? 'bg-[#f8fdfb] border-[#e6fcf5]' 
-                      : 'bg-white border-[#f0f0f0] shadow-[0_2px_8px_rgba(0,0,0,0.02)]'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <motion.div 
-                      animate={mission.status === 'completed' ? { scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] } : {}}
-                      transition={{ duration: 0.6, repeat: mission.status === 'completed' ? Infinity : 0, repeatDelay: 3 }}
-                      className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      mission.status === 'completed' ? 'bg-[#20c997] text-white' : 'bg-[#e0e0ff] text-[#141779]'
-                    }`}>
-                      {mission.status === 'completed' ? <CheckCircle size={20} /> : <Gift size={20} />}
-                    </motion.div>
-                    <div>
-                      <h3 className={`text-[13px] font-bold ${mission.status === 'completed' ? 'text-[#20c997]' : 'text-[#141779]'}`}>
-                        {mission.title}
-                      </h3>
-                      <p className="text-[11px] text-[#767683] font-semibold mt-0.5 flex items-center gap-2">
-                        <span>🪙 +{mission.coin_reward || mission.coinReward} {t('coins')}</span>
-                        <span>⭐ +{mission.xp_reward || mission.xpReward} {t('xp')}</span>
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {mission.status === 'completed' ? (
-                    <div className="bg-[#e6fcf5] text-[#20c997] text-[11px] font-bold px-4 py-2 rounded-[12px]">
-                      ✓ Completed
-                    </div>
-                  ) : (
-                    <div className="bg-[#f0f0f0] text-[#767683] text-[11px] font-bold px-4 py-2 rounded-[12px]">
-                      In Progress
-                    </div>
-                  )}
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        )}
-
         <button
           onClick={() => navigate("/parent")}
           className="bg-white rounded-[20px] p-4 flex justify-between items-center border-[1.5px] border-[#eef0f2] shadow-sm relative z-10 hover:bg-gray-50 transition-colors"
@@ -535,50 +507,169 @@ export default function HomeScreen() {
         </button>
       </main>
 
-      {/* FLOATING INTERACTIVE MASCOT */}
-      <motion.div 
-        className="fixed bottom-24 right-4 z-40 flex flex-col items-center"
-        animate={{ y: [0, -10, 0] }}
-        transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-      >
-        {mascotMsg && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.8, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            onClick={() => navigate('/evolution')}
-            className="bg-white text-[#141779] text-xs font-bold px-4 py-2 rounded-[16px] shadow-lg mb-2 relative border-2 border-[#57fae9] flex items-center gap-2 cursor-pointer hover:bg-gray-50 active:scale-95 transition-all"
-          >
-            <span>{mascotMsg}</span>
-            <span className="text-[9px] bg-[#141779] text-[#57fae9] px-1.5 py-0.5 rounded-full whitespace-nowrap">Visit ➜</span>
-            <div className="absolute -bottom-2 right-4 w-4 h-4 bg-white border-b-2 border-r-2 border-[#57fae9] transform rotate-45"></div>
-          </motion.div>
+      {/* DAILY MISSIONS MODAL */}
+      <AnimatePresence>
+        {showDailyMissionModal && (
+          <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+            <motion.div
+              initial={{ scale: 0.88, opacity: 0, y: 30 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.88, opacity: 0, y: 30 }}
+              transition={{ type: "spring", stiffness: 350, damping: 28 }}
+              className="bg-white/95 backdrop-blur-xl text-slate-900 w-full max-w-[420px] max-h-[88vh] p-4 sm:p-6 rounded-[28px] sm:rounded-[32px] border border-white/80 shadow-[0_30px_80px_-15px_rgba(20,23,121,0.35)] flex flex-col gap-3.5 sm:gap-5 relative overflow-hidden my-auto"
+            >
+              {/* Background ambient lighting */}
+              <div className="absolute -top-20 -right-20 w-48 h-48 bg-amber-400/20 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+
+              {/* Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100/80 relative z-10">
+                <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-amber-400 to-amber-500 text-slate-950 flex items-center justify-center shadow-lg shadow-amber-500/25 border border-amber-300 shrink-0">
+                    <Clock className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight truncate">Daily Quests</h3>
+                      <span className="text-[9px] sm:text-[10px] font-black bg-gradient-to-r from-amber-500 to-amber-600 text-white px-2 py-0.5 rounded-full shadow-xs border border-amber-400 shrink-0">
+                        ⚡ {todayCompletedCount}/25
+                      </span>
+                    </div>
+                    <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 mt-0.5 truncate">Continuous 5,000 Missions Journey</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowDailyMissionModal(false)}
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 flex items-center justify-center font-extrabold text-xs sm:text-sm transition-all active:scale-90 shrink-0 ml-1"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Daily Limit Reached Summary */}
+              {dailyLimitReached ? (
+                <div className="p-5 sm:p-6 bg-gradient-to-b from-amber-50 to-amber-100/60 rounded-2xl sm:rounded-3xl border border-amber-200/80 text-center flex flex-col items-center gap-2.5 sm:gap-3 shadow-inner relative z-10">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-amber-500 text-white flex items-center justify-center font-black text-2xl sm:text-3xl shadow-lg shadow-amber-500/30 animate-bounce">
+                    🏆
+                  </div>
+                  <h4 className="text-sm sm:text-base font-black text-amber-950">25 / 25 Quests Mastered Today!</h4>
+                  <p className="text-[11px] sm:text-xs font-semibold text-amber-800 leading-relaxed">
+                    Sensational effort! You have completed today's maximum 25 quests. Tomorrow starts your next continuous sequence!
+                  </p>
+                </div>
+              ) : (
+                /* Missions List */
+                <div className="flex flex-col gap-2.5 sm:gap-3.5 max-h-[55vh] sm:max-h-[380px] overflow-y-auto pr-0.5 relative z-10 custom-scrollbar">
+                  {(missions && missions.length > 0 ? missions : [
+                    { seq: 1, id: "seq_1", title: "Answer 10 Questions", coin_reward: 10, xp_reward: 20, current_progress: 0, target_progress: 10, status: "pending", mission_type: "answer_questions" },
+                    { seq: 2, id: "seq_2", title: "Win 1 Boss Battle", coin_reward: 15, xp_reward: 20, current_progress: 0, target_progress: 1, status: "pending", mission_type: "boss_win" },
+                    { seq: 3, id: "seq_3", title: "Win 1 Shadow Arena Battle", coin_reward: 50, xp_reward: 50, current_progress: 0, target_progress: 1, status: "pending", mission_type: "shadow_arena_win" }
+                  ]).map((mission) => {
+                    const isDone = mission.status === "completed";
+                    const isReady = mission.status === "ready_to_claim" || (mission.current_progress >= (mission.target_progress || 1) && !isDone);
+                    const cur = mission.current_progress || 0;
+                    const target = mission.target_progress || 1;
+                    const pct = Math.min(100, Math.round((cur / target) * 100));
+
+                    const getIcon = () => {
+                      if (mission.mission_type === "boss_win") return "⚔️";
+                      if (mission.mission_type === "shadow_arena_win") return "👑";
+                      return "🎯";
+                    };
+
+                    return (
+                      <div
+                        key={mission.id || `seq_${mission.seq}`}
+                        className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border transition-all duration-300 relative overflow-hidden ${
+                          isDone
+                            ? "bg-emerald-50/80 border-emerald-200/90 text-emerald-950 shadow-xs"
+                            : isReady
+                            ? "bg-gradient-to-r from-amber-50/90 via-amber-100/70 to-amber-50/90 border-amber-300 shadow-md ring-2 ring-amber-400/40"
+                            : "bg-slate-50/90 border-slate-200/80 text-slate-900 hover:border-slate-300 hover:bg-slate-50"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2 sm:gap-3">
+                          <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+                            <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0 text-base sm:text-xl font-bold shadow-xs ${
+                              isDone 
+                                ? "bg-emerald-500 text-white shadow-emerald-500/20" 
+                                : isReady
+                                ? "bg-amber-500 text-white animate-bounce shadow-amber-500/30"
+                                : "bg-indigo-600 text-white shadow-indigo-600/20"
+                            }`}>
+                              {isDone ? <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6" /> : getIcon()}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1 mb-0.5 sm:mb-1">
+                                <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider bg-indigo-600/10 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-600/20 shrink-0">
+                                  #{mission.seq}
+                                </span>
+                                <h4 className="text-[11px] sm:text-xs font-black text-slate-900 truncate tracking-tight">{mission.title}</h4>
+                              </div>
+                              <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-[11px] font-extrabold">
+                                <span className="inline-flex items-center gap-0.5 bg-amber-500/10 text-amber-700 px-1.5 py-0.5 rounded border border-amber-500/20">
+                                  🪙 +{mission.coin_reward || mission.coinReward || 10}
+                                </span>
+                                <span className="inline-flex items-center gap-0.5 bg-indigo-500/10 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-500/20">
+                                  ⭐ +{mission.xp_reward || mission.xpReward || 20}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Status Action Button */}
+                          {isDone ? (
+                            <span className="text-[10px] sm:text-[11px] font-black text-emerald-800 bg-emerald-200/80 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl shrink-0 border border-emerald-300/80 shadow-xs flex items-center gap-1">
+                              ✓ Claimed
+                            </span>
+                          ) : isReady ? (
+                            <button
+                              onClick={() => {
+                                completeMission(mission.id || `seq_${mission.seq}`);
+                              }}
+                              className="text-[10px] sm:text-[11px] font-black text-slate-950 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-400 hover:from-amber-500 hover:to-amber-600 active:scale-95 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl shrink-0 shadow-md shadow-amber-500/30 animate-pulse transition-all border border-amber-300"
+                            >
+                              🎁 CLAIM
+                            </button>
+                          ) : (
+                            <div className="flex flex-col items-end shrink-0">
+                              <span className="text-[10px] sm:text-[11px] font-black text-slate-600 bg-slate-200/90 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg sm:rounded-xl border border-slate-300/60 shadow-xs">
+                                {cur} / {target}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Progress Bar (if not completed) */}
+                        {!isDone && (
+                          <div className="w-full bg-slate-200/90 h-2 sm:h-2.5 rounded-full overflow-hidden mt-2 sm:mt-2.5 border border-slate-200/60 p-0.5">
+                            <div
+                              className={`h-full rounded-full transition-all duration-700 ease-out ${
+                                isReady 
+                                  ? "bg-gradient-to-r from-amber-400 to-amber-600 shadow-sm shadow-amber-500/50" 
+                                  : "bg-gradient-to-r from-indigo-500 to-indigo-700"
+                              }`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Footer Action */}
+              <button
+                onClick={() => setShowDailyMissionModal(false)}
+                className="w-full py-2.5 sm:py-3 bg-gradient-to-r from-slate-100 to-slate-200/80 hover:from-slate-200 hover:to-slate-300 text-slate-800 font-black rounded-xl sm:rounded-2xl text-[11px] sm:text-xs tracking-wider uppercase transition-all shadow-xs active:scale-98 border border-slate-200 relative z-10"
+              >
+                Close
+              </button>
+            </motion.div>
+          </div>
         )}
-        <button 
-          onClick={async () => {
-            try {
-              const res = await apiFetch("/api/dashboard/mascot-narration");
-              const json = await res.json();
-              if (json.success && json.narration) {
-                setMascotMsg(json.narration);
-                setTimeout(() => setMascotMsg(""), 5000);
-              }
-            } catch (e) {
-              const quotes = [
-                "You're doing great! 🚀", 
-                "Did you check your missions? 🎯", 
-                "Keep up the streak! 🔥", 
-                "I smell mystery boxes... 📦",
-                "Let's learn something new! 📚"
-              ];
-              setMascotMsg(quotes[Math.floor(Math.random() * quotes.length)]);
-              setTimeout(() => setMascotMsg(""), 3500);
-            }
-          }}
-          className="bg-white rounded-full w-14 h-14 shadow-[0_4px_15px_rgba(0,0,0,0.15)] border-2 border-[#141779] flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
-        >
-          <span className="text-3xl">🐉</span>
-        </button>
-      </motion.div>
+      </AnimatePresence>
 
       {/* SURPRISE CHEST MINIGAME MODAL */}
       {surpriseData && chestTaps < 2 && (
@@ -708,38 +799,68 @@ export default function HomeScreen() {
         </button>
       </motion.div>
 
+      {/* FLOATING DAILY MISSIONS CLOCK ICON (Just below Spin Wheel icon) */}
+      <motion.div
+        className="fixed bottom-24 right-4 z-40"
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+      >
+        <button
+          onClick={() => {
+            fetchMissions();
+            setShowDailyMissionModal(true);
+          }}
+          className="w-14 h-14 rounded-full bg-gradient-to-tr from-[#141779] to-[#30007f] text-amber-300 shadow-[0_4px_15px_rgba(20,23,121,0.3)] flex items-center justify-center border-2 border-amber-300/40 relative hover:scale-105 transition-transform"
+        >
+          <Clock className="w-7 h-7 animate-pulse" />
+          {/* Badge indicator if claimable missions exist */}
+          {missions.some(m => m.status === 'ready_to_claim') && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-slate-900 rounded-full text-[10px] font-black flex items-center justify-center border-2 border-white animate-bounce">
+              !
+            </span>
+          )}
+        </button>
+      </motion.div>
+
       {/* DAILY FREE SPIN AUTO-POPUP */}
       <AnimatePresence>
         {showSpinPopup && (
-          <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-md flex items-center justify-center p-6">
+          <div className="fixed inset-0 z-[100] bg-[#f7f9fb]/95 backdrop-blur-md flex items-center justify-center p-6">
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-gradient-to-br from-[#141779] to-[#07051a] w-full max-w-[360px] p-8 rounded-3xl flex flex-col items-center text-center gap-6 border border-[#57fae9]/30 shadow-[0_0_30px_rgba(87,250,233,0.2)]"
+              className="bg-white text-slate-900 w-full max-w-[360px] p-7 rounded-[32px] flex flex-col items-center text-center gap-5 border border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.1)] relative overflow-hidden"
             >
-              <div className="w-20 h-20 rounded-full bg-[#57fae9]/10 flex items-center justify-center border border-[#57fae9]/30 animate-bounce">
-                <Gift className="w-10 h-10 text-[#57fae9]" />
+              {/* Background ambient glows */}
+              <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-teal-400/15 blur-2xl pointer-events-none" />
+              <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-amber-400/20 blur-2xl pointer-events-none" />
+
+              <div className="w-20 h-20 rounded-full bg-teal-50 flex items-center justify-center border border-teal-200 shadow-sm animate-bounce z-10">
+                <Gift className="w-10 h-10 text-[#006a62]" />
               </div>
-              <div>
-                <h3 className="text-2xl font-bold text-white">Free Spin Available!</h3>
-                <p className="text-sm text-white/70 mt-2">
+              <div className="z-10">
+                <span className="px-3 py-1 bg-amber-100 text-amber-800 text-[10px] font-black uppercase tracking-widest rounded-full border border-amber-200 mb-2 inline-block">
+                  Daily Bonus 🎁
+                </span>
+                <h3 className="text-2xl font-black text-slate-800 tracking-tight">Free Spin Available!</h3>
+                <p className="text-xs font-semibold text-slate-600 leading-relaxed mt-2">
                   You have a free daily spin waiting. Spin the Quantum Wheel to unlock coins, XP, boosters, and legendary companion skins!
                 </p>
               </div>
-              <div className="flex flex-col gap-2 w-full">
+              <div className="flex flex-col gap-2.5 w-full z-10">
                 <button
                   onClick={() => {
                     setShowSpinPopup(false);
                     navigate("/daily-rewards");
                   }}
-                  className="w-full py-4 bg-[#57fae9] text-[#007168] font-bold rounded-full hover:bg-[#45e0d0] active:scale-95 transition-all uppercase tracking-wide text-sm"
+                  className="w-full py-3.5 bg-gradient-to-r from-[#007168] to-[#004e48] text-white font-extrabold rounded-2xl hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-wide text-xs shadow-md border border-teal-600/30 flex items-center justify-center gap-2"
                 >
-                  Spin Now
+                  <span>🎰 Spin Now</span>
                 </button>
                 <button
                   onClick={() => setShowSpinPopup(false)}
-                  className="w-full py-3 bg-white/5 text-white/50 font-bold rounded-full hover:bg-white/10 active:scale-95 transition-all text-xs"
+                  className="w-full py-3 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 active:scale-95 transition-all text-xs border border-slate-200"
                 >
                   Maybe Later
                 </button>
@@ -748,6 +869,13 @@ export default function HomeScreen() {
           </div>
         )}
       </AnimatePresence>
+
+      <ChildSwitcherModal 
+        isOpen={showSwitcher} 
+        onClose={() => setShowSwitcher(false)} 
+        user={userData} 
+        onUserUpdated={(u) => setUserData(u)} 
+      />
 
     </div>
   );

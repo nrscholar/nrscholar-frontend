@@ -13,7 +13,7 @@ export default function ParentLearningDNAScreen() {
     } catch (e) { return null; }
   })();
 
-  const [loading, setLoading] = useState(!cachedDna);
+  const [loading, setLoading] = useState(!cachedDna || cachedDna?.hasData === false);
   const [dnaData, setDnaData] = useState<any>(cachedDna);
 
   useEffect(() => {
