@@ -79,7 +79,7 @@ export default function SignupStep2Screen() {
 
   const classes = ["Nursery", "KG", "Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"];
   const ages = ["4 Years", "5 Years", "6 Years", "7 Years", "8 Years", "9 Years", "10 Years", "11 Years", "12 Years", "13 Years", "14 Years", "15 Years"];
-  const boards = ["CBSE (NCERT)", "ICSE", "State Board", "IB", "IGCSE"];
+  const boards = ["CBSE (NCERT)", "GSEB", "ICSE", "State Board", "IB", "IGCSE"];
 
   const handleNext = () => {
     const params = new URLSearchParams(searchParams);
