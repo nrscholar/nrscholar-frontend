@@ -74,6 +74,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySa
 
   // Final Summary state
   const [completionResult, setCompletionResult] = useState<any>(null);
+  const [userAnswers, setUserAnswers] = useState<any[]>([]);
 
   // Fetch Mission Data Effect
   useEffect(() => {
@@ -166,7 +167,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySa
   const bossState = getBossExpression();
 
   // Finalize Mission API helper
-  const finalizeMission = async (finalBossDamage = bossDamageCount, finalChildDamage = childDamageCount) => {
+  const finalizeMission = async (finalBossDamage = bossDamageCount, finalChildDamage = childDamageCount, currentAnswers = userAnswers) => {
     try {
       const bossCorrect = finalBossDamage;
       const res = await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/complete`, {
@@ -178,7 +179,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySa
           bossCorrect: bossCorrect,
           bossTotal: bossQuestions.length,
           timeTakenSec: totalSessionSec,
-          livesRemaining: Math.max(0, 3 - finalChildDamage)
+          livesRemaining: Math.max(0, 3 - finalChildDamage),
+          answers: currentAnswers
         })
       });
       const json = await res.json();
@@ -193,7 +195,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySa
   };
 
   // Boss Attack execution helper
-  const executeBossAttack = useCallback((isCorrect: boolean) => {
+  const executeBossAttack = useCallback((isCorrect: boolean, currentAnswers = userAnswers) => {
     if (isCorrect) {
       // Right Answer -> Boss is Angry!
       setBossAngry(true);
@@ -212,7 +214,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySa
         setBossBasketCount(0);
         const nextIndex = currentBossIndex + 1;
         if (newBossDamage >= bossMaxHp || nextIndex >= bossQuestions.length) {
-          await finalizeMission(newBossDamage, childDamageCount);
+          await finalizeMission(newBossDamage, childDamageCount, currentAnswers);
         } else {
           setCurrentBossIndex(nextIndex);
         }
@@ -234,13 +236,13 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySa
         setBossBasketCount(0);
         const nextIndex = currentBossIndex + 1;
         if (newChildDamage >= 3 || nextIndex >= bossQuestions.length) {
-          await finalizeMission(bossDamageCount, newChildDamage);
+          await finalizeMission(bossDamageCount, newChildDamage, currentAnswers);
         } else {
           setCurrentBossIndex(nextIndex);
         }
       }, 1400);
     }
-  }, [bossDamageCount, childDamageCount, currentBossIndex, bossMaxHp, bossQuestions.length]);
+  }, [bossDamageCount, childDamageCount, currentBossIndex, bossMaxHp, bossQuestions.length, userAnswers]);
 
   const handleQuizConfirm = () => {
     if (!quizConfirmed) {
@@ -255,6 +257,15 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySa
 
       setQuizConfirmed(true);
       setQuizIsCorrect(isCorrect);
+
+      const selectedValue = isDragObjects ? String(basketCount) : (quizSelected !== null ? String(currentQ?.options?.[quizSelected]) : "");
+      const newAns = {
+        questionId: currentQ?._id,
+        isCorrect: isCorrect,
+        selectedAnswer: selectedValue,
+        timeSpent: QUESTION_TIME_LIMIT - questionTimeLeft
+      };
+      setUserAnswers((prev) => [...prev, newAns]);
 
       if (isCorrect) {
         setQuizCorrectCount((prev) => prev + 1);
@@ -281,13 +292,29 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySa
     setBossSelected(optionIndex);
 
     const isCorrect = String(optionText).trim().toLowerCase() === String(activeBossQ?.answer).trim().toLowerCase();
-    executeBossAttack(isCorrect);
+    const newAns = {
+      questionId: activeBossQ?._id,
+      isCorrect: isCorrect,
+      selectedAnswer: optionText,
+      timeSpent: QUESTION_TIME_LIMIT - questionTimeLeft
+    };
+    const updatedAnswers = [...userAnswers, newAns];
+    setUserAnswers(updatedAnswers);
+    executeBossAttack(isCorrect, updatedAnswers);
   };
 
   const handleBossDragConfirm = () => {
     if (bossSelected !== null) return;
     const isCorrect = (bossBasketCount === bossTargetCount || String(bossBasketCount) === String(activeBossQ?.answer));
-    executeBossAttack(isCorrect);
+    const newAns = {
+      questionId: activeBossQ?._id,
+      isCorrect: isCorrect,
+      selectedAnswer: String(bossBasketCount),
+      timeSpent: QUESTION_TIME_LIMIT - questionTimeLeft
+    };
+    const updatedAnswers = [...userAnswers, newAns];
+    setUserAnswers(updatedAnswers);
+    executeBossAttack(isCorrect, updatedAnswers);
   };
 
   useEffect(() => {
@@ -321,6 +348,14 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySa
         setQuizConfirmed(true);
         setQuizIsCorrect(false);
         setStreak(1);
+
+        const newAns = {
+          questionId: currentQ?._id,
+          isCorrect: false,
+          selectedAnswer: "TIMEOUT",
+          timeSpent: QUESTION_TIME_LIMIT
+        };
+        setUserAnswers((prev) => [...prev, newAns]);
         return;
       }
       const t = setInterval(() => {
@@ -332,7 +367,16 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySa
         // Auto-fail boss question on 30s timeout (deduct exactly 1 heart)
         setQuestionTimeLeft(QUESTION_TIME_LIMIT);
         setBossSelected(-1);
-        executeBossAttack(false);
+
+        const newAns = {
+          questionId: activeBossQ?._id,
+          isCorrect: false,
+          selectedAnswer: "TIMEOUT",
+          timeSpent: QUESTION_TIME_LIMIT
+        };
+        const updatedAnswers = [...userAnswers, newAns];
+        setUserAnswers(updatedAnswers);
+        executeBossAttack(false, updatedAnswers);
         return;
       }
       const t = setInterval(() => {
@@ -340,7 +384,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySa
       }, 1000);
       return () => clearInterval(t);
     }
-  }, [phase, questionTimeLeft, quizConfirmed, bossSelected, bossAngry, dragonCrying, executeBossAttack]);
+  }, [phase, questionTimeLeft, quizConfirmed, bossSelected, bossAngry, dragonCrying, executeBossAttack, currentQ?._id, activeBossQ?._id, userAnswers]);
 
   if (loading) {
     return (
