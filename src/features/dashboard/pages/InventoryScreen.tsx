@@ -145,8 +145,6 @@ export default function InventoryScreen() {
           if (data.type === 'fragment') {
             apiFetch("/api/retention/fragments").then(r => r.json()).then(f => setFragments(f)).catch(() => {});
           }
-          // Refetch profile to sync levels and stats with backend
-          fetchProfile();
         }, 1500);
       } else {
         setOpeningBox(null);

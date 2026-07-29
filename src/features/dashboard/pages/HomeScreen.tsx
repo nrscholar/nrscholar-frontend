@@ -29,6 +29,45 @@ export default function HomeScreen() {
 
   const [missions, setMissions] = useState<any[]>([]);
   const [retentionStreak, setRetentionStreak] = useState<any>(null);
+  const [dailyChallenge, setDailyChallenge] = useState<any>(null);
+  const [claimingChallenge, setClaimingChallenge] = useState(false);
+  const [retentionTrigger, setRetentionTrigger] = useState(0);
+
+  const claimDailyChallengeReward = async () => {
+    if (claimingChallenge) return;
+    setClaimingChallenge(true);
+    try {
+      const res = await apiFetch("/api/practice/challenge/claim", { method: "POST" });
+      const json = await res.json();
+      if (res.ok && json.success && json.data) {
+        if (json.data.coinReward) setCoins(prev => prev + (json.data.coinReward || 0));
+        if (json.data.xpReward) setXp(prev => prev + (json.data.xpReward || 0));
+        
+        alert(`Success! You claimed +${json.data.xpReward} XP and +${json.data.coinReward} Coins! 🎁`);
+        
+        if (json.data.user) {
+          const cached = localStorage.getItem("userData");
+          if (cached) {
+            const u = JSON.parse(cached);
+            u.coins = json.data.user.coins;
+            u.xp = json.data.user.xp;
+            u.level = json.data.user.level;
+            localStorage.setItem("userData", JSON.stringify(u));
+          }
+        }
+        
+        setRetentionTrigger(prev => prev + 1);
+        window.dispatchEvent(new Event("userDataUpdated"));
+      } else {
+        alert(json.message || "Failed to claim reward");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error claiming reward");
+    } finally {
+      setClaimingChallenge(false);
+    }
+  };
 
   const fetchMissions = async () => {
     try {
@@ -188,6 +227,19 @@ export default function HomeScreen() {
         } catch (e) {
           console.error("Failed to fetch spin wheel status", e);
         }
+
+        // Fetch Daily Challenge status
+        try {
+          const dcRes = await apiFetch("/api/practice/challenge/today");
+          if (dcRes.ok) {
+            const dcData = await dcRes.json();
+            if (dcData && dcData.success && dcData.data) {
+              setDailyChallenge(dcData.data);
+            }
+          }
+        } catch (e) {
+          console.error("Failed to fetch daily challenge", e);
+        }
       } catch (e) {
         console.error("Failed to fetch retention data", e);
       }
@@ -210,9 +262,30 @@ export default function HomeScreen() {
       fetchProfile();
       fetchRetentionData();
     };
+    
+    const handleUserDataUpdated = () => {
+      const cached = localStorage.getItem("userData");
+      if (cached) {
+        try {
+          const u = JSON.parse(cached);
+          setUserData(u);
+          setXp(u.xp || 0);
+          setCoins(u.coins || 0);
+          setChildName(u.childName || "Explorer");
+          setChildPhoto(u.childPhoto || "");
+          setUserLevel(u.level || 1);
+          setStreakDays(u.streakDays || 0);
+        } catch (e) {
+          console.error("Failed to parse cached userData:", e);
+        }
+      } else {
+        fetchProfile();
+      }
+    };
+    
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleFocus);
-    window.addEventListener('userDataUpdated', fetchProfile);
+    window.addEventListener('userDataUpdated', handleUserDataUpdated);
 
     // Poll every 10 seconds so missions update quickly after being completed
     const pollInterval = setInterval(fetchMissions, 10000);
@@ -220,10 +293,10 @@ export default function HomeScreen() {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('userDataUpdated', fetchProfile);
+      window.removeEventListener('userDataUpdated', handleUserDataUpdated);
       clearInterval(pollInterval);
     };
-  }, []);
+  }, [retentionTrigger]);
 
   const completeMission = async (missionId: string) => {
     try {
@@ -417,6 +490,77 @@ export default function HomeScreen() {
             {xpNeeded > 0 ? t('only_xp_left', { xp: xpNeeded, city: t(nextCityName.toLowerCase().replace(' ', '_')) }) : t('reached_city', { city: t(nextCityName.toLowerCase().replace(' ', '_')) })}
           </p>
         </button>
+
+        {/* DAILY CHALLENGE CARD */}
+        {dailyChallenge && (
+          <div className="w-full bg-[#f4efff] rounded-[24px] p-5 border-[1.5px] border-[#dcd0ff] shadow-sm relative overflow-hidden z-10">
+            {/* Background decorative elements */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-200/20 rounded-full blur-2xl pointer-events-none" />
+            
+            <div className="flex justify-between items-start mb-3 gap-2">
+              <div>
+                <span className="px-2.5 py-0.5 bg-[#e0d3ff] text-[#5b3fbe] text-[10px] font-black uppercase tracking-widest rounded-full border border-[#c3b2f5]">
+                  Daily Challenge 🎯
+                </span>
+                <h3 className="text-base font-black text-[#141779] mt-2 leading-snug">
+                  {dailyChallenge.title}
+                </h3>
+              </div>
+              
+              {/* Rewards */}
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                <span className="text-[10px] font-bold text-[#006a62] whitespace-nowrap bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-100">
+                  ⭐ {dailyChallenge.bonusStars} Stars
+                </span>
+                <span className="text-[10px] font-bold text-[#006a62] whitespace-nowrap bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100">
+                  ✨ {dailyChallenge.xpReward} XP
+                </span>
+              </div>
+            </div>
+            
+            <p className="text-xs text-[#525266] font-medium leading-normal mb-4">
+              {dailyChallenge.desc || dailyChallenge.description}
+            </p>
+            
+            {/* Progress details */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-[10px] font-bold text-[#141779]">
+                <span>Progress</span>
+                <span>{dailyChallenge.progress} / {dailyChallenge.target}</span>
+              </div>
+              <div className="w-full bg-slate-200/70 h-2 rounded-full overflow-hidden border border-slate-300/30">
+                <div 
+                  className="h-full bg-gradient-to-r from-violet-500 to-indigo-600 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(100, (dailyChallenge.progress / dailyChallenge.target) * 100)}%` }}
+                />
+              </div>
+            </div>
+            
+            {/* Actions */}
+            <div className="mt-4 flex gap-2">
+              {dailyChallenge.claimed ? (
+                <div className="w-full bg-emerald-100 text-emerald-800 font-extrabold py-2.5 rounded-xl border border-emerald-200 flex items-center justify-center gap-1.5 text-xs">
+                  <span>✓ Rewards Claimed!</span>
+                </div>
+              ) : dailyChallenge.completed ? (
+                <button
+                  onClick={claimDailyChallengeReward}
+                  disabled={claimingChallenge}
+                  className="w-full bg-gradient-to-r from-amber-400 via-amber-500 to-amber-400 hover:from-amber-500 hover:to-amber-600 text-slate-900 font-black py-2.5 rounded-xl shadow-md shadow-amber-500/20 active:scale-98 transition-all flex items-center justify-center gap-1.5 text-xs border border-amber-300"
+                >
+                  <span>🎁 CLAIM {dailyChallenge.bonusStars} STARS & {dailyChallenge.xpReward} XP</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => navigate("/daily-challenge")}
+                  className="w-full bg-[#141779] text-white font-extrabold py-2.5 rounded-xl hover:opacity-90 active:scale-98 transition-all flex items-center justify-center gap-1.5 text-xs shadow-md shadow-indigo-900/10 border border-indigo-950/20"
+                >
+                  <span>Start Activity 🚀</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* QUICK ACTIONS BENTO GRID */}
         <div className="flex flex-col gap-[14px] relative z-10">
