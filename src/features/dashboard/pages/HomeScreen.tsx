@@ -497,7 +497,11 @@ export default function HomeScreen() {
             {/* Background decorative elements */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-200/20 rounded-full blur-2xl pointer-events-none" />
             
-            <div className="flex justify-between items-start mb-3 gap-2">
+            <div 
+              className="flex justify-between items-start mb-3 gap-2 cursor-pointer hover:opacity-85 transition-opacity" 
+              onClick={() => navigate("/daily-challenge")}
+              title="View Challenge Details"
+            >
               <div>
                 <span className="px-2.5 py-0.5 bg-[#e0d3ff] text-[#5b3fbe] text-[10px] font-black uppercase tracking-widest rounded-full border border-[#c3b2f5]">
                   Daily Challenge 🎯
@@ -526,7 +530,11 @@ export default function HomeScreen() {
             <div className="space-y-1.5">
               <div className="flex justify-between text-[10px] font-bold text-[#141779]">
                 <span>Progress</span>
-                <span>{dailyChallenge.progress} / {dailyChallenge.target}</span>
+                <span>
+                  {dailyChallenge.title.toLowerCase().includes("accuracy")
+                    ? `${dailyChallenge.progress}% / ${dailyChallenge.target}%`
+                    : `${dailyChallenge.progress} / ${dailyChallenge.target}`}
+                </span>
               </div>
               <div className="w-full bg-slate-200/70 h-2 rounded-full overflow-hidden border border-slate-300/30">
                 <div 
@@ -552,7 +560,18 @@ export default function HomeScreen() {
                 </button>
               ) : (
                 <button
-                  onClick={() => navigate("/daily-challenge")}
+                  onClick={() => {
+                    const t = (dailyChallenge.title || "").toLowerCase();
+                    let dest = "/practice/chapters";
+                    if (t.includes("math")) {
+                      dest = "/practice/chapters";
+                    } else if (t.includes("science") || t.includes("read") || t.includes("topic")) {
+                      dest = "/textbook/subjects";
+                    } else if (t.includes("boss") || t.includes("landmark") || t.includes("explore") || t.includes("map")) {
+                      dest = "/practice/journey-map";
+                    }
+                    navigate(dest);
+                  }}
                   className="w-full bg-[#141779] text-white font-extrabold py-2.5 rounded-xl hover:opacity-90 active:scale-98 transition-all flex items-center justify-center gap-1.5 text-xs shadow-md shadow-indigo-900/10 border border-indigo-950/20"
                 >
                   <span>Start Activity 🚀</span>

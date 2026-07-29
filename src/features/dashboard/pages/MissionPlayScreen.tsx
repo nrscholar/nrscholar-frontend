@@ -14,7 +14,8 @@ import {
   Flame,
   Volume2,
   ShieldAlert,
-  Play
+  Play,
+  Swords
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "../../../api";
@@ -48,6 +49,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySa
   const [basketCount, setBasketCount] = useState(0);
   const [quizConfirmed, setQuizConfirmed] = useState(false);
   const [quizIsCorrect, setQuizIsCorrect] = useState(false);
+  const [isTimeout, setIsTimeout] = useState(false);
 
   // Stats state
   const [xpEarned, setXpEarned] = useState(0);
@@ -72,6 +74,11 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySa
   const [dragonCrying, setDragonCrying] = useState(false);
   const [bossBasketCount, setBossBasketCount] = useState(0);
 
+  // Revival State
+  const [showReviveModal, setShowReviveModal] = useState(false);
+  const [revivalSpins, setRevivalSpins] = useState(0);
+  const [hasDoubleDamage, setHasDoubleDamage] = useState(false);
+
   // Final Summary state
   const [completionResult, setCompletionResult] = useState<any>(null);
   const [userAnswers, setUserAnswers] = useState<any[]>([]);
@@ -86,6 +93,23 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySa
           setMissionData(json.data);
           if (json.data.quizCompleted) {
             setPhase("BOSS");
+          }
+          if (json.data.doubleDamage !== undefined) {
+            setHasDoubleDamage(json.data.doubleDamage);
+          }
+          if (json.data.childHearts !== undefined) {
+            setChildDamageCount(3 - json.data.childHearts);
+            if (json.data.childHearts === 0) {
+              apiFetch("/api/retention/spin-wheel/status")
+                .then(r => r.json())
+                .then(data => {
+                  if (data && data.balances) {
+                    setRevivalSpins(data.balances.boss_revival_spins_balance || 0);
+                  }
+                })
+                .catch(() => {});
+              setShowReviveModal(true);
+            }
           }
         }
       } catch (e) {
@@ -194,13 +218,18 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySa
     }
   };
 
+  const handleGiveUp = async () => {
+    setShowReviveModal(false);
+    await finalizeMission(bossDamageCount, 3);
+  };
+
   // Boss Attack execution helper
   const executeBossAttack = useCallback((isCorrect: boolean, currentAnswers = userAnswers) => {
     if (isCorrect) {
       // Right Answer -> Boss is Angry!
       setBossAngry(true);
       setDragonCrying(false);
-      const newBossDamage = bossDamageCount + 1;
+      const newBossDamage = bossDamageCount + (hasDoubleDamage ? 2 : 1);
       setBossDamageCount(newBossDamage);
       setXpEarned((prev) => prev + 25);
       setCoinsEarned((prev) => prev + 20);
@@ -235,14 +264,24 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySa
         setBossSelected(null);
         setBossBasketCount(0);
         const nextIndex = currentBossIndex + 1;
-        if (newChildDamage >= 3 || nextIndex >= bossQuestions.length) {
+        if (newChildDamage >= 3) {
+          apiFetch("/api/retention/spin-wheel/status")
+            .then(r => r.json())
+            .then(data => {
+              if (data && data.balances) {
+                setRevivalSpins(data.balances.boss_revival_spins_balance || 0);
+              }
+            })
+            .catch(() => {});
+          setShowReviveModal(true);
+        } else if (nextIndex >= bossQuestions.length) {
           await finalizeMission(bossDamageCount, newChildDamage, currentAnswers);
         } else {
           setCurrentBossIndex(nextIndex);
         }
       }, 1400);
     }
-  }, [bossDamageCount, childDamageCount, currentBossIndex, bossMaxHp, bossQuestions.length, userAnswers]);
+  }, [bossDamageCount, childDamageCount, currentBossIndex, bossMaxHp, bossQuestions.length, userAnswers, hasDoubleDamage]);
 
   const handleQuizConfirm = () => {
     if (!quizConfirmed) {
@@ -279,6 +318,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySa
       setQuizConfirmed(false);
       setQuizSelected(null);
       setBasketCount(0);
+      setQuestionTimeLeft(QUESTION_TIME_LIMIT);
+      setIsTimeout(false);
       if (currentQuizIndex + 1 < quizQuestions.length) {
         setCurrentQuizIndex((prev) => prev + 1);
       } else {
@@ -338,6 +379,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySa
   // Reset 30-second countdown on question change
   useEffect(() => {
     setQuestionTimeLeft(QUESTION_TIME_LIMIT);
+    setIsTimeout(false);
   }, [currentQuizIndex, currentBossIndex, phase]);
 
   // 30s Per-Question Countdown Timer Effect (30s -> 29s -> 28s ... -> 0s)
@@ -345,6 +387,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySa
     if (phase === "QUIZ" && !quizConfirmed) {
       if (questionTimeLeft <= 0) {
         // Auto-fail on 30s timeout
+        setIsTimeout(true);
         setQuizConfirmed(true);
         setQuizIsCorrect(false);
         setStreak(1);
@@ -365,6 +408,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySa
     } else if (phase === "BOSS" && bossSelected === null && !bossAngry && !dragonCrying) {
       if (questionTimeLeft <= 0) {
         // Auto-fail boss question on 30s timeout (deduct exactly 1 heart)
+        setIsTimeout(true);
         setQuestionTimeLeft(QUESTION_TIME_LIMIT);
         setBossSelected(-1);
 
@@ -564,7 +608,9 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySa
 
                 let style = "bg-white border-gray-200 text-[#191c1e] hover:border-[#141779]";
                 if (quizConfirmed) {
-                  if (isCorrect) {
+                  if (isTimeout) {
+                    style = "bg-white border-gray-200 text-[#191c1e] opacity-60";
+                  } else if (isCorrect) {
                     style = "bg-emerald-500 border-emerald-600 text-white font-bold";
                   } else if (isSelected) {
                     style = "bg-red-500 border-red-600 text-white font-bold";
@@ -581,8 +627,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySa
                     className={`w-full p-4 rounded-2xl border text-left font-semibold text-base transition-all flex items-center justify-between shadow-xs ${style}`}
                   >
                     <span>{opt}</span>
-                    {quizConfirmed && isCorrect && <CheckCircle2 size={20} className="text-white" />}
-                    {quizConfirmed && isSelected && !isCorrect && <XCircle size={20} className="text-white" />}
+                    {quizConfirmed && !isTimeout && isCorrect && <CheckCircle2 size={20} className="text-white" />}
+                    {quizConfirmed && !isTimeout && isSelected && !isCorrect && <XCircle size={20} className="text-white" />}
                   </button>
                 );
               })}
@@ -593,22 +639,28 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySa
             {quizConfirmed && (
               <div
                 className={`p-4 rounded-2xl flex items-center gap-3 ${
-                  quizIsCorrect
+                  isTimeout
+                    ? "bg-amber-100 text-amber-900 border border-amber-300"
+                    : quizIsCorrect
                     ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
                     : "bg-red-100 text-red-900 border border-red-300"
                 }`}
               >
-                {quizIsCorrect ? (
+                {isTimeout ? (
+                  <Clock size={24} className="text-amber-600 shrink-0" />
+                ) : quizIsCorrect ? (
                   <CheckCircle2 size={24} className="text-emerald-600 shrink-0" />
                 ) : (
                   <XCircle size={24} className="text-red-600 shrink-0" />
                 )}
                 <div>
                   <h4 className="font-extrabold text-sm">
-                    {quizIsCorrect ? "Excellent! Target Reached! 🌟" : "Not quite right!"}
+                    {isTimeout ? "Time's Up!" : quizIsCorrect ? "Excellent! Target Reached! 🌟" : "Not quite right!"}
                   </h4>
                   <p className="text-xs font-semibold">
-                    {quizIsCorrect
+                    {isTimeout
+                      ? "You did not answer within 30 seconds."
+                      : quizIsCorrect
                       ? "+15 XP & +10 Coins"
                       : isDragObjects
                       ? `Target was ${targetCount} ${objectEmoji}`
@@ -852,10 +904,14 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySa
 
                 let style = "bg-white border-gray-200 text-[#141779] hover:border-[#141779]";
                 if (bossSelected !== null) {
-                  if (isCorrect) {
-                    style = "bg-emerald-600 border-emerald-600 text-white font-bold";
-                  } else if (isSelected) {
-                    style = "bg-red-600 border-red-600 text-white font-bold";
+                  if (isTimeout) {
+                    style = "bg-white border-gray-200 text-[#141779] opacity-60";
+                  } else {
+                    if (isCorrect) {
+                      style = "bg-emerald-600 border-emerald-600 text-white font-bold";
+                    } else if (isSelected) {
+                      style = "bg-red-600 border-red-600 text-white font-bold";
+                    }
                   }
                 }
 
@@ -867,8 +923,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySa
                     className={`w-full p-4 rounded-2xl border text-left font-semibold text-base transition-all flex items-center justify-between shadow-xs ${style}`}
                   >
                     <span>{opt}</span>
-                    {bossSelected !== null && isCorrect && <CheckCircle2 size={20} className="text-white" />}
-                    {bossSelected !== null && isSelected && !isCorrect && <XCircle size={20} className="text-white" />}
+                    {bossSelected !== null && !isTimeout && isCorrect && <CheckCircle2 size={20} className="text-white" />}
+                    {bossSelected !== null && !isTimeout && isSelected && !isCorrect && <XCircle size={20} className="text-white" />}
                   </button>
                 );
               })}
@@ -1017,6 +1073,61 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySa
             </button>
           </div>
         </main>
+      )}
+
+      {showReviveModal && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/80 backdrop-blur-md px-6 text-center">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-gradient-to-br from-[#141779] to-[#07051a] border-2 border-[#57fae9]/30 rounded-3xl p-8 max-w-sm w-full shadow-[0_0_50px_rgba(87,250,233,0.25)] flex flex-col items-center gap-6"
+          >
+            <div className="w-20 h-20 rounded-full bg-[#57fae9]/10 border border-[#57fae9]/30 flex items-center justify-center animate-pulse">
+              <Swords className="text-[#57fae9] w-10 h-10 animate-bounce" />
+            </div>
+            <div>
+              <h2 className="text-3xl font-black text-white uppercase tracking-widest">Final Chance!</h2>
+              <p className="text-sm text-white/70 mt-2">
+                You ran out of hearts! Revive using the Revival Wheel to keep your current progress and fight on!
+              </p>
+            </div>
+            
+            <div className="w-full bg-white/5 rounded-2xl p-4 border border-white/10">
+              <span className="text-xs text-white/50 uppercase font-bold tracking-widest block mb-1">Your Revival Spins</span>
+              <span className="text-3xl font-black text-[#57fae9]">{revivalSpins} Available</span>
+            </div>
+
+            <div className="flex flex-col gap-2 w-full">
+              <button
+                onClick={() => {
+                  if (revivalSpins > 0) {
+                    navigate(`/daily-rewards?type=boss_revival&chapter_id=${chapterId}`);
+                  } else {
+                    apiFetch("/api/retention/spin-wheel/grant", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ spin_type: "boss_revival", amount: 1 })
+                    }).then(() => {
+                      navigate(`/daily-rewards?type=boss_revival&chapter_id=${chapterId}`);
+                    }).catch(() => {
+                      alert("No revival spins available. Ask a parent or complete learning chapters to earn spins!");
+                    });
+                  }
+                }}
+                className="w-full py-4 bg-[#57fae9] text-[#007168] font-bold rounded-full hover:bg-[#45e0d0] active:scale-95 transition-all uppercase tracking-wide text-sm flex items-center justify-center gap-2"
+              >
+                <span>🔥 Spin to Revive</span>
+              </button>
+              
+              <button
+                onClick={handleGiveUp}
+                className="w-full py-3 bg-white/5 text-white/50 font-bold rounded-full hover:bg-white/10 active:scale-95 transition-all text-xs"
+              >
+                Retreat & Lose XP
+              </button>
+            </div>
+          </motion.div>
+        </div>
       )}
 
       <footer className="px-6 py-4 text-center text-xs font-semibold text-[#767683]">

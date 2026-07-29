@@ -404,7 +404,7 @@ export default function ParentSettings() {
             </div>
             <div>
               <h2 className="text-xl font-bold text-[#141779]">Subject Focus</h2>
-              <p className="text-sm text-[#767683] mt-0.5">Restrict access to certain subjects</p>
+              <p className="text-sm text-[#767683] mt-0.5">Enable/disable access to learning subjects</p>
             </div>
           </div>
           
@@ -420,8 +420,8 @@ export default function ParentSettings() {
                   <span className="text-base font-bold text-[#191c1e]">{subject}</span>
                 </div>
                 <CustomSwitch 
-                  checked={restrictedSubjects[subject] || false} 
-                  onChange={(v) => toggleSubjectRestriction(subject, v)} 
+                  checked={!restrictedSubjects[subject]} 
+                  onChange={(v) => toggleSubjectRestriction(subject, !v)} 
                 />
               </div>
             )) : (

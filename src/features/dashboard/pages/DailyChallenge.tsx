@@ -91,7 +91,11 @@ export default function DailyChallenge() {
         <div className="w-full mt-6 space-y-2">
           <div className="flex justify-between text-sm font-bold text-[#141779]">
             <span>Progress</span>
-            <span>{data.progress || 0} / {data.target || 1}</span>
+            <span>
+              {(data.title || "").toLowerCase().includes("accuracy")
+                ? `${data.progress || 0}% / ${data.target || 1}%`
+                : `${data.progress || 0} / ${data.target || 1}`}
+            </span>
           </div>
           <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden border border-slate-200">
             <div 
@@ -117,8 +121,16 @@ export default function DailyChallenge() {
       ) : (
         <button 
           onClick={() => {
-            alert("Go ahead and practice questions or fight boss battles to progress!");
-            navigate("/practice/chapters");
+            const t = (data.title || "").toLowerCase();
+            let dest = "/practice/chapters";
+            if (t.includes("math")) {
+              dest = "/practice/chapters";
+            } else if (t.includes("science") || t.includes("read") || t.includes("topic")) {
+              dest = "/textbook/subjects";
+            } else if (t.includes("boss") || t.includes("landmark") || t.includes("explore") || t.includes("map")) {
+              dest = "/practice/journey-map";
+            }
+            navigate(dest);
           }}
           className="w-full bg-[#141779] p-4 rounded-full flex items-center justify-center mt-10 hover:opacity-90 transition-opacity shadow-[0_4px_10px_rgba(20,23,121,0.2)]"
         >

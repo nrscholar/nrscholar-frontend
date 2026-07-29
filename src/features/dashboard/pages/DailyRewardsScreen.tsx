@@ -195,7 +195,8 @@ export default function DailyRewardsScreen() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           spin_type: spinType,
-          boss_id: searchParams.get("boss_id")
+          boss_id: searchParams.get("boss_id") || undefined,
+          chapter_id: searchParams.get("chapter_id") || undefined
         })
       });
       const data = await res.json();
