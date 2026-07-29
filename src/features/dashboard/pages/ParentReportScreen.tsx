@@ -55,6 +55,30 @@ function SectionHeader({ icon, title, subtitle }: { icon: React.ReactNode; title
 
 export default function ParentReportScreen() {
   const navigate = useNavigate();
+  
+  const formatReadingTime = (seconds: number) => {
+    if (!seconds || seconds <= 0) return "0s";
+    if (seconds < 60) return `${seconds}s`;
+    const mins = Math.floor(seconds / 60);
+    if (mins < 60) {
+      const remainingSecs = seconds % 60;
+      return remainingSecs > 0 ? `${mins}m ${remainingSecs}s` : `${mins}m`;
+    }
+    const hrs = Math.floor(mins / 60);
+    const remainingMins = mins % 60;
+    return remainingMins > 0 ? `${hrs}h ${remainingMins}m` : `${hrs}h`;
+  };
+
+  const formatChapterReadingTime = (seconds: number) => {
+    if (!seconds || seconds <= 0) return "";
+    if (seconds < 60) return `${seconds}s`;
+    const mins = Math.floor(seconds / 60);
+    if (mins < 60) return `${mins}m`;
+    const hrs = Math.floor(mins / 60);
+    const remainingMins = mins % 60;
+    return remainingMins > 0 ? `${hrs}h ${remainingMins}m` : `${hrs}h`;
+  };
+
   const [activeTab, setActiveTab] = useState("daily");
   
   const cachedReport = (() => {
@@ -269,6 +293,10 @@ export default function ParentReportScreen() {
                 <StatBox label="Completion Rate" value={`${rA.completionRate ?? 0}%`} color="text-[#141779]" />
               </div>
               <ProgressBar value={rA.completionRate ?? 0} color="bg-[#006a62]" />
+              <div className="mt-3 bg-[#006a62]/5 border border-[#006a62]/10 rounded-xl p-3 flex justify-between items-center">
+                <span className="text-xs font-bold text-[#006a62]">Total Reading Time</span>
+                <span className="text-sm font-black text-[#006a62]">{formatReadingTime(rA.totalReadingTime ?? 0)}</span>
+              </div>
               {rA.qualityWarning && (
                 <div className="mt-3 bg-orange-50 border border-orange-200 rounded-xl p-3 flex gap-2 items-start">
                   <AlertTriangle size={18} className="text-orange-600 shrink-0 mt-0.5" />
@@ -558,7 +586,11 @@ export default function ParentReportScreen() {
                             <div>
                               <p className="text-xs font-bold text-[#141779]">{ch.name}</p>
                               <div className="flex gap-1 mt-0.5 flex-wrap">
-                                {ch.readingCompleted   && <span className="text-[8px] bg-blue-100   text-blue-700   rounded px-1 font-bold">📖 Read</span>}
+                                {ch.readingCompleted   && (
+                                  <span className="text-[8px] bg-blue-100   text-blue-700   rounded px-1 font-bold">
+                                    📖 Read{ch.readingTimeSpent > 0 ? ` (${formatChapterReadingTime(ch.readingTimeSpent)})` : ""}
+                                  </span>
+                                )}
                                 {ch.questionsCompleted && <span className="text-[8px] bg-green-100  text-green-700  rounded px-1 font-bold">✅ Q&A</span>}
                                 {ch.bossCompleted      && <span className="text-[8px] bg-purple-100 text-purple-700 rounded px-1 font-bold">🏆 Boss</span>}
                               </div>

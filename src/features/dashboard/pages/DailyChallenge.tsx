@@ -45,6 +45,8 @@ export default function DailyChallenge() {
             u.coins = json.data.user.coins;
             u.xp = json.data.user.xp;
             u.level = json.data.user.level;
+            u.parentXp = json.data.user.parentXp;
+            u.parentLevel = json.data.user.parentLevel;
             localStorage.setItem("userData", JSON.stringify(u));
           }
           window.dispatchEvent(new Event("userDataUpdated"));

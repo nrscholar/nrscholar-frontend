@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, VolumeX, Heart, Star, ShieldCheck, Gift, Ear, Sparkles, BookOpen, Lock, TrendingUp, Users, Settings, ArrowLeft } from "lucide-react";
+import { Menu, VolumeX, Heart, Star, ShieldCheck, Gift, Ear, Sparkles, BookOpen, Lock, TrendingUp, Settings, ArrowLeft, Flame } from "lucide-react";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
 
@@ -120,7 +120,7 @@ export default function ParentChallengesScreen() {
   const nextLevelXp = getXpForLevel(level + 1);
   const levelProgressPercent = Math.max(0, Math.min(100, Math.round(((totalXP - currentLevelXp) / Math.max(1, nextLevelXp - currentLevelXp)) * 100)));
 
-  const IconMap: any = { VolumeX, Heart, Ear, BookOpen };
+  const IconMap: any = { VolumeX, Heart, Ear, BookOpen, Flame };
 
   return (
     <div className="bg-[#f7f9fb] text-[#191c1e] min-h-screen flex flex-col items-center font-sans relative pb-24">
@@ -357,10 +357,6 @@ export default function ParentChallengesScreen() {
         <button onClick={() => navigate('/parent/roadmap')} className="flex flex-col items-center justify-center text-[#006a62] p-2 rounded-xl scale-110 active:scale-95 transition-transform">
           <TrendingUp size={24} />
           <span className="text-[11px] font-bold mt-1">Growth</span>
-        </button>
-        <button className="flex flex-col items-center justify-center text-[#464652] hover:bg-[#2d328f]/10 p-2 rounded-xl transition-all">
-          <Users size={24} />
-          <span className="text-[11px] font-bold mt-1">Community</span>
         </button>
         <button onClick={() => navigate('/parent/settings')} className="flex flex-col items-center justify-center text-[#464652] hover:bg-[#2d328f]/10 p-2 rounded-xl transition-all">
           <Settings size={24} />

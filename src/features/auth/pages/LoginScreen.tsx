@@ -110,7 +110,7 @@ export default function LoginScreen() {
             <BookOpen size={28} color="white" />
           </div>
           <h1 className="text-2xl font-bold text-[#141779] tracking-[-0.5px]">NR Scholar</h1>
-          <p className="text-xs text-[#767683] font-medium mt-0.5">Welcome back to StudySaathy</p>
+          <p className="text-xs text-[#767683] font-medium mt-0.5">Welcome back to NR Scholar</p>
         </div>
 
         {/* Login Method Toggle */}

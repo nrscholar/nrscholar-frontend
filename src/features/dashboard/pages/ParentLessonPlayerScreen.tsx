@@ -70,7 +70,10 @@ export default function ParentLessonPlayerScreen() {
       await apiFetch('/api/parent/learning-library/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topicId: lessonId })
+        body: JSON.stringify({ 
+          topicId: lessonId,
+          acceptMission: missionAccepted
+        })
       });
     } catch (e) {
       console.error(e);

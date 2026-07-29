@@ -28,15 +28,31 @@ export default function ParentRoadmapScreen() {
 
   const [roadmapData, setRoadmapData] = useState<any>(cachedRoadmap);
   const [loading, setLoading] = useState(!cachedRoadmap);
+  const [profilePic, setProfilePic] = useState("");
+  const [username, setUsername] = useState("Parent");
 
   useEffect(() => {
     async function fetchRoadmap() {
       try {
-        const res = await apiFetch("/api/parent/roadmap");
-        const json = await res.json();
-        if (json.success && json.data) {
-          setRoadmapData(json.data);
-          sessionStorage.setItem("parent_roadmap_cache", JSON.stringify(json.data));
+        const [resUser, resRoadmap] = await Promise.all([
+          apiFetch("/api/users/me").catch(() => null),
+          apiFetch("/api/parent/roadmap").catch(() => null)
+        ]);
+
+        if (resUser) {
+          const jsonUser = await resUser.json();
+          if (jsonUser.success && jsonUser.data?.user) {
+            setUsername(jsonUser.data.user.parentName || jsonUser.data.user.username || "Parent");
+            setProfilePic(jsonUser.data.user.parentPhoto || "");
+          }
+        }
+
+        if (resRoadmap) {
+          const json = await resRoadmap.json();
+          if (json.success && json.data) {
+            setRoadmapData(json.data);
+            sessionStorage.setItem("parent_roadmap_cache", JSON.stringify(json.data));
+          }
         }
       } catch (err) {
         console.error("Failed to load roadmap", err);
@@ -118,7 +134,7 @@ export default function ParentRoadmapScreen() {
             <img 
               alt="User Profile" 
               className="w-full h-full object-cover"
-              src={`https://ui-avatars.com/api/?name=Parent&background=random`}
+              src={profilePic || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`}
             />
           </div>
           <Rocket size={20} color="#141779" className="hidden sm:block" />

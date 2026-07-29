@@ -138,13 +138,7 @@ export default function ParentAchievementsScreen() {
           </div>
         </section>
 
-        {/* Categories Chips */}
-        <section className="w-full mb-8 overflow-x-auto no-scrollbar flex gap-3 pb-2">
-          <button className="whitespace-nowrap px-6 py-2 rounded-full bg-[#141779] text-white font-bold text-sm shadow-md transition-all active:scale-95">All</button>
-          <button className="whitespace-nowrap px-6 py-2 rounded-full glass-panel text-[#464652] font-bold text-sm hover:bg-[#e6e8ea] transition-all active:scale-95">Communication</button>
-          <button className="whitespace-nowrap px-6 py-2 rounded-full glass-panel text-[#464652] font-bold text-sm hover:bg-[#e6e8ea] transition-all active:scale-95">Patience</button>
-          <button className="whitespace-nowrap px-6 py-2 rounded-full glass-panel text-[#464652] font-bold text-sm hover:bg-[#e6e8ea] transition-all active:scale-95">Consistency</button>
-        </section>
+
 
         {/* Achievement Wall */}
         <section className="w-full grid grid-cols-3 gap-y-10 gap-x-4 mb-8">

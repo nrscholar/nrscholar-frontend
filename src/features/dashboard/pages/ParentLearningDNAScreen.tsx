@@ -15,15 +15,31 @@ export default function ParentLearningDNAScreen() {
 
   const [loading, setLoading] = useState(!cachedDna || cachedDna?.hasData === false);
   const [dnaData, setDnaData] = useState<any>(cachedDna);
+  const [profilePic, setProfilePic] = useState("");
+  const [username, setUsername] = useState("Parent");
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await apiFetch("/api/parent/learning-dna");
-        const json = await res.json();
-        if (json.success) {
-          setDnaData(json.data);
-          sessionStorage.setItem("parent_learning_dna_cache", JSON.stringify(json.data));
+        const [resUser, resDna] = await Promise.all([
+          apiFetch("/api/users/me").catch(() => null),
+          apiFetch("/api/parent/learning-dna").catch(() => null)
+        ]);
+
+        if (resUser) {
+          const jsonUser = await resUser.json();
+          if (jsonUser.success && jsonUser.data?.user) {
+            setUsername(jsonUser.data.user.parentName || jsonUser.data.user.username || "Parent");
+            setProfilePic(jsonUser.data.user.parentPhoto || "");
+          }
+        }
+
+        if (resDna) {
+          const json = await resDna.json();
+          if (json.success) {
+            setDnaData(json.data);
+            sessionStorage.setItem("parent_learning_dna_cache", JSON.stringify(json.data));
+          }
         }
       } catch (err) {
         console.error(err);
@@ -60,7 +76,7 @@ export default function ParentLearningDNAScreen() {
           <img 
             alt="User Profile" 
             className="w-full h-full object-cover"
-            src={`https://ui-avatars.com/api/?name=Parent&background=random`}
+            src={profilePic || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`}
           />
         </div>
         <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#141779] to-[#30007f]">Learning DNA</h1>

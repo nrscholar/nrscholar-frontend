@@ -128,16 +128,6 @@ export default function ProfileScreen() {
 
         {/* Settings List */}
         <div className="flex flex-col gap-3">
-          <button 
-            onClick={() => navigate("/edit-profile")}
-            className="w-full flex items-center justify-between bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_1px_5px_rgba(0,0,0,0.05)] hover:bg-white transition-colors"
-          >
-            <div className="flex items-center gap-4">
-              <User size={24} color="#141779" />
-              <span className="text-lg font-medium text-[#191c1e]">{t('edit_profile')}</span>
-            </div>
-            <ArrowLeft size={24} color="#767683" className="rotate-180" />
-          </button>
 
           <button 
             onClick={() => navigate("/parent")}

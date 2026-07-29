@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Clock, CheckCircle2, ShieldAlert, Star, TrendingUp, Search, Calendar, FileText, Activity, X, ChevronDown, ChevronUp, BookOpen, Layers } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle2, ShieldAlert, Star, TrendingUp, Search, Calendar, FileText, Activity, X, ChevronDown, ChevronUp, BookOpen, Layers, ChevronRight } from "lucide-react";
 import { apiFetch } from "../../../api";
 
 export default function KidsActivityScreen() {
@@ -70,6 +70,7 @@ export default function KidsActivityScreen() {
       case "milestone": return { icon: <Star className="text-[#ff5e00]" size={20} />, bgColor: "bg-[#ff5e00]/10" };
       case "struggle": return { icon: <ShieldAlert className="text-[#ba1a1a]" size={20} />, bgColor: "bg-[#ba1a1a]/10" };
       case "chapter": return { icon: <FileText className="text-[#30007f]" size={20} />, bgColor: "bg-[#30007f]/10" };
+      case "reading": return { icon: <BookOpen className="text-[#006a62]" size={20} />, bgColor: "bg-[#006a62]/10" };
       default: return { icon: <Activity className="text-[#464652]" size={20} />, bgColor: "bg-gray-100" };
     }
   };
@@ -261,6 +262,18 @@ export default function KidsActivityScreen() {
                                     </div>
                                   )}
                                 </div>
+
+                                {activity.details && (
+                                  <div className="mt-2.5 pt-2 border-t border-gray-100/60 flex items-center justify-between text-[11px] font-bold">
+                                    <span className="flex items-center gap-1 text-[#767683] font-medium">
+                                      <BookOpen size={12} className="text-[#767683]/80" />
+                                      {activity.details.length} {activity.details.length === 1 ? 'Question' : 'Questions'}
+                                    </span>
+                                    <span className="flex items-center gap-0.5 text-[#141779] font-extrabold hover:text-[#30007f] transition-colors">
+                                      show more <ChevronRight size={12} className="mt-[0.5px]" />
+                                    </span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           );

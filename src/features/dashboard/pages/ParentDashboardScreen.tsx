@@ -195,19 +195,16 @@ export default function ParentDashboardScreen() {
           <button onClick={() => navigate("/home")} className="w-11 h-11 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 shadow-xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all">
             <ArrowLeft size={22} className="text-[#141779]" />
           </button>
-          <div className="w-10 h-10 rounded-full border-2 border-[rgba(20,23,121,0.2)] overflow-hidden">
-            {parentPhoto ? (
-              <img
-                src={parentPhoto}
-                alt="Profile"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full bg-[#141779]/10 flex items-center justify-center text-lg">
-                👨‍👩‍👦
-              </div>
-            )}
-          </div>
+          <button
+            onClick={() => navigate('/parent/settings')}
+            className="w-10 h-10 rounded-full border-2 border-[rgba(20,23,121,0.2)] overflow-hidden bg-white shrink-0 hover:scale-105 active:scale-95 transition-all"
+          >
+            <img
+              src={parentPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData?.fullName || "Parent")}&background=random`}
+              alt="Profile"
+              className="w-full h-full object-cover"
+            />
+          </button>
           <h1 className="text-2xl font-black text-[#141779]">{t("parent_space") || "Parent Space"}</h1>
         </div>
         <button onClick={() => { setShowNotifications(true); markAllRead(); }} className="relative w-11 h-11 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 shadow-xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all">

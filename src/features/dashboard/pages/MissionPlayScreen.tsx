@@ -22,7 +22,7 @@ import { apiFetch } from "../../../api";
 
 type StepPhase = "INTRO" | "QUIZ" | "MINI_REWARD" | "BOSS" | "SUMMARY";
 
-export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySaathy Mission Play Engine (Updated)
+export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scholar Mission Play Engine (Updated)
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const chapterId = searchParams.get("chapterId") || "ch1";
@@ -990,77 +990,109 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - StudySa
           </div>
 
           <div className="bg-white border border-gray-200 rounded-3xl p-4 w-full mb-4 text-left shadow-xs">
-            <div className="flex justify-between items-center mb-3">
-              <div>
-                <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1">
+            {completionResult?.threeDayAvailable !== false ? (
+              <>
+                <div className="flex justify-between items-center mb-3">
+                  <div>
+                    <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1">
+                      <span>📈 3-Day Performance Average</span>
+                    </h4>
+                    <span className="text-[11px] text-gray-500 font-semibold">Short-term retention trend</span>
+                  </div>
+                  <span className="text-base font-black text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-xl border border-indigo-200">
+                    {completionResult?.threeDayAvg ?? 0}%
+                  </span>
+                </div>
+
+                <div className="flex items-end justify-between gap-3 h-24 pt-4 px-2">
+                  {(completionResult?.threeDayTrend || [
+                    { day: "Day 1", accuracy: 0 },
+                    { day: "Day 2", accuracy: 0 },
+                    { day: "Today", accuracy: completionResult?.accuracy || 0 }
+                  ]).map((d: any, idx: number) => (
+                    <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
+                      <span className="text-[10px] font-extrabold text-[#141779]">{d.accuracy}%</span>
+                      <div className="w-full bg-gray-100 rounded-xl h-full flex items-end overflow-hidden p-1">
+                        <motion.div
+                          initial={{ height: 0 }}
+                          animate={{ height: `${d.accuracy}%` }}
+                          transition={{ duration: 0.8, delay: idx * 0.15 }}
+                          className="w-full bg-gradient-to-t from-indigo-600 to-teal-400 rounded-lg"
+                        />
+                      </div>
+                      <span className="text-[10px] font-bold text-gray-500">{d.day}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-6 px-4 text-center">
+                <div className="w-12 h-12 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 mb-3 shadow-2xs">
+                  <Clock size={20} className="animate-pulse" />
+                </div>
+                <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1 mb-1.5">
                   <span>📈 3-Day Performance Average</span>
                 </h4>
-                <span className="text-[11px] text-gray-500 font-semibold">Short-term retention trend</span>
+                <p className="text-xs text-gray-500 font-bold max-w-[280px] leading-relaxed">
+                  Required data not available. You'll see in next few learning Days.
+                </p>
               </div>
-              <span className="text-base font-black text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-xl border border-indigo-200">
-                {completionResult?.threeDayAvg ?? 0}%
-              </span>
-            </div>
-
-            <div className="flex items-end justify-between gap-3 h-24 pt-4 px-2">
-              {(completionResult?.threeDayTrend || [
-                { day: "Day 1", accuracy: 0 },
-                { day: "Day 2", accuracy: 0 },
-                { day: "Today", accuracy: completionResult?.accuracy || 0 }
-              ]).map((d: any, idx: number) => (
-                <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
-                  <span className="text-[10px] font-extrabold text-[#141779]">{d.accuracy}%</span>
-                  <div className="w-full bg-gray-100 rounded-xl h-full flex items-end overflow-hidden p-1">
-                    <motion.div
-                      initial={{ height: 0 }}
-                      animate={{ height: `${d.accuracy}%` }}
-                      transition={{ duration: 0.8, delay: idx * 0.15 }}
-                      className="w-full bg-gradient-to-t from-indigo-600 to-teal-400 rounded-lg"
-                    />
-                  </div>
-                  <span className="text-[10px] font-bold text-gray-500">{d.day}</span>
-                </div>
-              ))}
-            </div>
+            )}
           </div>
 
           <div className="bg-white border border-gray-200 rounded-3xl p-4 w-full mb-6 text-left shadow-xs">
-            <div className="flex justify-between items-center mb-3">
-              <div>
-                <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1">
+            {completionResult?.sevenDayAvailable !== false ? (
+              <>
+                <div className="flex justify-between items-center mb-3">
+                  <div>
+                    <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1">
+                      <span>📊 7-Day Performance Trend</span>
+                    </h4>
+                    <span className="text-[11px] text-gray-500 font-semibold">Weekly consistency overview</span>
+                  </div>
+                  <span className="text-base font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200">
+                    {completionResult?.sevenDayAvg ?? 0}%
+                  </span>
+                </div>
+
+                <div className="flex items-end justify-between gap-2 h-24 pt-4 px-1">
+                  {(completionResult?.sevenDayTrend || [
+                    { day: "Mon", accuracy: 0 },
+                    { day: "Tue", accuracy: 0 },
+                    { day: "Wed", accuracy: 0 },
+                    { day: "Thu", accuracy: 0 },
+                    { day: "Fri", accuracy: 0 },
+                    { day: "Sat", accuracy: 0 },
+                    { day: "Sun", accuracy: completionResult?.accuracy || 0 }
+                  ]).map((d: any, idx: number) => (
+                    <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
+                      <span className="text-[9px] font-bold text-gray-500">{d.accuracy}%</span>
+                      <div className="w-full bg-gray-100 rounded-lg h-full flex items-end overflow-hidden p-0.5">
+                        <motion.div
+                          initial={{ height: 0 }}
+                          animate={{ height: `${d.accuracy}%` }}
+                          transition={{ duration: 0.8, delay: idx * 0.08 }}
+                          className="w-full bg-gradient-to-t from-teal-600 to-emerald-400 rounded-md"
+                        />
+                      </div>
+                      <span className="text-[9px] font-extrabold text-gray-600">{d.day}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-6 px-4 text-center">
+                <div className="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 mb-3 shadow-2xs">
+                  <Clock size={20} className="animate-pulse" />
+                </div>
+                <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1 mb-1.5">
                   <span>📊 7-Day Performance Trend</span>
                 </h4>
-                <span className="text-[11px] text-gray-500 font-semibold">Weekly consistency overview</span>
+                <p className="text-xs text-gray-500 font-bold max-w-[280px] leading-relaxed">
+                  Required data not available. You'll see in next few learning Days.
+                </p>
               </div>
-              <span className="text-base font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200">
-                {completionResult?.sevenDayAvg ?? 0}%
-              </span>
-            </div>
-
-            <div className="flex items-end justify-between gap-2 h-24 pt-4 px-1">
-              {(completionResult?.sevenDayTrend || [
-                { day: "Mon", accuracy: 0 },
-                { day: "Tue", accuracy: 0 },
-                { day: "Wed", accuracy: 0 },
-                { day: "Thu", accuracy: 0 },
-                { day: "Fri", accuracy: 0 },
-                { day: "Sat", accuracy: 0 },
-                { day: "Sun", accuracy: completionResult?.accuracy || 0 }
-              ]).map((d: any, idx: number) => (
-                <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
-                  <span className="text-[9px] font-bold text-gray-500">{d.accuracy}%</span>
-                  <div className="w-full bg-gray-100 rounded-lg h-full flex items-end overflow-hidden p-0.5">
-                    <motion.div
-                      initial={{ height: 0 }}
-                      animate={{ height: `${d.accuracy}%` }}
-                      transition={{ duration: 0.8, delay: idx * 0.08 }}
-                      className="w-full bg-gradient-to-t from-teal-600 to-emerald-400 rounded-md"
-                    />
-                  </div>
-                  <span className="text-[9px] font-extrabold text-gray-600">{d.day}</span>
-                </div>
-              ))}
-            </div>
+            )}
           </div>
 
           <div className="w-full flex flex-col gap-3">
