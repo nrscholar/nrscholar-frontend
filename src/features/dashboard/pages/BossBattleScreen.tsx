@@ -38,6 +38,34 @@ export default function BossBattleScreen() {
   const [attacking, setAttacking] = useState(false);
   const [actionResult, setActionResult] = useState<"idle" | "correct" | "wrong">("idle");
   const [lossOverlay, setLossOverlay] = useState({ show: false, xpLoss: 0 });
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+  const [userCoins, setUserCoins] = useState(0);
+
+  const openReviveModal = async () => {
+    setShowReviveModal(true);
+    try {
+      const res = await apiFetch("/api/users/me");
+      const json = await res.json();
+      if (json.success && json.data?.user) {
+        setUserCoins(json.data.user.coins || 0);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    try {
+      const res = await apiFetch("/api/retention/spin-wheel/status");
+      const json = await res.json();
+      if (json && json.balances) {
+        setRevivalSpins(json.balances.boss_revival_spins_balance || 0);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
   const [particlesInit, setParticlesInit] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   
@@ -265,21 +293,11 @@ export default function BossBattleScreen() {
           } else if (status === "LOST") {
             submitActivityLog(newAnswers).catch(() => {});
             
-            // Fetch current spin status
-            apiFetch("/api/retention/spin-wheel/status")
-              .then(res => res.json())
-              .then(data => {
-                if (data && data.balances) {
-                  setRevivalSpins(data.balances.boss_revival_spins_balance || 0);
-                }
-              })
-              .catch(() => {});
-              
             setPendingLossData({
               xpLoss: json.data.xpLoss || -30,
               newAnswers
             });
-            setShowReviveModal(true);
+            openReviveModal();
           } else {
             setCurrentQIndex(prev => prev + 1);
             setSelected(null);
@@ -612,33 +630,55 @@ export default function BossBattleScreen() {
               </p>
             </div>
             
-            <div className="w-full bg-white/5 rounded-2xl p-4 border border-white/10">
-              <span className="text-xs text-white/50 uppercase font-bold tracking-widest block mb-1">Your Revival Spins</span>
-              <span className="text-3xl font-black text-[#57fae9]">{revivalSpins} Available</span>
+            <div className="w-full bg-white/5 rounded-2xl p-4 border border-white/10 flex justify-between items-center text-center">
+              <div className="flex-1">
+                <span className="text-[10px] text-white/50 uppercase font-black tracking-widest block mb-1">Revival Spins</span>
+                <span className="text-2xl font-black text-[#57fae9]">{revivalSpins}</span>
+              </div>
+              <div className="w-px h-8 bg-white/10" />
+              <div className="flex-1">
+                <span className="text-[10px] text-white/50 uppercase font-black tracking-widest block mb-1">Your Coins</span>
+                <span className="text-2xl font-black text-amber-400">🪙 {Math.max(0, userCoins)}</span>
+              </div>
             </div>
 
             <div className="flex flex-col gap-2 w-full">
-              <button
-                onClick={() => {
-                  if (revivalSpins > 0) {
-                    navigate(`/daily-rewards?type=boss_revival&boss_id=${battleData?.battleId}`);
-                  } else {
-                    // Give them 1 revival spin as defined by: "Available once per boss attempt when hearts reach 0."
-                    apiFetch("/api/retention/spin-wheel/grant", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ spin_type: "boss_revival", amount: 1 })
-                    }).then(() => {
-                      navigate(`/daily-rewards?type=boss_revival&boss_id=${battleData?.battleId}`);
-                    }).catch(() => {
-                      alert("No revival spins available. Ask a parent or complete learning chapters to earn spins!");
-                    });
-                  }
-                }}
-                className="w-full py-4 bg-[#57fae9] text-[#007168] font-bold rounded-full hover:bg-[#45e0d0] active:scale-95 transition-all uppercase tracking-wide text-sm flex items-center justify-center gap-2"
-              >
-                <span>🔥 Spin to Revive</span>
-              </button>
+              {revivalSpins > 0 ? (
+                <button
+                  onClick={() => navigate(`/daily-rewards?type=boss_revival&boss_id=${battleData?.battleId}`)}
+                  className="w-full py-4 bg-[#57fae9] text-[#007168] font-bold rounded-full hover:bg-[#45e0d0] active:scale-95 transition-all uppercase tracking-wide text-sm flex items-center justify-center gap-2"
+                >
+                  <span>🔥 Spin to Revive</span>
+                </button>
+              ) : (
+                <button
+                  onClick={async () => {
+                    if (userCoins < 100) {
+                      showToast("Not enough coins! You need 100 coins.");
+                      return;
+                    }
+                    try {
+                      const res = await apiFetch("/api/retention/spin-wheel/buy-revival", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" }
+                      });
+                      const json = await res.json();
+                      if (json.success) {
+                        setRevivalSpins(json.balances.boss_revival_spins_balance || 1);
+                        setUserCoins(json.coins);
+                        showToast("Purchased 1 Revival Spin! 🎉");
+                      } else {
+                        showToast(json.message || "Purchase failed.");
+                      }
+                    } catch (e) {
+                      showToast("Purchase failed.");
+                    }
+                  }}
+                  className="w-full py-4 bg-amber-400 text-slate-950 font-bold rounded-full hover:bg-amber-300 active:scale-95 transition-all uppercase tracking-wide text-sm flex items-center justify-center gap-2"
+                >
+                  <span>🛒 Buy Revival Spin (100 🪙)</span>
+                </button>
+              )}
               
               <button
                 onClick={handleGiveUp}
@@ -674,6 +714,17 @@ export default function BossBattleScreen() {
             </motion.div>
         </motion.div>
       )}
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div 
+          className="fixed top-24 z-[250] bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl border border-slate-800/80 font-bold text-xs sm:text-sm tracking-wide flex items-center justify-center gap-2 text-center animate-bounce max-w-[90vw] w-auto"
+          style={{ left: "50%", transform: "translateX(-50%)" }}
+        >
+          <span>✨</span>
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
     </div>
   );
 }

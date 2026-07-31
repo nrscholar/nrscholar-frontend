@@ -101,6 +101,35 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   const [showReviveModal, setShowReviveModal] = useState(false);
   const [revivalSpins, setRevivalSpins] = useState(0);
   const [hasDoubleDamage, setHasDoubleDamage] = useState(false);
+  const [lossOverlay, setLossOverlay] = useState<{ show: boolean; xpLoss: number }>({ show: false, xpLoss: 0 });
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+  const [userCoins, setUserCoins] = useState(0);
+
+  const openReviveModal = async () => {
+    setShowReviveModal(true);
+    try {
+      const res = await apiFetch("/api/users/me");
+      const json = await res.json();
+      if (json.success && json.data?.user) {
+        setUserCoins(json.data.user.coins || 0);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    try {
+      const res = await apiFetch("/api/retention/spin-wheel/status");
+      const json = await res.json();
+      if (json && json.balances) {
+        setRevivalSpins(json.balances.boss_revival_spins_balance || 0);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   useEffect(() => {
     sessionStorage.setItem(`boss_damage_${chapterId}_${missionSeq}`, bossDamageCount.toString());
@@ -135,15 +164,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           if (json.data.childHearts !== undefined) {
             setChildDamageCount(3 - json.data.childHearts);
             if (json.data.childHearts === 0) {
-              apiFetch("/api/retention/spin-wheel/status")
-                .then(r => r.json())
-                .then(data => {
-                  if (data && data.balances) {
-                    setRevivalSpins(data.balances.boss_revival_spins_balance || 0);
-                  }
-                })
-                .catch(() => {});
-              setShowReviveModal(true);
+              openReviveModal();
             }
           }
         }
@@ -262,7 +283,31 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
   const handleGiveUp = async () => {
     setShowReviveModal(false);
-    await finalizeMission(bossDamageCount, 3);
+    
+    // Clear all session storage keys for this mission
+    sessionStorage.removeItem(`boss_damage_${chapterId}_${missionSeq}`);
+    sessionStorage.removeItem(`boss_wrong_${chapterId}_${missionSeq}`);
+    sessionStorage.removeItem(`boss_index_${chapterId}_${missionSeq}`);
+    sessionStorage.removeItem(`mission_phase_${chapterId}_${missionSeq}`);
+    sessionStorage.removeItem(`mission_timer_${chapterId}_${missionSeq}`);
+
+    try {
+      // Call backend retreat endpoint to apply XP deduction & reset hearts
+      await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/retreat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+    } catch (e) {
+      console.error("Failed to call retreat API:", e);
+    }
+
+    // Show the defeat overlay with XP loss
+    setLossOverlay({ show: true, xpLoss: -30 });
+
+    // Navigate back to the previous screen (the roadmap) after 3 seconds
+    setTimeout(() => {
+      navigate(-1);
+    }, 3000);
   };
 
   // Boss Attack execution helper
@@ -317,15 +362,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
         setBossBasketCount(0);
         const nextIndex = currentBossIndex + 1;
         if (newChildDamage >= 3) {
-          apiFetch("/api/retention/spin-wheel/status")
-            .then(r => r.json())
-            .then(data => {
-              if (data && data.balances) {
-                setRevivalSpins(data.balances.boss_revival_spins_balance || 0);
-              }
-            })
-            .catch(() => {});
-          setShowReviveModal(true);
+          openReviveModal();
         } else if (nextIndex >= bossQuestions.length) {
           await finalizeMission(bossDamageCount, newChildDamage, currentAnswers);
         } else {
@@ -1176,32 +1213,55 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
               </p>
             </div>
             
-            <div className="w-full bg-white/5 rounded-2xl p-4 border border-white/10">
-              <span className="text-xs text-white/50 uppercase font-bold tracking-widest block mb-1">Your Revival Spins</span>
-              <span className="text-3xl font-black text-[#57fae9]">{revivalSpins} Available</span>
+            <div className="w-full bg-white/5 rounded-2xl p-4 border border-white/10 flex justify-between items-center text-center">
+              <div className="flex-1">
+                <span className="text-[10px] text-white/50 uppercase font-black tracking-widest block mb-1">Revival Spins</span>
+                <span className="text-2xl font-black text-[#57fae9]">{revivalSpins}</span>
+              </div>
+              <div className="w-px h-8 bg-white/10" />
+              <div className="flex-1">
+                <span className="text-[10px] text-white/50 uppercase font-black tracking-widest block mb-1">Your Coins</span>
+                <span className="text-2xl font-black text-amber-400">🪙 {Math.max(0, userCoins)}</span>
+              </div>
             </div>
 
             <div className="flex flex-col gap-2 w-full">
-              <button
-                onClick={() => {
-                  if (revivalSpins > 0) {
-                    navigate(`/daily-rewards?type=boss_revival&chapter_id=${chapterId}`);
-                  } else {
-                    apiFetch("/api/retention/spin-wheel/grant", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ spin_type: "boss_revival", amount: 1 })
-                    }).then(() => {
-                      navigate(`/daily-rewards?type=boss_revival&chapter_id=${chapterId}`);
-                    }).catch(() => {
-                      alert("No revival spins available. Ask a parent or complete learning chapters to earn spins!");
-                    });
-                  }
-                }}
-                className="w-full py-4 bg-[#57fae9] text-[#007168] font-bold rounded-full hover:bg-[#45e0d0] active:scale-95 transition-all uppercase tracking-wide text-sm flex items-center justify-center gap-2"
-              >
-                <span>🔥 Spin to Revive</span>
-              </button>
+              {revivalSpins > 0 ? (
+                <button
+                  onClick={() => navigate(`/daily-rewards?type=boss_revival&chapter_id=${chapterId}`)}
+                  className="w-full py-4 bg-[#57fae9] text-[#007168] font-bold rounded-full hover:bg-[#45e0d0] active:scale-95 transition-all uppercase tracking-wide text-sm flex items-center justify-center gap-2"
+                >
+                  <span>🔥 Spin to Revive</span>
+                </button>
+              ) : (
+                <button
+                  onClick={async () => {
+                    if (userCoins < 100) {
+                      showToast("Not enough coins! You need 100 coins.");
+                      return;
+                    }
+                    try {
+                      const res = await apiFetch("/api/retention/spin-wheel/buy-revival", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" }
+                      });
+                      const json = await res.json();
+                      if (json.success) {
+                        setRevivalSpins(json.balances.boss_revival_spins_balance || 1);
+                        setUserCoins(json.coins);
+                        showToast("Purchased 1 Revival Spin! 🎉");
+                      } else {
+                        showToast(json.message || "Purchase failed.");
+                      }
+                    } catch (e) {
+                      showToast("Purchase failed.");
+                    }
+                  }}
+                  className="w-full py-4 bg-amber-400 text-slate-950 font-bold rounded-full hover:bg-amber-300 active:scale-95 transition-all uppercase tracking-wide text-sm flex items-center justify-center gap-2"
+                >
+                  <span>🛒 Buy Revival Spin (100 🪙)</span>
+                </button>
+              )}
               
               <button
                 onClick={handleGiveUp}
@@ -1214,6 +1274,55 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
         </div>
       )}
 
+      {/* Defeat/Retreat Overlay Animation */}
+      {lossOverlay.show && (
+        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-950/95 backdrop-blur-md px-6 text-center">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0, y: 30 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            transition={{ type: "spring", duration: 0.5 }}
+            className="bg-gradient-to-br from-[#141779] to-[#07051a] border-2 border-[#57fae9]/30 rounded-3xl p-8 max-w-sm w-full shadow-[0_0_60px_rgba(87,250,233,0.2)] flex flex-col items-center gap-6"
+          >
+            {/* Spotlight Icon */}
+            <div className="w-20 h-20 rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center shadow-inner relative">
+              <ShieldAlert className="text-rose-400 w-10 h-10 animate-pulse" />
+              <div className="absolute inset-0 rounded-full bg-rose-500/5 blur-md" />
+            </div>
+
+            {/* Content */}
+            <div className="space-y-2">
+              <h2 className="text-3xl font-black text-white uppercase tracking-wider">
+                Fall Back!
+              </h2>
+              <p className="text-sm text-white/70 leading-relaxed font-semibold">
+                You retreated from the mission. Rest up and try again!
+              </p>
+            </div>
+
+            {/* Penalty Box */}
+            <div className="w-full bg-white/5 rounded-2xl p-4 border border-white/10 relative overflow-hidden">
+              <span className="text-xs text-white/40 uppercase font-black tracking-widest block mb-1">
+                XP Penalty
+              </span>
+              <span className="text-3xl font-black text-rose-400 drop-shadow-md">
+                {lossOverlay.xpLoss} XP
+              </span>
+              {/* Decorative accent */}
+              <div className="absolute right-0 top-0 bottom-0 w-1 bg-rose-500/40" />
+            </div>
+          </motion.div>
+        </div>
+      )}
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div 
+          className="fixed top-24 z-[250] bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl border border-slate-800/80 font-bold text-xs sm:text-sm tracking-wide flex items-center justify-center gap-2 text-center animate-bounce max-w-[90vw] w-auto"
+          style={{ left: "50%", transform: "translateX(-50%)" }}
+        >
+          <span>✨</span>
+          <span>{toastMessage}</span>
+        </div>
+      )}
 
     </div>
   );
