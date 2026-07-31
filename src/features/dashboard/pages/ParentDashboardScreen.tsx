@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Bell, Settings, BrainCircuit, Clock, ChevronRight, Home, Activity, X, BarChart2, Users } from "lucide-react";
+import { ArrowLeft, Bell, Settings, BrainCircuit, Clock, ChevronRight, Home, Activity, X, BarChart2, Users, CheckCircle, AlertTriangle } from "lucide-react";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
 import ChildSwitcherModal from "../../../components/ChildSwitcherModal";
@@ -18,9 +18,9 @@ export default function ParentDashboardScreen() {
   const [showSwitcher, setShowSwitcher] = useState(false);
 
   const [modalType, setModalType] = useState<"strengths" | "weaknesses" | "risks" | "lastActivity" | "graph" | null>(null);
-  const [strengths, setStrengths] = useState("Quick problem solver in Mathematics.");
-  const [weaknesses, setWeaknesses] = useState("Needs more practice in Science concepts.");
-  const [risks, setRisks] = useState("Slight drop in engagement this week.");
+  const [strengths, setStrengths] = useState<string[]>(["Quick problem solver in Mathematics."]);
+  const [weaknesses, setWeaknesses] = useState<string[]>(["Needs more practice in Science concepts."]);
+  const [risks, setRisks] = useState<string[]>(["Slight drop in engagement this week."]);
   const [todayTime, setTodayTime] = useState(0);
   const [solvedToday, setSolvedToday] = useState(0);
   const [todayConfidenceScore, setTodayConfidenceScore] = useState(0);
@@ -290,18 +290,45 @@ export default function ParentDashboardScreen() {
           </div>
 
           <button onClick={() => setModalType("strengths")} className="text-left w-full bg-white rounded-[20px] p-5 border border-slate-200/80 shadow-sm border-l-[6px] border-l-[#006a62] hover:shadow-md transition-all">
-            <h4 className="text-base font-extrabold text-[#006a62] mb-1">💪 Strengths (Fast Processor)</h4>
-            <p className="text-sm font-semibold text-slate-800 leading-normal">{strengths}</p>
+            <h4 className="text-base font-extrabold text-[#006a62] mb-3">💪 Strengths</h4>
+            {strengths.length === 0 ? (
+              <p className="text-xs text-slate-500">Complete more quests to identify strengths.</p>
+            ) : (
+              strengths.map((s: string, i: number) => (
+                <div key={i} className="bg-green-50 border border-green-100 rounded-xl p-3 mb-2 flex gap-2 items-start">
+                  <CheckCircle size={14} className="text-green-600 shrink-0 mt-0.5" />
+                  <p className="text-xs text-green-800 font-semibold">{s}</p>
+                </div>
+              ))
+            )}
           </button>
 
           <button onClick={() => setModalType("weaknesses")} className="text-left w-full bg-white rounded-[20px] p-5 border border-slate-200/80 shadow-sm border-l-[6px] border-l-[#ba1a1a] hover:shadow-md transition-all">
-            <h4 className="text-base font-extrabold text-[#ba1a1a] mb-1">⚠️ Weaknesses / Review Needed</h4>
-            <p className="text-sm font-semibold text-slate-800 leading-normal">{weaknesses}</p>
+            <h4 className="text-base font-extrabold text-[#ba1a1a] mb-3">⚠️ Weaknesses / Review Needed</h4>
+            {weaknesses.length === 0 ? (
+              <p className="text-xs text-slate-500">No weaknesses detected.</p>
+            ) : (
+              weaknesses.map((w: string, i: number) => (
+                <div key={i} className="bg-orange-50 border border-orange-100 rounded-xl p-3 mb-2 flex gap-2 items-start">
+                  <AlertTriangle size={14} className="text-orange-600 shrink-0 mt-0.5" />
+                  <p className="text-xs text-orange-800 font-semibold">{w}</p>
+                </div>
+              ))
+            )}
           </button>
 
           <button onClick={() => setModalType("risks")} className="text-left w-full bg-white rounded-[20px] p-5 border border-slate-200/80 shadow-sm border-l-[6px] border-l-[#d97706] hover:shadow-md transition-all">
-            <h4 className="text-base font-extrabold text-[#d97706] mb-1">🔔 Risk Alerts</h4>
-            <p className="text-sm font-semibold text-slate-800 leading-normal">{risks}</p>
+            <h4 className="text-base font-extrabold text-[#d97706] mb-3">🔔 Risk Alerts</h4>
+            {risks.length === 0 ? (
+              <p className="text-xs text-slate-500">No immediate risks detected.</p>
+            ) : (
+              risks.map((r: string, i: number) => (
+                <div key={i} className="bg-red-50 border border-red-100 rounded-xl p-3 mb-2 flex gap-2 items-start">
+                  <AlertTriangle size={14} className="text-red-600 shrink-0 mt-0.5" />
+                  <p className="text-xs text-red-800 font-semibold">{r}</p>
+                </div>
+              ))
+            )}
           </button>
         </div>
 
@@ -589,7 +616,7 @@ export default function ParentDashboardScreen() {
                           `They should give more attention to ${lowestSubject} to build a more balanced cognitive profile.`
                           : <>Your child is currently excelling at <strong>{highestSubject}</strong>! However, they should give more attention to <strong>{lowestSubject}</strong> to build a more balanced cognitive profile.</>
                     ) : (
-                      <>{diff >= 0 ? "Consistent upward trend this week!" : "Noticed a slight dip recently."} {strengths}</>
+                      <>{diff >= 0 ? "Consistent upward trend this week!" : "Noticed a slight dip recently."} {strengths.join(" ")}</>
                     )}
                   </p>
                 </div>

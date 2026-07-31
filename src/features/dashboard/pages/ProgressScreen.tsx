@@ -23,37 +23,44 @@ export default function ProgressScreen() {
 
   useEffect(() => {
     const fetchProgress = async () => {
-      try {
-        const cached = localStorage.getItem("userData");
-        if (cached) {
-           const u = JSON.parse(cached);
-           setXp(u.xp || 0);
-           setLevel(u.level || 1);
-           setStreakDays(u.streakDays || 0);
-           setUsername(u.childName || u.name || "Explorer");
-           setUserPhoto(u.childPhoto || u.photo || "");
-        }
-        
-        const response = await apiFetch("/api/users/me");
-        const data = await response.json();
-        if (data.success && data.data.user) {
-           const u = data.data.user;
-           setXp(u.xp || 0);
-           setLevel(u.level || 1);
-           setStreakDays(u.streakDays || 0);
-           setUsername(u.childName || u.name || "Explorer");
-           setUserPhoto(u.childPhoto || u.photo || "");
-        }
-      } catch(e) {}
+      const cached = localStorage.getItem("userData");
+      if (cached) {
+        try {
+          const u = JSON.parse(cached);
+          setXp(u.xp || 0);
+          setLevel(u.level || 1);
+          setStreakDays(u.streakDays || 0);
+          setUsername(u.childName || u.name || "Explorer");
+          setUserPhoto(u.childPhoto || u.photo || "");
+        } catch(e) {}
+      }
 
-      try {
-        const notifRes = await apiFetch("/api/notifications");
-        const notifData = await notifRes.json();
-        if (notifData.success && notifData.data) {
-          setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
-        }
-      } catch (e) {}
-      
+      const mePromise = (async () => {
+        try {
+          const response = await apiFetch("/api/users/me");
+          const data = await response.json();
+          if (data.success && data.data.user) {
+             const u = data.data.user;
+             setXp(u.xp || 0);
+             setLevel(u.level || 1);
+             setStreakDays(u.streakDays || 0);
+             setUsername(u.childName || u.name || "Explorer");
+             setUserPhoto(u.childPhoto || u.photo || "");
+          }
+        } catch(e) {}
+      })();
+
+      const notifPromise = (async () => {
+        try {
+          const notifRes = await apiFetch("/api/notifications");
+          const notifData = await notifRes.json();
+          if (notifData.success && notifData.data) {
+            setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
+          }
+        } catch (e) {}
+      })();
+
+      await Promise.allSettled([mePromise, notifPromise]);
       setLoading(false);
     };
     fetchProgress();
@@ -206,7 +213,7 @@ export default function ProgressScreen() {
                   key={m.seq}
                   onClick={() => {
                     if (isUnlocked || isCompleted) {
-                      navigate(`/mission-play?chapterId=ch1&missionSeq=${m.seq}`);
+                      navigate(`/mission-play?chapterId=ch1&missionSeq=${m.seq}${isCompleted ? "&replay=true" : ""}`);
                     }
                   }}
                   className={`p-4 rounded-2xl border flex items-center justify-between transition-all ${

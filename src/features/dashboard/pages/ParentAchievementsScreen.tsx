@@ -17,31 +17,39 @@ export default function ParentAchievementsScreen() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        const uRes = await apiFetch("/api/users/me");
-        const uJson = await uRes.json();
-        if (uJson.success && uJson.data?.user) {
-          setParentPhoto(uJson.data.user.parentPhoto || "");
-          setUsername(uJson.data.user.parentName || uJson.data.user.username || "Parent");
-        }
+        const uPromise = (async () => {
+          try {
+            const uRes = await apiFetch("/api/users/me");
+            const uJson = await uRes.json();
+            if (uJson.success && uJson.data?.user) {
+              setParentPhoto(uJson.data.user.parentPhoto || "");
+              setUsername(uJson.data.user.parentName || uJson.data.user.username || "Parent");
+            }
+          } catch (e) {}
+        })();
 
-        // BUG-P05 FIX: Real rank from DB instead of fake formula
-        try {
-          const rankRes = await apiFetch("/api/parent/rank");
-          const rankJson = await rankRes.json();
-          if (rankJson.success && rankJson.data) {
-            setGlobalRank(rankJson.data.rank);
-          }
-        } catch (e) {}
+        const rankPromise = (async () => {
+          try {
+            const rankRes = await apiFetch("/api/parent/rank");
+            const rankJson = await rankRes.json();
+            if (rankJson.success && rankJson.data) {
+              setGlobalRank(rankJson.data.rank);
+            }
+          } catch (e) {}
+        })();
 
-        try {
-          const achRes = await apiFetch("/api/parent/achievements");
-          const achJson = await achRes.json();
-          if (achJson.success && achJson.data) {
-            setAchievements(achJson.data.achievements);
-            setBadgesEarned(achJson.data.badgesEarned);
-          }
-        } catch (e) {}
+        const achPromise = (async () => {
+          try {
+            const achRes = await apiFetch("/api/parent/achievements");
+            const achJson = await achRes.json();
+            if (achJson.success && achJson.data) {
+              setAchievements(achJson.data.achievements);
+              setBadgesEarned(achJson.data.badgesEarned);
+            }
+          } catch (e) {}
+        })();
 
+        await Promise.allSettled([uPromise, rankPromise, achPromise]);
       } catch (e) {}
     }
     fetchStats();

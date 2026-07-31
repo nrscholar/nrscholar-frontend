@@ -103,54 +103,50 @@ export default function HomeScreen() {
     }
   }, [pendingSpinPopup, surpriseData]);
 
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const res = await apiFetch("/api/notifications");
-        const json = await res.json();
-        if (json.success && json.data) {
-          setUnreadCount(json.data.filter((n: any) => !n.isRead).length);
-        }
-      } catch (e) {}
-    };
-    const fetchMascotNarration = async () => {
-      try {
-        const res = await apiFetch("/api/dashboard/mascot-narration");
-        const json = await res.json();
-        if (json.success && json.narration) {
-          setMascotMsg(json.narration);
-          setTimeout(() => setMascotMsg(""), 8000);
-        }
-      } catch (e) {}
-    };
-    fetchNotifications();
-    fetchMascotNarration();
-  }, []);
+  const fetchNotifications = async () => {
+    try {
+      const res = await apiFetch("/api/notifications");
+      const json = await res.json();
+      if (json.success && json.data) {
+        setUnreadCount(json.data.filter((n: any) => !n.isRead).length);
+      }
+    } catch (e) {}
+  };
+
+  const fetchMascotNarration = async () => {
+    try {
+      const res = await apiFetch("/api/dashboard/mascot-narration");
+      const json = await res.json();
+      if (json.success && json.narration) {
+        setMascotMsg(json.narration);
+        setTimeout(() => setMascotMsg(""), 8000);
+      }
+    } catch (e) {}
+  };
+
+  const fetchProfile = async () => {
+    const token = localStorage.getItem("userToken");
+    if (!token) return;
+    try {
+      const response = await apiFetch("/api/users/me");
+      const data = await response.json();
+      if (data.success) {
+        const u = data.data.user;
+        setUserData(u);
+        setXp(u.xp || 0);
+        setCoins(u.coins || 0);
+        setChildName(u.childName || "Explorer");
+        setChildPhoto(u.childPhoto || "");
+        setUserLevel(u.level || 1);
+        setStreakDays(u.streakDays || 0);
+        localStorage.setItem("userData", JSON.stringify(u));
+      }
+    } catch (e) {
+      console.error("Failed to fetch profile");
+    }
+  };
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      const token = localStorage.getItem("userToken");
-      if (!token) return;
-      try {
-        const response = await apiFetch("/api/users/me", {
-        });
-        const data = await response.json();
-        if (data.success) {
-          const u = data.data.user;
-          setUserData(u);
-          setXp(u.xp || 0);
-          setCoins(u.coins || 0);
-          setChildName(u.childName || "Explorer");
-          setChildPhoto(u.childPhoto || "");
-          setUserLevel(u.level || 1);
-          setStreakDays(u.streakDays || 0);
-          localStorage.setItem("userData", JSON.stringify(u));
-        }
-      } catch (e) {
-        console.error("Failed to fetch profile");
-      }
-    };
-    
     // Initial load from cache
     const cached = localStorage.getItem("userData");
     if (cached) {
@@ -166,27 +162,16 @@ export default function HomeScreen() {
       } catch(e) {}
     }
 
-    const fetchRetentionData = async () => {
+    const loadAllDashboardData = async () => {
       const token = localStorage.getItem("userToken");
       if (!token) return;
-      try {
-        await fetchMissions();
-        
-        // IMPORTANT: Update the streak BEFORE fetching it
-        try {
-          const streakUpRes = await apiFetch("/api/retention/streak/update", { method: "POST" });
-          if (streakUpRes.ok) {
-            // Refetch profile to display new XP/coins from daily login on-the-spot
-            fetchProfile();
-          }
-        } catch(e) {}
-        
-        const stRes = await apiFetch("/api/retention/streak");
-        if (stRes.ok) {
-          const stData = await stRes.json();
-          setRetentionStreak(stData);
-        }
 
+      const profilePromise = fetchProfile();
+      const missionsPromise = fetchMissions();
+      const notificationsPromise = fetchNotifications();
+      const mascotNarrationPromise = fetchMascotNarration();
+
+      const citiesPromise = (async () => {
         try {
           const cRes = await apiFetch("/api/practice/cities");
           if (cRes.ok) {
@@ -198,18 +183,22 @@ export default function HomeScreen() {
         } catch (e) {
           console.error("Failed to fetch cities", e);
         }
-        
-        // Fetch Random Unscripted Surprise
-        const surRes = await apiFetch("/api/retention/surprise");
-        if (surRes.ok) {
-          const surData = await surRes.json();
-          if (surData && surData.reward_type) {
-            setSurpriseData(surData);
-            setChestTaps(0);
-          }
-        }
+      })();
 
-        // Fetch Spin Wheel status
+      const surprisePromise = (async () => {
+        try {
+          const surRes = await apiFetch("/api/retention/surprise");
+          if (surRes.ok) {
+            const surData = await surRes.json();
+            if (surData && surData.reward_type) {
+              setSurpriseData(surData);
+              setChestTaps(0);
+            }
+          }
+        } catch (e) {}
+      })();
+
+      const spinWheelPromise = (async () => {
         try {
           const spinRes = await apiFetch("/api/retention/spin-wheel/status");
           if (spinRes.ok) {
@@ -227,8 +216,9 @@ export default function HomeScreen() {
         } catch (e) {
           console.error("Failed to fetch spin wheel status", e);
         }
+      })();
 
-        // Fetch Daily Challenge status
+      const dailyChallengePromise = (async () => {
         try {
           const dcRes = await apiFetch("/api/practice/challenge/today");
           if (dcRes.ok) {
@@ -240,27 +230,51 @@ export default function HomeScreen() {
         } catch (e) {
           console.error("Failed to fetch daily challenge", e);
         }
-      } catch (e) {
-        console.error("Failed to fetch retention data", e);
-      }
+      })();
+
+      const streakSequencePromise = (async () => {
+        try {
+          try {
+            const streakUpRes = await apiFetch("/api/retention/streak/update", { method: "POST" });
+            if (streakUpRes.ok) {
+              await fetchProfile();
+            }
+          } catch(e) {}
+          
+          const stRes = await apiFetch("/api/retention/streak");
+          if (stRes.ok) {
+            const stData = await stRes.json();
+            setRetentionStreak(stData);
+          }
+        } catch (e) {
+          console.error("Failed to fetch streak info", e);
+        }
+      })();
+
+      await Promise.allSettled([
+        profilePromise,
+        missionsPromise,
+        notificationsPromise,
+        mascotNarrationPromise,
+        citiesPromise,
+        surprisePromise,
+        spinWheelPromise,
+        dailyChallengePromise,
+        streakSequencePromise
+      ]);
     };
-    
-    fetchProfile();
-    fetchRetentionData();
+
+    loadAllDashboardData();
 
     // Re-fetch missions whenever the user switches back to this tab/screen
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        fetchMissions();
-        fetchProfile();
-        fetchRetentionData();
+        loadAllDashboardData();
       }
     };
     // Also re-fetch on window focus (covers navigating back from another route)
     const handleFocus = () => {
-      fetchMissions();
-      fetchProfile();
-      fetchRetentionData();
+      loadAllDashboardData();
     };
     
     const handleUserDataUpdated = () => {

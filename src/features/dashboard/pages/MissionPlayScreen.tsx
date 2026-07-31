@@ -27,10 +27,19 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   const [searchParams] = useSearchParams();
   const chapterId = searchParams.get("chapterId") || "ch1";
   const missionSeq = parseInt(searchParams.get("missionSeq") || "1", 10);
+  const isReplay = searchParams.get("replay") === "true";
 
   const [loading, setLoading] = useState(true);
   const [missionData, setMissionData] = useState<any>(null);
   const [phase, setPhase] = useState<StepPhase>(() => {
+    if (isReplay) {
+      sessionStorage.removeItem(`mission_phase_${chapterId}_${missionSeq}`);
+      sessionStorage.removeItem(`boss_damage_${chapterId}_${missionSeq}`);
+      sessionStorage.removeItem(`boss_wrong_${chapterId}_${missionSeq}`);
+      sessionStorage.removeItem(`boss_index_${chapterId}_${missionSeq}`);
+      sessionStorage.removeItem(`mission_timer_${chapterId}_${missionSeq}`);
+      return "INTRO";
+    }
     const queryPhase = searchParams.get("phase");
     if (queryPhase === "BOSS" || queryPhase === "QUIZ" || queryPhase === "SUMMARY") {
       return queryPhase as StepPhase;
@@ -61,14 +70,28 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   // Question Countdown Timer State (30s per question)
   const [questionTimeLeft, setQuestionTimeLeft] = useState(QUESTION_TIME_LIMIT);
   const [totalSessionSec, setTotalSessionSec] = useState(() => {
+    if (isReplay) return 0;
     const saved = sessionStorage.getItem(`mission_timer_${chapterId}_${missionSeq}`);
     return saved ? (parseInt(saved, 10) || 0) : 0;
   });
 
   // Boss Battle state
-  const [bossDamageCount, setBossDamageCount] = useState(0);
-  const [childDamageCount, setChildDamageCount] = useState(0);
-  const [currentBossIndex, setCurrentBossIndex] = useState(0);
+  const [bossDamageCount, setBossDamageCount] = useState(() => {
+    if (isReplay) return 0;
+    const saved = sessionStorage.getItem(`boss_damage_${chapterId}_${missionSeq}`);
+    return saved ? (parseInt(saved, 10) || 0) : 0;
+  });
+  const [childDamageCount, setChildDamageCount] = useState(0); // tracks hearts lost (0-3)
+  const [wrongAnswerCount, setWrongAnswerCount] = useState(() => {
+    if (isReplay) return 0;
+    const saved = sessionStorage.getItem(`boss_wrong_${chapterId}_${missionSeq}`);
+    return saved ? (parseInt(saved, 10) || 0) : 0;
+  });
+  const [currentBossIndex, setCurrentBossIndex] = useState(() => {
+    if (isReplay) return 0;
+    const saved = sessionStorage.getItem(`boss_index_${chapterId}_${missionSeq}`);
+    return saved ? (parseInt(saved, 10) || 0) : 0;
+  });
   const [bossSelected, setBossSelected] = useState<number | null>(null);
   const [bossAngry, setBossAngry] = useState(false);
   const [dragonCrying, setDragonCrying] = useState(false);
@@ -78,6 +101,18 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   const [showReviveModal, setShowReviveModal] = useState(false);
   const [revivalSpins, setRevivalSpins] = useState(0);
   const [hasDoubleDamage, setHasDoubleDamage] = useState(false);
+
+  useEffect(() => {
+    sessionStorage.setItem(`boss_damage_${chapterId}_${missionSeq}`, bossDamageCount.toString());
+  }, [bossDamageCount, chapterId, missionSeq]);
+
+  useEffect(() => {
+    sessionStorage.setItem(`boss_wrong_${chapterId}_${missionSeq}`, wrongAnswerCount.toString());
+  }, [wrongAnswerCount, chapterId, missionSeq]);
+
+  useEffect(() => {
+    sessionStorage.setItem(`boss_index_${chapterId}_${missionSeq}`, currentBossIndex.toString());
+  }, [currentBossIndex, chapterId, missionSeq]);
 
   // Final Summary state
   const [completionResult, setCompletionResult] = useState<any>(null);
@@ -91,7 +126,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
         const json = await res.json();
         if (json.success && json.data) {
           setMissionData(json.data);
-          if (json.data.quizCompleted) {
+          if (json.data.quizCompleted && !isReplay) {
             setPhase("BOSS");
           }
           if (json.data.doubleDamage !== undefined) {
@@ -193,6 +228,13 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   // Finalize Mission API helper
   const finalizeMission = async (finalBossDamage = bossDamageCount, finalChildDamage = childDamageCount, currentAnswers = userAnswers) => {
     try {
+      // Clear boss state
+      sessionStorage.removeItem(`boss_damage_${chapterId}_${missionSeq}`);
+      sessionStorage.removeItem(`boss_wrong_${chapterId}_${missionSeq}`);
+      sessionStorage.removeItem(`boss_index_${chapterId}_${missionSeq}`);
+      sessionStorage.removeItem(`mission_phase_${chapterId}_${missionSeq}`);
+      sessionStorage.removeItem(`mission_timer_${chapterId}_${missionSeq}`);
+
       const bossCorrect = finalBossDamage;
       const res = await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/complete`, {
         method: "POST",
@@ -253,8 +295,18 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       // Wrong Answer -> Dragon/Hero is Crying!
       setDragonCrying(true);
       setBossAngry(false);
-      const newChildDamage = childDamageCount + 1;
+      const newWrongCount = wrongAnswerCount + 1;
+      setWrongAnswerCount(newWrongCount);
+      
+      const newChildDamage = Math.min(3, childDamageCount + 1);
       setChildDamageCount(newChildDamage);
+
+      // Sync updated lives to the backend immediately so that revival spin checks are accurate
+      apiFetch(`/api/practice/chapters/${chapterId}/missions/hearts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hearts: Math.max(0, 3 - newChildDamage) })
+      }).catch(console.error);
 
       setTimeout(() => {
         setDragonCrying(false);
@@ -281,7 +333,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
         }
       }, 1400);
     }
-  }, [bossDamageCount, childDamageCount, currentBossIndex, bossMaxHp, bossQuestions.length, userAnswers, hasDoubleDamage]);
+  }, [bossDamageCount, childDamageCount, wrongAnswerCount, currentBossIndex, bossMaxHp, bossQuestions.length, userAnswers, hasDoubleDamage]);
 
   const handleQuizConfirm = () => {
     if (!quizConfirmed) {
@@ -1162,9 +1214,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
         </div>
       )}
 
-      <footer className="px-6 py-4 text-center text-xs font-semibold text-[#767683]">
-        © StudySaathy Learning Platform
-      </footer>
+
     </div>
   );
 }

@@ -30,9 +30,9 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
     headers.set("Expires", "0");
   }
 
-  // Add 10-second timeout using AbortController
+  // Add 30-second timeout using AbortController
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
 
   let response;
   try {
@@ -52,7 +52,7 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
         if (!refreshPromise) {
           refreshPromise = (async () => {
             const refreshController = new AbortController();
-            const refreshTimeout = setTimeout(() => refreshController.abort(), 10000);
+            const refreshTimeout = setTimeout(() => refreshController.abort(), 30000);
             try {
               const res = await fetch("/api/users/refresh", {
                 method: "POST",
@@ -83,7 +83,7 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
           
           // Re-fetch with timeout
           const retryController = new AbortController();
-          const retryTimeout = setTimeout(() => retryController.abort(), 10000);
+          const retryTimeout = setTimeout(() => retryController.abort(), 30000);
           try {
             response = await fetch(url, { ...options, headers, signal: retryController.signal });
             clearTimeout(retryTimeout);

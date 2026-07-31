@@ -250,7 +250,7 @@ export default function MissionMapScreen() {
                     <button
                       disabled={isLocked}
                       onClick={() =>
-                        navigate(`/mission-play?chapterId=${chapterId}&missionSeq=${m.seq}`)
+                        navigate(`/mission-play?chapterId=${chapterId}&missionSeq=${m.seq}${isCompleted ? "&replay=true" : ""}`)
                       }
                       className={`px-4 py-2 rounded-2xl font-bold text-xs flex items-center gap-2 transition-all active:scale-95 ${
                         isCompleted

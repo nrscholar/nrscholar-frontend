@@ -137,81 +137,92 @@ export default function ParentSettings() {
   useEffect(() => {
     async function loadControls() {
       try {
-        const res = await apiFetch("/api/parent/controls");
-        const json = await res.json();
-        if (json.success && json.data?.parentControls) {
-          const pc = json.data.parentControls;
-          setAllowReels(pc.allowReels);
-          setAllowChat(pc.allowChat);
-          setScreenTimeMinutes(pc.screenTimeMinutes !== undefined ? pc.screenTimeMinutes : 0);
-          if (pc.restrictedSubjects) {
-            setRestrictedSubjects(pc.restrictedSubjects);
-          }
-        }
-        
-        // Load parent photo and children details
-        const profileRes = await apiFetch("/api/users/me");
-        const profileJson = await profileRes.json();
-        if (profileJson.success && profileJson.data?.user) {
-          const u = profileJson.data.user;
-          setUser(u);
-          setParentName(u.fullName || "");
-          setParentPhoto(u.parentPhoto || "");
-          
-          const kids = u.children || [];
-          const k1 = kids.find((k: any) => k.childId === "child_1") || kids[0];
-          if (k1) {
-            setChild1Name(k1.childName || "");
-            setChild1Class(k1.childClass || "");
-            setChild1Age(k1.childAge ? `${k1.childAge} Years` : "");
-            setChild1Board(k1.childBoard || "");
-            setChild1Photo(k1.childPhoto || "");
-            setChild1Code(k1.uniqueCode || "");
-          } else {
-            setChild1Name(u.childName || "");
-            setChild1Class(u.childClass || "");
-            setChild1Age(u.childAge ? `${u.childAge} Years` : "");
-            setChild1Board(u.childBoard || "");
-            setChild1Photo(u.childPhoto || "");
-          }
-
-          const k2 = kids.find((k: any) => k.childId === "child_2") || (kids.length > 1 ? kids[1] : null);
-          if (k2) {
-            setHasChild2(true);
-            setChild2Name(k2.childName || "");
-            setChild2Class(k2.childClass || "");
-            setChild2Age(k2.childAge ? `${k2.childAge} Years` : "");
-            setChild2Board(k2.childBoard || "");
-            setChild2Photo(k2.childPhoto || "");
-            setChild2Code(k2.uniqueCode || "");
-          } else {
-            setHasChild2(false);
-          }
-        }
-
-        // Fetch subjects
-        const subjRes = await apiFetch("/api/practice/subjects");
-        const subjJson = await subjRes.json();
-        if (subjJson.success && subjJson.data) {
-          const names: string[] = Array.from(new Set(subjJson.data.map((s: any) => s.name)));
-          setSubjects(names);
-          // Initialize restriction state for any new subjects
-          setRestrictedSubjects(prev => {
-            const newState = { ...prev };
-            names.forEach((s: string) => {
-              if (newState[s] === undefined) {
-                // Check if an alias is already restricted
-                const lower = s.toLowerCase();
-                let isRestricted = false;
-                if (lower.includes("math") && (prev["Maths"] || prev["Mathematics"] || prev["Math"])) isRestricted = true;
-                if (lower.includes("sci") && (prev["Science"] || prev["Sci"])) isRestricted = true;
-                if (lower.includes("eng") && (prev["English"] || prev["Eng"])) isRestricted = true;
-                newState[s] = isRestricted;
+        const controlsPromise = (async () => {
+          try {
+            const res = await apiFetch("/api/parent/controls");
+            const json = await res.json();
+            if (json.success && json.data?.parentControls) {
+              const pc = json.data.parentControls;
+              setAllowReels(pc.allowReels);
+              setAllowChat(pc.allowChat);
+              setScreenTimeMinutes(pc.screenTimeMinutes !== undefined ? pc.screenTimeMinutes : 0);
+              if (pc.restrictedSubjects) {
+                setRestrictedSubjects(pc.restrictedSubjects);
               }
-            });
-            return newState;
-          });
-        }
+            }
+          } catch (e) {
+            console.error("Failed to load parent controls", e);
+          }
+        })();
+
+        const profilePromise = (async () => {
+          try {
+            const profileRes = await apiFetch("/api/users/me");
+            const profileJson = await profileRes.json();
+            if (profileJson.success && profileJson.data?.user) {
+              const u = profileJson.data.user;
+              setUser(u);
+              setParentName(u.fullName || "");
+              setParentPhoto(u.parentPhoto || "");
+              
+              const kids = u.children || [];
+              const k1 = kids.find((k: any) => k.childId === "child_1") || kids[0];
+              if (k1) {
+                setChild1Name(k1.childName || "");
+                setChild1Class(k1.childClass || "");
+                setChild1Age(k1.childAge ? `${k1.childAge} Years` : "");
+                setChild1Board(k1.childBoard || "");
+                setChild1Photo(k1.childPhoto || "");
+                setChild1Code(k1.uniqueCode || "");
+              } else {
+                setChild1Name(u.childName || "");
+                setChild1Class(u.childClass || "");
+                setChild1Age(u.childAge ? `${u.childAge} Years` : "");
+                setChild1Board(u.childBoard || "");
+                setChild1Photo(u.childPhoto || "");
+              }
+
+              const k2 = kids.find((k: any) => k.childId === "child_2") || (kids.length > 1 ? kids[1] : null);
+              if (k2) {
+                setHasChild2(true);
+                setChild2Name(k2.childName || "");
+                setChild2Class(k2.childClass || "");
+                setChild2Age(k2.childAge ? `${k2.childAge} Years` : "");
+                setChild2Board(k2.childBoard || "");
+                setChild2Photo(k2.childPhoto || "");
+                setChild2Code(k2.uniqueCode || "");
+              } else {
+                setHasChild2(false);
+              }
+            }
+          } catch (e) {
+            console.error("Failed to load profile", e);
+          }
+        })();
+
+        const subjectsPromise = (async () => {
+          try {
+            const subjRes = await apiFetch("/api/practice/subjects");
+            const subjJson = await subjRes.json();
+            if (subjJson.success && subjJson.data) {
+              const names: string[] = Array.from(new Set(subjJson.data.map((s: any) => s.name)));
+              setSubjects(names);
+              setRestrictedSubjects(prev => {
+                const newState = { ...prev };
+                names.forEach((s: string) => {
+                  if (newState[s] === undefined) {
+                    newState[s] = false;
+                  }
+                });
+                return newState;
+              });
+            }
+          } catch (e) {
+            console.error("Failed to load subjects", e);
+          }
+        })();
+
+        await Promise.allSettled([controlsPromise, profilePromise, subjectsPromise]);
       } catch (err) {
         console.error("Failed to load parental controls", err);
       }
@@ -537,8 +548,8 @@ export default function ParentSettings() {
                       <span className="text-base font-bold text-[#191c1e]">{subject}</span>
                     </div>
                     <CustomSwitch 
-                      checked={restrictedSubjects[subject] || false} 
-                      onChange={(v) => toggleSubjectRestriction(subject, v)} 
+                      checked={!restrictedSubjects[subject]} 
+                      onChange={(v) => toggleSubjectRestriction(subject, !v)} 
                     />
                   </div>
                 )) : (

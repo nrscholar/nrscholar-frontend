@@ -33,11 +33,9 @@ export default function ChapterReaderScreen() {
   const startTimeRef = useRef(Date.now());
   const hasLoggedRef = useRef(false);
 
-  // ─── Two-phase zoom ────────────────────────────────────────────────────────
-  // committedScale: the scale baked into <Page width> — only updates on pinch END
-  // liveScale:      CSS transform applied DURING the pinch — causes zero re-renders
+  // ─── Two-phase zoom using CSS Zoom ──────────────────────────────────────────
+  // committedScale: the scale applied via CSS zoom on the wrapper
   const [committedScale, setCommittedScale] = useState(1);
-  const [liveScale, setLiveScale] = useState(1);          // CSS transform multiplier
   const committedScaleRef = useRef(1);                    // mutable, no re-render
   const liveScaleRef = useRef(1);                         // mutable, no re-render
 
@@ -147,18 +145,14 @@ export default function ChapterReaderScreen() {
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (e.touches.length === 2 && lastDistRef.current !== null) {
-      // ── Phase 1: smooth live CSS transform — NO state update to <Page> ──
       e.preventDefault();
       const ratio = getPinchDist(e.touches) / lastDistRef.current;
-      // liveScale is a multiplier on top of committedScale
       const rawLive = lastCommittedAtStartRef.current * ratio;
       const clampedTotal = Math.min(MAX_SCALE, Math.max(MIN_SCALE, rawLive));
-      // Express liveScale as the factor relative to committedScale
-      const live = clampedTotal / committedScaleRef.current;
-      liveScaleRef.current = live;
-      // Directly mutate the DOM — avoids React re-render entirely
+      liveScaleRef.current = clampedTotal;
+      // Directly mutate DOM zoom for smooth 60fps zooming without React re-render
       const el = document.getElementById('pdf-zoom-wrapper');
-      if (el) el.style.transform = `scale(${live})`;
+      if (el) el.style.zoom = String(clampedTotal);
     } else if (
       e.touches.length === 1 &&
       touchStartXRef.current !== null &&
@@ -175,20 +169,12 @@ export default function ChapterReaderScreen() {
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
     if (isPinchingRef.current) {
-      // ── Phase 2: commit the final scale → re-renders <Page> exactly once ──
-      const live = liveScaleRef.current;
-      const newCommitted = Math.min(MAX_SCALE, Math.max(MIN_SCALE,
-        committedScaleRef.current * live
-      ));
+      const newCommitted = Math.min(MAX_SCALE, Math.max(MIN_SCALE, liveScaleRef.current));
       committedScaleRef.current = newCommitted;
-      liveScaleRef.current = 1;
+      liveScaleRef.current = newCommitted;
 
-      // Reset the inline transform before React re-renders with new width
-      const el = document.getElementById('pdf-zoom-wrapper');
-      if (el) el.style.transform = 'scale(1)';
-
+      // Update React state to match
       setCommittedScale(newCommitted);
-      setLiveScale(1);
       isPinchingRef.current = false;
     }
 
@@ -214,14 +200,13 @@ export default function ChapterReaderScreen() {
     if (swipeHint) { const t = setTimeout(() => setSwipeHint(null), 400); return () => clearTimeout(t); }
   }, [swipeHint]);
 
-  // ─── Zoom button helpers (commit immediately — one re-render) ──────────────
+  // ─── Zoom button helpers ───────────────────────────────────────────────────
   const applyCommit = (next: number) => {
     committedScaleRef.current = next;
-    liveScaleRef.current = 1;
+    liveScaleRef.current = next;
     const el = document.getElementById('pdf-zoom-wrapper');
-    if (el) el.style.transform = 'scale(1)';
+    if (el) el.style.zoom = String(next);
     setCommittedScale(next);
-    setLiveScale(1);
   };
   const zoomIn    = () => applyCommit(Math.min(MAX_SCALE, parseFloat((committedScaleRef.current + 0.25).toFixed(2))));
   const zoomOut   = () => applyCommit(Math.max(MIN_SCALE, parseFloat((committedScaleRef.current - 0.25).toFixed(2))));
@@ -235,8 +220,8 @@ export default function ChapterReaderScreen() {
     );
   }
 
-  // Only used for the <Page> width — only changes when pinch ends or button tapped
-  const pageWidth = Math.round(BASE_WIDTH() * committedScale);
+  // Keep Page width constant so react-pdf doesn't re-render/flicker the canvas
+  const pageWidth = Math.round(BASE_WIDTH());
 
   return (
     <div className={`flex flex-col bg-white ${isFullscreen ? 'fixed inset-0 z-50' : 'h-screen overflow-hidden'}`}>
@@ -302,19 +287,19 @@ export default function ChapterReaderScreen() {
               >
                 {/*
                   id="pdf-zoom-wrapper" — during a pinch we mutate this element's
-                  style.transform directly (bypassing React) for smooth 60fps feedback.
-                  On pinch-end we reset transform and commit the new width to state.
+                  style.zoom directly (bypassing React) for smooth 60fps feedback.
+                  On pinch-end we commit the new scale to state.
                 */}
                 <div
                   id="pdf-zoom-wrapper"
-                  style={{ transformOrigin: 'top center', willChange: 'transform' }}
+                  style={{ zoom: committedScale, transformOrigin: 'top center', display: 'inline-block' }}
                 >
                   <div className="bg-white rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(20,23,121,0.2)] border-8 border-white/60">
                     <Page
                       pageNumber={pageNumber}
                       renderTextLayer={false}
                       renderAnnotationLayer={true}
-                      devicePixelRatio={window.devicePixelRatio || 1}
+                      devicePixelRatio={2}
                       width={pageWidth}
                     />
                   </div>

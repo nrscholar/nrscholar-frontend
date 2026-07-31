@@ -21,45 +21,52 @@ export default function WeeklyTestQuestionsScreen() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    async function fetchTest() {
-      try {
-        const cached = localStorage.getItem("userData");
-        if (cached) {
-          try {
-            const u = JSON.parse(cached);
-            setChildName(u.childName || u.name || "Kid");
-            setChildPhoto(u.childPhoto || u.photo || "");
-          } catch(e) {}
-        }
-        const meRes = await apiFetch("/api/users/me");
-        const meJson = await meRes.json();
-        if (meJson.success && meJson.data?.user) {
-          setChildName(meJson.data.user.childName || meJson.data.user.name || "Kid");
-          setChildPhoto(meJson.data.user.childPhoto || meJson.data.user.photo || "");
-        }
-      } catch (e) {}
-
-      try {
-        const notifRes = await apiFetch("/api/notifications");
-        const notifData = await notifRes.json();
-        if (notifData.success && notifData.data) {
-          setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
-        }
-      } catch (e) {}
-
-      try {
-        const res = await apiFetch("/api/practice/weekly-test");
-        const json = await res.json();
-        if (json.success && json.data) {
-          setQuestionsData(json.data.questions);
-          setTipsData(json.data.tips);
-        }
-      } catch (e) {
-      } finally {
-        setLoading(false);
+    async function loadQuestions() {
+      const cached = localStorage.getItem("userData");
+      if (cached) {
+        try {
+          const u = JSON.parse(cached);
+          setChildName(u.childName || u.name || "Kid");
+          setChildPhoto(u.childPhoto || u.photo || "");
+        } catch(e) {}
       }
+
+      const mePromise = (async () => {
+        try {
+          const meRes = await apiFetch("/api/users/me");
+          const meJson = await meRes.json();
+          if (meJson.success && meJson.data?.user) {
+            setChildName(meJson.data.user.childName || meJson.data.user.name || "Kid");
+            setChildPhoto(meJson.data.user.childPhoto || meJson.data.user.photo || "");
+          }
+        } catch (e) {}
+      })();
+
+      const notifPromise = (async () => {
+        try {
+          const notifRes = await apiFetch("/api/notifications");
+          const notifData = await notifRes.json();
+          if (notifData.success && notifData.data) {
+            setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
+          }
+        } catch (e) {}
+      })();
+
+      const testPromise = (async () => {
+        try {
+          const res = await apiFetch("/api/practice/weekly-test");
+          const json = await res.json();
+          if (json.success && json.data) {
+            setQuestionsData(json.data.questions);
+            setTipsData(json.data.tips);
+          }
+        } catch (e) {}
+      })();
+
+      await Promise.allSettled([mePromise, notifPromise, testPromise]);
+      setLoading(false);
     }
-    fetchTest();
+    loadQuestions();
   }, []);
 
   const total = questionsData.length > 0 ? questionsData.length : 1;
