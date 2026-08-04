@@ -211,13 +211,7 @@ export default function HomeScreen() {
         {/* MAIN HERO SECTION: Large Journey Progress Card */}
         <TouchableOpacity
           activeOpacity={0.9}
-          onPress={() => router.push({
-            pathname: "/practice/chapters",
-            params: {
-              subjectId: "sub1",
-              subjectName: "Mathematics",
-            }
-          })}
+          onPress={() => router.push("/practice/journey-map")}
         >
           <LinearGradient
             colors={["#e0f7f6", "#ffffff"]}

@@ -168,14 +168,14 @@ export default function ParentDailyTipScreen() {
               setChildName(u.childName || "Explorer");
               setParentLevel(u.parentLevel || 1);
               setXp(u.parentXp || 0);
-              setTotalStars(u.totalStars || 0);
-              setStreak(u.streakDays || 0);
+              setTotalStars((u.parentStars || 0) + (u.totalStars || 0));
+              setStreak(u.parentStreak || u.streakDays || 0);
 
               nextCache.childName = u.childName || "Explorer";
               nextCache.parentLevel = u.parentLevel || 1;
               nextCache.xp = u.parentXp || 0;
-              nextCache.totalStars = u.totalStars || 0;
-              nextCache.streak = u.streakDays || 0;
+              nextCache.totalStars = (u.parentStars || 0) + (u.totalStars || 0);
+              nextCache.streak = u.parentStreak || u.streakDays || 0;
             }
           }
 

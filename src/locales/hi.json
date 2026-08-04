@@ -119,6 +119,13 @@
     "parent_space": "पैरेंट स्पेस",
     "student_profile": "छात्र प्रोफाइल",
     "journey": "यात्र",
-    "growth_journey": "विकास यात्रा"
+    "growth_journey": "विकास यात्रा",
+    "how_can_we_help": "हम आपकी क्या मदद कर सकते हैं?",
+    "browse_faqs": "हमारे अक्सर पूछे जाने वाले प्रश्न पढ़ें या हमारी टीम से संपर्क करें।",
+    "contact_support": "सहायता से संपर्क करें",
+    "reply_within_24h": "हम आम तौर पर 24 घंटे के भीतर जवाब देते हैं।",
+    "language_settings": "भाषा सेटिंग्स",
+    "lessons_language": "पाठों की भाषा",
+    "manage_language_pref": "अपनी भाषा प्राथमिकताएं प्रबंधित करें"
   }
 }

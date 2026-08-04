@@ -14,6 +14,7 @@ export default function InventoryScreen() {
   const [openingBox, setOpeningBox] = useState<string | null>(null);
   const [hatchingType, setHatchingType] = useState<string | null>(null);
   const [rewardData, setRewardData] = useState<any>(null);
+  const [subTab, setSubTab] = useState<"Journey" | "Lab">("Journey");
 
   const [xp, setXp] = useState(0);
   const [coins, setCoins] = useState(0);
@@ -380,68 +381,96 @@ export default function InventoryScreen() {
               <p className="text-xs text-[#b8b8d2]">Hatch fragments and level up your mystical companions!</p>
             </div>
 
-            <div>
-              <h2 className="text-sm font-bold text-[#767683] tracking-widest uppercase mb-3">My Dragons</h2>
-              {dragons.length === 0 ? (
-                <div className="bg-white rounded-[20px] p-6 text-center border border-[#f0f0f0]">
-                  <p className="text-sm text-[#767683]">No dragons hatched yet. Collect fragments!</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  {dragons.map((d: any) => (
+            {/* Sub-tab Switcher */}
+            <div className="flex gap-2 bg-white p-1.5 rounded-2xl border border-[#f0f0f0] shadow-sm">
+              <button
+                onClick={() => setSubTab("Journey")}
+                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  subTab === "Journey"
+                    ? "bg-[#141779] text-white shadow-md"
+                    : "text-[#767683] hover:bg-gray-50"
+                }`}
+              >
+                Dragon Journey 🗺️
+              </button>
+              <button
+                onClick={() => setSubTab("Lab")}
+                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  subTab === "Lab"
+                    ? "bg-[#141779] text-white shadow-md"
+                    : "text-[#767683] hover:bg-gray-50"
+                }`}
+              >
+                Lab 🧪
+              </button>
+            </div>
+
+            {subTab === "Journey" && (
+              <div>
+                <h2 className="text-sm font-bold text-[#767683] tracking-widest uppercase mb-3">My Dragons</h2>
+                {dragons.length === 0 ? (
+                  <div className="bg-white rounded-[20px] p-6 text-center border border-[#f0f0f0]">
+                    <p className="text-sm text-[#767683]">No dragons hatched yet. Collect fragments!</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    {dragons.map((d: any) => (
+                      <motion.div 
+                        key={d.id} 
+                        animate={{ y: [-3, 3, -3] }}
+                        transition={{ repeat: Infinity, duration: 2 + Math.random(), ease: "easeInOut" }}
+                        className="bg-gradient-to-br from-[#e0e0ff] to-[#ffffff] rounded-[20px] p-4 border-2 border-[#141779] flex flex-col items-center shadow-sm"
+                      >
+                        <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-2">
+                          <span className="text-3xl">🐉</span>
+                        </div>
+                        <h3 className="text-[13px] font-bold text-[#141779] text-center">{d.name}</h3>
+                        <p className="text-[10px] font-bold text-[#767683]">Level {d.level} • {d.rarity}</p>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {subTab === "Lab" && (
+              <div>
+                <h2 className="text-sm font-bold text-[#767683] tracking-widest uppercase mb-3">Dragon Fragments</h2>
+                <div className="flex flex-col gap-3">
+                  {fragments.map((f: any) => (
                     <motion.div 
-                      key={d.id} 
-                      animate={{ y: [-3, 3, -3] }}
-                      transition={{ repeat: Infinity, duration: 2 + Math.random(), ease: "easeInOut" }}
-                      className="bg-gradient-to-br from-[#e0e0ff] to-[#ffffff] rounded-[20px] p-4 border-2 border-[#141779] flex flex-col items-center shadow-sm"
+                      key={f.type} 
+                      animate={hatchingType === f.type ? {
+                        x: [-5, 5, -5, 5, -5, 5, 0],
+                        scale: [1, 1.05, 1.05, 1],
+                        filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"]
+                      } : {}}
+                      transition={{ duration: 0.5, repeat: hatchingType === f.type ? Infinity : 0 }}
+                      className="bg-white rounded-[20px] p-4 border border-[#f0f0f0] flex items-center justify-between"
                     >
-                      <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-2">
-                        <span className="text-3xl">🐉</span>
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full bg-[rgba(20,23,121,0.05)] flex items-center justify-center">
+                          <span className="text-xl">🧩</span>
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-[#141779] capitalize">{f.type} Fragments</h3>
+                          <p className="text-xs text-[#767683] font-semibold">{f.count} / 10 Needed</p>
+                        </div>
                       </div>
-                      <h3 className="text-[13px] font-bold text-[#141779] text-center">{d.name}</h3>
-                      <p className="text-[10px] font-bold text-[#767683]">Level {d.level} • {d.rarity}</p>
+                      {f.count >= 10 && (
+                        <button 
+                          onClick={() => combineFragments(f.type)}
+                          disabled={hatchingType !== null}
+                          className={`text-white px-4 py-2 rounded-xl text-xs font-bold transition-colors ${hatchingType === f.type ? "bg-gray-400" : "bg-[#20c997] hover:bg-[#1bb386]"}`}
+                        >
+                          {hatchingType === f.type ? "Hatching..." : "Hatch!"}
+                        </button>
+                      )}
                     </motion.div>
                   ))}
                 </div>
-              )}
-            </div>
-
-            <div>
-              <h2 className="text-sm font-bold text-[#767683] tracking-widest uppercase mb-3">Dragon Fragments</h2>
-              <div className="flex flex-col gap-3">
-                {fragments.map((f: any) => (
-                  <motion.div 
-                    key={f.type} 
-                    animate={hatchingType === f.type ? {
-                      x: [-5, 5, -5, 5, -5, 5, 0],
-                      scale: [1, 1.05, 1.05, 1],
-                      filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"]
-                    } : {}}
-                    transition={{ duration: 0.5, repeat: hatchingType === f.type ? Infinity : 0 }}
-                    className="bg-white rounded-[20px] p-4 border border-[#f0f0f0] flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-[rgba(20,23,121,0.05)] flex items-center justify-center">
-                        <span className="text-xl">🧩</span>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-bold text-[#141779] capitalize">{f.type} Fragments</h3>
-                        <p className="text-xs text-[#767683] font-semibold">{f.count} / 10 Needed</p>
-                      </div>
-                    </div>
-                    {f.count >= 10 && (
-                      <button 
-                        onClick={() => combineFragments(f.type)}
-                        disabled={hatchingType !== null}
-                        className={`text-white px-4 py-2 rounded-xl text-xs font-bold transition-colors ${hatchingType === f.type ? "bg-gray-400" : "bg-[#20c997] hover:bg-[#1bb386]"}`}
-                      >
-                        {hatchingType === f.type ? "Hatching..." : "Hatch!"}
-                      </button>
-                    )}
-                  </motion.div>
-                ))}
               </div>
-            </div>
+            )}
           </div>
         )}
       </main>

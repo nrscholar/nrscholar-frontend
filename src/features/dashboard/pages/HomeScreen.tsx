@@ -88,7 +88,6 @@ export default function HomeScreen() {
   // Unscripted Game Elements
   const [surpriseData, setSurpriseData] = useState<any>(null);
   const [chestTaps, setChestTaps] = useState(0);
-  const [mascotMsg, setMascotMsg] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasFreeSpin, setHasFreeSpin] = useState(false);
   const [showSpinPopup, setShowSpinPopup] = useState(false);
@@ -113,16 +112,7 @@ export default function HomeScreen() {
     } catch (e) {}
   };
 
-  const fetchMascotNarration = async () => {
-    try {
-      const res = await apiFetch("/api/dashboard/mascot-narration");
-      const json = await res.json();
-      if (json.success && json.narration) {
-        setMascotMsg(json.narration);
-        setTimeout(() => setMascotMsg(""), 8000);
-      }
-    } catch (e) {}
-  };
+
 
   const fetchProfile = async () => {
     const token = localStorage.getItem("userToken");
@@ -169,7 +159,6 @@ export default function HomeScreen() {
       const profilePromise = fetchProfile();
       const missionsPromise = fetchMissions();
       const notificationsPromise = fetchNotifications();
-      const mascotNarrationPromise = fetchMascotNarration();
 
       const citiesPromise = (async () => {
         try {
@@ -255,7 +244,6 @@ export default function HomeScreen() {
         profilePromise,
         missionsPromise,
         notificationsPromise,
-        mascotNarrationPromise,
         citiesPromise,
         surprisePromise,
         spinWheelPromise,
@@ -271,10 +259,6 @@ export default function HomeScreen() {
       if (document.visibilityState === 'visible') {
         loadAllDashboardData();
       }
-    };
-    // Also re-fetch on window focus (covers navigating back from another route)
-    const handleFocus = () => {
-      loadAllDashboardData();
     };
     
     const handleUserDataUpdated = () => {
@@ -298,7 +282,6 @@ export default function HomeScreen() {
     };
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
     window.addEventListener('userDataUpdated', handleUserDataUpdated);
 
     // Poll every 10 seconds so missions update quickly after being completed
@@ -306,7 +289,6 @@ export default function HomeScreen() {
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
       window.removeEventListener('userDataUpdated', handleUserDataUpdated);
       clearInterval(pollInterval);
     };
@@ -399,14 +381,6 @@ export default function HomeScreen() {
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-1.5">
               <h1 className="text-lg font-bold text-[#141779] leading-tight truncate">{childName}</h1>
-              <button
-                onClick={() => setShowSwitcher(true)}
-                title="Switch Child Profile"
-                className="p-1 rounded-lg bg-indigo-50 text-[#141779] hover:bg-indigo-100 transition-colors flex items-center gap-1 text-[10px] font-bold border border-indigo-100 shrink-0"
-              >
-                <Users size={12} />
-                <span>Switch</span>
-              </button>
             </div>
             <div className="flex items-center gap-1 mt-0.5">
               <Star size={14} fill="#006a62" color="#006a62" className="shrink-0" />
@@ -506,7 +480,7 @@ export default function HomeScreen() {
         </button>
 
         {/* DAILY CHALLENGE CARD */}
-        {dailyChallenge && (
+        {false && dailyChallenge && (
           <div className="w-full bg-[#f4efff] rounded-[24px] p-5 border-[1.5px] border-[#dcd0ff] shadow-sm relative overflow-hidden z-10">
             {/* Background decorative elements */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-200/20 rounded-full blur-2xl pointer-events-none" />

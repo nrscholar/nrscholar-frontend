@@ -134,49 +134,64 @@ export default function ParentLearningDNAScreen() {
             <h3 className="text-[16px] font-semibold text-[#464652] mb-3 px-1">Learning Modalities</h3>
             <div className="bg-white/70 backdrop-blur-md rounded-[20px] p-5 border border-white/60 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col gap-5">
               
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-[#e6e0ff] flex items-center justify-center">
-                  <BrainCircuit size={24} className="text-[#30007f]" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between mb-1.5">
-                    <span className="text-[15px] font-bold text-[#191c1e]">Visual Processing</span>
-                    <span className="text-[15px] font-bold text-[#30007f]">{dnaData?.visualPercentage ?? 92}%</span>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-[#e6e0ff] flex items-center justify-center shrink-0">
+                    <BrainCircuit size={24} className="text-[#30007f]" />
                   </div>
-                  <div className="w-full h-2.5 bg-gray-200/60 rounded-full overflow-hidden shadow-inner relative">
-                    <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#141779] to-[#30007f] rounded-full" style={{ width: `${dnaData?.visualPercentage ?? 92}%` }} />
+                  <div className="flex-1">
+                    <div className="flex justify-between mb-1.5">
+                      <span className="text-[15px] font-bold text-[#191c1e]">Visual Processing</span>
+                      <span className="text-[15px] font-bold text-[#30007f]">{dnaData?.visualPercentage ?? 92}%</span>
+                    </div>
+                    <div className="w-full h-2.5 bg-gray-200/60 rounded-full overflow-hidden shadow-inner relative">
+                      <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#141779] to-[#30007f] rounded-full" style={{ width: `${dnaData?.visualPercentage ?? 92}%` }} />
+                    </div>
                   </div>
                 </div>
+                <p className="text-[11px] text-[#767683] font-semibold pl-16">
+                  Measures your child's ability to learn using visual stimuli, including diagrams, charts, and spatial puzzles.
+                </p>
               </div>
 
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-[#ccf4f0] flex items-center justify-center">
-                  <Activity size={24} className="text-[#006a62]" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between mb-1.5">
-                    <span className="text-[15px] font-bold text-[#191c1e]">Kinesthetic (Hands-on)</span>
-                    <span className="text-[15px] font-bold text-[#006a62]">{dnaData?.kinestheticPercentage ?? 78}%</span>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-[#ccf4f0] flex items-center justify-center shrink-0">
+                    <Activity size={24} className="text-[#006a62]" />
                   </div>
-                  <div className="w-full h-2.5 bg-gray-200/60 rounded-full overflow-hidden shadow-inner relative">
-                    <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#006a62] to-[#57fae9] rounded-full" style={{ width: `${dnaData?.kinestheticPercentage ?? 78}%` }} />
+                  <div className="flex-1">
+                    <div className="flex justify-between mb-1.5">
+                      <span className="text-[15px] font-bold text-[#191c1e]">Kinesthetic (Hands-on)</span>
+                      <span className="text-[15px] font-bold text-[#006a62]">{dnaData?.kinestheticPercentage ?? 78}%</span>
+                    </div>
+                    <div className="w-full h-2.5 bg-gray-200/60 rounded-full overflow-hidden shadow-inner relative">
+                      <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#006a62] to-[#57fae9] rounded-full" style={{ width: `${dnaData?.kinestheticPercentage ?? 78}%` }} />
+                    </div>
                   </div>
                 </div>
+                <p className="text-[11px] text-[#767683] font-semibold pl-16">
+                  Reflects how effectively your child learns through active participation, drag-and-drop interactions, and hands-on games.
+                </p>
               </div>
 
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-[#ffdad6] flex items-center justify-center">
-                  <Target size={24} className="text-[#ba1a1a]" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between mb-1.5">
-                    <span className="text-[15px] font-bold text-[#191c1e]">Reading/Writing</span>
-                    <span className="text-[15px] font-bold text-[#ba1a1a]">{dnaData?.readingPercentage ?? 45}%</span>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-[#ffdad6] flex items-center justify-center shrink-0">
+                    <Target size={24} className="text-[#ba1a1a]" />
                   </div>
-                  <div className="w-full h-2.5 bg-gray-200/60 rounded-full overflow-hidden shadow-inner relative">
-                    <div className="absolute top-0 left-0 h-full bg-[#ba1a1a] rounded-full" style={{ width: `${dnaData?.readingPercentage ?? 45}%` }} />
+                  <div className="flex-1">
+                    <div className="flex justify-between mb-1.5">
+                      <span className="text-[15px] font-bold text-[#191c1e]">Reading/Writing</span>
+                      <span className="text-[15px] font-bold text-[#ba1a1a]">{dnaData?.readingPercentage ?? 45}%</span>
+                    </div>
+                    <div className="w-full h-2.5 bg-gray-200/60 rounded-full overflow-hidden shadow-inner relative">
+                      <div className="absolute top-0 left-0 h-full bg-[#ba1a1a] rounded-full" style={{ width: `${dnaData?.readingPercentage ?? 45}%` }} />
+                    </div>
                   </div>
                 </div>
+                <p className="text-[11px] text-[#767683] font-semibold pl-16">
+                  Indicates your child's proficiency in processing written text, vocabulary exercises, and text comprehension.
+                </p>
               </div>
 
             </div>
@@ -187,79 +202,104 @@ export default function ParentLearningDNAScreen() {
             <h3 className="text-[16px] font-semibold text-[#464652] mb-3 px-1">Psychological & Grit DNA</h3>
             <div className="bg-white/70 backdrop-blur-md rounded-[20px] p-5 border border-white/60 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col gap-5">
               
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-[#e3f2fd] flex items-center justify-center">
-                  <BrainCircuit size={24} className="text-[#1976d2]" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between mb-1.5">
-                    <span className="text-[15px] font-bold text-[#191c1e]">Confidence Level</span>
-                    <span className="text-[15px] font-bold text-[#1976d2]">{dnaData?.metrics?.confidence ?? 75}%</span>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-[#e3f2fd] flex items-center justify-center shrink-0">
+                    <BrainCircuit size={24} className="text-[#1976d2]" />
                   </div>
-                  <div className="w-full h-2.5 bg-gray-200/60 rounded-full overflow-hidden shadow-inner relative">
-                    <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#1e88e5] to-[#1565c0] rounded-full" style={{ width: `${dnaData?.metrics?.confidence ?? 75}%` }} />
+                  <div className="flex-1">
+                    <div className="flex justify-between mb-1.5">
+                      <span className="text-[15px] font-bold text-[#191c1e]">Confidence Level</span>
+                      <span className="text-[15px] font-bold text-[#1976d2]">{dnaData?.metrics?.confidence ?? 75}%</span>
+                    </div>
+                    <div className="w-full h-2.5 bg-gray-200/60 rounded-full overflow-hidden shadow-inner relative">
+                      <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#1e88e5] to-[#1565c0] rounded-full" style={{ width: `${dnaData?.metrics?.confidence ?? 75}%` }} />
+                    </div>
                   </div>
                 </div>
+                <p className="text-[11px] text-[#767683] font-semibold pl-16">
+                  Tracks your child's self-assurance when solving tasks, particularly their success rate on first-time question attempts.
+                </p>
               </div>
 
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-[#f3e5f5] flex items-center justify-center">
-                  <Activity size={24} className="text-[#8e24aa]" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between mb-1.5">
-                    <span className="text-[15px] font-bold text-[#191c1e]">Focus & Attention</span>
-                    <span className="text-[15px] font-bold text-[#8e24aa]">{dnaData?.metrics?.focus ?? 85}%</span>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-[#f3e5f5] flex items-center justify-center shrink-0">
+                    <Activity size={24} className="text-[#8e24aa]" />
                   </div>
-                  <div className="w-full h-2.5 bg-gray-200/60 rounded-full overflow-hidden shadow-inner relative">
-                    <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#ab47bc] to-[#7b1fa2] rounded-full" style={{ width: `${dnaData?.metrics?.focus ?? 85}%` }} />
+                  <div className="flex-1">
+                    <div className="flex justify-between mb-1.5">
+                      <span className="text-[15px] font-bold text-[#191c1e]">Focus & Attention</span>
+                      <span className="text-[15px] font-bold text-[#8e24aa]">{dnaData?.metrics?.focus ?? 85}%</span>
+                    </div>
+                    <div className="w-full h-2.5 bg-gray-200/60 rounded-full overflow-hidden shadow-inner relative">
+                      <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#ab47bc] to-[#7b1fa2] rounded-full" style={{ width: `${dnaData?.metrics?.focus ?? 85}%` }} />
+                    </div>
                   </div>
                 </div>
+                <p className="text-[11px] text-[#767683] font-semibold pl-16">
+                  Measures study duration and concentration levels during lessons, indicating sustained engagement.
+                </p>
               </div>
 
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-[#efebe9] flex items-center justify-center">
-                  <Target size={24} className="text-[#5d4037]" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between mb-1.5">
-                    <span className="text-[15px] font-bold text-[#191c1e]">Resilience & Grit</span>
-                    <span className="text-[15px] font-bold text-[#5d4037]">{dnaData?.metrics?.resilience ?? 70}%</span>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-[#efebe9] flex items-center justify-center shrink-0">
+                    <Target size={24} className="text-[#5d4037]" />
                   </div>
-                  <div className="w-full h-2.5 bg-gray-200/60 rounded-full overflow-hidden shadow-inner relative">
-                    <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#8d6e63] to-[#5d4037] rounded-full" style={{ width: `${dnaData?.metrics?.resilience ?? 70}%` }} />
+                  <div className="flex-1">
+                    <div className="flex justify-between mb-1.5">
+                      <span className="text-[15px] font-bold text-[#191c1e]">Resilience & Grit</span>
+                      <span className="text-[15px] font-bold text-[#5d4037]">{dnaData?.metrics?.resilience ?? 70}%</span>
+                    </div>
+                    <div className="w-full h-2.5 bg-gray-200/60 rounded-full overflow-hidden shadow-inner relative">
+                      <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#8d6e63] to-[#5d4037] rounded-full" style={{ width: `${dnaData?.metrics?.resilience ?? 70}%` }} />
+                    </div>
                   </div>
                 </div>
+                <p className="text-[11px] text-[#767683] font-semibold pl-16">
+                  Evaluates how your child handles difficult challenges, recovers from mistakes, and persists through tough boss fights.
+                </p>
               </div>
 
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-[#e8f5e9] flex items-center justify-center">
-                  <Zap size={24} className="text-[#388e3c]" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between mb-1.5">
-                    <span className="text-[15px] font-bold text-[#191c1e]">Curiosity & Exploration</span>
-                    <span className="text-[15px] font-bold text-[#388e3c]">{dnaData?.metrics?.curiosity ?? 65}%</span>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-[#e8f5e9] flex items-center justify-center shrink-0">
+                    <Zap size={24} className="text-[#388e3c]" />
                   </div>
-                  <div className="w-full h-2.5 bg-gray-200/60 rounded-full overflow-hidden shadow-inner relative">
-                    <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#66bb6a] to-[#388e3c] rounded-full" style={{ width: `${dnaData?.metrics?.curiosity ?? 65}%` }} />
+                  <div className="flex-1">
+                    <div className="flex justify-between mb-1.5">
+                      <span className="text-[15px] font-bold text-[#191c1e]">Curiosity & Exploration</span>
+                      <span className="text-[15px] font-bold text-[#388e3c]">{dnaData?.metrics?.curiosity ?? 65}%</span>
+                    </div>
+                    <div className="w-full h-2.5 bg-gray-200/60 rounded-full overflow-hidden shadow-inner relative">
+                      <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#66bb6a] to-[#388e3c] rounded-full" style={{ width: `${dnaData?.metrics?.curiosity ?? 65}%` }} />
+                    </div>
                   </div>
                 </div>
+                <p className="text-[11px] text-[#767683] font-semibold pl-16">
+                  Measures your child's willingness to choose new subjects, try optional quests, and discover new learning paths.
+                </p>
               </div>
 
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-[#fff8e1] flex items-center justify-center">
-                  <Zap size={24} className="text-[#fbc02d]" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between mb-1.5">
-                    <span className="text-[15px] font-bold text-[#191c1e]">Consistency & Motivation</span>
-                    <span className="text-[15px] font-bold text-[#fbc02d]">{dnaData?.metrics?.motivation ?? 70}%</span>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-[#fff8e1] flex items-center justify-center shrink-0">
+                    <Zap size={24} className="text-[#fbc02d]" />
                   </div>
-                  <div className="w-full h-2.5 bg-gray-200/60 rounded-full overflow-hidden shadow-inner relative">
-                    <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#fdd835] to-[#fbc02d] rounded-full" style={{ width: `${dnaData?.metrics?.motivation ?? 70}%` }} />
+                  <div className="flex-1">
+                    <div className="flex justify-between mb-1.5">
+                      <span className="text-[15px] font-bold text-[#191c1e]">Consistency & Motivation</span>
+                      <span className="text-[15px] font-bold text-[#fbc02d]">{dnaData?.metrics?.motivation ?? 70}%</span>
+                    </div>
+                    <div className="w-full h-2.5 bg-gray-200/60 rounded-full overflow-hidden shadow-inner relative">
+                      <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#fdd835] to-[#fbc02d] rounded-full" style={{ width: `${dnaData?.metrics?.motivation ?? 70}%` }} />
+                    </div>
                   </div>
                 </div>
+                <p className="text-[11px] text-[#767683] font-semibold pl-16">
+                  Reflects the frequency of daily learning streaks, completing goals, and claiming milestones regularly.
+                </p>
               </div>
 
             </div>

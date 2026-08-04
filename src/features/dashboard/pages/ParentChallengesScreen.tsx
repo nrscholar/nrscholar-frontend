@@ -31,7 +31,7 @@ export default function ParentChallengesScreen() {
           const jsonUser = await resUser.json();
           if (jsonUser.success && jsonUser.data?.user) {
             setLevel(jsonUser.data.user.parentLevel || 1);
-            setStreak(jsonUser.data.user.streakDays || 0);
+            setStreak(jsonUser.data.user.parentStreak ?? jsonUser.data.user.streakDays ?? 0);
             setTotalXP(jsonUser.data.user.parentXp || 0);
             setUsername(jsonUser.data.user.parentName || jsonUser.data.user.username || "Parent");
             setProfilePic(jsonUser.data.user.parentPhoto || "");

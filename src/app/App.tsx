@@ -255,11 +255,19 @@ const ScreenTimeTracker = () => {
 
   if (showWarning && !isParentRoute) {
     return (
-      <div className="fixed top-6 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-orange-600 text-white px-6 py-3 rounded-full shadow-[0_10px_30px_rgba(245,158,11,0.4)] z-[9999] flex items-center gap-3 animate-bounce border-2 border-white/30 backdrop-blur-md">
-        <Clock className="w-5 h-5 text-amber-100 animate-spin" />
-        <span className="font-extrabold text-sm tracking-wide">
-          Only {minutesLeft} {minutesLeft === 1 ? 'minute' : 'minutes'} left for today! ⏳
-        </span>
+      <div className="fixed top-6 left-1/2 -translate-x-1/2 bg-[#141779]/95 backdrop-blur-md text-white px-5 py-3.5 rounded-[24px] shadow-[0_15px_35px_rgba(20,23,121,0.35)] z-[9999] flex items-center gap-3.5 border border-amber-400/30 transition-all duration-300 hover:scale-[1.02] max-w-sm w-[90%] sm:w-auto">
+        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-400/20 shrink-0">
+          <Clock className="w-5 h-5 text-amber-400 animate-pulse" />
+        </div>
+        <div className="flex flex-col flex-1 min-w-0">
+          <span className="text-[10px] font-extrabold text-amber-400 uppercase tracking-widest leading-none mb-1">
+            Screen Time Alert
+          </span>
+          <span className="font-black text-xs sm:text-sm tracking-wide text-white leading-tight">
+            Only <span className="text-amber-300 font-black">{minutesLeft} {minutesLeft === 1 ? 'minute' : 'minutes'}</span> left for today!
+          </span>
+        </div>
+        <span className="text-xl shrink-0">⏳</span>
       </div>
     );
   }

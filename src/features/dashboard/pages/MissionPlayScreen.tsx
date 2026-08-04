@@ -93,6 +93,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     return saved ? (parseInt(saved, 10) || 0) : 0;
   });
   const [bossSelected, setBossSelected] = useState<number | null>(null);
+  const [bossConfirmed, setBossConfirmed] = useState(false);
   const [bossAngry, setBossAngry] = useState(false);
   const [dragonCrying, setDragonCrying] = useState(false);
   const [bossBasketCount, setBossBasketCount] = useState(0);
@@ -146,6 +147,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   // Final Summary state
   const [completionResult, setCompletionResult] = useState<any>(null);
   const [userAnswers, setUserAnswers] = useState<any[]>([]);
+  const [isCompleting, setIsCompleting] = useState(false);
 
   // Fetch Mission Data Effect
   useEffect(() => {
@@ -207,6 +209,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       const initial = activeBossQ?.interaction?.details?.initialCount || 0;
       setBossBasketCount(initial);
     }
+    setBossSelected(null);
+    setBossConfirmed(false);
   }, [currentBossIndex, activeBossQ?._id]);
 
   const activeBossOptions = (activeBossQ?.options && Array.isArray(activeBossQ.options) && activeBossQ.options.length > 0)
@@ -248,6 +252,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
   // Finalize Mission API helper
   const finalizeMission = async (finalBossDamage = bossDamageCount, finalChildDamage = childDamageCount, currentAnswers = userAnswers) => {
+    setIsCompleting(true);
     try {
       // Clear boss state
       sessionStorage.removeItem(`boss_damage_${chapterId}_${missionSeq}`);
@@ -277,6 +282,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     } catch (e) {
       console.error("Failed to complete mission:", e);
     } finally {
+      setIsCompleting(false);
       setPhase("SUMMARY");
     }
   };
@@ -417,10 +423,16 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     }
   };
 
-  const handleBossAnswer = (optionIndex: number, optionText: string) => {
-    if (bossSelected !== null) return;
+  const handleBossAnswer = (optionIndex: number) => {
+    if (bossConfirmed) return;
     setBossSelected(optionIndex);
+  };
 
+  const handleBossMCConfirm = () => {
+    if (bossSelected === null || bossConfirmed) return;
+    setBossConfirmed(true);
+
+    const optionText = activeBossOptions[bossSelected];
     const isCorrect = String(optionText).trim().toLowerCase() === String(activeBossQ?.answer).trim().toLowerCase();
     const newAns = {
       questionId: activeBossQ?._id,
@@ -434,7 +446,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   };
 
   const handleBossDragConfirm = () => {
-    if (bossSelected !== null) return;
+    if (bossConfirmed) return;
+    setBossConfirmed(true);
     const isCorrect = (bossBasketCount === bossTargetCount || String(bossBasketCount) === String(activeBossQ?.answer));
     const newAns = {
       questionId: activeBossQ?._id,
@@ -456,6 +469,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   // Overall session active timer (for parent space total time reporting)
   useEffect(() => {
     const timer = setInterval(() => {
+      if (isCompleting) return;
       setTotalSessionSec((prev) => {
         const next = prev + 1;
         sessionStorage.setItem(`mission_timer_${chapterId}_${missionSeq}`, next.toString());
@@ -463,7 +477,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [chapterId, missionSeq]);
+  }, [chapterId, missionSeq, isCompleting]);
 
   // Reset 30-second countdown on question change
   useEffect(() => {
@@ -473,6 +487,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
   // 30s Per-Question Countdown Timer Effect (30s -> 29s -> 28s ... -> 0s)
   useEffect(() => {
+    if (isCompleting) return;
     if (phase === "QUIZ" && !quizConfirmed) {
       if (questionTimeLeft <= 0) {
         // Auto-fail on 30s timeout
@@ -494,12 +509,13 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
         setQuestionTimeLeft((prev) => Math.max(0, prev - 1));
       }, 1000);
       return () => clearInterval(t);
-    } else if (phase === "BOSS" && bossSelected === null && !bossAngry && !dragonCrying) {
+    } else if (phase === "BOSS" && !bossConfirmed && !bossAngry && !dragonCrying) {
       if (questionTimeLeft <= 0) {
         // Auto-fail boss question on 30s timeout (deduct exactly 1 heart)
         setIsTimeout(true);
         setQuestionTimeLeft(QUESTION_TIME_LIMIT);
         setBossSelected(-1);
+        setBossConfirmed(true);
 
         const newAns = {
           questionId: activeBossQ?._id,
@@ -517,7 +533,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       }, 1000);
       return () => clearInterval(t);
     }
-  }, [phase, questionTimeLeft, quizConfirmed, bossSelected, bossAngry, dragonCrying, executeBossAttack, currentQ?._id, activeBossQ?._id, userAnswers]);
+  }, [phase, questionTimeLeft, quizConfirmed, bossSelected, bossConfirmed, bossAngry, dragonCrying, executeBossAttack, currentQ?._id, activeBossQ?._id, userAnswers, isCompleting]);
 
   if (loading) {
     return (
@@ -978,45 +994,61 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
               </div>
 
               <button
-                disabled={bossSelected !== null}
+                disabled={bossConfirmed}
                 onClick={handleBossDragConfirm}
-                className="w-full py-4 rounded-2xl bg-[#141779] text-white font-black text-base shadow-lg hover:bg-[#101362] flex items-center justify-center gap-2 active:scale-95 transition-all"
+                className="w-full py-4 rounded-2xl bg-[#141779] text-white font-black text-base shadow-lg hover:bg-[#101362] flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
               >
                 <span>STRIKE BOSS ⚡</span>
               </button>
             </div>
           ) : (
             <div className="flex flex-col gap-3 mb-4">
-              {activeBossOptions.map((opt: string, idx: number) => {
-                const isSelected = bossSelected === idx;
-                const isCorrect = String(opt).trim().toLowerCase() === String(activeBossQ?.answer).trim().toLowerCase();
+              <div className="flex flex-col gap-3">
+                {activeBossOptions.map((opt: string, idx: number) => {
+                  const isSelected = bossSelected === idx;
+                  const isCorrect = String(opt).trim().toLowerCase() === String(activeBossQ?.answer).trim().toLowerCase();
 
-                let style = "bg-white border-gray-200 text-[#141779] hover:border-[#141779]";
-                if (bossSelected !== null) {
-                  if (isTimeout) {
-                    style = "bg-white border-gray-200 text-[#141779] opacity-60";
+                  let style = "bg-white border-gray-200 text-[#141779] hover:border-[#141779]";
+                  if (bossConfirmed) {
+                    if (isTimeout) {
+                      style = "bg-white border-gray-200 text-[#141779] opacity-60";
+                    } else {
+                      if (isCorrect) {
+                        style = "bg-emerald-600 border-emerald-600 text-white font-bold";
+                      } else if (isSelected) {
+                        style = "bg-red-600 border-red-600 text-white font-bold";
+                      } else {
+                        style = "bg-white border-gray-200 text-[#141779] opacity-40";
+                      }
+                    }
                   } else {
-                    if (isCorrect) {
-                      style = "bg-emerald-600 border-emerald-600 text-white font-bold";
-                    } else if (isSelected) {
-                      style = "bg-red-600 border-red-600 text-white font-bold";
+                    if (isSelected) {
+                      style = "bg-indigo-50 border-[#141779] text-[#141779] ring-2 ring-[#141779]/50 font-bold";
                     }
                   }
-                }
 
-                return (
-                  <button
-                    key={idx}
-                    disabled={bossSelected !== null}
-                    onClick={() => handleBossAnswer(idx, opt)}
-                    className={`w-full p-4 rounded-2xl border text-left font-semibold text-base transition-all flex items-center justify-between shadow-xs ${style}`}
-                  >
-                    <span>{opt}</span>
-                    {bossSelected !== null && !isTimeout && isCorrect && <CheckCircle2 size={20} className="text-white" />}
-                    {bossSelected !== null && !isTimeout && isSelected && !isCorrect && <XCircle size={20} className="text-white" />}
-                  </button>
-                );
-              })}
+                  return (
+                    <button
+                      key={idx}
+                      disabled={bossConfirmed}
+                      onClick={() => handleBossAnswer(idx)}
+                      className={`w-full p-4 rounded-2xl border text-left font-semibold text-base transition-all flex items-center justify-between shadow-xs ${style}`}
+                    >
+                      <span>{opt}</span>
+                      {bossConfirmed && !isTimeout && isCorrect && <CheckCircle2 size={20} className="text-white" />}
+                      {bossConfirmed && !isTimeout && isSelected && !isCorrect && <XCircle size={20} className="text-white" />}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                disabled={bossSelected === null || bossConfirmed}
+                onClick={handleBossMCConfirm}
+                className="w-full py-4 mt-2 rounded-2xl bg-[#141779] text-white font-black text-base shadow-lg hover:bg-[#101362] flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
+              >
+                <span>STRIKE BOSS ⚡</span>
+              </button>
             </div>
           )}
         </main>

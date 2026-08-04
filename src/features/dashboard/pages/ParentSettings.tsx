@@ -1,8 +1,8 @@
 import { AnimatePresence, motion, Variants } from "framer-motion";
-import { ArrowLeft, Bell, BookOpen, Camera, Save, ShieldCheck, Timer, Trash2, UserRound, GraduationCap, Cake, ChevronDown, Check, Plus } from "lucide-react";
+import { ArrowLeft, Bell, BookOpen, Camera, Save, ShieldCheck, Timer, Trash2, UserRound, GraduationCap, Cake, ChevronDown, Check, Plus, Globe, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiFetch } from "../../../api";
+import { apiFetch, clearAuthSession } from "../../../api";
 import { useTranslation } from "react-i18next";
 
 const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect, placeholder }: any) => {
@@ -65,6 +65,61 @@ const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect
   );
 };
 
+const LanguageDropdown = ({ value, onChange, options }: any) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectedLabel = options.find((o: any) => o.value === value)?.label || value;
+
+  return (
+    <div className={`relative shrink-0 sm:w-48 w-full ${isOpen ? 'z-30' : 'z-10'}`}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full h-11 bg-[#f0f4f8] rounded-xl px-4 text-sm font-bold text-[#191c1e] border-2 border-transparent hover:border-[#141779]/20 focus:border-[#141779] outline-none flex items-center justify-between shadow-sm transition-all"
+      >
+        <span>{selectedLabel}</span>
+        <ChevronDown size={18} className={`text-[#767683] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <div 
+              className="fixed inset-0 z-40" 
+              onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} 
+            />
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="absolute top-full right-0 mt-1.5 bg-white rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.15)] border border-gray-100 z-50 flex flex-col w-full overflow-hidden"
+            >
+              <div className="overflow-y-auto w-full max-h-[200px]">
+                {options.map((opt: any) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onChange(opt.value);
+                      setIsOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between px-4 py-3 border-b border-[#f2f4f6] last:border-0 hover:bg-[#141779]/5 transition-colors text-left"
+                  >
+                    <span className={`text-sm ${value === opt.value ? 'font-bold text-[#141779]' : 'font-medium text-[#464652]'}`}>
+                      {opt.label}
+                    </span>
+                    {value === opt.value && <Check size={16} className="text-[#141779]" />}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 function CustomSwitch({ checked, onChange }: { checked: boolean, onChange: (v: boolean) => void }) {
   return (
     <button
@@ -94,7 +149,7 @@ const itemVariants: Variants = {
 };
 
 export default function ParentSettings() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"main" | "profile">("main");
   const [user, setUser] = useState<any>(null);
@@ -106,8 +161,10 @@ export default function ParentSettings() {
   const [subjects, setSubjects] = useState<string[]>([]);
   const [restrictedSubjects, setRestrictedSubjects] = useState<Record<string, boolean>>({});
   const [showResetModal, setShowResetModal] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [contentLanguage, setContentLanguage] = useState("en");
 
   // Parent Profile States
   const [parentName, setParentName] = useState("");
@@ -148,6 +205,9 @@ export default function ParentSettings() {
               setScreenTimeMinutes(pc.screenTimeMinutes !== undefined ? pc.screenTimeMinutes : 0);
               if (pc.restrictedSubjects) {
                 setRestrictedSubjects(pc.restrictedSubjects);
+              }
+              if (pc.contentLanguage) {
+                setContentLanguage(pc.contentLanguage);
               }
             }
           } catch (e) {
@@ -408,6 +468,85 @@ export default function ParentSettings() {
     }
   };
 
+  const handleLogout = () => {
+    clearAuthSession();
+    navigate("/login");
+  };
+
+  const handleDeleteChild = async (childId: string) => {
+    if (!window.confirm("Are you sure you want to delete this child profile? All progress for this child will be lost.")) {
+      return;
+    }
+    try {
+      const res = await apiFetch(`/api/users/children/${childId}`, {
+        method: "DELETE"
+      });
+      const json = await res.json();
+      if (json.success && json.data?.user) {
+        const u = json.data.user;
+        setUser(u);
+        localStorage.setItem("userData", JSON.stringify(u));
+        
+        // Update states
+        const kids = u.children || [];
+        const k1 = kids.find((k: any) => k.childId === "child_1") || kids[0];
+        if (k1) {
+          setChild1Name(k1.childName || "");
+          setChild1Class(k1.childClass || "");
+          setChild1Age(k1.childAge ? `${k1.childAge} Years` : "");
+          setChild1Board(k1.childBoard || "");
+          setChild1Photo(k1.childPhoto || "");
+          setChild1Code(k1.uniqueCode || "");
+        }
+        
+        const k2 = kids.find((k: any) => k.childId === "child_2") || (kids.length > 1 ? kids[1] : null);
+        if (k2) {
+          setHasChild2(true);
+          setChild2Name(k2.childName || "");
+          setChild2Class(k2.childClass || "");
+          setChild2Age(k2.childAge ? `${k2.childAge} Years` : "");
+          setChild2Board(k2.childBoard || "");
+          setChild2Photo(k2.childPhoto || "");
+          setChild2Code(k2.uniqueCode || "");
+        } else {
+          setHasChild2(false);
+          setChild2Name("");
+          setChild2Class("");
+          setChild2Age("");
+          setChild2Board("");
+          setChild2Photo("");
+          setChild2Code("");
+        }
+        
+        setToastMessage("Child profile deleted successfully! 🗑️");
+        setTimeout(() => setToastMessage(null), 3000);
+      } else {
+        setToastMessage(json.message || "Failed to delete child profile");
+        setTimeout(() => setToastMessage(null), 3000);
+      }
+    } catch (e: any) {
+      console.error(e);
+      setToastMessage(e.message || "Failed to delete child profile");
+      setTimeout(() => setToastMessage(null), 3000);
+    }
+  };
+
+  const deleteChild2Click = () => {
+    const kids = user?.children || [];
+    const hasSavedChild2 = kids.some((k: any) => k.childId === "child_2");
+    if (hasSavedChild2) {
+      handleDeleteChild("child_2");
+    } else {
+      setHasChild2(false);
+      setChild2Name("");
+      setChild2Class("");
+      setChild2Age("");
+      setChild2Board("");
+      setChild2Photo("");
+      setChild2Code("");
+    }
+  };
+
   const isScreenTimeOn = screenTimeMinutes > 0 && screenTimeMinutes < 9999;
 
   return (
@@ -559,6 +698,73 @@ export default function ParentSettings() {
                 )}
               </div>
             </motion.div>
+
+            {/* Language Settings */}
+            <motion.div variants={itemVariants} className="bg-white/70 backdrop-blur-md rounded-3xl p-7 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative z-20">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#141779]/20 to-[#141779]/5 flex items-center justify-center">
+                  <Globe size={24} color="#141779" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-[#141779]">{t("language_settings")}</h2>
+                  <p className="text-sm text-[#767683] mt-0.5">{t("manage_language_pref")}</p>
+                </div>
+              </div>
+              
+              <div className="flex flex-col gap-4">
+                {/* App Language Selector */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white rounded-2xl shadow-sm border border-gray-100 gap-3">
+                  <div className="flex flex-col">
+                    <span className="text-base font-bold text-[#191c1e]">{t("app_language")}</span>
+                    <span className="text-xs text-[#767683]">{t("select_language")}</span>
+                  </div>
+                  <LanguageDropdown 
+                    value={i18n.language.split('-')[0]}
+                    onChange={(val: string) => i18n.changeLanguage(val)}
+                    options={[
+                      { value: "en", label: "English" },
+                      { value: "hi", label: "हिंदी (Hindi)" },
+                      { value: "gu", label: "ગુજરાતી (Gujarati)" }
+                    ]}
+                  />
+                </div>
+
+                {/* Lessons Language Selector */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white rounded-2xl shadow-sm border border-gray-100 gap-3">
+                  <div className="flex flex-col">
+                    <span className="text-base font-bold text-[#191c1e]">{t("lessons_language")}</span>
+                    <span className="text-xs text-[#767683]">{t("select_language")}</span>
+                  </div>
+                  <LanguageDropdown 
+                    value={contentLanguage}
+                    onChange={(val: string) => {
+                      setContentLanguage(val);
+                      updateSetting("contentLanguage", val);
+                    }}
+                    options={[
+                      { value: "en", label: "English" },
+                      { value: "hi", label: "हिंदी (Hindi)" },
+                      { value: "gu", label: "ગુજરાતી (Gujarati)" }
+                    ]}
+                  />
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Logout Option */}
+            <motion.button 
+              variants={itemVariants}
+              onClick={() => setShowLogoutModal(true)}
+              className="bg-red-50 hover:bg-red-100 rounded-3xl p-6 border-2 border-red-100 shadow-sm flex items-center gap-4 text-left group overflow-hidden relative w-full transition-colors"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-red-100 flex items-center justify-center shrink-0">
+                <LogOut size={24} className="text-red-600" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-lg font-bold text-red-700">Logout</h2>
+                <p className="text-sm font-medium text-red-900/60 mt-1">Sign out of your account</p>
+              </div>
+            </motion.button>
           </>
         ) : (
           <>
@@ -606,6 +812,16 @@ export default function ParentSettings() {
                 <h3 className="text-lg font-bold text-[#141779] flex items-center gap-2">
                   <UserRound size={20} className="text-[#141779]" /> Child 1 Profile
                 </h3>
+                {hasChild2 && (
+                  <button 
+                    type="button" 
+                    onClick={() => handleDeleteChild("child_1")} 
+                    className="p-1 text-red-500 hover:text-red-700 transition-colors"
+                    title="Delete this child profile"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                )}
               </div>
               
               <div className="flex flex-col gap-5">
@@ -630,7 +846,7 @@ export default function ParentSettings() {
                   </div>
                   <span className="text-[11px] font-bold text-[#767683] mt-1.5">Tap photo to edit</span>
                 </div>
-
+ 
                 <div className="flex flex-col gap-2">
                   <label className="text-sm font-semibold text-[#767683] ml-2">Child Name</label>
                   <input
@@ -640,7 +856,7 @@ export default function ParentSettings() {
                     className="w-full h-14 bg-white rounded-2xl px-5 text-base font-medium text-[#191c1e] border-2 border-transparent focus:border-[#141779] outline-none shadow-sm hover:shadow-md transition-shadow"
                   />
                 </div>
-
+ 
                 <CustomDropdown
                   label="Education Board"
                   icon={BookOpen}
@@ -650,7 +866,7 @@ export default function ParentSettings() {
                   onSelect={setChild1Board}
                   placeholder="Select Board"
                 />
-
+ 
                 <div className="flex gap-3 w-full">
                   <CustomDropdown
                     label="Class / Grade"
@@ -661,7 +877,7 @@ export default function ParentSettings() {
                     onSelect={setChild1Class}
                     placeholder="Select"
                   />
-
+ 
                   <CustomDropdown
                     label="Age"
                     icon={Cake}
@@ -674,7 +890,7 @@ export default function ParentSettings() {
                 </div>
               </div>
             </motion.div>
-
+ 
             {/* Child 2 Profile Card (if exists or enabled) */}
             {hasChild2 ? (
               <motion.div variants={itemVariants} className="bg-white/70 backdrop-blur-md rounded-3xl p-7 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative group">
@@ -685,7 +901,7 @@ export default function ParentSettings() {
                   <div className="flex items-center gap-2">
                     <button 
                       type="button" 
-                      onClick={() => setHasChild2(false)} 
+                      onClick={deleteChild2Click} 
                       className="p-1 text-red-500 hover:text-red-700 transition-colors"
                       title="Remove second child details from this form"
                     >
@@ -876,6 +1092,32 @@ export default function ParentSettings() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Custom Logout Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-5">
+          <div className="bg-white w-full max-w-sm rounded-[24px] p-6 shadow-2xl">
+            <h3 className="text-xl font-bold text-[#141779] text-center mb-2">{t('logout') || 'Logout'}</h3>
+            <p className="text-sm text-[#464652] text-center mb-6">
+              Are you sure you want to logout?
+            </p>
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={handleLogout}
+                className="w-full py-3.5 bg-[#ba1a1a] text-white rounded-xl font-bold text-sm shadow-md hover:bg-red-700 transition-colors"
+              >
+                Yes, Logout
+              </button>
+              <button 
+                onClick={() => setShowLogoutModal(false)}
+                className="w-full py-3.5 bg-[#f0f2f5] text-[#141779] rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

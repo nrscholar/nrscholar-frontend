@@ -13,6 +13,7 @@ export default function ParentLessonsScreen() {
   const [xp, setXp] = useState(0);
   const [username, setUsername] = useState("Parent");
   const [profilePic, setProfilePic] = useState("");
+  const [contentLanguage, setContentLanguage] = useState("en");
 
   function getXpForLevel(lvl: number): number {
     if (lvl <= 1) return 0;
@@ -47,8 +48,20 @@ export default function ParentLessonsScreen() {
         console.error("Failed to fetch user data", e);
       }
     };
+    const fetchControls = async () => {
+      try {
+        const res = await apiFetch('/api/parent/controls');
+        const json = await res.json();
+        if (json.success && json.data?.parentControls?.contentLanguage) {
+          setContentLanguage(json.data.parentControls.contentLanguage);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
     fetchLibrary();
     fetchUser();
+    fetchControls();
   }, []);
 
   const unlockedTopicIds = new Set<string>();
@@ -98,7 +111,34 @@ export default function ParentLessonsScreen() {
           </div>
           <h1 className="text-xl font-bold text-[#141779]">{t("lessons") || "Daily Parenting Lessons"}</h1>
         </div>
-        <div className="w-10 h-10"></div> {/* Spacer for balance */}
+        <div className="relative">
+          <select 
+            value={contentLanguage}
+            onChange={async (e) => {
+              const newLang = e.target.value;
+              setContentLanguage(newLang);
+              try {
+                await apiFetch('/api/parent/controls', {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ contentLanguage: newLang })
+                });
+                const res = await apiFetch('/api/parent/learning-library');
+                const data = await res.json();
+                if (data.success) {
+                  setAllTopics(data.data.topics);
+                }
+              } catch (err) {
+                console.error(err);
+              }
+            }}
+            className="bg-white border border-[#141779]/20 text-[#141779] rounded-xl px-2.5 py-1.5 text-xs font-bold shadow-sm outline-none focus:border-[#141779]"
+          >
+            <option value="en">English</option>
+            <option value="hi">हिंदी (Hindi)</option>
+            <option value="gu">ગુજરાતી (Gujarati)</option>
+          </select>
+        </div>
       </header>
 
       <main className="flex-1 flex flex-col">
@@ -139,7 +179,7 @@ export default function ParentLessonsScreen() {
         {/* Categories Chips */}
         <section className="py-4">
           <div className="flex overflow-x-auto no-scrollbar gap-3 px-6">
-            {["For You", "Emotional Intelligence", "Child Psychology", "Communication", "Digital Parenting"].map(filter => (
+            {["For You", "Completed", "Emotional Intelligence", "Child Psychology", "Communication", "Digital Parenting"].map(filter => (
               <button 
                 key={filter}
                 onClick={() => setActiveFilter(filter)}
@@ -154,12 +194,19 @@ export default function ParentLessonsScreen() {
         {/* First Row: Recommended */}
         <section className="mt-4">
           <div className="px-6 flex justify-between items-center mb-4">
-            <h3 className="text-[20px] font-bold text-[#191c1e]">Recommended for You</h3>
+            <h3 className="text-[20px] font-bold text-[#191c1e]">
+              {activeFilter === "Completed" ? "Completed Lessons" : "Recommended for You"}
+            </h3>
             <button onClick={() => navigate('/parent/learning-library')} className="text-[#006a62] font-bold text-sm hover:underline">See All</button>
           </div>
           <div className="grid grid-cols-2 gap-4 px-6 pb-4">
             {allTopics
-              .filter(t => unlockedTopicIds.has(t.topicId) && (activeFilter === "For You" || t.category === activeFilter))
+              .filter(t => {
+                if (activeFilter === "Completed") {
+                  return t.status === "completed";
+                }
+                return unlockedTopicIds.has(t.topicId) && (activeFilter === "For You" || t.category === activeFilter);
+              })
               .map((topic, index) => {
                 const isLocked = false;
                 return (

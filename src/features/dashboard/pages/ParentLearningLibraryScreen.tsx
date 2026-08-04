@@ -25,6 +25,7 @@ export default function ParentLearningLibraryScreen() {
   const [topics, setTopics] = useState<any[]>([]);
   const [progress, setProgress] = useState({ completed: 0, total: 100 });
   const [showMore, setShowMore] = useState(false);
+  const [contentLanguage, setContentLanguage] = useState("en");
 
   const categoryStats = topics.reduce((acc, topic) => {
     const cat = topic.category || "Other";
@@ -51,7 +52,19 @@ export default function ParentLearningLibraryScreen() {
         console.error("Failed to fetch library", e);
       }
     };
+    const fetchControls = async () => {
+      try {
+        const res = await apiFetch('/api/parent/controls');
+        const json = await res.json();
+        if (json.success && json.data?.parentControls?.contentLanguage) {
+          setContentLanguage(json.data.parentControls.contentLanguage);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
     fetchLibrary();
+    fetchControls();
   }, []);
 
   const filteredTopics = topics.filter(topic => {
@@ -102,6 +115,35 @@ export default function ParentLearningLibraryScreen() {
             />
           </div>
           <h1 className="text-xl font-bold text-[#141779]">Library</h1>
+        </div>
+        <div className="relative">
+          <select 
+            value={contentLanguage}
+            onChange={async (e) => {
+              const newLang = e.target.value;
+              setContentLanguage(newLang);
+              try {
+                await apiFetch('/api/parent/controls', {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ contentLanguage: newLang })
+                });
+                const res = await apiFetch('/api/parent/learning-library');
+                const data = await res.json();
+                if (data.success) {
+                  setTopics(data.data.topics);
+                  setProgress(data.data.progress);
+                }
+              } catch (err) {
+                console.error(err);
+              }
+            }}
+            className="bg-white border border-[#141779]/20 text-[#141779] rounded-xl px-2.5 py-1.5 text-xs font-bold shadow-sm outline-none focus:border-[#141779]"
+          >
+            <option value="en">English</option>
+            <option value="hi">हिंदी (Hindi)</option>
+            <option value="gu">ગુજરાતી (Gujarati)</option>
+          </select>
         </div>
       </header>
 

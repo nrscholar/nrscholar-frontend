@@ -124,6 +124,13 @@
     "parent_space": "Parent Space",
     "student_profile": "STUDENT PROFILE",
     "journey": "Journey",
-    "growth_journey": "Growth Journey"
+    "growth_journey": "Growth Journey",
+    "how_can_we_help": "How can we help?",
+    "browse_faqs": "Browse our frequently asked questions or get in touch with our team.",
+    "contact_support": "Contact Support",
+    "reply_within_24h": "We typically reply within 24 hours.",
+    "language_settings": "Language Settings",
+    "lessons_language": "Lessons Language",
+    "manage_language_pref": "Manage your language preferences"
   }
 }

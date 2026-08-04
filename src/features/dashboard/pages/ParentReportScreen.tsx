@@ -297,6 +297,19 @@ export default function ParentReportScreen() {
                 <span className="text-xs font-bold text-[#006a62]">Total Reading Time</span>
                 <span className="text-sm font-black text-[#006a62]">{formatReadingTime(rA.totalReadingTime ?? 0)}</span>
               </div>
+              {rA.readChaptersList && rA.readChaptersList.length > 0 && (
+                <div className="mt-3">
+                  <h4 className="text-[10px] font-bold text-[#464652] mb-1.5 uppercase tracking-wider">Chapters Read:</h4>
+                  <div className="flex flex-col gap-1.5">
+                    {rA.readChaptersList.map((chName: string, idx: number) => (
+                      <div key={idx} className="bg-slate-50 border border-slate-200/60 rounded-xl px-3 py-2 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#006a62]" />
+                        <span className="text-xs font-semibold text-[#191c1e]">{chName}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {rA.qualityWarning && (
                 <div className="mt-3 bg-orange-50 border border-orange-200 rounded-xl p-3 flex gap-2 items-start">
                   <AlertTriangle size={18} className="text-orange-600 shrink-0 mt-0.5" />
