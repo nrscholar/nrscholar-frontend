@@ -9,20 +9,20 @@ const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="flex flex-col gap-2 flex-1 relative">
-      <label className="text-sm font-semibold text-[#767683] ml-2">{label}</label>
+    <div className="flex flex-col gap-1 md:gap-2 flex-1 relative min-w-0">
+      <label className="text-xs md:text-sm font-semibold text-[#767683] ml-1 md:ml-2 truncate">{label}</label>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full h-14 bg-white rounded-2xl pl-12 pr-10 text-base font-medium text-[#191c1e] border-2 border-transparent focus:border-[#141779] outline-none flex items-center justify-start text-left relative shadow-sm hover:shadow-md transition-shadow"
+        className="w-full h-10 md:h-14 bg-white rounded-xl md:rounded-2xl pl-8 md:pl-12 pr-7 md:pr-10 text-xs md:text-base font-medium text-[#191c1e] border-2 border-transparent focus:border-[#141779] outline-none flex items-center justify-start text-left relative shadow-sm hover:shadow-md transition-all duration-200"
       >
-        <div className="absolute left-4 z-10 flex items-center h-full top-0">
-          <Icon size={22} color={iconColor} />
+        <div className="absolute left-2.5 md:left-4 z-10 flex items-center h-full top-0">
+          <Icon className="w-4 h-4 md:w-[22px] md:h-[22px]" color={iconColor} />
         </div>
-        <span className={`truncate ${value ? "text-[#191c1e]" : "text-[#c7c5d4]"}`}>
+        <span className={`truncate w-full ${value ? "text-[#191c1e]" : "text-[#c7c5d4]"}`}>
           {value || placeholder}
         </span>
-        <ChevronDown size={24} color="#767683" className="absolute right-3" />
+        <ChevronDown className="absolute right-2 md:right-3 w-4 h-4 md:w-6 md:h-6" color="#767683" />
       </button>
 
       <AnimatePresence>
@@ -866,8 +866,8 @@ export default function ParentSettings() {
                   onSelect={setChild1Board}
                   placeholder="Select Board"
                 />
- 
-                <div className="flex gap-3 w-full">
+
+                <div className="flex gap-2 md:gap-3 w-full">
                   <CustomDropdown
                     label="Class / Grade"
                     icon={GraduationCap}
@@ -953,7 +953,7 @@ export default function ParentSettings() {
                     placeholder="Select Board"
                   />
 
-                  <div className="flex gap-3 w-full">
+                  <div className="flex gap-2 md:gap-3 w-full">
                     <CustomDropdown
                       label="Class / Grade"
                       icon={GraduationCap}

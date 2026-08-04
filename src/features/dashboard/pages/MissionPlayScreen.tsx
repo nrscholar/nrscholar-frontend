@@ -180,8 +180,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   }, [chapterId, missionSeq]);
 
   const quizQuestions = missionData?.quizQuestions || [];
-  let bossQuestions = (missionData?.bossQuestions && missionData.bossQuestions.length > 0) 
-    ? missionData.bossQuestions 
+  let bossQuestions = (missionData?.bossQuestions && missionData.bossQuestions.length > 0)
+    ? missionData.bossQuestions
     : quizQuestions;
 
   if (bossQuestions.length === 0) {
@@ -289,7 +289,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
   const handleGiveUp = async () => {
     setShowReviveModal(false);
-    
+
     // Clear all session storage keys for this mission
     sessionStorage.removeItem(`boss_damage_${chapterId}_${missionSeq}`);
     sessionStorage.removeItem(`boss_wrong_${chapterId}_${missionSeq}`);
@@ -348,7 +348,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       setBossAngry(false);
       const newWrongCount = wrongAnswerCount + 1;
       setWrongAnswerCount(newWrongCount);
-      
+
       const newChildDamage = Math.min(3, childDamageCount + 1);
       setChildDamageCount(newChildDamage);
 
@@ -565,20 +565,18 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           </div>
         </div>
 
-        <div className={`flex items-center gap-1.5 border px-3.5 py-1 rounded-full font-mono font-extrabold text-xs shadow-2xs transition-all ${
-          (phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5 
-            ? "bg-rose-50 border-rose-300 text-rose-700 animate-pulse ring-2 ring-rose-400/40" 
+        <div className={`flex items-center gap-1.5 border px-3.5 py-1 rounded-full font-mono font-extrabold text-xs shadow-2xs transition-all ${(phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5
+            ? "bg-rose-50 border-rose-300 text-rose-700 animate-pulse ring-2 ring-rose-400/40"
             : "bg-slate-100/90 border-slate-200 text-slate-800"
-        }`}>
+          }`}>
           <div className="relative flex items-center justify-center">
             <Clock size={14} className={(phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5 ? "text-rose-600 animate-bounce" : "text-indigo-600"} />
-            <span className={`absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ${
-              (phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5 ? "bg-rose-500 animate-ping" : "bg-emerald-500 animate-ping"
-            }`} />
+            <span className={`absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ${(phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5 ? "bg-rose-500 animate-ping" : "bg-emerald-500 animate-ping"
+              }`} />
           </div>
           <span>
-            {phase === "QUIZ" || phase === "BOSS" 
-              ? `${questionTimeLeft}s` 
+            {phase === "QUIZ" || phase === "BOSS"
+              ? `${questionTimeLeft}s`
               : `${Math.floor(totalSessionSec / 60).toString().padStart(2, '0')}:${(totalSessionSec % 60).toString().padStart(2, '0')}`}
           </span>
         </div>
@@ -648,7 +646,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
           <div className="my-4 bg-white border border-gray-200 rounded-3xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.06)] relative">
             <span className="text-xs font-bold text-[#006a62] uppercase tracking-wider block mb-2">
-              Question #{currentQuizIndex + 1} {isDragObjects ? "• Drag & Drop" : "• Multiple Choice"}
+              Question #{currentQuizIndex + 1} {isDragObjects ? "• Drag & Drop" : ""}
             </span>
             <h3 className="text-lg font-bold text-[#141779] leading-snug">
               {currentQ?.question}
@@ -658,13 +656,12 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           {isDragObjects ? (
             <div className="flex flex-col gap-4 mb-4">
               <div
-                className={`w-full min-h-[140px] rounded-2xl border-4 border-dashed p-4 flex flex-wrap gap-2 items-center justify-center transition-colors ${
-                  quizConfirmed
+                className={`w-full min-h-[140px] rounded-2xl border-4 border-dashed p-4 flex flex-wrap gap-2 items-center justify-center transition-colors ${quizConfirmed
                     ? quizIsCorrect
                       ? "border-emerald-500 bg-emerald-50"
                       : "border-red-500 bg-red-50"
                     : "border-gray-300 bg-white cursor-pointer hover:bg-gray-50"
-                }`}
+                  }`}
                 onClick={() => {
                   if (!quizConfirmed && basketCount > 0) {
                     setBasketCount((prev) => prev - 1);
@@ -743,13 +740,12 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           <div className="flex flex-col gap-3">
             {quizConfirmed && (
               <div
-                className={`p-4 rounded-2xl flex items-center gap-3 ${
-                  isTimeout
+                className={`p-4 rounded-2xl flex items-center gap-3 ${isTimeout
                     ? "bg-amber-100 text-amber-900 border border-amber-300"
                     : quizIsCorrect
-                    ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
-                    : "bg-red-100 text-red-900 border border-red-300"
-                }`}
+                      ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                      : "bg-red-100 text-red-900 border border-red-300"
+                  }`}
               >
                 {isTimeout ? (
                   <Clock size={24} className="text-amber-600 shrink-0" />
@@ -766,10 +762,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                     {isTimeout
                       ? "You did not answer within 30 seconds."
                       : quizIsCorrect
-                      ? "+15 XP & +10 Coins"
-                      : isDragObjects
-                      ? `Target was ${targetCount} ${objectEmoji}`
-                      : `Correct Answer: ${currentQ?.answer}`}
+                        ? "+15 XP & +10 Coins"
+                        : isDragObjects
+                          ? `Target was ${targetCount} ${objectEmoji}`
+                          : `Correct Answer: ${currentQ?.answer}`}
                   </p>
                 </div>
               </div>
@@ -778,15 +774,14 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             <button
               disabled={!isDragObjects && quizSelected === null && !quizConfirmed}
               onClick={handleQuizConfirm}
-              className={`w-full py-4 rounded-2xl font-black text-base shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all ${
-                !isDragObjects && quizSelected === null && !quizConfirmed
+              className={`w-full py-4 rounded-2xl font-black text-base shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all ${!isDragObjects && quizSelected === null && !quizConfirmed
                   ? "bg-gray-300 text-gray-500 cursor-not-allowed shadow-none"
                   : !quizConfirmed
-                  ? "bg-[#141779] text-white hover:bg-[#101362]"
-                  : quizIsCorrect
-                  ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                  : "bg-red-600 text-white hover:bg-red-700"
-              }`}
+                    ? "bg-[#141779] text-white hover:bg-[#101362]"
+                    : quizIsCorrect
+                      ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                      : "bg-red-600 text-white hover:bg-red-700"
+                }`}
             >
               <span>{quizConfirmed ? "CONTINUE →" : "CHECK ANSWER"}</span>
             </button>
@@ -837,10 +832,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             {/* Background Orbs & Sparkles */}
             <div className="absolute -top-12 -left-12 w-36 h-36 rounded-full bg-amber-400/20 blur-2xl pointer-events-none" />
             <div className="absolute -bottom-12 -right-12 w-36 h-36 rounded-full bg-indigo-500/25 blur-2xl pointer-events-none" />
-            
+
             {/* Top Bar: Hero vs Boss Header */}
             <div className="flex items-center justify-between mb-3.5 relative z-10 gap-2">
-              
+
               {/* Left: Dragon Hero */}
               <div className="flex items-center gap-2">
                 <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-xl relative shadow-inner">
@@ -910,9 +905,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                 transition={{ duration: 0.5, repeat: bossAngry ? 2 : 0 }}
                 className="relative z-10 flex items-center gap-3"
               >
-                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-600/30 backdrop-blur-xs border border-white/30 flex items-center justify-center text-3xl shadow-inner relative ${
-                  bossAngry ? "ring-4 ring-rose-500/80 animate-pulse" : ""
-                }`}>
+                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-600/30 backdrop-blur-xs border border-white/30 flex items-center justify-center text-3xl shadow-inner relative ${bossAngry ? "ring-4 ring-rose-500/80 animate-pulse" : ""
+                  }`}>
                   <span>🐲</span>
                   {bossAngry && (
                     <motion.span
@@ -1102,7 +1096,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                 {completionResult?.confidenceLabel || "High Mastery 🚀"}
               </span>
               <div className="w-full h-2 bg-gray-200 rounded-full mt-2 overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-gradient-to-r from-amber-400 to-emerald-500 rounded-full"
                   style={{ width: `${completionResult?.confidenceScore || 90}%` }}
                 />
@@ -1244,7 +1238,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                 You ran out of hearts! Revive using the Revival Wheel to keep your current progress and fight on!
               </p>
             </div>
-            
+
             <div className="w-full bg-white/5 rounded-2xl p-4 border border-white/10 flex justify-between items-center text-center">
               <div className="flex-1">
                 <span className="text-[10px] text-white/50 uppercase font-black tracking-widest block mb-1">Revival Spins</span>
@@ -1294,7 +1288,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                   <span>🛒 Buy Revival Spin (100 🪙)</span>
                 </button>
               )}
-              
+
               <button
                 onClick={handleGiveUp}
                 className="w-full py-3 bg-white/5 text-white/50 font-bold rounded-full hover:bg-white/10 active:scale-95 transition-all text-xs"
@@ -1347,7 +1341,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       )}
       {/* Toast Notification */}
       {toastMessage && (
-        <div 
+        <div
           className="fixed top-24 z-[250] bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl border border-slate-800/80 font-bold text-xs sm:text-sm tracking-wide flex items-center justify-center gap-2 text-center animate-bounce max-w-[90vw] w-auto"
           style={{ left: "50%", transform: "translateX(-50%)" }}
         >

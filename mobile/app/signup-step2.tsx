@@ -22,17 +22,17 @@ const CustomDropdown = ({ label, icon, iconColor, value, options, onSelect, plac
 
   return (
     <View style={styles.inputGroupContainer}>
-      <Text style={styles.inputLabel}>{label}</Text>
+      <Text style={styles.inputLabel} numberOfLines={1}>{label}</Text>
       <TouchableOpacity
         style={styles.selectWrapper}
         activeOpacity={0.8}
         onPress={() => setModalVisible(true)}
       >
-        <MaterialIcons name={icon} size={22} color={iconColor} style={styles.inputIconLeft} />
-        <Text style={[styles.selectText, !value && { color: "#c7c5d4" }]}>
+        <MaterialIcons name={icon} size={13} color={iconColor} />
+        <Text style={[styles.selectText, !value && { color: "#c7c5d4" }]} numberOfLines={1}>
           {value || placeholder}
         </Text>
-        <MaterialIcons name="arrow-drop-down" size={24} color="#767683" style={styles.inputIconRight} />
+        <MaterialIcons name="keyboard-arrow-down" size={13} color="#767683" />
       </TouchableOpacity>
 
       <Modal
@@ -85,8 +85,8 @@ export default function SignupStep2Screen() {
   const [selectedClass, setSelectedClass] = useState("");
   const [age, setAge] = useState("");
 
-  const classes = ["Nursery", "KG", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5"];
-  const ages = ["4 Years", "5 Years", "6 Years", "7 Years", "8 Years", "9 Years", "10 Years"];
+  const classes = ["Nursery", "KG", "Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"];
+  const ages = ["4 Years", "5 Years", "6 Years", "7 Years", "8 Years", "9 Years", "10 Years", "11 Years", "12 Years", "13 Years", "14 Years", "15 Years"];
 
   const handleNext = () => {
     router.push({
@@ -357,20 +357,23 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 6,
+    overflow: 'hidden',
   },
   inputGroup: {
     gap: 8,
   },
   inputGroupContainer: {
-    gap: 8,
+    gap: 6,
     flex: 1,
+    flexBasis: 0,
+    minWidth: 0,
   },
   inputLabel: {
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: '600',
     color: '#767683',
-    marginLeft: 16,
+    marginLeft: 8,
   },
   inputWrapper: {
     position: 'relative',
@@ -378,12 +381,12 @@ const styles = StyleSheet.create({
   },
   inputIconLeft: {
     position: 'absolute',
-    left: 16,
+    left: 14,
     zIndex: 1,
   },
   inputIconRight: {
     position: 'absolute',
-    right: 12,
+    right: 10,
     zIndex: 1,
   },
   input: {
@@ -391,7 +394,7 @@ const styles = StyleSheet.create({
     height: 56,
     backgroundColor: 'rgba(255, 255, 255, 0.5)',
     borderRadius: 9999,
-    paddingLeft: 48,
+    paddingLeft: 44,
     paddingRight: 24,
     fontSize: 16,
     fontWeight: '500',
@@ -401,19 +404,27 @@ const styles = StyleSheet.create({
   },
   selectWrapper: {
     width: '100%',
-    height: 56,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    height: 36,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderRadius: 9999,
-    paddingLeft: 48,
-    paddingRight: 40,
-    borderWidth: 2,
-    borderColor: '#ffffff',
-    justifyContent: 'center',
+    paddingHorizontal: 8,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   selectText: {
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '600',
     color: '#191c1e',
+    flex: 1,
+    flexShrink: 1,
   },
   nextButton: {
     width: '100%',
