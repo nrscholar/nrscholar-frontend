@@ -381,15 +381,15 @@ export default function ParentDashboard() {
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.glassCard, { borderLeftWidth: 4, borderLeftColor: C.primary, padding: 12 }]}
+              style={[styles.glassCard, { borderLeftWidth: 4, borderLeftColor: "#d97706", padding: 12 }]}
               activeOpacity={0.8}
               onPress={() => setModalType("risks")}
             >
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Text style={{ fontSize: 13, fontWeight: "700", color: C.primary, marginBottom: 4 }}>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: "#d97706", marginBottom: 4 }}>
                   🔔 Risk Alerts
                 </Text>
-                <MaterialIcons name="chevron-right" size={18} color={C.primary} />
+                <MaterialIcons name="chevron-right" size={18} color="#d97706" />
               </View>
               <Text style={{ fontSize: 12, color: C.onSurfaceVariant }}>
                 {report?.risks || "No critical drops. Attention level remains consistent over the past 7 days."}
@@ -705,13 +705,16 @@ export default function ParentDashboard() {
         <View style={styles.modalOverlay}>
           <View style={styles.bottomSheetContainer}>
             <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setModalType(null)} style={styles.backModalBtn}>
+                <MaterialIcons name="arrow-back" size={22} color={C.primary} />
+              </TouchableOpacity>
               <Text style={styles.modalTitle}>
                 {modalType === "strengths" ? "💪 Cognitive Strengths" :
                  modalType === "weaknesses" ? "⚠️ Areas for Review" :
                  "🔔 Risk Alerts"}
               </Text>
               <TouchableOpacity onPress={() => setModalType(null)} style={styles.closeModalBtn}>
-                <MaterialIcons name="close" size={24} color={C.onSurfaceVariant} />
+                <MaterialIcons name="close" size={22} color={C.onSurfaceVariant} />
               </TouchableOpacity>
             </View>
 
@@ -845,6 +848,38 @@ export default function ParentDashboard() {
                         )}
                       </Text>
                     </View>
+
+                    {/* Go to Lessons CTA */}
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      onPress={() => {
+                        setModalType(null);
+                        router.push({
+                          pathname: "/practice/webview" as any,
+                          params: { path: "/parent/lessons" }
+                        });
+                      }}
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 8,
+                        backgroundColor: C.primary,
+                        borderRadius: 14,
+                        paddingVertical: 14,
+                        paddingHorizontal: 20,
+                        marginTop: 4,
+                        shadowColor: C.primary,
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.25,
+                        shadowRadius: 8,
+                        elevation: 4,
+                      }}
+                    >
+                      <MaterialIcons name="menu-book" size={18} color={C.white} />
+                      <Text style={{ fontSize: 13, fontWeight: "800", color: C.white, letterSpacing: 0.3 }}>Go to Lessons</Text>
+                      <MaterialIcons name="arrow-forward" size={16} color={C.white} />
+                    </TouchableOpacity>
                   </View>
                 );
               })()}
@@ -1280,5 +1315,9 @@ const styles = StyleSheet.create({
   },
   closeModalBtn: {
     padding: 4,
+  },
+  backModalBtn: {
+    padding: 4,
+    marginRight: 4,
   },
 });

@@ -290,7 +290,7 @@ export default function ParentDashboardScreen() {
           </div>
 
           <button onClick={() => setModalType("strengths")} className="text-left w-full bg-white rounded-[20px] p-5 border border-slate-200/80 shadow-sm border-l-[6px] border-l-[#006a62] hover:shadow-md transition-all">
-            <h4 className="text-base font-extrabold text-[#006a62] mb-3">💪 Strengths</h4>
+            <h4 className="text-base font-extrabold text-[#006a62] mb-3">💪 Strengths (Fast Processor)</h4>
             {strengths.length === 0 ? (
               <p className="text-xs text-slate-500">Complete more quests to identify strengths.</p>
             ) : (
@@ -467,161 +467,178 @@ export default function ParentDashboardScreen() {
       {/* Graph Modal */}
       {modalType && (
         <div className="fixed inset-0 bg-black/40 z-[100] flex justify-center items-end sm:items-center p-0 sm:p-5 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-[#f7f9fb] w-full sm:w-[400px] max-w-full rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom-10 duration-300">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-bold text-[#141779]">
-                {modalType === "strengths" ? "Cognitive Strengths" :
-                  modalType === "weaknesses" ? "Areas for Review" :
-                  modalType === "risks" ? "Confidence Decline Risk" :
-                    "Cognitive Profile Graph"}
-              </h2>
+          <div className="bg-[#f7f9fb] w-full sm:w-[400px] max-w-full rounded-t-3xl sm:rounded-3xl max-h-[90vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-10 duration-300">
+            <div className="flex justify-between items-center p-5 border-b border-gray-100 shrink-0">
+              <div className="flex items-center gap-3">
+                <button onClick={() => setModalType(null)} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors">
+                  <ArrowLeft size={20} color="#141779" />
+                </button>
+                <h2 className="text-lg font-bold text-[#141779]">
+                  {modalType === "strengths" ? "💪 Cognitive Strengths" :
+                    modalType === "weaknesses" ? "⚠️ Areas for Review" :
+                    modalType === "risks" ? "🔔 Risk Alerts" :
+                      "Cognitive Profile Graph"}
+                </h2>
+              </div>
               <button onClick={() => setModalType(null)} className="p-2 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">
                 <X size={20} color="#464652" />
               </button>
             </div>
 
-            <div className="mb-6 bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-              <div className="flex justify-between items-end mb-2">
-                <div>
-                  <p className="text-[10px] font-bold text-[#767683] uppercase tracking-wider mb-1">{chartTitle} (7-Day Trend)</p>
-                  <p className="text-3xl font-black" style={{ color: chartColor }}>{currentScore}%</p>
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                <div className="flex justify-between items-end mb-2">
+                  <div>
+                    <p className="text-[10px] font-bold text-[#767683] uppercase tracking-wider mb-1">{chartTitle} (7-Day Trend)</p>
+                    <p className="text-3xl font-black" style={{ color: chartColor }}>{currentScore}%</p>
+                  </div>
+                  <div className={`px-2 py-1 rounded-md text-[10px] font-bold ${diff >= 0 ? 'bg-[#006a62]/10 text-[#006a62]' : 'bg-[#ba1a1a]/10 text-[#ba1a1a]'}`}>
+                    {diffStr}
+                  </div>
                 </div>
-                <div className={`px-2 py-1 rounded-md text-[10px] font-bold ${diff >= 0 ? 'bg-[#006a62]/10 text-[#006a62]' : 'bg-[#ba1a1a]/10 text-[#ba1a1a]'}`}>
-                  {diffStr}
-                </div>
-              </div>
 
-              {/* Custom SVG Line Graph */}
-              <div className="relative w-full h-[160px] mt-6">
-                <svg viewBox="0 0 300 120" className="w-full h-full overflow-visible">
-                  <defs>
-                    <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={chartColor} stopOpacity="0.4" />
-                      <stop offset="100%" stopColor={chartColor} stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
+                {/* Custom SVG Line Graph */}
+                <div className="relative w-full h-[160px] mt-6">
+                  <svg viewBox="0 0 300 120" className="w-full h-full overflow-visible">
+                    <defs>
+                      <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={chartColor} stopOpacity="0.4" />
+                        <stop offset="100%" stopColor={chartColor} stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
 
-                  {/* Grid Lines */}
-                  <line x1="0" y1="0" x2="300" y2="0" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
-                  <line x1="0" y1="60" x2="300" y2="60" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
-                  <line x1="0" y1="120" x2="300" y2="120" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
+                    {/* Grid Lines */}
+                    <line x1="0" y1="0" x2="300" y2="0" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
+                    <line x1="0" y1="60" x2="300" y2="60" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
+                    <line x1="0" y1="120" x2="300" y2="120" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
 
-                  {/* Area Fill */}
-                  <path
-                    d={chart.pathArea}
-                    fill="url(#lineGradient)"
-                    className="animate-in fade-in duration-700"
-                  />
-
-                  {/* The Line */}
-                  <path
-                    d={chart.pathLine}
-                    fill="none"
-                    stroke={chartColor}
-                    strokeWidth="3.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="drop-shadow-sm animate-in slide-in-from-left-4 duration-700"
-                  />
-
-                  {/* Data Points */}
-                  {chart.points.map((p, idx) => (
-                    <circle
-                      key={idx}
-                      cx={p.x}
-                      cy={p.y}
-                      r={idx === chart.points.length - 1 ? 5 : 4}
-                      fill={idx === chart.points.length - 1 ? chartColor : "#ffffff"}
-                      stroke={idx === chart.points.length - 1 ? "#ffffff" : chartColor}
-                      strokeWidth="2.5"
-                      className={idx === chart.points.length - 1 ? "animate-pulse" : ""}
+                    {/* Area Fill */}
+                    <path
+                      d={chart.pathArea}
+                      fill="url(#lineGradient)"
+                      className="animate-in fade-in duration-700"
                     />
-                  ))}
-                </svg>
 
-                {/* X Axis Labels */}
-                <div className="flex justify-between text-[10px] font-bold text-[#767683] mt-4 px-1">
-                  {chart.labels.map((lbl, idx) => (
-                    <span key={idx} style={{ color: idx === chart.labels.length - 1 ? chartColor : undefined }}>{lbl}</span>
-                  ))}
+                    {/* The Line */}
+                    <path
+                      d={chart.pathLine}
+                      fill="none"
+                      stroke={chartColor}
+                      strokeWidth="3.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="drop-shadow-sm animate-in slide-in-from-left-4 duration-700"
+                    />
+
+                    {/* Data Points */}
+                    {chart.points.map((p, idx) => (
+                      <circle
+                        key={idx}
+                        cx={p.x}
+                        cy={p.y}
+                        r={idx === chart.points.length - 1 ? 5 : 4}
+                        fill={idx === chart.points.length - 1 ? chartColor : "#ffffff"}
+                        stroke={idx === chart.points.length - 1 ? "#ffffff" : chartColor}
+                        strokeWidth="2.5"
+                        className={idx === chart.points.length - 1 ? "animate-pulse" : ""}
+                      />
+                    ))}
+                  </svg>
+
+                  {/* X Axis Labels */}
+                  <div className="flex justify-between text-[10px] font-bold text-[#767683] mt-4 px-1">
+                    {chart.labels.map((lbl, idx) => (
+                      <span key={idx} style={{ color: idx === chart.labels.length - 1 ? chartColor : undefined }}>{lbl}</span>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Subject Breakdown Bars */}
-            <div className="mt-6 mb-4 space-y-4">
-              <h3 className="text-[13px] font-bold text-[#141779] mb-3 border-b border-gray-100 pb-2">
-                {modalType === "strengths" ? "Top Subjects" : modalType === "weaknesses" ? "Needs Attention" : modalType === "risks" ? "At-Risk Subjects" : "Performance by Subject"}
-              </h3>
-              {subjectBreakdown
-                .slice()
-                .filter(sb => {
-                  if (modalType === "strengths") return sb.accuracy >= 70;
-                  if (modalType === "weaknesses") return sb.accuracy < 70;
-                  return true;
-                })
-                .sort((a, b) => {
-                  if (modalType === "weaknesses") return a.accuracy - b.accuracy;
-                  return b.accuracy - a.accuracy;
-                })
-                .map((sb, idx) => {
-                  const isStrength = sb.accuracy >= 70;
-                  const barColor = isStrength ? "#006a62" : "#ba1a1a";
-                  const bgColor = isStrength ? "bg-[#006a62]/10" : "bg-[#ba1a1a]/10";
+              {/* Subject Breakdown Bars */}
+              <div className="space-y-4">
+                <h3 className="text-[13px] font-bold text-[#141779] mb-3 border-b border-gray-100 pb-2">
+                  {modalType === "strengths" ? "Top Subjects" : modalType === "weaknesses" ? "Needs Attention" : modalType === "risks" ? "At-Risk Subjects" : "Performance by Subject"}
+                </h3>
+                {subjectBreakdown
+                  .slice()
+                  .filter(sb => {
+                    if (modalType === "strengths") return sb.accuracy >= 70;
+                    if (modalType === "weaknesses") return sb.accuracy < 70;
+                    return true;
+                  })
+                  .sort((a, b) => {
+                    if (modalType === "weaknesses") return a.accuracy - b.accuracy;
+                    return b.accuracy - a.accuracy;
+                  })
+                  .map((sb, idx) => {
+                    const isStrength = sb.accuracy >= 70;
+                    const barColor = isStrength ? "#006a62" : "#ba1a1a";
+                    const bgColor = isStrength ? "bg-[#006a62]/10" : "bg-[#ba1a1a]/10";
 
-                  return (
-                    <div key={idx}>
-                      <div className="flex justify-between text-xs font-bold mb-1.5">
-                        <span className={isStrength ? "text-[#006a62]" : "text-[#ba1a1a]"}>
-                          {sb.subject} {isStrength ? "💪" : "⚠️"}
-                        </span>
-                        <span className={isStrength ? "text-[#006a62]" : "text-[#ba1a1a]"}>{sb.accuracy}%</span>
+                    return (
+                      <div key={idx}>
+                        <div className="flex justify-between text-xs font-bold mb-1.5">
+                          <span className={isStrength ? "text-[#006a62]" : "text-[#ba1a1a]"}>
+                            {sb.subject} {isStrength ? "💪" : "⚠️"}
+                          </span>
+                          <span className={isStrength ? "text-[#006a62]" : "text-[#ba1a1a]"}>{sb.accuracy}%</span>
+                        </div>
+                        <div className={`h-2.5 w-full ${bgColor} rounded-full overflow-hidden`}>
+                          <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${sb.accuracy}%`, backgroundColor: barColor }} />
+                        </div>
                       </div>
-                      <div className={`h-2.5 w-full ${bgColor} rounded-full overflow-hidden`}>
-                        <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${sb.accuracy}%`, backgroundColor: barColor }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              {subjectBreakdown.length === 0 && (
-                <p className="text-xs text-[#767683]">Play more quests to see detailed subject breakdown!</p>
-              )}
-              {subjectBreakdown.length > 0 &&
-                modalType === "weaknesses" &&
-                subjectBreakdown.every(sb => sb.accuracy >= 70) && (
-                  <p className="text-xs text-[#006a62] font-semibold bg-[#006a62]/10 p-3 rounded-lg text-center mt-2">
-                    🎉 Fantastic! Your child has no weak subjects right now.
-                  </p>
+                    );
+                  })}
+                {subjectBreakdown.length === 0 && (
+                  <p className="text-xs text-[#767683]">Play more quests to see detailed subject breakdown!</p>
                 )}
-              {subjectBreakdown.length > 0 &&
-                modalType === "strengths" &&
-                subjectBreakdown.every(sb => sb.accuracy < 70) && (
-                  <p className="text-xs text-[#ba1a1a] font-semibold bg-[#ba1a1a]/10 p-3 rounded-lg text-center mt-2">
-                    Keep playing to build up strong subjects!
-                  </p>
-                )}
-            </div>
+                {subjectBreakdown.length > 0 &&
+                  modalType === "weaknesses" &&
+                  subjectBreakdown.every(sb => sb.accuracy >= 70) && (
+                    <p className="text-xs text-[#006a62] font-semibold bg-[#006a62]/10 p-3 rounded-lg text-center mt-2">
+                      🎉 Fantastic! Your child has no weak subjects right now.
+                    </p>
+                  )}
+                {subjectBreakdown.length > 0 &&
+                  modalType === "strengths" &&
+                  subjectBreakdown.every(sb => sb.accuracy < 70) && (
+                    <p className="text-xs text-[#ba1a1a] font-semibold bg-[#ba1a1a]/10 p-3 rounded-lg text-center mt-2">
+                      Keep playing to build up strong subjects!
+                    </p>
+                  )}
+              </div>
 
-            {(() => {
-              return (
-                <div className="bg-indigo-50 p-4 rounded-xl shadow-sm border border-indigo-100 mt-4">
-                  <p className="text-xs text-[#141779] leading-relaxed">
-                    <span className="font-bold text-[#141779]">Actionable Insight: </span>
-                    {modalType === "risks" ? (
-                      <>Noticeable decline in confidence recently. We recommend a <strong>15-minute review session</strong> today focusing on basics, avoiding complex new quests to rebuild {childName}'s confidence slowly.</>
-                    ) : subjectBreakdown.length > 0 ? (
-                      modalType === "strengths" ?
-                        `Your child is currently excelling at ${highestSubject}! These strong foundations help boost overall confidence.`
-                        : modalType === "weaknesses" ?
-                          `They should give more attention to ${lowestSubject} to build a more balanced cognitive profile.`
-                          : <>Your child is currently excelling at <strong>{highestSubject}</strong>! However, they should give more attention to <strong>{lowestSubject}</strong> to build a more balanced cognitive profile.</>
-                    ) : (
-                      <>{diff >= 0 ? "Consistent upward trend this week!" : "Noticed a slight dip recently."} {strengths.join(" ")}</>
-                    )}
-                  </p>
-                </div>
-              );
-            })()}
+              {(() => {
+                return (
+                  <div className="bg-indigo-50 p-4 rounded-xl shadow-sm border border-indigo-100">
+                    <p className="text-xs text-[#141779] leading-relaxed">
+                      <span className="font-bold text-[#141779]">Actionable Insight: </span>
+                      {modalType === "risks" ? (
+                        <>Noticeable decline in confidence recently. We recommend a <strong>15-minute review session</strong> today focusing on basics, avoiding complex new quests to rebuild {childName}'s confidence slowly.</>
+                      ) : subjectBreakdown.length > 0 ? (
+                        modalType === "strengths" ?
+                          `Your child is currently excelling at ${highestSubject}! These strong foundations help boost overall confidence.`
+                          : modalType === "weaknesses" ?
+                            `They should give more attention to ${lowestSubject} to build a more balanced cognitive profile.`
+                            : <>Your child is currently excelling at <strong>{highestSubject}</strong>! However, they should give more attention to <strong>{lowestSubject}</strong> to build a more balanced cognitive profile.</>
+                      ) : (
+                        <>{diff >= 0 ? "Consistent upward trend this week!" : "Noticed a slight dip recently."} {strengths.join(" ")}</>
+                      )}
+                    </p>
+                  </div>
+                );
+              })()}
+
+              {/* Go to Lessons CTA */}
+              <button
+                onClick={() => { setModalType(null); navigate('/parent/lessons'); }}
+                className="w-full flex items-center justify-center gap-2 bg-[#141779] text-white font-extrabold text-sm py-3.5 px-6 rounded-2xl hover:bg-[#1e23a0] active:scale-95 transition-all shadow-md shadow-[#141779]/25 shrink-0"
+              >
+                <span>📖</span>
+                <span>Go to Lessons</span>
+                <ChevronRight size={16} />
+              </button>
+            </div>
           </div>
         </div>
       )}

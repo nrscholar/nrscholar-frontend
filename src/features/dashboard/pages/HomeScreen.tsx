@@ -29,45 +29,9 @@ export default function HomeScreen() {
 
   const [missions, setMissions] = useState<any[]>([]);
   const [retentionStreak, setRetentionStreak] = useState<any>(null);
-  const [dailyChallenge, setDailyChallenge] = useState<any>(null);
-  const [claimingChallenge, setClaimingChallenge] = useState(false);
   const [retentionTrigger, setRetentionTrigger] = useState(0);
 
-  const claimDailyChallengeReward = async () => {
-    if (claimingChallenge) return;
-    setClaimingChallenge(true);
-    try {
-      const res = await apiFetch("/api/practice/challenge/claim", { method: "POST" });
-      const json = await res.json();
-      if (res.ok && json.success && json.data) {
-        if (json.data.coinReward) setCoins(prev => prev + (json.data.coinReward || 0));
-        if (json.data.xpReward) setXp(prev => prev + (json.data.xpReward || 0));
-        
-        alert(`Success! You claimed +${json.data.xpReward} XP and +${json.data.coinReward} Coins! 🎁`);
-        
-        if (json.data.user) {
-          const cached = localStorage.getItem("userData");
-          if (cached) {
-            const u = JSON.parse(cached);
-            u.coins = json.data.user.coins;
-            u.xp = json.data.user.xp;
-            u.level = json.data.user.level;
-            localStorage.setItem("userData", JSON.stringify(u));
-          }
-        }
-        
-        setRetentionTrigger(prev => prev + 1);
-        window.dispatchEvent(new Event("userDataUpdated"));
-      } else {
-        alert(json.message || "Failed to claim reward");
-      }
-    } catch (e) {
-      console.error(e);
-      alert("Error claiming reward");
-    } finally {
-      setClaimingChallenge(false);
-    }
-  };
+
 
   const fetchMissions = async () => {
     try {
@@ -82,9 +46,9 @@ export default function HomeScreen() {
           setTodayCompletedCount(msData.today_completed_count || 0);
         }
       }
-    } catch (e) {}
+    } catch (e) { }
   };
-  
+
   // Unscripted Game Elements
   const [surpriseData, setSurpriseData] = useState<any>(null);
   const [chestTaps, setChestTaps] = useState(0);
@@ -109,7 +73,7 @@ export default function HomeScreen() {
       if (json.success && json.data) {
         setUnreadCount(json.data.filter((n: any) => !n.isRead).length);
       }
-    } catch (e) {}
+    } catch (e) { }
   };
 
 
@@ -149,7 +113,7 @@ export default function HomeScreen() {
         setChildPhoto(u.childPhoto || "");
         setUserLevel(u.level || 1);
         setStreakDays(u.streakDays || 0);
-      } catch(e) {}
+      } catch (e) { }
     }
 
     const loadAllDashboardData = async () => {
@@ -184,7 +148,7 @@ export default function HomeScreen() {
               setChestTaps(0);
             }
           }
-        } catch (e) {}
+        } catch (e) { }
       })();
 
       const spinWheelPromise = (async () => {
@@ -196,7 +160,7 @@ export default function HomeScreen() {
               const dailyCount = spinData.balances.daily_spins_balance || 0;
               const hasSpin = dailyCount > 0 || (spinData.balances.chapter_spins_balance || 0) > 0 || (spinData.balances.event_spins_balance || 0) > 0;
               setHasFreeSpin(hasSpin);
-              
+
               if (dailyCount > 0 && sessionStorage.getItem("dailySpinPopupShown") !== "true") {
                 setPendingSpinPopup(true);
               }
@@ -207,20 +171,6 @@ export default function HomeScreen() {
         }
       })();
 
-      const dailyChallengePromise = (async () => {
-        try {
-          const dcRes = await apiFetch("/api/practice/challenge/today");
-          if (dcRes.ok) {
-            const dcData = await dcRes.json();
-            if (dcData && dcData.success && dcData.data) {
-              setDailyChallenge(dcData.data);
-            }
-          }
-        } catch (e) {
-          console.error("Failed to fetch daily challenge", e);
-        }
-      })();
-
       const streakSequencePromise = (async () => {
         try {
           try {
@@ -228,8 +178,8 @@ export default function HomeScreen() {
             if (streakUpRes.ok) {
               await fetchProfile();
             }
-          } catch(e) {}
-          
+          } catch (e) { }
+
           const stRes = await apiFetch("/api/retention/streak");
           if (stRes.ok) {
             const stData = await stRes.json();
@@ -247,7 +197,6 @@ export default function HomeScreen() {
         citiesPromise,
         surprisePromise,
         spinWheelPromise,
-        dailyChallengePromise,
         streakSequencePromise
       ]);
     };
@@ -260,7 +209,7 @@ export default function HomeScreen() {
         loadAllDashboardData();
       }
     };
-    
+
     const handleUserDataUpdated = () => {
       const cached = localStorage.getItem("userData");
       if (cached) {
@@ -280,7 +229,7 @@ export default function HomeScreen() {
         fetchProfile();
       }
     };
-    
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('userDataUpdated', handleUserDataUpdated);
 
@@ -310,7 +259,7 @@ export default function HomeScreen() {
         // Add coins and XP visually
         if (data.coinReward) setCoins(prev => prev + (data.coinReward || 0));
         if (data.xpReward) setXp(prev => prev + (data.xpReward || 0));
-        
+
         // Instantly fetch updated missions so the NEXT mission in sequence populates!
         fetchMissions();
       }
@@ -336,12 +285,12 @@ export default function HomeScreen() {
   const nextLockedIndex = citiesData.length > 0 ? Math.min(citiesData.length - 1, currentCityIndex + 1) : 0;
   const currentCityName = citiesData.length > 0 ? citiesData[currentCityIndex].name : "Egg Village";
   const nextCityName = citiesData.length > 0 ? citiesData[nextLockedIndex].name : "Forest Kingdom";
-  
+
   const targetXp = citiesData.length > 0 ? (xpThresholds[nextLockedIndex] || (nextLockedIndex * 5000)) : 1000;
   const prevMilestoneXp = citiesData.length > 0 ? (xpThresholds[currentCityIndex] || (currentCityIndex * 5000)) : 0;
   const xpNeeded = Math.max(0, targetXp - xp);
   const currentLegXpTotal = Math.max(1, targetXp - prevMilestoneXp);
-  
+
   // Calculate leg percentage: if at initial milestone (e.g. initial 50 XP daily login streak reward), start at 0%
   const xpInLeg = Math.max(0, xp - prevMilestoneXp);
   let rawLegPercentage = currentLegXpTotal > 0 ? (xpInLeg / currentLegXpTotal) * 100 : 0;
@@ -360,19 +309,19 @@ export default function HomeScreen() {
       {/* Top Section */}
       <header className="fixed top-0 left-0 right-0 flex items-center justify-between px-4 sm:px-6 py-4 bg-[rgba(247,249,251,0.8)] border-b-[1.5px] border-[rgba(255,255,255,0.2)] z-50 backdrop-blur-md gap-2">
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          <button 
+          <button
             onClick={() => navigate("/profile")}
             className="w-11 h-11 rounded-full border-2 border-[#57fae9] overflow-hidden hover:opacity-80 transition-opacity shrink-0"
           >
             {childPhoto ? (
-              <img 
-                src={childPhoto} 
+              <img
+                src={childPhoto}
                 alt="Avatar"
                 className="w-full h-full object-cover"
               />
             ) : (
-              <img 
-                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(childName || "Kid")}&background=random`} 
+              <img
+                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(childName || "Kid")}&background=random`}
                 alt="Avatar"
                 className="w-full h-full object-cover"
               />
@@ -395,7 +344,7 @@ export default function HomeScreen() {
             <span className="text-xs font-bold text-[#ff9f43]">🔥 {retentionStreak?.currentStreak ?? streakDays}</span>
           </div>
           {/* Bell button with badge overlapping the icon top-right */}
-          <button 
+          <button
             onClick={() => navigate("/notifications")}
             className="w-10 h-10 rounded-xl bg-[rgba(20,23,121,0.08)] flex items-center justify-center hover:bg-[rgba(20,23,121,0.15)] transition-all shrink-0"
           >
@@ -408,7 +357,7 @@ export default function HomeScreen() {
               )}
             </div>
           </button>
-          <button 
+          <button
             onClick={() => navigate("/practice/inventory")}
             className="h-10 bg-[rgba(255,215,0,0.15)] px-2.5 rounded-xl flex items-center justify-center hover:opacity-80 transition-opacity whitespace-nowrap shrink-0"
           >
@@ -461,7 +410,7 @@ export default function HomeScreen() {
           {/* Map Progress Track with Learning Train */}
           <div className="h-16 flex items-center bg-[rgba(255,255,255,0.6)] rounded-2xl border border-[#e0f2f1] relative overflow-hidden mb-4 px-5">
             <div className="h-0.5 border-t-2 border-dashed border-[#141779] opacity-50 w-full" />
-            
+
             <div className="absolute inset-0 px-5 flex items-center">
               <div style={{ width: `${currentLegXpPercentage}%`, transition: 'width 1s ease-in-out' }} />
               <motion.div
@@ -479,100 +428,11 @@ export default function HomeScreen() {
           </p>
         </button>
 
-        {/* DAILY CHALLENGE CARD */}
-        {false && dailyChallenge && (
-          <div className="w-full bg-[#f4efff] rounded-[24px] p-5 border-[1.5px] border-[#dcd0ff] shadow-sm relative overflow-hidden z-10">
-            {/* Background decorative elements */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-200/20 rounded-full blur-2xl pointer-events-none" />
-            
-            <div 
-              className="flex justify-between items-start mb-3 gap-2 cursor-pointer hover:opacity-85 transition-opacity" 
-              onClick={() => navigate("/daily-challenge")}
-              title="View Challenge Details"
-            >
-              <div>
-                <span className="px-2.5 py-0.5 bg-[#e0d3ff] text-[#5b3fbe] text-[10px] font-black uppercase tracking-widest rounded-full border border-[#c3b2f5]">
-                  Daily Challenge 🎯
-                </span>
-                <h3 className="text-base font-black text-[#141779] mt-2 leading-snug">
-                  {dailyChallenge.title}
-                </h3>
-              </div>
-              
-              {/* Rewards */}
-              <div className="flex flex-col items-end gap-1 shrink-0">
-                <span className="text-[10px] font-bold text-[#006a62] whitespace-nowrap bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-100">
-                  ⭐ {dailyChallenge.bonusStars} Stars
-                </span>
-                <span className="text-[10px] font-bold text-[#006a62] whitespace-nowrap bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100">
-                  ✨ {dailyChallenge.xpReward} XP
-                </span>
-              </div>
-            </div>
-            
-            <p className="text-xs text-[#525266] font-medium leading-normal mb-4">
-              {dailyChallenge.desc || dailyChallenge.description}
-            </p>
-            
-            {/* Progress details */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-[10px] font-bold text-[#141779]">
-                <span>Progress</span>
-                <span>
-                  {dailyChallenge.title.toLowerCase().includes("accuracy")
-                    ? `${dailyChallenge.progress}% / ${dailyChallenge.target}%`
-                    : `${dailyChallenge.progress} / ${dailyChallenge.target}`}
-                </span>
-              </div>
-              <div className="w-full bg-slate-200/70 h-2 rounded-full overflow-hidden border border-slate-300/30">
-                <div 
-                  className="h-full bg-gradient-to-r from-violet-500 to-indigo-600 rounded-full transition-all duration-500"
-                  style={{ width: `${Math.min(100, (dailyChallenge.progress / dailyChallenge.target) * 100)}%` }}
-                />
-              </div>
-            </div>
-            
-            {/* Actions */}
-            <div className="mt-4 flex gap-2">
-              {dailyChallenge.claimed ? (
-                <div className="w-full bg-emerald-100 text-emerald-800 font-extrabold py-2.5 rounded-xl border border-emerald-200 flex items-center justify-center gap-1.5 text-xs">
-                  <span>✓ Rewards Claimed!</span>
-                </div>
-              ) : dailyChallenge.completed ? (
-                <button
-                  onClick={claimDailyChallengeReward}
-                  disabled={claimingChallenge}
-                  className="w-full bg-gradient-to-r from-amber-400 via-amber-500 to-amber-400 hover:from-amber-500 hover:to-amber-600 text-slate-900 font-black py-2.5 rounded-xl shadow-md shadow-amber-500/20 active:scale-98 transition-all flex items-center justify-center gap-1.5 text-xs border border-amber-300"
-                >
-                  <span>🎁 CLAIM {dailyChallenge.bonusStars} STARS & {dailyChallenge.xpReward} XP</span>
-                </button>
-              ) : (
-                <button
-                  onClick={() => {
-                    const t = (dailyChallenge.title || "").toLowerCase();
-                    let dest = "/practice/chapters";
-                    if (t.includes("math")) {
-                      dest = "/practice/chapters";
-                    } else if (t.includes("science") || t.includes("read") || t.includes("topic")) {
-                      dest = "/textbook/subjects";
-                    } else if (t.includes("boss") || t.includes("landmark") || t.includes("explore") || t.includes("map")) {
-                      dest = "/practice/journey-map";
-                    }
-                    navigate(dest);
-                  }}
-                  className="w-full bg-[#141779] text-white font-extrabold py-2.5 rounded-xl hover:opacity-90 active:scale-98 transition-all flex items-center justify-center gap-1.5 text-xs shadow-md shadow-indigo-900/10 border border-indigo-950/20"
-                >
-                  <span>Start Activity 🚀</span>
-                </button>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* QUICK ACTIONS BENTO GRID */}
         <div className="flex flex-col gap-[14px] relative z-10">
           <h2 className="text-[10px] font-bold text-[#767683] tracking-[1.5px] px-1">{t('explorer_mission_controls')}   </h2>
-          
+
           <div className="grid grid-cols-2 gap-3">
             {/* Continue Learning */}
             <button
@@ -743,23 +603,21 @@ export default function HomeScreen() {
                     return (
                       <div
                         key={mission.id || `seq_${mission.seq}`}
-                        className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border transition-all duration-300 relative overflow-hidden ${
-                          isDone
+                        className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border transition-all duration-300 relative overflow-hidden ${isDone
                             ? "bg-emerald-50/80 border-emerald-200/90 text-emerald-950 shadow-xs"
                             : isReady
-                            ? "bg-gradient-to-r from-amber-50/90 via-amber-100/70 to-amber-50/90 border-amber-300 shadow-md ring-2 ring-amber-400/40"
-                            : "bg-slate-50/90 border-slate-200/80 text-slate-900 hover:border-slate-300 hover:bg-slate-50"
-                        }`}
+                              ? "bg-gradient-to-r from-amber-50/90 via-amber-100/70 to-amber-50/90 border-amber-300 shadow-md ring-2 ring-amber-400/40"
+                              : "bg-slate-50/90 border-slate-200/80 text-slate-900 hover:border-slate-300 hover:bg-slate-50"
+                          }`}
                       >
                         <div className="flex items-center justify-between gap-2 sm:gap-3">
                           <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
-                            <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0 text-base sm:text-xl font-bold shadow-xs ${
-                              isDone 
-                                ? "bg-emerald-500 text-white shadow-emerald-500/20" 
+                            <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0 text-base sm:text-xl font-bold shadow-xs ${isDone
+                                ? "bg-emerald-500 text-white shadow-emerald-500/20"
                                 : isReady
-                                ? "bg-amber-500 text-white animate-bounce shadow-amber-500/30"
-                                : "bg-indigo-600 text-white shadow-indigo-600/20"
-                            }`}>
+                                  ? "bg-amber-500 text-white animate-bounce shadow-amber-500/30"
+                                  : "bg-indigo-600 text-white shadow-indigo-600/20"
+                              }`}>
                               {isDone ? <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6" /> : getIcon()}
                             </div>
                             <div className="min-w-0">
@@ -807,11 +665,10 @@ export default function HomeScreen() {
                         {!isDone && (
                           <div className="w-full bg-slate-200/90 h-2 sm:h-2.5 rounded-full overflow-hidden mt-2 sm:mt-2.5 border border-slate-200/60 p-0.5">
                             <div
-                              className={`h-full rounded-full transition-all duration-700 ease-out ${
-                                isReady 
-                                  ? "bg-gradient-to-r from-amber-400 to-amber-600 shadow-sm shadow-amber-500/50" 
+                              className={`h-full rounded-full transition-all duration-700 ease-out ${isReady
+                                  ? "bg-gradient-to-r from-amber-400 to-amber-600 shadow-sm shadow-amber-500/50"
                                   : "bg-gradient-to-r from-indigo-500 to-indigo-700"
-                              }`}
+                                }`}
                               style={{ width: `${pct}%` }}
                             />
                           </div>
@@ -846,12 +703,12 @@ export default function HomeScreen() {
             <h2 className="text-3xl font-bold text-white mb-8 animate-pulse text-center">{t('wild_surprise')}</h2>
             <motion.button
               onClick={() => {
-                 if(chestTaps === 0) {
-                   setChestTaps(1);
-                   setTimeout(() => setChestTaps(2), 1200);
-                 }
+                if (chestTaps === 0) {
+                  setChestTaps(1);
+                  setTimeout(() => setChestTaps(2), 1200);
+                }
               }}
-              animate={chestTaps === 1 ? { 
+              animate={chestTaps === 1 ? {
                 scale: [1, 1.2, 1.1, 1.3, 1.5],
                 rotate: [0, -10, 10, -15, 15, -20, 20, 0],
                 filter: ["brightness(1)", "brightness(1.5)", "brightness(2)"]
@@ -863,7 +720,7 @@ export default function HomeScreen() {
             >
               <span className="relative z-10">🎁</span>
               {chestTaps === 1 && (
-                <motion.div 
+                <motion.div
                   initial={{ scale: 0, opacity: 0 }}
                   animate={{ scale: [0, 5, 15], opacity: [0, 1, 1] }}
                   transition={{ duration: 1, delay: 0.2, ease: "easeIn" }}
@@ -881,13 +738,13 @@ export default function HomeScreen() {
       {/* REWARD REVEAL */}
       {surpriseData && chestTaps >= 2 && (
         <div className="fixed inset-0 z-[100] bg-[rgba(0,0,0,0.9)] flex flex-col items-center justify-center p-6">
-          <motion.div 
+          <motion.div
             initial={{ scale: 0, rotate: -180 }}
             animate={{ scale: 1, rotate: 0 }}
             transition={{ type: "spring", damping: 15, stiffness: 200 }}
             className="bg-gradient-to-b from-[#fff7e6] to-white w-full max-w-sm rounded-[32px] p-8 text-center relative shadow-[0_0_50px_rgba(255,215,0,0.4)]"
           >
-            <motion.span 
+            <motion.span
               initial={{ scale: 0 }}
               animate={{ scale: [1, 1.2, 1] }}
               transition={{ delay: 0.3, duration: 0.5 }}
@@ -897,20 +754,20 @@ export default function HomeScreen() {
             </motion.span>
             <h2 className="text-3xl font-bold text-[#141779] mb-2">{t('surprise_reward')}</h2>
             <p className="text-[#767683] font-semibold mb-6">{t('magic_chest_gave_you')}</p>
-            
-            <motion.div 
+
+            <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.5 }}
               className="bg-[#ff9f43]/10 rounded-2xl p-6 mb-8 border-2 border-[#ff9f43]/30 relative overflow-hidden"
             >
-               <div className="absolute inset-0 bg-white/40 blur-xl animate-pulse" />
-               <span className="text-5xl block mb-2 relative z-10">{surpriseData.reward_type === 'coins' ? '🪙' : surpriseData.reward_type === 'xp' ? '⭐' : '🔮'}</span>
-               <h3 className="text-2xl font-bold text-[#ff9f43] relative z-10">+{surpriseData.amount} {surpriseData.reward_type.toUpperCase()}</h3>
+              <div className="absolute inset-0 bg-white/40 blur-xl animate-pulse" />
+              <span className="text-5xl block mb-2 relative z-10">{surpriseData.reward_type === 'coins' ? '🪙' : surpriseData.reward_type === 'xp' ? '⭐' : '🔮'}</span>
+              <h3 className="text-2xl font-bold text-[#ff9f43] relative z-10">+{surpriseData.amount} {surpriseData.reward_type.toUpperCase()}</h3>
             </motion.div>
 
-            <button 
-              onClick={() => { 
+            <button
+              onClick={() => {
                 if (surpriseData.reward_type === 'coins') {
                   setCoins(c => {
                     const newCoins = c + surpriseData.amount;
@@ -934,7 +791,7 @@ export default function HomeScreen() {
                     return newXp;
                   });
                 }
-                setSurpriseData(null); 
+                setSurpriseData(null);
               }}
               className="w-full bg-[#141779] text-white font-bold py-4 rounded-[16px] hover:opacity-90 active:scale-95 transition-all text-xl shadow-[0_4px_12px_rgba(20,23,121,0.2)]"
             >
@@ -952,11 +809,10 @@ export default function HomeScreen() {
       >
         <button
           onClick={() => navigate("/daily-rewards")}
-          className={`w-14 h-14 rounded-full shadow-[0_4px_15px_rgba(0,0,0,0.15)] flex items-center justify-center border-2 transition-transform hover:scale-110 active:scale-95 ${
-            hasFreeSpin
+          className={`w-14 h-14 rounded-full shadow-[0_4px_15px_rgba(0,0,0,0.15)] flex items-center justify-center border-2 transition-transform hover:scale-110 active:scale-95 ${hasFreeSpin
               ? "bg-[#57fae9] border-[#007168] text-[#007168] animate-pulse"
               : "bg-white border-[#141779] text-[#141779]"
-          }`}
+            }`}
         >
           <Gift className="w-7 h-7" />
         </button>
@@ -1033,11 +889,11 @@ export default function HomeScreen() {
         )}
       </AnimatePresence>
 
-      <ChildSwitcherModal 
-        isOpen={showSwitcher} 
-        onClose={() => setShowSwitcher(false)} 
-        user={userData} 
-        onUserUpdated={(u) => setUserData(u)} 
+      <ChildSwitcherModal
+        isOpen={showSwitcher}
+        onClose={() => setShowSwitcher(false)}
+        user={userData}
+        onUserUpdated={(u) => setUserData(u)}
       />
 
     </div>

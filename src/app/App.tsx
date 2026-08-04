@@ -23,7 +23,6 @@ import AssessmentSummary from "../features/dashboard/pages/AssessmentSummary";
 import ChapterQuestionsScreen from "../features/dashboard/pages/ChapterQuestionsScreen";
 import ChaptersScreen from "../features/dashboard/pages/ChaptersScreen";
 import ChatScreen from "../features/dashboard/pages/ChatScreen";
-import DailyChallenge from "../features/dashboard/pages/DailyChallenge";
 import EvolutionScreen from "../features/dashboard/pages/EvolutionScreen";
 import HabitsScreen from "../features/dashboard/pages/HabitsScreen";
 import HomeScreen from "../features/dashboard/pages/HomeScreen";
@@ -327,7 +326,6 @@ function App() {
             <Route path="/practice/inventory" element={<InventoryScreen />} />
             <Route path="/practice/journey-map" element={<JourneyMapScreen />} />
             <Route path="/practice/collections" element={<InventoryScreen />} />
-            <Route path="/daily-challenge" element={<DailyChallenge />} />
             <Route path="/parent" element={<ParentalGateScreen />} />
             <Route path="/parent/gate" element={<ParentalGateScreen />} />
             <Route path="/parent/dashboard" element={<ParentDashboardScreen />} />

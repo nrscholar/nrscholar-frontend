@@ -138,7 +138,7 @@ export default function HabitsScreen() {
                 <Heart size={24} color="#2addcd" className="fill-[#2addcd]" />
               )}
             </div>
-            <span className="text-xs font-bold text-[#464652]">Today</span>
+            <span className="text-xs font-bold text-[#464652]">Day {habit?.currentDay || 1} (Today)</span>
           </div>
 
           {/* Next Day (currentDay + 1) */}
@@ -165,6 +165,7 @@ export default function HabitsScreen() {
               <div className="w-16 h-16 bg-[#e0e0ff] rounded-2xl flex items-center justify-center mb-4">
                 <Sparkles size={36} color="#141779" />
               </div>
+              <span className="text-xs font-extrabold text-[#006a62] uppercase tracking-wider mb-1">Lesson {habit?.currentDay || 1}</span>
               <h3 className="text-xl font-bold text-[#141779] text-center mb-3">
                 {habit?.title || "Daily Lesson"}
               </h3>
