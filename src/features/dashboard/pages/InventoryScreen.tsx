@@ -14,6 +14,7 @@ export default function InventoryScreen() {
   const [openingBox, setOpeningBox] = useState<string | null>(null);
   const [hatchingType, setHatchingType] = useState<string | null>(null);
   const [rewardData, setRewardData] = useState<any>(null);
+  const [subTab, setSubTab] = useState<"Journey" | "Lab">("Journey");
 
   const [xp, setXp] = useState(0);
   const [coins, setCoins] = useState(0);
@@ -23,22 +24,23 @@ export default function InventoryScreen() {
     window.scrollTo(0, 0);
   }, []);
 
+  const fetchProfile = async () => {
+    const token = localStorage.getItem("userToken");
+    if (!token) return;
+    try {
+      const response = await apiFetch("/api/users/me", {});
+      const data = await response.json();
+      if (data.success) {
+        const u = data.data.user;
+        setXp(u.xp || 0);
+        setCoins(u.coins || 0);
+        setUserBadges(u.badges || []);
+        localStorage.setItem("userData", JSON.stringify(u));
+      }
+    } catch (e) {}
+  };
+
   useEffect(() => {
-    const fetchProfile = async () => {
-      const token = localStorage.getItem("userToken");
-      if (!token) return;
-      try {
-        const response = await apiFetch("/api/users/me", {});
-        const data = await response.json();
-        if (data.success) {
-          const u = data.data.user;
-          setXp(u.xp || 0);
-          setCoins(u.coins || 0);
-          setUserBadges(u.badges || []);
-        }
-      } catch (e) {}
-    };
-    
     const cached = localStorage.getItem("userData");
     if (cached) {
       try {
@@ -118,23 +120,30 @@ export default function InventoryScreen() {
           // Refetch boxes
           setMysteryBoxes(prev => ({...prev, [type]: Math.max(0, (prev[type] || 0) - 1)}));
 
-          if (data.type === 'coins') {
+          if (data.user_coins !== undefined && data.user_coins !== null) {
+            setCoins(data.user_coins);
+          } else if (data.type === 'coins') {
             setCoins(prev => prev + data.amount);
-            const stored = localStorage.getItem("userData");
-            if (stored) {
-              const u = JSON.parse(stored);
-              u.coins = (u.coins || 0) + data.amount;
-              localStorage.setItem("userData", JSON.stringify(u));
-            }
+          }
+
+          if (data.user_xp !== undefined && data.user_xp !== null) {
+            setXp(data.user_xp);
           } else if (data.type === 'xp') {
             setXp(prev => prev + data.amount);
-            const stored = localStorage.getItem("userData");
-            if (stored) {
-              const u = JSON.parse(stored);
-              u.xp = (u.xp || 0) + data.amount;
-              localStorage.setItem("userData", JSON.stringify(u));
-            }
-          } else if (data.type === 'fragment') {
+          }
+
+          const stored = localStorage.getItem("userData");
+          if (stored) {
+            const u = JSON.parse(stored);
+            if (data.user_coins !== undefined) u.coins = data.user_coins;
+            else if (data.type === 'coins') u.coins = (u.coins || 0) + data.amount;
+            if (data.user_xp !== undefined) u.xp = data.user_xp;
+            else if (data.type === 'xp') u.xp = (u.xp || 0) + data.amount;
+            localStorage.setItem("userData", JSON.stringify(u));
+          }
+          window.dispatchEvent(new Event("userDataUpdated"));
+
+          if (data.type === 'fragment') {
             apiFetch("/api/retention/fragments").then(r => r.json()).then(f => setFragments(f)).catch(() => {});
           }
         }, 1500);
@@ -324,8 +333,9 @@ export default function InventoryScreen() {
                 const count = mysteryBoxes[type] || 0;
                 let bgColors = "from-[#f0f0f0] to-[#ffffff]";
                 let borderColor = "border-[#d0d0d0]";
-                if (type === 'rare') { bgColors = "from-[#e0f7fa] to-[#ffffff]"; borderColor = "border-[#00bcd4]"; }
-                if (type === 'epic') { bgColors = "from-[#f3e5f5] to-[#ffffff]"; borderColor = "border-[#9c27b0]"; }
+                let glowShadow = "shadow-[0_4px_16px_rgba(156,163,175,0.25)]";
+                if (type === 'rare') { bgColors = "from-[#e0f7fa] to-[#ffffff]"; borderColor = "border-[#00bcd4]"; glowShadow = "shadow-[0_4px_24px_rgba(0,188,212,0.35)]"; }
+                if (type === 'epic') { bgColors = "from-[#f3e5f5] to-[#ffffff]"; borderColor = "border-[#9c27b0]"; glowShadow = "shadow-[0_4px_28px_rgba(156,39,176,0.4)]"; }
                 
                 return (
                   <motion.div 
@@ -336,7 +346,7 @@ export default function InventoryScreen() {
                       scale: [1, 1.05, 1]
                     } : {}}
                     transition={{ duration: 0.5, repeat: openingBox === type ? Infinity : 0 }}
-                    className={`bg-gradient-to-br ${bgColors} rounded-[20px] p-4 border-2 ${borderColor} flex flex-col items-center relative overflow-hidden shadow-sm`}
+                    className={`bg-gradient-to-br ${bgColors} rounded-[20px] p-4 border-2 ${borderColor} ${glowShadow} flex flex-col items-center relative overflow-hidden transition-shadow`}
                   >
                     <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-3 shadow-inner">
                       <Package size={32} color={type === 'epic' ? '#9c27b0' : type === 'rare' ? '#00bcd4' : '#767683'} />
@@ -371,68 +381,96 @@ export default function InventoryScreen() {
               <p className="text-xs text-[#b8b8d2]">Hatch fragments and level up your mystical companions!</p>
             </div>
 
-            <div>
-              <h2 className="text-sm font-bold text-[#767683] tracking-widest uppercase mb-3">My Dragons</h2>
-              {dragons.length === 0 ? (
-                <div className="bg-white rounded-[20px] p-6 text-center border border-[#f0f0f0]">
-                  <p className="text-sm text-[#767683]">No dragons hatched yet. Collect fragments!</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  {dragons.map((d: any) => (
+            {/* Sub-tab Switcher */}
+            <div className="flex gap-2 bg-white p-1.5 rounded-2xl border border-[#f0f0f0] shadow-sm">
+              <button
+                onClick={() => setSubTab("Journey")}
+                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  subTab === "Journey"
+                    ? "bg-[#141779] text-white shadow-md"
+                    : "text-[#767683] hover:bg-gray-50"
+                }`}
+              >
+                Dragon Journey 🗺️
+              </button>
+              <button
+                onClick={() => setSubTab("Lab")}
+                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  subTab === "Lab"
+                    ? "bg-[#141779] text-white shadow-md"
+                    : "text-[#767683] hover:bg-gray-50"
+                }`}
+              >
+                Lab 🧪
+              </button>
+            </div>
+
+            {subTab === "Journey" && (
+              <div>
+                <h2 className="text-sm font-bold text-[#767683] tracking-widest uppercase mb-3">My Dragons</h2>
+                {dragons.length === 0 ? (
+                  <div className="bg-white rounded-[20px] p-6 text-center border border-[#f0f0f0]">
+                    <p className="text-sm text-[#767683]">No dragons hatched yet. Collect fragments!</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    {dragons.map((d: any) => (
+                      <motion.div 
+                        key={d.id} 
+                        animate={{ y: [-3, 3, -3] }}
+                        transition={{ repeat: Infinity, duration: 2 + Math.random(), ease: "easeInOut" }}
+                        className="bg-gradient-to-br from-[#e0e0ff] to-[#ffffff] rounded-[20px] p-4 border-2 border-[#141779] flex flex-col items-center shadow-sm"
+                      >
+                        <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-2">
+                          <span className="text-3xl">🐉</span>
+                        </div>
+                        <h3 className="text-[13px] font-bold text-[#141779] text-center">{d.name}</h3>
+                        <p className="text-[10px] font-bold text-[#767683]">Level {d.level} • {d.rarity}</p>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {subTab === "Lab" && (
+              <div>
+                <h2 className="text-sm font-bold text-[#767683] tracking-widest uppercase mb-3">Dragon Fragments</h2>
+                <div className="flex flex-col gap-3">
+                  {fragments.map((f: any) => (
                     <motion.div 
-                      key={d.id} 
-                      animate={{ y: [-3, 3, -3] }}
-                      transition={{ repeat: Infinity, duration: 2 + Math.random(), ease: "easeInOut" }}
-                      className="bg-gradient-to-br from-[#e0e0ff] to-[#ffffff] rounded-[20px] p-4 border-2 border-[#141779] flex flex-col items-center shadow-sm"
+                      key={f.type} 
+                      animate={hatchingType === f.type ? {
+                        x: [-5, 5, -5, 5, -5, 5, 0],
+                        scale: [1, 1.05, 1.05, 1],
+                        filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"]
+                      } : {}}
+                      transition={{ duration: 0.5, repeat: hatchingType === f.type ? Infinity : 0 }}
+                      className="bg-white rounded-[20px] p-4 border border-[#f0f0f0] flex items-center justify-between"
                     >
-                      <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-2">
-                        <span className="text-3xl">🐉</span>
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full bg-[rgba(20,23,121,0.05)] flex items-center justify-center">
+                          <span className="text-xl">🧩</span>
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-[#141779] capitalize">{f.type} Fragments</h3>
+                          <p className="text-xs text-[#767683] font-semibold">{f.count} / 10 Needed</p>
+                        </div>
                       </div>
-                      <h3 className="text-[13px] font-bold text-[#141779] text-center">{d.name}</h3>
-                      <p className="text-[10px] font-bold text-[#767683]">Level {d.level} • {d.rarity}</p>
+                      {f.count >= 10 && (
+                        <button 
+                          onClick={() => combineFragments(f.type)}
+                          disabled={hatchingType !== null}
+                          className={`text-white px-4 py-2 rounded-xl text-xs font-bold transition-colors ${hatchingType === f.type ? "bg-gray-400" : "bg-[#20c997] hover:bg-[#1bb386]"}`}
+                        >
+                          {hatchingType === f.type ? "Hatching..." : "Hatch!"}
+                        </button>
+                      )}
                     </motion.div>
                   ))}
                 </div>
-              )}
-            </div>
-
-            <div>
-              <h2 className="text-sm font-bold text-[#767683] tracking-widest uppercase mb-3">Dragon Fragments</h2>
-              <div className="flex flex-col gap-3">
-                {fragments.map((f: any) => (
-                  <motion.div 
-                    key={f.type} 
-                    animate={hatchingType === f.type ? {
-                      x: [-5, 5, -5, 5, -5, 5, 0],
-                      scale: [1, 1.05, 1.05, 1],
-                      filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"]
-                    } : {}}
-                    transition={{ duration: 0.5, repeat: hatchingType === f.type ? Infinity : 0 }}
-                    className="bg-white rounded-[20px] p-4 border border-[#f0f0f0] flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-[rgba(20,23,121,0.05)] flex items-center justify-center">
-                        <span className="text-xl">🧩</span>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-bold text-[#141779] capitalize">{f.type} Fragments</h3>
-                        <p className="text-xs text-[#767683] font-semibold">{f.count} / 10 Needed</p>
-                      </div>
-                    </div>
-                    {f.count >= 10 && (
-                      <button 
-                        onClick={() => combineFragments(f.type)}
-                        disabled={hatchingType !== null}
-                        className={`text-white px-4 py-2 rounded-xl text-xs font-bold transition-colors ${hatchingType === f.type ? "bg-gray-400" : "bg-[#20c997] hover:bg-[#1bb386]"}`}
-                      >
-                        {hatchingType === f.type ? "Hatching..." : "Hatch!"}
-                      </button>
-                    )}
-                  </motion.div>
-                ))}
               </div>
-            </div>
+            )}
           </div>
         )}
       </main>

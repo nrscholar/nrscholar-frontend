@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ChevronDown, ChevronUp, Mail } from "lucide-react";
 import { apiFetch } from "../../../api";
-
+import { useTranslation } from "react-i18next";
 
 export default function HelpCenterScreen() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [faqs, setFaqs] = useState<{question: string, answer: string, _id: string}[]>([]);
   const [openFaq, setOpenFaq] = useState<string | null>(null);
@@ -37,14 +38,14 @@ export default function HelpCenterScreen() {
         <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity">
           <ArrowLeft size={24} color="#141779" />
         </button>
-        <h1 className="text-2xl font-bold text-[#141779]">Help Center</h1>
+        <h1 className="text-2xl font-bold text-[#141779]">{t("help_center")}</h1>
         <div className="w-8" />
       </header>
 
       <main className="px-6 pt-8 pb-24 flex flex-col gap-6">
         <div className="text-center mb-4">
-          <h2 className="text-2xl font-bold text-[#141779] mb-2">How can we help?</h2>
-          <p className="text-[#767683] text-sm">Browse our frequently asked questions or get in touch with our team.</p>
+          <h2 className="text-2xl font-bold text-[#141779] mb-2">{t("how_can_we_help")}</h2>
+          <p className="text-[#767683] text-sm">{t("browse_faqs")}</p>
         </div>
 
         {loading ? (
@@ -82,10 +83,10 @@ export default function HelpCenterScreen() {
             className="w-full flex items-center justify-center gap-3 bg-[#141779] text-white py-4 rounded-2xl font-bold shadow-md hover:bg-[#1a1e9c] transition-colors"
           >
             <Mail size={20} />
-            Contact Support
+            {t("contact_support")}
           </button>
           <p className="text-center text-xs text-[#767683] mt-3">
-            We typically reply within 24 hours.
+            {t("reply_within_24h")}
           </p>
         </div>
       </main>

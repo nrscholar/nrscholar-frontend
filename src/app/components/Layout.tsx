@@ -32,14 +32,14 @@ export default function Layout() {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex flex-col items-center justify-center gap-1 py-1.5 px-4 rounded-full transition-all duration-300 ${
+              className={`flex flex-col items-center justify-center gap-1 h-[56px] min-w-[64px] px-2 rounded-2xl transition-all duration-300 ${
                 isActive
                   ? "bg-[#57fae9] text-[#007168] shadow-sm scale-105"
                   : "text-[#464652] hover:text-[#007168]"
               }`}
             >
-              <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
-              <span className="text-[10px] font-bold tracking-wide">{item.label}</span>
+              <Icon size={20} strokeWidth={isActive ? 2.5 : 2} className="shrink-0" />
+              <span className="text-[10px] font-bold tracking-wide whitespace-nowrap">{item.label}</span>
             </Link>
           );
         })}

@@ -55,9 +55,41 @@ function SectionHeader({ icon, title, subtitle }: { icon: React.ReactNode; title
 
 export default function ParentReportScreen() {
   const navigate = useNavigate();
+  
+  const formatReadingTime = (seconds: number) => {
+    if (!seconds || seconds <= 0) return "0s";
+    if (seconds < 60) return `${seconds}s`;
+    const mins = Math.floor(seconds / 60);
+    if (mins < 60) {
+      const remainingSecs = seconds % 60;
+      return remainingSecs > 0 ? `${mins}m ${remainingSecs}s` : `${mins}m`;
+    }
+    const hrs = Math.floor(mins / 60);
+    const remainingMins = mins % 60;
+    return remainingMins > 0 ? `${hrs}h ${remainingMins}m` : `${hrs}h`;
+  };
+
+  const formatChapterReadingTime = (seconds: number) => {
+    if (!seconds || seconds <= 0) return "";
+    if (seconds < 60) return `${seconds}s`;
+    const mins = Math.floor(seconds / 60);
+    if (mins < 60) return `${mins}m`;
+    const hrs = Math.floor(mins / 60);
+    const remainingMins = mins % 60;
+    return remainingMins > 0 ? `${hrs}h ${remainingMins}m` : `${hrs}h`;
+  };
+
   const [activeTab, setActiveTab] = useState("daily");
-  const [reportData, setReportData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  
+  const cachedReport = (() => {
+    try {
+      const raw = sessionStorage.getItem("parent_report_cache");
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  })();
+
+  const [reportData, setReportData] = useState<any>(cachedReport);
+  const [loading, setLoading] = useState(!cachedReport);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -136,7 +168,10 @@ export default function ParentReportScreen() {
       try {
         const res  = await apiFetch("/api/parent/report");
         const json = await res.json();
-        if (json.success) setReportData(json.data);
+        if (json.success) {
+          setReportData(json.data);
+          sessionStorage.setItem("parent_report_cache", JSON.stringify(json.data));
+        }
       } catch (err) { console.error(err); }
       finally { setLoading(false); }
     })();
@@ -150,9 +185,22 @@ export default function ParentReportScreen() {
   ];
 
   if (loading) return (
-    <div className="min-h-screen bg-[#f7f9fb] flex flex-col items-center justify-center gap-3">
-      <Loader2 size={32} className="animate-spin text-[#141779]" />
-      <p className="text-sm font-bold text-[#464652]">Analysing learning data...</p>
+    <div className="min-h-screen bg-[#f7f9fb] px-5 pt-[104px] flex flex-col gap-5">
+      <header className="fixed top-0 left-0 right-0 flex items-center justify-between px-6 h-16 bg-white/60 backdrop-blur-xl border-b border-white/40 z-50">
+        <div className="flex items-center gap-3 w-full">
+          <div className="w-8 h-8 bg-gray-200 animate-pulse rounded-full"></div>
+          <div className="h-6 w-32 bg-gray-200 animate-pulse rounded"></div>
+        </div>
+      </header>
+      <div className="flex gap-2">
+        <div className="bg-gray-200 animate-pulse rounded-lg h-8 flex-1"></div>
+        <div className="bg-gray-200 animate-pulse rounded-lg h-8 flex-1"></div>
+        <div className="bg-gray-200 animate-pulse rounded-lg h-8 flex-1"></div>
+        <div className="bg-gray-200 animate-pulse rounded-lg h-8 flex-1"></div>
+      </div>
+      <div className="bg-gray-200 animate-pulse rounded-[24px] h-48 w-full"></div>
+      <div className="bg-gray-200 animate-pulse rounded-[24px] h-48 w-full"></div>
+      <div className="bg-gray-200 animate-pulse rounded-[24px] h-48 w-full"></div>
     </div>
   );
 
@@ -245,6 +293,23 @@ export default function ParentReportScreen() {
                 <StatBox label="Completion Rate" value={`${rA.completionRate ?? 0}%`} color="text-[#141779]" />
               </div>
               <ProgressBar value={rA.completionRate ?? 0} color="bg-[#006a62]" />
+              <div className="mt-3 bg-[#006a62]/5 border border-[#006a62]/10 rounded-xl p-3 flex justify-between items-center">
+                <span className="text-xs font-bold text-[#006a62]">Total Reading Time</span>
+                <span className="text-sm font-black text-[#006a62]">{formatReadingTime(rA.totalReadingTime ?? 0)}</span>
+              </div>
+              {rA.readChaptersList && rA.readChaptersList.length > 0 && (
+                <div className="mt-3">
+                  <h4 className="text-[10px] font-bold text-[#464652] mb-1.5 uppercase tracking-wider">Chapters Read:</h4>
+                  <div className="flex flex-col gap-1.5">
+                    {rA.readChaptersList.map((chName: string, idx: number) => (
+                      <div key={idx} className="bg-slate-50 border border-slate-200/60 rounded-xl px-3 py-2 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#006a62]" />
+                        <span className="text-xs font-semibold text-[#191c1e]">{chName}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {rA.qualityWarning && (
                 <div className="mt-3 bg-orange-50 border border-orange-200 rounded-xl p-3 flex gap-2 items-start">
                   <AlertTriangle size={18} className="text-orange-600 shrink-0 mt-0.5" />
@@ -534,7 +599,11 @@ export default function ParentReportScreen() {
                             <div>
                               <p className="text-xs font-bold text-[#141779]">{ch.name}</p>
                               <div className="flex gap-1 mt-0.5 flex-wrap">
-                                {ch.readingCompleted   && <span className="text-[8px] bg-blue-100   text-blue-700   rounded px-1 font-bold">📖 Read</span>}
+                                {ch.readingCompleted   && (
+                                  <span className="text-[8px] bg-blue-100   text-blue-700   rounded px-1 font-bold">
+                                    📖 Read{ch.readingTimeSpent > 0 ? ` (${formatChapterReadingTime(ch.readingTimeSpent)})` : ""}
+                                  </span>
+                                )}
                                 {ch.questionsCompleted && <span className="text-[8px] bg-green-100  text-green-700  rounded px-1 font-bold">✅ Q&A</span>}
                                 {ch.bossCompleted      && <span className="text-[8px] bg-purple-100 text-purple-700 rounded px-1 font-bold">🏆 Boss</span>}
                               </div>

@@ -41,30 +41,37 @@ export default function WeeklyTestResultsScreen() {
 
   useEffect(() => {
     async function loadData() {
-      try {
-        const cached = localStorage.getItem("userData");
-        if (cached) {
-          try {
-            const u = JSON.parse(cached);
-            setChildName(u.childName || u.name || "Kid");
-            setChildPhoto(u.childPhoto || u.photo || "");
-          } catch(e) {}
-        }
-        const meRes = await apiFetch("/api/users/me");
-        const meJson = await meRes.json();
-        if (meJson.success && meJson.data?.user) {
-          setChildName(meJson.data.user.childName || meJson.data.user.name || "Kid");
-          setChildPhoto(meJson.data.user.childPhoto || meJson.data.user.photo || "");
-        }
-      } catch (e) {}
+      const cached = localStorage.getItem("userData");
+      if (cached) {
+        try {
+          const u = JSON.parse(cached);
+          setChildName(u.childName || u.name || "Kid");
+          setChildPhoto(u.childPhoto || u.photo || "");
+        } catch(e) {}
+      }
 
-      try {
-        const notifRes = await apiFetch("/api/notifications");
-        const notifData = await notifRes.json();
-        if (notifData.success && notifData.data) {
-          setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
-        }
-      } catch (e) {}
+      const mePromise = (async () => {
+        try {
+          const meRes = await apiFetch("/api/users/me");
+          const meJson = await meRes.json();
+          if (meJson.success && meJson.data?.user) {
+            setChildName(meJson.data.user.childName || meJson.data.user.name || "Kid");
+            setChildPhoto(meJson.data.user.childPhoto || meJson.data.user.photo || "");
+          }
+        } catch (e) {}
+      })();
+
+      const notifPromise = (async () => {
+        try {
+          const notifRes = await apiFetch("/api/notifications");
+          const notifData = await notifRes.json();
+          if (notifData.success && notifData.data) {
+            setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
+          }
+        } catch (e) {}
+      })();
+
+      await Promise.allSettled([mePromise, notifPromise]);
     }
     loadData();
   }, []);

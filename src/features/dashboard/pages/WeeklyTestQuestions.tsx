@@ -21,45 +21,52 @@ export default function WeeklyTestQuestionsScreen() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    async function fetchTest() {
-      try {
-        const cached = localStorage.getItem("userData");
-        if (cached) {
-          try {
-            const u = JSON.parse(cached);
-            setChildName(u.childName || u.name || "Kid");
-            setChildPhoto(u.childPhoto || u.photo || "");
-          } catch(e) {}
-        }
-        const meRes = await apiFetch("/api/users/me");
-        const meJson = await meRes.json();
-        if (meJson.success && meJson.data?.user) {
-          setChildName(meJson.data.user.childName || meJson.data.user.name || "Kid");
-          setChildPhoto(meJson.data.user.childPhoto || meJson.data.user.photo || "");
-        }
-      } catch (e) {}
-
-      try {
-        const notifRes = await apiFetch("/api/notifications");
-        const notifData = await notifRes.json();
-        if (notifData.success && notifData.data) {
-          setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
-        }
-      } catch (e) {}
-
-      try {
-        const res = await apiFetch("/api/practice/weekly-test");
-        const json = await res.json();
-        if (json.success && json.data) {
-          setQuestionsData(json.data.questions);
-          setTipsData(json.data.tips);
-        }
-      } catch (e) {
-      } finally {
-        setLoading(false);
+    async function loadQuestions() {
+      const cached = localStorage.getItem("userData");
+      if (cached) {
+        try {
+          const u = JSON.parse(cached);
+          setChildName(u.childName || u.name || "Kid");
+          setChildPhoto(u.childPhoto || u.photo || "");
+        } catch(e) {}
       }
+
+      const mePromise = (async () => {
+        try {
+          const meRes = await apiFetch("/api/users/me");
+          const meJson = await meRes.json();
+          if (meJson.success && meJson.data?.user) {
+            setChildName(meJson.data.user.childName || meJson.data.user.name || "Kid");
+            setChildPhoto(meJson.data.user.childPhoto || meJson.data.user.photo || "");
+          }
+        } catch (e) {}
+      })();
+
+      const notifPromise = (async () => {
+        try {
+          const notifRes = await apiFetch("/api/notifications");
+          const notifData = await notifRes.json();
+          if (notifData.success && notifData.data) {
+            setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
+          }
+        } catch (e) {}
+      })();
+
+      const testPromise = (async () => {
+        try {
+          const res = await apiFetch("/api/practice/weekly-test");
+          const json = await res.json();
+          if (json.success && json.data) {
+            setQuestionsData(json.data.questions);
+            setTipsData(json.data.tips);
+          }
+        } catch (e) {}
+      })();
+
+      await Promise.allSettled([mePromise, notifPromise, testPromise]);
+      setLoading(false);
     }
-    fetchTest();
+    loadQuestions();
   }, []);
 
   const total = questionsData.length > 0 ? questionsData.length : 1;
@@ -86,9 +93,33 @@ export default function WeeklyTestQuestionsScreen() {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-[#f4efff]">
-      <div className="w-10 h-10 border-4 border-[#141779] border-t-transparent rounded-full animate-spin" />
-    </div>;
+    return (
+      <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col pb-24 relative overflow-hidden">
+        <header className="flex items-center justify-between px-5 py-4 bg-[#f4efff] sticky top-0 z-40 animate-pulse">
+          <div className="flex items-center gap-3 w-full">
+            <div className="w-8 h-8 bg-gray-200 rounded-full shrink-0" />
+            <div className="w-10 h-10 bg-gray-200 rounded-full shrink-0" />
+            <div className="h-6 bg-gray-200 rounded w-1/2" />
+          </div>
+          <div className="w-10 h-10 bg-gray-200 rounded-full shrink-0 ml-2" />
+        </header>
+        <main className="px-6 pt-2 flex-1 flex flex-col animate-pulse">
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-3">
+              <div className="h-6 bg-gray-200 rounded w-1/3" />
+              <div className="h-6 bg-gray-200 rounded-full w-20" />
+            </div>
+            <div className="h-6 bg-gray-200 rounded-full w-full" />
+          </div>
+          <div className="bg-white rounded-[20px] p-7 mb-6 h-32 border border-gray-100 shadow-sm" />
+          <div className="grid grid-cols-2 gap-3.5 mb-7">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-28 bg-gray-200 rounded-[18px]" />
+            ))}
+          </div>
+        </main>
+      </div>
+    );
   }
 
   const subjectColors: Record<string, string> = {

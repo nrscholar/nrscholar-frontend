@@ -12,10 +12,22 @@ export default function TextbookSubjectsScreen() {
   useEffect(() => {
     async function fetchSubjects() {
       try {
-        const res = await apiFetch("/api/textbook/subjects");
-        const json = await res.json();
-        if (json.success && json.data) {
-          setSubjects(json.data);
+        const [subjRes, controlsRes] = await Promise.all([
+          apiFetch("/api/textbook/subjects"),
+          apiFetch("/api/parent/controls")
+        ]);
+        
+        const subjJson = await subjRes.json();
+        const controlsJson = await controlsRes.json();
+        
+        let restricted: Record<string, boolean> = {};
+        if (controlsJson.success && controlsJson.data?.parentControls?.restrictedSubjects) {
+          restricted = controlsJson.data.parentControls.restrictedSubjects;
+        }
+
+        if (subjJson.success && subjJson.data) {
+          const allowedSubjects = subjJson.data.filter((s: string) => !restricted[s]);
+          setSubjects(allowedSubjects);
         }
       } catch (error) {
         console.error("Error fetching textbook subjects:", error);
@@ -54,8 +66,16 @@ export default function TextbookSubjectsScreen() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center mt-10">
-            <div className="w-8 h-8 border-4 border-[#141779] border-t-transparent rounded-full animate-spin" />
+          <div className="grid grid-cols-1 gap-5">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-[24px] p-5 border-2 border-gray-100 shadow-sm flex items-center gap-5 animate-pulse">
+                <div className="w-16 h-16 bg-gray-200 rounded-[18px] shrink-0" />
+                <div className="flex-1">
+                  <div className="h-6 bg-gray-200 rounded w-1/2 mb-2" />
+                  <div className="h-4 bg-gray-200 rounded w-1/3" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : subjects.length === 0 ? (
           <div className="text-center mt-10 text-[#767683] font-bold">

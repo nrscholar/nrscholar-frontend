@@ -37,12 +37,25 @@ export default function MultiplayerHubScreen() {
       }
     });
 
-    apiFetch("/api/practice/subjects")
-      .then(r => r.json())
-      .then(d => {
-        if (d.success && d.data && d.data.length > 0) {
-          setSubjects(d.data);
-          setActiveSubject(d.data[0]);
+    Promise.all([
+      apiFetch("/api/practice/subjects"),
+      apiFetch("/api/parent/controls")
+    ])
+      .then(async ([subjRes, controlsRes]) => {
+        const subjData = await subjRes.json();
+        const controlsData = await controlsRes.json();
+
+        let restricted: Record<string, boolean> = {};
+        if (controlsData.success && controlsData.data?.parentControls?.restrictedSubjects) {
+          restricted = controlsData.data.parentControls.restrictedSubjects;
+        }
+
+        if (subjData.success && subjData.data && subjData.data.length > 0) {
+          const allowedSubjects = subjData.data.filter((s: any) => !restricted[s.name]);
+          setSubjects(allowedSubjects);
+          if (allowedSubjects.length > 0) {
+            setActiveSubject(allowedSubjects[0]);
+          }
         }
       });
   }, []);
@@ -92,9 +105,29 @@ export default function MultiplayerHubScreen() {
     return completedChapterIds.includes(pracCh._id) || completedChapterIds.includes(`${pracCh._id}_hard`);
   };
 
+  const getMixChapterOrder = () => {
+    if (!practiceChapters.length || !completedChapterIds.length) return 1;
+    const completedOrders = practiceChapters
+      .filter(p => completedChapterIds.includes(p._id) || completedChapterIds.includes(`${p._id}_hard`))
+      .map(p => p.order || 1);
+    return completedOrders.length > 0 ? Math.max(...completedOrders) : 1;
+  };
+
+  const getEntryFee = (order: number) => {
+    if (order <= 3) return 100;
+    if (order <= 6) return 250;
+    if (order <= 9) return 500;
+    const tier = Math.floor((order - 1) / 3);
+    if (tier === 3) return 1000;
+    return 1000 * Math.pow(2, tier - 3);
+  };
+
+  const currentOrder = chapter === "Mix Chapters" ? getMixChapterOrder() : (practiceChapters.find(p => p.name === chapter)?.order || 1);
+  const entryFee = getEntryFee(currentOrder);
+
   const handleCreateRoom = async () => {
-    if (myCoins < 100) {
-      setError("Not enough coins! First complete a chapter to earn coins, then play Arena.");
+    if (myCoins < entryFee) {
+      setError(`Not enough coins! You need at least ${entryFee} coins to play Shadow Arena in this city.`);
       return;
     }
     setLoading(true);
@@ -120,7 +153,7 @@ export default function MultiplayerHubScreen() {
 
   const handleJoinRoom = async () => {
     if (myCoins < 100) {
-      setError("Not enough coins! First complete a chapter to earn coins, then play Arena.");
+      setError("Not enough coins! You need at least the room's entry fee (100-500+ coins) to join this Arena match.");
       return;
     }
     if (joinCode.length < 6) {
@@ -260,10 +293,13 @@ export default function MultiplayerHubScreen() {
             <button
               onClick={handleCreateRoom}
               disabled={loading}
-              className="w-full bg-[#141779] text-white py-5 rounded-2xl shadow-[0_6px_0_#0b0d4d] active:translate-y-[6px] active:shadow-none transition-all flex items-center justify-center gap-3 border-2 border-[#141779]"
+              className="w-full bg-[#141779] text-white py-4 rounded-2xl shadow-[0_6px_0_#0b0d4d] active:translate-y-[6px] active:shadow-none transition-all flex flex-col items-center justify-center border-2 border-[#141779]"
             >
-              <Users size={24} />
-              <span className="text-[18px] font-extrabold tracking-wide uppercase">Create Room</span>
+              <div className="flex items-center gap-3">
+                <Users size={24} />
+                <span className="text-[18px] font-extrabold tracking-wide uppercase">Create Room</span>
+              </div>
+              <span className="text-[11px] font-bold text-[#57fae9] mt-1">Cost: {entryFee} Coins | Win: {entryFee * 2} Coins</span>
             </button>
           </div>
 

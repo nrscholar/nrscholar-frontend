@@ -59,7 +59,7 @@ export default function JourneyMapScreen() {
             userFuel = uData.data.user.fuel !== undefined ? uData.data.user.fuel : 0;
             userXp = uData.data.user.xp !== undefined ? uData.data.user.xp : 0; // Fixed default
             userCoins = uData.data.user.coins !== undefined ? uData.data.user.coins : 0;
-            userName = uData.data.user.name || "Explorer";
+            userName = uData.data.user.childName || uData.data.user.fullName || "Explorer";
             setChildPhoto(uData.data.user.childPhoto || "");
             setUserLevel(uData.data.user.level || 1);
           }
@@ -67,15 +67,17 @@ export default function JourneyMapScreen() {
       }
       
       // Fallback
-      if (userXp === undefined || userXp === null) {
+      if (userXp === undefined || userXp === null || userName === "Explorer") {
         const cached = localStorage.getItem("userData");
         if (cached) {
           try {
             const u = JSON.parse(cached);
             userFuel = u.fuel !== undefined ? u.fuel : 0;
-            userName = u.name || "Explorer";
+            userName = u.childName || u.fullName || u.name || "Explorer";
             userXp = u.xp !== undefined ? u.xp : 0;
             userCoins = u.coins !== undefined ? u.coins : 0;
+            setChildPhoto(u.childPhoto || "");
+            setUserLevel(u.level || 1);
           } catch(e) {}
         }
       }
@@ -156,8 +158,29 @@ export default function JourneyMapScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="bg-background text-on-surface flex items-center justify-center min-h-screen">
+        <div className="relative w-full max-w-[430px] h-screen bg-surface-bright flex flex-col overflow-hidden shadow-2xl animate-pulse">
+          <header className="fixed top-0 w-full max-w-[430px] z-50 flex justify-between items-center px-4 py-4 bg-surface/80 border-b-[1.5px] border-outline-variant/30 gap-2">
+            <div className="flex items-center gap-2 flex-1">
+              <div className="w-8 h-8 rounded-full bg-surface-container-highest shrink-0" />
+              <div className="w-10 h-10 rounded-full bg-surface-container-highest shrink-0" />
+              <div className="flex-1">
+                <div className="h-4 bg-surface-container-highest rounded w-2/3 mb-1" />
+                <div className="h-3 bg-surface-container-highest rounded w-1/3" />
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <div className="w-9 h-9 rounded-full bg-surface-container-highest" />
+              <div className="w-14 h-8 rounded-full bg-surface-container-highest" />
+              <div className="w-14 h-8 rounded-full bg-surface-container-highest" />
+            </div>
+          </header>
+          <main className="flex-1 mt-20 px-6 py-4 flex flex-col items-center gap-10">
+            <div className="w-full h-[300px] bg-surface-container rounded-3xl" />
+            <div className="w-64 h-32 bg-surface-container rounded-2xl" />
+            <div className="w-64 h-32 bg-surface-container rounded-2xl" />
+          </main>
+        </div>
       </div>
     );
   }
@@ -296,14 +319,16 @@ export default function JourneyMapScreen() {
           <div className="flex items-center gap-1.5 shrink-0">
             <button 
               onClick={() => navigate("/notifications")}
-              className="w-9 h-9 rounded-full bg-surface-container flex items-center justify-center hover:opacity-85 transition-all relative shrink-0"
+              className="w-9 h-9 rounded-full bg-surface-container flex items-center justify-center hover:opacity-85 transition-all shrink-0"
             >
-              <span className="material-symbols-outlined text-[20px] text-primary">notifications</span>
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4.5 h-4.5 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border-2 border-surface">
-                  {unreadCount}
-                </span>
-              )}
+              <div className="relative">
+                <span className="material-symbols-outlined text-[20px] text-primary">notifications</span>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border border-surface pointer-events-none z-10">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </div>
             </button>
             <div className="flex items-center gap-1 bg-surface-container px-2.5 py-1.5 rounded-full whitespace-nowrap">
               <span className="material-symbols-outlined text-[16px] text-orange-500" style={{fontVariationSettings: "'FILL' 1"}}>local_fire_department</span>

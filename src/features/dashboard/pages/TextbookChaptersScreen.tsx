@@ -64,8 +64,22 @@ export default function TextbookChaptersScreen() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center mt-10">
-            <div className="w-8 h-8 border-4 border-[#141779] border-t-transparent rounded-full animate-spin" />
+          <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-4">
+              <div className="h-5 bg-gray-200 rounded w-1/4 mb-2 ml-2 animate-pulse" />
+              <div className="flex flex-col gap-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="bg-white rounded-[24px] p-4 border-2 border-gray-100 shadow-sm flex items-center gap-4 animate-pulse">
+                    <div className="w-14 h-14 bg-gray-200 rounded-[16px] shrink-0" />
+                    <div className="flex-1">
+                      <div className="h-3 bg-gray-200 rounded w-1/4 mb-2" />
+                      <div className="h-5 bg-gray-200 rounded w-3/4 mb-2" />
+                      <div className="h-3 bg-gray-200 rounded w-1/5" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         ) : (
           <div className="flex flex-col gap-8">

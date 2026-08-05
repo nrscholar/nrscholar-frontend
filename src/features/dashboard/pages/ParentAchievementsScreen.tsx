@@ -2,8 +2,10 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, Globe, BookOpen, Flame, Lock, GraduationCap, Users, X, TrendingUp, Settings, ArrowLeft } from "lucide-react";
 import { apiFetch } from "../../../api";
+import { useTranslation } from "react-i18next";
 
 export default function ParentAchievementsScreen() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [activeAchievement, setActiveAchievement] = useState<any | null>(null);
   const [badgesEarned, setBadgesEarned] = useState(0);
@@ -15,31 +17,39 @@ export default function ParentAchievementsScreen() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        const uRes = await apiFetch("/api/users/me");
-        const uJson = await uRes.json();
-        if (uJson.success && uJson.data?.user) {
-          setParentPhoto(uJson.data.user.parentPhoto || "");
-          setUsername(uJson.data.user.parentName || uJson.data.user.username || "Parent");
-        }
+        const uPromise = (async () => {
+          try {
+            const uRes = await apiFetch("/api/users/me");
+            const uJson = await uRes.json();
+            if (uJson.success && uJson.data?.user) {
+              setParentPhoto(uJson.data.user.parentPhoto || "");
+              setUsername(uJson.data.user.parentName || uJson.data.user.username || "Parent");
+            }
+          } catch (e) {}
+        })();
 
-        // BUG-P05 FIX: Real rank from DB instead of fake formula
-        try {
-          const rankRes = await apiFetch("/api/parent/rank");
-          const rankJson = await rankRes.json();
-          if (rankJson.success && rankJson.data) {
-            setGlobalRank(rankJson.data.rank);
-          }
-        } catch (e) {}
+        const rankPromise = (async () => {
+          try {
+            const rankRes = await apiFetch("/api/parent/rank");
+            const rankJson = await rankRes.json();
+            if (rankJson.success && rankJson.data) {
+              setGlobalRank(rankJson.data.rank);
+            }
+          } catch (e) {}
+        })();
 
-        try {
-          const achRes = await apiFetch("/api/parent/achievements");
-          const achJson = await achRes.json();
-          if (achJson.success && achJson.data) {
-            setAchievements(achJson.data.achievements);
-            setBadgesEarned(achJson.data.badgesEarned);
-          }
-        } catch (e) {}
+        const achPromise = (async () => {
+          try {
+            const achRes = await apiFetch("/api/parent/achievements");
+            const achJson = await achRes.json();
+            if (achJson.success && achJson.data) {
+              setAchievements(achJson.data.achievements);
+              setBadgesEarned(achJson.data.badgesEarned);
+            }
+          } catch (e) {}
+        })();
 
+        await Promise.allSettled([uPromise, rankPromise, achPromise]);
       } catch (e) {}
     }
     fetchStats();
@@ -76,9 +86,18 @@ export default function ParentAchievementsScreen() {
             filter: drop-shadow(0 0 8px rgba(0, 106, 98, 0.4));
         }
         .hexagon {
-            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            clip-path: url(#rounded-hex);
         }
       `}</style>
+
+      {/* SVG Definitions for Rounded Hexagon */}
+      <svg width="0" height="0" className="absolute">
+        <defs>
+          <clipPath id="rounded-hex" clipPathUnits="objectBoundingBox">
+            <path d="M0.5,0.03 C0.54,0.03 0.57,0.05 0.59,0.08 L0.95,0.28 C0.98,0.30 1.00,0.33 1.00,0.37 L1.00,0.63 C1.00,0.67 0.98,0.70 0.95,0.72 L0.59,0.92 C0.57,0.95 0.54,0.97 0.50,0.97 C0.46,0.97 0.43,0.95 0.41,0.92 L0.05,0.72 C0.02,0.70 0.00,0.67 0.00,0.63 L0.00,0.37 C0.00,0.33 0.02,0.30 0.05,0.28 L0.41,0.08 C0.43,0.05 0.46,0.03 0.50,0.03 Z" />
+          </clipPath>
+        </defs>
+      </svg>
 
       {/* Top App Bar */}
       <header className="fixed top-0 w-full z-50 bg-[rgba(247,249,251,0.8)] backdrop-blur-lg border-b border-[#c7c5d4]/30 shadow-sm flex items-center justify-between px-6 py-4">
@@ -93,7 +112,7 @@ export default function ParentAchievementsScreen() {
               src={parentPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`}
             />
           </div>
-          <h1 className="text-xl font-bold text-[#141779] tracking-tight">Achievements</h1>
+          <h1 className="text-xl font-bold text-[#141779] tracking-tight">{t("achievements") || "Achievements"}</h1>
         </div>
         <div className="w-10 h-10"></div> {/* Spacer for balance */}
       </header>
@@ -107,7 +126,7 @@ export default function ParentAchievementsScreen() {
         
         {/* Header Section */}
         <section className="w-full mt-4 mb-6">
-          <h2 className="text-2xl font-bold text-[#141779] mb-4 text-center">Parent Achievements</h2>
+          <h2 className="text-2xl font-bold text-[#141779] mb-4 text-center">{t("parent_achievements") || "Parent Achievements"}</h2>
           <div className="glass-panel rounded-xl p-5 flex justify-around items-center shadow-sm">
             <div className="text-center">
               <p className="text-xs uppercase tracking-widest text-[#464652] mb-1">Badges Earned</p>
@@ -127,13 +146,7 @@ export default function ParentAchievementsScreen() {
           </div>
         </section>
 
-        {/* Categories Chips */}
-        <section className="w-full mb-8 overflow-x-auto no-scrollbar flex gap-3 pb-2">
-          <button className="whitespace-nowrap px-6 py-2 rounded-full bg-[#141779] text-white font-bold text-sm shadow-md transition-all active:scale-95">All</button>
-          <button className="whitespace-nowrap px-6 py-2 rounded-full glass-panel text-[#464652] font-bold text-sm hover:bg-[#e6e8ea] transition-all active:scale-95">Communication</button>
-          <button className="whitespace-nowrap px-6 py-2 rounded-full glass-panel text-[#464652] font-bold text-sm hover:bg-[#e6e8ea] transition-all active:scale-95">Patience</button>
-          <button className="whitespace-nowrap px-6 py-2 rounded-full glass-panel text-[#464652] font-bold text-sm hover:bg-[#e6e8ea] transition-all active:scale-95">Consistency</button>
-        </section>
+
 
         {/* Achievement Wall */}
         <section className="w-full grid grid-cols-3 gap-y-10 gap-x-4 mb-8">

@@ -58,6 +58,8 @@ export default function ParentLessonPlayerScreen() {
         setAnimateIn(true);
         transitioningRef.current = false;
       }, 300);
+    } else {
+      handleCompleteLesson();
     }
   };
 
@@ -68,7 +70,10 @@ export default function ParentLessonPlayerScreen() {
       await apiFetch('/api/parent/learning-library/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topicId: lessonId })
+        body: JSON.stringify({ 
+          topicId: lessonId,
+          acceptMission: missionAccepted
+        })
       });
     } catch (e) {
       console.error(e);
@@ -238,7 +243,25 @@ export default function ParentLessonPlayerScreen() {
       );
     }
 
-    return null;
+    return (
+      <div className="text-center">
+        {IconComponent && (
+          <IllustrationBlock bg={slide.themeBg} text={slide.themeText}>
+            <IconComponent size={48} />
+          </IllustrationBlock>
+        )}
+        <h2 className={`text-2xl font-bold mb-6 ${slide.themeText || 'text-[#141779]'}`}>{slide.title || lessonData?.title || "Lesson Details"}</h2>
+        {slide.text && <p className="text-lg text-[#464652] leading-relaxed max-w-md mx-auto mb-4">{slide.text}</p>}
+        {slide.description && <p className="text-lg text-[#464652] leading-relaxed max-w-md mx-auto mb-4">{slide.description}</p>}
+        {Array.isArray(slide.content) && (
+          <div className="space-y-4 text-[#464652] text-lg font-medium leading-relaxed text-left max-w-md mx-auto">
+            {slide.content.map((block: any, idx: number) => (
+              <p key={idx}>{typeof block === 'string' ? block : block.value || JSON.stringify(block)}</p>
+            ))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -257,9 +280,14 @@ export default function ParentLessonPlayerScreen() {
 
       <main className="flex-1 px-6 pb-32 flex flex-col justify-center relative z-10">
         {loading ? (
-          <div className="flex flex-col items-center justify-center h-full gap-4 text-[#141779]">
-            <Icons.Loader className="animate-spin" size={32} />
-            <p className="font-bold">Loading Lesson...</p>
+          <div className="flex flex-col items-center justify-center h-full gap-8 w-full max-w-md mx-auto">
+            <div className="w-32 h-32 bg-gray-200 animate-pulse rounded-3xl"></div>
+            <div className="h-8 w-48 bg-gray-200 animate-pulse rounded"></div>
+            <div className="w-full space-y-4">
+              <div className="h-4 w-full bg-gray-200 animate-pulse rounded"></div>
+              <div className="h-4 w-5/6 bg-gray-200 animate-pulse rounded mx-auto"></div>
+              <div className="h-4 w-4/6 bg-gray-200 animate-pulse rounded mx-auto"></div>
+            </div>
           </div>
         ) : !slides.length ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
@@ -294,7 +322,7 @@ export default function ParentLessonPlayerScreen() {
                 disabled={!showFeedback}
                 className={`w-full py-4 rounded-full font-bold text-lg flex justify-center items-center gap-2 transition-all shadow-lg ${showFeedback ? 'bg-[#006a62] text-white hover:bg-[#00524c] active:scale-95' : 'bg-[#e0e3e5] text-[#767683] cursor-not-allowed'}`}
               >
-                Continue
+                {currentStep === totalSteps - 1 ? "Finish Lesson" : "Continue"}
               </button>
             ) : slides[currentStep]?.type === 'mission' ? (
               <button
@@ -309,7 +337,7 @@ export default function ParentLessonPlayerScreen() {
                 onClick={nextStep}
                 className="w-full bg-[#141779] text-white py-4 rounded-full font-bold text-lg flex justify-center items-center shadow-lg shadow-[#141779]/30 active:scale-95 transition-transform"
               >
-                {currentStep === 0 ? "Continue" : "Next"}
+                {currentStep === totalSteps - 1 ? "Finish Lesson" : (currentStep === 0 ? "Continue" : "Next")}
               </button>
             )}
           </>

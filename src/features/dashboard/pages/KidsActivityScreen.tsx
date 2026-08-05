@@ -1,14 +1,22 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Clock, CheckCircle2, ShieldAlert, Star, TrendingUp, Search, Calendar, FileText, Activity, X, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle2, ShieldAlert, Star, TrendingUp, Search, Calendar, FileText, Activity, X, ChevronDown, ChevronUp, BookOpen, Layers, ChevronRight } from "lucide-react";
 import { apiFetch } from "../../../api";
 
 export default function KidsActivityScreen() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [activities, setActivities] = useState<any[]>([]);
-  const [engagementHours, setEngagementHours] = useState("0");
-  const [engagementTrend, setEngagementTrend] = useState<number | null>(null);
+
+  const cached = (() => {
+    try {
+      const raw = sessionStorage.getItem("kids_activities_cache");
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  })();
+
+  const [loading, setLoading] = useState(!cached);
+  const [activities, setActivities] = useState<any[]>(cached?.activities || []);
+  const [engagementHours, setEngagementHours] = useState(cached?.engagementHours || "0");
+  const [engagementTrend, setEngagementTrend] = useState<number | null>(cached?.engagementTrend !== undefined ? cached.engagementTrend : null);
   const [selectedActivity, setSelectedActivity] = useState<any>(null);
   const [openDateLabel, setOpenDateLabel] = useState<string | null>(null);
 
@@ -27,7 +35,7 @@ export default function KidsActivityScreen() {
   useEffect(() => {
     async function fetchActivities() {
       try {
-        setLoading(true);
+        if (!cached) setLoading(true);
         // Fetching real data from the backend
         // Pass browser timezone offset so server computes "today" in local time
         const tzOffset = -new Date().getTimezoneOffset(); // positive for east of UTC (IST = +330)
@@ -39,6 +47,11 @@ export default function KidsActivityScreen() {
             setActivities(json.data.activities || []);
             setEngagementHours(json.data.engagementHours || "0");
             setEngagementTrend(json.data.engagementTrend !== undefined ? json.data.engagementTrend : null);
+            sessionStorage.setItem("kids_activities_cache", JSON.stringify({
+              activities: json.data.activities || [],
+              engagementHours: json.data.engagementHours || "0",
+              engagementTrend: json.data.engagementTrend !== undefined ? json.data.engagementTrend : null
+            }));
           }
         }
       } catch (error) {
@@ -57,6 +70,7 @@ export default function KidsActivityScreen() {
       case "milestone": return { icon: <Star className="text-[#ff5e00]" size={20} />, bgColor: "bg-[#ff5e00]/10" };
       case "struggle": return { icon: <ShieldAlert className="text-[#ba1a1a]" size={20} />, bgColor: "bg-[#ba1a1a]/10" };
       case "chapter": return { icon: <FileText className="text-[#30007f]" size={20} />, bgColor: "bg-[#30007f]/10" };
+      case "reading": return { icon: <BookOpen className="text-[#006a62]" size={20} />, bgColor: "bg-[#006a62]/10" };
       default: return { icon: <Activity className="text-[#464652]" size={20} />, bgColor: "bg-gray-100" };
     }
   };
@@ -83,28 +97,46 @@ export default function KidsActivityScreen() {
       <main className="px-5 pt-6 relative z-10">
         
         {/* Analytics Summary Card */}
-        <div className="bg-white/70 backdrop-blur-md rounded-[24px] p-6 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] mb-8 flex items-center justify-between">
-          <div>
-            <h2 className="text-[14px] font-bold text-[#767683] uppercase tracking-wider mb-1">Weekly Engagement</h2>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-black text-[#141779]">{engagementHours}</span>
-              {engagementTrend !== null && engagementTrend !== undefined && (
-                <span className={`text-[14px] font-bold flex items-center gap-1 ${engagementTrend >= 0 ? 'text-[#007168]' : 'text-[#ba1a1a]'}`}>
-                  {engagementTrend >= 0 ? <TrendingUp size={16} /> : <TrendingUp size={16} className="rotate-180" />} 
-                  {engagementTrend >= 0 ? '+' : ''}{engagementTrend}%
-                </span>
-              )}
+        {loading ? (
+          <div className="bg-white/70 backdrop-blur-md rounded-[20px] p-5 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] mb-5 flex items-center justify-between animate-pulse">
+            <div className="flex-1">
+              <div className="h-3 w-32 bg-gray-200 rounded mb-3"></div>
+              <div className="h-8 w-24 bg-gray-200 rounded"></div>
+            </div>
+            <div className="w-16 h-16 rounded-full bg-gray-200"></div>
+          </div>
+        ) : (
+          <div className="bg-white/70 backdrop-blur-md rounded-[20px] p-5 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] mb-5 flex items-center justify-between">
+            <div>
+              <h2 className="text-[14px] font-bold text-[#767683] uppercase tracking-wider mb-1">Weekly Engagement</h2>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-black text-[#141779]">{engagementHours}</span>
+                {engagementTrend !== null && engagementTrend !== undefined && (
+                  <span className={`text-[14px] font-bold flex items-center gap-1 ${engagementTrend >= 0 ? 'text-[#007168]' : 'text-[#ba1a1a]'}`}>
+                    {engagementTrend >= 0 ? <TrendingUp size={16} /> : <TrendingUp size={16} className="rotate-180" />} 
+                    {engagementTrend >= 0 ? '+' : ''}{engagementTrend}%
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="w-16 h-16 rounded-full bg-[#141779]/10 flex items-center justify-center">
+              <Clock size={28} className="text-[#141779]" />
             </div>
           </div>
-          <div className="w-16 h-16 rounded-full bg-[#141779]/10 flex items-center justify-center">
-            <Clock size={28} className="text-[#141779]" />
-          </div>
-        </div>
+        )}
 
         {/* Timeline */}
         {loading ? (
-          <div className="flex justify-center items-center py-12">
-            <div className="w-10 h-10 border-4 border-[#141779] border-t-transparent rounded-full animate-spin" />
+          <div className="flex flex-col gap-4 mt-2">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="bg-white/70 rounded-[16px] p-4 flex gap-4 animate-pulse">
+                <div className="w-12 h-12 bg-gray-200 rounded-full shrink-0"></div>
+                <div className="flex-1 flex flex-col gap-2 justify-center">
+                  <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : activities.length === 0 ? (
           <div className="text-center py-12 bg-white/50 backdrop-blur-sm rounded-[24px] border border-white/60 shadow-sm">
@@ -143,11 +175,11 @@ export default function KidsActivityScreen() {
               const isOpen = openDateLabel === null ? groupIdx === 0 : openDateLabel === dateLabel;
               
               return (
-                <div key={dateLabel} className="mb-6 bg-white/70 backdrop-blur-md rounded-[20px] border border-white/60 shadow-[0_4px_20px_rgba(0,0,0,0.03)] overflow-hidden transition-all duration-300">
+                <div key={dateLabel} className="mb-3 bg-white/70 backdrop-blur-md rounded-[16px] border border-white/60 shadow-[0_4px_20px_rgba(0,0,0,0.03)] overflow-hidden transition-all duration-300">
                   {/* Accordion Header */}
                   <button 
                     onClick={() => setOpenDateLabel(isOpen ? "" : dateLabel)}
-                    className="w-full px-5 py-4 flex items-center justify-between hover:bg-white/50 transition-colors"
+                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/50 transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <Calendar className="text-[#141779]" size={20} />
@@ -168,12 +200,12 @@ export default function KidsActivityScreen() {
                   
                   {/* Accordion Body */}
                   {isOpen && (
-                    <div className="p-5 pt-2 border-t border-gray-100/50 bg-white/30">
-                      <div className="relative pl-6 pt-4 before:content-[''] before:absolute before:left-[11px] before:top-6 before:bottom-2 before:w-[2px] before:bg-gradient-to-b before:from-[#141779]/30 before:to-transparent">
+                    <div className="p-4 pt-1 border-t border-gray-100/50 bg-white/30">
+                      <div className="relative pl-6 pt-2 before:content-[''] before:absolute before:left-[11px] before:top-4 before:bottom-2 before:w-[2px] before:bg-gradient-to-b before:from-[#141779]/30 before:to-transparent">
                         {group.activities.map((activity: any, index: number) => {
                           const { icon, bgColor } = getIconData(activity.type);
                           return (
-                            <div key={activity.id || `${groupIdx}-${index}`} className="relative mb-6 group animate-in slide-in-from-bottom-2 fade-in duration-300" style={{ animationDelay: `${index * 50}ms`, animationFillMode: "backwards" }}>
+                            <div key={activity.id || `${groupIdx}-${index}`} className="relative mb-4 group animate-in slide-in-from-bottom-2 fade-in duration-300" style={{ animationDelay: `${index * 50}ms`, animationFillMode: "backwards" }}>
                               
                               {/* Timeline Dot */}
                               <div className={`absolute -left-[25px] w-8 h-8 rounded-full ${bgColor} border-[2px] border-white shadow-sm flex items-center justify-center z-10 group-hover:scale-110 transition-transform`}>
@@ -183,40 +215,65 @@ export default function KidsActivityScreen() {
                               {/* Content Card */}
                               <div 
                                 onClick={() => activity.details && setSelectedActivity(activity)}
-                                className={`ml-8 bg-white/90 rounded-[16px] p-4 border border-white/60 shadow-sm hover:shadow-md transition-all ${activity.details ? 'cursor-pointer hover:scale-[1.01]' : 'cursor-default'}`}
+                                className={`ml-7 bg-white/90 rounded-[14px] p-3 border border-white/60 shadow-sm hover:shadow-md transition-all ${activity.details ? 'cursor-pointer hover:scale-[1.01]' : 'cursor-default'}`}
                               >
-                                <div className="flex justify-between items-start mb-2">
-                                  <h3 className="text-[15px] font-bold text-[#141779] pr-4">{activity.title}</h3>
-                                  <span className="text-[11px] font-bold text-[#767683] whitespace-nowrap bg-gray-100/80 px-2 py-1 rounded-md flex items-center gap-1">
-                                    <Clock size={11} /> {activity.time || (activity.createdAt ? new Date(activity.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now")}
-                                  </span>
+                                <div className="flex justify-between items-start mb-1">
+                                  <h3 className="text-[14px] font-bold text-[#141779] pr-3 leading-tight">{activity.title}</h3>
+                                  <div className="flex flex-col items-end gap-1 shrink-0">
+                                    <span className="text-[10px] font-bold text-[#767683] whitespace-nowrap bg-gray-100/80 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                      <Clock size={10} /> {activity.time || (activity.createdAt ? new Date(activity.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now")}
+                                    </span>
+                                  </div>
                                 </div>
+
+
                                 
                                 {activity.description && (
-                                  <p className="text-[13px] text-[#464652] font-medium leading-snug mb-3">
+                                  <p className="text-[12px] text-[#464652] font-medium leading-snug mb-2">
                                     {activity.description}
                                   </p>
                                 )}
                                 
                                 <div className="flex flex-wrap items-center gap-2 mt-1">
                                   {activity.correctQuestions !== undefined && activity.totalQuestions !== undefined && (
-                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#007168]/10 text-[#007168]">
+                                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-[#007168]/10 text-[#007168]">
                                       <CheckCircle2 size={12} />
-                                      <span className="text-[12px] font-extrabold tracking-wide">
+                                      <span className="text-[11px] font-extrabold tracking-wide">
                                         {activity.correctQuestions}/{activity.totalQuestions}
                                       </span>
                                     </div>
                                   )}
                                   
                                   {activity.timeTaken !== undefined && (
-                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#30007f]/10 text-[#30007f]">
+                                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-[#30007f]/10 text-[#30007f]">
                                       <Clock size={12} />
-                                      <span className="text-[12px] font-extrabold tracking-wide">
+                                      <span className="text-[11px] font-extrabold tracking-wide">
                                         {formatTime(activity.timeTaken)}
                                       </span>
                                     </div>
                                   )}
+                                  
+                                  {activity.subject && (
+                                    <div className="ml-auto flex items-center gap-2">
+                                      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#e31b54]/10 text-[#e31b54]">
+                                        <Layers size={10} />
+                                        <span className="text-[10px] font-extrabold uppercase tracking-wide truncate max-w-[100px]">{activity.subject}</span>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
+
+                                {activity.details && (
+                                  <div className="mt-2.5 pt-2 border-t border-gray-100/60 flex items-center justify-between text-[11px] font-bold">
+                                    <span className="flex items-center gap-1 text-[#767683] font-medium">
+                                      <BookOpen size={12} className="text-[#767683]/80" />
+                                      {activity.details.length} {activity.details.length === 1 ? 'Question' : 'Questions'}
+                                    </span>
+                                    <span className="flex items-center gap-0.5 text-[#141779] font-extrabold hover:text-[#30007f] transition-colors">
+                                      show more <ChevronRight size={12} className="mt-[0.5px]" />
+                                    </span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           );
@@ -230,12 +287,7 @@ export default function KidsActivityScreen() {
           </div>
         )}
         
-        {/* End of timeline indicator */}
-        {!loading && activities.length > 0 && (
-          <div className="text-center mt-6 mb-8">
-            <p className="text-[13px] font-bold text-[#767683]">No more recent activity</p>
-          </div>
-        )}
+        {/* End of timeline indicator removed as requested */}
 
       </main>
 

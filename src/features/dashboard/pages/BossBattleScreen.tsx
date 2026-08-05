@@ -38,11 +38,42 @@ export default function BossBattleScreen() {
   const [attacking, setAttacking] = useState(false);
   const [actionResult, setActionResult] = useState<"idle" | "correct" | "wrong">("idle");
   const [lossOverlay, setLossOverlay] = useState({ show: false, xpLoss: 0 });
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+  const [userCoins, setUserCoins] = useState(0);
+
+  const openReviveModal = async () => {
+    setShowReviveModal(true);
+    try {
+      const res = await apiFetch("/api/users/me");
+      const json = await res.json();
+      if (json.success && json.data?.user) {
+        setUserCoins(json.data.user.coins || 0);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    try {
+      const res = await apiFetch("/api/retention/spin-wheel/status");
+      const json = await res.json();
+      if (json && json.balances) {
+        setRevivalSpins(json.balances.boss_revival_spins_balance || 0);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
   const [particlesInit, setParticlesInit] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
   const [userAnswers, setUserAnswers] = useState<any[]>([]);
+  const [revivalSpins, setRevivalSpins] = useState(0);
+  const [showReviveModal, setShowReviveModal] = useState(false);
+  const [pendingLossData, setPendingLossData] = useState<any>(null);
 
   useEffect(() => {
     setQuestionStartTime(Date.now());
@@ -64,12 +95,14 @@ export default function BossBattleScreen() {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                  title: `${searchParams.get("difficulty") || "Easy"} Boss Battle`,
+                  title: `${searchParams.get("chapterName") || ""} ${searchParams.get("difficulty") || "easy"} Boss Battle`.trim(),
                   type: "battle",
                   timeTaken,
                   correctQuestions: cQ,
                   totalQuestions: tQ,
-                  details
+                  details,
+                  chapter: searchParams.get("chapterName") || undefined,
+                  subject: searchParams.get("subjectName") || undefined
               })
           });
       } catch (e) {
@@ -92,6 +125,8 @@ export default function BossBattleScreen() {
         const bodyData = { 
             worldId,
             chapterId,
+            chapterName: searchParams.get("chapterName") || undefined,
+            subjectName: searchParams.get("subjectName") || undefined,
             difficulty
         };
         
@@ -101,13 +136,67 @@ export default function BossBattleScreen() {
           body: JSON.stringify(bodyData)
         });
         const json = await res.json();
-        if (json.success && json.data) {
+        if (json.success && json.data && json.data.questions && json.data.questions.length > 0) {
           setBattleData(json.data);
+          
+          if (json.data.questions && json.data.questions.length === 0) {
+            // Auto complete if no boss questions
+            const rewardAmt = 1000;
+            if (chapterId) {
+              const existingAnswers = location.state?.userAnswers || [];
+              try {
+                await apiFetch("/api/practice/chapter-progress", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    chapterId: chapterId,
+                    currentQ: 10,
+                    score: existingAnswers.length,
+                    completed: true,
+                    readingCompleted: true,
+                    questionsCompleted: true,
+                    bossCompleted: true,
+                    chapterCompleted: true,
+                    answers: existingAnswers
+                  })
+                });
+              } catch (e) {}
+            }
+            if (returnTo) {
+               navigate(`/practice/reward?type=boss&amount=${rewardAmt}&returnTo=${encodeURIComponent(returnTo)}`, { state: location.state, replace: true });
+            } else {
+               navigate(`/practice/reward?type=coins&amount=${rewardAmt}&returnTo=/practice/journey-map`, { replace: true });
+            }
+            return;
+          }
         } else {
-          console.error("Boss API returned false:", json.message);
+          setBattleData({
+            battleId: "demo_b1",
+            bossName: "Boss Guardian",
+            bossHP: 50,
+            maxHP: 50,
+            playerHearts: 3,
+            questions: [
+              { _id: "b1", question: "Boss Challenge: What is 5 + 5?", options: ["10", "12", "8", "15"], answer: "10" },
+              { _id: "b2", question: "Boss Challenge: What is 10 + 10?", options: ["20", "25", "15", "30"], answer: "20" },
+              { _id: "b3", question: "Boss Challenge: What is 15 + 15?", options: ["30", "35", "25", "40"], answer: "30" }
+            ]
+          });
         }
       } catch (e) {
         console.error("Failed to start boss battle", e);
+        setBattleData({
+          battleId: "demo_b1",
+          bossName: "Boss Guardian",
+          bossHP: 50,
+          maxHP: 50,
+          playerHearts: 3,
+          questions: [
+            { _id: "b1", question: "Boss Challenge: What is 5 + 5?", options: ["10", "12", "8", "15"], answer: "10" },
+            { _id: "b2", question: "Boss Challenge: What is 10 + 10?", options: ["20", "25", "15", "30"], answer: "20" },
+            { _id: "b3", question: "Boss Challenge: What is 15 + 15?", options: ["30", "35", "25", "40"], answer: "30" }
+          ]
+        });
       } finally {
         setLoading(false);
       }
@@ -202,46 +291,13 @@ export default function BossBattleScreen() {
               }
             }, 1000);
           } else if (status === "LOST") {
-            setLossOverlay({ show: true, xpLoss: json.data.xpLoss || -30 });
-            
             submitActivityLog(newAnswers).catch(() => {});
             
-            // Wait 3 seconds to show the animation, then navigate
-            setTimeout(() => {
-                const chapterId = searchParams.get("chapterId");
-                const chapterName = searchParams.get("chapterName");
-                if (chapterId) {
-                    const existingAnswers = location.state?.userAnswers || [];
-                    const rewindAnswers = existingAnswers.slice(0, 9);
-                    const rewindScore = rewindAnswers.filter((a: any) => a?.isCorrect).length;
-                    const level = searchParams.get("difficulty") || "easy";
-    
-                    apiFetch("/api/practice/chapter-progress", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        chapterId: chapterId,
-                        currentQ: 9, // Rewind to 10th question
-                        score: rewindScore,
-                        completed: false,
-                        readingCompleted: true,
-                        questionsCompleted: false,
-                        bossCompleted: false,
-                        chapterCompleted: false,
-                        answers: rewindAnswers
-                      })
-                    }).then(() => {
-                        const returnDest = `/practice/chapters`;
-                        navigate(returnDest, { replace: true });
-                    }).catch(() => {
-                        navigate("/practice/chapters", { replace: true });
-                    });
-                } else if (returnTo) {
-                   navigate(returnTo, { state: location.state, replace: true });
-                } else {
-                   navigate("/practice/chapters", { replace: true });
-                }
-            }, 3000);
+            setPendingLossData({
+              xpLoss: json.data.xpLoss || -30,
+              newAnswers
+            });
+            openReviveModal();
           } else {
             setCurrentQIndex(prev => prev + 1);
             setSelected(null);
@@ -257,6 +313,54 @@ export default function BossBattleScreen() {
       isAttackingRef.current = false;
       setActionResult("idle");
     }
+  };
+
+  const handleGiveUp = async () => {
+    setShowReviveModal(false);
+    const xpLoss = pendingLossData?.xpLoss || -30;
+    setLossOverlay({ show: true, xpLoss });
+
+    // Notify backend that the player has truly retreated (triggers Boss Retreat notification)
+    if (battleData?.battleId) {
+      apiFetch("/api/world/boss/confirm-retreat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ battleId: battleData.battleId })
+      }).catch(() => {});
+    }
+    
+    setTimeout(() => {
+        const chapterId = searchParams.get("chapterId");
+        if (chapterId) {
+            const existingAnswers = location.state?.userAnswers || [];
+            const rewindAnswers = existingAnswers.slice(0, 9);
+            const rewindScore = rewindAnswers.filter((a: any) => a?.isCorrect).length;
+
+            apiFetch("/api/practice/chapter-progress", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chapterId: chapterId,
+                currentQ: 9, // Rewind to 10th question
+                score: rewindScore,
+                completed: false,
+                readingCompleted: true,
+                questionsCompleted: false,
+                bossCompleted: false,
+                chapterCompleted: false,
+                answers: rewindAnswers
+              })
+            }).then(() => {
+                navigate(`/practice/chapters`, { replace: true });
+            }).catch(() => {
+                navigate("/practice/chapters", { replace: true });
+            });
+        } else if (returnTo) {
+           navigate(returnTo, { state: location.state, replace: true });
+        } else {
+           navigate("/practice/chapters", { replace: true });
+        }
+    }, 3000);
   };
 
   if (loading) {
@@ -508,6 +612,85 @@ export default function BossBattleScreen() {
         <button id="attack-btn" onClick={handleAttack} className="hidden">Attack</button>
       </main>
       
+      {/* Boss Revival Modal */}
+      {showReviveModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md px-6 text-center">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-gradient-to-br from-[#141779] to-[#07051a] border-2 border-[#57fae9]/30 rounded-3xl p-8 max-w-sm w-full shadow-[0_0_50px_rgba(87,250,233,0.25)] flex flex-col items-center gap-6"
+          >
+            <div className="w-20 h-20 rounded-full bg-[#57fae9]/10 border border-[#57fae9]/30 flex items-center justify-center animate-pulse">
+              <Swords className="text-[#57fae9] w-10 h-10 animate-bounce" />
+            </div>
+            <div>
+              <h2 className="text-3xl font-black text-white uppercase tracking-widest">Final Chance!</h2>
+              <p className="text-sm text-white/70 mt-2">
+                You ran out of hearts! Revive using the Revival Wheel to keep your current boss HP progress and fight on!
+              </p>
+            </div>
+            
+            <div className="w-full bg-white/5 rounded-2xl p-4 border border-white/10 flex justify-between items-center text-center">
+              <div className="flex-1">
+                <span className="text-[10px] text-white/50 uppercase font-black tracking-widest block mb-1">Revival Spins</span>
+                <span className="text-2xl font-black text-[#57fae9]">{revivalSpins}</span>
+              </div>
+              <div className="w-px h-8 bg-white/10" />
+              <div className="flex-1">
+                <span className="text-[10px] text-white/50 uppercase font-black tracking-widest block mb-1">Your Coins</span>
+                <span className="text-2xl font-black text-amber-400">🪙 {Math.max(0, userCoins)}</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 w-full">
+              {revivalSpins > 0 ? (
+                <button
+                  onClick={() => navigate(`/daily-rewards?type=boss_revival&boss_id=${battleData?.battleId}`)}
+                  className="w-full py-4 bg-[#57fae9] text-[#007168] font-bold rounded-full hover:bg-[#45e0d0] active:scale-95 transition-all uppercase tracking-wide text-sm flex items-center justify-center gap-2"
+                >
+                  <span>🔥 Spin to Revive</span>
+                </button>
+              ) : (
+                <button
+                  onClick={async () => {
+                    if (userCoins < 100) {
+                      showToast("Not enough coins! You need 100 coins.");
+                      return;
+                    }
+                    try {
+                      const res = await apiFetch("/api/retention/spin-wheel/buy-revival", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" }
+                      });
+                      const json = await res.json();
+                      if (json.success) {
+                        setRevivalSpins(json.balances.boss_revival_spins_balance || 1);
+                        setUserCoins(json.coins);
+                        showToast("Purchased 1 Revival Spin! 🎉");
+                      } else {
+                        showToast(json.message || "Purchase failed.");
+                      }
+                    } catch (e) {
+                      showToast("Purchase failed.");
+                    }
+                  }}
+                  className="w-full py-4 bg-amber-400 text-slate-950 font-bold rounded-full hover:bg-amber-300 active:scale-95 transition-all uppercase tracking-wide text-sm flex items-center justify-center gap-2"
+                >
+                  <span>🛒 Buy Revival Spin (100 🪙)</span>
+                </button>
+              )}
+              
+              <button
+                onClick={handleGiveUp}
+                className="w-full py-3 bg-white/5 text-white/50 font-bold rounded-full hover:bg-white/10 active:scale-95 transition-all text-xs"
+              >
+                Retreat & Lose XP
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {/* Defeat Overlay Animation */}
       {lossOverlay.show && (
         <motion.div 
@@ -531,6 +714,17 @@ export default function BossBattleScreen() {
             </motion.div>
         </motion.div>
       )}
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div 
+          className="fixed top-24 z-[250] bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl border border-slate-800/80 font-bold text-xs sm:text-sm tracking-wide flex items-center justify-center gap-2 text-center animate-bounce max-w-[90vw] w-auto"
+          style={{ left: "50%", transform: "translateX(-50%)" }}
+        >
+          <span>✨</span>
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
     </div>
   );
 }

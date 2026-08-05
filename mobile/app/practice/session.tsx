@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -55,6 +56,7 @@ export default function SessionScreen() {
   
   const [currentQ, setCurrentQ] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const [textAnswer, setTextAnswer] = useState("");
   const [showFeedback, setShowFeedback] = useState(false);
   const [totalCorrect, setTotalCorrect] = useState(0);
   const [incorrectTracker, setIncorrectTracker] = useState<any[]>([]);
@@ -118,6 +120,7 @@ export default function SessionScreen() {
   const sceneTitle = q?.title || "Mission";
   const interactionType = q?.interaction?.type;
   const isDragObjects = interactionType === "drag_objects";
+  const isTextInput = !isDragObjects && qOptions.length === 0;
 
   useEffect(() => {
     if (isDragObjects) {
@@ -136,17 +139,18 @@ export default function SessionScreen() {
   };
 
   const handleCheck = () => {
-    if (selectedOption === null) return;
+    if (!isTextInput && selectedOption === null) return;
+    if (isTextInput && textAnswer.trim() === "") return;
     setShowFeedback(true);
     
-    const isAnsCorrect = qOptions[selectedOption] === qAnswer;
+    const isAnsCorrect = isTextInput ? textAnswer.trim().toLowerCase() === String(qAnswer).trim().toLowerCase() : qOptions[selectedOption] === qAnswer;
     if (isAnsCorrect) {
       setTotalCorrect(prev => prev + 1);
     } else {
       setIncorrectTracker(prev => [...prev, {
         questionId: q._id,
         questionText: qText,
-        userAnswer: qOptions[selectedOption],
+        userAnswer: isTextInput ? textAnswer.trim() : qOptions[selectedOption],
         correctAnswer: qAnswer
       }]);
     }
@@ -217,6 +221,7 @@ export default function SessionScreen() {
     if (currentQ < questions.length - 1) {
       setCurrentQ(p => p + 1);
       setSelectedOption(null);
+      setTextAnswer("");
       setShowFeedback(false);
     } else {
       submitAndComplete();
@@ -578,6 +583,54 @@ export default function SessionScreen() {
               })}
             </View>
           </View>
+        ) : isTextInput ? (
+          <View style={{ paddingHorizontal: 24, marginTop: 20, marginBottom: 40, gap: 12 }}>
+            <TextInput
+              style={[
+                {
+                  backgroundColor: C.surfaceContainerLowest,
+                  borderWidth: 2,
+                  borderColor: C.primary,
+                  borderRadius: 16,
+                  padding: 16,
+                  fontSize: 18,
+                  color: C.onSurface,
+                },
+                showFeedback && isCorrect && { backgroundColor: C.tertiaryContainer, borderColor: C.secondary, color: C.secondary },
+                showFeedback && !isCorrect && { backgroundColor: C.errorContainer, borderColor: C.onErrorContainer, color: C.onErrorContainer }
+              ]}
+              value={textAnswer}
+              onChangeText={(text) => {
+                if (!showFeedback) setTextAnswer(text);
+              }}
+              placeholder="Type your answer here..."
+              placeholderTextColor={C.onSurfaceVariant}
+              editable={!showFeedback}
+            />
+            {showFeedback && !isCorrect && (
+              <View style={{
+                backgroundColor: C.surfaceContainerLowest,
+                borderWidth: 2,
+                borderColor: C.onErrorContainer,
+                borderRadius: 12,
+                padding: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.05,
+                shadowRadius: 5,
+                elevation: 1,
+              }}>
+                <MaterialIcons name="check" size={20} color={C.secondary} />
+                <Text style={{ color: C.onErrorContainer, fontWeight: "700", fontSize: 16 }}>
+                  Correct Answer: {qAnswer}
+                </Text>
+              </View>
+            )}
+          </View>
         ) : (
           <View style={styles.optionsGrid}>
             {qOptions.map((opt: string, idx: number) => {
@@ -626,7 +679,7 @@ export default function SessionScreen() {
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 24) }]}>
         {!showFeedback ? (
           <TouchableOpacity 
-            style={[styles.actionBtn, (selectedOption === null && !isDragObjects) && { opacity: 0.6 }]} 
+            style={[styles.actionBtn, ((selectedOption === null && !isDragObjects && !isTextInput) || (isTextInput && textAnswer.trim() === "")) && { opacity: 0.6 }]} 
             activeOpacity={0.8} 
             onPress={() => {
               if (isDragObjects) {
@@ -659,7 +712,7 @@ export default function SessionScreen() {
                 handleCheck();
               }
             }}
-            disabled={(selectedOption === null && !isDragObjects) || (isDragObjects && basketCount === 0)}
+            disabled={(selectedOption === null && !isDragObjects && !isTextInput) || (isDragObjects && basketCount === 0) || (isTextInput && textAnswer.trim() === "")}
           >
             <Text style={styles.actionBtnText}>Check Answer</Text>
             <MaterialIcons name="arrow-forward" size={24} color={C.white} />

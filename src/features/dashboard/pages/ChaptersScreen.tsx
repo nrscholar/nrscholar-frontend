@@ -62,14 +62,42 @@ export default function ChaptersScreen() {
       } catch (e) {}
 
       try {
-        const subRes = await apiFetch("/api/practice/subjects");
+        const [subRes, controlsRes] = await Promise.all([
+          apiFetch("/api/practice/subjects"),
+          apiFetch("/api/parent/controls")
+        ]);
+        
         const subData = await subRes.json();
+        const controlsData = await controlsRes.json();
+        
+        let restricted: Record<string, boolean> = {};
+        if (controlsData.success && controlsData.data?.parentControls?.restrictedSubjects) {
+          restricted = controlsData.data.parentControls.restrictedSubjects;
+        }
+
         if (subData.success && subData.data.length > 0) {
-          setSubjects(subData.data);
-          setActiveSubject(subData.data[0]);
+          const allowedSubjects = subData.data.filter((s: any) => !restricted[s.name]);
+          
+          if (allowedSubjects.length > 0) {
+            setSubjects(allowedSubjects);
+            const savedSubjectId = sessionStorage.getItem("activeSubjectId");
+            const found = allowedSubjects.find((s: any) => s._id === savedSubjectId);
+            if (found) {
+              setActiveSubject(found);
+            } else {
+              setActiveSubject(allowedSubjects[0]);
+              sessionStorage.setItem("activeSubjectId", allowedSubjects[0]._id);
+            }
+          } else {
+            setSubjects([]);
+            setLoading(false);
+          }
+        } else {
+          setLoading(false);
         }
       } catch (e) {
         console.error("Failed to fetch subjects");
+        setLoading(false);
       }
     };
     fetchSubjects();
@@ -119,33 +147,33 @@ export default function ChaptersScreen() {
   }, [activeSubject]);
 
   const totalChapters = chapters.length;
-  // A chapter is only fully complete if the legacy exact match exists OR the hard level boss is beaten
   const isChapterCompleted = (chapterId: string) => completedChapters.includes(chapterId) || completedChapters.includes(`${chapterId}_hard`);
   const completedChaptersCount = chapters.filter(ch => isChapterCompleted(ch._id)).length;
-  const progressPercent = totalChapters > 0 ? (completedChaptersCount / totalChapters) * 100 : 0;
+  
+  let totalCompletedMissionsCount = 0;
+  chapters.forEach(ch => {
+    const prog = chapterProgressMap[ch._id] || {};
+    const missions = prog.completedMissions || [];
+    if (Array.isArray(missions)) {
+      totalCompletedMissionsCount += missions.length;
+    } else if (prog.chapterCompleted || prog.completed) {
+      totalCompletedMissionsCount += 4;
+    }
+  });
+
+  const totalMissions = Math.max(1, totalChapters * 4);
+  const missionProgressPercent = (totalCompletedMissionsCount / totalMissions) * 100;
+  const chapterProgressPercent = totalChapters > 0 ? (completedChaptersCount / totalChapters) * 100 : 0;
+  const progressPercent = Math.max(missionProgressPercent, chapterProgressPercent);
   
   const currentChapterIndex = chapters.findIndex(ch => !isChapterCompleted(ch._id));
 
   const handleToggleChapter = async (chapterId: string, chapterName: string) => {
-    const isCompleted = isChapterCompleted(chapterId);
-    
-    if (isCompleted) {
-      if (expandedChapter === chapterId) {
-        setExpandedChapter(null);
-      } else {
-        setExpandedChapter(chapterId);
-      }
-      return;
-    }
-
     const progress = chapterProgressMap[chapterId] || {};
-    
     if (!progress.readingCompleted) {
-      navigate(`/chapter-reader?chapterId=${chapterId}&title=${encodeURIComponent(chapterName)}`);
-    } else if (!progress.questionsCompleted) {
-      navigate(`/chapter-questions?chapterId=${chapterId}&chapterName=${encodeURIComponent(chapterName)}`);
-    } else if (!progress.bossCompleted) {
-      navigate(`/boss-battle?worldId=w1&chapterId=${chapterId}&difficulty=easy&returnTo=/practice/journey-map`);
+      navigate(`/chapter-reader?chapterId=${chapterId}&title=${encodeURIComponent(chapterName)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}`);
+    } else {
+      navigate(`/mission-roadmap?chapterId=${chapterId}&title=${encodeURIComponent(chapterName)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}`);
     }
   };
 
@@ -186,14 +214,16 @@ export default function ChaptersScreen() {
           {/* Right Side: Bell Icon */}
           <button 
             onClick={() => navigate("/notifications")}
-            className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all relative shrink-0"
+            className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all shrink-0"
           >
-            <Bell size={20} className="text-[#141779]" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-bold border-2 border-white">
-                {unreadCount}
-              </span>
-            )}
+            <div className="relative">
+              <Bell size={20} className="text-[#141779]" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border border-white pointer-events-none z-10">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </div>
           </button>
         </div>
         
@@ -205,7 +235,10 @@ export default function ChaptersScreen() {
               return (
                 <button
                   key={sub._id}
-                  onClick={() => setActiveSubject(sub)}
+                  onClick={() => {
+                    setActiveSubject(sub);
+                    sessionStorage.setItem("activeSubjectId", sub._id);
+                  }}
                   className={`px-5 py-2 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${isActive ? 'bg-[#141779] text-white shadow-md' : 'bg-white text-[#767683] border border-[#e0e3e5] hover:border-[#141779]'}`}
                 >
                   {sub.name}
@@ -218,16 +251,41 @@ export default function ChaptersScreen() {
 
       <main className="px-6 pt-6 flex flex-col gap-6">
         {loading ? (
-          <div className="flex justify-center mt-10">
-            <div className="w-8 h-8 border-4 border-[#141779] border-t-transparent rounded-full animate-spin" />
-          </div>
+          <>
+            <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-6 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_2px_10px_rgba(0,0,0,0.05)] flex flex-col gap-4 animate-pulse">
+              <div className="flex justify-between items-end">
+                <div className="flex-1">
+                  <div className="h-3 bg-gray-200 rounded w-1/3 mb-2" />
+                  <div className="h-6 bg-gray-200 rounded w-1/2" />
+                </div>
+                <div className="w-12 h-12 rounded-full border-4 border-gray-200" />
+              </div>
+              <div className="w-full h-2.5 bg-gray-200 rounded-full" />
+            </div>
+            <div className="flex flex-col gap-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex flex-col bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.8)] animate-pulse">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-gray-200 shrink-0" />
+                    <div className="flex-1">
+                      <div className="h-3 bg-gray-200 rounded w-1/4 mb-2" />
+                      <div className="h-5 bg-gray-200 rounded w-2/3" />
+                    </div>
+                    <div className="w-6 h-6 rounded-full bg-gray-200" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         ) : (
           <>
             {/* Progress Summary Card */}
             <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-6 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_2px_10px_rgba(0,0,0,0.05)] flex flex-col gap-4">
               <div className="flex justify-between items-end">
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-[#767683] mb-1">{t('mission_progress')}</p>
+                  <p className="text-sm font-semibold text-[#767683] mb-1">
+                    {t('mission_progress')} {totalCompletedMissionsCount > 0 && <span className="text-xs font-bold text-[#006a62] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 ml-1">• {totalCompletedMissionsCount} {totalCompletedMissionsCount === 1 ? 'Mission' : 'Missions'} Done</span>}
+                  </p>
                   <h2 className="text-2xl font-bold text-[#141779]">{t('chapters_complete', { completed: completedChaptersCount, total: totalChapters })}</h2>
                 </div>
                 <div className="relative w-12 h-12 rounded-full border-4 border-[rgba(0,106,98,0.2)] flex items-center justify-center">
@@ -274,15 +332,15 @@ export default function ChaptersScreen() {
                     isExpanded && (
                       <div className="mt-4 pt-4 border-t border-[rgba(0,0,0,0.05)] w-full text-left">
                         <div className="flex flex-col gap-3">
-                          <button onClick={(e) => { e.stopPropagation(); navigate(`/chapter-reader?chapterId=${chap._id}&title=${encodeURIComponent(chap.name)}`); }} className="bg-white border-2 border-[#141779] text-[#141779] px-4 py-2 rounded-xl hover:bg-gray-50 transition-all font-bold text-sm w-full text-left flex justify-between">
+                          <button onClick={(e) => { e.stopPropagation(); navigate(`/chapter-reader?chapterId=${chap._id}&title=${encodeURIComponent(`${index + 1}. ${chap.name}`)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}`); }} className="bg-white border-2 border-[#141779] text-[#141779] px-4 py-2 rounded-xl hover:bg-gray-50 transition-all font-bold text-sm w-full text-left flex justify-between">
                             <span>Read PDF</span>
                             <span>→</span>
                           </button>
-                          <button onClick={(e) => { e.stopPropagation(); navigate(`/chapter-questions?chapterId=${chap._id}&chapterName=${encodeURIComponent(chap.name)}`); }} className="bg-white border-2 border-[#141779] text-[#141779] px-4 py-2 rounded-xl hover:bg-gray-50 transition-all font-bold text-sm w-full text-left flex justify-between">
+                          <button onClick={(e) => { e.stopPropagation(); navigate(`/chapter-questions?chapterId=${chap._id}&chapterName=${encodeURIComponent(`${index + 1}. ${chap.name}`)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}`); }} className="bg-white border-2 border-[#141779] text-[#141779] px-4 py-2 rounded-xl hover:bg-gray-50 transition-all font-bold text-sm w-full text-left flex justify-between">
                             <span>Practice Questions</span>
                             <span>→</span>
                           </button>
-                          <button onClick={(e) => { e.stopPropagation(); navigate(`/boss-battle?worldId=w1&chapterId=${chap._id}&difficulty=easy&returnTo=/practice/journey-map`); }} className="bg-white border-2 border-[#141779] text-[#141779] px-4 py-2 rounded-xl hover:bg-gray-50 transition-all font-bold text-sm w-full text-left flex justify-between">
+                          <button onClick={(e) => { e.stopPropagation(); navigate(`/boss-battle?worldId=w1&chapterId=${chap._id}&difficulty=easy&returnTo=/practice/journey-map&subjectName=${encodeURIComponent(activeSubject?.name || "")}&chapterName=${encodeURIComponent(`${index + 1}. ${chap.name}`)}`); }} className="bg-white border-2 border-[#141779] text-[#141779] px-4 py-2 rounded-xl hover:bg-gray-50 transition-all font-bold text-sm w-full text-left flex justify-between">
                             <span>Boss Round</span>
                             <span>→</span>
                           </button>
@@ -294,7 +352,7 @@ export default function ChaptersScreen() {
                   if (status === "completed") {
                     return (
                       <div key={chap._id} className={`flex flex-col bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.8)] ${isExpanded ? 'shadow-md' : 'hover:bg-white'} transition-all w-full`}>
-                        <button onClick={() => handleToggleChapter(chap._id, chap.name)} className="flex items-center gap-4 text-left w-full">
+                        <button onClick={() => handleToggleChapter(chap._id, `${index + 1}. ${chap.name}`)} className="flex items-center gap-4 text-left w-full">
                           <div className="w-12 h-12 rounded-full bg-[rgba(0,106,98,0.1)] border border-[rgba(0,106,98,0.2)] flex items-center justify-center shrink-0">
                             <IconComponent size={24} color="#006a62" />
                           </div>
@@ -319,7 +377,7 @@ export default function ChaptersScreen() {
                             className="absolute -top-8 -right-8 w-24 h-24 rounded-full bg-[rgba(0,106,98,0.05)] pointer-events-none"
                             />
                         )}
-                        <div onClick={() => handleToggleChapter(chap._id, chap.name)} className="flex items-center gap-4 cursor-pointer relative z-10 w-full">
+                        <div onClick={() => handleToggleChapter(chap._id, `${index + 1}. ${chap.name}`)} className="flex items-center gap-4 cursor-pointer relative z-10 w-full">
                             <div className="w-12 h-12 rounded-full bg-[#006a62] flex items-center justify-center shrink-0 shadow-[0_4px_8px_rgba(0,0,0,0.3)]">
                             <IconComponent size={24} color="white" />
                             </div>
@@ -328,7 +386,7 @@ export default function ChaptersScreen() {
                             <h3 className="text-lg font-bold text-[#141779]">{chap.name}</h3>
                             </div>
                             {!isExpanded && (
-                                <button onClick={(e) => { e.stopPropagation(); handleToggleChapter(chap._id, chap.name); }} className="bg-[#141779] px-6 py-2 rounded-full hover:opacity-90 transition-opacity">
+                                <button onClick={(e) => { e.stopPropagation(); handleToggleChapter(chap._id, `${index + 1}. ${chap.name}`); }} className="bg-[#141779] px-6 py-2 rounded-full hover:opacity-90 transition-opacity">
                                 <span className="text-white text-sm font-semibold">{t('start')}</span>
                                 </button>
                             )}

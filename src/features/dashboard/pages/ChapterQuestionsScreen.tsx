@@ -18,6 +18,7 @@ export default function ChapterQuestionsScreen() {
 
   const [currentQ, setCurrentQ] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
+  const [textAnswer, setTextAnswer] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [score, setScore] = useState(0);
   const [sessionCorrect, setSessionCorrect] = useState(0);
@@ -30,6 +31,7 @@ export default function ChapterQuestionsScreen() {
   const [childPhoto, setChildPhoto] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
+
 
   useEffect(() => {
     initParticlesEngine(async (engine) => { await loadSlim(engine); }).then(() => setParticlesInit(true));
@@ -82,6 +84,33 @@ export default function ChapterQuestionsScreen() {
           filtered = qJson.data.slice(0, 15);
           setQuestionsData(filtered);
         }
+        
+        if (filtered.length === 0) {
+          try {
+            await apiFetch("/api/practice/chapter-progress", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chapterId: chapterId,
+                currentQ: 0,
+                score: 0,
+                answers: [],
+                completed: true,
+                readingCompleted: true,
+                questionsCompleted: true,
+                bossCompleted: true,
+                chapterCompleted: true
+              })
+            });
+          } catch (e) {}
+          
+          const finalReturnUrl = encodeURIComponent(`/practice/journey-map`);
+          navigate(`/practice/reward?type=coins&amount=100&returnTo=${finalReturnUrl}`, {
+            replace: true
+          });
+          return;
+        }
+
         if (pJson.success && pJson.data) {
           if (!pJson.data.questionsCompleted) {
             const savedQ = pJson.data.currentQ || 0;
@@ -90,6 +119,7 @@ export default function ChapterQuestionsScreen() {
               const finalReturnUrl = encodeURIComponent(`/practice/chapters`);
               
               sessionStorage.setItem("lastSessionAnswers", JSON.stringify(pJson.data.answers || []));
+              await submitActivityLog(pJson.data.answers || []);
               
               navigate(`/boss-battle?worldId=w1&chapterId=${chapterId}&difficulty=easy&returnTo=${finalReturnUrl}`, {
                 state: { userAnswers: pJson.data.answers || [] },
@@ -137,9 +167,13 @@ export default function ChapterQuestionsScreen() {
   const totalDraggables = dragDetails.draggablesCount || 6;
   const objectEmoji = dragDetails.objectEmoji || "🍎";
 
+  const isTextInput = interactionType === "mcq" && optionsList.length === 0;
+
   let isCorrect = false;
   if (interactionType === "drag_objects") {
     isCorrect = basketCount === targetCount;
+  } else if (isTextInput) {
+    isCorrect = textAnswer.trim().toLowerCase() === String(correctAnswer).trim().toLowerCase();
   } else {
     isCorrect = selected === correctIndex;
   }
@@ -168,7 +202,9 @@ export default function ChapterQuestionsScreen() {
               timeTaken,
               correctQuestions: cQ,
               totalQuestions: tQ,
-              details
+              details,
+              chapter: searchParams.get("chapterName") || undefined,
+              subject: searchParams.get("subjectName") || undefined
           })
       });
     } catch (e) {
@@ -177,7 +213,8 @@ export default function ChapterQuestionsScreen() {
   };
 
   const handleConfirm = async () => {
-    if (interactionType === "mcq" && selected === null) return;
+    if (interactionType === "mcq" && !isTextInput && selected === null) return;
+    if (isTextInput && textAnswer.trim() === "" && !confirmed) return;
     if (!confirmed) {
       setConfirmed(true);
       setAnsweredThisSession(prev => prev + 1);
@@ -194,7 +231,7 @@ export default function ChapterQuestionsScreen() {
         const next = [...prev];
         next[currentQ] = {
           isCorrect,
-          selected: interactionType === "mcq" ? selected : basketCount,
+          selected: interactionType === "drag_objects" ? basketCount : isTextInput ? textAnswer.trim() : selected,
           interactionType,
           questionText,
           optionsList,
@@ -211,8 +248,17 @@ export default function ChapterQuestionsScreen() {
       apiFetch("/api/world/questions/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ questionId: q?._id || `q_${currentQ}`, isCorrect })
+        body: JSON.stringify({ 
+          questionId: q?._id || `q_${currentQ}`, 
+          isCorrect,
+          chapterName: searchParams.get("chapterName") || undefined,
+          subjectName: searchParams.get("subjectName") || undefined,
+          timeSpent
+        })
       }).catch(e => console.error("Failed to submit for rewards", e));
+
+      // m2 (Answer 10 Questions) is handled server-side in /api/world/questions/submit
+      // which counts DB attempts per day — no need to track here
 
     } else {
       
@@ -237,6 +283,7 @@ export default function ChapterQuestionsScreen() {
         // Store nextQ state first
         setCurrentQ(nextQ);
         setSelected(null);
+        setTextAnswer("");
         setConfirmed(false);
 
       } else {
@@ -250,20 +297,24 @@ export default function ChapterQuestionsScreen() {
               currentQ: total,
               score: score,
               answers: userAnswers,
-              completed: false,
+              completed: true,
               readingCompleted: true,
               questionsCompleted: true
             })
           });
+          await submitActivityLog(userAnswers);
         } catch (e) {
           console.error("Failed to save progress", e);
         }
+        
+        // m1 (Complete 1 Lesson) is auto-completed server-side via /api/world/questions/submit
+        // and /api/practice/chapter-progress — no need to call it here
         
         const finalReturnUrl = encodeURIComponent(`/practice/chapters`);
         
         sessionStorage.setItem("lastSessionAnswers", JSON.stringify(userAnswers));
         
-        navigate(`/boss-battle?worldId=w1&chapterId=${chapterId}&difficulty=easy&returnTo=${finalReturnUrl}`, {
+        navigate(`/boss-battle?worldId=w1&chapterId=${chapterId}&difficulty=easy&returnTo=${finalReturnUrl}&chapterName=${encodeURIComponent(searchParams.get("chapterName") || "")}&subjectName=${encodeURIComponent(searchParams.get("subjectName") || "")}`, {
           state: { userAnswers },
           replace: true
         });
@@ -294,9 +345,36 @@ export default function ChapterQuestionsScreen() {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-[#f4efff]">
-      <div className="w-10 h-10 border-4 border-[#141779] border-t-transparent rounded-full animate-spin" />
-    </div>;
+    return (
+      <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col pb-24 relative overflow-hidden">
+        <header className="flex items-center justify-between px-5 py-4 bg-[#f4efff] sticky top-0 z-40 animate-pulse">
+          <div className="flex items-center gap-3 w-full">
+            <div className="w-8 h-8 bg-gray-200 rounded-full shrink-0" />
+            <div className="w-10 h-10 bg-gray-200 rounded-full shrink-0" />
+            <div className="h-6 bg-gray-200 rounded w-1/2" />
+          </div>
+          <div className="w-10 h-10 bg-gray-200 rounded-full shrink-0 ml-2" />
+        </header>
+        <main className="px-6 pt-2 flex-1 flex flex-col animate-pulse">
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-3">
+              <div className="h-6 bg-gray-200 rounded w-1/3" />
+              <div className="h-6 bg-gray-200 rounded-full w-20" />
+            </div>
+            <div className="h-6 bg-gray-200 rounded-full w-full" />
+          </div>
+          <div className="flex items-end gap-4 mb-8 mt-4 px-2">
+            <div className="w-[70px] h-[70px] bg-gray-200 rounded-full shrink-0" />
+            <div className="flex-1 bg-gray-200 h-24 rounded-[24px] rounded-bl-none" />
+          </div>
+          <div className="grid grid-cols-2 gap-3.5">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-16 bg-gray-200 rounded-[16px]" />
+            ))}
+          </div>
+        </main>
+      </div>
+    );
   }
 
   if (questionsData.length === 0) {
@@ -471,7 +549,7 @@ export default function ChapterQuestionsScreen() {
 
         {/* Interactive Area */}
         <div className="mb-7">
-          {interactionType === "mcq" && (
+          {interactionType === "mcq" && !isTextInput && (
             <div className="grid grid-cols-2 gap-3.5">
               {optionsList && optionsList.map((opt: string, idx: number) => {
                 let btnClass = "bg-white border-2 border-gray-200 border-b-[4px] active:border-b-2 active:translate-y-[2px] active:mt-[2px] active:mb-[-2px]";
@@ -509,6 +587,30 @@ export default function ChapterQuestionsScreen() {
                   </button>
                 );
               })}
+            </div>
+          )}
+
+          {isTextInput && (
+            <div className="w-full flex flex-col justify-center mt-4 mb-4 gap-3">
+              <input
+                type="text"
+                value={textAnswer}
+                onChange={(e) => {
+                  if (!confirmed) setTextAnswer(e.target.value);
+                }}
+                disabled={confirmed}
+                placeholder="Type your answer here..."
+                className={`w-full p-4 rounded-2xl border-2 font-bold text-lg outline-none transition-all ${
+                  confirmed ? (isCorrect ? 'bg-[#e8ddff] border-[#30007f] text-[#1d0052]' : 'bg-[#ffdad6] border-[#ba1a1a] text-[#ba1a1a]')
+                  : 'bg-white border-gray-200 text-[#4b4b4b] focus:border-[#141779] shadow-sm'
+                }`}
+              />
+              {confirmed && !isCorrect && (
+                <div className="w-full p-4 rounded-xl bg-white border-2 border-[#ba1a1a] text-[#ba1a1a] font-bold text-center flex items-center justify-center gap-2 shadow-sm animate-in fade-in slide-in-from-top-2">
+                  <span className="text-[#58cc02]">✓</span>
+                  <span>Correct Answer: {correctAnswer}</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -588,10 +690,10 @@ export default function ChapterQuestionsScreen() {
           </AnimatePresence>
 
           <button
-            disabled={interactionType === "mcq" && selected === null && !confirmed}
+            disabled={(interactionType === "mcq" && !isTextInput && selected === null && !confirmed) || (isTextInput && textAnswer.trim() === "" && !confirmed)}
             onClick={handleConfirm}
             className={`w-full py-[16px] rounded-2xl flex items-center justify-center transition-all ${
-              !confirmed && interactionType === "mcq" && selected === null ? 'bg-[#e5e5e5] text-[#afafaf]' :
+              (!confirmed && interactionType === "mcq" && !isTextInput && selected === null) || (!confirmed && isTextInput && textAnswer.trim() === "") ? 'bg-[#e5e5e5] text-[#afafaf]' :
               !confirmed ? 'bg-[#141779] text-white shadow-[0_4px_0_#0b0d4d] hover:bg-[#1a1e9e] active:translate-y-[4px] active:shadow-none active:mt-1' :
               isCorrect ? 'bg-[#30007f] text-white shadow-[0_4px_0_#1d0052] hover:bg-[#3f00a8] active:translate-y-[4px] active:shadow-none active:mt-1' :
               'bg-[#ba1a1a] text-white shadow-[0_4px_0_#93000a] hover:bg-[#d92222] active:translate-y-[4px] active:shadow-none active:mt-1'

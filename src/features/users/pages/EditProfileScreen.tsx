@@ -1,9 +1,74 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, UserRound, GraduationCap, Cake, BookOpen, Save, Camera } from "lucide-react";
+import { ArrowLeft, UserRound, GraduationCap, Cake, BookOpen, Save, Camera, ChevronDown, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "../../../api";
 
+const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect, placeholder }: any) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="flex flex-col gap-2 flex-1 relative">
+      <label className="text-sm font-semibold text-[#767683] ml-4">{label}</label>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full h-14 bg-[rgba(255,255,255,0.5)] rounded-full pl-12 pr-10 text-base font-medium text-[#191c1e] border-2 border-white flex items-center justify-start text-left relative"
+      >
+        <div className="absolute left-4 z-10 flex items-center h-full top-0">
+          <Icon size={22} color={iconColor} />
+        </div>
+        <span className={`truncate ${value ? "text-[#191c1e]" : "text-[#c7c5d4]"}`}>
+          {value || placeholder}
+        </span>
+        <ChevronDown size={24} color="#767683" className="absolute right-3" />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-[rgba(0,0,0,0.5)] z-50 flex items-center justify-center p-6"
+              onClick={() => setIsOpen(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="w-full max-w-[320px] bg-white rounded-3xl p-6 max-h-[60vh] flex flex-col"
+                onClick={e => e.stopPropagation()}
+              >
+                <h3 className="text-xl font-bold text-[#141779] mb-4 text-center">Select {label}</h3>
+                <div className="overflow-y-auto pr-2">
+                  {options.map((opt: string) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => {
+                        onSelect(opt);
+                        setIsOpen(false);
+                      }}
+                      className="w-full flex items-center justify-between py-4 border-b border-[#f2f4f6] last:border-0"
+                    >
+                      <span className={`text-base ${value === opt ? 'font-bold text-[#141779]' : 'font-medium text-[#464652]'}`}>
+                        {opt}
+                      </span>
+                      {value === opt && <Check size={20} color="#141779" />}
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
 export default function EditProfileScreen() {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -27,9 +92,9 @@ export default function EditProfileScreen() {
     }
   };
 
-  const classes = ["Nursery", "KG", "Class 1", "Class 2", "Class 3", "Class 4", "Class 5"];
-  const ages = ["4 Years", "5 Years", "6 Years", "7 Years", "8 Years", "9 Years", "10 Years"];
-  const boards = ["CBSE (NCERT)", "ICSE", "State Board", "IB", "IGCSE"];
+  const classes = ["Nursery", "KG", "Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"];
+  const ages = ["4 Years", "5 Years", "6 Years", "7 Years", "8 Years", "9 Years", "10 Years", "11 Years", "12 Years", "13 Years", "14 Years", "15 Years"];
+  const boards = ["CBSE (NCERT)", "GSEB", "ICSE", "State Board", "IB", "IGCSE"];
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -138,92 +203,54 @@ export default function EditProfileScreen() {
               <span className="text-xs font-bold text-[#767683] mt-2">{t('tap_photo_to_edit')}</span>
             </div>
 
+            {/* Child's Name */}
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-[#767683] ml-2">{t('explorer_name')}</label>
+              <label className="text-sm font-semibold text-[#767683] ml-4">{t('child_name') || "Child's Name"}</label>
               <div className="relative flex items-center">
-                <UserRound size={22} color="#006a62" className="absolute left-4" />
                 <input
                   type="text"
+                  placeholder={t('enter_child_name') || "Enter Child Name"}
                   value={childName}
                   onChange={(e) => setChildName(e.target.value)}
-                  className="w-full h-14 bg-white rounded-full pl-12 pr-6 text-base font-medium text-[#191c1e] border-2 border-transparent focus:border-[#141779] outline-none"
+                  className="w-full h-14 bg-[rgba(255,255,255,0.5)] rounded-full pl-12 pr-6 text-base font-medium text-[#191c1e] border-2 border-white focus:outline-none focus:border-[#141779] transition-colors placeholder:text-[#c7c5d4]"
                 />
+                <UserRound size={22} color="#006a62" className="absolute left-4" />
               </div>
             </div>
 
+            {/* Board Selection */}
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-[#767683] ml-2">{t('education_board')}</label>
-              <div className="relative flex items-center">
-                <BookOpen size={22} color="#006a62" className="absolute left-4" />
-                <select
-                  value={childBoard}
-                  onChange={(e) => setChildBoard(e.target.value)}
-                  className="w-full h-14 bg-white rounded-full pl-12 pr-6 text-base font-medium text-[#191c1e] border-2 border-transparent focus:border-[#141779] outline-none appearance-none"
-                >
-                  <option value="" disabled>{t('select_board')}</option>
-                  {boards.map(b => <option key={b} value={b}>{b}</option>)}
-                </select>
-              </div>
+              <CustomDropdown
+                label={t('education_board') || "Education Board"}
+                icon={BookOpen}
+                iconColor="#006a62"
+                value={childBoard}
+                options={boards}
+                onSelect={setChildBoard}
+                placeholder={t('select_board') || "Select Board"}
+              />
             </div>
 
+            {/* Row for Class & Age */}
             <div className="flex gap-3">
-              <div className="flex flex-col gap-2 flex-1">
-                <label className="text-sm font-semibold text-[#767683] ml-2">{t('class_grade')}</label>
-                <div className="relative flex items-center">
-                  <GraduationCap size={22} color="#30007f" className="absolute left-4" />
-                  <select
-                    value={childClass}
-                    onChange={(e) => setChildClass(e.target.value)}
-                    className="w-full h-14 bg-white rounded-full pl-10 pr-2 text-base font-medium text-[#191c1e] border-2 border-transparent focus:border-[#141779] outline-none appearance-none"
-                  >
-                    <option value="" disabled>{t('select')}</option>
-                    {classes.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2 flex-1">
-                <label className="text-sm font-semibold text-[#767683] ml-2">{t('age')}</label>
-                <div className="relative flex items-center">
-                  <Cake size={22} color="#141779" className="absolute left-4" />
-                  <select
-                    value={childAge}
-                    onChange={(e) => setChildAge(e.target.value)}
-                    className="w-full h-14 bg-white rounded-full pl-10 pr-2 text-base font-medium text-[#191c1e] border-2 border-transparent focus:border-[#141779] outline-none appearance-none"
-                  >
-                    <option value="" disabled>{t('select')}</option>
-                    {ages.map(a => <option key={a} value={a}>{a}</option>)}
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Language Selection */}
-            <div className="flex flex-col gap-2 mt-2">
-              <label className="text-sm font-semibold text-[#767683] ml-2">{t('app_language')}</label>
-              <div className="flex gap-2">
-                <button 
-                  type="button"
-                  onClick={() => { localStorage.setItem('i18nextLng', 'en'); window.location.reload(); }}
-                  className={`flex-1 py-3 rounded-full border-2 ${localStorage.getItem('i18nextLng') === 'en' || !localStorage.getItem('i18nextLng') ? 'bg-[#141779] text-white border-[#141779]' : 'bg-white text-[#141779] border-gray-200'} text-sm font-bold transition-colors`}
-                >
-                  English
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => { localStorage.setItem('i18nextLng', 'hi'); window.location.reload(); }}
-                  className={`flex-1 py-3 rounded-full border-2 ${localStorage.getItem('i18nextLng') === 'hi' ? 'bg-[#141779] text-white border-[#141779]' : 'bg-white text-[#141779] border-gray-200'} text-sm font-bold transition-colors`}
-                >
-                  हिन्दी
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => { localStorage.setItem('i18nextLng', 'gu'); window.location.reload(); }}
-                  className={`flex-1 py-3 rounded-full border-2 ${localStorage.getItem('i18nextLng') === 'gu' ? 'bg-[#141779] text-white border-[#141779]' : 'bg-white text-[#141779] border-gray-200'} text-sm font-bold transition-colors`}
-                >
-                  ગુજરાતી
-                </button>
-              </div>
+              <CustomDropdown
+                label={t('class_grade') || "Class/Grade"}
+                icon={GraduationCap}
+                iconColor="#30007f"
+                value={childClass}
+                options={classes}
+                onSelect={setChildClass}
+                placeholder={t('select') || "Select"}
+              />
+              <CustomDropdown
+                label={t('age') || "Age"}
+                icon={Cake}
+                iconColor="#141779"
+                value={childAge}
+                options={ages}
+                onSelect={setChildAge}
+                placeholder={t('select') || "Select"}
+              />
             </div>
 
             <button

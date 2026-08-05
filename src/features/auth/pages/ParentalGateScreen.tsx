@@ -5,7 +5,7 @@ import { apiFetch } from "../../../api";
 
 export default function ParentalGateScreen() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"loading" | "set" | "enter" | "reset-step1" | "reset-step2">("loading");
+  const [mode, setMode] = useState<"loading" | "set-step1" | "set-step2" | "enter" | "reset-step1" | "reset-step2">("loading");
   const [pin, setPin] = useState("");
   const [tempPin, setTempPin] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
@@ -23,11 +23,11 @@ export default function ParentalGateScreen() {
         if (json.success && json.data?.isPinSet) {
           setMode("enter");
         } else {
-          setMode("set");
+          setMode("set-step1");
         }
       } catch (err) {
         console.error("Failed to check PIN status", err);
-        setMode("set");
+        setMode("set-step1");
       }
     }
     checkPinStatus();
@@ -40,6 +40,22 @@ export default function ParentalGateScreen() {
       
       if (mode === "enter" && nextPin.length === 4) {
         validatePin(nextPin);
+      } else if (mode === "set-step1" && nextPin.length === 4) {
+        setTempPin(nextPin);
+        setTimeout(() => {
+          setPin("");
+          setMode("set-step2");
+        }, 300);
+      } else if (mode === "set-step2" && nextPin.length === 4) {
+        if (nextPin === tempPin) {
+          handleSetPin(nextPin);
+        } else {
+          setErrorMsg("PINs do not match. Try again.");
+          setTimeout(() => {
+            setPin("");
+            setMode("set-step1");
+          }, 1000);
+        }
       } else if (mode === "reset-step1" && nextPin.length === 4) {
         setTempPin(nextPin);
         setTimeout(() => {
@@ -88,26 +104,26 @@ export default function ParentalGateScreen() {
     }
   };
 
-  const handleSetPin = async () => {
-    if (pin.length === 4) {
-      try {
-        const res = await apiFetch("/api/parent/set-pin", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pin })
-        });
-        const json = await res.json();
-        
-        if (json.success) {
-          setSuccessMsg("PIN Set Successfully!");
-          setTimeout(() => navigate("/parent/dashboard"), 1000);
-        } else {
-          const errorDetail = typeof json.detail === 'string' ? json.detail : (json.detail ? JSON.stringify(json.detail) : "");
-          setErrorMsg(json.message || errorDetail || "Failed to set PIN");
-        }
-      } catch (err: any) {
-        setErrorMsg(err.message || "Failed to set PIN");
+  const handleSetPin = async (newPin: string) => {
+    try {
+      const res = await apiFetch("/api/parent/set-pin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin: newPin })
+      });
+      const json = await res.json();
+      
+      if (json.success) {
+        setSuccessMsg("PIN Set Successfully!");
+        setTimeout(() => navigate("/parent/dashboard"), 1000);
+      } else {
+        const errorDetail = typeof json.detail === 'string' ? json.detail : (json.detail ? JSON.stringify(json.detail) : "");
+        setErrorMsg(json.message || errorDetail || "Failed to set PIN");
+        setTimeout(() => { setPin(""); setMode("set-step1"); }, 1000);
       }
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to set PIN");
+      setTimeout(() => { setPin(""); setMode("set-step1"); }, 1000);
     }
   };
 
@@ -208,13 +224,15 @@ export default function ParentalGateScreen() {
         
         <div className="text-center mb-8">
           <h2 className="text-2xl font-bold text-[#141779] mb-2">
-            {mode === "set" ? "Set Parent PIN" : 
+            {mode === "set-step1" ? "Set Parent PIN" : 
+             mode === "set-step2" ? "Confirm Parent PIN" : 
              mode === "enter" ? "Enter Parent PIN" : 
              mode === "reset-step1" ? "Enter New PIN" : 
              "Confirm New PIN"}
           </h2>
           <p className="text-sm font-medium text-[#464652] max-w-[280px]">
-            {mode === "set" ? "Create a 4-digit security code to keep parental controls secure." : 
+            {mode === "set-step1" ? "Create a 4-digit security code to keep parental controls secure." : 
+             mode === "set-step2" ? "Re-enter your 4-digit PIN to confirm." : 
              mode === "enter" ? "Enter your 4-digit security code to access parental controls." : 
              mode === "reset-step1" ? "Enter your new 4-digit PIN." : 
              "Re-enter your new 4-digit PIN to confirm."}
@@ -282,17 +300,8 @@ export default function ParentalGateScreen() {
         </div>
 
         {/* Action Button for Set Mode */}
-        {mode === "set" && (
+        {(mode === "set-step1" || mode === "set-step2") && (
           <div className="mt-8 w-full max-w-[320px] flex flex-col gap-4">
-            <button
-              onClick={handleSetPin}
-              disabled={pin.length < 4}
-              className={`w-full py-4 rounded-xl flex items-center justify-center font-bold text-lg text-white transition-opacity ${
-                pin.length === 4 ? "bg-[#2d328f] hover:opacity-90" : "bg-[#2d328f] opacity-50"
-              }`}
-            >
-              Confirm PIN
-            </button>
             <button onClick={() => navigate(-1)} className="text-[#767683] text-sm font-bold hover:underline">
               Skip for now
             </button>

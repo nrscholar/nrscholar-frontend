@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, Search, BookOpen, TrendingUp, Users, Settings, Plus, PlayCircle, ArrowLeft } from "lucide-react";
+import { Menu, Search, BookOpen, TrendingUp, Users, Settings, Plus, PlayCircle, ArrowLeft, Lock } from "lucide-react";
 import { apiFetch } from "../../../api";
+import { useTranslation } from "react-i18next";
 
 export default function ParentLessonsScreen() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [allTopics, setAllTopics] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState("For You");
@@ -11,6 +13,7 @@ export default function ParentLessonsScreen() {
   const [xp, setXp] = useState(0);
   const [username, setUsername] = useState("Parent");
   const [profilePic, setProfilePic] = useState("");
+  const [contentLanguage, setContentLanguage] = useState("en");
 
   function getXpForLevel(lvl: number): number {
     if (lvl <= 1) return 0;
@@ -41,11 +44,37 @@ export default function ParentLessonsScreen() {
           setUsername(json.data.user.parentName || json.data.user.username || "Parent");
           setProfilePic(json.data.user.parentPhoto || "");
         }
-      } catch (e) { }
+      } catch (e) {
+        console.error("Failed to fetch user data", e);
+      }
+    };
+    const fetchControls = async () => {
+      try {
+        const res = await apiFetch('/api/parent/controls');
+        const json = await res.json();
+        if (json.success && json.data?.parentControls?.contentLanguage) {
+          setContentLanguage(json.data.parentControls.contentLanguage);
+        }
+      } catch (e) {
+        console.error(e);
+      }
     };
     fetchLibrary();
     fetchUser();
+    fetchControls();
   }, []);
+
+  const unlockedTopicIds = new Set<string>();
+  const seenCategories = new Set<string>();
+  allTopics.forEach(topic => {
+    if (topic.status !== "completed") {
+      const cat = topic.category || "Other";
+      if (!seenCategories.has(cat)) {
+        seenCategories.add(cat);
+        unlockedTopicIds.add(topic.topicId);
+      }
+    }
+  });
 
   return (
     <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans pb-24 overflow-x-hidden relative">
@@ -80,9 +109,36 @@ export default function ParentLessonsScreen() {
               className="w-full h-full object-cover"
             />
           </div>
-          <h1 className="text-xl font-bold text-[#141779]">Daily Parenting Lessons</h1>
+          <h1 className="text-xl font-bold text-[#141779]">{t("lessons") || "Daily Parenting Lessons"}</h1>
         </div>
-        <div className="w-10 h-10"></div> {/* Spacer for balance */}
+        <div className="relative">
+          <select 
+            value={contentLanguage}
+            onChange={async (e) => {
+              const newLang = e.target.value;
+              setContentLanguage(newLang);
+              try {
+                await apiFetch('/api/parent/controls', {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ contentLanguage: newLang })
+                });
+                const res = await apiFetch('/api/parent/learning-library');
+                const data = await res.json();
+                if (data.success) {
+                  setAllTopics(data.data.topics);
+                }
+              } catch (err) {
+                console.error(err);
+              }
+            }}
+            className="bg-white border border-[#141779]/20 text-[#141779] rounded-xl px-2.5 py-1.5 text-xs font-bold shadow-sm outline-none focus:border-[#141779]"
+          >
+            <option value="en">English</option>
+            <option value="hi">हिंदी (Hindi)</option>
+            <option value="gu">ગુજરાતી (Gujarati)</option>
+          </select>
+        </div>
       </header>
 
       <main className="flex-1 flex flex-col">
@@ -118,22 +174,12 @@ export default function ParentLessonsScreen() {
           </div>
         </section>
 
-        {/* Search Bar */}
-        <section className="px-6 py-2">
-          <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#767683]" size={20} />
-            <input
-              type="text"
-              className="w-full bg-[#f2f4f6] border-none rounded-full py-4 pl-12 pr-6 text-base focus:ring-2 focus:ring-[rgba(0,106,98,0.3)] transition-all outline-none"
-              placeholder="Search for lessons..."
-            />
-          </div>
-        </section>
+
 
         {/* Categories Chips */}
         <section className="py-4">
           <div className="flex overflow-x-auto no-scrollbar gap-3 px-6">
-            {["For You", "Emotional Intelligence", "Child Psychology", "Communication", "Digital Parenting"].map(filter => (
+            {["For You", "Completed", "Emotional Intelligence", "Child Psychology", "Communication", "Digital Parenting"].map(filter => (
               <button 
                 key={filter}
                 onClick={() => setActiveFilter(filter)}
@@ -148,37 +194,54 @@ export default function ParentLessonsScreen() {
         {/* First Row: Recommended */}
         <section className="mt-4">
           <div className="px-6 flex justify-between items-center mb-4">
-            <h3 className="text-[20px] font-bold text-[#191c1e]">Recommended for You</h3>
+            <h3 className="text-[20px] font-bold text-[#191c1e]">
+              {activeFilter === "Completed" ? "Completed Lessons" : "Recommended for You"}
+            </h3>
             <button onClick={() => navigate('/parent/learning-library')} className="text-[#006a62] font-bold text-sm hover:underline">See All</button>
           </div>
           <div className="grid grid-cols-2 gap-4 px-6 pb-4">
-            {allTopics.filter(t => t.status !== "locked" && t.status !== "completed" && (activeFilter === "For You" || t.category === activeFilter)).slice(0, 8).map((topic) => (
-              <div
-                key={topic.topicId}
-                onClick={() => navigate(`/parent/lessons/player?id=${topic.topicId}`)}
-                className="w-full flex flex-col rounded-2xl overflow-hidden glass-card group cursor-pointer transition-all hover:shadow-xl active:scale-[0.98]"
-              >
-                <div className="relative h-28 md:h-36 overflow-hidden bg-gray-200">
-                  <img
-                    alt={topic.title}
-                    src={topic.imageUrl}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                  <div className="absolute top-2 left-2 bg-[#57fae9] text-[#007168] px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm">+{topic.xp || 30} XP</div>
-                  <div className="absolute bottom-2 right-2 bg-black/40 backdrop-blur-md text-white px-2 py-0.5 rounded-full text-[10px]">{topic.duration || 3} min</div>
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <PlayCircle size={48} className="text-white drop-shadow-lg" />
+            {allTopics
+              .filter(t => {
+                if (activeFilter === "Completed") {
+                  return t.status === "completed";
+                }
+                return unlockedTopicIds.has(t.topicId) && (activeFilter === "For You" || t.category === activeFilter);
+              })
+              .map((topic, index) => {
+                const isLocked = false;
+                return (
+                  <div
+                    key={topic.topicId}
+                    onClick={() => !isLocked && navigate(`/parent/lessons/player?id=${topic.topicId}`)}
+                    className={`w-full flex flex-col rounded-2xl overflow-hidden glass-card group transition-all ${isLocked ? 'opacity-70 grayscale' : 'cursor-pointer hover:shadow-xl active:scale-[0.98]'}`}
+                  >
+                    <div className="relative h-28 md:h-36 overflow-hidden bg-gray-200">
+                      <img
+                        alt={topic.title}
+                        src={topic.imageUrl}
+                        className={`w-full h-full object-cover ${!isLocked ? 'group-hover:scale-110' : ''} transition-transform duration-700`}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                      <div className="absolute top-2 left-2 bg-[#57fae9] text-[#007168] px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm">+{topic.xp || 30} XP</div>
+                      <div className="absolute bottom-2 right-2 bg-black/40 backdrop-blur-md text-white px-2 py-0.5 rounded-full text-[10px]">{topic.duration || 3} min</div>
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        {!isLocked && <PlayCircle size={48} className="text-white drop-shadow-lg" />}
+                      </div>
+                      {isLocked && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
+                          <Lock size={32} className="text-white drop-shadow-md" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-3 bg-white/50 backdrop-blur-md">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[#006a62] text-[9px] font-bold uppercase tracking-widest">{topic.category}</span>
+                      </div>
+                      <h4 className="text-[14px] font-bold text-[#141779] leading-tight line-clamp-2">{topic.title}</h4>
+                    </div>
                   </div>
-                </div>
-                <div className="p-3 bg-white/50 backdrop-blur-md">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[#006a62] text-[9px] font-bold uppercase tracking-widest">{topic.category}</span>
-                  </div>
-                  <h4 className="text-[14px] font-bold text-[#141779] leading-tight line-clamp-2">{topic.title}</h4>
-                </div>
-              </div>
-            ))}
+                );
+              })}
           </div>
         </section>
       </main>
