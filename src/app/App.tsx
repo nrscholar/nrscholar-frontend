@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useNavigate, useLocation } from "react-router-dom";
 import Layout from "./components/Layout";
+import ParentLayout from "./components/ParentLayout";
 import ChildSwitcherModal from "../components/ChildSwitcherModal";
 import { Clock, Sparkles } from "lucide-react";
 
@@ -328,19 +329,21 @@ function App() {
             <Route path="/practice/collections" element={<InventoryScreen />} />
             <Route path="/parent" element={<ParentalGateScreen />} />
             <Route path="/parent/gate" element={<ParentalGateScreen />} />
-            <Route path="/parent/dashboard" element={<ParentDashboardScreen />} />
-            <Route path="/parent/reports" element={<ParentReportScreen />} />
-            <Route path="/parent/daily-tip" element={<ParentDailyTipScreen />} />
-            <Route path="/parent/challenges" element={<ParentChallengesScreen />} />
-            <Route path="/parent/achievements" element={<ParentAchievementsScreen />} />
-            <Route path="/parent/lessons" element={<ParentLessonsScreen />} />
-            <Route path="/parent/learning-library" element={<ParentLearningLibraryScreen />} />
+            <Route element={<ParentLayout />}>
+              <Route path="/parent/dashboard" element={<ParentDashboardScreen />} />
+              <Route path="/parent/reports" element={<ParentReportScreen />} />
+              <Route path="/parent/daily-tip" element={<ParentDailyTipScreen />} />
+              <Route path="/parent/challenges" element={<ParentChallengesScreen />} />
+              <Route path="/parent/achievements" element={<ParentAchievementsScreen />} />
+              <Route path="/parent/lessons" element={<ParentLessonsScreen />} />
+              <Route path="/parent/learning-library" element={<ParentLearningLibraryScreen />} />
+              <Route path="/parent/roadmap" element={<ParentRoadmapScreen />} />
+              <Route path="/parent/kids-activity" element={<KidsActivityScreen />} />
+              <Route path="/parent/settings" element={<ParentSettings />} />
+              <Route path="/parent/learning-dna" element={<ParentLearningDNAScreen />} />
+            </Route>
             <Route path="/parent/lessons/player" element={<ParentLessonPlayerScreen />} />
-            <Route path="/parent/roadmap" element={<ParentRoadmapScreen />} />
-            <Route path="/parent/kids-activity" element={<KidsActivityScreen />} />
-            <Route path="/parent/settings" element={<ParentSettings />} />
             <Route path="/parent/subscription" element={<ParentSubscriptionScreen />} />
-            <Route path="/parent/learning-dna" element={<ParentLearningDNAScreen />} />
             <Route path="/practice/reward" element={<RewardScreen />} />
             <Route path="/daily-rewards" element={<DailyRewardsScreen />} />
             <Route path="/weekly-test" element={<WeeklyTestScreen />} />

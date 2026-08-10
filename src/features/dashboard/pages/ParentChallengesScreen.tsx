@@ -68,8 +68,7 @@ export default function ParentChallengesScreen() {
         setClaimState(prev => ({ ...prev, [id]: "claimed" }));
         setTotalXP(prev => prev + xp);
         
-        setToastMessage(`🎉 ${xp} XP increased!`);
-        setTimeout(() => setToastMessage(null), 3000);
+        setToastMessage(`${xp} XP increased!`);
       } else {
         setClaimState(prev => ({ ...prev, [id]: "idle" }));
       }
@@ -140,10 +139,46 @@ export default function ParentChallengesScreen() {
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      {/* Toast Popup */}
+      {/* Reward Pop-up Modal */}
       {toastMessage && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-[#006a62] text-white px-6 py-3 rounded-full font-bold shadow-2xl transition-all animate-bounce">
-          {toastMessage}
+        <div className="fixed inset-0 bg-[#f7f9fb]/90 backdrop-blur-sm z-[9999] flex flex-col items-center justify-center p-6 text-center font-sans">
+          <div className="bg-[#141779] border border-[#1f239c] rounded-[32px] p-6 sm:p-8 max-w-sm w-full shadow-[0_20px_50px_rgba(20,23,121,0.3)] flex flex-col items-center relative overflow-hidden">
+            {/* Decorative ambient background glows */}
+            <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-amber-400/10 blur-2xl pointer-events-none" />
+            <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full bg-teal-400/10 blur-2xl pointer-events-none" />
+
+            {/* Icon Header */}
+            <div className="relative mb-4 z-10">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/10 border border-white/20 flex items-center justify-center shadow-lg backdrop-blur-xs">
+                <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 text-amber-400 animate-pulse" />
+              </div>
+              <span className="absolute -bottom-1 -right-1 text-lg sm:text-xl">🎉</span>
+            </div>
+
+            {/* Badge */}
+            <span className="px-3.5 py-1 bg-amber-400 text-[#141779] font-black text-[11px] rounded-full uppercase tracking-wider mb-3 shadow-sm z-10">
+              Reward Claimed! 🏆
+            </span>
+
+            {/* Title */}
+            <h1 className="text-white text-xl sm:text-2xl font-black mb-2 tracking-tight z-10">
+              XP Increased!
+            </h1>
+
+            {/* Description */}
+            <p className="text-blue-100/90 text-sm leading-relaxed mb-5 font-bold z-10">
+              {toastMessage}
+            </p>
+
+            <div className="w-full flex flex-col gap-2.5 z-10">
+              <button 
+                onClick={() => setToastMessage(null)} 
+                className="w-full bg-gradient-to-r from-[#007168] to-[#004e48] text-white py-3 rounded-2xl font-extrabold shadow-lg hover:scale-[1.02] active:scale-95 transition-all text-xs sm:text-sm flex items-center justify-center gap-2 border border-white/15"
+              >
+                <span>Awesome!</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -348,21 +383,7 @@ export default function ParentChallengesScreen() {
         </div>
       </main>
 
-      {/* Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 w-full flex justify-around items-center py-3 px-4 bg-[rgba(255,255,255,0.7)] backdrop-blur-xl border-t border-white/20 shadow-lg rounded-t-xl z-50">
-        <button onClick={() => navigate('/parent/lessons')} className="flex flex-col items-center justify-center text-[#464652] hover:bg-[#2d328f]/10 p-2 rounded-xl transition-all">
-          <BookOpen size={24} />
-          <span className="text-[11px] font-bold mt-1">Lessons</span>
-        </button>
-        <button onClick={() => navigate('/parent/roadmap')} className="flex flex-col items-center justify-center text-[#006a62] p-2 rounded-xl scale-110 active:scale-95 transition-transform">
-          <TrendingUp size={24} />
-          <span className="text-[11px] font-bold mt-1">Growth</span>
-        </button>
-        <button onClick={() => navigate('/parent/settings')} className="flex flex-col items-center justify-center text-[#464652] hover:bg-[#2d328f]/10 p-2 rounded-xl transition-all">
-          <Settings size={24} />
-          <span className="text-[11px] font-bold mt-1">Settings</span>
-        </button>
-      </nav>
+
 
     </div>
   );

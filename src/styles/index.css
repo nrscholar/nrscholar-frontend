@@ -64,22 +64,13 @@ body {
   100% { transform: translateX(100%) rotate(45deg); }
 }
 
-/* Custom Scrollbar Styles */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* Hide scrollbar for Chrome, Safari and Opera */
+*::-webkit-scrollbar {
+  display: none;
 }
 
-::-webkit-scrollbar-track {
-  background: rgba(244, 239, 255, 0.8);
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #a5a9e3;
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #141779;
+/* Hide scrollbar for IE, Edge and Firefox */
+* {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
 }

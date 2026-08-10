@@ -28,6 +28,7 @@ export default function ParentDashboardScreen() {
   const [weeklyTrend, setWeeklyTrend] = useState<{ day: string, score: number }[]>([]);
   const [subjectBreakdown, setSubjectBreakdown] = useState<{ subject: string, accuracy: number }[]>([]);
   const [lastActivity, setLastActivity] = useState<string>("Exploring new quests...");
+  const [top3SubjectsTrend, setTop3SubjectsTrend] = useState<any[]>([]);
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -89,6 +90,7 @@ export default function ParentDashboardScreen() {
             if (repJson.data.weeklyTrend) setWeeklyTrend(repJson.data.weeklyTrend);
             if (repJson.data.subjectBreakdown) setSubjectBreakdown(repJson.data.subjectBreakdown);
             if (repJson.data.lastActivity) setLastActivity(repJson.data.lastActivity);
+            if (repJson.data.top3SubjectsTrend) setTop3SubjectsTrend(repJson.data.top3SubjectsTrend);
           }
         }
 
@@ -291,8 +293,10 @@ export default function ParentDashboardScreen() {
 
           <button onClick={() => setModalType("strengths")} className="text-left w-full bg-white rounded-[20px] p-5 border border-slate-200/80 shadow-sm border-l-[6px] border-l-[#006a62] hover:shadow-md transition-all">
             <h4 className="text-base font-extrabold text-[#006a62] mb-3">💪 Strengths (Fast Processor)</h4>
-            {strengths.length === 0 ? (
-              <p className="text-xs text-slate-500">Complete more quests to identify strengths.</p>
+            {strengths.length === 0 || strengths[0] === "No strength for now." ? (
+              <p className="text-xs text-slate-500">No strength for now.</p>
+            ) : strengths[0] === "Not enough Data for now wait few Days" ? (
+              <p className="text-xs text-slate-500">Not enough Data for now wait few Days</p>
             ) : (
               strengths.map((s: string, i: number) => (
                 <div key={i} className="bg-green-50 border border-green-100 rounded-xl p-3 mb-2 flex gap-2 items-start">
@@ -305,8 +309,10 @@ export default function ParentDashboardScreen() {
 
           <button onClick={() => setModalType("weaknesses")} className="text-left w-full bg-white rounded-[20px] p-5 border border-slate-200/80 shadow-sm border-l-[6px] border-l-[#ba1a1a] hover:shadow-md transition-all">
             <h4 className="text-base font-extrabold text-[#ba1a1a] mb-3">⚠️ Weaknesses / Review Needed</h4>
-            {weaknesses.length === 0 ? (
-              <p className="text-xs text-slate-500">No weaknesses detected.</p>
+            {weaknesses.length === 0 || weaknesses[0] === "No weakness for now." ? (
+              <p className="text-xs text-slate-500">No weakness for now.</p>
+            ) : weaknesses[0] === "Not enough Data for now wait few Days" ? (
+              <p className="text-xs text-slate-500">Not enough Data for now wait few Days</p>
             ) : (
               weaknesses.map((w: string, i: number) => (
                 <div key={i} className="bg-orange-50 border border-orange-100 rounded-xl p-3 mb-2 flex gap-2 items-start">
@@ -319,8 +325,10 @@ export default function ParentDashboardScreen() {
 
           <button onClick={() => setModalType("risks")} className="text-left w-full bg-white rounded-[20px] p-5 border border-slate-200/80 shadow-sm border-l-[6px] border-l-[#d97706] hover:shadow-md transition-all">
             <h4 className="text-base font-extrabold text-[#d97706] mb-3">🔔 Risk Alerts</h4>
-            {risks.length === 0 ? (
-              <p className="text-xs text-slate-500">No immediate risks detected.</p>
+            {risks.length === 0 || risks[0] === "No risk for now." ? (
+              <p className="text-xs text-slate-500">No risk for now.</p>
+            ) : risks[0] === "Not enough Data for now wait few Days" ? (
+              <p className="text-xs text-slate-500">Not enough Data for now wait few Days</p>
             ) : (
               risks.map((r: string, i: number) => (
                 <div key={i} className="bg-red-50 border border-red-100 rounded-xl p-3 mb-2 flex gap-2 items-start">
@@ -332,8 +340,66 @@ export default function ParentDashboardScreen() {
           </button>
         </div>
 
+        {/* Top 3 Subjects Trend Chart */}
+        {top3SubjectsTrend && top3SubjectsTrend.length > 0 && (
+          <div className="w-full bg-white rounded-[24px] p-5 border border-slate-200/80 shadow-sm flex flex-col gap-3">
+            <h3 className="text-sm font-black text-[#141779] uppercase tracking-wider">Top Subjects Daily Trend</h3>
+            <p className="text-[11px] text-slate-500 font-bold -mt-1">Performance over the last 7 active days</p>
+            
+            {/* Graph Legend */}
+            <div className="flex flex-wrap items-center gap-3.5 mt-1 text-[10px] font-black">
+              {top3SubjectsTrend.map((t, idx) => {
+                const colors = ["#006a62", "#141779", "#7b1fa2"];
+                const color = colors[idx % colors.length];
+                return (
+                  <div key={idx} className="flex items-center gap-1.5" style={{ color }}>
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                    <span>{t.subject}</span>
+                  </div>
+                );
+              })}
+            </div>
+            
+            {/* SVG Line Graph */}
+            <div className="relative w-full h-[130px] mt-3">
+              <svg viewBox="0 0 300 120" className="w-full h-full overflow-visible">
+                {/* Horizontal Grid Lines */}
+                <line x1="0" y1="0" x2="300" y2="0" stroke="#f1f5f9" strokeWidth="1.5" strokeDasharray="4 4" />
+                <line x1="0" y1="60" x2="300" y2="60" stroke="#f1f5f9" strokeWidth="1.5" strokeDasharray="4 4" />
+                <line x1="0" y1="120" x2="300" y2="120" stroke="#f1f5f9" strokeWidth="1.5" strokeDasharray="4 4" />
+
+                {top3SubjectsTrend.map((t, idx) => {
+                  const colors = ["#006a62", "#141779", "#7b1fa2"];
+                  const color = colors[idx % colors.length];
+                  const points = t.timeline.map((pt: any, i: number) => {
+                    const x = (i / (t.timeline.length - 1)) * 300;
+                    const y = 120 - (pt.score / 100) * 120;
+                    return { x, y };
+                  });
+                  const pathLine = `M ${points.map((p: any) => `${p.x},${p.y}`).join(" L ")}`;
+                  return (
+                    <g key={idx}>
+                      <path d={pathLine} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                      {points.map((p: any, pIdx: number) => (
+                        <circle key={pIdx} cx={p.x} cy={p.y} r="3.5" fill="#ffffff" stroke={color} strokeWidth="2.5" />
+                      ))}
+                    </g>
+                  );
+                })}
+              </svg>
+              
+              {/* X Axis Labels */}
+              <div className="flex justify-between text-[9px] font-black text-slate-500 mt-2.5 px-1">
+                {top3SubjectsTrend[0]?.timeline.map((pt: any, i: number) => (
+                  <span key={i}>{pt.day}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Parent Learning Section */}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 w-full">
           <h3 className="text-base font-extrabold text-slate-800 px-1">Parent Learning</h3>
           <div className="grid grid-cols-2 gap-3">
             <button
@@ -448,21 +514,7 @@ export default function ParentDashboardScreen() {
 
       </main>
 
-      {/* Floating Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center px-4 py-3 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-lg">
-        <button onClick={() => navigate('/parent')} className="flex flex-col items-center justify-center gap-1 py-1.5 px-4 rounded-full transition-all duration-300 bg-[#57fae9] text-[#007168] shadow-xs scale-105">
-          <Home size={20} strokeWidth={2.5} />
-          <span className="text-[10px] font-extrabold tracking-wide">Home</span>
-        </button>
-        <button onClick={() => navigate('/parent/reports')} className="flex flex-col items-center justify-center gap-1 py-1.5 px-4 rounded-full transition-all duration-300 text-slate-600 hover:text-[#007168]">
-          <BarChart2 size={20} strokeWidth={2} />
-          <span className="text-[10px] font-extrabold tracking-wide">Reports</span>
-        </button>
-        <button onClick={() => navigate('/parent/settings')} className="flex flex-col items-center justify-center gap-1 py-1.5 px-4 rounded-full transition-all duration-300 text-slate-600 hover:text-[#007168]">
-          <Settings size={20} strokeWidth={2} />
-          <span className="text-[10px] font-extrabold tracking-wide">Settings</span>
-        </button>
-      </nav>
+
 
       {/* Graph Modal */}
       {modalType && (
