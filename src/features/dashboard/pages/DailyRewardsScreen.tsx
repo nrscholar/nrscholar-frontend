@@ -291,30 +291,26 @@ export default function DailyRewardsScreen() {
   const segmentAngle = 360 / currentRewards.length;
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-[#141779] w-full flex flex-col items-center overflow-x-hidden font-headline relative">
-      {/* Background Grid */}
+    <div className="min-h-screen bg-slate-950 text-white w-full flex flex-col items-center overflow-x-hidden font-headline relative">
+      {/* Background Starfield Grid */}
       <div 
-        className="absolute inset-0 pointer-events-none opacity-30" 
-        style={{
-          backgroundImage: "radial-gradient(circle, rgba(20,23,121,0.15) 1px, transparent 1px)",
-          backgroundSize: "32px 32px"
-        }}
+        className="absolute inset-0 pointer-events-none opacity-20 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-950/40 via-slate-950 to-slate-950" 
       />
 
       {/* Top App Bar */}
-      <header className="w-full z-50 bg-[#f7f9fb]/80 backdrop-blur-lg border-b border-[#141779]/10 flex justify-between items-center px-6 py-4 max-w-[430px] mx-auto">
-        <button onClick={handleBack} className="active:scale-95 transition-transform text-[#141779]">
+      <header className="w-full z-50 bg-slate-950/80 backdrop-blur-lg border-b border-indigo-950/60 flex justify-between items-center px-6 py-4 max-w-[430px] mx-auto">
+        <button onClick={handleBack} className="active:scale-95 transition-transform text-white">
           <ArrowLeft className="w-6 h-6" />
         </button>
-        <h1 className="text-xl font-bold tracking-wide">
-          {spinType === "boss_revival" ? "Revival Wheel" : "Daily Rewards"}
+        <h1 className="text-lg font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-white to-indigo-200">
+          {spinType === "boss_revival" ? "REVIVAL WHEEL" : "QUANTUM WHEEL"}
         </h1>
         <div className="w-6 h-6" />
       </header>
 
       {/* Tabs for different spin types (Hidden if boss revival) */}
       {spinType !== "boss_revival" && (
-        <div className="flex gap-2 p-2 bg-[#141779]/5 border border-[#141779]/10 rounded-full mt-4 max-w-[360px] w-[90%] mx-auto overflow-x-auto no-scrollbar relative z-10">
+        <div className="flex gap-2 p-1.5 bg-slate-900/60 border border-indigo-950/60 rounded-full mt-5 max-w-[360px] w-[90%] mx-auto relative z-10 shadow-inner">
           {[
             { id: "daily", label: "Daily" },
             { id: "chapter", label: "Chapter" },
@@ -330,10 +326,10 @@ export default function DailyRewardsScreen() {
                     setErrorMessage("");
                   }
                 }}
-                className={`flex-1 py-2 px-4 rounded-full text-sm font-bold transition-all duration-300 whitespace-nowrap ${
+                className={`flex-1 py-2 px-4 rounded-full text-xs font-black tracking-wider uppercase transition-all duration-300 whitespace-nowrap ${
                   isActive
-                    ? "bg-[#141779] text-white shadow-md"
-                    : "text-[#141779]/60 hover:text-[#141779]"
+                    ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)] border border-violet-500/30"
+                    : "text-indigo-200/50 hover:text-white"
                 }`}
               >
                 {tab.label}
@@ -344,20 +340,20 @@ export default function DailyRewardsScreen() {
       )}
 
       {/* Main Canvas */}
-      <main className="relative flex-1 w-full max-w-[430px] flex flex-col items-center justify-center px-6 pt-8 pb-24 gap-8 z-10">
+      <main className="relative flex-1 w-full max-w-[430px] flex flex-col items-center justify-center px-6 pt-6 pb-24 gap-6 z-10">
         
         {/* Reward Info Header */}
-        <div className="text-center space-y-2">
-          <p className="text-xs font-bold uppercase tracking-[2px] text-[#008477]">
+        <div className="text-center space-y-1.5">
+          <p className="text-[10px] font-black uppercase tracking-[3px] text-cyan-400">
             {spinType === "boss_revival" ? "BOSS EMERGENCY" : "QUANTUM EXPEDITION"}
           </p>
-          <h2 className="text-2xl font-bold text-[#141779]">
-            {spinType === "boss_revival" ? "Spin the Revival Wheel" : "Spin the Quantum Wheel"}
+          <h2 className="text-xl sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-300">
+            {spinType === "boss_revival" ? "Spin the Revival Wheel" : "Unlock Cosmic Loot"}
           </h2>
-          <p className="text-sm text-[#141779]/60">
+          <p className="text-xs sm:text-sm font-bold text-slate-400">
             {spinType === "boss_revival" 
               ? "Recover hearts to jump back into the battle!"
-              : "Upgrade your learning kit with daily rewards."}
+              : "Upgrade your learning kit with premium rewards."}
           </p>
         </div>
 
@@ -467,23 +463,20 @@ export default function DailyRewardsScreen() {
           <button
             onClick={startSpin}
             disabled={isSpinning || getSpinBalance() <= 0}
-            style={{
-              boxShadow: getSpinBalance() > 0 ? "0 4px 15px rgba(20,23,121,0.2)" : "none"
-            }}
-            className={`w-full py-4 rounded-full font-bold text-lg tracking-wide uppercase transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 ${
+            className={`w-full py-4 rounded-full font-black text-lg tracking-wider uppercase transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 border ${
               isSpinning 
-                ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
+                ? "bg-slate-900 border-slate-800 text-slate-500 cursor-not-allowed"
                 : getSpinBalance() > 0
-                ? "bg-[#141779] text-white hover:bg-[#141779]/95"
-                : "bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300/40"
+                ? "bg-gradient-to-r from-violet-600 via-indigo-600 to-violet-600 hover:scale-[1.01] hover:shadow-[0_0_25px_rgba(124,58,237,0.6)] text-white border-violet-500/40 animate-pulse"
+                : "bg-slate-900/60 border-slate-900 text-slate-600 cursor-not-allowed"
             }`}
           >
-            {isSpinning ? "Calibrating..." : "Initialize Spin"}
+            {isSpinning ? "🌀 Calibrating..." : "Initialize Spin"}
           </button>
 
-          <div className="flex items-center justify-center gap-2 text-[#141779]/70 text-sm font-semibold">
-            <History className="w-4 h-4" />
-            <span className="font-bold uppercase tracking-wider">
+          <div className="flex items-center justify-center gap-2 text-indigo-300 text-xs font-black">
+            <History className="w-4 h-4 text-cyan-400" />
+            <span className="font-bold uppercase tracking-widest">
               {getSpinBalance()} attempts left
             </span>
           </div>
@@ -499,7 +492,7 @@ export default function DailyRewardsScreen() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/50 backdrop-blur-md"
+              className="absolute inset-0 bg-slate-950/80"
               onClick={handleClaim}
             />
 
@@ -509,7 +502,7 @@ export default function DailyRewardsScreen() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="relative bg-white w-full max-w-[360px] p-8 rounded-3xl flex flex-col items-center text-center gap-6 border border-slate-200 shadow-2xl overflow-hidden"
+              className="relative bg-white w-full max-w-[360px] p-8 rounded-[32px] flex flex-col items-center text-center gap-6 border-2 border-slate-200 shadow-2xl overflow-hidden text-slate-950"
             >
               {/* Glow backdrop */}
               <div className="absolute inset-0 bg-radial-gradient(circle,rgba(20,23,121,0.05)_0%,transparent_70%) pointer-events-none" />
@@ -529,26 +522,25 @@ export default function DailyRewardsScreen() {
               </div>
 
               <div>
-                <h3 className="text-2xl font-extrabold text-[#141779] tracking-wide">
-                  Mission Success!
+                <h3 className="text-2xl font-black text-slate-950 tracking-wide">
+                  🎉 Nailed It!
                 </h3>
                 <p className="text-sm text-slate-600 mt-2">
-                  You've unlocked the{" "}
-                  <span className="font-bold" style={{ color: wonReward.color }}>
+                  You've unlocked:{" "}
+                  <span className="font-extrabold text-lg block mt-1" style={{ color: wonReward.color }}>
                     {wonReward.name}
-                  </span>{" "}
-                  reward.
+                  </span>
                 </p>
                 
                 {/* Motivation message */}
-                <div className="mt-4 p-3 bg-slate-50 rounded-2xl text-xs text-slate-500 border border-slate-200/50 italic">
-                  "Excellent! Your consistency has been rewarded. Keep going!"
+                <div className="mt-4 p-4 bg-indigo-50/50 rounded-2xl text-xs font-semibold text-indigo-950 border border-indigo-100 italic">
+                  "Awesome! Use this reward to help in your next mission. Keep up the great work!"
                 </div>
               </div>
 
               <button
                 onClick={handleClaim}
-                className="w-full py-4 rounded-full font-bold text-base tracking-wide uppercase transition-all duration-300 transform active:scale-95 text-white"
+                className="w-full py-4 rounded-full font-black text-base tracking-wider uppercase transition-all duration-300 transform active:scale-95 text-white"
                 style={{
                   backgroundColor: wonReward.color,
                   boxShadow: `0 4px 15px ${wonReward.color}40`

@@ -66,25 +66,25 @@ export default function HabitsScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] font-sans relative overflow-hidden pb-10">
-      {/* Background Elements */}
-      <div className="absolute top-[25%] -left-[50px] w-[150px] h-[150px] bg-[rgba(0,106,98,0.1)] rounded-full z-0" />
-      <div className="absolute bottom-[25%] -right-[50px] w-[180px] h-[180px] bg-[rgba(20,23,121,0.05)] rounded-full z-0" />
+    <div className="min-h-screen bg-gradient-to-b from-[#fefcbf] via-[#fffbeb] to-[#f0f9ff] text-slate-900 w-full flex flex-col items-center overflow-x-hidden font-headline relative pb-10">
+      {/* Soft warm sun glows */}
+      <div className="absolute top-[5%] -left-[40px] w-[180px] h-[180px] bg-amber-200/40 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-[15%] -right-[40px] w-[200px] h-[200px] bg-emerald-200/30 rounded-full blur-3xl pointer-events-none" />
 
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 bg-[rgba(247,249,251,0.8)] border-b border-[rgba(255,255,255,0.2)] sticky top-0 z-40 backdrop-blur-md">
+      <header className="w-full z-40 bg-white/80 backdrop-blur-md border-b border-amber-900/10 flex justify-between items-center px-6 py-4 max-w-[430px] mx-auto sticky top-0 shadow-xs">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => navigate(-1)} 
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            className="p-2 hover:bg-amber-100/50 active:scale-95 rounded-full transition-all shrink-0"
           >
-            <ArrowLeft size={24} color="#141779" />
+            <ArrowLeft size={24} className="text-[#141779]" />
           </button>
-          <h1 className="text-xl font-bold text-[#141779]">Good Habits</h1>
+          <h1 className="text-xl font-black tracking-wide text-[#141779]">Good Habits</h1>
         </div>
         <button 
           onClick={() => navigate("/notifications")} 
-          className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all relative shrink-0"
+          className="w-10 h-10 rounded-full bg-white shadow-xs flex items-center justify-center hover:bg-amber-50 active:scale-95 transition-all relative shrink-0 border border-amber-100"
         >
           <Bell size={20} className="text-[#141779]" />
           {unreadCount > 0 && (
@@ -95,107 +95,118 @@ export default function HabitsScreen() {
         </button>
       </header>
 
-      <main className="px-6 pt-8 flex flex-col items-center gap-8 relative z-10">
+      <main className="px-6 pt-6 flex flex-col items-center gap-6 w-full max-w-[430px] relative z-10">
         
         {/* Title Section */}
-        <div className="flex flex-col items-center">
-          <h2 className="text-2xl font-bold text-[#141779] mb-1">Good Habits & Values</h2>
-          <span className="text-sm font-semibold text-[#006a62]">Sparkle like a Star today!</span>
+        <div className="text-center space-y-1">
+          <h2 className="text-2xl font-black text-[#141779] tracking-tight">Daily Habit Journey</h2>
+          <p className="text-xs font-black text-amber-700 uppercase tracking-widest">Build smart habits, gain gold stars! ⭐</p>
         </div>
 
-        {/* Progress Orbit Tracker */}
-        <div className="flex justify-center gap-4 w-full">
+        {/* Progress Orbit Tracker (Cute Stepping Stones) */}
+        <div className="flex justify-between items-center w-full bg-white/90 border-2 border-amber-200/50 p-5 rounded-3xl shadow-sm relative overflow-hidden">
+          {/* Stepper Path Connecting Line */}
+          <div className="absolute top-[42px] left-10 right-10 h-1 border-t-2 border-dashed border-amber-300 pointer-events-none" />
+
           {/* Past Day (currentDay - 2) */}
-          {(habit?.currentDay > 2) && (
-            <div className="flex flex-col items-center gap-1">
-              <div className="w-12 h-12 rounded-full bg-[#57fae9] flex items-center justify-center shadow-[0_0_10px_rgba(87,250,233,0.5)]">
-                <Star size={24} color="#00201d" className="fill-[#00201d]" />
+          {(habit?.currentDay > 2) ? (
+            <div className="flex flex-col items-center gap-1.5 relative z-10">
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-amber-400 to-amber-500 text-white flex items-center justify-center shadow-sm border-2 border-white">
+                <Star size={18} className="fill-white text-white" />
               </div>
-              <span className="text-xs font-bold text-[#464652]">Day {habit.currentDay - 2}</span>
+              <span className="text-[10px] font-black text-amber-900">Day {habit.currentDay - 2}</span>
             </div>
+          ) : (
+            <div className="w-11 h-11 opacity-0 pointer-events-none" />
           )}
           
           {/* Past Day (currentDay - 1) */}
-          {(habit?.currentDay > 1) && (
-            <div className="flex flex-col items-center gap-1">
-              <div className="w-12 h-12 rounded-full bg-[#57fae9] flex items-center justify-center shadow-[0_0_10px_rgba(87,250,233,0.5)]">
-                <Star size={24} color="#00201d" className="fill-[#00201d]" />
+          {(habit?.currentDay > 1) ? (
+            <div className="flex flex-col items-center gap-1.5 relative z-10">
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-amber-400 to-amber-500 text-white flex items-center justify-center shadow-sm border-2 border-white">
+                <Star size={18} className="fill-white text-white" />
               </div>
-              <span className="text-xs font-bold text-[#464652]">Day {habit.currentDay - 1}</span>
+              <span className="text-[10px] font-black text-amber-900">Day {habit.currentDay - 1}</span>
             </div>
+          ) : (
+            <div className="w-11 h-11 opacity-0 pointer-events-none" />
           )}
 
           {/* Today (currentDay) */}
-          <div className="flex flex-col items-center gap-1">
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+          <div className="flex flex-col items-center gap-1.5 relative z-10">
+            <div className="absolute -top-5 bg-emerald-500 text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full border border-white shadow-xs animate-bounce">
+              TODAY
+            </div>
+            <div className={`w-13 h-13 rounded-full flex items-center justify-center border-2 border-white relative z-10 shadow-md ${
               completed 
-                ? "bg-[#57fae9] shadow-[0_0_10px_rgba(87,250,233,0.5)]" 
-                : "border-2 border-dashed border-[#2addcd]"
+                ? "bg-gradient-to-br from-amber-400 to-amber-500" 
+                : "bg-gradient-to-br from-emerald-400 to-emerald-500 animate-pulse"
             }`}>
               {completed ? (
-                <Star size={24} color="#00201d" className="fill-[#00201d]" />
+                <Star size={22} className="fill-white text-white" />
               ) : (
-                <Heart size={24} color="#2addcd" className="fill-[#2addcd]" />
+                <Heart size={22} className="fill-white text-white animate-pulse" />
               )}
             </div>
-            <span className="text-xs font-bold text-[#464652]">Day {habit?.currentDay || 1} (Today)</span>
+            <span className="text-[10px] font-black text-emerald-950">Day {habit?.currentDay || 1}</span>
           </div>
 
           {/* Next Day (currentDay + 1) */}
-          <div className="flex flex-col items-center gap-1 opacity-40">
-            <div className="w-12 h-12 rounded-full border-2 border-dashed border-[#c7c5d4] flex items-center justify-center">
-              <Lock size={24} color="#767683" />
+          <div className="flex flex-col items-center gap-1.5 opacity-60 relative z-10">
+            <div className="w-11 h-11 rounded-full bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400">
+              <Lock size={16} />
             </div>
-            <span className="text-xs font-bold text-[#464652]">Day {(habit?.currentDay || 1) + 1}</span>
+            <span className="text-[10px] font-black text-slate-500">Day {(habit?.currentDay || 1) + 1}</span>
           </div>
         </div>
 
         {/* Daily Lesson Card */}
-        <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-6 flex flex-col items-center border-[1.5px] border-[rgba(255,255,255,0.4)] shadow-[0_2px_10px_rgba(0,0,0,0.05)] w-full max-w-[400px]">
+        <div className="bg-white rounded-[32px] p-6 flex flex-col items-center border-2 border-amber-100 shadow-[0_12px_24px_rgba(180,83,9,0.04)] w-full max-w-[400px] relative overflow-hidden">
           {loading ? (
-            <div className="py-6 flex flex-col items-center justify-center w-full animate-pulse gap-2">
-              <div className="w-16 h-16 bg-gray-200 rounded-2xl mb-4" />
-              <div className="h-6 bg-gray-200 rounded w-2/3 mb-2" />
-              <div className="h-4 bg-gray-200 rounded w-5/6" />
-              <div className="h-4 bg-gray-200 rounded w-4/6 mb-6" />
-              <div className="h-14 w-full bg-gray-200 rounded-full" />
+            <div className="py-6 flex flex-col items-center justify-center w-full animate-pulse gap-3">
+              <div className="w-20 h-20 bg-slate-200 rounded-3xl mb-4" />
+              <div className="h-6 bg-slate-200 rounded w-2/3 mb-2" />
+              <div className="h-4 bg-slate-200 rounded w-5/6" />
+              <div className="h-4 bg-slate-200 rounded w-4/6 mb-6" />
+              <div className="h-14 w-full bg-slate-200 rounded-full" />
             </div>
           ) : (
             <>
-              <div className="w-16 h-16 bg-[#e0e0ff] rounded-2xl flex items-center justify-center mb-4">
-                <Sparkles size={36} color="#141779" />
+              {/* Dynamic Theme Icon Wrapper */}
+              <div className="w-18 h-18 bg-gradient-to-tr from-amber-400 to-orange-500 text-white rounded-3xl flex items-center justify-center mb-5 shadow-md border-2 border-white relative">
+                <Sparkles size={32} className="animate-pulse" />
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 text-white border border-white text-[9px] rounded-full flex items-center justify-center font-black">✓</span>
               </div>
-              <span className="text-xs font-extrabold text-[#006a62] uppercase tracking-wider mb-1">Lesson {habit?.currentDay || 1}</span>
-              <h3 className="text-xl font-bold text-[#141779] text-center mb-3">
+
+              <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-1.5">LESSON {habit?.currentDay || 1}</span>
+              <h3 className="text-xl sm:text-2xl font-black text-[#141779] text-center mb-3 tracking-tight">
                 {habit?.title || "Daily Lesson"}
               </h3>
-              <p className="text-base font-medium text-[#464652] text-center leading-6 mb-8 px-2">
-                {habit?.description || "Loading your lesson..."}
+              <p className="text-sm font-bold text-slate-600 text-center leading-relaxed mb-6 px-1">
+                {habit?.description || "Loading your daily story..."}
               </p>
 
               {/* Interaction Button */}
               <button
                 disabled={completed || !habit || submitting}
                 onClick={handleComplete}
-                className={`w-full py-4 rounded-full flex items-center justify-center gap-2 transition-all ${
-                  completed ? 'border-2 cursor-not-allowed' : 'bg-[#141779] shadow-[0_4px_10px_rgba(20,23,121,0.3)] hover:opacity-90 active:scale-[0.98]'
+                className={`w-full py-4 rounded-2xl flex items-center justify-center gap-2 border transition-all duration-300 ${
+                  completed 
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800 shadow-xs cursor-not-allowed' 
+                    : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-md hover:scale-[1.01] active:scale-[0.98] border-orange-400/20'
                 }`}
-                style={completed ? { backgroundColor: '#e6f7ed', borderColor: '#b2ecc6' } : {}}
               >
                 {submitting ? (
                   <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <span 
-                      className={`text-base font-bold ${completed ? '' : 'text-white'}`}
-                      style={completed ? { color: '#0f7d3d' } : {}}
-                    >
+                    <span className="text-base font-black uppercase tracking-wider">
                       {completed ? `Claimed +${habit?.rewardPoints || 10} Points` : "Complete Story"}
                     </span>
                     {completed ? (
-                      <CheckCircle2 size={22} color="#0f7d3d" />
+                      <CheckCircle2 size={20} className="text-emerald-700" />
                     ) : (
-                      <PartyPopper size={22} color="white" />
+                      <PartyPopper size={20} className="text-white shrink-0 animate-bounce" />
                     )}
                   </>
                 )}
@@ -205,23 +216,25 @@ export default function HabitsScreen() {
         </div>
 
         {showModal && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-6 backdrop-blur-sm">
-            <div className="bg-white rounded-[24px] p-6 flex flex-col items-center w-full max-w-[320px] shadow-2xl animate-in fade-in zoom-in duration-300">
-              <div className="w-16 h-16 bg-[#fff0da] rounded-full flex items-center justify-center mb-4">
-                <PartyPopper size={32} color="#ff9f43" />
+          <div className="fixed inset-0 bg-slate-950/80 z-50 flex items-center justify-center p-6">
+            <div className="bg-white rounded-[32px] p-8 flex flex-col items-center w-full max-w-[340px] border-2 border-slate-200 shadow-2xl animate-in fade-in zoom-in-95 duration-300 relative overflow-hidden">
+              <div className="absolute -top-10 -right-10 w-28 h-28 bg-amber-400/10 rounded-full blur-xl pointer-events-none" />
+              <div className="w-18 h-18 bg-amber-100 border border-amber-200 rounded-full flex items-center justify-center mb-5 animate-bounce">
+                <PartyPopper size={36} className="text-amber-500" />
               </div>
-              <h3 className="text-xl font-bold text-[#141779] text-center mb-2">Brilliant!</h3>
-              <p className="text-[#464652] text-center mb-6">You earned <span className="font-bold text-[#ff9f43]">{habit?.rewardPoints || 10} Points</span> for completing today's story.</p>
+              <h3 className="text-2xl font-black text-[#141779] text-center mb-2">🎉 Splendid!</h3>
+              <p className="text-slate-600 text-center mb-6 leading-relaxed">
+                You earned <span className="font-extrabold text-amber-500 text-lg">+{habit?.rewardPoints || 10} Points</span> for practicing this habit today!
+              </p>
               <button 
                 onClick={() => { setShowModal(false); navigate(-1); }}
-                className="w-full bg-[#141779] text-white py-3 rounded-full font-bold hover:opacity-90 transition-opacity"
+                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white py-3.5 rounded-2xl font-black uppercase tracking-wider transition-all shadow-md active:scale-95 border border-orange-500/10"
               >
                 Continue Journey
               </button>
             </div>
           </div>
         )}
-
       </main>
     </div>
   );

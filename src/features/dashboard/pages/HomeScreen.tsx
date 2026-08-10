@@ -5,7 +5,233 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import ChildSwitcherModal from "../../../components/ChildSwitcherModal";
+import AdventureHero from "../../../components/AdventureHero";
 
+
+interface AdventureTheme {
+  type: string;
+  title: string;
+  bgGradient: string;
+  bgColor: string;
+  character: string;
+  characterName: string;
+  particle: string;
+  rewardIcon: string;
+  rewardName: string;
+  rewardXpText: string;
+  ctaText: string;
+}
+
+const ADVENTURE_THEMES: Record<string, AdventureTheme> = {
+  dragon: {
+    type: "dragon",
+    title: "🐉 DRAGON VALLEY",
+    bgGradient: "from-emerald-400 via-teal-300 to-sky-200",
+    bgColor: "border-emerald-400 text-emerald-950",
+    character: "🐉",
+    characterName: "Flame Dragon",
+    particle: "🔥",
+    rewardIcon: "🥚",
+    rewardName: "DRAGON EGG",
+    rewardXpText: "XP TO HATCH EGG",
+    ctaText: "CONTINUE ADVENTURE →"
+  },
+  science: {
+    type: "science",
+    title: "🧪 SCIENCE LAB",
+    bgGradient: "from-indigo-400 via-purple-300 to-pink-200",
+    bgColor: "border-indigo-400 text-indigo-950",
+    character: "🧪",
+    characterName: "Scientist Owl",
+    particle: "⚡",
+    rewardIcon: "🔬",
+    rewardName: "QUANTUM MICROSCOPE",
+    rewardXpText: "XP TO UNLOCK LAB",
+    ctaText: "ENTER LAB →"
+  },
+  social: {
+    type: "social",
+    title: "🏆 CHAMPION'S ARENA",
+    bgGradient: "from-amber-400 via-orange-300 to-yellow-200",
+    bgColor: "border-amber-400 text-amber-950",
+    character: "🏆",
+    characterName: "Champion Star",
+    particle: "⭐",
+    rewardIcon: "🥉",
+    rewardName: "BRONZE MEDAL",
+    rewardXpText: "XP TO CLAIM MEDAL",
+    ctaText: "TAKE CHALLENGE →"
+  },
+  space: {
+    type: "space",
+    title: "🚀 QUANTUM SPACE",
+    bgGradient: "from-slate-900 via-indigo-950 to-indigo-900",
+    bgColor: "border-indigo-400 text-indigo-200",
+    character: "🚀",
+    characterName: "Astronaut Rover",
+    particle: "✨",
+    rewardIcon: "🛸",
+    rewardName: "ALIEN SATELLITE",
+    rewardXpText: "XP TO UNLOCK SPACE STATION",
+    ctaText: "LAUNCH ROCKET →"
+  },
+  ocean: {
+    type: "ocean",
+    title: "🌊 UNDERWATER TRENCH",
+    bgGradient: "from-sky-500 via-cyan-400 to-teal-300",
+    bgColor: "border-cyan-400 text-cyan-950",
+    character: "🌊",
+    characterName: "Deep Diver",
+    particle: "🫧",
+    rewardIcon: "🏴‍☠️",
+    rewardName: "SUNKEN TREASURE",
+    rewardXpText: "XP TO OPEN TREASURE",
+    ctaText: "DIVE DEEP →"
+  },
+  history: {
+    type: "history",
+    title: "📜 ANCIENT RUINS",
+    bgGradient: "from-amber-600 via-yellow-500 to-orange-400",
+    bgColor: "border-amber-600 text-amber-950",
+    character: "📜",
+    characterName: "Ruins Explorer",
+    particle: "🏺",
+    rewardIcon: "🏺",
+    rewardName: "ANCIENT URN",
+    rewardXpText: "XP TO UNLOCK TEMPLE",
+    ctaText: "EXPLORE RUINS →"
+  }
+};
+
+const RenderThemeAnimationElements = ({ themeType }: { themeType: string }) => {
+  if (themeType === "dragon") {
+    return (
+      <>
+        <motion.div
+          animate={{ x: [-40, 360] }}
+          transition={{ repeat: Infinity, duration: 25, ease: "linear" }}
+          className="absolute top-4 left-0 text-3xl opacity-30 pointer-events-none select-none"
+        >
+          ☁️
+        </motion.div>
+        <motion.div
+          animate={{ x: [360, -40] }}
+          transition={{ repeat: Infinity, duration: 32, ease: "linear" }}
+          className="absolute top-10 left-0 text-2xl opacity-20 pointer-events-none select-none"
+        >
+          ☁️
+        </motion.div>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <motion.div
+            key={i}
+            initial={{ y: 120, x: 50 + i * 80, opacity: 0, scale: 0.5 }}
+            animate={{ y: [120, 20], opacity: [0, 0.7, 0.7, 0], scale: [0.5, 1, 0.5] }}
+            transition={{ repeat: Infinity, duration: 3 + i, delay: i * 0.8 }}
+            className="absolute text-sm pointer-events-none select-none"
+          >
+            🔥
+          </motion.div>
+        ))}
+      </>
+    );
+  }
+  if (themeType === "science") {
+    return (
+      <>
+        {Array.from({ length: 3 }).map((_, i) => (
+          <motion.div
+            key={i}
+            initial={{ y: 130, x: 40 + i * 110, opacity: 0 }}
+            animate={{ y: [130, 10], opacity: [0, 0.6, 0.6, 0], rotate: 360 }}
+            transition={{ repeat: Infinity, duration: 4 + i, delay: i * 1.2 }}
+            className="absolute text-lg pointer-events-none select-none"
+          >
+            ⚛️
+          </motion.div>
+        ))}
+        {Array.from({ length: 3 }).map((_, i) => (
+          <motion.div
+            key={i}
+            initial={{ scale: 0, opacity: 0, x: 80 + i * 90, y: 30 + i * 20 }}
+            animate={{ scale: [0, 1.2, 0], opacity: [0, 0.8, 0] }}
+            transition={{ repeat: Infinity, duration: 1.5, delay: i * 0.4 }}
+            className="absolute text-xs pointer-events-none select-none text-yellow-300"
+          >
+            ⚡
+          </motion.div>
+        ))}
+      </>
+    );
+  }
+  if (themeType === "social") {
+    return (
+      <>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <motion.div
+            key={i}
+            initial={{ scale: 0.6, opacity: 0.2 }}
+            animate={{ scale: [0.6, 1.2, 0.6], opacity: [0.2, 0.9, 0.2] }}
+            transition={{ repeat: Infinity, duration: 2, delay: i * 0.5 }}
+            className="absolute text-base pointer-events-none select-none text-yellow-400"
+            style={{ top: `${20 + i * 25}px`, left: `${30 + i * 100}px` }}
+          >
+            ⭐
+          </motion.div>
+        ))}
+      </>
+    );
+  }
+  if (themeType === "space") {
+    return (
+      <>
+        {Array.from({ length: 5 }).map((_, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0.1 }}
+            animate={{ opacity: [0.1, 0.9, 0.1] }}
+            transition={{ repeat: Infinity, duration: 1.8, delay: i * 0.3 }}
+            className="absolute text-[8px] pointer-events-none select-none text-white"
+            style={{ top: `${15 + i * 20}px`, left: `${20 + i * 80}px` }}
+          >
+            ✨
+          </motion.div>
+        ))}
+      </>
+    );
+  }
+  if (themeType === "ocean") {
+    return (
+      <>
+        {Array.from({ length: 5 }).map((_, i) => (
+          <motion.div
+            key={i}
+            initial={{ y: 140, x: 30 + i * 75, opacity: 0 }}
+            animate={{ y: [140, 10], opacity: [0, 0.8, 0.8, 0] }}
+            transition={{ repeat: Infinity, duration: 3.5, delay: i * 0.6 }}
+            className="absolute text-xs pointer-events-none select-none text-cyan-200"
+          >
+            🫧
+          </motion.div>
+        ))}
+      </>
+    );
+  }
+  return (
+    <>
+      {Array.from({ length: 3 }).map((_, i) => (
+        <motion.div
+          key={i}
+          initial={{ y: 130, x: 60 + i * 100, opacity: 0 }}
+          animate={{ y: [130, 20], opacity: [0, 0.5, 0.5, 0] }}
+          transition={{ repeat: Infinity, duration: 5, delay: i * 1.5 }}
+          className="absolute text-sm pointer-events-none select-none"
+        >
+          🏺
+        </motion.div>
+      ))}
+    </>
+  );
+};
 
 export default function HomeScreen() {
   const navigate = useNavigate();
@@ -56,6 +282,7 @@ export default function HomeScreen() {
   const [hasFreeSpin, setHasFreeSpin] = useState(false);
   const [showSpinPopup, setShowSpinPopup] = useState(false);
   const [pendingSpinPopup, setPendingSpinPopup] = useState(false);
+  const [showStreakModal, setShowStreakModal] = useState(false);
   const [citiesData, setCitiesData] = useState<any[]>([]);
 
   useEffect(() => {
@@ -299,6 +526,38 @@ export default function HomeScreen() {
   }
   const currentLegXpPercentage = Math.min(100, Math.max(0, Math.floor(rawLegPercentage)));
 
+  const getAdventureTheme = (): typeof ADVENTURE_THEMES[keyof typeof ADVENTURE_THEMES] => {
+    const name = currentCityName.toLowerCase();
+    if (name.includes("desert") || name.includes("forest") || name.includes("egg") || name.includes("valley")) {
+      return ADVENTURE_THEMES.dragon;
+    }
+    if (name.includes("lab") || name.includes("science") || name.includes("experiment") || name.includes("quantum")) {
+      return ADVENTURE_THEMES.science;
+    }
+    if (name.includes("arena") || name.includes("champion") || name.includes("medal") || name.includes("habits")) {
+      return ADVENTURE_THEMES.social;
+    }
+    if (name.includes("space") || name.includes("planet") || name.includes("star") || name.includes("rocket") || name.includes("galaxy")) {
+      return ADVENTURE_THEMES.space;
+    }
+    if (name.includes("ocean") || name.includes("water") || name.includes("trench") || name.includes("sea") || name.includes("treasure")) {
+      return ADVENTURE_THEMES.ocean;
+    }
+    if (name.includes("ruins") || name.includes("ancient") || name.includes("history") || name.includes("temple")) {
+      return ADVENTURE_THEMES.history;
+    }
+    
+    const keys = Object.keys(ADVENTURE_THEMES);
+    const themeKey = keys[userLevel % keys.length];
+    return ADVENTURE_THEMES[themeKey] || ADVENTURE_THEMES.dragon;
+  };
+
+  const theme = getAdventureTheme();
+
+  const totalMissions = missions.length || 4;
+  const completedMissions = missions.filter((m: any) => m.status === "completed").length;
+  const hatchPct = Math.round((completedMissions / totalMissions) * 100);
+  const remainingQuests = totalMissions - completedMissions;
 
   return (
     <div className="min-h-screen bg-[#f7f9fb] text-[#141779] font-sans relative overflow-x-hidden pb-24">
@@ -307,11 +566,11 @@ export default function HomeScreen() {
       <div className="absolute bottom-[20%] -left-[25%] w-[320px] h-[320px] rounded-full bg-[rgba(20,23,121,0.05)] pointer-events-none" />
 
       {/* Top Section */}
-      <header className="fixed top-0 left-0 right-0 flex items-center justify-between px-4 sm:px-6 py-4 bg-[rgba(247,249,251,0.8)] border-b-[1.5px] border-[rgba(255,255,255,0.2)] z-50 backdrop-blur-md gap-2">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
+      <header className="fixed top-0 left-0 right-0 flex items-center justify-between px-4 sm:px-6 py-3 bg-[#f7f9fb]/90 border-b border-slate-100 z-50 backdrop-blur-md gap-2">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <button
             onClick={() => navigate("/profile")}
-            className="w-11 h-11 rounded-full border-2 border-[#57fae9] overflow-hidden hover:opacity-80 transition-opacity shrink-0"
+            className="w-9 h-9 rounded-full border border-teal-200 overflow-hidden hover:opacity-80 transition-opacity shrink-0"
           >
             {childPhoto ? (
               <img
@@ -328,110 +587,87 @@ export default function HomeScreen() {
             )}
           </button>
           <div className="flex flex-col min-w-0">
-            <div className="flex items-center gap-1.5">
-              <h1 className="text-lg font-bold text-[#141779] leading-tight truncate">{childName}</h1>
-            </div>
-            <div className="flex items-center gap-1 mt-0.5">
-              <Star size={14} fill="#006a62" color="#006a62" className="shrink-0" />
-              <span className="text-[11px] text-[#767683] font-semibold truncate">{t('explorer_level')} {userLevel}</span>
+            <h1 className="text-sm font-black text-slate-800 leading-tight truncate">{childName}</h1>
+            <div className="flex items-center gap-0.5 mt-0.5">
+              <Star size={10} fill="#006a62" color="#006a62" className="shrink-0" />
+              <span className="text-[10px] text-slate-500 font-bold truncate">{t('explorer_level')} {userLevel}</span>
             </div>
           </div>
         </div>
 
         {/* Currency & Streak Stats */}
         <div className="flex items-center gap-1.5 shrink-0">
-          <div className="h-10 bg-[rgba(255,159,67,0.15)] px-2.5 rounded-xl flex items-center justify-center whitespace-nowrap">
-            <span className="text-xs font-bold text-[#ff9f43]">🔥 {retentionStreak?.currentStreak ?? streakDays}</span>
-          </div>
-          {/* Bell button with badge overlapping the icon top-right */}
+          <button
+            onClick={() => setShowStreakModal(true)}
+            className="h-8.5 bg-orange-50 px-2 rounded-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-transform border border-orange-100 whitespace-nowrap"
+          >
+            <span className="text-[11px] font-black text-orange-600">🔥 {retentionStreak?.currentStreak ?? streakDays}</span>
+          </button>
+          
           <button
             onClick={() => navigate("/notifications")}
-            className="w-10 h-10 rounded-xl bg-[rgba(20,23,121,0.08)] flex items-center justify-center hover:bg-[rgba(20,23,121,0.15)] transition-all shrink-0"
+            className="w-8.5 h-8.5 rounded-xl bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition-all shrink-0 border border-slate-200/40"
           >
             <div className="relative">
-              <Bell size={18} className="text-[#141779]" />
+              <Bell size={15} className="text-slate-600" />
               {unreadCount > 0 && (
-                <span className="absolute -top-2 -right-2 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border border-white pointer-events-none z-10">
+                <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-red-500 rounded-full text-[8px] text-white flex items-center justify-center font-bold border border-white pointer-events-none z-10">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
             </div>
           </button>
+          
           <button
             onClick={() => navigate("/practice/inventory")}
-            className="h-10 bg-[rgba(255,215,0,0.15)] px-2.5 rounded-xl flex items-center justify-center hover:opacity-80 transition-opacity whitespace-nowrap shrink-0"
+            className="h-8.5 bg-amber-50 px-2 rounded-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-transform border border-amber-100 whitespace-nowrap shrink-0"
           >
-            <span className="text-xs font-bold text-[#141779]">🪙 {coins}</span>
+            <span className="text-[11px] font-black text-amber-700">🪙 {coins}</span>
           </button>
         </div>
-
       </header>
 
-      <main className="px-6 pt-[100px] flex flex-col gap-6">
-        {/* Journey Fuel Bar Card */}
-        <div className="bg-white rounded-[20px] p-4 border-[1.5px] border-[#f0f0f0] shadow-sm relative z-10">
-          <div className="flex justify-between items-center mb-2">
-            <div className="flex items-center gap-1">
-              <Zap size={16} fill="#141779" color="#141779" />
-              <span className="text-[10px] font-bold text-[#141779] tracking-[1px]">{t('journey_progress')}</span>
+      <main className="px-6 pt-[76px] flex flex-col gap-5 max-w-md mx-auto w-full">
+        {/* 1. HERO SECTION - MY LEARNING ADVENTURE */}
+        <AdventureHero
+          themeKey={theme.type}
+          xp={xp}
+          targetXp={targetXp}
+          currentCityName={currentCityName}
+          nextCityName={nextCityName}
+          onCtaClick={() => navigate("/practice/journey-map")}
+          onMissionClick={() => navigate("/practice/chapters")}
+        />
+
+        {/* 2. RECENT UNLOCK */}
+        <div className="flex flex-col gap-2 relative z-10">
+          <h2 className="text-[10px] font-black text-[#141779] tracking-widest uppercase px-1">Recent Unlock</h2>
+          <div className="bg-gradient-to-r from-amber-50/70 to-yellow-50/70 border-2 border-amber-100 rounded-[24px] p-4 flex items-center gap-4 shadow-sm">
+            <div className="w-12 h-12 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center text-2xl shadow-inner animate-pulse shrink-0 select-none">
+              {theme.rewardIcon}
             </div>
-            <span className="text-xs font-bold text-[#141779]">🔥 {xp} XP</span>
-          </div>
-          {/* XP Progress Bar */}
-          <div className="w-full h-3 rounded-full overflow-hidden bg-[rgba(20,23,121,0.10)] mt-1 mb-0.5">
-            <div
-              className="h-full rounded-full transition-all duration-700"
-              style={{
-                width: `${currentLegXpPercentage}%`,
-                background: "linear-gradient(to right, #141779, #57fae9)"
-              }}
-            />
-          </div>
-          <div className="flex items-center gap-1 mt-2.5">
-            <MapPin size={16} fill="#ff9f43" color="white" />
-            <span className="text-[11px] text-[#767683] font-semibold">
-              {t('next')}: {t(nextCityName.toLowerCase().replace(' ', '_'))} • <span className="font-bold text-[#141779]">{xpNeeded > 0 ? `${xpNeeded} ${t('xp_needed')}` : t('ready')}</span>
-            </span>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-xs font-black text-amber-950 uppercase tracking-tight">{theme.rewardName}</h3>
+              <div className="flex justify-between items-center text-[9px] font-black text-amber-700 mt-1 uppercase">
+                <span>Hatch Progress</span>
+                <span>{hatchPct}%</span>
+              </div>
+              <div className="w-full h-2 bg-amber-200/50 rounded-full overflow-hidden p-0.5 border border-amber-200/40 mt-1">
+                <div 
+                  className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full" 
+                  style={{ width: `${hatchPct}%` }}
+                />
+              </div>
+              <p className="text-[9px] font-bold text-amber-800 mt-1.5">
+                🎯 {remainingQuests > 0 ? `${remainingQuests} Quests remaining to hatch!` : "Egg is fully hatched! Claim your reward!"}
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* MAIN HERO SECTION: Large Journey Progress Card */}
-        <button
-          onClick={() => navigate("/practice/journey-map")}
-          className="w-full text-left bg-gradient-to-br from-[#e0f7f6] to-[#ffffff] rounded-[24px] p-5 border-[1.5px] border-[rgba(255,255,255,0.5)] shadow-[0_6px_16px_rgba(0,0,0,0.05)] relative z-10 hover:shadow-md transition-shadow"
-        >
-          <p className="text-[9px] font-bold text-[#141779] tracking-[2px] text-center mb-2">{t('current_route')}</p>
-          <div className="flex justify-center items-center gap-3 mb-5">
-            <span className="text-[22px] font-bold text-[#141779]">{t(currentCityName.toLowerCase().replace(' ', '_'))}</span>
-            <ChevronRight size={18} color="#141779" />
-            <span className="text-[22px] font-bold text-[#141779]">{t(nextCityName.toLowerCase().replace(' ', '_'))}</span>
-          </div>
-
-          {/* Map Progress Track with Learning Train */}
-          <div className="h-16 flex items-center bg-[rgba(255,255,255,0.6)] rounded-2xl border border-[#e0f2f1] relative overflow-hidden mb-4 px-5">
-            <div className="h-0.5 border-t-2 border-dashed border-[#141779] opacity-50 w-full" />
-
-            <div className="absolute inset-0 px-5 flex items-center">
-              <div style={{ width: `${currentLegXpPercentage}%`, transition: 'width 1s ease-in-out' }} />
-              <motion.div
-                animate={{ y: [-3, 0, -3] }}
-                transition={{ repeat: Infinity, duration: 1, ease: "easeInOut" }}
-                className="bg-[#141779] rounded-[10px] p-2 border-[1.5px] border-[#57fae9] -ml-5 shadow-sm"
-              >
-                <div className="w-6 h-6 flex items-center justify-center text-white">🚂</div>
-              </motion.div>
-            </div>
-          </div>
-
-          <p className="text-xs font-bold text-[#141779] text-center">
-            {xpNeeded > 0 ? t('only_xp_left', { xp: xpNeeded, city: t(nextCityName.toLowerCase().replace(' ', '_')) }) : t('reached_city', { city: t(nextCityName.toLowerCase().replace(' ', '_')) })}
-          </p>
-        </button>
-
-
-        {/* QUICK ACTIONS BENTO GRID */}
-        <div className="flex flex-col gap-[14px] relative z-10">
-          <h2 className="text-[10px] font-bold text-[#767683] tracking-[1.5px] px-1">{t('explorer_mission_controls')}   </h2>
+        {/* 4. QUICK ACTIONS BENTO GRID */}
+        <div className="flex flex-col gap-3 relative z-10">
+          <h2 className="text-[10px] font-bold text-[#767683] tracking-[1.5px] px-1 uppercase">{t('explorer_mission_controls')}</h2>
 
           <div className="grid grid-cols-2 gap-3">
             {/* Continue Learning */}
@@ -491,8 +727,6 @@ export default function HomeScreen() {
                 <p className="text-[10px] text-[#767683] font-semibold">{t('unlocked_cards_badges')}</p>
               </div>
             </button>
-
-
           </div>
 
           {/* Multiplayer Challenge */}
@@ -515,6 +749,7 @@ export default function HomeScreen() {
           </button>
         </div>
 
+        {/* 5. PARENT SPACE LINK */}
         <button
           onClick={() => navigate("/parent")}
           className="bg-white rounded-[20px] p-4 flex justify-between items-center border-[1.5px] border-[#eef0f2] shadow-sm relative z-10 hover:bg-gray-50 transition-colors"
@@ -533,37 +768,37 @@ export default function HomeScreen() {
       {/* DAILY MISSIONS MODAL */}
       <AnimatePresence>
         {showDailyMissionModal && (
-          <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+          <div className="fixed inset-0 z-[100] bg-slate-950/80 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
             <motion.div
-              initial={{ scale: 0.88, opacity: 0, y: 30 }}
+              initial={{ scale: 0.9, opacity: 0, y: 40 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.88, opacity: 0, y: 30 }}
-              transition={{ type: "spring", stiffness: 350, damping: 28 }}
-              className="bg-white/95 backdrop-blur-xl text-slate-900 w-full max-w-[420px] max-h-[88vh] p-4 sm:p-6 rounded-[28px] sm:rounded-[32px] border border-white/80 shadow-[0_30px_80px_-15px_rgba(20,23,121,0.35)] flex flex-col gap-3.5 sm:gap-5 relative overflow-hidden my-auto"
+              exit={{ scale: 0.9, opacity: 0, y: 40 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              className="bg-white text-slate-950 w-full max-w-[430px] max-h-[90vh] p-5 sm:p-7 rounded-[32px] border-2 border-slate-200 shadow-2xl flex flex-col gap-4 sm:gap-6 relative overflow-hidden my-auto"
             >
               {/* Background ambient lighting */}
-              <div className="absolute -top-20 -right-20 w-48 h-48 bg-amber-400/20 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -top-24 -right-24 w-52 h-52 bg-amber-400/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-24 -left-24 w-52 h-52 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
               {/* Header */}
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100/80 relative z-10">
-                <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-amber-400 to-amber-500 text-slate-950 flex items-center justify-center shadow-lg shadow-amber-500/25 border border-amber-300 shrink-0">
-                    <Clock className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" />
+              <div className="flex items-center justify-between pb-4 border-b-2 border-slate-100 relative z-10">
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-400 to-amber-500 text-slate-950 flex items-center justify-center shadow-lg shadow-amber-500/20 border-2 border-white shrink-0">
+                    <Clock className="w-6 h-6 animate-pulse" />
                   </div>
                   <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                      <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight truncate">Daily Quests</h3>
-                      <span className="text-[9px] sm:text-[10px] font-black bg-gradient-to-r from-amber-500 to-amber-600 text-white px-2 py-0.5 rounded-full shadow-xs border border-amber-400 shrink-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg sm:text-xl font-black text-slate-950 tracking-tight truncate">Daily Quests</h3>
+                      <span className="text-[10px] sm:text-xs font-black bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full border border-amber-400 shrink-0">
                         ⚡ {todayCompletedCount}/25
                       </span>
                     </div>
-                    <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 mt-0.5 truncate">Continuous 5,000 Missions Journey</p>
+                    <p className="text-xs font-bold text-slate-500 mt-0.5 truncate">Continuous 5,000 Missions Journey</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowDailyMissionModal(false)}
-                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 flex items-center justify-center font-extrabold text-xs sm:text-sm transition-all active:scale-90 shrink-0 ml-1"
+                  className="w-9 h-9 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-950 flex items-center justify-center font-extrabold text-sm transition-all active:scale-90 shrink-0 ml-1"
                 >
                   ✕
                 </button>
@@ -571,23 +806,23 @@ export default function HomeScreen() {
 
               {/* Daily Limit Reached Summary */}
               {dailyLimitReached ? (
-                <div className="p-5 sm:p-6 bg-gradient-to-b from-amber-50 to-amber-100/60 rounded-2xl sm:rounded-3xl border border-amber-200/80 text-center flex flex-col items-center gap-2.5 sm:gap-3 shadow-inner relative z-10">
-                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-amber-500 text-white flex items-center justify-center font-black text-2xl sm:text-3xl shadow-lg shadow-amber-500/30 animate-bounce">
+                <div className="p-6 bg-gradient-to-b from-amber-50 to-amber-100/40 rounded-[24px] border-2 border-amber-200 text-center flex flex-col items-center gap-3 shadow-sm relative z-10">
+                  <div className="w-16 h-16 rounded-full bg-amber-500 text-white flex items-center justify-center font-black text-3xl shadow-lg shadow-amber-500/25 animate-bounce">
                     🏆
                   </div>
-                  <h4 className="text-sm sm:text-base font-black text-amber-950">25 / 25 Quests Mastered Today!</h4>
-                  <p className="text-[11px] sm:text-xs font-semibold text-amber-800 leading-relaxed">
+                  <h4 className="text-base sm:text-lg font-black text-amber-950">25 / 25 Quests Mastered Today!</h4>
+                  <p className="text-xs font-semibold text-amber-800 leading-relaxed">
                     Sensational effort! You have completed today's maximum 25 quests. Tomorrow starts your next continuous sequence!
                   </p>
                 </div>
               ) : (
                 /* Missions List */
-                <div className="flex flex-col gap-2.5 sm:gap-3.5 max-h-[55vh] sm:max-h-[380px] overflow-y-auto pr-0.5 relative z-10 custom-scrollbar">
+                <div className="flex flex-col gap-3 max-h-[60vh] sm:max-h-[420px] overflow-y-auto pr-1 relative z-10 custom-scrollbar">
                   {(missions && missions.length > 0 ? missions : [
                     { seq: 1, id: "seq_1", title: "Answer 10 Questions", coin_reward: 10, xp_reward: 20, current_progress: 0, target_progress: 10, status: "pending", mission_type: "answer_questions" },
                     { seq: 2, id: "seq_2", title: "Win 1 Boss Battle", coin_reward: 15, xp_reward: 20, current_progress: 0, target_progress: 1, status: "pending", mission_type: "boss_win" },
                     { seq: 3, id: "seq_3", title: "Win 1 Shadow Arena Battle", coin_reward: 50, xp_reward: 50, current_progress: 0, target_progress: 1, status: "pending", mission_type: "shadow_arena_win" }
-                  ]).map((mission) => {
+                  ]).map((mission, index) => {
                     const isDone = mission.status === "completed";
                     const isReady = mission.status === "ready_to_claim" || (mission.current_progress >= (mission.target_progress || 1) && !isDone);
                     const cur = mission.current_progress || 0;
@@ -601,37 +836,43 @@ export default function HomeScreen() {
                     };
 
                     return (
-                      <div
+                      <motion.div
                         key={mission.id || `seq_${mission.seq}`}
-                        className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border transition-all duration-300 relative overflow-hidden ${isDone
-                            ? "bg-emerald-50/80 border-emerald-200/90 text-emerald-950 shadow-xs"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.08, type: "spring", stiffness: 200, damping: 20 }}
+                        whileHover={{ scale: 1.015 }}
+                        className={`p-4 rounded-2xl border-2 transition-all duration-300 relative overflow-hidden ${isDone
+                            ? "bg-emerald-50 border-emerald-200 text-emerald-950 shadow-sm"
                             : isReady
-                              ? "bg-gradient-to-r from-amber-50/90 via-amber-100/70 to-amber-50/90 border-amber-300 shadow-md ring-2 ring-amber-400/40"
-                              : "bg-slate-50/90 border-slate-200/80 text-slate-900 hover:border-slate-300 hover:bg-slate-50"
+                              ? "bg-amber-50/70 border-amber-300 shadow-md ring-2 ring-amber-400/20"
+                              : "bg-slate-50 border-slate-200 text-slate-900 hover:border-indigo-200 hover:bg-white"
                           }`}
                       >
-                        <div className="flex items-center justify-between gap-2 sm:gap-3">
-                          <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
-                            <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0 text-base sm:text-xl font-bold shadow-xs ${isDone
-                                ? "bg-emerald-500 text-white shadow-emerald-500/20"
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3.5 min-w-0">
+                            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 text-xl font-bold border ${isDone
+                                ? "bg-emerald-500 border-emerald-400 text-white shadow-lg shadow-emerald-500/20"
                                 : isReady
-                                  ? "bg-amber-500 text-white animate-bounce shadow-amber-500/30"
-                                  : "bg-indigo-600 text-white shadow-indigo-600/20"
+                                  ? "bg-amber-500 border-amber-400 text-slate-950 animate-bounce shadow-lg shadow-amber-500/25"
+                                  : "bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/20"
                               }`}>
-                              {isDone ? <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6" /> : getIcon()}
+                              {isDone ? <CheckCircle className="w-6 h-6" /> : getIcon()}
                             </div>
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1 mb-0.5 sm:mb-1">
-                                <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider bg-indigo-600/10 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-600/20 shrink-0">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                                <span className="text-[10px] font-black uppercase tracking-wider bg-[#141779] text-white px-2 py-0.5 rounded-md shrink-0">
                                   #{mission.seq}
                                 </span>
-                                <h4 className="text-[11px] sm:text-xs font-black text-slate-900 truncate tracking-tight">{mission.title}</h4>
+                                <h4 className="text-sm sm:text-base font-black text-slate-950 whitespace-normal break-words leading-snug tracking-tight">
+                                  {mission.title}
+                                </h4>
                               </div>
-                              <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-[11px] font-extrabold">
-                                <span className="inline-flex items-center gap-0.5 bg-amber-500/10 text-amber-700 px-1.5 py-0.5 rounded border border-amber-500/20">
+                              <div className="flex items-center gap-2 text-[11px] font-black flex-wrap">
+                                <span className="inline-flex items-center gap-0.5 bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-lg border border-amber-200">
                                   🪙 +{mission.coin_reward || mission.coinReward || 10}
                                 </span>
-                                <span className="inline-flex items-center gap-0.5 bg-indigo-500/10 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-500/20">
+                                <span className="inline-flex items-center gap-0.5 bg-indigo-50 text-indigo-800 px-2.5 py-0.5 rounded-lg border border-indigo-100">
                                   ⭐ +{mission.xp_reward || mission.xpReward || 20}
                                 </span>
                               </div>
@@ -640,7 +881,7 @@ export default function HomeScreen() {
 
                           {/* Status Action Button */}
                           {isDone ? (
-                            <span className="text-[10px] sm:text-[11px] font-black text-emerald-800 bg-emerald-200/80 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl shrink-0 border border-emerald-300/80 shadow-xs flex items-center gap-1">
+                            <span className="text-xs font-black text-emerald-800 bg-emerald-100 px-3 py-1.5 rounded-xl shrink-0 border border-emerald-200 shadow-xs flex items-center gap-1">
                               ✓ Claimed
                             </span>
                           ) : isReady ? (
@@ -648,13 +889,13 @@ export default function HomeScreen() {
                               onClick={() => {
                                 completeMission(mission.id || `seq_${mission.seq}`);
                               }}
-                              className="text-[10px] sm:text-[11px] font-black text-slate-950 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-400 hover:from-amber-500 hover:to-amber-600 active:scale-95 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl shrink-0 shadow-md shadow-amber-500/30 animate-pulse transition-all border border-amber-300"
+                              className="text-xs font-black text-slate-950 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-400 hover:from-amber-500 hover:to-amber-600 active:scale-95 px-4 py-2 rounded-xl shrink-0 shadow-lg shadow-amber-500/30 animate-pulse border border-amber-300"
                             >
                               🎁 CLAIM
                             </button>
                           ) : (
                             <div className="flex flex-col items-end shrink-0">
-                              <span className="text-[10px] sm:text-[11px] font-black text-slate-600 bg-slate-200/90 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg sm:rounded-xl border border-slate-300/60 shadow-xs">
+                              <span className="text-xs font-black text-slate-700 bg-slate-200/80 px-2.5 py-1 rounded-xl border border-slate-300/40">
                                 {cur} / {target}
                               </span>
                             </div>
@@ -663,29 +904,31 @@ export default function HomeScreen() {
 
                         {/* Progress Bar (if not completed) */}
                         {!isDone && (
-                          <div className="w-full bg-slate-200/90 h-2 sm:h-2.5 rounded-full overflow-hidden mt-2 sm:mt-2.5 border border-slate-200/60 p-0.5">
+                          <div className="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden mt-3 border border-slate-300/30 p-0.5">
                             <div
                               className={`h-full rounded-full transition-all duration-700 ease-out ${isReady
-                                  ? "bg-gradient-to-r from-amber-400 to-amber-600 shadow-sm shadow-amber-500/50"
+                                  ? "bg-gradient-to-r from-amber-400 to-amber-600 shadow-sm"
                                   : "bg-gradient-to-r from-indigo-500 to-indigo-700"
                                 }`}
                               style={{ width: `${pct}%` }}
                             />
                           </div>
                         )}
-                      </div>
+                      </motion.div>
                     );
                   })}
                 </div>
               )}
 
-              {/* Footer Action */}
-              <button
-                onClick={() => setShowDailyMissionModal(false)}
-                className="w-full py-2.5 sm:py-3 bg-gradient-to-r from-slate-100 to-slate-200/80 hover:from-slate-200 hover:to-slate-300 text-slate-800 font-black rounded-xl sm:rounded-2xl text-[11px] sm:text-xs tracking-wider uppercase transition-all shadow-xs active:scale-98 border border-slate-200 relative z-10"
-              >
-                Close
-              </button>
+              {/* Close Bottom Area */}
+              <div className="flex justify-end pt-2 border-t border-slate-100">
+                <button
+                  onClick={() => setShowDailyMissionModal(false)}
+                  className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm transition-all active:scale-95"
+                >
+                  Close
+                </button>
+              </div>
             </motion.div>
           </div>
         )}
@@ -693,14 +936,14 @@ export default function HomeScreen() {
 
       {/* SURPRISE CHEST MINIGAME MODAL */}
       {surpriseData && chestTaps < 2 && (
-        <div className="fixed inset-0 z-[100] bg-[rgba(0,0,0,0.85)] backdrop-blur-md flex flex-col items-center justify-center p-6">
+        <div className="fixed inset-0 z-[100] bg-[#f7f9fb]/95 backdrop-blur-md flex flex-col items-center justify-center p-6">
           <motion.div
             initial={{ y: -500, scale: 0 }}
             animate={{ y: 0, scale: 1 }}
             transition={{ type: "spring", bounce: 0.6 }}
             className="text-center flex flex-col items-center"
           >
-            <h2 className="text-3xl font-bold text-white mb-8 animate-pulse text-center">{t('wild_surprise')}</h2>
+            <h2 className="text-3xl font-bold text-[#141779] mb-8 animate-pulse text-center">{t('wild_surprise')}</h2>
             <motion.button
               onClick={() => {
                 if (chestTaps === 0) {
@@ -728,7 +971,7 @@ export default function HomeScreen() {
                 />
               )}
             </motion.button>
-            <p className="text-white mt-12 font-bold text-xl bg-[rgba(255,255,255,0.2)] px-6 py-3 rounded-full shadow-[0_0_15px_rgba(255,255,255,0.3)] animate-pulse">
+            <p className="text-[#006a62] mt-12 font-bold text-xl bg-white border border-teal-200 px-6 py-3 rounded-full shadow-md animate-pulse">
               {chestTaps === 1 ? t('opening') : t('tap_to_open')}
             </p>
           </motion.div>
@@ -737,12 +980,12 @@ export default function HomeScreen() {
 
       {/* REWARD REVEAL */}
       {surpriseData && chestTaps >= 2 && (
-        <div className="fixed inset-0 z-[100] bg-[rgba(0,0,0,0.9)] flex flex-col items-center justify-center p-6">
+        <div className="fixed inset-0 z-[100] bg-[#f7f9fb]/95 backdrop-blur-md flex flex-col items-center justify-center p-6">
           <motion.div
             initial={{ scale: 0, rotate: -180 }}
             animate={{ scale: 1, rotate: 0 }}
             transition={{ type: "spring", damping: 15, stiffness: 200 }}
-            className="bg-gradient-to-b from-[#fff7e6] to-white w-full max-w-sm rounded-[32px] p-8 text-center relative shadow-[0_0_50px_rgba(255,215,0,0.4)]"
+            className="bg-gradient-to-b from-[#fff7e6] to-white w-full max-w-sm rounded-[32px] p-8 text-center relative shadow-[0_0_50px_rgba(255,215,0,0.4)] border border-amber-200"
           >
             <motion.span
               initial={{ scale: 0 }}
@@ -895,6 +1138,78 @@ export default function HomeScreen() {
         user={userData}
         onUserUpdated={(u) => setUserData(u)}
       />
+
+      <AnimatePresence>
+        {showStreakModal && (
+          <div className="fixed inset-0 z-[110] bg-[#f7f9fb]/95 backdrop-blur-md flex flex-col items-center justify-center p-6">
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              className="bg-white border border-gray-200 w-full max-w-sm rounded-[32px] p-8 text-center relative shadow-2xl flex flex-col items-center justify-between gap-6"
+            >
+              <div className="flex-1 flex flex-col items-center justify-center w-full gap-6">
+                {/* Large Duolingo Fire Flame */}
+                <div className="relative w-40 h-40 flex items-center justify-center">
+                  <motion.div
+                    animate={{
+                      scale: [1, 1.05, 1],
+                      filter: ["brightness(1)", "brightness(1.1)", "brightness(1)"]
+                    }}
+                    transition={{ repeat: Infinity, duration: 2 }}
+                    className="w-full h-full text-[140px] flex items-center justify-center filter drop-shadow-[0_8px_25px_rgba(255,159,67,0.4)] select-none animate-pulse"
+                  >
+                    🔥
+                  </motion.div>
+                  {/* Streak Number Overlay */}
+                  <span className="absolute text-4xl font-black text-white mt-10 select-none">
+                    {retentionStreak?.currentStreak ?? streakDays}
+                  </span>
+                </div>
+
+                {/* Day of Week Row (Sun to Sat) */}
+                <div className="flex justify-between w-full px-1 gap-1">
+                  {["S", "M", "T", "W", "T", "F", "S"].map((day, idx) => {
+                    const isToday = new Date().getDay() === idx;
+                    const isActive = retentionStreak?.streakDaysOfWeek?.[idx] || (isToday && (retentionStreak?.currentStreak ?? streakDays) > 0);
+                    
+                    return (
+                      <div key={idx} className="flex flex-col items-center gap-1 flex-1">
+                        <div
+                          className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black shadow-xs border ${
+                            isActive
+                              ? "bg-gradient-to-br from-amber-400 to-orange-500 border-amber-300 text-white shadow-inner"
+                              : "bg-gray-50 border-gray-100 text-gray-400"
+                          }`}
+                        >
+                          {day}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="space-y-1 mt-2">
+                  <h2 className="text-2xl font-black text-slate-800 leading-tight">
+                    {retentionStreak?.currentStreak ?? streakDays} Day Streak!
+                  </h2>
+                  <p className="text-xs font-bold text-slate-500 leading-relaxed px-4">
+                    Your longest streak is {retentionStreak?.longestStreak ?? streakDays} days. Keep up the consistency!
+                  </p>
+                </div>
+              </div>
+
+              {/* Close button */}
+              <button
+                onClick={() => setShowStreakModal(false)}
+                className="w-full py-3.5 rounded-2xl bg-[#00aaef] hover:bg-[#0091cb] text-white font-black text-xs shadow-md uppercase tracking-wider active:scale-95 transition-all mt-4"
+              >
+                Awesome!
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

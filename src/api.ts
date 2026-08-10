@@ -66,7 +66,7 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
   }
 
   // Check cache for /api/parent/report GET requests
-  const isReportRequest = (url.includes("/api/parent/report") || url.includes("parent/report")) && reqMethod === "GET";
+  const isReportRequest = (url.includes("/api/parent/report") || url.includes("parent/report")) && !url.includes("/report/download") && reqMethod === "GET";
   if (isReportRequest) {
     const now = Date.now();
     if (lastParentReport && (now - lastParentReport.timestamp < CACHE_TTL)) {

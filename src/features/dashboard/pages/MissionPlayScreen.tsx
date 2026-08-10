@@ -22,6 +22,182 @@ import { apiFetch } from "../../../api";
 
 type StepPhase = "INTRO" | "QUIZ" | "MINI_REWARD" | "BOSS" | "SUMMARY";
 
+const getUserClassNumber = (): number => {
+  const cached = localStorage.getItem("userData");
+  if (cached) {
+    try {
+      const u = JSON.parse(cached);
+      const className = u.childClass || "Class 3";
+      const num = parseInt(className.replace(/\D/g, ""), 10);
+      return isNaN(num) ? 3 : num;
+    } catch (e) {
+      return 3;
+    }
+  }
+  return 3;
+};
+
+const RenderClassIllustration = ({ classNum }: { classNum: number }) => {
+  if (classNum >= 2 && classNum <= 4) {
+    // Dragon SVG
+    return (
+      <div className="relative w-48 h-48 flex items-center justify-center">
+        <motion.div
+          animate={{ scale: [1, 1.2, 1], y: [0, -10, 0] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+          className="absolute top-4 right-6 text-3xl pointer-events-none"
+        >
+          🎉
+        </motion.div>
+        <motion.div
+          animate={{ scale: [0.8, 1.1, 0.8], y: [0, -5, 0] }}
+          transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+          className="absolute top-10 left-6 text-2xl pointer-events-none"
+        >
+          ✨
+        </motion.div>
+        <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-xl">
+          <motion.path
+            d="M20,40 Q5,30 25,20 Z"
+            fill="#34d399"
+            animate={{ rotate: [-10, 15, -10] }}
+            transition={{ repeat: Infinity, duration: 0.8, ease: "easeInOut" }}
+            style={{ transformOrigin: "25px 20px" }}
+          />
+          <motion.path
+            d="M80,40 Q95,30 75,20 Z"
+            fill="#34d399"
+            animate={{ rotate: [10, -15, 10] }}
+            transition={{ repeat: Infinity, duration: 0.8, ease: "easeInOut" }}
+            style={{ transformOrigin: "75px 20px" }}
+          />
+          <ellipse cx="50" cy="55" rx="22" ry="25" fill="#10b981" />
+          <ellipse cx="50" cy="62" rx="14" ry="16" fill="#6ee7b7" />
+          <motion.g
+            animate={{ y: [-2, 2, -2] }}
+            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+          >
+            <circle cx="50" cy="30" r="16" fill="#10b981" />
+            <circle cx="44" cy="26" r="4.5" fill="white" />
+            <circle cx="45.5" cy="26" r="2" fill="black" />
+            <circle cx="56" cy="26" r="4.5" fill="white" />
+            <circle cx="54.5" cy="26" r="2" fill="black" />
+            <circle cx="38" cy="32" r="2" fill="#f43f5e" opacity="0.6" />
+            <circle cx="62" cy="32" r="2" fill="#f43f5e" opacity="0.6" />
+            <path d="M42,16 Q45,6 48,15 Z" fill="#fbbf24" />
+            <path d="M58,16 Q55,6 52,15 Z" fill="#fbbf24" />
+            <path d="M50,33 L62,35 L62,38 L50,34 Z" fill="#fb923c" />
+            <ellipse cx="62" cy="36.5" rx="1.5" ry="3" fill="#fb7185" />
+          </motion.g>
+          <motion.path
+            d="M68,68 Q85,80 75,90"
+            stroke="#10b981"
+            strokeWidth="6"
+            strokeLinecap="round"
+            fill="none"
+            animate={{ rotate: [-5, 5, -5] }}
+            transition={{ repeat: Infinity, duration: 1, ease: "easeInOut" }}
+            style={{ transformOrigin: "68px 68px" }}
+          />
+        </svg>
+      </div>
+    );
+  } else if (classNum >= 5 && classNum <= 7) {
+    // Scientist Owl SVG
+    return (
+      <div className="relative w-48 h-48 flex items-center justify-center">
+        <motion.div
+          animate={{ y: [20, -30], opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
+          className="absolute bottom-12 right-10 text-emerald-400 text-sm font-bold pointer-events-none"
+        >
+          🧪
+        </motion.div>
+        <motion.div
+          animate={{ y: [15, -40], opacity: [0, 1, 0], scale: [0.4, 0.9, 0.4] }}
+          transition={{ duration: 2, repeat: Infinity, delay: 0.8, ease: "easeOut" }}
+          className="absolute bottom-16 right-6 text-purple-400 text-xs font-bold pointer-events-none"
+        >
+          ✨
+        </motion.div>
+        
+        <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-xl">
+          <path d="M30,85 L70,85 L62,55 L38,55 Z" fill="#e2e8f0" />
+          <path d="M48,55 L52,55 L50,68 Z" fill="#141779" />
+          <motion.g
+            animate={{ rotate: [-2, 2, -2] }}
+            transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+            style={{ transformOrigin: "50px 50px" }}
+          >
+            <circle cx="50" cy="40" r="18" fill="#4f46e5" />
+            <path d="M32,32 L25,22 L38,28 Z" fill="#312e81" />
+            <path d="M68,32 L75,22 L62,28 Z" fill="#312e81" />
+            
+            <circle cx="43" cy="40" r="6.5" fill="white" />
+            <circle cx="43" cy="40" r="3" fill="#1e1b4b" />
+            <circle cx="57" cy="40" r="6.5" fill="white" />
+            <circle cx="57" cy="40" r="3" fill="#1e1b4b" />
+            
+            <circle cx="43" cy="40" r="7.5" fill="none" stroke="#fbbf24" strokeWidth="2.5" />
+            <circle cx="57" cy="40" r="7.5" fill="none" stroke="#fbbf24" strokeWidth="2.5" />
+            <line x1="50.5" y1="40" x2="49.5" y2="40" stroke="#fbbf24" strokeWidth="2.5" />
+            
+            <path d="M50,44 L47,48 L53,48 Z" fill="#fb923c" />
+          </motion.g>
+          <circle cx="34" cy="65" r="4" fill="#4f46e5" />
+          <circle cx="66" cy="65" r="4" fill="#4f46e5" />
+          <path d="M63,65 L69,65 L73,78 L59,78 Z" fill="#059669" opacity="0.85" />
+          <rect x="64" y="60" width="4" height="6" fill="#e2e8f0" />
+        </svg>
+      </div>
+    );
+  } else {
+    // Medalist (Class 8-10)
+    return (
+      <div className="relative w-48 h-48 flex items-center justify-center">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+          className="absolute inset-0 border-4 border-dashed border-yellow-300/30 rounded-full pointer-events-none"
+        />
+        <motion.div
+          animate={{ scale: [0.8, 1.2, 0.8], rotate: [0, 45, 0] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+          className="absolute top-4 left-6 text-2xl pointer-events-none"
+        >
+          ⭐
+        </motion.div>
+        <motion.div
+          animate={{ scale: [1, 0.7, 1], rotate: [0, -45, 0] }}
+          transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+          className="absolute bottom-6 right-6 text-xl pointer-events-none"
+        >
+          ✨
+        </motion.div>
+        
+        <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-xl">
+          <path d="M35,50 L25,90 L40,80 L48,50 Z" fill="#e11d48" />
+          <path d="M65,50 L75,90 L60,80 L52,50 Z" fill="#e11d48" />
+          <path d="M38,50 L32,85 L42,77 L47,50 Z" fill="#be123c" />
+          <path d="M62,50 L68,85 L58,77 L53,50 Z" fill="#be123c" />
+          
+          <motion.circle
+            cx="50"
+            cy="46"
+            r="24"
+            fill="#fbbf24"
+            animate={{ scale: [1, 1.04, 1] }}
+            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+          />
+          <circle cx="50" cy="46" r="20" fill="#f59e0b" />
+          <polygon points="50,34 54,42 63,42 56,48 59,57 50,51 41,57 44,48 37,42 46,42" fill="#fff" />
+          <path d="M34,34 Q40,24 50,23 Q40,32 34,34 Z" fill="#fff" opacity="0.3" />
+        </svg>
+      </div>
+    );
+  }
+};
+
 export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scholar Mission Play Engine (Updated)
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -38,6 +214,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       sessionStorage.removeItem(`boss_wrong_${chapterId}_${missionSeq}`);
       sessionStorage.removeItem(`boss_index_${chapterId}_${missionSeq}`);
       sessionStorage.removeItem(`mission_timer_${chapterId}_${missionSeq}`);
+      sessionStorage.removeItem(`user_answers_${chapterId}_${missionSeq}`);
       return "INTRO";
     }
     const queryPhase = searchParams.get("phase");
@@ -56,6 +233,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   const [quizSelected, setQuizSelected] = useState<number | null>(null);
   const [quizCorrectCount, setQuizCorrectCount] = useState(0);
   const [basketCount, setBasketCount] = useState(0);
+  const [selectedDragValue, setSelectedDragValue] = useState<string | null>(null);
   const [quizConfirmed, setQuizConfirmed] = useState(false);
   const [quizIsCorrect, setQuizIsCorrect] = useState(false);
   const [isTimeout, setIsTimeout] = useState(false);
@@ -97,6 +275,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   const [bossAngry, setBossAngry] = useState(false);
   const [dragonCrying, setDragonCrying] = useState(false);
   const [bossBasketCount, setBossBasketCount] = useState(0);
+  const [selectedBossDragValue, setSelectedBossDragValue] = useState<string | null>(null);
 
   // Revival State
   const [showReviveModal, setShowReviveModal] = useState(false);
@@ -109,6 +288,12 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     setTimeout(() => setToastMessage(null), 3000);
   };
   const [userCoins, setUserCoins] = useState(0);
+
+  // Duolingo Streak animations and steps
+  const [summaryStep, setSummaryStep] = useState<"LESSON_COMPLETE" | "STREAK" | "REPORT">("LESSON_COMPLETE");
+  const [displayedStreak, setDisplayedStreak] = useState(0);
+  const [streakDaysOfWeek, setStreakDaysOfWeek] = useState<boolean[]>([false, false, false, false, false, false, false]);
+  const [animateStreakNumber, setAnimateStreakNumber] = useState(false);
 
   const openReviveModal = async () => {
     setShowReviveModal(true);
@@ -146,8 +331,15 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
   // Final Summary state
   const [completionResult, setCompletionResult] = useState<any>(null);
-  const [userAnswers, setUserAnswers] = useState<any[]>([]);
+  const [userAnswers, setUserAnswers] = useState<any[]>(() => {
+    const saved = sessionStorage.getItem(`user_answers_${chapterId}_${missionSeq}`);
+    return saved ? JSON.parse(saved) : [];
+  });
   const [isCompleting, setIsCompleting] = useState(false);
+
+  useEffect(() => {
+    sessionStorage.setItem(`user_answers_${chapterId}_${missionSeq}`, JSON.stringify(userAnswers));
+  }, [userAnswers, chapterId, missionSeq]);
 
   // Fetch Mission Data Effect
   useEffect(() => {
@@ -203,6 +395,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   const bossTargetCount = bossDragDetails.targetCount ?? (parseInt(activeBossQ?.answer) || 3);
   const bossTotalDraggables = bossDragDetails.draggablesCount || (bossTargetCount + 3);
   const bossObjectEmoji = bossDragDetails.objectEmoji || "⭐";
+  const isBossLanguageDrag = isBossDrag && activeBossQ?.options && activeBossQ.options.length > 0 && isNaN(Number(activeBossQ.options[0]));
 
   useEffect(() => {
     if (activeBossQ) {
@@ -211,6 +404,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     }
     setBossSelected(null);
     setBossConfirmed(false);
+    setSelectedBossDragValue(null);
   }, [currentBossIndex, activeBossQ?._id]);
 
   const activeBossOptions = (activeBossQ?.options && Array.isArray(activeBossQ.options) && activeBossQ.options.length > 0)
@@ -229,6 +423,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   const targetCount = dragDetails.targetCount ?? (parseInt(currentQ?.answer) || 3);
   const totalDraggables = dragDetails.draggablesCount || (targetCount + 3);
   const objectEmoji = dragDetails.objectEmoji || "🍎";
+  const isLanguageDrag = isDragObjects && currentQ?.options && currentQ.options.length > 0 && isNaN(Number(currentQ.options[0]));
 
   useEffect(() => {
     if (currentQ) {
@@ -237,6 +432,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     }
     setQuizConfirmed(false);
     setQuizSelected(null);
+    setSelectedDragValue(null);
   }, [currentQuizIndex, currentQ?._id]);
 
   // Boss Expression based on health & attack status
@@ -250,6 +446,30 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
   const bossState = getBossExpression();
 
+  const getSuccessFeedback = () => {
+    if (streak > 2) {
+      return {
+        main: "🔥 You're on a roll!",
+        sub: `${streak} correct answers in a row!`
+      };
+    }
+    if (currentQ?.difficulty === "Hard" || currentQ?.isBoss) {
+      return {
+        main: "💪 Brilliant!",
+        sub: "That was a tricky one — and you got it right!"
+      };
+    }
+    const general = [
+      { main: "🧠 Great thinking!", sub: "You understood this concept correctly." },
+      { main: "🎯 You got it right!", sub: "Great thinking! You understood it correctly." },
+      { main: "🎉 Nailed it!", sub: "Your answer is correct." },
+      { main: "💡 Smart move!", sub: "You solved this challenge perfectly." },
+      { main: "🌟 Brilliant work!", sub: "Keep going, you are doing awesome!" },
+      { main: "🚀 You're getting stronger!", sub: "Every correct answer helps you grow." }
+    ];
+    return general[currentQuizIndex % general.length];
+  };
+
   // Finalize Mission API helper
   const finalizeMission = async (finalBossDamage = bossDamageCount, finalChildDamage = childDamageCount, currentAnswers = userAnswers) => {
     setIsCompleting(true);
@@ -260,6 +480,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       sessionStorage.removeItem(`boss_index_${chapterId}_${missionSeq}`);
       sessionStorage.removeItem(`mission_phase_${chapterId}_${missionSeq}`);
       sessionStorage.removeItem(`mission_timer_${chapterId}_${missionSeq}`);
+      sessionStorage.removeItem(`user_answers_${chapterId}_${missionSeq}`);
 
       const bossCorrect = finalBossDamage;
       const res = await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/complete`, {
@@ -278,6 +499,19 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       const json = await res.json();
       if (json.success && json.data) {
         setCompletionResult(json.data);
+        const oldStr = json.data.oldStreak !== undefined ? json.data.oldStreak : (json.data.streak || 1);
+        setDisplayedStreak(oldStr);
+        setStreakDaysOfWeek(json.data.streakDaysOfWeek || [false, false, false, false, false, false, false]);
+        
+        // If it should animate (first lesson today), trigger numbers increment after delay
+        if (json.data.shouldAnimateStreak) {
+          setTimeout(() => {
+            setAnimateStreakNumber(true);
+            setDisplayedStreak(json.data.streak || 1);
+          }, 1500);
+        } else {
+          setDisplayedStreak(json.data.streak || 1);
+        }
       }
     } catch (e) {
       console.error("Failed to complete mission:", e);
@@ -296,12 +530,16 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     sessionStorage.removeItem(`boss_index_${chapterId}_${missionSeq}`);
     sessionStorage.removeItem(`mission_phase_${chapterId}_${missionSeq}`);
     sessionStorage.removeItem(`mission_timer_${chapterId}_${missionSeq}`);
+    sessionStorage.removeItem(`user_answers_${chapterId}_${missionSeq}`);
 
     try {
       // Call backend retreat endpoint to apply XP deduction & reset hearts
       await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/retreat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          answers: userAnswers
+        })
       });
     } catch (e) {
       console.error("Failed to call retreat API:", e);
@@ -382,7 +620,11 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     if (!quizConfirmed) {
       let isCorrect = false;
       if (isDragObjects) {
-        isCorrect = (basketCount === targetCount || String(basketCount) === String(currentQ?.answer));
+        if (isLanguageDrag) {
+          isCorrect = String(selectedDragValue).trim().toLowerCase() === String(currentQ?.answer).trim().toLowerCase();
+        } else {
+          isCorrect = (basketCount === targetCount || String(basketCount) === String(currentQ?.answer));
+        }
       } else {
         if (quizSelected === null) return;
         const selectedOpt = currentQ?.options?.[quizSelected];
@@ -392,7 +634,9 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       setQuizConfirmed(true);
       setQuizIsCorrect(isCorrect);
 
-      const selectedValue = isDragObjects ? String(basketCount) : (quizSelected !== null ? String(currentQ?.options?.[quizSelected]) : "");
+      const selectedValue = isDragObjects 
+        ? (isLanguageDrag ? String(selectedDragValue) : String(basketCount)) 
+        : (quizSelected !== null ? String(currentQ?.options?.[quizSelected]) : "");
       const newAns = {
         questionId: currentQ?._id,
         isCorrect: isCorrect,
@@ -448,11 +692,16 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   const handleBossDragConfirm = () => {
     if (bossConfirmed) return;
     setBossConfirmed(true);
-    const isCorrect = (bossBasketCount === bossTargetCount || String(bossBasketCount) === String(activeBossQ?.answer));
+    let isCorrect = false;
+    if (isBossLanguageDrag) {
+      isCorrect = String(selectedBossDragValue).trim().toLowerCase() === String(activeBossQ?.answer).trim().toLowerCase();
+    } else {
+      isCorrect = (bossBasketCount === bossTargetCount || String(bossBasketCount) === String(activeBossQ?.answer));
+    }
     const newAns = {
       questionId: activeBossQ?._id,
       isCorrect: isCorrect,
-      selectedAnswer: String(bossBasketCount),
+      selectedAnswer: isBossLanguageDrag ? String(selectedBossDragValue) : String(bossBasketCount),
       timeSpent: QUESTION_TIME_LIMIT - questionTimeLeft
     };
     const updatedAnswers = [...userAnswers, newAns];
@@ -548,7 +797,20 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans overflow-x-hidden flex flex-col justify-between">
       <header className="sticky top-0 z-40 bg-[rgba(247,249,251,0.85)] backdrop-blur-md border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-xs">
         <button
-          onClick={() => navigate(-1)}
+          onClick={async () => {
+            if (phase !== "INTRO" && phase !== "SUMMARY") {
+              try {
+                await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/retreat`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ answers: userAnswers })
+                });
+              } catch (e) {
+                console.error("Retreat on back button click failed:", e);
+              }
+            }
+            navigate(-1);
+          }}
           className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-gray-200 hover:bg-gray-50 active:scale-95 transition-all shadow-xs"
         >
           <ArrowLeft size={20} className="text-[#141779]" />
@@ -663,42 +925,88 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                     : "border-gray-300 bg-white cursor-pointer hover:bg-gray-50"
                   }`}
                 onClick={() => {
-                  if (!quizConfirmed && basketCount > 0) {
-                    setBasketCount((prev) => prev - 1);
+                  if (!quizConfirmed) {
+                    if (isLanguageDrag) {
+                      setSelectedDragValue(null);
+                      setBasketCount(0);
+                    } else if (basketCount > 0) {
+                      setBasketCount((prev) => prev - 1);
+                    }
                   }
                 }}
               >
-                {basketCount === 0 && (
-                  <span className="text-gray-400 font-bold select-none text-center text-sm uppercase tracking-wider">
-                    Tap items below to add to Basket!
-                  </span>
+                {isLanguageDrag ? (
+                  selectedDragValue === null ? (
+                    <span className="text-gray-400 font-bold select-none text-center text-sm uppercase tracking-wider">
+                      Tap an option below to complete the spelling!
+                    </span>
+                  ) : (
+                    <span className="text-5xl font-black text-indigo-700 bg-indigo-50 border-2 border-indigo-300 px-6 py-4 rounded-2xl shadow-inner animate-in zoom-in-50 duration-200">
+                      {selectedDragValue}
+                    </span>
+                  )
+                ) : (
+                  <>
+                    {basketCount === 0 && (
+                      <span className="text-gray-400 font-bold select-none text-center text-sm uppercase tracking-wider">
+                        Tap items below to add to Basket!
+                      </span>
+                    )}
+                    {Array.from({ length: basketCount }).map((_, i) => (
+                      <span key={i} className="text-4xl animate-bounce drop-shadow-sm select-none">
+                        {objectEmoji}
+                      </span>
+                    ))}
+                  </>
                 )}
-                {Array.from({ length: basketCount }).map((_, i) => (
-                  <span key={i} className="text-4xl animate-bounce drop-shadow-sm select-none">
-                    {objectEmoji}
-                  </span>
-                ))}
               </div>
 
               <div className="flex flex-wrap justify-center gap-3 p-4 bg-white rounded-2xl shadow-xs border border-gray-200">
-                {Array.from({ length: Math.max(0, totalDraggables - basketCount) }).map((_, i) => (
-                  <button
-                    key={i}
-                    disabled={quizConfirmed}
-                    onClick={() => {
-                      if (!quizConfirmed && basketCount < totalDraggables) {
-                        setBasketCount((prev) => prev + 1);
-                      }
-                    }}
-                    className="text-4xl hover:scale-110 active:scale-95 transition-transform p-2 drop-shadow-xs"
-                  >
-                    {objectEmoji}
-                  </button>
-                ))}
-                {totalDraggables - basketCount === 0 && (
-                  <span className="text-gray-400 font-bold text-xs py-2 uppercase tracking-wide">
-                    Basket Full! Tap basket to remove item.
-                  </span>
+                {isLanguageDrag ? (
+                  currentQ.options.map((opt: string, idx: number) => {
+                    const isSelected = selectedDragValue === opt;
+                    return (
+                      <button
+                        key={idx}
+                        disabled={quizConfirmed}
+                        onClick={() => {
+                          if (!quizConfirmed) {
+                            setSelectedDragValue(opt);
+                            setBasketCount(1);
+                          }
+                        }}
+                        className={`px-5 py-3 rounded-xl border text-xl font-bold transition-all ${
+                          isSelected
+                            ? "bg-[#141779] border-[#141779] text-white scale-105 shadow-md animate-pulse"
+                            : "bg-gray-50 border-gray-200 text-slate-700 hover:border-indigo-400 active:scale-95"
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <>
+                    {Array.from({ length: Math.max(0, totalDraggables - basketCount) }).map((_, i) => (
+                      <button
+                        key={i}
+                        disabled={quizConfirmed}
+                        onClick={() => {
+                          if (!quizConfirmed && basketCount < totalDraggables) {
+                            setBasketCount((prev) => prev + 1);
+                          }
+                        }}
+                        className="text-4xl hover:scale-110 active:scale-95 transition-transform p-2 drop-shadow-xs"
+                      >
+                        {objectEmoji}
+                      </button>
+                    ))}
+                    {totalDraggables - basketCount === 0 && (
+                      <span className="text-gray-400 font-bold text-xs py-2 uppercase tracking-wide">
+                        Basket Full! Tap basket to remove item.
+                      </span>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -754,19 +1062,26 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                 ) : (
                   <XCircle size={24} className="text-red-600 shrink-0" />
                 )}
-                <div>
+                 <div className="flex-1">
                   <h4 className="font-extrabold text-sm">
-                    {isTimeout ? "Time's Up!" : quizIsCorrect ? "Excellent! Target Reached! 🌟" : "Not quite right!"}
+                    {isTimeout ? "Time's Up!" : quizIsCorrect ? getSuccessFeedback().main : "Not quite right!"}
                   </h4>
                   <p className="text-xs font-semibold">
                     {isTimeout
                       ? "You did not answer within 30 seconds."
                       : quizIsCorrect
-                        ? "+15 XP & +10 Coins"
+                        ? getSuccessFeedback().sub
                         : isDragObjects
                           ? `Target was ${targetCount} ${objectEmoji}`
                           : `Correct Answer: ${currentQ?.answer}`}
                   </p>
+                  {quizIsCorrect && !isTimeout && (
+                    <div className="text-xs font-extrabold text-emerald-800/80 mt-1 flex items-center gap-1.5">
+                      <span>⭐ +15 XP</span>
+                      <span>·</span>
+                      <span>🪙 +10 Coins</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -953,42 +1268,88 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
               <div
                 className="w-full min-h-[120px] rounded-2xl border-2 border-dashed border-[#141779]/30 bg-[#f0f2ff] p-4 flex flex-wrap gap-2 items-center justify-center cursor-pointer shadow-inner"
                 onClick={() => {
-                  if (bossSelected === null && bossBasketCount > 0) {
-                    setBossBasketCount((prev) => prev - 1);
+                  if (!bossConfirmed) {
+                    if (isBossLanguageDrag) {
+                      setSelectedBossDragValue(null);
+                      setBossBasketCount(0);
+                    } else if (bossBasketCount > 0) {
+                      setBossBasketCount((prev) => prev - 1);
+                    }
                   }
                 }}
               >
-                {bossBasketCount === 0 && (
-                  <span className="text-[#141779]/70 font-bold select-none text-center text-xs uppercase tracking-wider">
-                    Tap items below to load into Weapon Basket!
-                  </span>
+                {isBossLanguageDrag ? (
+                  selectedBossDragValue === null ? (
+                    <span className="text-[#141779]/70 font-bold select-none text-center text-xs uppercase tracking-wider">
+                      Tap an option below to fill the boss weapon slot!
+                    </span>
+                  ) : (
+                    <span className="text-4xl font-black text-indigo-700 bg-indigo-50 border-2 border-indigo-300 px-5 py-3 rounded-xl shadow-inner animate-in zoom-in-50 duration-200">
+                      {selectedBossDragValue}
+                    </span>
+                  )
+                ) : (
+                  <>
+                    {bossBasketCount === 0 && (
+                      <span className="text-[#141779]/70 font-bold select-none text-center text-xs uppercase tracking-wider">
+                        Tap items below to load into Weapon Basket!
+                      </span>
+                    )}
+                    {Array.from({ length: bossBasketCount }).map((_, i) => (
+                      <span key={i} className="text-3xl animate-bounce drop-shadow-xs select-none">
+                        {bossObjectEmoji}
+                      </span>
+                    ))}
+                  </>
                 )}
-                {Array.from({ length: bossBasketCount }).map((_, i) => (
-                  <span key={i} className="text-3xl animate-bounce drop-shadow-xs select-none">
-                    {bossObjectEmoji}
-                  </span>
-                ))}
               </div>
 
               <div className="flex flex-wrap justify-center gap-3 p-3 bg-white rounded-2xl border border-gray-200 shadow-xs">
-                {Array.from({ length: Math.max(0, bossTotalDraggables - bossBasketCount) }).map((_, i) => (
-                  <button
-                    key={i}
-                    disabled={bossSelected !== null}
-                    onClick={() => {
-                      if (bossSelected === null && bossBasketCount < bossTotalDraggables) {
-                        setBossBasketCount((prev) => prev + 1);
-                      }
-                    }}
-                    className="text-3xl hover:scale-110 active:scale-95 transition-transform p-1.5"
-                  >
-                    {bossObjectEmoji}
-                  </button>
-                ))}
+                {isBossLanguageDrag ? (
+                  activeBossOptions.map((opt: string, idx: number) => {
+                    const isSelected = selectedBossDragValue === opt;
+                    return (
+                      <button
+                        key={idx}
+                        disabled={bossConfirmed}
+                        onClick={() => {
+                          if (!bossConfirmed) {
+                            setSelectedBossDragValue(opt);
+                            setBossBasketCount(1);
+                          }
+                        }}
+                        className={`px-4 py-2.5 rounded-lg border text-lg font-bold transition-all ${
+                          isSelected
+                            ? "bg-[#141779] border-[#141779] text-white scale-105 shadow-md animate-pulse"
+                            : "bg-gray-50 border-gray-200 text-slate-700 hover:border-indigo-400 active:scale-95"
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <>
+                    {Array.from({ length: Math.max(0, bossTotalDraggables - bossBasketCount) }).map((_, i) => (
+                      <button
+                        key={i}
+                        disabled={bossSelected !== null}
+                        onClick={() => {
+                          if (bossSelected === null && bossBasketCount < bossTotalDraggables) {
+                            setBossBasketCount((prev) => prev + 1);
+                          }
+                        }}
+                        className="text-3xl hover:scale-110 active:scale-95 transition-transform p-1.5"
+                      >
+                        {bossObjectEmoji}
+                      </button>
+                    ))}
+                  </>
+                )}
               </div>
 
               <button
-                disabled={bossConfirmed}
+                disabled={bossConfirmed || (isBossLanguageDrag && selectedBossDragValue === null)}
                 onClick={handleBossDragConfirm}
                 className="w-full py-4 rounded-2xl bg-[#141779] text-white font-black text-base shadow-lg hover:bg-[#101362] flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
               >
@@ -1049,177 +1410,371 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       )}
 
       {phase === "SUMMARY" && (
-        <main className="px-6 py-6 flex-1 flex flex-col items-center justify-center max-w-md mx-auto w-full text-center pb-8">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-amber-400 to-yellow-300 border-4 border-amber-200 flex items-center justify-center text-4xl mb-3 shadow-xl"
-          >
-            🏆
-          </motion.div>
+        <>
+          {summaryStep === "LESSON_COMPLETE" && (
+            <main className="fixed inset-0 z-50 bg-[#f7f9fb] flex flex-col items-center justify-between p-6 max-w-md mx-auto w-full text-center pb-8 animate-in fade-in duration-300">
+              <div className="flex-1 flex flex-col items-center justify-center w-full gap-5">
+                {/* Cute Class-Specific Animated Illustration */}
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: "spring", damping: 12 }}
+                  className="filter drop-shadow-md relative"
+                >
+                  <RenderClassIllustration classNum={getUserClassNumber()} />
+                </motion.div>
 
-          <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold text-xs uppercase tracking-widest border border-emerald-300 mb-2">
-            Mission {missionSeq} Accomplished!
-          </span>
+                {/* Congratulations Header */}
+                <div className="space-y-1.5 max-w-xs">
+                  <h2 className="text-3xl font-black text-[#141779] leading-tight tracking-tight uppercase">Lesson Complete!</h2>
+                  <p className="text-xs font-bold text-[#767683] px-2 leading-relaxed">
+                    You've successfully completed the lesson. Excellent progress!
+                  </p>
+                </div>
 
-          <h2 className="text-2xl font-black text-[#141779] mb-1">{missionTitle} Victory!</h2>
-          <p className="text-xs text-[#464652] font-semibold mb-4">Chapter Progression & Performance Report</p>
+                {/* Premium Custom Reward Dashboard Cards */}
+                <div className="w-full max-w-sm grid grid-cols-3 gap-3.5 mt-2 px-1">
+                  {/* XP Card */}
+                  <motion.div
+                    initial={{ y: 15, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.1 }}
+                    className="flex flex-col items-center p-3 rounded-2xl bg-amber-50/70 border-2 border-amber-100/60 shadow-xs relative overflow-hidden"
+                  >
+                    <div className="text-2xl animate-pulse">⚡</div>
+                    <span className="text-[10px] font-black text-amber-700 uppercase tracking-wider mt-1.5">XP</span>
+                    <span className="text-base font-black text-amber-900 mt-0.5">+{completionResult?.xpEarned || 10}</span>
+                  </motion.div>
 
-          <div className="flex gap-2 mb-6">
-            {[1, 2, 3].map((s) => (
-              <Star
-                key={s}
-                size={28}
-                className={
-                  s <= (completionResult?.stars || 3)
-                    ? "text-amber-500 fill-amber-400"
-                    : "text-gray-300"
-                }
-              />
-            ))}
-          </div>
+                  {/* Accuracy Card */}
+                  <motion.div
+                    initial={{ y: 15, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                    className="flex flex-col items-center p-3 rounded-2xl bg-emerald-50/70 border-2 border-emerald-100/60 shadow-xs relative overflow-hidden"
+                  >
+                    <div className="text-2xl">🎯</div>
+                    <span className="text-[10px] font-black text-emerald-700 uppercase tracking-wider mt-1.5">Accuracy</span>
+                    <span className="text-base font-black text-emerald-900 mt-0.5">{completionResult?.accuracy ?? 100}%</span>
+                  </motion.div>
 
-          <div className="grid grid-cols-2 gap-3 w-full mb-4">
-            <div className="bg-white border border-gray-200 rounded-3xl p-4 flex flex-col items-center shadow-xs">
-              <span className="text-[10px] font-black text-[#767683] uppercase tracking-wider">Accuracy</span>
-              <span className="text-3xl font-black text-emerald-600 mt-1">
-                {completionResult?.accuracy ?? Math.round((quizCorrectCount / Math.max(1, quizQuestions.length)) * 100)}%
-              </span>
-              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full mt-1 border border-emerald-200">
-                {completionResult?.targetStatus || ((completionResult?.accuracy ?? 100) >= 85 ? "Target Exceeded" : "Target Met")}
-              </span>
-            </div>
+                  {/* Coin Card */}
+                  <motion.div
+                    initial={{ y: 15, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                    className="flex flex-col items-center p-3 rounded-2xl bg-yellow-50/70 border-2 border-yellow-100/60 shadow-xs relative overflow-hidden"
+                  >
+                    <div className="text-2xl animate-spin" style={{ animationDuration: '6s' }}>🪙</div>
+                    <span className="text-[10px] font-black text-yellow-700 uppercase tracking-wider mt-1.5">Coins</span>
+                    <span className="text-base font-black text-yellow-900 mt-0.5">+{completionResult?.coinsEarned || 5}</span>
+                  </motion.div>
+                </div>
 
-            <div className="bg-white border border-gray-200 rounded-3xl p-4 flex flex-col items-center shadow-xs">
-              <span className="text-[10px] font-black text-[#767683] uppercase tracking-wider">Confidence</span>
-              <span className="text-xl font-black text-[#141779] mt-2">
-                {completionResult?.confidenceLabel || "High Mastery 🚀"}
-              </span>
-              <div className="w-full h-2 bg-gray-200 rounded-full mt-2 overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-amber-400 to-emerald-500 rounded-full"
-                  style={{ width: `${completionResult?.confidenceScore || 90}%` }}
-                />
+                {/* Progress bar to daily goal */}
+                <div className="w-full max-w-xs flex flex-col gap-2 mt-3">
+                  <div className="w-full h-3.5 bg-gray-200 rounded-full overflow-hidden p-0.5 border border-gray-300">
+                    <motion.div
+                      initial={{ width: "0%" }}
+                      animate={{ width: "75%" }}
+                      transition={{ duration: 1.2, ease: "easeOut" }}
+                      className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full"
+                    />
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] font-black text-amber-600 uppercase tracking-wider px-1">
+                    <span>Daily XP Goal</span>
+                    <span>75% Reached</span>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          <div className="bg-white border border-gray-200 rounded-3xl p-4 w-full mb-4 text-left shadow-xs">
-            {completionResult?.threeDayAvailable !== false ? (
-              <>
-                <div className="flex justify-between items-center mb-3">
-                  <div>
-                    <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1">
+              {/* Continue button */}
+              <button
+                onClick={() => setSummaryStep("STREAK")}
+                className="w-full py-4 rounded-2xl bg-[#00aaef] hover:bg-[#0091cb] text-white font-black text-base shadow-md uppercase tracking-wider active:scale-95 transition-all mt-auto"
+              >
+                Continue
+              </button>
+            </main>
+          )}
+
+          {summaryStep === "STREAK" && (
+            <main className="fixed inset-0 z-50 bg-[#f7f9fb] flex flex-col items-center justify-between p-6 max-w-md mx-auto w-full text-center pb-8 animate-in fade-in duration-300">
+              <div className="flex-1 flex flex-col items-center justify-center w-full gap-8">
+                {/* Large Duolingo Fire Flame */}
+                <div className="relative w-44 h-44 flex items-center justify-center">
+                  {/* Floating Streak Extended animation */}
+                  {completionResult?.shouldAnimateStreak && animateStreakNumber && (
+                    <motion.div
+                      initial={{ y: 20, opacity: 0, scale: 0.5 }}
+                      animate={{ y: -65, opacity: [0, 1, 1, 0], scale: [0.5, 1.2, 1] }}
+                      transition={{ duration: 1.8, ease: "easeOut" }}
+                      className="absolute -top-12 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-black text-xs px-3.5 py-1.5 rounded-full shadow-lg pointer-events-none z-20 whitespace-nowrap border border-orange-300 uppercase tracking-wider"
+                    >
+                      STREAK EXTENDED! 🔥
+                    </motion.div>
+                  )}
+                  
+                  <motion.div
+                    animate={animateStreakNumber ? {
+                      scale: [1, 1.35, 1.1, 1.18, 1],
+                      filter: ["brightness(1)", "brightness(1.25)", "brightness(1)"]
+                    } : {}}
+                    transition={{ duration: 0.7 }}
+                    className="w-full h-full text-[160px] flex items-center justify-center filter drop-shadow-[0_8px_25px_rgba(255,159,67,0.45)] select-none"
+                  >
+                    🔥
+                  </motion.div>
+                  {/* Streak Number Overlay */}
+                  <motion.span
+                    key={displayedStreak}
+                    initial={{ scale: 0.6, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", damping: 10 }}
+                    className="absolute text-5xl font-black text-white mt-12 select-none"
+                  >
+                    {displayedStreak}
+                  </motion.span>
+                </div>
+
+                {/* Day of Week Row (Sun to Sat) */}
+                <div className="flex justify-between w-full max-w-xs px-2 mt-4 gap-1.5">
+                  {["S", "M", "T", "W", "T", "F", "S"].map((day, idx) => {
+                    const isToday = new Date().getDay() === idx;
+                    
+                    // If this is today, and we should animate, start with today as inactive (grey)
+                    // and animate it active (colored) when animateStreakNumber is true.
+                    const isActive = isToday 
+                      ? (completionResult?.shouldAnimateStreak ? animateStreakNumber : streakDaysOfWeek[idx])
+                      : streakDaysOfWeek[idx];
+                    
+                    return (
+                      <div key={idx} className="flex flex-col items-center gap-1.5 flex-1 relative">
+                        {/* Floating +1 Day badge above today's circle */}
+                        {isToday && completionResult?.shouldAnimateStreak && animateStreakNumber && (
+                          <motion.div
+                            initial={{ y: 5, opacity: 0, scale: 0.5 }}
+                            animate={{ y: -38, opacity: [0, 1, 1, 0], scale: [0.5, 1.25, 1] }}
+                            transition={{ duration: 1.6, ease: "easeOut", delay: 0.2 }}
+                            className="absolute -top-10 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black text-[9px] px-2 py-0.5 rounded-full shadow-md pointer-events-none z-20 border border-amber-300 tracking-wider whitespace-nowrap"
+                          >
+                            +1 DAY!
+                          </motion.div>
+                        )}
+                        
+                        <motion.div
+                          animate={isToday && animateStreakNumber ? {
+                            scale: [1, 1.35, 1.05, 1.1, 1],
+                            rotate: [0, 15, -15, 0]
+                          } : {}}
+                          transition={{ duration: 0.6, delay: 0.2 }}
+                          className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-black shadow-xs transition-all duration-500 border ${
+                            isActive
+                              ? "bg-gradient-to-br from-amber-400 to-orange-500 border-amber-300 text-white shadow-inner scale-105"
+                              : "bg-gray-100 border-gray-200 text-gray-400"
+                          }`}
+                        >
+                          {day}
+                        </motion.div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="space-y-2 max-w-xs mt-2">
+                  <h2 className="text-2xl font-black text-slate-800 leading-tight tracking-tight uppercase">
+                    {displayedStreak} Day Streak!
+                  </h2>
+                  <p className="text-xs font-bold text-slate-500 leading-relaxed">
+                    Complete a lesson every day to build your streak!
+                  </p>
+                </div>
+              </div>
+
+              {/* Continue to stats button */}
+              <button
+                onClick={() => setSummaryStep("REPORT")}
+                className="w-full py-4 rounded-2xl bg-[#00aaef] hover:bg-[#0091cb] text-white font-black text-base shadow-md uppercase tracking-wider active:scale-95 transition-all mt-auto"
+              >
+                Continue
+              </button>
+            </main>
+          )}
+
+          {summaryStep === "REPORT" && (
+            <main className="px-6 py-6 flex-1 flex flex-col items-center justify-center max-w-md mx-auto w-full text-center pb-8 animate-in fade-in duration-300">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-amber-400 to-yellow-300 border-4 border-amber-200 flex items-center justify-center text-4xl mb-3 shadow-xl"
+              >
+                🏆
+              </motion.div>
+
+              <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold text-xs uppercase tracking-widest border border-emerald-300 mb-2">
+                Mission {missionSeq} Accomplished!
+              </span>
+
+              <h2 className="text-2xl font-black text-[#141779] mb-1">{missionTitle} Victory!</h2>
+              <p className="text-xs text-[#464652] font-semibold mb-4">Chapter Progression & Performance Report</p>
+
+              <div className="flex gap-2 mb-6">
+                {[1, 2, 3].map((s) => (
+                  <Star
+                    key={s}
+                    size={28}
+                    className={
+                      s <= (completionResult?.stars || 3)
+                        ? "text-amber-500 fill-amber-400"
+                        : "text-gray-300"
+                    }
+                  />
+                ))}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 w-full mb-4">
+                <div className="bg-white border border-gray-200 rounded-3xl p-4 flex flex-col items-center shadow-xs">
+                  <span className="text-[10px] font-black text-[#767683] uppercase tracking-wider">Accuracy</span>
+                  <span className="text-3xl font-black text-emerald-600 mt-1">
+                    {completionResult?.accuracy ?? Math.round((quizCorrectCount / Math.max(1, quizQuestions.length)) * 100)}%
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full mt-1 border border-emerald-200">
+                    {completionResult?.targetStatus || ((completionResult?.accuracy ?? 100) >= 85 ? "Target Exceeded" : "Target Met")}
+                  </span>
+                </div>
+
+                <div className="bg-white border border-gray-200 rounded-3xl p-4 flex flex-col items-center shadow-xs">
+                  <span className="text-[10px] font-black text-[#767683] uppercase tracking-wider">Confidence</span>
+                  <span className="text-xl font-black text-[#141779] mt-2">
+                    {completionResult?.confidenceLabel || "High Mastery 🚀"}
+                  </span>
+                  <div className="w-full h-2 bg-gray-200 rounded-full mt-2 overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-amber-400 to-emerald-500 rounded-full"
+                      style={{ width: `${completionResult?.confidenceScore || 90}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white border border-gray-200 rounded-3xl p-4 w-full mb-4 text-left shadow-xs">
+                {completionResult?.threeDayAvailable !== false ? (
+                  <>
+                    <div className="flex justify-between items-center mb-3">
+                      <div>
+                        <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1">
+                          <span>📈 3-Day Performance Average</span>
+                        </h4>
+                        <span className="text-[11px] text-gray-500 font-semibold">Short-term retention trend</span>
+                      </div>
+                      <span className="text-base font-black text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-xl border border-indigo-200">
+                        {completionResult?.threeDayAvg ?? 0}%
+                      </span>
+                    </div>
+
+                    <div className="flex items-end justify-between gap-3 h-24 pt-4 px-2">
+                      {(completionResult?.threeDayTrend || [
+                        { day: "Day 1", accuracy: 0 },
+                        { day: "Day 2", accuracy: 0 },
+                        { day: "Today", accuracy: completionResult?.accuracy || 0 }
+                      ]).map((d: any, idx: number) => (
+                        <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
+                          <span className="text-[10px] font-extrabold text-[#141779]">{d.accuracy}%</span>
+                          <div className="w-full bg-gray-100 rounded-xl h-full flex items-end overflow-hidden p-1">
+                            <motion.div
+                              initial={{ height: 0 }}
+                              animate={{ height: `${d.accuracy}%` }}
+                              transition={{ duration: 0.8, delay: idx * 0.15 }}
+                              className="w-full bg-gradient-to-t from-indigo-600 to-teal-400 rounded-lg"
+                            />
+                          </div>
+                          <span className="text-[10px] font-bold text-gray-500">{d.day}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-6 px-4 text-center">
+                    <div className="w-12 h-12 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 mb-3 shadow-2xs">
+                      <Clock size={20} className="animate-pulse" />
+                    </div>
+                    <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1 mb-1.5">
                       <span>📈 3-Day Performance Average</span>
                     </h4>
-                    <span className="text-[11px] text-gray-500 font-semibold">Short-term retention trend</span>
+                    <p className="text-xs text-gray-500 font-bold max-w-[280px] leading-relaxed">
+                      Required data not available. You'll see in next few learning Days.
+                    </p>
                   </div>
-                  <span className="text-base font-black text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-xl border border-indigo-200">
-                    {completionResult?.threeDayAvg ?? 0}%
-                  </span>
-                </div>
-
-                <div className="flex items-end justify-between gap-3 h-24 pt-4 px-2">
-                  {(completionResult?.threeDayTrend || [
-                    { day: "Day 1", accuracy: 0 },
-                    { day: "Day 2", accuracy: 0 },
-                    { day: "Today", accuracy: completionResult?.accuracy || 0 }
-                  ]).map((d: any, idx: number) => (
-                    <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
-                      <span className="text-[10px] font-extrabold text-[#141779]">{d.accuracy}%</span>
-                      <div className="w-full bg-gray-100 rounded-xl h-full flex items-end overflow-hidden p-1">
-                        <motion.div
-                          initial={{ height: 0 }}
-                          animate={{ height: `${d.accuracy}%` }}
-                          transition={{ duration: 0.8, delay: idx * 0.15 }}
-                          className="w-full bg-gradient-to-t from-indigo-600 to-teal-400 rounded-lg"
-                        />
-                      </div>
-                      <span className="text-[10px] font-bold text-gray-500">{d.day}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-6 px-4 text-center">
-                <div className="w-12 h-12 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 mb-3 shadow-2xs">
-                  <Clock size={20} className="animate-pulse" />
-                </div>
-                <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1 mb-1.5">
-                  <span>📈 3-Day Performance Average</span>
-                </h4>
-                <p className="text-xs text-gray-500 font-bold max-w-[280px] leading-relaxed">
-                  Required data not available. You'll see in next few learning Days.
-                </p>
+                )}
               </div>
-            )}
-          </div>
 
-          <div className="bg-white border border-gray-200 rounded-3xl p-4 w-full mb-6 text-left shadow-xs">
-            {completionResult?.sevenDayAvailable !== false ? (
-              <>
-                <div className="flex justify-between items-center mb-3">
-                  <div>
-                    <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1">
+              <div className="bg-white border border-gray-200 rounded-3xl p-4 w-full mb-6 text-left shadow-xs">
+                {completionResult?.sevenDayAvailable !== false ? (
+                  <>
+                    <div className="flex justify-between items-center mb-3">
+                      <div>
+                        <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1">
+                          <span>📊 7-Day Performance Trend</span>
+                        </h4>
+                        <span className="text-[11px] text-gray-500 font-semibold">Weekly consistency overview</span>
+                      </div>
+                      <span className="text-base font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200">
+                        {completionResult?.sevenDayAvg ?? 0}%
+                      </span>
+                    </div>
+
+                    <div className="flex items-end justify-between gap-2 h-24 pt-4 px-1">
+                      {(completionResult?.sevenDayTrend || [
+                        { day: "Mon", accuracy: 0 },
+                        { day: "Tue", accuracy: 0 },
+                        { day: "Wed", accuracy: 0 },
+                        { day: "Thu", accuracy: 0 },
+                        { day: "Fri", accuracy: 0 },
+                        { day: "Sat", accuracy: 0 },
+                        { day: "Sun", accuracy: completionResult?.accuracy || 0 }
+                      ]).map((d: any, idx: number) => (
+                        <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
+                          <span className="text-[9px] font-bold text-gray-500">{d.accuracy}%</span>
+                          <div className="w-full bg-gray-100 rounded-lg h-full flex items-end overflow-hidden p-0.5">
+                            <motion.div
+                              initial={{ height: 0 }}
+                              animate={{ height: `${d.accuracy}%` }}
+                              transition={{ duration: 0.8, delay: idx * 0.08 }}
+                              className="w-full bg-gradient-to-t from-teal-600 to-emerald-400 rounded-md"
+                            />
+                          </div>
+                          <span className="text-[9px] font-extrabold text-gray-600">{d.day}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-6 px-4 text-center">
+                    <div className="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 mb-3 shadow-2xs">
+                      <Clock size={20} className="animate-pulse" />
+                    </div>
+                    <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1 mb-1.5">
                       <span>📊 7-Day Performance Trend</span>
                     </h4>
-                    <span className="text-[11px] text-gray-500 font-semibold">Weekly consistency overview</span>
+                    <p className="text-xs text-gray-500 font-bold max-w-[280px] leading-relaxed">
+                      Required data not available. You'll see in next few learning Days.
+                    </p>
                   </div>
-                  <span className="text-base font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200">
-                    {completionResult?.sevenDayAvg ?? 0}%
-                  </span>
-                </div>
-
-                <div className="flex items-end justify-between gap-2 h-24 pt-4 px-1">
-                  {(completionResult?.sevenDayTrend || [
-                    { day: "Mon", accuracy: 0 },
-                    { day: "Tue", accuracy: 0 },
-                    { day: "Wed", accuracy: 0 },
-                    { day: "Thu", accuracy: 0 },
-                    { day: "Fri", accuracy: 0 },
-                    { day: "Sat", accuracy: 0 },
-                    { day: "Sun", accuracy: completionResult?.accuracy || 0 }
-                  ]).map((d: any, idx: number) => (
-                    <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
-                      <span className="text-[9px] font-bold text-gray-500">{d.accuracy}%</span>
-                      <div className="w-full bg-gray-100 rounded-lg h-full flex items-end overflow-hidden p-0.5">
-                        <motion.div
-                          initial={{ height: 0 }}
-                          animate={{ height: `${d.accuracy}%` }}
-                          transition={{ duration: 0.8, delay: idx * 0.08 }}
-                          className="w-full bg-gradient-to-t from-teal-600 to-emerald-400 rounded-md"
-                        />
-                      </div>
-                      <span className="text-[9px] font-extrabold text-gray-600">{d.day}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-6 px-4 text-center">
-                <div className="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 mb-3 shadow-2xs">
-                  <Clock size={20} className="animate-pulse" />
-                </div>
-                <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1 mb-1.5">
-                  <span>📊 7-Day Performance Trend</span>
-                </h4>
-                <p className="text-xs text-gray-500 font-bold max-w-[280px] leading-relaxed">
-                  Required data not available. You'll see in next few learning Days.
-                </p>
+                )}
               </div>
-            )}
-          </div>
 
-          <div className="w-full flex flex-col gap-3">
-            <button
-              onClick={() => navigate(`/mission-roadmap?chapterId=${chapterId}`)}
-              className="w-full py-4 rounded-2xl bg-[#141779] text-white font-black text-base shadow-lg hover:bg-[#101362] flex items-center justify-center gap-2 active:scale-95 transition-all"
-            >
-              <span>Continue to Next Mission</span>
-              <Play size={18} className="fill-white" />
-            </button>
-          </div>
-        </main>
+              <div className="w-full flex flex-col gap-3">
+                <button
+                  onClick={() => navigate(`/mission-roadmap?chapterId=${chapterId}`)}
+                  className="w-full py-4 rounded-2xl bg-[#141779] text-white font-black text-base shadow-lg hover:bg-[#101362] flex items-center justify-center gap-2 active:scale-95 transition-all"
+                >
+                  <span>Continue to Next Mission</span>
+                  <Play size={18} className="fill-white" />
+                </button>
+              </div>
+            </main>
+          )}
+        </>
       )}
 
       {showReviveModal && (

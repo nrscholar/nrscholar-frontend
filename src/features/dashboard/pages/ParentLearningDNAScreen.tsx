@@ -370,23 +370,23 @@ export default function ParentLearningDNAScreen() {
           {/* Section 5: Recommended Activities */}
           <div>
             <h3 className="text-sm font-extrabold text-[#7c7d8a] tracking-wider uppercase mb-3 px-1">Recommended Activities</h3>
-            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none snap-x">
-              {activities.map((act, index) => {
+            <div className="grid grid-cols-2 gap-3">
+              {activities.slice(0, 4).map((act, index) => {
                 const ActIcon = act.icon;
                 return (
-                  <div key={index} className="bg-white border border-gray-100 rounded-[22px] p-5 shadow-[0_4px_16px_rgba(0,0,0,0.01)] min-w-[200px] max-w-[200px] flex flex-col gap-2 shrink-0 snap-start">
-                    <div className="w-9 h-9 rounded-2xl bg-[#e3eafc] text-[#2f61d5] flex items-center justify-center shrink-0 mb-1">
-                      <ActIcon size={18} />
+                  <div key={index} className="bg-white border border-gray-100 rounded-[22px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.01)] flex flex-col gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-[#e3eafc] text-[#2f61d5] flex items-center justify-center shrink-0 mb-0.5">
+                      <ActIcon size={16} />
                     </div>
-                    <h4 className="text-[15px] font-black text-[#1e1e24]">{act.name}</h4>
-                    <p className="text-[11px] text-[#7c7d8a] leading-normal font-medium grow">
+                    <h4 className="text-[14px] font-black text-[#1e1e24]">{act.name}</h4>
+                    <p className="text-[10px] text-[#7c7d8a] leading-normal font-medium grow">
                       {act.desc}
                     </p>
                     <div className="flex gap-0.5 text-[#ffb300]">
                       {Array.from({ length: 5 }).map((_, i) => (
                         <Star 
                           key={i} 
-                          size={11} 
+                          size={10} 
                           fill={i < act.stars ? "#ffb300" : "none"} 
                           stroke={i < act.stars ? "none" : "#ffb300"} 
                         />
@@ -400,51 +400,57 @@ export default function ParentLearningDNAScreen() {
 
           {/* Section 6: Achievements */}
           <div className="bg-white border border-gray-100 rounded-[28px] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.02)]">
-            <h3 className="text-sm font-extrabold text-[#7c7d8a] tracking-wider uppercase mb-5">Collectible Badges</h3>
+            <h3 className="text-sm font-extrabold text-[#7c7d8a] tracking-wider uppercase mb-2">Collectible Badges</h3>
+            {(dnaData?.totalAttempts ?? 0) < 5 ? (
+              <div className="bg-gray-50/70 border border-dashed border-gray-200 rounded-[22px] p-4 text-center mb-4">
+                <p className="text-xs font-bold text-[#7c7d8a]">Solve at least 5 quizzes to start unlocking badges!</p>
+                <p className="text-[10px] text-gray-400 mt-1 font-semibold">Current Progress: {dnaData?.totalAttempts ?? 0} / 5</p>
+              </div>
+            ) : null}
             <div className="grid grid-cols-2 gap-4">
               
               {/* Focus Master */}
               <div className={`border rounded-[22px] p-4 text-center flex flex-col items-center gap-1.5 transition-all ${
-                focusVal >= 70 
+                focusVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5
                   ? "bg-[#e8e9fc] border-[#141779]/20 opacity-100" 
                   : "bg-gray-50/50 border-dashed border-gray-200 opacity-50"
               }`}>
-                <Trophy size={20} className={focusVal >= 70 ? "text-[#141779]" : "text-gray-400"} />
+                <Trophy size={20} className={focusVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? "text-[#141779]" : "text-gray-400"} />
                 <h4 className="text-[13px] font-extrabold text-[#191c1e]">Focus Master</h4>
-                <span className="text-[9px] font-bold text-[#7c7d8a]">{focusVal >= 70 ? "Unlocked" : "Locked"}</span>
+                <span className="text-[9px] font-bold text-[#7c7d8a]">{focusVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? "Unlocked" : "Locked"}</span>
               </div>
 
               {/* 7-Day Streak */}
               <div className={`border rounded-[22px] p-4 text-center flex flex-col items-center gap-1.5 transition-all ${
-                consistencyVal >= 70 
+                consistencyVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5
                   ? "bg-[#fff3d6] border-[#b07b00]/20 opacity-100" 
                   : "bg-gray-50/50 border-dashed border-gray-200 opacity-50"
               }`}>
-                <Flame size={20} className={consistencyVal >= 70 ? "text-[#b07b00]" : "text-gray-400"} />
+                <Flame size={20} className={consistencyVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? "text-[#b07b00]" : "text-gray-400"} />
                 <h4 className="text-[13px] font-extrabold text-[#191c1e]">7-Day Streak</h4>
-                <span className="text-[9px] font-bold text-[#7c7d8a]">{consistencyVal >= 70 ? "Unlocked" : "Locked"}</span>
+                <span className="text-[9px] font-bold text-[#7c7d8a]">{consistencyVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? "Unlocked" : "Locked"}</span>
               </div>
 
               {/* Curious Mind */}
               <div className={`border rounded-[22px] p-4 text-center flex flex-col items-center gap-1.5 transition-all ${
-                curiosityVal >= 65 
+                curiosityVal >= 65 && (dnaData?.totalAttempts ?? 0) >= 5
                   ? "bg-[#dcf5f2] border-[#008272]/20 opacity-100" 
                   : "bg-gray-50/50 border-dashed border-gray-200 opacity-50"
               }`}>
-                <Compass size={20} className={curiosityVal >= 65 ? "text-[#008272]" : "text-gray-400"} />
+                <Compass size={20} className={curiosityVal >= 65 && (dnaData?.totalAttempts ?? 0) >= 5 ? "text-[#008272]" : "text-gray-400"} />
                 <h4 className="text-[13px] font-extrabold text-[#191c1e]">Curious Mind</h4>
-                <span className="text-[9px] font-bold text-[#7c7d8a]">{curiosityVal >= 65 ? "Unlocked" : "Locked"}</span>
+                <span className="text-[9px] font-bold text-[#7c7d8a]">{curiosityVal >= 65 && (dnaData?.totalAttempts ?? 0) >= 5 ? "Unlocked" : "Locked"}</span>
               </div>
 
               {/* Fast Learner */}
               <div className={`border rounded-[22px] p-4 text-center flex flex-col items-center gap-1.5 transition-all ${
-                creativityVal >= 70 
+                creativityVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5
                   ? "bg-[#dcf2e6] border-[#1a874b]/20 opacity-100" 
                   : "bg-gray-50/50 border-dashed border-gray-200 opacity-50"
               }`}>
-                <Zap size={20} className={creativityVal >= 70 ? "text-[#1a874b]" : "text-gray-400"} />
+                <Zap size={20} className={creativityVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? "text-[#1a874b]" : "text-gray-400"} />
                 <h4 className="text-[13px] font-extrabold text-[#191c1e]">Fast Learner</h4>
-                <span className="text-[9px] font-bold text-[#7c7d8a]">{creativityVal >= 70 ? "Unlocked" : "Locked"}</span>
+                <span className="text-[9px] font-bold text-[#7c7d8a]">{creativityVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? "Unlocked" : "Locked"}</span>
               </div>
 
             </div>
@@ -454,60 +460,70 @@ export default function ParentLearningDNAScreen() {
           <div className="bg-white border border-gray-100 rounded-[28px] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.02)]">
             <h3 className="text-sm font-extrabold text-[#7c7d8a] tracking-wider uppercase mb-5">Weekly Trend</h3>
             
-            {/* Bezier SVG Line Chart */}
-            <div className="w-full relative h-[100px] mb-4">
-              <svg className="w-full h-full" viewBox="0 0 320 80" overflow="visible">
-                <defs>
-                  <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="80">
-                    <stop offset="0%" stopColor="#ab47bc" stopOpacity="0.25" />
-                    <stop offset="100%" stopColor="#ab47bc" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-                {/* Horizontal reference lines */}
-                <line x1="30" y1="10" x2="290" y2="10" stroke="#f1f3f7" strokeWidth="1" />
-                <line x1="30" y1="36" x2="290" y2="36" stroke="#f1f3f7" strokeWidth="1" />
-                <line x1="30" y1="62" x2="290" y2="62" stroke="#f1f3f7" strokeWidth="1" />
-                
-                {/* Bezier curve path */}
-                <path 
-                  d={pathD} 
-                  fill="none" 
-                  stroke="#7b1fa2" 
-                  strokeWidth="3.5" 
-                  strokeLinecap="round"
-                />
-                
-                {/* Under-path fill */}
-                <path 
-                  d={`${pathD} L 290 70 L 30 70 Z`} 
-                  fill="url(#chartGradient)"
-                />
+            {(dnaData?.totalAttempts ?? 0) < 3 ? (
+              <div className="w-full bg-gray-50 border border-dashed border-gray-200 rounded-[22px] py-8 text-center flex flex-col items-center justify-center gap-2">
+                <Activity size={24} className="text-gray-400 animate-pulse" />
+                <p className="text-xs font-bold text-[#7c7d8a]">Weekly trend requires at least 3 completed quizzes.</p>
+                <p className="text-[10px] text-gray-400 font-semibold">Current Progress: {dnaData?.totalAttempts ?? 0} / 3</p>
+              </div>
+            ) : (
+              <>
+                {/* Bezier SVG Line Chart */}
+                <div className="w-full relative h-[100px] mb-4">
+                  <svg className="w-full h-full" viewBox="0 0 320 80" overflow="visible">
+                    <defs>
+                      <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="80">
+                        <stop offset="0%" stopColor="#ab47bc" stopOpacity="0.25" />
+                        <stop offset="100%" stopColor="#ab47bc" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    {/* Horizontal reference lines */}
+                    <line x1="30" y1="10" x2="290" y2="10" stroke="#f1f3f7" strokeWidth="1" />
+                    <line x1="30" y1="36" x2="290" y2="36" stroke="#f1f3f7" strokeWidth="1" />
+                    <line x1="30" y1="62" x2="290" y2="62" stroke="#f1f3f7" strokeWidth="1" />
+                    
+                    {/* Bezier curve path */}
+                    <path 
+                      d={pathD} 
+                      fill="none" 
+                      stroke="#7b1fa2" 
+                      strokeWidth="3.5" 
+                      strokeLinecap="round"
+                    />
+                    
+                    {/* Under-path fill */}
+                    <path 
+                      d={`${pathD} L 290 70 L 30 70 Z`} 
+                      fill="url(#chartGradient)"
+                    />
 
-                {/* Node points */}
-                {chartPoints.map((p, idx) => (
-                  <circle 
-                    key={idx} 
-                    cx={p.x} 
-                    cy={p.y} 
-                    r="4" 
-                    fill="#white" 
-                    stroke="#7b1fa2" 
-                    strokeWidth="2.5" 
-                  />
-                ))}
-              </svg>
-            </div>
-            
-            {/* Days labels */}
-            <div className="flex justify-between text-[11px] font-extrabold text-[#7c7d8a] px-2.5">
-              <span>Mon</span>
-              <span>Tue</span>
-              <span>Wed</span>
-              <span>Thu</span>
-              <span>Fri</span>
-              <span>Sat</span>
-              <span>Sun</span>
-            </div>
+                    {/* Node points */}
+                    {chartPoints.map((p, idx) => (
+                      <circle 
+                        key={idx} 
+                        cx={p.x} 
+                        cy={p.y} 
+                        r="4" 
+                        fill="#white" 
+                        stroke="#7b1fa2" 
+                        strokeWidth="2.5" 
+                      />
+                    ))}
+                  </svg>
+                </div>
+                
+                {/* Days labels */}
+                <div className="flex justify-between text-[11px] font-extrabold text-[#7c7d8a] px-2.5">
+                  <span>Mon</span>
+                  <span>Tue</span>
+                  <span>Wed</span>
+                  <span>Thu</span>
+                  <span>Fri</span>
+                  <span>Sat</span>
+                  <span>Sun</span>
+                </div>
+              </>
+            )}
           </div>
 
         </main>

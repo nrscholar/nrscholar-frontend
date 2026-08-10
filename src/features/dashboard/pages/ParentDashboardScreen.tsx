@@ -499,58 +499,68 @@ export default function ParentDashboardScreen() {
 
                 {/* Custom SVG Line Graph */}
                 <div className="relative w-full h-[160px] mt-6">
-                  <svg viewBox="0 0 300 120" className="w-full h-full overflow-visible">
-                    <defs>
-                      <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={chartColor} stopOpacity="0.4" />
-                        <stop offset="100%" stopColor={chartColor} stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
+                  {(!weeklyTrend || weeklyTrend.length === 0 || weeklyTrend.every(t => t.score === 0)) ? (
+                    <div className="w-full h-[120px] bg-gray-50 border border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-center p-4">
+                      <Activity size={24} className="text-gray-400 mb-2 animate-pulse" />
+                      <p className="text-xs font-bold text-[#7c7d8a]">Weekly trend requires completed quizzes.</p>
+                      <p className="text-[10px] text-gray-400 mt-1">No performance data recorded for this week yet.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <svg viewBox="0 0 300 120" className="w-full h-full overflow-visible">
+                        <defs>
+                          <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor={chartColor} stopOpacity="0.4" />
+                            <stop offset="100%" stopColor={chartColor} stopOpacity="0" />
+                          </linearGradient>
+                        </defs>
 
-                    {/* Grid Lines */}
-                    <line x1="0" y1="0" x2="300" y2="0" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
-                    <line x1="0" y1="60" x2="300" y2="60" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
-                    <line x1="0" y1="120" x2="300" y2="120" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
+                        {/* Grid Lines */}
+                        <line x1="0" y1="0" x2="300" y2="0" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
+                        <line x1="0" y1="60" x2="300" y2="60" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
+                        <line x1="0" y1="120" x2="300" y2="120" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
 
-                    {/* Area Fill */}
-                    <path
-                      d={chart.pathArea}
-                      fill="url(#lineGradient)"
-                      className="animate-in fade-in duration-700"
-                    />
+                        {/* Area Fill */}
+                        <path
+                          d={chart.pathArea}
+                          fill="url(#lineGradient)"
+                          className="animate-in fade-in duration-700"
+                        />
 
-                    {/* The Line */}
-                    <path
-                      d={chart.pathLine}
-                      fill="none"
-                      stroke={chartColor}
-                      strokeWidth="3.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="drop-shadow-sm animate-in slide-in-from-left-4 duration-700"
-                    />
+                        {/* The Line */}
+                        <path
+                          d={chart.pathLine}
+                          fill="none"
+                          stroke={chartColor}
+                          strokeWidth="3.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="drop-shadow-sm animate-in slide-in-from-left-4 duration-700"
+                        />
 
-                    {/* Data Points */}
-                    {chart.points.map((p, idx) => (
-                      <circle
-                        key={idx}
-                        cx={p.x}
-                        cy={p.y}
-                        r={idx === chart.points.length - 1 ? 5 : 4}
-                        fill={idx === chart.points.length - 1 ? chartColor : "#ffffff"}
-                        stroke={idx === chart.points.length - 1 ? "#ffffff" : chartColor}
-                        strokeWidth="2.5"
-                        className={idx === chart.points.length - 1 ? "animate-pulse" : ""}
-                      />
-                    ))}
-                  </svg>
+                        {/* Data Points */}
+                        {chart.points.map((p, idx) => (
+                          <circle
+                            key={idx}
+                            cx={p.x}
+                            cy={p.y}
+                            r={idx === chart.points.length - 1 ? 5 : 4}
+                            fill={idx === chart.points.length - 1 ? chartColor : "#ffffff"}
+                            stroke={idx === chart.points.length - 1 ? "#ffffff" : chartColor}
+                            strokeWidth="2.5"
+                            className={idx === chart.points.length - 1 ? "animate-pulse" : ""}
+                          />
+                        ))}
+                      </svg>
 
-                  {/* X Axis Labels */}
-                  <div className="flex justify-between text-[10px] font-bold text-[#767683] mt-4 px-1">
-                    {chart.labels.map((lbl, idx) => (
-                      <span key={idx} style={{ color: idx === chart.labels.length - 1 ? chartColor : undefined }}>{lbl}</span>
-                    ))}
-                  </div>
+                      {/* X Axis Labels */}
+                      <div className="flex justify-between text-[10px] font-bold text-[#767683] mt-4 px-1">
+                        {chart.labels.map((lbl, idx) => (
+                          <span key={idx} style={{ color: idx === chart.labels.length - 1 ? chartColor : undefined }}>{lbl}</span>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
