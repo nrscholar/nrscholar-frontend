@@ -1,4 +1,4 @@
-import { ArrowLeft, Book, ChevronDown, Globe, Microscope, Shapes, Swords, Trophy, Users, Lock, BookOpen } from "lucide-react";
+import { ArrowLeft, Book, ChevronDown, Globe, Microscope, Shapes, Swords, Trophy, Users, Lock, BookOpen, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
@@ -98,6 +98,15 @@ export default function MultiplayerHubScreen() {
     }).catch(() => {});
   }, [activeSubject, myClass]);
 
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setError("");
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
   const isChapterUnlocked = (chName: string) => {
     if (chName === "Mix Chapters" || chName === "Mix Chapters (All)") return true;
     const pracCh = practiceChapters.find(p => p.name === chName);
@@ -114,12 +123,7 @@ export default function MultiplayerHubScreen() {
   };
 
   const getEntryFee = (order: number) => {
-    if (order <= 3) return 100;
-    if (order <= 6) return 250;
-    if (order <= 9) return 500;
-    const tier = Math.floor((order - 1) / 3);
-    if (tier === 3) return 1000;
-    return 1000 * Math.pow(2, tier - 3);
+    return 100;
   };
 
   const currentOrder = chapter === "Mix Chapters" ? getMixChapterOrder() : (practiceChapters.find(p => p.name === chapter)?.order || 1);
@@ -153,7 +157,7 @@ export default function MultiplayerHubScreen() {
 
   const handleJoinRoom = async () => {
     if (myCoins < 100) {
-      setError("Not enough coins! You need at least the room's entry fee (100-500+ coins) to join this Arena match.");
+      setError("Not enough coins! You need at least 100 coins to join any Arena match.");
       return;
     }
     if (joinCode.length < 6) {
@@ -188,7 +192,10 @@ export default function MultiplayerHubScreen() {
           <ArrowLeft size={24} color="#141779" />
         </button>
         <h1 className="text-[20px] font-extrabold text-[#141779]">Shadow Arena</h1>
-        <div className="w-8" />
+        <div className="flex items-center gap-1.5 bg-white border border-[#e0e0e0] px-3 py-1.5 rounded-full shadow-sm">
+          <span className="text-sm">🪙</span>
+          <span className="text-sm font-black text-[#141779]">{myCoins}</span>
+        </div>
       </header>
 
       <main className="px-6 pt-6 flex-1 flex flex-col items-center justify-center gap-8">
@@ -201,8 +208,44 @@ export default function MultiplayerHubScreen() {
         </div>
 
         {error && (
-          <div className="bg-[#ffdad6] text-[#ba1a1a] px-4 py-3 rounded-2xl text-sm font-bold w-full text-center">
-            {error}
+          <div 
+            style={{
+              position: 'fixed',
+              top: '24px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '90%',
+              maxWidth: '420px',
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(12px)',
+              borderLeft: '6px solid #ba1a1a',
+              borderTop: '1px solid #ffb4ab',
+              borderRight: '1px solid #ffb4ab',
+              borderBottom: '1px solid #ffb4ab',
+              borderRadius: '16px',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
+              padding: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '16px',
+              zIndex: 9999,
+              animation: 'slideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards'
+            }}
+          >
+            <style>{`
+              @keyframes slideDown {
+                from { transform: translate(-50%, -100%); opacity: 0; }
+                to { transform: translate(-50%, 0); opacity: 1; }
+              }
+            `}</style>
+            <div className="flex items-center gap-3 flex-grow">
+              <span className="text-xl">🪙</span>
+              <p className="text-sm font-black text-[#141779] text-left">{error}</p>
+            </div>
+            <button onClick={() => setError("")} className="p-1.5 hover:bg-[#ffdad6] text-[#ba1a1a] rounded-full transition-colors shrink-0">
+              <X size={18} />
+            </button>
           </div>
         )}
 

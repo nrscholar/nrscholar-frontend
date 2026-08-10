@@ -490,7 +490,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           quizCorrect: quizCorrectCount,
           quizTotal: quizQuestions.length,
           bossCorrect: bossCorrect,
-          bossTotal: bossQuestions.length,
+          bossTotal: bossCorrect + wrongAnswerCount,
           timeTakenSec: totalSessionSec,
           livesRemaining: Math.max(0, 3 - finalChildDamage),
           answers: currentAnswers

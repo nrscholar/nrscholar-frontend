@@ -87,10 +87,20 @@ export default function InventoryScreen() {
       });
       if (res.ok) {
         const newDragon = await res.json();
-        setTimeout(() => {
+        setTimeout(async () => {
           setRewardData({ type: 'dragon', amount: 0, name: newDragon.name });
-          setDragons(prev => [...prev, newDragon]);
-          setFragments(prev => prev.map(f => f.type === type ? { ...f, count: Math.max(0, f.count - 10) } : f));
+          try {
+            const dragRes = await apiFetch("/api/retention/dragons");
+            if (dragRes.ok) {
+              const dData = await dragRes.json();
+              setDragons(dData);
+            }
+            const fragRes = await apiFetch("/api/retention/fragments");
+            if (fragRes.ok) {
+              const fData = await fragRes.json();
+              setFragments(fData);
+            }
+          } catch (e) {}
           setHatchingType(null);
         }, 1500);
       } else {
@@ -437,37 +447,65 @@ export default function InventoryScreen() {
               <div>
                 <h2 className="text-sm font-bold text-[#767683] tracking-widest uppercase mb-3">Dragon Fragments</h2>
                 <div className="flex flex-col gap-3">
-                  {fragments.map((f: any) => (
-                    <motion.div 
-                      key={f.type} 
-                      animate={hatchingType === f.type ? {
-                        x: [-5, 5, -5, 5, -5, 5, 0],
-                        scale: [1, 1.05, 1.05, 1],
-                        filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"]
-                      } : {}}
-                      transition={{ duration: 0.5, repeat: hatchingType === f.type ? Infinity : 0 }}
-                      className="bg-white rounded-[20px] p-4 border border-[#f0f0f0] flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-full bg-[rgba(20,23,121,0.05)] flex items-center justify-center">
-                          <span className="text-xl">🧩</span>
+                  {fragments.map((f: any) => {
+                    const getDragonType = (d: any) => {
+                      const dragId = String(d.id || "").toLowerCase();
+                      const skin = String(d.skin || "").toLowerCase();
+                      for (const t of ["fire", "water", "wind"]) {
+                        if (dragId.startsWith(t) || skin.startsWith(t)) return t;
+                      }
+                      return "fire";
+                    };
+                    const matchingDragon = dragons.find((d: any) => getDragonType(d) === f.type);
+                    const getUpgradeRequirement = (lvl: number) => {
+                      const costs: Record<number, number> = {
+                        1: 5,
+                        2: 10,
+                        3: 15,
+                        4: 25,
+                        5: 50,
+                        6: 75,
+                        7: 100
+                      };
+                      return costs[lvl] || 100;
+                    };
+                    const needed = matchingDragon ? getUpgradeRequirement(matchingDragon.level) : 10;
+                    const canCombine = f.count >= needed;
+
+                    return (
+                      <motion.div 
+                        key={f.type} 
+                        animate={hatchingType === f.type ? {
+                          x: [-5, 5, -5, 5, -5, 5, 0],
+                          scale: [1, 1.05, 1.05, 1],
+                          filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"]
+                        } : {}}
+                        transition={{ duration: 0.5, repeat: hatchingType === f.type ? Infinity : 0 }}
+                        className="bg-white rounded-[20px] p-4 border border-[#f0f0f0] flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-full bg-[rgba(20,23,121,0.05)] flex items-center justify-center">
+                            <span className="text-xl">🧩</span>
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-bold text-[#141779] capitalize">{f.type} Fragments</h3>
+                            <p className="text-xs text-[#767683] font-semibold">{f.count} / {needed} Needed</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="text-sm font-bold text-[#141779] capitalize">{f.type} Fragments</h3>
-                          <p className="text-xs text-[#767683] font-semibold">{f.count} / 10 Needed</p>
-                        </div>
-                      </div>
-                      {f.count >= 10 && (
-                        <button 
-                          onClick={() => combineFragments(f.type)}
-                          disabled={hatchingType !== null}
-                          className={`text-white px-4 py-2 rounded-xl text-xs font-bold transition-colors ${hatchingType === f.type ? "bg-gray-400" : "bg-[#20c997] hover:bg-[#1bb386]"}`}
-                        >
-                          {hatchingType === f.type ? "Hatching..." : "Hatch!"}
-                        </button>
-                      )}
-                    </motion.div>
-                  ))}
+                        {canCombine && (
+                          <button 
+                            onClick={() => combineFragments(f.type)}
+                            disabled={hatchingType !== null}
+                            className={`text-white px-4 py-2 rounded-xl text-xs font-bold transition-colors ${hatchingType === f.type ? "bg-gray-400" : "bg-[#20c997] hover:bg-[#1bb386]"}`}
+                          >
+                            {hatchingType === f.type 
+                              ? (matchingDragon ? "Upgrading..." : "Hatching...") 
+                              : (matchingDragon ? "Upgrade" : "Hatch!")}
+                          </button>
+                        )}
+                      </motion.div>
+                    );
+                  })}
                 </div>
               </div>
             )}

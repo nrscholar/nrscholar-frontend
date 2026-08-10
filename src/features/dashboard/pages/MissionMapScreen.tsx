@@ -171,7 +171,8 @@ export default function MissionMapScreen() {
 
           {missions.map((m: any, index: number) => {
             const isCompleted = m.status === "completed";
-            const isUnlocked = m.status === "unlocked";
+            const isRetest = m.status === "retest";
+            const isUnlocked = m.status === "unlocked" || isRetest;
             const isLocked = m.status === "locked";
 
             return (
@@ -231,7 +232,7 @@ export default function MissionMapScreen() {
 
                   {/* Stars / Play Button */}
                   <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
-                    {isCompleted ? (
+                    {isCompleted || isRetest ? (
                       <div className="flex items-center gap-1">
                         {[1, 2, 3].map((starIndex) => (
                           <Star
@@ -250,11 +251,13 @@ export default function MissionMapScreen() {
                     <button
                       disabled={isLocked}
                       onClick={() =>
-                        navigate(`/mission-play?chapterId=${chapterId}&missionSeq=${m.seq}${isCompleted ? "&replay=true" : ""}`)
+                        navigate(`/mission-play?chapterId=${chapterId}&missionSeq=${m.seq}${(isCompleted || isRetest) ? "&replay=true" : ""}`)
                       }
                       className={`px-4 py-2 rounded-2xl font-bold text-xs flex items-center gap-2 transition-all active:scale-95 ${
                         isCompleted
                           ? "bg-gray-100 text-[#141779] hover:bg-gray-200 border border-gray-300"
+                          : isRetest
+                          ? "bg-[#f59e0b] hover:bg-[#d97706] text-white font-black shadow-md shadow-[#f59e0b]/20"
                           : isUnlocked
                           ? "bg-[#141779] text-white font-black shadow-md shadow-[#141779]/20 hover:bg-[#101362]"
                           : "bg-gray-200 text-gray-400 cursor-not-allowed"
@@ -262,6 +265,11 @@ export default function MissionMapScreen() {
                     >
                       {isCompleted ? (
                         "Replay"
+                      ) : isRetest ? (
+                        <>
+                          <span>Re-test</span>
+                          <Play size={14} className="fill-white" />
+                        </>
                       ) : isUnlocked ? (
                         <>
                           <span>Start Mission</span>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Award, Flame, Bell } from "lucide-react";
+import { ArrowLeft, UserCircle, Award, Flame, Bell, Rocket } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
 
@@ -44,7 +44,12 @@ export default function ProgressScreen() {
   const [missions, setMissions] = useState<any[]>([]);
   const [badges, setBadges] = useState<any[]>([]);
 
-  // Compute level and progress percentage dynamically from actual XP
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [activeSubject, setActiveSubject] = useState<any>(null);
+  const [activeChapter, setActiveChapter] = useState<any>(null);
+  const [missionsList, setMissionsList] = useState<any[]>([]);
+  const [loadingMissions, setLoadingMissions] = useState(false);
+
   const { level, percent: progressPercent } = getLevelInfo(xp);
   const radius = 88;
   const circumference = 2 * Math.PI * radius;
@@ -89,24 +94,78 @@ export default function ProgressScreen() {
         } catch (e) {}
       })();
 
-      const missionsPromise = (async () => {
+      const subjectsPromise = (async () => {
         try {
-          // Fetch dynamic mission progression for active chapter (default: ch1)
-          const res = await apiFetch("/api/practice/chapters/ch1/missions");
-          const data = await res.json();
-          if (data.success && data.data?.missions) {
-            setMissions(data.data.missions);
+          const subRes = await apiFetch("/api/practice/subjects");
+          const subData = await subRes.json();
+          if (subData.success && subData.data && subData.data.length > 0) {
+            setSubjects(subData.data);
+            const savedSubId = sessionStorage.getItem("activeSubjectId");
+            const found = subData.data.find((s: any) => s._id === savedSubId);
+            setActiveSubject(found || subData.data[0]);
           }
         } catch (e) {
-          console.error(e);
+          console.error("Failed to fetch subjects:", e);
         }
       })();
 
-      await Promise.allSettled([mePromise, notifPromise, missionsPromise]);
+      await Promise.allSettled([mePromise, notifPromise, subjectsPromise]);
       setLoading(false);
     };
     fetchProgress();
   }, []);
+
+  useEffect(() => {
+    if (!activeSubject) return;
+
+    const fetchMissionsForActiveSubject = async () => {
+      setLoadingMissions(true);
+      try {
+        const [chRes, pRes] = await Promise.all([
+          apiFetch(`/api/practice/chapters/${activeSubject._id}`),
+          apiFetch(`/api/practice/chapter-progress`)
+        ]);
+        const chData = await chRes.json();
+        const pData = await pRes.json();
+
+        let chapters: any[] = [];
+        let completedChapterIds: string[] = [];
+
+        if (chData.success) {
+          chapters = chData.data;
+        }
+        if (pData.success && pData.data) {
+          completedChapterIds = pData.data
+            .filter((p: any) => p.chapterCompleted || p.completed)
+            .map((p: any) => p.chapterId);
+        }
+
+        if (chapters.length > 0) {
+          const currentChapterIndex = chapters.findIndex(ch => !completedChapterIds.includes(ch._id) && !completedChapterIds.includes(`${ch._id}_hard`));
+          const currentActive = chapters[currentChapterIndex >= 0 ? currentChapterIndex : 0];
+          setActiveChapter(currentActive);
+
+          const mRes = await apiFetch(`/api/practice/chapters/${currentActive._id}/missions`);
+          const mData = await mRes.json();
+          if (mData.success && mData.data?.missions) {
+            setMissionsList(mData.data.missions);
+          } else {
+            setMissionsList([]);
+          }
+        } else {
+          setActiveChapter(null);
+          setMissionsList([]);
+        }
+      } catch (e) {
+        console.error("Failed to load active chapter missions:", e);
+        setMissionsList([]);
+      } finally {
+        setLoadingMissions(false);
+      }
+    };
+
+    fetchMissionsForActiveSubject();
+  }, [activeSubject]);
 
   if (loading) {
     return (
@@ -158,44 +217,71 @@ export default function ProgressScreen() {
   return (
     <div className="min-h-screen bg-[#f7f9fb] font-sans pb-24 max-w-lg mx-auto">
       {/* TopAppBar */}
-      <header className="flex items-center justify-between px-6 py-4 bg-[rgba(247,249,251,0.8)] border-b border-gray-100 sticky top-0 z-50 backdrop-blur-sm shadow-sm">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity">
-            <ArrowLeft size={24} color="#141779" />
-          </button>
+      <header className="flex flex-col bg-[rgba(247,249,251,0.8)] border-b border-[rgba(255,255,255,0.2)] sticky top-0 z-50 backdrop-blur-sm pb-3">
+        <div className="flex items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-3">
+            <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity">
+              <ArrowLeft size={24} color="#141779" />
+            </button>
+            <button 
+              onClick={() => navigate("/profile")}
+              className="w-10 h-10 rounded-full border-2 border-[#57fae9] overflow-hidden bg-white shrink-0 active:scale-95 transition-all"
+            >
+              {userPhoto ? (
+                <img 
+                  src={userPhoto} 
+                  alt="Avatar"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <img 
+                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`} 
+                  alt="Avatar"
+                  className="w-full h-full object-cover"
+                />
+              )}
+            </button>
+            <h1 className="text-2xl font-bold text-[#141779] tracking-[-0.5px]">My Progress</h1>
+          </div>
+          
+          {/* Right side: Bell icon */}
           <button 
-            onClick={() => navigate("/profile")}
-            className="w-10 h-10 rounded-full border-2 border-[#57fae9] overflow-hidden bg-white shrink-0 active:scale-95 transition-all"
+            onClick={() => navigate("/notifications")}
+            className="w-11 h-11 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all relative shrink-0"
           >
-            {userPhoto ? (
-              <img 
-                src={userPhoto} 
-                alt="Avatar"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <img 
-                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`} 
-                alt="Avatar"
-                className="w-full h-full object-cover"
-              />
+            <Bell size={20} className="text-[#141779]" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-bold border-2 border-white">
+                {unreadCount}
+              </span>
             )}
           </button>
-          <h1 className="text-2xl font-bold text-[#141779] tracking-[-0.5px]">My Progress</h1>
         </div>
-        
-        {/* Right side: Bell icon */}
-        <button 
-          onClick={() => navigate("/notifications")}
-          className="w-11 h-11 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all relative"
-        >
-          <Bell size={20} className="text-[#141779]" />
-          {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-bold border-2 border-white">
-              {unreadCount}
-            </span>
-          )}
-        </button>
+
+        {/* Subject Selector Tabs */}
+        {subjects.length > 0 && (
+          <div className="flex overflow-x-auto hide-scrollbar px-6 pb-1 gap-3">
+            {subjects.map((sub) => {
+              const isActive = activeSubject?._id === sub._id;
+              return (
+                <button
+                  key={sub._id}
+                  onClick={() => {
+                    setActiveSubject(sub);
+                    sessionStorage.setItem("activeSubjectId", sub._id);
+                  }}
+                  className={`px-5 py-2 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${
+                    isActive 
+                      ? 'bg-[#141779] text-white shadow-md' 
+                      : 'bg-white text-[#767683] border border-[#e0e3e5] hover:border-[#141779]'
+                  }`}
+                >
+                  {sub.name}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </header>
 
       <main className="px-6 pt-8 flex flex-col gap-8">
@@ -235,78 +321,110 @@ export default function ProgressScreen() {
         {/* Mid Section: Mission Progress Roadmap */}
         <div className="flex flex-col gap-4">
           <div className="flex justify-between items-center px-1">
-            <h2 className="text-sm font-bold text-[#141779] tracking-[1px] uppercase">Active Mission Progression</h2>
-            <button 
-              onClick={() => navigate("/mission-roadmap?chapterId=ch1")}
-              className="text-xs font-bold text-[#006a62] hover:underline"
-            >
-              View Full Map →
-            </button>
+            <h2 className="text-sm font-bold text-[#141779] tracking-[1px] uppercase truncate max-w-[240px]">
+              {activeChapter ? `Active: ${activeChapter.name}` : "Active Mission Progression"}
+            </h2>
+            {activeChapter && (
+              <button 
+                onClick={() => navigate(`/mission-roadmap?chapterId=${activeChapter._id}&title=${encodeURIComponent(activeChapter.name)}`)}
+                className="text-xs font-bold text-[#006a62] hover:underline shrink-0"
+              >
+                View Full Map →
+              </button>
+            )}
           </div>
           <p className="text-[11px] text-gray-500 font-medium px-1 -mt-2.5">Conquer all realms to reach the Dragon King!</p>
 
-          <div className="bg-[rgba(255,255,255,0.8)] backdrop-blur-md rounded-3xl p-6 border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col gap-4">
-            {/* Dynamic Mission List */}
-            {activeMissions.map((m) => {
-              const isCompleted = m.status === "completed";
-              const isUnlocked = m.status === "unlocked";
+          <div className="bg-[rgba(255,255,255,0.8)] backdrop-blur-md rounded-3xl p-6 border-[1.5px] border-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] flex flex-col gap-4">
+            {loadingMissions ? (
+              <div className="flex flex-col items-center py-8">
+                <div className="w-8 h-8 border-4 border-[#141779] border-t-transparent rounded-full animate-spin mb-2" />
+                <p className="text-xs text-gray-500 font-bold animate-pulse">Syncing mission data...</p>
+              </div>
+            ) : !activeChapter ? (
+              <div className="text-center py-8 text-[#767683] font-semibold text-sm">
+                No active chapters found for this subject.
+              </div>
+            ) : missionsList.length === 0 ? (
+              <div className="text-center py-8 text-[#767683] font-semibold text-sm flex flex-col items-center gap-2">
+                <Rocket size={32} className="text-gray-300 animate-bounce" />
+                <span>No missions loaded for this chapter.</span>
+              </div>
+            ) : (
+              missionsList.map((m) => {
+                const isCompleted = m.status === "completed";
+                const isRetest = m.status === "retest";
+                const isUnlocked = m.status === "unlocked" || isRetest;
 
-              return (
-                <div
-                  key={m.seq}
-                  onClick={() => {
-                    if (isUnlocked || isCompleted) {
-                      navigate(`/mission-play?chapterId=ch1&missionSeq=${m.seq}${isCompleted ? "&replay=true" : ""}`);
-                    }
-                  }}
-                  className={`p-4 rounded-2xl border flex items-center justify-between transition-all ${
-                    isCompleted
-                      ? "bg-emerald-50/80 border-emerald-200 text-[#191c1e] cursor-pointer"
-                      : isUnlocked
-                      ? "bg-amber-50/90 border-amber-300 text-[#191c1e] ring-2 ring-amber-400/30 cursor-pointer animate-pulse"
-                      : "bg-gray-100/60 border-gray-200 text-gray-400 cursor-not-allowed"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{m.icon}</span>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/60 text-[#191c1e]">
-                          Mission {m.seq}
-                        </span>
-                        {isCompleted && (
-                          <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                            Completed ✓
+                return (
+                  <div
+                    key={m.seq}
+                    onClick={() => {
+                      if (isUnlocked || isCompleted) {
+                        navigate(`/mission-play?chapterId=${activeChapter._id}&missionSeq=${m.seq}${(isCompleted || isRetest) ? "&replay=true" : ""}`);
+                      }
+                    }}
+                    className={`p-4 rounded-2xl border flex items-center justify-between transition-all ${
+                      isCompleted
+                        ? "bg-emerald-50/80 border-emerald-200 text-emerald-950 cursor-pointer hover:bg-emerald-100/50"
+                        : isRetest
+                        ? "bg-amber-50/90 border-amber-300 text-amber-950 ring-2 ring-amber-400/20 cursor-pointer hover:bg-amber-100/50"
+                        : isUnlocked
+                        ? "bg-blue-50/90 border-blue-200 text-blue-950 ring-2 ring-blue-400/20 cursor-pointer hover:bg-blue-100/50"
+                        : "bg-gray-100/60 border-gray-200 text-gray-400 cursor-not-allowed"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{m.icon}</span>
+                      <div className="text-left">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/60">
+                            Mission {m.seq}
                           </span>
-                        )}
-                        {isUnlocked && (
-                          <span className="text-[10px] font-semibold text-amber-700 bg-amber-200 px-2 py-0.5 rounded-full">
-                            Next Up! 🚀
-                          </span>
-                        )}
+                          {isCompleted && (
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                              Completed ✓
+                            </span>
+                          )}
+                          {isRetest && (
+                            <span className="text-[10px] font-bold text-[#b45309] bg-amber-100 px-2 py-0.5 rounded-full">
+                              Re-test 🔄
+                            </span>
+                          )}
+                          {isUnlocked && !isRetest && (
+                            <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
+                              Next Up! 🚀
+                            </span>
+                          )}
+                        </div>
+                        <h4 className="text-sm font-bold mt-1 text-[#141779]">{m.title}</h4>
                       </div>
-                      <h4 className="text-sm font-semibold mt-1 text-[#191c1e]">{m.title}</h4>
+                    </div>
+
+                    <div className="text-right">
+                      {isCompleted || isRetest ? (
+                        <div className="flex gap-0.5">
+                          {[1, 2, 3].map((starIndex) => (
+                            <span 
+                              key={starIndex} 
+                              className={`text-xs font-black ${starIndex <= m.stars ? "text-amber-500" : "text-gray-300"}`}
+                            >
+                              ★
+                            </span>
+                          ))}
+                        </div>
+                      ) : isUnlocked ? (
+                        <span className="text-xs font-black text-blue-600 bg-blue-100 px-3 py-1 rounded-xl">
+                          Play
+                        </span>
+                      ) : (
+                        <span className="text-xs font-semibold text-gray-400">Locked 🔒</span>
+                      )}
                     </div>
                   </div>
-
-                  <div className="text-right">
-                    {isCompleted ? (
-                      <div className="flex gap-0.5">
-                        <span className="text-xs font-semibold text-amber-500">
-                          {Array.from({ length: m.stars || 3 }).map(() => "★").join("")}
-                        </span>
-                      </div>
-                    ) : isUnlocked ? (
-                      <span className="text-xs font-semibold text-amber-600 bg-amber-100 px-3 py-1 rounded-xl">
-                        Play
-                      </span>
-                    ) : (
-                      <span className="text-xs font-semibold text-gray-400">Locked 🔒</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
 

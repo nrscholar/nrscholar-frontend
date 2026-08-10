@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Trophy, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { apiFetch } from "../../../api";
 
@@ -25,7 +25,7 @@ export default function MultiplayerBattleScreen() {
   const [room, setRoom] = useState<any>(null);
   const [myId, setMyId] = useState<string>("");
   
-  const [questions, setQuestions] = useState<any[]>(BATTLE_QUESTIONS);
+  const [questions, setQuestions] = useState<any[]>([]);
   const [currentQ, setCurrentQ] = useState(0);
   const [myScore, setMyScore] = useState(0);
   const [myProgress, setMyProgress] = useState(0);
@@ -41,11 +41,69 @@ export default function MultiplayerBattleScreen() {
   const [myStreak, setMyStreak] = useState(0);
   const [userAnswers, setUserAnswers] = useState<any[]>([]);
 
+  const gameStateRef = useRef({ isFinished, opponentQuit, roomId });
+  
+  useEffect(() => {
+    gameStateRef.current = { isFinished, opponentQuit, roomId };
+  }, [isFinished, opponentQuit, roomId]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const { isFinished: finished, opponentQuit: oppQuit, roomId: rId } = gameStateRef.current;
+      if (!finished && !oppQuit) {
+        const token = localStorage.getItem("userToken");
+        if (token) {
+          fetch(`/api/multiplayer/room/${rId}/quit`, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${token}`
+            },
+            keepalive: true
+          });
+        }
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      
+      // Handle component unmount (React Router navigation / back button)
+      const { isFinished: finished, opponentQuit: oppQuit, roomId: rId } = gameStateRef.current;
+      const isStillOnBattlePage = window.location.pathname.includes(`/multiplayer-battle/${rId}`);
+      if (!finished && !oppQuit && !isStillOnBattlePage) {
+        const token = localStorage.getItem("userToken");
+        if (token) {
+          fetch(`/api/multiplayer/room/${rId}/quit`, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${token}`
+            },
+            keepalive: true
+          }).catch(console.error);
+        }
+      }
+    };
+  }, []);
+
   // Sync state
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [timeLeft, setTimeLeft] = useState(15);
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [waitTimer, setWaitTimer] = useState(0);
+  const [countdown, setCountdown] = useState<number | null>(null);
+
+  const isHost = room?.hostId === myId;
+  const myAvatar = isHost ? room?.hostAvatar : room?.guestAvatar;
+  const oppAvatar = isHost ? room?.guestAvatar : room?.hostAvatar;
+  const myName = isHost ? room?.hostName : room?.guestName;
+  const oppName = isHost ? room?.guestName : room?.hostName;
+  
+  const oppProgress = isHost ? room?.guestProgress : room?.hostProgress;
+  const oppScore = isHost ? room?.guestScore : room?.hostScore;
+
+  const amIWinning = myScore > oppScore;
+  const isOppWinning = oppScore > myScore;
 
   useEffect(() => {
     const loadQuestions = async () => {
@@ -88,7 +146,7 @@ export default function MultiplayerBattleScreen() {
         if (data.data.status === "finished") {
           setIsFinished(true);
           setWinnerId(data.data.winnerId);
-        } else if (data.data.status === "opponent_quit") {
+        } else if (data.data.status === "opponent_quit" && myId && data.data.winnerId === myId) {
           setOpponentQuit(true);
         }
       }
@@ -121,7 +179,7 @@ export default function MultiplayerBattleScreen() {
     setSelectedOption(selectedIndex);
     const timeTaken = 15 - timeLeft; // calculate time taken
     
-    const isCorrect = selectedIndex !== -1 && selectedIndex === questions[currentQ].a;
+    const isCorrect = selectedIndex !== -1 && selectedIndex === questions[currentQ]?.a;
     let newScore = myScore;
     if (isCorrect) {
       newScore += 10;
@@ -130,7 +188,7 @@ export default function MultiplayerBattleScreen() {
     setMyScore(newScore);
     
     const newAnswer = {
-        questionText: questions[currentQ].q,
+        questionText: questions[currentQ]?.q || "Question",
         isCorrect,
         timeSpent: timeTaken
     };
@@ -143,9 +201,29 @@ export default function MultiplayerBattleScreen() {
     updateBackendProgress(newProgress, newScore, isLast, timeTaken, isCorrect);
   };
 
+  // Synchronized countdown logic
+  useEffect(() => {
+    if (!room || !room.startedAt || questions.length === 0) return;
+    
+    const startTime = new Date(room.startedAt).getTime() + 4000; // 4 seconds countdown
+    
+    const updateCountdown = () => {
+      const diff = startTime - Date.now();
+      if (diff > 0) {
+        setCountdown(Math.ceil(diff / 1000));
+      } else {
+        setCountdown(null);
+      }
+    };
+    
+    updateCountdown();
+    const t = setInterval(updateCountdown, 200);
+    return () => clearInterval(t);
+  }, [room?.startedAt, questions.length]);
+
   // Timer logic
   useEffect(() => {
-    if (isFinished) return;
+    if (isFinished || countdown !== null) return;
     const t = setInterval(() => {
       if (selectedOption !== null && !isAdvancing) {
         setWaitTimer(prev => prev + 1);
@@ -164,7 +242,7 @@ export default function MultiplayerBattleScreen() {
       });
     }, 1000);
     return () => clearInterval(t);
-  }, [currentQ, isFinished, selectedOption, isAdvancing]);
+  }, [currentQ, isFinished, selectedOption, isAdvancing, countdown]);
 
   // Synchronous Advancement logic
   useEffect(() => {
@@ -264,19 +342,25 @@ export default function MultiplayerBattleScreen() {
     return () => { mounted = false; };
   }, [isFinished, winnerId, myId, userAnswers]);
 
-  if (!room) return <div className="min-h-screen bg-[#1d0052] flex items-center justify-center"><div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin"/></div>;
+  if (!room || questions.length === 0) return <div className="min-h-screen bg-[#1d0052] flex items-center justify-center"><div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin"/></div>;
 
-  const isHost = room.hostId === myId;
-  const myAvatar = isHost ? room.hostAvatar : room.guestAvatar;
-  const oppAvatar = isHost ? room.guestAvatar : room.hostAvatar;
-  const myName = isHost ? room.hostName : room.guestName;
-  const oppName = isHost ? room.guestName : room.hostName;
-  
-  const oppProgress = isHost ? room.guestProgress : room.hostProgress;
-  const oppScore = isHost ? room.guestScore : room.hostScore;
-
-  const amIWinning = myScore > oppScore;
-  const isOppWinning = oppScore > myScore;
+  if (countdown !== null) {
+    return (
+      <div className="min-h-screen bg-[#141779] flex flex-col items-center justify-center text-white relative">
+        {/* Background Decor */}
+        <div className="absolute top-[10%] left-[10%] w-64 h-64 bg-[#30007f] rounded-full blur-[80px] opacity-60"></div>
+        <div className="absolute bottom-[20%] right-[10%] w-64 h-64 bg-[#57fae9] rounded-full blur-[100px] opacity-20"></div>
+        
+        <div className="relative z-10 flex flex-col items-center gap-6">
+          <div className="text-[60px] animate-bounce">⚔️</div>
+          <h2 className="text-2xl font-black uppercase tracking-widest text-[#57fae9]">Battle Starts In</h2>
+          <div className="text-8xl font-black text-[#ff9f43] drop-shadow-[0_0_20px_rgba(255,159,67,0.8)] scale-110 transition-transform duration-200">
+            {countdown}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#141779] font-sans flex flex-col relative overflow-hidden text-white">
@@ -361,7 +445,7 @@ export default function MultiplayerBattleScreen() {
             <div className="grid grid-cols-1 gap-4 mt-auto relative">
               {questions[currentQ]?.options?.map((opt: string, idx: number) => {
                 const isSelected = selectedOption === idx;
-                const isCorrect = idx === questions[currentQ].a;
+                const isCorrect = idx === questions[currentQ]?.a;
                 
                 let btnStyle = "bg-white/10 hover:bg-white/20 border-white/20";
                 if (selectedOption !== null) {
@@ -571,7 +655,7 @@ export default function MultiplayerBattleScreen() {
                       await submitActivityLog(userAnswers);
                       await apiFetch(`/api/multiplayer/room/${roomId}/quit`, { method: "POST" });
                     } catch(e) {}
-                    navigate("/home");
+                    navigate("/multiplayer-hub");
                   }}
                   className="flex-1 bg-[#ba1a1a] text-white py-3 rounded-xl font-bold hover:bg-[#ba1a1a]/80 transition-all"
                 >

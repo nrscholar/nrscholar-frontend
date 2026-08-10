@@ -20,8 +20,9 @@ export default function DailyRewardsScreen() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const initialType = searchParams.get("type") || "daily";
+  const startType = initialType === "chapter" ? "daily" : initialType;
 
-  const [spinType, setSpinType] = useState<string>(initialType);
+  const [spinType, setSpinType] = useState<string>(startType);
   const [balances, setBalances] = useState<any>({
     daily_spins_balance: 0,
     chapter_spins_balance: 0,
@@ -313,7 +314,6 @@ export default function DailyRewardsScreen() {
         <div className="flex gap-2 p-1.5 bg-slate-900/60 border border-indigo-950/60 rounded-full mt-5 max-w-[360px] w-[90%] mx-auto relative z-10 shadow-inner">
           {[
             { id: "daily", label: "Daily" },
-            { id: "chapter", label: "Chapter" },
             { id: "event", label: "Event" }
           ].map((tab) => {
             const isActive = spinType === tab.id;
