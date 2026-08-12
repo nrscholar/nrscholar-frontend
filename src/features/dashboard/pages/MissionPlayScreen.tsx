@@ -795,7 +795,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
   return (
     <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans overflow-x-hidden flex flex-col justify-between">
-      <header className="sticky top-0 z-40 bg-[rgba(247,249,251,0.85)] backdrop-blur-md border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-xs">
+      <header className="sticky top-0 z-40 bg-[rgba(247,249,251,0.85)] backdrop-blur-md border-b border-gray-200 px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between shadow-xs">
         <button
           onClick={async () => {
             if (phase !== "INTRO" && phase !== "SUMMARY") {
@@ -811,28 +811,28 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             }
             navigate(-1);
           }}
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-gray-200 hover:bg-gray-50 active:scale-95 transition-all shadow-xs"
+          className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-white border border-gray-200 hover:bg-gray-50 active:scale-95 transition-all shadow-xs shrink-0"
         >
-          <ArrowLeft size={20} className="text-[#141779]" />
+          <ArrowLeft size={18} className="text-[#141779]" />
         </button>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 text-amber-800 font-bold text-xs">
-            <Zap size={14} className="text-amber-500 fill-amber-400" />
+        <div className="flex items-center gap-1.5 sm:gap-3">
+          <div className="flex items-center gap-1 bg-amber-50 px-2 sm:px-3 py-1 rounded-full border border-amber-200 text-amber-800 font-bold text-[10px] sm:text-xs shrink-0 whitespace-nowrap">
+            <Zap size={12} className="text-amber-500 fill-amber-400" />
             <span>{xpEarned} XP</span>
           </div>
-          <div className="flex items-center gap-1 bg-teal-50 px-3 py-1 rounded-full border border-teal-200 text-teal-800 font-bold text-xs">
-            <Award size={14} className="text-teal-600 fill-teal-500" />
+          <div className="flex items-center gap-1 bg-teal-50 px-2 sm:px-3 py-1 rounded-full border border-teal-200 text-teal-800 font-bold text-[10px] sm:text-xs shrink-0 whitespace-nowrap">
+            <Award size={12} className="text-teal-600 fill-teal-500" />
             <span>{coinsEarned} Coins</span>
           </div>
         </div>
 
-        <div className={`flex items-center gap-1.5 border px-3.5 py-1 rounded-full font-mono font-extrabold text-xs shadow-2xs transition-all ${(phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5
+        <div className={`flex items-center gap-1 sm:gap-1.5 border px-2 sm:px-3.5 py-1 rounded-full font-mono font-extrabold text-[10px] sm:text-xs shadow-2xs transition-all shrink-0 whitespace-nowrap ${(phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5
             ? "bg-rose-50 border-rose-300 text-rose-700 animate-pulse ring-2 ring-rose-400/40"
             : "bg-slate-100/90 border-slate-200 text-slate-800"
           }`}>
           <div className="relative flex items-center justify-center">
-            <Clock size={14} className={(phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5 ? "text-rose-600 animate-bounce" : "text-indigo-600"} />
+            <Clock size={12} className={(phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5 ? "text-rose-600 animate-bounce" : "text-indigo-600"} />
             <span className={`absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ${(phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5 ? "bg-rose-500 animate-ping" : "bg-emerald-500 animate-ping"
               }`} />
           </div>
@@ -1149,11 +1149,11 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             <div className="absolute -bottom-12 -right-12 w-36 h-36 rounded-full bg-indigo-500/25 blur-2xl pointer-events-none" />
 
             {/* Top Bar: Hero vs Boss Header */}
-            <div className="flex items-center justify-between mb-3.5 relative z-10 gap-2">
+            <div className="flex items-center justify-between mb-3.5 relative z-10 gap-1.5 sm:gap-2">
 
               {/* Left: Dragon Hero */}
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-xl relative shadow-inner">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="hidden xs:flex w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/10 border border-white/20 items-center justify-center text-xl relative shadow-inner shrink-0">
                   <span>🐲</span>
                   {dragonCrying && (
                     <motion.span
@@ -1167,15 +1167,15 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                   )}
                 </div>
                 <div>
-                  <span className="text-[11px] font-black uppercase text-amber-300 tracking-wider block leading-tight">
+                  <span className="text-[10px] sm:text-[11px] font-black uppercase text-amber-300 tracking-wider block leading-tight">
                     Dragon Hero
                   </span>
                   <div className="flex gap-0.5 mt-0.5">
                     {[1, 2, 3].map((h) => (
                       <Heart
                         key={h}
-                        size={15}
-                        className={h <= childHearts ? (dragonCrying ? "text-cyan-300 fill-cyan-300 animate-ping" : "text-rose-400 fill-rose-400 animate-pulse") : "text-white/20"}
+                        size={12}
+                        className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${h <= childHearts ? (dragonCrying ? "text-cyan-300 fill-cyan-300 animate-ping" : "text-rose-400 fill-rose-400 animate-pulse") : "text-white/20"}`}
                       />
                     ))}
                   </div>
@@ -1183,27 +1183,27 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
               </div>
 
               {/* Center: Boss Stage Badge */}
-              <div className="px-3 py-1 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 text-slate-950 font-black text-[10px] uppercase tracking-widest rounded-full shadow-md border border-amber-200 shrink-0">
+              <div className="px-2 sm:px-3 py-1 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 text-slate-950 font-black text-[9px] sm:text-[10px] uppercase tracking-wider sm:tracking-widest rounded-full shadow-md border border-amber-200 shrink-0">
                 BOSS STAGE ⚔️
               </div>
 
               {/* Right: Boss Guardian */}
-              <div className="flex items-center gap-2 justify-end">
+              <div className="flex items-center gap-1.5 sm:gap-2 justify-end">
                 <div className="text-right">
-                  <span className="text-[11px] font-black uppercase text-indigo-200 tracking-wider block leading-tight truncate max-w-[90px]">
-                    {bossName}
+                  <span className="text-[10px] sm:text-[11px] font-black uppercase text-indigo-200 tracking-wider block leading-tight truncate max-w-[80px] xs:max-w-[100px] sm:max-w-[130px]">
+                    {bossName ? bossName.split(' ')[0] : 'BOSS'}
                   </span>
                   <div className="flex gap-0.5 mt-0.5 justify-end">
                     {[1, 2, 3].map((h) => (
                       <Heart
                         key={h}
-                        size={15}
-                        className={h <= bossHearts ? "text-amber-400 fill-amber-400 animate-pulse" : "text-white/20"}
+                        size={12}
+                        className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${h <= bossHearts ? "text-amber-400 fill-amber-400 animate-pulse" : "text-white/20"}`}
                       />
                     ))}
                   </div>
                 </div>
-                <div className="w-9 h-9 rounded-xl bg-amber-400/10 border border-amber-300/30 flex items-center justify-center text-xl shadow-inner">
+                <div className="hidden xs:flex w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-amber-400/10 border border-amber-300/30 items-center justify-center text-xl shadow-inner shrink-0">
                   <span>🐉</span>
                 </div>
               </div>
@@ -1242,8 +1242,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                 </div>
               </motion.div>
 
-              <div className="relative z-10 flex flex-col items-end gap-1.5">
-                <span className="text-xs font-black bg-white/20 backdrop-blur-md px-3.5 py-1 rounded-full border border-white/30 text-white shadow-xs">
+              <div className="relative z-10 flex flex-col items-end gap-1.5 shrink-0">
+                <span className="text-xs font-black bg-white/20 backdrop-blur-md px-3.5 py-1 rounded-full border border-white/30 text-white shadow-xs whitespace-nowrap">
                   {bossHearts} / 3 HP
                 </span>
               </div>

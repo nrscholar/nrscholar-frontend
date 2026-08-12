@@ -17,9 +17,10 @@ interface ChildSwitcherModalProps {
   onClose: () => void;
   user: any;
   onUserUpdated: (user: any) => void;
+  onSwitched?: () => void; // optional: called after switch/add instead of page reload
 }
 
-export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdated }: ChildSwitcherModalProps) {
+export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdated, onSwitched }: ChildSwitcherModalProps) {
   const [switching, setSwitching] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showLinkForm, setShowLinkForm] = useState(false);
@@ -63,7 +64,7 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
         setShowLinkForm(false);
         setLinkCode("");
         onClose();
-        window.location.reload();
+        if (onSwitched) onSwitched(); else window.location.reload();
       } else {
         setLinkError(json.message || "Invalid Child Code.");
       }
@@ -102,7 +103,7 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
         sessionStorage.clear(); // Clear cached subject/chapter progress for previous child
         onUserUpdated(json.data.user);
         onClose();
-        window.location.reload();
+        if (onSwitched) onSwitched(); else window.location.reload();
       }
     } catch (e) {
       console.error("Failed to switch child", e);
@@ -134,7 +135,7 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
         setShowAddForm(false);
         setNewName("");
         onClose();
-        window.location.reload();
+        if (onSwitched) onSwitched(); else window.location.reload();
       }
     } catch (e) {
       console.error("Failed to add child", e);

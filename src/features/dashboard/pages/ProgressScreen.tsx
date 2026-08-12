@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, UserCircle, Award, Flame, Bell, Rocket } from "lucide-react";
+import { ArrowLeft, UserCircle, Award, Flame, Bell, Rocket, Atom, ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
 
@@ -213,6 +213,8 @@ export default function ProgressScreen() {
   // Dynamic achievement unlock check matching real child stats
   const hasMathAce = badges.some((b: any) => typeof b === 'string' ? b.toLowerCase().includes("math") : b?.name?.toLowerCase().includes("math"));
   const isStreakUnlocked = streakDays >= 3 || badges.some((b: any) => typeof b === 'string' ? b.toLowerCase().includes("streak") : b?.name?.toLowerCase().includes("streak"));
+  const hasScienceProdigy = badges.some((b: any) => typeof b === 'string' ? b.toLowerCase().includes("science") : b?.name?.toLowerCase().includes("science"));
+  const hasArenaMaster = level >= 5 || badges.some((b: any) => typeof b === 'string' ? b.toLowerCase().includes("arena") : b?.name?.toLowerCase().includes("arena"));
 
   return (
     <div className="min-h-screen bg-[#f7f9fb] font-sans pb-24 max-w-lg mx-auto">
@@ -431,27 +433,53 @@ export default function ProgressScreen() {
         {/* Bottom Section: Recent Achievements */}
         <div className="flex flex-col gap-4">
           <h2 className="text-sm font-semibold text-[#464652] tracking-[1px] px-1">{t('recent_achievements')}</h2>
-          <div className="flex gap-4">
+          <div className="grid grid-cols-2 gap-4">
             
-            <div className={`flex-1 rounded-2xl p-4 border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)] flex flex-col items-center gap-3 transition-all ${
-              hasMathAce ? 'bg-white border-primary/20' : 'bg-gray-50/70 opacity-60 grayscale-[0.6]'
+            {/* 1. Math Ace */}
+            <div className={`rounded-2xl p-4 border border-gray-100 shadow-[0_4px_16px_rgba(20,23,121,0.03)] flex flex-col items-center gap-3 transition-all duration-300 hover:scale-[1.02] ${
+              hasMathAce ? 'bg-white border-indigo-200' : 'bg-gray-50/70 opacity-60 grayscale-[0.6]'
             }`}>
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${hasMathAce ? 'bg-[#e0e0ff]' : 'bg-gray-200'}`}>
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${hasMathAce ? 'bg-[rgba(20,23,121,0.08)] scale-110' : 'bg-gray-200'}`}>
                 <Award size={28} className={hasMathAce ? 'text-[#141779]' : 'text-gray-400'} />
               </div>
-              <span className="text-sm font-semibold text-[#191c1e] text-center">
-                {t('math_ace')} {hasMathAce ? '🏆' : '🔒'}
+              <span className="text-xs font-black text-[#191c1e] text-center leading-tight">
+                {t('math_ace') || 'Math Ace'} {hasMathAce ? '🏆' : '🔒'}
               </span>
             </div>
 
-            <div className={`flex-1 rounded-2xl p-4 border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)] flex flex-col items-center gap-3 transition-all ${
-              isStreakUnlocked ? 'bg-white border-primary/20' : 'bg-gray-50/70 opacity-60 grayscale-[0.6]'
+            {/* 2. Streak Champion */}
+            <div className={`rounded-2xl p-4 border border-gray-100 shadow-[0_4px_16px_rgba(20,23,121,0.03)] flex flex-col items-center gap-3 transition-all duration-300 hover:scale-[1.02] ${
+              isStreakUnlocked ? 'bg-white border-teal-200' : 'bg-gray-50/70 opacity-60 grayscale-[0.6]'
             }`}>
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${isStreakUnlocked ? 'bg-[#57fae9]' : 'bg-gray-200'}`}>
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${isStreakUnlocked ? 'bg-[rgba(87,250,233,0.2)] scale-110' : 'bg-gray-200'}`}>
                 <Flame size={28} className={isStreakUnlocked ? 'text-[#006a62]' : 'text-gray-400'} />
               </div>
-              <span className="text-sm font-semibold text-[#191c1e] text-center">
-                {t('day_streak', { days: streakDays })} {isStreakUnlocked ? '🔥' : '🔒'}
+              <span className="text-xs font-black text-[#191c1e] text-center leading-tight">
+                {t('day_streak', { days: streakDays }) || `Streak: ${streakDays} Days`} {isStreakUnlocked ? '🔥' : '🔒'}
+              </span>
+            </div>
+
+            {/* 3. Science Prodigy */}
+            <div className={`rounded-2xl p-4 border border-gray-100 shadow-[0_4px_16px_rgba(20,23,121,0.03)] flex flex-col items-center gap-3 transition-all duration-300 hover:scale-[1.02] ${
+              hasScienceProdigy ? 'bg-white border-purple-200' : 'bg-gray-50/70 opacity-60 grayscale-[0.6]'
+            }`}>
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${hasScienceProdigy ? 'bg-[rgba(48,0,127,0.08)] scale-110' : 'bg-gray-200'}`}>
+                <Atom size={28} className={hasScienceProdigy ? 'text-[#30007f]' : 'text-gray-400'} />
+              </div>
+              <span className="text-xs font-black text-[#191c1e] text-center leading-tight">
+                {t('science_prodigy') || 'Science Prodigy'} {hasScienceProdigy ? '⚛️' : '🔒'}
+              </span>
+            </div>
+
+            {/* 4. Arena Master */}
+            <div className={`rounded-2xl p-4 border border-gray-100 shadow-[0_4px_16px_rgba(20,23,121,0.03)] flex flex-col items-center gap-3 transition-all duration-300 hover:scale-[1.02] ${
+              hasArenaMaster ? 'bg-white border-rose-200' : 'bg-gray-50/70 opacity-60 grayscale-[0.6]'
+            }`}>
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${hasArenaMaster ? 'bg-[rgba(186,26,26,0.08)] scale-110' : 'bg-gray-200'}`}>
+                <ShieldCheck size={28} className={hasArenaMaster ? 'text-[#ba1a1a]' : 'text-gray-400'} />
+              </div>
+              <span className="text-xs font-black text-[#191c1e] text-center leading-tight">
+                {t('arena_master') || 'Arena Master'} {hasArenaMaster ? '🛡️' : '🔒'}
               </span>
             </div>
 

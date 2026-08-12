@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Bell, Settings, BrainCircuit, Clock, ChevronRight, Home, Activity, X, BarChart2, Users, CheckCircle, AlertTriangle } from "lucide-react";
 import { apiFetch } from "../../../api";
@@ -10,6 +10,7 @@ export default function ParentDashboardScreen() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [childName, setChildName] = useState("Explorer");
   const [parentPhoto, setParentPhoto] = useState("");
   const [userLevel, setUserLevel] = useState(1);
@@ -28,6 +29,7 @@ export default function ParentDashboardScreen() {
   const [weeklyTrend, setWeeklyTrend] = useState<{ day: string, score: number }[]>([]);
   const [subjectBreakdown, setSubjectBreakdown] = useState<{ subject: string, accuracy: number }[]>([]);
   const [lastActivity, setLastActivity] = useState<string>("Exploring new quests...");
+  const [lastActivityDetails, setLastActivityDetails] = useState<any>(null);
   const [top3SubjectsTrend, setTop3SubjectsTrend] = useState<any[]>([]);
 
   const [showNotifications, setShowNotifications] = useState(false);
@@ -55,62 +57,64 @@ export default function ParentDashboardScreen() {
     }
   };
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const tzOffset = -new Date().getTimezoneOffset();
-        
-        const [userRes, reportRes, notifRes] = await Promise.all([
-          apiFetch("/api/users/me").catch(() => null),
-          apiFetch(`/api/parent/report?tz_offset_minutes=${tzOffset}`).catch(() => null),
-          apiFetch("/api/notifications").catch(() => null)
-        ]);
+  const loadData = useCallback(async () => {
+    try {
+      const tzOffset = -new Date().getTimezoneOffset();
+      
+      const [userRes, reportRes, notifRes] = await Promise.all([
+        apiFetch("/api/users/me").catch(() => null),
+        apiFetch(`/api/parent/report?tz_offset_minutes=${tzOffset}`).catch(() => null),
+        apiFetch("/api/notifications").catch(() => null)
+      ]);
 
-        if (userRes && userRes.ok) {
-          const json = await userRes.json();
-          if (json.success && json.data?.user) {
-            const user = json.data.user;
-            setUserData(user);
-            setChildName(user.childName || "Explorer");
-            setParentPhoto(user.parentPhoto || "");
-            setUserLevel(user.level || 1);
-            setXp(user.xp || 0);
-          }
+      if (userRes && userRes.ok) {
+        const json = await userRes.json();
+        if (json.success && json.data?.user) {
+          const user = json.data.user;
+          setUserData(user);
+          setChildName(user.childName || "Explorer");
+          setParentPhoto(user.parentPhoto || "");
+          setUserLevel(user.level || 1);
+          setXp(user.xp || 0);
         }
-
-        if (reportRes && reportRes.ok) {
-          const repJson = await reportRes.json();
-          if (repJson.success && repJson.data) {
-            if (repJson.data.strengths) setStrengths(repJson.data.strengths);
-            if (repJson.data.weaknesses) setWeaknesses(repJson.data.weaknesses);
-            if (repJson.data.risks) setRisks(repJson.data.risks);
-            if (repJson.data.todayTimeMinutes !== undefined) setTodayTime(repJson.data.todayTimeMinutes);
-            if (repJson.data.todaySolved !== undefined) setSolvedToday(repJson.data.todaySolved);
-            if (repJson.data.todayConfidenceScore !== undefined) setTodayConfidenceScore(repJson.data.todayConfidenceScore);
-            if (repJson.data.weeklyTrend) setWeeklyTrend(repJson.data.weeklyTrend);
-            if (repJson.data.subjectBreakdown) setSubjectBreakdown(repJson.data.subjectBreakdown);
-            if (repJson.data.lastActivity) setLastActivity(repJson.data.lastActivity);
-            if (repJson.data.top3SubjectsTrend) setTop3SubjectsTrend(repJson.data.top3SubjectsTrend);
-          }
-        }
-
-        if (notifRes && notifRes.ok) {
-          const notifJson = await notifRes.json();
-          if (notifJson.success && notifJson.data) {
-            setNotifications(notifJson.data);
-            const uCount = notifJson.data.filter((n: any) => !n.isRead).length;
-            setUnreadCount(uCount);
-          }
-        }
-
-      } catch (err) {
-        console.error("Failed to load user info", err);
-      } finally {
-        setLoading(false);
       }
+
+      if (reportRes && reportRes.ok) {
+        const repJson = await reportRes.json();
+        if (repJson.success && repJson.data) {
+          if (repJson.data.strengths) setStrengths(repJson.data.strengths);
+          if (repJson.data.weaknesses) setWeaknesses(repJson.data.weaknesses);
+          if (repJson.data.risks) setRisks(repJson.data.risks);
+          if (repJson.data.todayTimeMinutes !== undefined) setTodayTime(repJson.data.todayTimeMinutes);
+          if (repJson.data.todaySolved !== undefined) setSolvedToday(repJson.data.todaySolved);
+          if (repJson.data.todayConfidenceScore !== undefined) setTodayConfidenceScore(repJson.data.todayConfidenceScore);
+          if (repJson.data.weeklyTrend) setWeeklyTrend(repJson.data.weeklyTrend);
+          if (repJson.data.subjectBreakdown) setSubjectBreakdown(repJson.data.subjectBreakdown);
+          if (repJson.data.lastActivity) setLastActivity(repJson.data.lastActivity);
+          setLastActivityDetails(repJson.data.lastActivityDetails || null);
+          if (repJson.data.top3SubjectsTrend) setTop3SubjectsTrend(repJson.data.top3SubjectsTrend);
+        }
+      }
+
+      if (notifRes && notifRes.ok) {
+        const notifJson = await notifRes.json();
+        if (notifJson.success && notifJson.data) {
+          setNotifications(notifJson.data);
+          const uCount = notifJson.data.filter((n: any) => !n.isRead).length;
+          setUnreadCount(uCount);
+        }
+      }
+
+    } catch (err) {
+      console.error("Failed to load user info", err);
+    } finally {
+      setLoading(false);
     }
+  }, [refreshKey]);
+
+  useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const markAllRead = async () => {
     try {
@@ -220,6 +224,51 @@ export default function ParentDashboardScreen() {
       </header>
 
       <main className="px-5 pt-[104px] flex flex-col gap-6">
+
+        {/* Child Selector Pills — instant switch with no reload */}
+        {userData?.children && userData.children.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+            {userData.children.map((c: any) => {
+              const isActive = (userData.activeChildId || "child_1") === c.childId;
+              return (
+                <button
+                  key={c.childId}
+                  onClick={async () => {
+                    if (isActive) return;
+                    try {
+                      const res = await apiFetch("/api/users/active-child", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ childId: c.childId })
+                      });
+                      const json = await res.json();
+                      if (json.success && json.data?.user) {
+                        localStorage.setItem("userData", JSON.stringify(json.data.user));
+                        sessionStorage.clear();
+                        setUserData(json.data.user);
+                        setLoading(true);
+                        setRefreshKey(k => k + 1);
+                      }
+                    } catch (e) { console.error("Switch failed", e); }
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 font-bold text-sm shrink-0 transition-all ${
+                    isActive
+                      ? "border-[#141779] bg-[#141779] text-white shadow-md"
+                      : "border-slate-200 bg-white text-[#141779] hover:border-[#141779] hover:bg-indigo-50"
+                  }`}
+                >
+                  <span className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-black overflow-hidden shrink-0">
+                    {c.childPhoto
+                      ? <img src={c.childPhoto} alt={c.childName} className="w-full h-full object-cover rounded-full" />
+                      : c.childName?.charAt(0).toUpperCase()}
+                  </span>
+                  {c.childName}
+                  {isActive && <span className="text-[10px] opacity-70">✓</span>}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Child Summary Hero */}
         <div className="bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md relative overflow-hidden group">
@@ -497,18 +546,50 @@ export default function ParentDashboardScreen() {
 
           <button
             onClick={() => navigate('/parent/kids-activity')}
-            className="w-full bg-white rounded-[20px] p-5 border border-slate-200/80 shadow-sm flex justify-between items-center hover:bg-slate-50 hover:shadow-md transition-all group"
+            className="w-full bg-white rounded-[20px] p-5 border border-slate-200/80 shadow-sm flex justify-between items-center hover:bg-slate-50 hover:shadow-md transition-all group gap-3"
           >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-[#e6e0ff] flex items-center justify-center">
+            <div className="flex items-start gap-4 flex-1 min-w-0">
+              <div className="w-12 h-12 rounded-2xl bg-[#e6e0ff] flex items-center justify-center shrink-0">
                 <Clock size={24} className="text-[#30007f]" />
               </div>
-              <div className="text-left">
-                <h4 className="text-[16px] font-extrabold text-[#141779] mb-0.5">Kids Activity</h4>
-                <p className="text-sm font-semibold text-slate-700">{lastActivity}</p>
+              <div className="text-left min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <h4 className="text-[16px] font-extrabold text-[#141779] leading-none">Kids Activity</h4>
+                  {lastActivityDetails && (
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                      lastActivityDetails.type === "reading" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
+                      lastActivityDetails.type === "battle" ? "bg-rose-50 text-rose-700 border border-rose-200" :
+                      lastActivityDetails.type === "multiplayer" ? "bg-purple-50 text-purple-700 border border-purple-200" :
+                      "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                    }`}>
+                      {lastActivityDetails.type === "reading" ? "📖 Reading" :
+                       lastActivityDetails.type === "battle" ? "🐉 Boss" :
+                       lastActivityDetails.type === "multiplayer" ? "⚔️ Arena" :
+                       "🎯 Quiz"}
+                    </span>
+                  )}
+                </div>
+                {lastActivityDetails ? (
+                  <div className="flex flex-col gap-0.5">
+                    <p className="text-sm font-bold text-slate-800 break-words leading-snug">{lastActivityDetails.title}</p>
+                    <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500 mt-0.5">
+                      {lastActivityDetails.timeTaken > 0 && (
+                        <span>⏱️ {Math.round(lastActivityDetails.timeTaken / 60) || 1}m</span>
+                      )}
+                      {lastActivityDetails.timeTaken > 0 && lastActivityDetails.totalQuestions > 0 && <span>•</span>}
+                      {lastActivityDetails.totalQuestions > 0 && (
+                        <span className="text-indigo-600 font-extrabold">
+                          🎯 {lastActivityDetails.correctQuestions}/{lastActivityDetails.totalQuestions} Correct
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm font-semibold text-slate-700 break-words line-clamp-2">{lastActivity}</p>
+                )}
               </div>
             </div>
-            <ChevronRight size={24} className="text-[#141779] group-hover:translate-x-1 transition-transform" />
+            <ChevronRight size={24} className="text-[#141779] group-hover:translate-x-1 transition-transform shrink-0 self-center" />
           </button>
         </div>
 
@@ -691,13 +772,15 @@ export default function ParentDashboardScreen() {
                 );
               })()}
 
-              {/* Go to Lessons CTA */}
+              {/* View Reports CTA */}
               <button
-                onClick={() => { setModalType(null); navigate('/parent/lessons'); }}
+                onClick={() => { setModalType(null); navigate('/parent/reports'); }}
                 className="w-full flex items-center justify-center gap-2 bg-[#141779] text-white font-extrabold text-sm py-3.5 px-6 rounded-2xl hover:bg-[#1e23a0] active:scale-95 transition-all shadow-md shadow-[#141779]/25 shrink-0"
               >
-                <span>📖</span>
-                <span>Go to Lessons</span>
+                <span>📊</span>
+                <span>
+                  {modalType === "weaknesses" ? "Review Mistakes & Reports" : "View Subject Reports"}
+                </span>
                 <ChevronRight size={16} />
               </button>
             </div>
@@ -889,7 +972,8 @@ export default function ParentDashboardScreen() {
         isOpen={showSwitcher} 
         onClose={() => setShowSwitcher(false)} 
         user={userData} 
-        onUserUpdated={(u) => setUserData(u)} 
+        onUserUpdated={(u) => setUserData(u)}
+        onSwitched={() => { setLoading(true); setRefreshKey(k => k + 1); }}
       />
     </div>
   );

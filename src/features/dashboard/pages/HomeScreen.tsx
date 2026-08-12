@@ -385,7 +385,7 @@ export default function HomeScreen() {
             const spinData = await spinRes.json();
             if (spinData && spinData.balances) {
               const dailyCount = spinData.balances.daily_spins_balance || 0;
-              const hasSpin = dailyCount > 0 || (spinData.balances.chapter_spins_balance || 0) > 0 || (spinData.balances.event_spins_balance || 0) > 0;
+              const hasSpin = dailyCount > 0 || (spinData.balances.event_spins_balance || 0) > 0;
               setHasFreeSpin(hasSpin);
 
               if (dailyCount > 0 && sessionStorage.getItem("dailySpinPopupShown") !== "true") {
@@ -629,15 +629,23 @@ export default function HomeScreen() {
 
       <main className="px-6 pt-[76px] flex flex-col gap-5 max-w-md mx-auto w-full">
         {/* 1. HERO SECTION - MY LEARNING ADVENTURE */}
-        <AdventureHero
-          themeKey={theme.type}
-          xp={xp}
-          targetXp={targetXp}
-          currentCityName={currentCityName}
-          nextCityName={nextCityName}
-          onCtaClick={() => navigate("/practice/journey-map")}
-          onMissionClick={() => navigate("/practice/chapters")}
-        />
+        {(() => {
+          const activeMission = missions.find(m => m.status !== 'claimed') || missions[0];
+          return (
+            <AdventureHero
+              themeKey={theme.type}
+              xp={xp}
+              targetXp={targetXp}
+              currentCityName={currentCityName}
+              nextCityName={nextCityName}
+              onCtaClick={() => navigate("/practice/journey-map")}
+              onMissionClick={() => navigate("/practice/chapters")}
+              missionTitle={activeMission?.title}
+              missionProgress={activeMission ? { current: activeMission.current_progress || 0, total: activeMission.target_progress || 1 } : undefined}
+              missionRewardText={activeMission ? `+${activeMission.xp_reward} XP & ${activeMission.coin_reward} Coins` : undefined}
+            />
+          );
+        })()}
 
         {/* 2. RECENT UNLOCK */}
         <div className="flex flex-col gap-2 relative z-10">
@@ -1087,42 +1095,54 @@ export default function HomeScreen() {
       {/* DAILY FREE SPIN AUTO-POPUP */}
       <AnimatePresence>
         {showSpinPopup && (
-          <div className="fixed inset-0 z-[100] bg-[#f7f9fb]/95 backdrop-blur-md flex items-center justify-center p-6">
+          <div className="fixed inset-0 z-[100] bg-[#f7f9fb]/90 backdrop-blur-md flex items-center justify-center p-6">
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white text-slate-900 w-full max-w-[360px] p-7 rounded-[32px] flex flex-col items-center text-center gap-5 border border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.1)] relative overflow-hidden"
+              className="bg-gradient-to-br from-[#111453]/95 via-[#141779]/95 to-[#0b0c3f]/95 text-white w-full max-w-[360px] p-7 rounded-[32px] flex flex-col items-center text-center gap-5 border border-white/10 shadow-[0_20px_50px_rgba(20,23,121,0.5)] relative overflow-hidden"
             >
-              {/* Background ambient glows */}
-              <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-teal-400/15 blur-2xl pointer-events-none" />
-              <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-amber-400/20 blur-2xl pointer-events-none" />
+              {/* Radial ambient glow behind card contents */}
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(87,250,233,0.12)_0%,transparent_65%)] pointer-events-none" />
+              
+              {/* Background corner glows */}
+              <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-teal-400/20 blur-2xl pointer-events-none" />
+              <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-indigo-500/20 blur-2xl pointer-events-none" />
 
-              <div className="w-20 h-20 rounded-full bg-teal-50 flex items-center justify-center border border-teal-200 shadow-sm animate-bounce z-10">
-                <Gift className="w-10 h-10 text-[#006a62]" />
+              <div className="relative w-20 h-20 rounded-full bg-[rgba(87,250,233,0.08)] flex items-center justify-center border border-[#57fae9]/40 shadow-[0_0_30px_rgba(87,250,233,0.25)] z-10">
+                {/* Rotating dashed ring */}
+                <div 
+                  className="absolute inset-[-6px] border-2 border-dashed border-[#57fae9]/40 rounded-full pointer-events-none"
+                  style={{ animation: 'spin 20s linear infinite' }}
+                />
+                <Gift className="w-10 h-10 text-[#57fae9] filter drop-shadow-[0_0_8px_rgba(87,250,233,0.6)] animate-pulse" />
               </div>
+
               <div className="z-10">
-                <span className="px-3 py-1 bg-amber-100 text-amber-800 text-[10px] font-black uppercase tracking-widest rounded-full border border-amber-200 mb-2 inline-block">
+                <span className="px-3.5 py-1 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-[0_2px_10px_rgba(249,115,22,0.3)] mb-3.5 inline-block border-0">
                   Daily Bonus 🎁
                 </span>
-                <h3 className="text-2xl font-black text-slate-800 tracking-tight">Free Spin Available!</h3>
-                <p className="text-xs font-semibold text-slate-600 leading-relaxed mt-2">
-                  You have a free daily spin waiting. Spin the Quantum Wheel to unlock coins, XP, boosters, and legendary companion skins!
+                <h3 className="text-2xl font-black text-white tracking-tight drop-shadow-sm bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-teal-200">
+                  Free Spin Available!
+                </h3>
+                <p className="text-[11px] font-medium text-slate-300/90 leading-relaxed mt-2.5 max-w-[280px] mx-auto">
+                  Your daily ticket is ready. Spin the <span className="text-[#57fae9] font-black">Quantum Wheel</span> to claim legendary skins, XP multipliers, and bonus coins!
                 </p>
               </div>
+
               <div className="flex flex-col gap-2.5 w-full z-10">
                 <button
                   onClick={() => {
                     setShowSpinPopup(false);
                     navigate("/daily-rewards");
                   }}
-                  className="w-full py-3.5 bg-gradient-to-r from-[#007168] to-[#004e48] text-white font-extrabold rounded-2xl hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-wide text-xs shadow-md border border-teal-600/30 flex items-center justify-center gap-2"
+                  className="w-full py-4 bg-gradient-to-r from-[#57fae9] via-[#00f2fe] to-[#4facfe] text-[#141779] font-black rounded-2xl hover:scale-[1.03] active:scale-95 transition-all uppercase tracking-widest text-[11px] shadow-[0_0_25px_rgba(87,250,233,0.5)] flex items-center justify-center gap-2 border-0"
                 >
                   <span>🎰 Spin Now</span>
                 </button>
                 <button
                   onClick={() => setShowSpinPopup(false)}
-                  className="w-full py-3 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 active:scale-95 transition-all text-xs border border-slate-200"
+                  className="w-full py-3 bg-white/5 text-slate-400 font-bold rounded-2xl border border-white/10 hover:bg-white/10 hover:text-white active:scale-95 transition-all text-xs transition-colors duration-200"
                 >
                   Maybe Later
                 </button>
@@ -1141,14 +1161,18 @@ export default function HomeScreen() {
 
       <AnimatePresence>
         {showStreakModal && (
-          <div className="fixed inset-0 z-[110] bg-[#f7f9fb]/95 backdrop-blur-md flex flex-col items-center justify-center p-6">
+          <div className="fixed inset-0 z-[110] bg-[#f7f9fb]/90 backdrop-blur-md flex flex-col items-center justify-center p-6">
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
-              className="bg-white border border-gray-200 w-full max-w-sm rounded-[32px] p-8 text-center relative shadow-2xl flex flex-col items-center justify-between gap-6"
+              className="bg-gradient-to-br from-[#111453]/95 via-[#141779]/95 to-[#0b0c3f]/95 text-white border border-white/10 w-full max-w-sm rounded-[32px] p-8 text-center relative shadow-[0_20px_50px_rgba(20,23,121,0.5)] flex flex-col items-center justify-between gap-6 overflow-hidden"
             >
-              <div className="flex-1 flex flex-col items-center justify-center w-full gap-6">
+              {/* Background ambient glows */}
+              <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-teal-400/20 blur-2xl pointer-events-none" />
+              <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-orange-500/20 blur-2xl pointer-events-none" />
+
+              <div className="flex-1 flex flex-col items-center justify-center w-full gap-6 z-10">
                 {/* Large Duolingo Fire Flame */}
                 <div className="relative w-40 h-40 flex items-center justify-center">
                   <motion.div
@@ -1176,10 +1200,10 @@ export default function HomeScreen() {
                     return (
                       <div key={idx} className="flex flex-col items-center gap-1 flex-1">
                         <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black shadow-xs border ${
+                          className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black shadow-inner border ${
                             isActive
-                              ? "bg-gradient-to-br from-amber-400 to-orange-500 border-amber-300 text-white shadow-inner"
-                              : "bg-gray-50 border-gray-100 text-gray-400"
+                              ? "bg-gradient-to-br from-amber-400 to-orange-500 border-amber-300 text-white"
+                              : "bg-white/5 border-white/10 text-slate-400"
                           }`}
                         >
                           {day}
@@ -1190,10 +1214,10 @@ export default function HomeScreen() {
                 </div>
 
                 <div className="space-y-1 mt-2">
-                  <h2 className="text-2xl font-black text-slate-800 leading-tight">
+                  <h2 className="text-2xl font-black text-white leading-tight">
                     {retentionStreak?.currentStreak ?? streakDays} Day Streak!
                   </h2>
-                  <p className="text-xs font-bold text-slate-500 leading-relaxed px-4">
+                  <p className="text-xs font-bold text-slate-300 leading-relaxed px-4">
                     Your longest streak is {retentionStreak?.longestStreak ?? streakDays} days. Keep up the consistency!
                   </p>
                 </div>
@@ -1202,7 +1226,7 @@ export default function HomeScreen() {
               {/* Close button */}
               <button
                 onClick={() => setShowStreakModal(false)}
-                className="w-full py-3.5 rounded-2xl bg-[#00aaef] hover:bg-[#0091cb] text-white font-black text-xs shadow-md uppercase tracking-wider active:scale-95 transition-all mt-4"
+                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#57fae9] to-[#00c9b7] text-[#141779] font-black text-xs shadow-[0_4px_15px_rgba(87,250,233,0.3)] uppercase tracking-wider active:scale-95 transition-all mt-4 z-10 border-0"
               >
                 Awesome!
               </button>

@@ -208,8 +208,8 @@ export default function ChapterReaderScreen() {
     if (el) el.style.zoom = String(next);
     setCommittedScale(next);
   };
-  const zoomIn    = () => applyCommit(Math.min(MAX_SCALE, parseFloat((committedScaleRef.current + 0.25).toFixed(2))));
-  const zoomOut   = () => applyCommit(Math.max(MIN_SCALE, parseFloat((committedScaleRef.current - 0.25).toFixed(2))));
+  const zoomIn = () => applyCommit(Math.min(MAX_SCALE, parseFloat((committedScaleRef.current + 0.25).toFixed(2))));
+  const zoomOut = () => applyCommit(Math.max(MIN_SCALE, parseFloat((committedScaleRef.current - 0.25).toFixed(2))));
   const resetZoom = () => applyCommit(1);
 
   if (!chapterId) {

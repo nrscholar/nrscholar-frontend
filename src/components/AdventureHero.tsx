@@ -154,6 +154,10 @@ interface AdventureHeroProps {
   nextCityName?: string;
   onCtaClick?: () => void;
   onMissionClick?: () => void;
+  // Overrides for dynamic backend values
+  missionTitle?: string;
+  missionProgress?: { current: number; total: number };
+  missionRewardText?: string;
 }
 
 export default function AdventureHero({
@@ -164,11 +168,18 @@ export default function AdventureHero({
   nextCityName,
   onCtaClick,
   onMissionClick,
+  missionTitle,
+  missionProgress,
+  missionRewardText,
 }: AdventureHeroProps) {
   const theme = ADVENTURE_THEMES[themeKey] || ADVENTURE_THEMES.dragon;
 
   const startName = currentCityName || theme.currentLocationName;
   const endName = nextCityName || theme.destinationName;
+
+  const displayMissionTitle = missionTitle || theme.missionTitle;
+  const displayMissionProgress = missionProgress || theme.missionProgress;
+  const displayMissionRewardText = missionRewardText || theme.missionRewardText;
 
   // Calculate percentage along the leg (0% to 100%)
   const legProgress = Math.min(100, Math.max(0, Math.round((xp / targetXp) * 100)));
@@ -360,30 +371,30 @@ export default function AdventureHero({
                 TODAY'S QUEST
               </span>
               <h4 className="text-xs font-black text-slate-900 mt-0.5 leading-snug">
-                {theme.missionTitle}
+                {displayMissionTitle}
               </h4>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex-1 flex flex-col gap-1">
-            <div className="flex justify-between text-[10px] font-black text-slate-600 uppercase">
-              <span>Mission Progress</span>
-              <span className="text-indigo-600 font-extrabold">
-                {theme.missionProgress.current} / {theme.missionProgress.total}
+        <div className="flex items-center justify-between gap-2.5 sm:gap-3">
+          <div className="flex-1 flex flex-col gap-1 min-w-0">
+            <div className="flex justify-between text-[10px] font-black text-slate-600 uppercase gap-1">
+              <span className="whitespace-nowrap truncate">Mission Progress</span>
+              <span className="text-indigo-600 font-extrabold whitespace-nowrap">
+                {displayMissionProgress.current} / {displayMissionProgress.total}
               </span>
             </div>
             <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200">
               <div
                 className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full transition-all duration-500"
-                style={{ width: `${(theme.missionProgress.current / theme.missionProgress.total) * 100}%` }}
+                style={{ width: `${(displayMissionProgress.current / displayMissionProgress.total) * 100}%` }}
               />
             </div>
           </div>
 
-          <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-800 text-[10.5px] font-black px-2.5 py-1.5 rounded-xl shrink-0">
-            <span>🎁 {theme.missionRewardText}</span>
+          <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-800 text-[9.5px] sm:text-[10.5px] font-black px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-xl shrink-0 whitespace-nowrap">
+            <span>🎁 {displayMissionRewardText}</span>
           </div>
         </div>
 
