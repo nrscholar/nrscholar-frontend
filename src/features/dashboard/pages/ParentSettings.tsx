@@ -222,18 +222,19 @@ export default function ParentSettings() {
             if (profileJson.success && profileJson.data?.user) {
               const u = profileJson.data.user;
               setUser(u);
-              setParentName(u.fullName || "");
+              setParentName(u.parentName || u.fullName || u.username || u.name || "");
               setParentPhoto(u.parentPhoto || "");
               
               const kids = u.children || [];
               const k1 = kids.find((k: any) => k.childId === "child_1") || kids[0];
+              const fallbackAge1 = k1?.childAge || u.childAge;
               if (k1) {
-                setChild1Name(k1.childName || "");
-                setChild1Class(k1.childClass || "");
-                setChild1Age(k1.childAge ? `${k1.childAge} Years` : "");
-                setChild1Board(k1.childBoard || "");
-                setChild1Photo(k1.childPhoto || "");
-                setChild1Code(k1.uniqueCode || "");
+                setChild1Name(k1.childName || u.childName || "");
+                setChild1Class(k1.childClass || u.childClass || "");
+                setChild1Age(fallbackAge1 ? (typeof fallbackAge1 === 'string' && fallbackAge1.includes('Years') ? fallbackAge1 : `${fallbackAge1} Years`) : "");
+                setChild1Board(k1.childBoard || u.childBoard || "");
+                setChild1Photo(k1.childPhoto || u.childPhoto || "");
+                setChild1Code(k1.uniqueCode || u.uniqueCode || "");
               } else {
                 setChild1Name(u.childName || "");
                 setChild1Class(u.childClass || "");
@@ -853,6 +854,7 @@ export default function ParentSettings() {
                     type="text"
                     value={child1Name}
                     onChange={(e) => setChild1Name(e.target.value)}
+                    placeholder="Enter Child Name"
                     className="w-full h-14 bg-white rounded-2xl px-5 text-base font-medium text-[#191c1e] border-2 border-transparent focus:border-[#141779] outline-none shadow-sm hover:shadow-md transition-shadow"
                   />
                 </div>
