@@ -1,8 +1,10 @@
 import { ArrowLeft, Maximize2, Minimize2, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "lucide-react";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, forwardRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import { Document, Page, pdfjs } from 'react-pdf';
+// @ts-ignore – react-pageflip ships commonjs without proper ESM types
+import HTMLFlipBook from 'react-pageflip';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
@@ -15,10 +17,63 @@ const pdfOptions = {
 };
 
 const MIN_SCALE = 1;
-const MAX_SCALE = 4.0;
-const BASE_WIDTH = () => Math.min(window.innerWidth - 32, 600);
-const SWIPE_THRESHOLD = 60;
+const MAX_SCALE = 3.0;
+const BASE_WIDTH = () => Math.min(window.innerWidth - 32, 560);
 
+// ─── BookPage ─────────────────────────────────────────────────────────────────
+// react-pageflip REQUIRES forwardRef so it can measure the underlying DOM node
+// for flip-animation geometry. Without it the curl silently breaks.
+interface BookPageProps {
+  pageNum: number;
+  pageWidth: number;
+  pageHeight: number;
+  shouldRender: boolean;
+}
+
+const BookPage = forwardRef<HTMLDivElement, BookPageProps>(
+  ({ pageNum, pageWidth, pageHeight, shouldRender }, ref) => (
+    <div
+      ref={ref}
+      style={{
+        width: pageWidth,
+        height: pageHeight,
+        background: '#fff',
+        overflow: 'hidden',
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'center',
+        position: 'relative',
+      }}
+    >
+      {shouldRender ? (
+        <Page
+          pageNumber={pageNum}
+          width={pageWidth}
+          renderTextLayer={false}
+          renderAnnotationLayer={true}
+          devicePixelRatio={2}
+          loading={
+            <div
+              style={{ width: pageWidth, height: pageHeight }}
+              className="flex items-center justify-center"
+            >
+              <div className="w-8 h-8 border-4 border-[#e0c3fc] border-t-[#141779] rounded-full animate-spin" />
+            </div>
+          }
+        />
+      ) : (
+        /* Placeholder – keeps layout stable but allocates no canvas memory */
+        <div
+          style={{ width: pageWidth, height: pageHeight }}
+          className="bg-gray-50"
+        />
+      )}
+    </div>
+  )
+);
+BookPage.displayName = 'BookPage';
+
+// ─── Main screen ──────────────────────────────────────────────────────────────
 export default function ChapterReaderScreen() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -33,29 +88,28 @@ export default function ChapterReaderScreen() {
   const startTimeRef = useRef(Date.now());
   const hasLoggedRef = useRef(false);
 
-  // ─── Two-phase zoom using CSS Zoom ──────────────────────────────────────────
-  // committedScale: the scale applied via CSS zoom on the wrapper
+  // ─── Zoom (button + 2-finger pinch; 1-finger belongs to pageflip) ──────────
   const [committedScale, setCommittedScale] = useState(1);
-  const committedScaleRef = useRef(1);                    // mutable, no re-render
-  const liveScaleRef = useRef(1);                         // mutable, no re-render
+  const committedScaleRef = useRef(1);
+  const liveScaleRef = useRef(1);
 
   // Pinch tracking refs
   const lastDistRef = useRef<number | null>(null);
-  const lastCommittedAtStartRef = useRef(1);              // committedScale when pinch began
+  const lastCommittedAtStartRef = useRef(1);
   const isPinchingRef = useRef(false);
-
-  // ─── Swipe (single finger, only at base zoom) ──────────────────────────────
-  const touchStartXRef = useRef<number | null>(null);
-  const touchStartYRef = useRef<number | null>(null);
-  const isSwipingRef = useRef(false);
-  const [swipeHint, setSwipeHint] = useState<'left' | 'right' | null>(null);
 
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [numPages, setNumPages] = useState<number>();
   const [pageNumber, setPageNumber] = useState<number>(1);
+  // Center of the windowed render range (only ±3 pages around this are mounted)
+  const [renderWindow, setRenderWindow] = useState<number>(1);
 
-  // ─── Reading time ─────────────────────────────────────────────────────────
+  // ─── Flip book imperative ref ──────────────────────────────────────────────
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const flipBookRef = useRef<any>(null);
+
+  // ─── Reading time ──────────────────────────────────────────────────────────
   const logReadingTime = async () => {
     if (hasLoggedRef.current) return;
     const timeSpent = Math.floor((Date.now() - startTimeRef.current) / 1000);
@@ -120,95 +174,59 @@ export default function ChapterReaderScreen() {
     setMarkingComplete(false);
   };
 
+  // ─── Flip callback (fired by react-pageflip after curl completes) ──────────
+  const handleFlip = useCallback((e: { data: number }) => {
+    const newPage = e.data + 1; // pageflip uses 0-based index
+    setPageNumber(newPage);
+    setRenderWindow(newPage);  // slide the render window to keep ±3 pages live
+  }, []);
+
   // ─── Pinch distance helper ─────────────────────────────────────────────────
   const getPinchDist = (t: React.TouchList) =>
     Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
 
-  // ─── Touch handlers ────────────────────────────────────────────────────────
+  // ─── Touch handlers — only 2-finger pinch; 1-finger belongs to pageflip ────
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (e.touches.length === 2) {
-      // Record the distance at pinch-start and the already-committed scale
       lastDistRef.current = getPinchDist(e.touches);
       lastCommittedAtStartRef.current = committedScaleRef.current;
       isPinchingRef.current = true;
-      // Cancel any in-flight swipe
-      touchStartXRef.current = null;
-      isSwipingRef.current = false;
-    } else if (e.touches.length === 1) {
-      touchStartXRef.current = e.touches[0].clientX;
-      touchStartYRef.current = e.touches[0].clientY;
-      isSwipingRef.current = false;
-      lastDistRef.current = null;
-      isPinchingRef.current = false;
     }
   }, []);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (e.touches.length === 2 && lastDistRef.current !== null) {
+    if (e.touches.length === 2 && lastDistRef.current !== null && isPinchingRef.current) {
       e.preventDefault();
       const ratio = getPinchDist(e.touches) / lastDistRef.current;
       const rawLive = lastCommittedAtStartRef.current * ratio;
-      const clampedTotal = Math.min(MAX_SCALE, Math.max(MIN_SCALE, rawLive));
-      liveScaleRef.current = clampedTotal;
-      // Directly mutate DOM zoom for smooth 60fps zooming without React re-render
-      const el = document.getElementById('pdf-zoom-wrapper');
-      if (el) el.style.zoom = String(clampedTotal);
-    } else if (
-      e.touches.length === 1 &&
-      touchStartXRef.current !== null &&
-      committedScaleRef.current <= 1.05
-    ) {
-      const dx = e.touches[0].clientX - touchStartXRef.current;
-      const dy = e.touches[0].clientY - (touchStartYRef.current ?? 0);
-      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
-        isSwipingRef.current = true;
-        e.preventDefault();
-      }
+      const clamped = Math.min(MAX_SCALE, Math.max(MIN_SCALE, rawLive));
+      liveScaleRef.current = clamped;
+      // Direct DOM mutation for 60fps — avoids React re-render during live pinch
+      const el = document.getElementById('pdf-flipbook-wrapper');
+      if (el) (el as HTMLElement & { style: CSSStyleDeclaration }).style.zoom = String(clamped);
     }
   }, []);
 
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+  const handleTouchEnd = useCallback(() => {
     if (isPinchingRef.current) {
-      const newCommitted = Math.min(MAX_SCALE, Math.max(MIN_SCALE, liveScaleRef.current));
-      committedScaleRef.current = newCommitted;
-      liveScaleRef.current = newCommitted;
-
-      // Update React state to match
-      setCommittedScale(newCommitted);
+      const committed = Math.min(MAX_SCALE, Math.max(MIN_SCALE, liveScaleRef.current));
+      committedScaleRef.current = committed;
+      liveScaleRef.current = committed;
+      setCommittedScale(committed);
       isPinchingRef.current = false;
     }
-
-    if (isSwipingRef.current && touchStartXRef.current !== null && e.changedTouches.length > 0) {
-      const dx = e.changedTouches[0].clientX - touchStartXRef.current;
-      if (Math.abs(dx) >= SWIPE_THRESHOLD) {
-        if (dx < 0) {
-          setPageNumber(p => { const n = Math.min(p + 1, numPages ?? p); if (n !== p) setSwipeHint('left'); return n; });
-        } else {
-          setPageNumber(p => { const n = Math.max(p - 1, 1); if (n !== p) setSwipeHint('right'); return n; });
-        }
-      }
-    }
-
-    touchStartXRef.current = null;
-    touchStartYRef.current = null;
-    isSwipingRef.current = false;
     lastDistRef.current = null;
-  }, [numPages]);
-
-  // Clear swipe hint
-  useEffect(() => {
-    if (swipeHint) { const t = setTimeout(() => setSwipeHint(null), 400); return () => clearTimeout(t); }
-  }, [swipeHint]);
+  }, []);
 
   // ─── Zoom button helpers ───────────────────────────────────────────────────
   const applyCommit = (next: number) => {
     committedScaleRef.current = next;
     liveScaleRef.current = next;
-    const el = document.getElementById('pdf-zoom-wrapper');
-    if (el) el.style.zoom = String(next);
+    const el = document.getElementById('pdf-flipbook-wrapper');
+    if (el) (el as HTMLElement & { style: CSSStyleDeclaration }).style.zoom = String(next);
     setCommittedScale(next);
   };
-  const zoomIn = () => applyCommit(Math.min(MAX_SCALE, parseFloat((committedScaleRef.current + 0.25).toFixed(2))));
+  const zoomIn  = () => applyCommit(Math.min(MAX_SCALE, parseFloat((committedScaleRef.current + 0.25).toFixed(2))));
   const zoomOut = () => applyCommit(Math.max(MIN_SCALE, parseFloat((committedScaleRef.current - 0.25).toFixed(2))));
   const resetZoom = () => applyCommit(1);
 
@@ -220,8 +238,8 @@ export default function ChapterReaderScreen() {
     );
   }
 
-  // Keep Page width constant so react-pdf doesn't re-render/flicker the canvas
-  const pageWidth = Math.round(BASE_WIDTH());
+  const pageWidth  = Math.round(BASE_WIDTH());
+  const pageHeight = Math.round(pageWidth * 1.414); // A4 portrait ratio
 
   return (
     <div className={`flex flex-col bg-white ${isFullscreen ? 'fixed inset-0 z-50' : 'h-screen overflow-hidden'}`}>
@@ -259,7 +277,7 @@ export default function ChapterReaderScreen() {
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        style={{ touchAction: 'none' }}   // we control all gestures manually
+        style={{ touchAction: 'none' }}
       >
         {/* Background decorations */}
         <div className="absolute top-10 left-10 w-20 h-20 bg-white/20 rounded-full blur-xl pointer-events-none" />
@@ -272,38 +290,79 @@ export default function ChapterReaderScreen() {
           </div>
         ) : pdfUrl ? (
           /*
-           * overflow-auto: scrolls when committed page width > viewport
-           * (only after pinch-end when <Page> is re-rendered at the new width)
+           * overflow-auto: allows vertical scroll when zoomed
+           * We center the flipbook with flex
            */
           <div className="absolute inset-0 overflow-auto" style={{ paddingBottom: '9rem' }}>
-            <div className="flex flex-col items-center justify-start min-h-full p-4 min-w-max mx-auto">
+            <div className="w-max mx-auto flex flex-col items-center p-4">
               <Document
                 file={pdfUrl}
                 options={pdfOptions}
-                onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+                onLoadSuccess={({ numPages: n }) => setNumPages(n)}
                 loading={
                   <div className="w-12 h-12 border-4 border-white border-t-[#141779] rounded-full animate-spin mt-20 shadow-md" />
                 }
               >
-                {/*
-                  id="pdf-zoom-wrapper" — during a pinch we mutate this element's
-                  style.zoom directly (bypassing React) for smooth 60fps feedback.
-                  On pinch-end we commit the new scale to state.
-                */}
-                <div
-                  id="pdf-zoom-wrapper"
-                  style={{ zoom: committedScale, transformOrigin: 'top center', display: 'inline-block' }}
-                >
-                  <div className="bg-white rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(20,23,121,0.2)] border-8 border-white/60">
-                    <Page
-                      pageNumber={pageNumber}
-                      renderTextLayer={false}
-                      renderAnnotationLayer={true}
-                      devicePixelRatio={2}
+                {numPages && (
+                  /*
+                   * id="pdf-flipbook-wrapper" — pinch-zoom and zoom buttons
+                   * mutate this element's style.zoom directly for 60fps feedback.
+                   * The flipbook itself is sized to pageWidth × pageHeight.
+                   */
+                  <div
+                    id="pdf-flipbook-wrapper"
+                    style={{
+                      zoom: committedScale,
+                      display: 'inline-block',
+                      // Book-like drop shadow
+                      filter: 'drop-shadow(0 24px 48px rgba(20,23,121,0.28)) drop-shadow(0 4px 8px rgba(20,23,121,0.12))',
+                      borderRadius: 4,
+                    }}
+                  >
+                    <HTMLFlipBook
+                      ref={flipBookRef}
                       width={pageWidth}
-                    />
+                      height={pageHeight}
+                      size="fixed"
+                      minWidth={pageWidth}
+                      maxWidth={pageWidth}
+                      minHeight={pageHeight}
+                      maxHeight={pageHeight}
+                      showCover={false}
+                      usePortrait={true}       /* single-page portrait mode (mobile-friendly) */
+                      startPage={0}            /* 0-indexed */
+                      flippingTime={700}       /* curl animation duration in ms */
+                      useMouseEvents={true}    /* allow mouse drag on desktop too */
+                      mobileScrollSupport={false}
+                      onFlip={handleFlip}
+                      className=""
+                      drawShadow={true}
+                      startZIndex={0}
+                      autoSize={false}
+                      maxShadowOpacity={0.4}
+                      clickEventForward={true}
+                      swipeDistance={30}
+                      showPageCorners={true}
+                      disableFlipByClick={false}
+                      style={{ background: 'transparent' }}
+                    >
+                      {Array.from({ length: numPages }, (_, i) => (
+                        <BookPage
+                          key={i}
+                          pageNum={i + 1}
+                          pageWidth={pageWidth}
+                          pageHeight={pageHeight}
+                          /*
+                           * Windowed rendering: only allocate canvas for ±3 pages
+                           * around current page. Everything else is a lightweight
+                           * placeholder div. This prevents memory crashes on large PDFs.
+                           */
+                          shouldRender={Math.abs(i + 1 - renderWindow) <= 3}
+                        />
+                      ))}
+                    </HTMLFlipBook>
                   </div>
-                </div>
+                )}
               </Document>
             </div>
           </div>
@@ -316,7 +375,7 @@ export default function ChapterReaderScreen() {
           </div>
         )}
 
-        {/* ── Floating controls ────────────────────────────────────────────── */}
+        {/* ── Floating controls ─────────────────────────────────────────────── */}
         {pdfUrl && numPages && (
           <div className="absolute bottom-4 left-0 right-0 flex flex-col items-center gap-2 pointer-events-none z-20 px-4">
 
@@ -338,17 +397,21 @@ export default function ChapterReaderScreen() {
 
             {/* Page navigation pill */}
             <div className="bg-white/90 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white px-6 py-3 rounded-full flex items-center justify-between gap-6 pointer-events-auto min-w-[200px]">
-              <button disabled={pageNumber <= 1}
-                onClick={() => setPageNumber(p => Math.max(p - 1, 1))}
-                className="p-2 text-[#141779] hover:bg-[#141779]/10 active:scale-95 rounded-full disabled:opacity-30 transition-all">
+              <button
+                disabled={pageNumber <= 1}
+                onClick={() => flipBookRef.current?.pageFlip().flipPrev()}
+                className="p-2 text-[#141779] hover:bg-[#141779]/10 active:scale-95 rounded-full disabled:opacity-30 transition-all"
+              >
                 <ChevronLeft size={28} />
               </button>
               <span className="font-extrabold text-[#141779] text-lg tracking-wide">
                 {pageNumber} <span className="opacity-40 mx-1 font-normal">/</span> {numPages}
               </span>
-              <button disabled={pageNumber >= numPages}
-                onClick={() => setPageNumber(p => Math.min(p + 1, numPages))}
-                className="p-2 text-[#141779] hover:bg-[#141779]/10 active:scale-95 rounded-full disabled:opacity-30 transition-all">
+              <button
+                disabled={pageNumber >= numPages}
+                onClick={() => flipBookRef.current?.pageFlip().flipNext()}
+                className="p-2 text-[#141779] hover:bg-[#141779]/10 active:scale-95 rounded-full disabled:opacity-30 transition-all"
+              >
                 <ChevronRight size={28} />
               </button>
             </div>
@@ -357,7 +420,7 @@ export default function ChapterReaderScreen() {
         )}
       </main>
 
-      {/* ── Footer: mark complete ────────────────────────────────────────────── */}
+      {/* ── Footer: mark complete ─────────────────────────────────────────────── */}
       {!loading && pdfUrl && !isFullscreen && pageNumber === numPages && (
         <div className="bg-white border-t border-gray-100 p-5 shrink-0 flex justify-center shadow-[0_-10px_30px_rgba(0,0,0,0.05)] z-20 relative">
           <button

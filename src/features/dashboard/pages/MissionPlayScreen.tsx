@@ -374,7 +374,11 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   const quizQuestions = missionData?.quizQuestions || [];
   let bossQuestions = (missionData?.bossQuestions && missionData.bossQuestions.length > 0)
     ? missionData.bossQuestions
-    : quizQuestions;
+    : (() => {
+        if (quizQuestions.length === 0) return [];
+        const half = Math.ceil(quizQuestions.length / 2);
+        return [...quizQuestions.slice(half), ...quizQuestions.slice(0, half)];
+      })();
 
   if (bossQuestions.length === 0) {
     bossQuestions = [
