@@ -12,15 +12,15 @@ const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full h-14 bg-[rgba(255,255,255,0.5)] rounded-full pl-12 pr-10 text-base font-medium text-[#191c1e] border-2 border-white flex items-center justify-start text-left relative"
+        className="w-full h-14 bg-[rgba(255,255,255,0.5)] rounded-full pl-10 pr-8 sm:pl-12 sm:pr-10 text-sm sm:text-base font-medium text-[#191c1e] border-2 border-white flex items-center justify-start text-left relative"
       >
-        <div className="absolute left-4 z-10 flex items-center h-full top-0">
-          <Icon size={22} color={iconColor} />
+        <div className="absolute left-3 sm:left-4 z-10 flex items-center h-full top-0">
+          <Icon size={20} className="sm:w-[22px] sm:h-[22px]" color={iconColor} />
         </div>
-        <span className={`truncate ${value ? "text-[#191c1e]" : "text-[#c7c5d4]"}`}>
+        <span className={`block flex-1 min-w-0 truncate ${value ? "text-[#191c1e]" : "text-[#c7c5d4]"}`}>
           {value || placeholder}
         </span>
-        <ChevronDown size={24} color="#767683" className="absolute right-3" />
+        <ChevronDown size={20} className="absolute right-2 sm:right-3 sm:w-[24px] sm:h-[24px]" color="#767683" />
       </button>
 
       <AnimatePresence>
@@ -30,7 +30,7 @@ const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-[rgba(0,0,0,0.5)] z-50 flex items-center justify-center p-6"
+              className="fixed inset-x-0 bottom-0 top-[72px] bg-[rgba(0,0,0,0.5)] z-50 flex items-center justify-center p-6"
               onClick={() => setIsOpen(false)}
             >
               <motion.div

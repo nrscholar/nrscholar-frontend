@@ -190,46 +190,33 @@ export default function DailyRewardsScreen() {
     setIsSpinning(true);
 
     try {
-      // Server-side reward generation
-      const res = await apiFetch("/api/retention/spin-wheel/spin", {
+      // Phase 1: Preview the spin to let server pick the winning segment
+      const previewRes = await apiFetch("/api/retention/spin-wheel/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          spin_type: spinType,
-          boss_id: searchParams.get("boss_id") || undefined,
-          chapter_id: searchParams.get("chapter_id") || undefined
+          spin_type: spinType
         })
       });
-      const data = await res.json();
+      const previewData = await previewRes.json();
 
-      if (!res.ok) {
-        throw new Error(data.detail || "Server failed to initiate spin");
+      if (!previewRes.ok) {
+        throw new Error(previewData.detail || "Server failed to initiate spin preview");
       }
 
-      const reward = data.reward;
-      const finalBalances = data.balances;
+      const token = previewData.token;
+      const rewardsList = previewData.rewards;
+      const selectedReward = rewardsList[previewData.winning_index];
 
-      if (data.user) {
-        const stored = localStorage.getItem("userData");
-        if (stored) {
-          const u = JSON.parse(stored);
-          u.coins = data.user.coins;
-          u.xp = data.user.xp;
-          u.level = data.user.level;
-          localStorage.setItem("userData", JSON.stringify(u));
-        }
-        window.dispatchEvent(new Event("userDataUpdated"));
-      }
-
-      // Find the index of the won reward on the wheel
+      // Find the index of this selected reward on our local interleaved wheel pool
       const pool = getDisplayRewards();
       let index = pool.findIndex(
-        (r) => r.name.toLowerCase() === reward.name.toLowerCase()
+        (r) => r.name.toLowerCase() === selectedReward.name.toLowerCase()
       );
 
       if (index === -1) {
-        // Fallback: match by reward type or category
-        index = pool.findIndex((r) => r.reward_type === reward.reward_type);
+        // Fallback: match by reward type
+        index = pool.findIndex((r) => r.reward_type === selectedReward.reward_type);
         if (index === -1) index = 0;
       }
 
@@ -238,10 +225,43 @@ export default function DailyRewardsScreen() {
 
       // Spin 6 full times, and calculate ending alignment to target slice
       const spinsCount = 6;
-      const finalAngle = rotation + (spinsCount * 360) + (360 - (index * segmentAngle) - (segmentAngle / 2));
+      const currentSpins = Math.floor(rotation / 360);
+      const targetOffset = 360 - (index * segmentAngle) - (segmentAngle / 2);
+      const finalAngle = (currentSpins + spinsCount) * 360 + targetOffset;
 
       setRotation(finalAngle);
-      setWonReward(reward);
+      setWonReward(selectedReward);
+
+      // Phase 2: Claim the reward in parallel while the wheel is spinning
+      const claimRes = await apiFetch("/api/retention/spin-wheel/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: token,
+          boss_id: searchParams.get("boss_id") || undefined,
+          chapter_id: searchParams.get("chapter_id") || undefined
+        })
+      });
+      const claimData = await claimRes.json();
+
+      if (!claimRes.ok) {
+        throw new Error(claimData.detail || "Server failed to claim spin reward");
+      }
+
+      const finalBalances = claimData.balances;
+
+      if (claimData.user) {
+        const stored = localStorage.getItem("userData");
+        if (stored) {
+          const u = JSON.parse(stored);
+          u.coins = claimData.user.coins;
+          u.xp = claimData.user.xp;
+          u.level = claimData.user.level;
+          localStorage.setItem("userData", JSON.stringify(u));
+        }
+        window.dispatchEvent(new Event("userDataUpdated"));
+      }
+
       setBalances(finalBalances);
 
       // Animation duration: 6.5 seconds
