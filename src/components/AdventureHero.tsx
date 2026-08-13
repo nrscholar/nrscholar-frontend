@@ -192,7 +192,7 @@ export default function AdventureHero({
     <div className="w-full max-w-[430px] mx-auto flex flex-col gap-3 font-sans">
       {/* 1. IMMERSIVE ENVIRONMENT CARD */}
       <div
-        className={`w-full rounded-[32px] bg-gradient-to-b ${theme.bgGradient} p-5 border-4 ${theme.accentBorderColor} shadow-[0_12px_32px_rgba(0,0,0,0.3)] relative overflow-hidden text-white flex flex-col gap-4 select-none`}
+        className={`w-full rounded-[32px] bg-gradient-to-b ${theme.bgGradient} p-3 border-4 ${theme.accentBorderColor} shadow-[0_12px_32px_rgba(0,0,0,0.3)] relative overflow-hidden text-white flex flex-col gap-3 select-none`}
       >
         {/* Ambient environmental particles / animations */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -251,7 +251,7 @@ export default function AdventureHero({
         </div>
 
         {/* LIVING ADVENTURE WORLD SCENE (Dragon flying over path to destination) */}
-        <div className="relative w-full h-32 my-1 z-10 flex flex-col justify-between">
+        <div className="relative w-full h-[72px] z-10 flex flex-col justify-between">
           {/* Background Scenery Elements */}
           <div className="absolute inset-0 flex justify-between items-end px-2 opacity-40 pointer-events-none">
             <span className="text-4xl">{theme.bgDecorations[1] || "🏔️"}</span>
