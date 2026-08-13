@@ -808,7 +808,7 @@ export default function ParentSettings() {
             </motion.div>
 
             {/* Child 1 Profile Card */}
-            <motion.div variants={itemVariants} className="bg-white/70 backdrop-blur-md rounded-3xl p-7 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative group">
+            <motion.div variants={itemVariants} className="bg-white/70 backdrop-blur-md rounded-3xl p-7 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative group overflow-visible z-20">
               <div className="flex justify-between items-center mb-5">
                 <h3 className="text-lg font-bold text-[#141779] flex items-center gap-2">
                   <UserRound size={20} className="text-[#141779]" /> Child 1 Profile
@@ -869,7 +869,7 @@ export default function ParentSettings() {
                   placeholder="Select Board"
                 />
 
-                <div className="flex gap-2 md:gap-3 w-full">
+                <div className="flex gap-2 md:gap-3 w-full relative z-10">
                   <CustomDropdown
                     label="Class / Grade"
                     icon={GraduationCap}
@@ -895,7 +895,7 @@ export default function ParentSettings() {
  
             {/* Child 2 Profile Card (if exists or enabled) */}
             {hasChild2 ? (
-              <motion.div variants={itemVariants} className="bg-white/70 backdrop-blur-md rounded-3xl p-7 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative group">
+              <motion.div variants={itemVariants} className="bg-white/70 backdrop-blur-md rounded-3xl p-7 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative group overflow-visible z-10">
                 <div className="flex justify-between items-center mb-5">
                   <h3 className="text-lg font-bold text-[#141779] flex items-center gap-2">
                     <UserRound size={20} className="text-[#141779]" /> Child 2 Profile
@@ -955,7 +955,7 @@ export default function ParentSettings() {
                     placeholder="Select Board"
                   />
 
-                  <div className="flex gap-2 md:gap-3 w-full">
+                  <div className="flex gap-2 md:gap-3 w-full relative z-10">
                     <CustomDropdown
                       label="Class / Grade"
                       icon={GraduationCap}
