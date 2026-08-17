@@ -70,7 +70,7 @@ export default function DailyRewardsScreen() {
     if (isSpinning || isBuying) return;
     setErrorMessage("");
 
-    const cost = spinType === "daily" ? 100 : 150;
+    const cost = (spinType === "daily" || spinType === "boss_revival") ? 100 : 150;
     const cachedData = localStorage.getItem("userData");
     let userCoins = 0;
     if (cachedData) {
@@ -546,7 +546,7 @@ export default function DailyRewardsScreen() {
               disabled={isSpinning || isBuying}
               className="w-full py-4 rounded-full font-black text-base sm:text-lg tracking-wider uppercase transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/25 border border-amber-300"
             >
-              <span>{isBuying ? "Purchasing..." : `🛒 Buy 1 Spin (${spinType === "daily" ? "100 🪙" : "150 🪙"})`}</span>
+              <span>{isBuying ? "Purchasing..." : `🛒 Buy 1 Spin (${(spinType === "daily" || spinType === "boss_revival") ? "100 🪙" : "150 🪙"})`}</span>
             </button>
           )}
 

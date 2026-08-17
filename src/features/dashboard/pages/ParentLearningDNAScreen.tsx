@@ -72,41 +72,40 @@ export default function ParentLearningDNAScreen() {
   // Derive dynamic properties from data
   const hasData = dnaData?.hasData !== false;
   
-  // Resolve modal percentages
-  const visualPct = dnaData?.visualPercentage ?? 92;
-  const kinestheticPct = dnaData?.kinestheticPercentage ?? 78;
-  const readingPct = dnaData?.readingPercentage ?? 45;
+  // Resolve modal percentages — 0 when no real data from API
+  const visualPct = dnaData?.visualPercentage ?? 0;
+  const kinestheticPct = dnaData?.kinestheticPercentage ?? 0;
+  const readingPct = dnaData?.readingPercentage ?? 0;
 
   // Resolve dominant learning style name and badge
-  const dominantProfile = dnaData?.dominantProfile || "Visual-Spatial Learner";
+  const dominantProfile = dnaData?.dominantProfile || "";
   let learnerIdentity = "Visual Explorer";
-  let identityBadge = "Top 8% Visual Learner";
+  let identityBadge = "";
   
   if (dominantProfile.toLowerCase().includes("kinesthetic")) {
     learnerIdentity = "Hands-on Builder";
-    identityBadge = `Top ${100 - kinestheticPct}% Kinesthetic Learner`;
+    identityBadge = kinestheticPct > 0 ? `Top ${100 - kinestheticPct}% Kinesthetic Learner` : "Kinesthetic Learner";
   } else if (dominantProfile.toLowerCase().includes("reading") || dominantProfile.toLowerCase().includes("write")) {
     learnerIdentity = "Creative Thinker";
-    identityBadge = `Top ${100 - readingPct}% Focused Reader`;
+    identityBadge = readingPct > 0 ? `Top ${100 - readingPct}% Focused Reader` : "Reading & Writing Learner";
+  } else if (dominantProfile) {
+    identityBadge = visualPct > 0 ? `Top ${100 - visualPct}% Visual Learner` : "Visual-Spatial Learner";
   } else {
-    identityBadge = `Top ${100 - visualPct}% Visual Learner`;
+    identityBadge = "Learning Profile";
   }
 
-  // Resolve learning power metrics
-  const focusVal = dnaData?.metrics?.focus ?? 85;
-  const confidenceVal = dnaData?.metrics?.confidence ?? 75;
-  const consistencyVal = dnaData?.metrics?.motivation ?? 70;
+  // Resolve learning power metrics — 0 when no real data
+  const focusVal = dnaData?.metrics?.focus ?? 0;
+  const confidenceVal = dnaData?.metrics?.confidence ?? 0;
+  const consistencyVal = dnaData?.metrics?.motivation ?? 0;
 
-  // Resolve growth mindset metrics
-  const curiosityVal = dnaData?.metrics?.curiosity ?? 65;
-  const resilienceVal = dnaData?.metrics?.resilience ?? 70;
-  const creativityVal = dnaData?.metrics?.learningSpeed ?? 80;
+  // Resolve growth mindset metrics — 0 when no real data
+  const curiosityVal = dnaData?.metrics?.curiosity ?? 0;
+  const resilienceVal = dnaData?.metrics?.resilience ?? 0;
+  const creativityVal = dnaData?.metrics?.learningSpeed ?? 0;
 
-  // AI recommendations
-  const firstTip = dnaData?.tips?.[0] || {
-    title: "Use Visual Schemas",
-    desc: "Drawing concepts triggers memory pathways up to 60% faster. Try illustrating core principles together."
-  };
+  // AI recommendations — no hardcoded fallback tip
+  const firstTip = dnaData?.tips?.[0] || null;
 
   // Resolve dynamic activities based on dominant profile
   const activities = dominantProfile.toLowerCase().includes("kinesthetic") 
@@ -350,7 +349,8 @@ export default function ParentLearningDNAScreen() {
             </div>
           </div>
 
-          {/* Section 4: AI Coach */}
+          {/* Section 4: AI Coach — only shown when real data available */}
+          {firstTip && (
           <div className="bg-gradient-to-r from-[#141779] to-[#3b1580] rounded-[28px] p-6 text-white shadow-lg relative overflow-hidden">
             <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full blur-2xl"></div>
             <div className="flex items-center gap-2 mb-3">
@@ -366,6 +366,7 @@ export default function ParentLearningDNAScreen() {
               <span className="text-sm font-black text-[#57fae9]">+{Math.round(confidenceVal * 0.2 + 10)}% boost</span>
             </div>
           </div>
+          )}
 
           {/* Section 5: Recommended Activities */}
           <div>

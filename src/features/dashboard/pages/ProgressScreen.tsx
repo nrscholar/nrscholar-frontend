@@ -201,14 +201,8 @@ export default function ProgressScreen() {
     );
   }
 
-  // Fallback to basic list if API failed or missions is empty
-  const activeMissions = missions.length > 0 ? missions : [
-    { seq: 1, title: "Forest Trail", icon: "🌲", status: "completed", stars: 3 },
-    { seq: 2, title: "Mystic River", icon: "🌊", status: "locked", stars: 0 },
-    { seq: 3, title: "Crystal Cave", icon: "💎", status: "locked", stars: 0 },
-    { seq: 4, title: "Royal Castle", icon: "🏰", status: "locked", stars: 0 },
-    { seq: 5, title: "Dragon King Lair", icon: "🐲", status: "locked", stars: 0 },
-  ];
+  // activeMissions removed — the missionsList from the API is used directly above
+  // with proper empty states for no chapter / no missions cases
 
   // Dynamic achievement unlock check matching real child stats
   const hasMathAce = badges.some((b: any) => typeof b === 'string' ? b.toLowerCase().includes("math") : b?.name?.toLowerCase().includes("math"));

@@ -20,9 +20,9 @@ export default function ParentDashboardScreen() {
   const [showSwitcher, setShowSwitcher] = useState(false);
 
   const [modalType, setModalType] = useState<"strengths" | "weaknesses" | "risks" | "lastActivity" | "graph" | null>(null);
-  const [strengths, setStrengths] = useState<string[]>(["Quick problem solver in Mathematics."]);
-  const [weaknesses, setWeaknesses] = useState<string[]>(["Needs more practice in Science concepts."]);
-  const [risks, setRisks] = useState<string[]>(["Slight drop in engagement this week."]);
+  const [strengths, setStrengths] = useState<string[]>([]);
+  const [weaknesses, setWeaknesses] = useState<string[]>([]);
+  const [risks, setRisks] = useState<string[]>([]);
   const [todayTime, setTodayTime] = useState(0);
   const [solvedToday, setSolvedToday] = useState(0);
   const [todayConfidenceScore, setTodayConfidenceScore] = useState(0);
@@ -66,7 +66,7 @@ export default function ParentDashboardScreen() {
       const [userRes, reportRes, notifRes] = await Promise.all([
         apiFetch("/api/users/me").catch(() => null),
         apiFetch(`/api/parent/report?tz_offset_minutes=${tzOffset}`).catch(() => null),
-        apiFetch("/api/notifications").catch(() => null)
+        apiFetch("/api/notifications?role=parent").catch(() => null)
       ]);
 
       if (userRes && userRes.ok) {
@@ -132,7 +132,7 @@ export default function ParentDashboardScreen() {
 
   const markAllRead = async () => {
     try {
-      await apiFetch("/api/notifications/mark-all-read", { method: "POST" });
+      await apiFetch("/api/notifications/mark-all-read?role=parent", { method: "POST" });
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
       setUnreadCount(0);
     } catch (e) { }
@@ -159,10 +159,10 @@ export default function ParentDashboardScreen() {
     return { pathLine, pathArea, points, labels: weeklyTrend.map(t => t.day) };
   };
 
-  let highestSubject = "Math";
-  let lowestSubject = "Science";
-  let highestAcc = 90;
-  let lowestAcc = 50;
+  let highestSubject: string | null = null;
+  let lowestSubject: string | null = null;
+  let highestAcc: number | null = null;
+  let lowestAcc: number | null = null;
   if (subjectBreakdown && subjectBreakdown.length > 0) {
     const sorted = [...subjectBreakdown].sort((a, b) => b.accuracy - a.accuracy);
     highestSubject = sorted[0].subject;
@@ -171,14 +171,14 @@ export default function ParentDashboardScreen() {
     lowestAcc = sorted[sorted.length - 1].accuracy;
   }
 
-  const chartTitle = modalType === "strengths" ? highestSubject : modalType === "weaknesses" ? lowestSubject : modalType === "risks" ? "Confidence Decline" : "Overall Logic & Reasoning";
-  const targetAcc = modalType === "strengths" ? highestAcc : modalType === "weaknesses" ? lowestAcc : modalType === "risks" ? undefined : undefined;
+  const chartTitle = modalType === "strengths" ? (highestSubject ?? "Top Subject") : modalType === "weaknesses" ? (lowestSubject ?? "Focus Area") : modalType === "risks" ? "Confidence Decline" : "Overall Logic & Reasoning";
+  const targetAcc = modalType === "strengths" ? (highestAcc ?? undefined) : modalType === "weaknesses" ? (lowestAcc ?? undefined) : undefined;
 
   const chart = generateChartData(targetAcc);
-  const currentScore = chart.points.length > 0 ? chart.points[chart.points.length - 1].score : 92;
-  const startScore = chart.points.length > 0 ? chart.points[0].score : 65;
-  const diff = currentScore - startScore;
-  const diffStr = diff >= 0 ? `+${diff}% this week` : `${diff}% this week`;
+  const currentScore = chart.points.length > 0 ? chart.points[chart.points.length - 1].score : 0;
+  const startScore = chart.points.length > 0 ? chart.points[0].score : 0;
+  const diff = chart.points.length > 0 ? currentScore - startScore : 0;
+  const diffStr = chart.points.length > 0 ? (diff >= 0 ? `+${diff}% this week` : `${diff}% this week`) : "";
   const chartColor = modalType === "weaknesses" ? "#ba1a1a" : modalType === "risks" ? "#ff5e00" : "#006a62";
 
   if (loading) {
@@ -648,11 +648,17 @@ export default function ParentDashboardScreen() {
                 <div className="flex justify-between items-end mb-2">
                   <div>
                     <p className="text-[10px] font-bold text-[#767683] uppercase tracking-wider mb-1">{chartTitle} (7-Day Trend)</p>
-                    <p className="text-3xl font-black" style={{ color: chartColor }}>{currentScore}%</p>
+                    {chart.points.length > 0 ? (
+                      <p className="text-3xl font-black" style={{ color: chartColor }}>{currentScore}%</p>
+                    ) : (
+                      <p className="text-3xl font-black text-slate-400">--%</p>
+                    )}
                   </div>
-                  <div className={`px-2 py-1 rounded-md text-[10px] font-bold ${diff >= 0 ? 'bg-[#006a62]/10 text-[#006a62]' : 'bg-[#ba1a1a]/10 text-[#ba1a1a]'}`}>
-                    {diffStr}
-                  </div>
+                  {chart.points.length > 0 && diffStr && (
+                    <div className={`px-2 py-1 rounded-md text-[10px] font-bold ${diff >= 0 ? 'bg-[#006a62]/10 text-[#006a62]' : 'bg-[#ba1a1a]/10 text-[#ba1a1a]'}`}>
+                      {diffStr}
+                    </div>
+                  )}
                 </div>
 
                 {/* Custom SVG Line Graph */}
@@ -789,8 +795,10 @@ export default function ParentDashboardScreen() {
                           : modalType === "weaknesses" ?
                             `They should give more attention to ${lowestSubject} to build a more balanced cognitive profile.`
                             : <>Your child is currently excelling at <strong>{highestSubject}</strong>! However, they should give more attention to <strong>{lowestSubject}</strong> to build a more balanced cognitive profile.</>
-                      ) : (
+                      ) : chart.points.length > 0 ? (
                         <>{diff >= 0 ? "Consistent upward trend this week!" : "Noticed a slight dip recently."} {strengths.join(" ")}</>
+                      ) : (
+                        <>No trend data available yet. Complete more quizzes to get personalized insights.</>
                       )}
                     </p>
                   </div>

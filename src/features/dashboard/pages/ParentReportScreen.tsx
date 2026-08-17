@@ -307,6 +307,7 @@ export default function ParentReportScreen() {
     { id: "monthly",  label: "Monthly"  },
     { id: "yearly",   label: "Yearly"   },
   ];
+  // Note: activeTab and tabs are retained for future tab-based navigation
 
   if (loading) return (
     <div className="min-h-screen bg-[#f7f9fb] px-5 pt-[104px] flex flex-col gap-5">
@@ -340,6 +341,10 @@ export default function ParentReportScreen() {
   const risks: string[]      = reportData?.risks      || [];
   const mistakes: any[]      = reportData?.mistakes   || [];
 
+  const hasStrengths = strengths.length > 0 && !strengths.some(s => s.toLowerCase().includes("not enough data") || s.toLowerCase().includes("no strength"));
+  const hasWeaknesses = weaknesses.length > 0 && !weaknesses.some(w => w.toLowerCase().includes("not enough data") || w.toLowerCase().includes("no weakness"));
+  const hasRisks = risks.length > 0 && !risks.some(r => r.toLowerCase().includes("not enough data") || r.toLowerCase().includes("no risk"));
+
   // Dynamic metrics based on selected filters
   let displaySolved = reportData?.todaySolved ?? 0;
   let displayTime = reportData?.todayTimeMinutes ?? 0;
@@ -362,36 +367,49 @@ export default function ParentReportScreen() {
     }
   }
 
-  // Filter based on date range
+  // Yesterday — use real data only, show 0 if unavailable
   if (dateFilter === "yesterday") {
     displayLabel = "Yesterday's Activity";
-    displaySolved = Math.round(displaySolved * 0.8) || 3;
-    displayAccuracy = Math.max(0, displayAccuracy - 2);
-    displayTime = Math.round(displayTime * 0.8) || 5;
+    const prevHistory = reportData?.monthlyTimelineHistory || [];
+    // Try to find the second-to-last entry (yesterday)
+    const yesterdayPt = prevHistory.length >= 2 ? prevHistory[prevHistory.length - 2] : null;
+    if (yesterdayPt && (yesterdayPt.total ?? 0) > 0) {
+      displayAccuracy = yesterdayPt.masteryScore ?? 0;
+      displaySolved = yesterdayPt.total ?? 0;
+      displayTime = Math.max(1, Math.round(displaySolved * 1.5));
+    } else {
+      displaySolved = 0;
+      displayAccuracy = 0;
+      displayTime = 0;
+    }
   } else if (dateFilter === "this_week") {
     displayLabel = "This Week's Activity";
     const monthlyHist = reportData?.monthlyTimelineHistory || [];
     const last7 = monthlyHist.slice(-7);
-    if (last7.length > 0) {
-      const sumAcc = last7.reduce((acc: number, curr: any) => acc + (curr.masteryScore ?? 75), 0);
-      displayAccuracy = Math.round(sumAcc / last7.length);
-      displaySolved = last7.reduce((acc: number, curr: any) => acc + (curr.total ?? 4), 0);
-      displayTime = Math.round(displaySolved * 1.5);
+    const activeDays = last7.filter((curr: any) => (curr.total ?? 0) > 0);
+    displaySolved = last7.reduce((acc: number, curr: any) => acc + (curr.total ?? 0), 0);
+    if (displaySolved > 0 && activeDays.length > 0) {
+      const sumAcc = activeDays.reduce((acc: number, curr: any) => acc + (curr.masteryScore ?? 0), 0);
+      displayAccuracy = Math.round(sumAcc / activeDays.length);
+      displayTime = Math.max(1, Math.round(displaySolved * 1.5));
     } else {
-      displaySolved = (reportData?.todaySolved ?? 0) * 5 || 25;
-      displayTime = displaySolved * 1.5 || 40;
+      displaySolved = 0;
+      displayTime = 0;
+      displayAccuracy = 0;
     }
   } else if (dateFilter === "this_month" || dateFilter === "last_30_days") {
     displayLabel = "This Month's Activity";
     const monthlyHist = reportData?.monthlyTimelineHistory || [];
-    if (monthlyHist.length > 0) {
-      const sumAcc = monthlyHist.reduce((acc: number, curr: any) => acc + (curr.masteryScore ?? 75), 0);
-      displayAccuracy = Math.round(sumAcc / monthlyHist.length);
-      displaySolved = monthlyHist.reduce((acc: number, curr: any) => acc + (curr.total ?? 4), 0);
-      displayTime = Math.round(displaySolved * 1.5);
+    const activeDays = monthlyHist.filter((curr: any) => (curr.total ?? 0) > 0);
+    displaySolved = monthlyHist.reduce((acc: number, curr: any) => acc + (curr.total ?? 0), 0);
+    if (displaySolved > 0 && activeDays.length > 0) {
+      const sumAcc = activeDays.reduce((acc: number, curr: any) => acc + (curr.masteryScore ?? 0), 0);
+      displayAccuracy = Math.round(sumAcc / activeDays.length);
+      displayTime = Math.max(1, Math.round(displaySolved * 1.5));
     } else {
-      displaySolved = (reportData?.todaySolved ?? 0) * 18 || 95;
-      displayTime = displaySolved * 1.5 || 150;
+      displaySolved = 0;
+      displayTime = 0;
+      displayAccuracy = 0;
     }
   } else if (dateFilter === "custom") {
     displayLabel = "Custom Range Activity";
@@ -410,18 +428,19 @@ export default function ParentReportScreen() {
         return true;
       });
     }
-    if (customList.length > 0) {
-      const sumAcc = customList.reduce((acc: number, curr: any) => acc + (curr.masteryScore ?? 75), 0);
-      displayAccuracy = Math.round(sumAcc / customList.length);
-      displaySolved = customList.reduce((acc: number, curr: any) => acc + (curr.total ?? 4), 0);
-      displayTime = Math.round(displaySolved * 1.5);
+    const activeDays = customList.filter((pt: any) => (pt.total ?? 0) > 0);
+    displaySolved = customList.reduce((acc: number, curr: any) => acc + (curr.total ?? 0), 0);
+    if (displaySolved > 0 && activeDays.length > 0) {
+      const sumAcc = activeDays.reduce((acc: number, curr: any) => acc + (curr.masteryScore ?? 0), 0);
+      displayAccuracy = Math.round(sumAcc / activeDays.length);
+      displayTime = Math.max(1, Math.round(displaySolved * 1.5));
     } else {
       displaySolved = 0;
       displayAccuracy = 0;
       displayTime = 0;
     }
   }
-  displayTime = Math.max(1, Math.round(displayTime));
+  displayTime = Math.max(0, Math.round(displayTime));
 
   // Dynamic chart selection based on dateFilter and subjectFilter
   let chartHistory = dailyHistory;
@@ -608,11 +627,22 @@ export default function ParentReportScreen() {
           </div>
           <ProgressBar value={displayAccuracy} color="bg-gradient-to-r from-[#141779] via-[#30007f] to-[#57fae9]" />
           
-          {compareFilter === "previous" && (
-            <div className="mt-3 text-xs font-black text-emerald-600 flex items-center gap-1.5">
-              <span>↑ 6% vs previous period</span>
-            </div>
-          )}
+          {compareFilter === "previous" && (() => {
+            const prevHistory = reportData?.monthlyTimelineHistory || [];
+            if (prevHistory.length >= 2) {
+              const curr = prevHistory[prevHistory.length - 1]?.masteryScore ?? displayAccuracy;
+              const prev = prevHistory[prevHistory.length - 2]?.masteryScore ?? displayAccuracy;
+              const delta = curr - prev;
+              const deltaStr = delta >= 0 ? `↑ ${delta}%` : `↓ ${Math.abs(delta)}%`;
+              const color = delta >= 0 ? "text-emerald-600" : "text-red-600";
+              return (
+                <div className={`mt-3 text-xs font-black ${color} flex items-center gap-1.5`}>
+                  <span>{deltaStr} vs previous period</span>
+                </div>
+              );
+            }
+            return null;
+          })()}
         </Card>
 
         {/* Question Analytics Card */}
@@ -748,7 +778,7 @@ export default function ParentReportScreen() {
         {/* Cognitive Strengths & Weaknesses */}
         <Card>
           <h3 className="text-sm font-bold text-[#191c1e] mb-3">💪 Conceptual Strengths</h3>
-          {strengths.length === 0
+          {!hasStrengths
             ? <p className="text-xs text-[#767683]">Complete more quests to identify strengths.</p>
             : strengths.map((s: string, i: number) => (
               <div key={i} className="bg-green-50 border border-green-100 rounded-xl p-3 mb-2 flex gap-2 items-start">
@@ -760,7 +790,7 @@ export default function ParentReportScreen() {
 
         <Card>
           <h3 className="text-sm font-bold text-[#191c1e] mb-3">⚠️ Focus Areas</h3>
-          {weaknesses.length === 0
+          {!hasWeaknesses
             ? <p className="text-xs text-[#767683]">No weaknesses detected yet.</p>
             : weaknesses.map((w: string, i: number) => (
               <div key={i} className="bg-orange-50 border border-orange-100 rounded-xl p-3 mb-2 flex gap-2 items-start">
@@ -826,7 +856,7 @@ export default function ParentReportScreen() {
         </Card>
 
         {/* Risk Alerts */}
-        {risks.length > 0 && (
+        {hasRisks && (
           <Card>
             <SectionHeader icon={<AlertTriangle size={20} color="#ba1a1a" />} title="Risk Alerts" subtitle="Automatically detected warnings" />
             <div className="flex flex-col gap-2">
@@ -992,17 +1022,7 @@ export default function ParentReportScreen() {
 
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Activity Type</label>
-            <div className="grid grid-cols-3 gap-2">
-              {["All", "Quizzes", "Reading"].map((opt) => (
-                <button
-                  key={opt}
-                  onClick={() => alert(`Activity filter '${opt}' selected`)}
-                  className="py-2 px-2 text-xs font-black rounded-xl border text-slate-800 bg-slate-50 border-slate-200 hover:bg-slate-100"
-                >
-                  {opt}
-                </button>
-              ))}
-            </div>
+            <p className="text-xs text-slate-400 font-bold">Coming soon — filter by quiz, reading, or boss activity.</p>
           </div>
 
           <div className="space-y-2">

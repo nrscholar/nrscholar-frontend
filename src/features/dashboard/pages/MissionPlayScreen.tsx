@@ -342,6 +342,14 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     sessionStorage.setItem(`user_answers_${chapterId}_${missionSeq}`, JSON.stringify(userAnswers));
   }, [userAnswers, chapterId, missionSeq]);
 
+  useEffect(() => {
+    if (searchParams.get("replay") === "true") {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete("replay");
+      navigate(`?${newParams.toString()}`, { replace: true });
+    }
+  }, [searchParams, navigate]);
+
   // Fetch Mission Data Effect
   useEffect(() => {
     async function fetchMission() {
@@ -503,6 +511,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       });
       const json = await res.json();
       if (json.success && json.data) {
+        setCompletionResult(json.data);
         // Trigger Interactive Desktop Push Notification & Floating Banner Toast
         showInteractiveNotification(
           "🧩 MYSTERY SOLVED!",
@@ -728,6 +737,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
   // Overall session active timer (for parent space total time reporting)
   useEffect(() => {
+    if (phase === "SUMMARY") return;
     const timer = setInterval(() => {
       if (isCompleting) return;
       setTotalSessionSec((prev) => {
@@ -737,7 +747,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [chapterId, missionSeq, isCompleting]);
+  }, [chapterId, missionSeq, isCompleting, phase]);
 
   // Reset 30-second countdown on question change
   useEffect(() => {
