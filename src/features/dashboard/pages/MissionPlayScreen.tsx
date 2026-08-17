@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "../../../api";
+import { showInteractiveNotification } from "../../../services/pushNotificationService";
 
 type StepPhase = "INTRO" | "QUIZ" | "MINI_REWARD" | "BOSS" | "SUMMARY";
 
@@ -502,7 +503,13 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       });
       const json = await res.json();
       if (json.success && json.data) {
-        setCompletionResult(json.data);
+        // Trigger Interactive Desktop Push Notification & Floating Banner Toast
+        showInteractiveNotification(
+          "🧩 MYSTERY SOLVED!",
+          `You bagged +${json.data.earnedXp || 20} XP & ${json.data.earnedCoins || 50} Coins! Your dragon egg is glowing 🐉`,
+          "/home",
+          "gamification"
+        );
         const oldStr = json.data.oldStreak !== undefined ? json.data.oldStreak : (json.data.streak || 1);
         setDisplayedStreak(oldStr);
         setStreakDaysOfWeek(json.data.streakDaysOfWeek || [false, false, false, false, false, false, false]);
@@ -1475,27 +1482,43 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                   </motion.div>
                 </div>
 
-                {/* Progress bar to daily goal */}
-                <div className="w-full max-w-xs flex flex-col gap-2 mt-3">
-                  <div className="w-full h-3.5 bg-gray-200 rounded-full overflow-hidden p-0.5 border border-gray-300">
-                    <motion.div
-                      initial={{ width: "0%" }}
-                      animate={{ width: "75%" }}
-                      transition={{ duration: 1.2, ease: "easeOut" }}
-                      className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full"
-                    />
-                  </div>
-                  <div className="flex justify-between items-center text-[10px] font-black text-amber-600 uppercase tracking-wider px-1">
-                    <span>Daily XP Goal</span>
-                    <span>75% Reached</span>
-                  </div>
-                </div>
+                {/* Dynamic progress bar to daily goal */}
+                {(() => {
+                  const todayLessons = completionResult?.todayLessonsCount || 1;
+                  const xpGoalPct = Math.min(100, Math.max(34, Math.round(todayLessons * 34)));
+                  return (
+                    <div className="w-full max-w-xs flex flex-col gap-2 mt-3">
+                      <div className="w-full h-3.5 bg-gray-200 rounded-full overflow-hidden p-0.5 border border-gray-300">
+                        <motion.div
+                          initial={{ width: "0%" }}
+                          animate={{ width: `${xpGoalPct}%` }}
+                          transition={{ duration: 1.2, ease: "easeOut" }}
+                          className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full"
+                        />
+                      </div>
+                      <div className="flex justify-between items-center text-[10px] font-black text-amber-600 uppercase tracking-wider px-1">
+                        <span>Daily XP Goal</span>
+                        <span>{xpGoalPct >= 100 ? "100% Goal Mastered! 🎉" : `${xpGoalPct}% Reached`}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
-              {/* Continue button */}
+              {/* Continue button - Primary color & Streak first-lesson filter */}
               <button
-                onClick={() => setSummaryStep("STREAK")}
-                className="w-full py-4 rounded-2xl bg-[#00aaef] hover:bg-[#0091cb] text-white font-black text-base shadow-md uppercase tracking-wider active:scale-95 transition-all mt-auto"
+                onClick={() => {
+                  const todayKey = `streak_shown_${new Date().toISOString().slice(0, 10)}`;
+                  const alreadyShownToday = localStorage.getItem(todayKey) === "true";
+                  
+                  if (completionResult?.shouldAnimateStreak && !alreadyShownToday) {
+                    localStorage.setItem(todayKey, "true");
+                    setSummaryStep("STREAK");
+                  } else {
+                    setSummaryStep("REPORT");
+                  }
+                }}
+                className="w-full py-4 rounded-2xl bg-[#141779] hover:bg-[#101362] text-white font-black text-base shadow-lg shadow-indigo-900/20 uppercase tracking-wider active:scale-95 transition-all mt-auto"
               >
                 Continue
               </button>
@@ -1595,10 +1618,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                 </div>
               </div>
 
-              {/* Continue to stats button */}
+              {/* Continue to stats button - Primary color */}
               <button
                 onClick={() => setSummaryStep("REPORT")}
-                className="w-full py-4 rounded-2xl bg-[#00aaef] hover:bg-[#0091cb] text-white font-black text-base shadow-md uppercase tracking-wider active:scale-95 transition-all mt-auto"
+                className="w-full py-4 rounded-2xl bg-[#141779] hover:bg-[#101362] text-white font-black text-base shadow-lg shadow-indigo-900/20 uppercase tracking-wider active:scale-95 transition-all mt-auto"
               >
                 Continue
               </button>

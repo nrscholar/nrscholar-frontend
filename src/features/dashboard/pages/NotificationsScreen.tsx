@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Bell, Sparkles, AlertCircle } from "lucide-react";
+import { ArrowLeft, Bell, Sparkles, AlertCircle, Gift, BookOpen, Disc } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../../api";
@@ -96,24 +96,35 @@ export default function NotificationsScreen() {
             <div className="absolute left-[22px] top-0 bottom-0 border-l-2 border-dashed border-[rgba(20,23,121,0.2)] z-0" />
 
             {notifications.map((notif, idx) => {
-              const isInfo = notif.type === "habit" || notif.type === "general";
+              const isSpin = notif.type === "spin" || notif.type === "daily_spin";
+              const isReward = notif.type === "reward" || notif.type === "daily_reward";
+              const isPdf = notif.type === "pdf" || notif.type === "reading";
               const isGamification = notif.type === "gamification";
               const isLearning = notif.type === "learning";
               
               return (
                 <div key={notif._id || idx} className="flex items-start gap-4 z-10 relative">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-[0_2px_4px_rgba(0,0,0,0.1)] mt-1 ${
+                    isSpin ? "bg-purple-600 text-white" :
+                    isReward ? "bg-amber-500 text-white" :
+                    isPdf ? "bg-indigo-600 text-white" :
                     isLearning ? "bg-[#141779] text-white" :
                     isGamification ? "bg-[#57fae9] text-[#006a62]" :
                     "bg-[#e0e3e5] text-[#141779]"
                   }`}>
-                    {isLearning ? <Bell size={20} /> :
+                    {isSpin ? <Disc size={20} /> :
+                     isReward ? <Gift size={20} /> :
+                     isPdf ? <BookOpen size={20} /> :
+                     isLearning ? <Bell size={20} /> :
                      isGamification ? <Sparkles size={20} /> :
                      <AlertCircle size={20} />}
                   </div>
                   <div className="flex-1 relative">
                     <div className="absolute -left-[6px] top-5 w-4 h-4 bg-[rgba(255,255,255,0.7)] rotate-45 z-0" />
-                    <div className="w-full text-left bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.5)] shadow-[0_1px_5px_rgba(0,0,0,0.05)] hover:bg-white transition-colors relative z-10">
+                    <div 
+                      onClick={() => notif.screen && navigate(notif.screen)}
+                      className={`w-full text-left bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.5)] shadow-[0_1px_5px_rgba(0,0,0,0.05)] hover:bg-white transition-colors relative z-10 ${notif.screen ? 'cursor-pointer hover:border-indigo-300' : ''}`}
+                    >
                       <div className="flex justify-between items-start mb-1">
                         <h3 className="text-sm font-semibold text-[#141779]">{notif.title}</h3>
                         {notif.createdAt && (

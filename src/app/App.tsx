@@ -72,6 +72,8 @@ const AuthHandler = () => {
 };
 
 import { apiFetch } from "../api";
+import { registerPushNotificationToken } from "../services/pushNotificationService";
+import GlobalNotificationBanner from "../components/GlobalNotificationBanner";
 
 const ScreenTimeTracker = () => {
   const [showWarning, setShowWarning] = useState(false);
@@ -90,6 +92,9 @@ const ScreenTimeTracker = () => {
   useEffect(() => {
     const token = localStorage.getItem("userToken");
     if (!token) return;
+
+    // Register push notification device token
+    registerPushNotificationToken();
 
     let limitMinutes = 9999;
     
@@ -297,6 +302,7 @@ function App() {
     <BrowserRouter>
       <AuthHandler />
       <ScreenTimeTracker />
+      <GlobalNotificationBanner />
       <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#141779]"></div></div>}>
         <Routes>
           <Route path="/" element={<Navigate to="/home" replace />} />

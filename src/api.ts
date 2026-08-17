@@ -104,9 +104,9 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
     headers.set("Expires", "0");
   }
 
-  // Add 30-second timeout using AbortController
+  // Add 15-second timeout using AbortController
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000);
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
 
   let response;
   try {
@@ -114,9 +114,17 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
     clearTimeout(timeoutId);
   } catch (e) {
     clearTimeout(timeoutId);
-    console.error("Network error", e);
-    // Return a fake response to avoid crashing UI components
-    return new Response(JSON.stringify({ success: false, message: "Network Error" }), { status: 503, headers: { "Content-Type": "application/json" }});
+    console.warn("First network attempt failed/idle. Retrying once...", e);
+    // Automatic retry once for idle socket drops
+    try {
+      const retryController = new AbortController();
+      const retryTimeout = setTimeout(() => retryController.abort(), 15000);
+      response = await fetch(url, { ...options, headers, signal: retryController.signal });
+      clearTimeout(retryTimeout);
+    } catch (retryErr) {
+      console.error("Network error on retry", retryErr);
+      return new Response(JSON.stringify({ success: false, message: "Network Error" }), { status: 503, headers: { "Content-Type": "application/json" }});
+    }
   }
 
   // Cache successful GET /api/users/me responses

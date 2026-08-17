@@ -4,7 +4,8 @@ export interface MapStageConfig {
   name: string;
   subtitle: string;
   emoji: string;
-  iconBg: string;
+  iconBg?: string;
+  terrainIcon?: string;
   storyQuote: string;
   questsCount: number;
   lessonsCount: number;
@@ -17,6 +18,8 @@ export interface MapStageConfig {
   biomeType: "forest" | "cave" | "volcano" | "castle";
   missions: { title: string; type: string; xp: number; icon: string }[];
 }
+
+export type MapLocationConfig = MapStageConfig;
 
 export interface MapWorldThemeConfig {
   type: "dragon" | "science" | "reading" | "space";
@@ -39,7 +42,10 @@ export const NRSCHOLAR_TOKENS = {
   background: "#F4F8FF", // Soft Sky Atmosphere
   textDark: "#1E2A5E",
   textMuted: "#64748B",
+  heading: "#1E2A5E",
 };
+
+export const NRSCHOLAR_COLORS = NRSCHOLAR_TOKENS;
 
 export const WORLD_THEMES: Record<string, MapWorldThemeConfig> = {
   dragon: {

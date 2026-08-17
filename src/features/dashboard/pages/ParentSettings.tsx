@@ -1017,24 +1017,40 @@ export default function ParentSettings() {
         {/* HIDDEN: All Bento Grid Controls — Kid-Safe Mode, Edu Reels, AI Teacher, Premium Plans, Support, Update Pin kept for future use */}
 
         {/* HIDDEN: Factory Reset Journey — kept for future use */}
-        {/*
-        <motion.button 
+        {/* Family Link Code Card */}
+        <motion.div 
           variants={itemVariants}
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.99 }}
-          onClick={() => setShowResetModal(true)}
-          className="bg-gradient-to-r from-red-50 to-rose-50 rounded-3xl p-6 border-2 border-red-100 shadow-sm flex items-center gap-4 text-left group overflow-hidden relative"
+          className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-sm flex flex-col gap-4"
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-red-100/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          <div className="w-14 h-14 rounded-2xl bg-red-100 flex items-center justify-center shrink-0 shadow-inner group-hover:bg-red-200 transition-colors z-10">
-            <Trash2 size={26} className="text-red-600" />
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-[#141779] shrink-0">
+              <ShieldCheck size={24} />
+            </div>
+            <div>
+              <h2 className="text-lg font-black text-[#141779]">Family Link & Devices</h2>
+              <p className="text-xs font-semibold text-slate-500">Connect co-parents (Father & Mother) or extra devices</p>
+            </div>
           </div>
-          <div className="flex-1 z-10">
-            <h2 className="text-lg font-bold text-red-700">Factory Reset Journey</h2>
-            <p className="text-sm font-medium text-red-900/60 mt-1">Erase all coins, progress, and battle history permanently</p>
+
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Your Family Link Code</span>
+              <span className="text-xl font-black text-[#141779] tracking-widest">{user?.familyCode || "FAM-8492"}</span>
+            </div>
+            <button
+              onClick={() => {
+                if (user?.familyCode) {
+                  navigator.clipboard.writeText(user.familyCode);
+                  setToastMessage("Family Code copied!");
+                  setTimeout(() => setToastMessage(null), 2500);
+                }
+              }}
+              className="px-3.5 py-2 rounded-xl bg-[#141779] text-white text-xs font-black uppercase tracking-wider"
+            >
+              Copy Code
+            </button>
           </div>
-        </motion.button>
-        */}
+        </motion.div>
       {/* Reset Modal */}
       <AnimatePresence>
         {showResetModal && (

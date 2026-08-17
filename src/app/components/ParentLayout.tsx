@@ -1,4 +1,4 @@
-import { Link, useLocation, Outlet } from "react-router-dom";
+import { Link, useLocation, Outlet, Navigate } from "react-router-dom";
 import { Home, BarChart2, BookOpen, TrendingUp, Settings } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -6,6 +6,11 @@ export default function ParentLayout() {
   const location = useLocation();
   const currentPath = location.pathname;
   const { t } = useTranslation();
+
+  const isPinVerified = sessionStorage.getItem("parentPinVerified") === "true";
+  if (!isPinVerified) {
+    return <Navigate to="/parent/gate" replace />;
+  }
 
   const navItems = [
     { path: "/parent/dashboard", label: t('dashboard', 'Dashboard'), icon: Home },

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Bell, Settings, BrainCircuit, Clock, ChevronRight, Home, Activity, X, BarChart2, Users, CheckCircle, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Bell, BookOpen, Clock, Heart, ShieldAlert, Sparkles, TrendingUp, Trophy, Zap, ChevronRight, Download, Share2, Award, Calendar, CheckCircle, CheckCircle2, Target, BarChart2, Flame, UserCheck, RefreshCw, X, AlertTriangle, Users, BrainCircuit, Activity, Settings } from "lucide-react";
+import FamilyLinkModal from "../../../components/FamilyLinkModal";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
 import ChildSwitcherModal from "../../../components/ChildSwitcherModal";
@@ -37,6 +38,7 @@ export default function ParentDashboardScreen() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const [showBreakdownModal, setShowBreakdownModal] = useState(false);
+  const [showFamilyModal, setShowFamilyModal] = useState(false);
   const [breakdownData, setBreakdownData] = useState<any>(null);
   const [loadingBreakdown, setLoadingBreakdown] = useState(false);
 
@@ -213,15 +215,26 @@ export default function ParentDashboardScreen() {
           </button>
           <h1 className="text-2xl font-black text-[#141779]">{t("parent_space") || "Parent Space"}</h1>
         </div>
-        <button onClick={() => { setShowNotifications(true); markAllRead(); }} className="relative w-11 h-11 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 shadow-xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all">
-          <Bell size={22} className="text-[#141779]" />
-          {unreadCount > 0 && (
-            <span className="absolute top-2 right-2.5 w-4 h-4 bg-[#ba1a1a] rounded-full border-2 border-white flex items-center justify-center text-[8px] font-bold text-white">
-              {unreadCount}
-            </span>
-          )}
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setShowFamilyModal(true)} 
+            className="h-10 px-3 flex items-center gap-1.5 rounded-full bg-indigo-50 border border-indigo-200 text-[#141779] font-black text-xs hover:bg-indigo-100 active:scale-95 transition-all shadow-xs"
+          >
+            <Users size={16} />
+            <span className="hidden sm:inline">Family Code</span>
+          </button>
+          <button onClick={() => { setShowNotifications(true); markAllRead(); }} className="relative w-11 h-11 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 shadow-xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all">
+            <Bell size={22} className="text-[#141779]" />
+            {unreadCount > 0 && (
+              <span className="absolute top-2 right-2.5 w-4 h-4 bg-[#ba1a1a] rounded-full border-2 border-white flex items-center justify-center text-[8px] font-bold text-white">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+        </div>
       </header>
+
+      <FamilyLinkModal isOpen={showFamilyModal} onClose={() => setShowFamilyModal(false)} />
 
       <main className="px-5 pt-[104px] flex flex-col gap-6">
 

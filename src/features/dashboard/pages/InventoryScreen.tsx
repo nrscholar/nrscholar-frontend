@@ -343,9 +343,9 @@ export default function InventoryScreen() {
                 const count = mysteryBoxes[type] || 0;
                 let bgColors = "from-[#f0f0f0] to-[#ffffff]";
                 let borderColor = "border-[#d0d0d0]";
-                let glowShadow = "shadow-[0_4px_16px_rgba(156,163,175,0.25)]";
-                if (type === 'rare') { bgColors = "from-[#e0f7fa] to-[#ffffff]"; borderColor = "border-[#00bcd4]"; glowShadow = "shadow-[0_4px_24px_rgba(0,188,212,0.35)]"; }
-                if (type === 'epic') { bgColors = "from-[#f3e5f5] to-[#ffffff]"; borderColor = "border-[#9c27b0]"; glowShadow = "shadow-[0_4px_28px_rgba(156,39,176,0.4)]"; }
+                let glowShadow = "shadow-sm";
+                if (type === 'rare') { bgColors = "from-[#e0f7fa] to-[#ffffff]"; borderColor = "border-[#00bcd4]"; glowShadow = "shadow-sm"; }
+                if (type === 'epic') { bgColors = "from-[#f3e5f5] to-[#ffffff]"; borderColor = "border-[#9c27b0]"; glowShadow = "shadow-sm"; }
                 
                 return (
                   <motion.div 
@@ -424,20 +424,28 @@ export default function InventoryScreen() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-3">
-                    {dragons.map((d: any) => (
-                      <motion.div 
-                        key={d.id} 
-                        animate={{ y: [-3, 3, -3] }}
-                        transition={{ repeat: Infinity, duration: 2 + Math.random(), ease: "easeInOut" }}
-                        className="bg-gradient-to-br from-[#e0e0ff] to-[#ffffff] rounded-[20px] p-4 border-2 border-[#141779] flex flex-col items-center shadow-sm"
-                      >
-                        <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-2">
-                          <span className="text-3xl">🐉</span>
-                        </div>
-                        <h3 className="text-[13px] font-bold text-[#141779] text-center">{d.name}</h3>
-                        <p className="text-[10px] font-bold text-[#767683]">Level {d.level} • {d.rarity}</p>
-                      </motion.div>
-                    ))}
+                    {dragons.map((d: any, index: number) => {
+                      const isNew = d.isNew || index === dragons.length - 1;
+                      return (
+                        <motion.div 
+                          key={d.id || index} 
+                          animate={{ y: [-3, 3, -3] }}
+                          transition={{ repeat: Infinity, duration: 2 + Math.random(), ease: "easeInOut" }}
+                          className="bg-gradient-to-br from-[#e0e0ff] to-[#ffffff] rounded-[20px] p-4 border-2 border-[#141779] flex flex-col items-center shadow-sm relative overflow-hidden"
+                        >
+                          {isNew && (
+                            <span className="absolute top-2 right-2 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 text-[8px] font-black px-1.5 py-0.5 rounded-full border border-amber-300 shadow-xs animate-pulse uppercase tracking-wider">
+                              NEW
+                            </span>
+                          )}
+                          <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-2 shadow-inner">
+                            <span className="text-3xl">🐉</span>
+                          </div>
+                          <h3 className="text-[13px] font-bold text-[#141779] text-center">{d.name}</h3>
+                          <p className="text-[10px] font-bold text-[#767683]">Level {d.level} • {d.rarity}</p>
+                        </motion.div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

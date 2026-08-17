@@ -283,6 +283,41 @@ export default function HomeScreen() {
   const [showSpinPopup, setShowSpinPopup] = useState(false);
   const [pendingSpinPopup, setPendingSpinPopup] = useState(false);
   const [showStreakModal, setShowStreakModal] = useState(false);
+  const [streakRevivalData, setStreakRevivalData] = useState<any>(null);
+  const [showRevivalModal, setShowRevivalModal] = useState(false);
+  const [revivalError, setRevivalError] = useState("");
+  const [revivalLoading, setRevivalLoading] = useState(false);
+
+  const handleReviveStreak = async () => {
+    setRevivalError("");
+    setRevivalLoading(true);
+    try {
+      const res = await apiFetch("/api/retention/streak/revive", { method: "POST" });
+      const json = await res.json();
+      if (json.success) {
+        setShowRevivalModal(false);
+        setCoins(json.coins);
+        setStreakDays(json.current_streak);
+        fetchProfile();
+      } else {
+        setRevivalError(json.message || "You don't have enough coins to revive your streak!");
+      }
+    } catch (e) {
+      setRevivalError("Failed to revive streak. Please try again.");
+    } finally {
+      setRevivalLoading(false);
+    }
+  };
+
+  const handleDeclineRevival = async () => {
+    try {
+      await apiFetch("/api/retention/streak/decline", { method: "POST" });
+    } catch (e) {}
+    setShowRevivalModal(false);
+    setStreakDays(0);
+    fetchProfile();
+  };
+
   const [citiesData, setCitiesData] = useState<any[]>([]);
 
   useEffect(() => {
@@ -401,9 +436,13 @@ export default function HomeScreen() {
       const streakSequencePromise = (async () => {
         try {
           try {
-            const streakUpRes = await apiFetch("/api/retention/streak/update", { method: "POST" });
-            if (streakUpRes.ok) {
-              await fetchProfile();
+            const statusRes = await apiFetch("/api/retention/streak/status");
+            if (statusRes.ok) {
+              const sData = await statusRes.json();
+              if (sData.lostStreak) {
+                setStreakRevivalData(sData);
+                setShowRevivalModal(true);
+              }
             }
           } catch (e) { }
 
@@ -649,8 +688,13 @@ export default function HomeScreen() {
 
         {/* 2. RECENT UNLOCK */}
         <div className="flex flex-col gap-2 relative z-10">
-          <h2 className="text-[10px] font-black text-[#141779] tracking-widest uppercase px-1">Recent Unlock</h2>
-          <div className="bg-gradient-to-r from-amber-50/70 to-yellow-50/70 border-2 border-amber-100 rounded-[24px] p-4 flex items-center gap-4 shadow-sm">
+          <div className="flex justify-between items-center px-1">
+            <h2 className="text-[10px] font-black text-[#141779] tracking-widest uppercase">Recent Unlock</h2>
+            <span className="text-[9px] font-black bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 px-2 py-0.5 rounded-full border border-amber-300 shadow-xs uppercase tracking-wider animate-pulse">
+              ✨ JUST UNLOCKED
+            </span>
+          </div>
+          <div className="bg-gradient-to-r from-amber-50/70 to-yellow-50/70 border-2 border-amber-100 rounded-[24px] p-4 flex items-center gap-4 shadow-sm relative overflow-hidden">
             <div className="w-12 h-12 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center text-2xl shadow-inner animate-pulse shrink-0 select-none">
               {theme.rewardIcon}
             </div>
@@ -961,13 +1005,12 @@ export default function HomeScreen() {
               }}
               animate={chestTaps === 1 ? {
                 scale: [1, 1.2, 1.1, 1.3, 1.5],
-                rotate: [0, -10, 10, -15, 15, -20, 20, 0],
-                filter: ["brightness(1)", "brightness(1.5)", "brightness(2)"]
+                rotate: [0, -10, 10, -15, 15, -20, 20, 0]
               } : {}}
               transition={chestTaps === 1 ? { duration: 1.2, ease: "easeInOut" } : {}}
               whileHover={chestTaps === 0 ? { scale: 1.1, rotate: 5 } : {}}
               whileTap={chestTaps === 0 ? { scale: 0.8, rotate: -15 } : {}}
-              className="text-[140px] filter drop-shadow-[0_0_30px_rgba(255,215,0,0.6)] cursor-pointer relative"
+              className="text-[140px] cursor-pointer relative filter drop-shadow-md"
             >
               <span className="relative z-10">🎁</span>
               {chestTaps === 1 && (
@@ -993,7 +1036,7 @@ export default function HomeScreen() {
             initial={{ scale: 0, rotate: -180 }}
             animate={{ scale: 1, rotate: 0 }}
             transition={{ type: "spring", damping: 15, stiffness: 200 }}
-            className="bg-gradient-to-b from-[#fff7e6] to-white w-full max-w-sm rounded-[32px] p-8 text-center relative shadow-[0_0_50px_rgba(255,215,0,0.4)] border border-amber-200"
+            className="bg-white w-full max-w-sm rounded-[32px] p-8 text-center relative shadow-2xl border border-slate-200"
           >
             <motion.span
               initial={{ scale: 0 }}
@@ -1010,7 +1053,7 @@ export default function HomeScreen() {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.5 }}
-              className="bg-[#ff9f43]/10 rounded-2xl p-6 mb-8 border-2 border-[#ff9f43]/30 relative overflow-hidden"
+              className="bg-amber-50 rounded-2xl p-6 mb-8 border border-amber-200 relative overflow-hidden"
             >
               <div className="absolute inset-0 bg-white/40 blur-xl animate-pulse" />
               <span className="text-5xl block mb-2 relative z-10">{surpriseData.reward_type === 'coins' ? '🪙' : surpriseData.reward_type === 'xp' ? '⭐' : '🔮'}</span>
@@ -1223,7 +1266,6 @@ export default function HomeScreen() {
                 </div>
               </div>
 
-              {/* Close button */}
               <button
                 onClick={() => setShowStreakModal(false)}
                 className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#57fae9] to-[#00c9b7] text-[#141779] font-black text-xs shadow-[0_4px_15px_rgba(87,250,233,0.3)] uppercase tracking-wider active:scale-95 transition-all mt-4 z-10 border-0"
@@ -1234,6 +1276,52 @@ export default function HomeScreen() {
           </div>
         )}
       </AnimatePresence>
+      {/* STREAK REVIVAL MODAL */}
+      {showRevivalModal && streakRevivalData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in select-none">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border-2 border-red-500/30 flex flex-col items-center text-center relative overflow-hidden animate-scale-up">
+            {/* Background Glow */}
+            <div className="absolute -top-12 -right-12 w-40 h-40 bg-red-500/10 rounded-full blur-2xl pointer-events-none" />
+            
+            {/* Icon Badge */}
+            <div className="w-20 h-20 rounded-3xl bg-red-50 text-red-500 flex items-center justify-center text-4xl mb-4 border border-red-200 shadow-inner">
+              💔
+            </div>
+
+            <h2 className="text-xl font-black text-slate-900 tracking-tight mb-2">
+              You Lost Your Streak!
+            </h2>
+
+            <p className="text-xs font-medium text-slate-600 mb-4 leading-relaxed">
+              You missed <span className="font-black text-red-600">{streakRevivalData.missedDays} day(s)</span> and lost your <span className="font-black text-amber-600">{streakRevivalData.previousStreak}-day streak</span>!
+            </p>
+
+            {revivalError && (
+              <div className="w-full mb-4 p-3 bg-red-50 border-2 border-red-500 text-red-600 font-extrabold text-xs rounded-xl text-center shadow-xs">
+                {revivalError}
+              </div>
+            )}
+
+            <div className="w-full flex flex-col gap-2.5 mt-1">
+              <button
+                onClick={handleReviveStreak}
+                disabled={revivalLoading}
+                className="w-full py-3.5 px-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 active:scale-95 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg border border-amber-300/40 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              >
+                <span>🔥 Pay {streakRevivalData.reviveCost} Coins to Revive</span>
+              </button>
+
+              <button
+                onClick={handleDeclineRevival}
+                disabled={revivalLoading}
+                className="w-full py-3 px-4 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-600 font-bold text-xs rounded-2xl transition-all"
+              >
+                Start Fresh 🔄
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

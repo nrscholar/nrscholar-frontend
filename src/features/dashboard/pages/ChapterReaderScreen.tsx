@@ -100,6 +100,7 @@ export default function ChapterReaderScreen() {
 
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pdfError, setPdfError] = useState<string | null>(null);
   const [numPages, setNumPages] = useState<number>();
   const [pageNumber, setPageNumber] = useState<number>(1);
   // Center of the windowed render range (only ±3 pages around this are mounted)
@@ -136,25 +137,51 @@ export default function ChapterReaderScreen() {
 
   useEffect(() => { return () => { logReadingTime(); }; }, []);
 
-  useEffect(() => {
-    async function loadPdf() {
-      try {
-        if (!chapterId) return;
-        const res = await apiFetch(`/api/textbook/chapter/${chapterId}/pdf`);
-        if (!res.ok) throw new Error("Failed to load PDF");
-        const blob = await res.blob();
-        setPdfUrl(URL.createObjectURL(blob));
-      } catch (error) {
-        console.error("Error loading PDF:", error);
-      } finally {
-        setLoading(false);
+  const loadPdf = async () => {
+    setLoading(true);
+    setPdfError(null);
+    try {
+      if (!chapterId) {
+        throw new Error("No chapter ID provided");
       }
+      const res = await apiFetch(`/api/textbook/chapter/${chapterId}/pdf`);
+      if (!res.ok) throw new Error("Failed to load PDF file from server");
+      const blob = await res.blob();
+      setPdfUrl(URL.createObjectURL(blob));
+    } catch (error: any) {
+      console.error("Error loading PDF:", error);
+      setPdfError(error.message || "Failed to load PDF document");
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     loadPdf();
     return () => { if (pdfUrl) URL.revokeObjectURL(pdfUrl); };
   }, [chapterId]);
 
-  const toggleFullscreen = () => setIsFullscreen(f => !f);
+  useEffect(() => {
+    const handleFsChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', handleFsChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFsChange);
+    };
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+      setIsFullscreen(true);
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+      setIsFullscreen(false);
+    }
+  };
 
   const handleReadingComplete = async () => {
     if (!chapterId) return;
@@ -287,6 +314,24 @@ export default function ChapterReaderScreen() {
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
             <div className="w-12 h-12 border-4 border-white border-t-[#141779] rounded-full animate-spin shadow-md" />
             <p className="text-[#141779] font-extrabold tracking-wide text-lg drop-shadow-sm">Loading Magic Book...</p>
+          </div>
+        ) : pdfError ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-30">
+            <div className="bg-white/90 backdrop-blur-md rounded-3xl p-6 border-2 border-red-200 shadow-xl max-w-sm flex flex-col items-center gap-4">
+              <div className="w-14 h-14 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-black text-2xl">
+                ⚠️
+              </div>
+              <h3 className="text-lg font-black text-slate-900">Failed to Load PDF</h3>
+              <p className="text-xs font-semibold text-slate-600 leading-relaxed">
+                {pdfError}
+              </p>
+              <button
+                onClick={loadPdf}
+                className="px-6 py-2.5 bg-[#141779] text-white rounded-full font-extrabold text-xs uppercase tracking-wider shadow-md hover:bg-indigo-900 active:scale-95 transition-all"
+              >
+                Retry Loading
+              </button>
+            </div>
           </div>
         ) : pdfUrl ? (
           /*

@@ -91,8 +91,9 @@ export default function ParentalGateScreen() {
       const json = await res.json();
       
       if (json.success) {
+        sessionStorage.setItem("parentPinVerified", "true");
         setSuccessMsg("Access Granted");
-        setTimeout(() => navigate("/parent/dashboard"), 1000);
+        setTimeout(() => navigate("/parent/dashboard"), 600);
       } else {
         const errorDetail = typeof json.detail === 'string' ? json.detail : (json.detail ? JSON.stringify(json.detail) : "");
         setErrorMsg(json.message || errorDetail || "Incorrect PIN");

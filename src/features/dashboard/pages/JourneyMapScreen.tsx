@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { apiFetch } from "../../../api";
-import { motion, AnimatePresence } from "framer-motion";
 import MapWorld from "../../../components/map/MapWorld";
+import { ArrowLeft } from "lucide-react";
 
 interface City {
   _id?: string;
@@ -301,31 +301,37 @@ export default function JourneyMapScreen() {
   else if (xp >= 1000) startXpOfStage = 1000;
 
   return (
-    <div className="bg-[#F4F8FF] text-slate-900 font-sans flex items-center justify-center min-h-screen">
-      <div className="relative w-full max-w-[390px] h-[844px] max-h-screen bg-[#F4F8FF] flex flex-col overflow-hidden shadow-2xl">
+    <div className="bg-[#F7F9FB] text-slate-900 font-sans flex items-center justify-center min-h-screen">
+      <div className="relative w-full max-w-[430px] min-h-screen bg-[#F7F9FB] flex flex-col overflow-hidden shadow-2xl">
         
-        {/* Minimal Header (NRscholar Brand Royal Indigo #2D328F) */}
-        <header className="fixed top-0 w-full max-w-[390px] z-40 flex justify-between items-center px-4 py-3 bg-white/90 backdrop-blur-md border-b border-indigo-100 shadow-xs">
+        {/* Header */}
+        <header className="sticky top-0 w-full max-w-[430px] z-50 flex justify-between items-center px-4 py-3.5 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-xs">
           <div className="flex items-center gap-2.5">
             <button 
               onClick={() => navigate('/home')} 
-              className="w-8.5 h-8.5 rounded-full bg-indigo-50 hover:bg-indigo-100 active:scale-95 flex items-center justify-center text-[#2D328F] transition-all border border-indigo-100"
+              className="w-8.5 h-8.5 rounded-full bg-slate-50 hover:bg-slate-100 active:scale-95 flex items-center justify-center text-[#141779] transition-all border border-slate-200"
             >
-              <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+              <ArrowLeft size={20} />
             </button>
+            <div className="w-9 h-9 rounded-full bg-[#141779] text-white flex items-center justify-center font-black text-xs border-2 border-white shadow-xs">
+              {userLevel}
+            </div>
             <div>
-              <h1 className="text-xs font-black text-[#2D328F] uppercase tracking-widest leading-none font-headline">
-                WORLD MAP
+              <h1 className="text-sm font-black text-[#141779] uppercase tracking-wider leading-none">
+                Growth Journey
               </h1>
-              <p className="text-[9.5px] font-bold text-[#14C8C6] mt-0.5">
-                Explorer Level {userLevel}
+              <p className="text-[10px] font-bold text-[#006a62] mt-0.5">
+                Explorer
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5">
-            <div className="flex items-center gap-1 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full text-[10px] font-black text-[#2D328F]">
-              <span>⚡ {xp >= 1000 ? `${(xp/1000).toFixed(1)}k` : xp} XP</span>
+            <div className="flex items-center gap-1 bg-teal-50 border border-teal-200 px-2.5 py-1 rounded-full text-[10px] font-black text-[#006a62]">
+              <span>🗺️ {cities.length > 0 ? Math.round((cities.filter(c => c.unlocked).length / cities.length) * 100) : 0}%</span>
+            </div>
+            <div className="flex items-center gap-1 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full text-[10px] font-black text-[#141779]">
+              <span>⭐ {xp} XP</span>
             </div>
             <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full text-[10px] font-black text-amber-800">
               <span>🪙 {coins}</span>
@@ -333,8 +339,8 @@ export default function JourneyMapScreen() {
           </div>
         </header>
 
-        {/* EDGE-TO-EDGE STORYBOOK ADVENTURE WORLD MAP */}
-        <main className="flex-1 mt-13 p-0 overflow-y-auto no-scrollbar relative flex items-center justify-center">
+        {/* Growth Journey Roadmap View */}
+        <main className="flex-1 w-full overflow-y-auto no-scrollbar relative">
           <MapWorld
             themeKey="dragon"
             xp={xp}
@@ -344,7 +350,6 @@ export default function JourneyMapScreen() {
             }}
           />
         </main>
-
       </div>
     </div>
   );

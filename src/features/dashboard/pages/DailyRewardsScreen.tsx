@@ -34,6 +34,7 @@ export default function DailyRewardsScreen() {
   const [activeRewards, setActiveRewards] = useState<Reward[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSpinning, setIsSpinning] = useState(false);
+  const [isBuying, setIsBuying] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [wonReward, setWonReward] = useState<Reward | null>(null);
@@ -64,6 +65,53 @@ export default function DailyRewardsScreen() {
   useEffect(() => {
     fetchSpinStatus();
   }, []);
+
+  const buySpin = async () => {
+    if (isSpinning || isBuying) return;
+    setErrorMessage("");
+
+    const cost = spinType === "daily" ? 100 : 150;
+    const cachedData = localStorage.getItem("userData");
+    let userCoins = 0;
+    if (cachedData) {
+      try {
+        const u = JSON.parse(cachedData);
+        userCoins = u.coins || 0;
+      } catch (e) {}
+    }
+
+    if (userCoins < cost) {
+      setErrorMessage("You don't have enough coins to buy a spin!");
+      return;
+    }
+
+    setIsBuying(true);
+    try {
+      const response = await apiFetch("/api/retention/spin-wheel/buy-spin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ spin_type: spinType })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setBalances(data.balances);
+        if (cachedData) {
+          try {
+            const u = JSON.parse(cachedData);
+            u.coins = data.coins;
+            localStorage.setItem("userData", JSON.stringify(u));
+          } catch (e) {}
+        }
+        setErrorMessage("");
+      } else {
+        setErrorMessage(data.message || "You don't have enough coins to buy a spin!");
+      }
+    } catch (e: any) {
+      setErrorMessage("You don't have enough coins to buy a spin!");
+    } finally {
+      setIsBuying(false);
+    }
+  };
 
   const getShortName = (name: string) => {
     if (name === "AI Motivation Card") return "AI Motivation";
@@ -312,29 +360,29 @@ export default function DailyRewardsScreen() {
   const segmentAngle = 360 / currentRewards.length;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white w-full flex flex-col items-center overflow-x-hidden font-headline relative">
-      {/* Background Starfield Grid */}
+    <div className="min-h-screen bg-white text-slate-900 w-full flex flex-col items-center overflow-x-hidden font-headline relative">
+      {/* Background Soft Glow */}
       <div 
-        className="absolute inset-0 pointer-events-none opacity-20 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-950/40 via-slate-950 to-slate-950" 
+        className="absolute inset-0 pointer-events-none opacity-40 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-50/60 via-slate-50 to-white" 
       />
 
       {/* Top App Bar */}
-      <header className="w-full z-50 bg-slate-950/80 backdrop-blur-lg border-b border-indigo-950/60 flex justify-between items-center px-6 py-4 max-w-[430px] mx-auto">
-        <button onClick={handleBack} className="active:scale-95 transition-transform text-white">
+      <header className="w-full z-50 bg-white/90 backdrop-blur-lg border-b border-slate-200 flex justify-between items-center px-6 py-4 max-w-[430px] mx-auto">
+        <button onClick={handleBack} className="active:scale-95 transition-transform text-slate-700 hover:text-slate-950">
           <ArrowLeft className="w-6 h-6" />
         </button>
-        <h1 className="text-lg font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-white to-indigo-200">
-          {spinType === "boss_revival" ? "REVIVAL WHEEL" : "QUANTUM WHEEL"}
+        <h1 className="text-lg font-black tracking-widest text-indigo-950">
+          {spinType === "boss_revival" ? "REVIVAL WHEEL" : "LUCKY WHEEL"}
         </h1>
         <div className="w-6 h-6" />
       </header>
 
       {/* Tabs for different spin types (Hidden if boss revival) */}
       {spinType !== "boss_revival" && (
-        <div className="flex gap-2 p-1.5 bg-slate-900/60 border border-indigo-950/60 rounded-full mt-5 max-w-[360px] w-[90%] mx-auto relative z-10 shadow-inner">
+        <div className="flex gap-2 p-1.5 bg-slate-100 border border-slate-200 rounded-full mt-5 max-w-[360px] w-[90%] mx-auto relative z-10 shadow-inner">
           {[
-            { id: "daily", label: "Daily" },
-            { id: "event", label: "Event" }
+            { id: "daily", label: `Daily (${balances.daily_spins_balance || 0} Left)` },
+            { id: "event", label: `Event (${balances.event_spins_balance || 0} Left)` }
           ].map((tab) => {
             const isActive = spinType === tab.id;
             return (
@@ -348,8 +396,8 @@ export default function DailyRewardsScreen() {
                 }}
                 className={`flex-1 py-2 px-4 rounded-full text-xs font-black tracking-wider uppercase transition-all duration-300 whitespace-nowrap ${
                   isActive
-                    ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)] border border-violet-500/30"
-                    : "text-indigo-200/50 hover:text-white"
+                    ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md border border-violet-500/30"
+                    : "text-slate-500 hover:text-slate-900"
                 }`}
               >
                 {tab.label}
@@ -364,13 +412,13 @@ export default function DailyRewardsScreen() {
         
         {/* Reward Info Header */}
         <div className="text-center space-y-1.5">
-          <p className="text-[10px] font-black uppercase tracking-[3px] text-cyan-400">
-            {spinType === "boss_revival" ? "BOSS EMERGENCY" : "QUANTUM EXPEDITION"}
+          <p className="text-[10px] font-black uppercase tracking-[3px] text-indigo-600">
+            {spinType === "boss_revival" ? "BOSS EMERGENCY" : "DAILY REWARDS"}
           </p>
-          <h2 className="text-xl sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-300">
-            {spinType === "boss_revival" ? "Spin the Revival Wheel" : "Unlock Cosmic Loot"}
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900">
+            {spinType === "boss_revival" ? "Spin the Revival Wheel" : "Unlock Special Rewards"}
           </h2>
-          <p className="text-xs sm:text-sm font-bold text-slate-400">
+          <p className="text-xs sm:text-sm font-bold text-slate-500">
             {spinType === "boss_revival" 
               ? "Recover hearts to jump back into the battle!"
               : "Upgrade your learning kit with premium rewards."}
@@ -471,32 +519,40 @@ export default function DailyRewardsScreen() {
           </div>
         </div>
 
-        {/* Error message display */}
+        {/* Error message display in bold red font */}
         {errorMessage && (
-          <div className="w-full p-3 bg-red-50 border border-red-200 text-red-700 text-sm font-semibold rounded-xl text-center">
+          <div className="w-full p-3.5 bg-red-50 border-2 border-red-200 text-red-600 font-black text-xs sm:text-sm rounded-2xl text-center shadow-xs uppercase tracking-wider">
             {errorMessage}
           </div>
         )}
 
         {/* Controls */}
-        <div className="w-full space-y-4">
-          <button
-            onClick={startSpin}
-            disabled={isSpinning || getSpinBalance() <= 0}
-            className={`w-full py-4 rounded-full font-black text-lg tracking-wider uppercase transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 border ${
-              isSpinning 
-                ? "bg-slate-900 border-slate-800 text-slate-500 cursor-not-allowed"
-                : getSpinBalance() > 0
-                ? "bg-gradient-to-r from-violet-600 via-indigo-600 to-violet-600 hover:scale-[1.01] hover:shadow-[0_0_25px_rgba(124,58,237,0.6)] text-white border-violet-500/40 animate-pulse"
-                : "bg-slate-900/60 border-slate-900 text-slate-600 cursor-not-allowed"
-            }`}
-          >
-            {isSpinning ? "🌀 Calibrating..." : "Initialize Spin"}
-          </button>
+        <div className="w-full space-y-3">
+          {getSpinBalance() > 0 ? (
+            <button
+              onClick={startSpin}
+              disabled={isSpinning}
+              className={`w-full py-4 rounded-full font-black text-lg tracking-wider uppercase transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 border ${
+                isSpinning 
+                  ? "bg-gradient-to-r from-violet-600 via-indigo-600 to-violet-600 text-white opacity-90 cursor-not-allowed border-violet-500/40"
+                  : "bg-gradient-to-r from-violet-600 via-indigo-600 to-violet-600 hover:scale-[1.01] hover:shadow-[0_0_25px_rgba(124,58,237,0.6)] text-white border-violet-500/40 animate-pulse"
+              }`}
+            >
+              {isSpinning ? "🌀 Spinning..." : "Spin"}
+            </button>
+          ) : (
+            <button
+              onClick={buySpin}
+              disabled={isSpinning || isBuying}
+              className="w-full py-4 rounded-full font-black text-base sm:text-lg tracking-wider uppercase transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/25 border border-amber-300"
+            >
+              <span>{isBuying ? "Purchasing..." : `🛒 Buy 1 Spin (${spinType === "daily" ? "100 🪙" : "150 🪙"})`}</span>
+            </button>
+          )}
 
           <div className="flex items-center justify-center gap-2 text-indigo-300 text-xs font-black">
             <History className="w-4 h-4 text-cyan-400" />
-            <span className="font-bold uppercase tracking-widest">
+            <span className="font-bold uppercase tracking-widest text-slate-600">
               {getSpinBalance()} attempts left
             </span>
           </div>

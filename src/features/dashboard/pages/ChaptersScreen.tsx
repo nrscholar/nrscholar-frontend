@@ -28,6 +28,8 @@ export default function ChaptersScreen() {
   const [expandedChapter, setExpandedChapter] = useState<string | null>(null);
   const [questions, setQuestions] = useState<any[]>([]);
   const [questionsLoading, setQuestionsLoading] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [showSubModal, setShowSubModal] = useState(false);
   
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -43,6 +45,7 @@ export default function ChaptersScreen() {
             const u = JSON.parse(cached);
             setChildName(u.childName || u.name || "Kid");
             setChildPhoto(u.childPhoto || u.photo || "");
+            setIsSubscribed(Boolean(u.is_subscribed || u.isSubscribed));
           } catch(e) {}
         }
         const meRes = await apiFetch("/api/users/me");
@@ -50,6 +53,7 @@ export default function ChaptersScreen() {
         if (meJson.success && meJson.data?.user) {
           setChildName(meJson.data.user.childName || meJson.data.user.name || "Kid");
           setChildPhoto(meJson.data.user.childPhoto || meJson.data.user.photo || "");
+          setIsSubscribed(Boolean(meJson.data.user.is_subscribed || meJson.data.user.isSubscribed));
         }
       } catch (e) {}
 
@@ -168,7 +172,11 @@ export default function ChaptersScreen() {
   
   const currentChapterIndex = chapters.findIndex(ch => !isChapterCompleted(ch._id));
 
-  const handleToggleChapter = async (chapterId: string, chapterName: string) => {
+  const handleToggleChapter = async (index: number, chapterId: string, chapterName: string) => {
+    if (index >= 1 && !isSubscribed) {
+      setShowSubModal(true);
+      return;
+    }
     const progress = chapterProgressMap[chapterId] || {};
     if (!progress.readingCompleted) {
       navigate(`/chapter-reader?chapterId=${chapterId}&title=${encodeURIComponent(chapterName)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}`);
@@ -352,7 +360,7 @@ export default function ChaptersScreen() {
                   if (status === "completed") {
                     return (
                       <div key={chap._id} className={`flex flex-col bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.8)] ${isExpanded ? 'shadow-md' : 'hover:bg-white'} transition-all w-full`}>
-                        <button onClick={() => handleToggleChapter(chap._id, `${index + 1}. ${chap.name}`)} className="flex items-center gap-4 text-left w-full">
+                        <button onClick={() => handleToggleChapter(index, chap._id, `${index + 1}. ${chap.name}`)} className="flex items-center gap-4 text-left w-full">
                           <div className="w-12 h-12 rounded-full bg-[rgba(0,106,98,0.1)] border border-[rgba(0,106,98,0.2)] flex items-center justify-center shrink-0">
                             <IconComponent size={24} color="#006a62" />
                           </div>
@@ -367,9 +375,11 @@ export default function ChaptersScreen() {
                     );
                   }
 
+                  const isSubLocked = index >= 1 && !isSubscribed;
+
                   if (status === "current") {
                     return (
-                      <div key={chap._id} className={`flex flex-col relative bg-[rgba(87,250,233,0.3)] rounded-2xl p-4 border-2 border-[rgba(0,106,98,0.3)] overflow-hidden shadow-[0_4px_10px_rgba(0,0,0,0.1)] transition-all ${isExpanded ? 'ring-2 ring-[#006a62]' : 'hover:opacity-95'}`}>
+                      <div key={chap._id} className={`flex flex-col relative ${isSubLocked ? 'bg-amber-50/70 border-amber-300' : 'bg-[rgba(87,250,233,0.3)] border-[rgba(0,106,98,0.3)]'} rounded-2xl p-4 border-2 overflow-hidden shadow-[0_4px_10px_rgba(0,0,0,0.1)] transition-all ${isExpanded ? 'ring-2 ring-[#006a62]' : 'hover:opacity-95'}`}>
                         {!isExpanded && (
                             <motion.div
                             animate={{ scale: [1, 1.05, 1] }}
@@ -377,17 +387,24 @@ export default function ChaptersScreen() {
                             className="absolute -top-8 -right-8 w-24 h-24 rounded-full bg-[rgba(0,106,98,0.05)] pointer-events-none"
                             />
                         )}
-                        <div onClick={() => handleToggleChapter(chap._id, `${index + 1}. ${chap.name}`)} className="flex items-center gap-4 cursor-pointer relative z-10 w-full">
-                            <div className="w-12 h-12 rounded-full bg-[#006a62] flex items-center justify-center shrink-0 shadow-[0_4px_8px_rgba(0,0,0,0.3)]">
-                            <IconComponent size={24} color="white" />
+                        <div onClick={() => handleToggleChapter(index, chap._id, `${index + 1}. ${chap.name}`)} className="flex items-center gap-4 cursor-pointer relative z-10 w-full">
+                            <div className={`w-12 h-12 rounded-full ${isSubLocked ? 'bg-amber-500 text-slate-950' : 'bg-[#006a62] text-white'} flex items-center justify-center shrink-0 shadow-[0_4px_8px_rgba(0,0,0,0.3)]`}>
+                              {isSubLocked ? <Lock size={24} /> : <IconComponent size={24} color="white" />}
                             </div>
                             <div className="flex-1">
-                            <p className="text-xs font-bold text-[#006a62] tracking-[1px] mb-0.5 uppercase">{t('chapter')} {index + 1}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs font-bold text-[#006a62] tracking-[1px] mb-0.5 uppercase">{t('chapter')} {index + 1}</p>
+                              {isSubLocked && (
+                                <span className="text-[9px] font-black uppercase bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full border border-amber-300">
+                                  PREMIUM
+                                </span>
+                              )}
+                            </div>
                             <h3 className="text-lg font-bold text-[#141779]">{chap.name}</h3>
                             </div>
                             {!isExpanded && (
-                                <button onClick={(e) => { e.stopPropagation(); handleToggleChapter(chap._id, `${index + 1}. ${chap.name}`); }} className="bg-[#141779] px-6 py-2 rounded-full hover:opacity-90 transition-opacity">
-                                <span className="text-white text-sm font-semibold">{t('start')}</span>
+                                <button onClick={(e) => { e.stopPropagation(); handleToggleChapter(index, chap._id, `${index + 1}. ${chap.name}`); }} className={`${isSubLocked ? 'bg-amber-500' : 'bg-[#141779]'} px-6 py-2 rounded-full hover:opacity-90 transition-opacity`}>
+                                <span className="text-white text-sm font-semibold">{isSubLocked ? 'Unlock 🔒' : t('start')}</span>
                                 </button>
                             )}
                         </div>
@@ -397,7 +414,7 @@ export default function ChaptersScreen() {
 
                   return (
                     <div key={chap._id} className={`flex flex-col bg-[#f2f4f6] opacity-60 rounded-2xl p-4 border border-[rgba(118,118,131,0.1)] transition-all`}>
-                      <button onClick={() => { if(!isExpanded) showToast(t('complete_chapter_to_unlock', { chapter: currentChapterIndex + 1 })); }} className="flex items-center gap-4 text-left w-full cursor-pointer">
+                      <button onClick={() => { if(isSubLocked) { setShowSubModal(true); } else if(!isExpanded) showToast(t('complete_chapter_to_unlock', { chapter: currentChapterIndex + 1 })); }} className="flex items-center gap-4 text-left w-full cursor-pointer">
                           <div className="w-12 h-12 rounded-full bg-[rgba(118,118,131,0.1)] flex items-center justify-center shrink-0">
                             <IconComponent size={24} color="#767683" />
                           </div>
@@ -415,6 +432,42 @@ export default function ChaptersScreen() {
           </>
         )}
       </main>
+
+      {/* Subscription Lock Modal */}
+      {showSubModal && (
+        <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-6 text-center">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-[32px] p-6 max-w-sm w-full border-2 border-amber-300 shadow-2xl flex flex-col items-center gap-4"
+          >
+            <div className="w-16 h-16 rounded-full bg-amber-100 border border-amber-300 flex items-center justify-center text-3xl shadow-inner animate-bounce">
+              🔒
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-slate-900">Unlock Full Access!</h3>
+              <p className="text-xs font-semibold text-slate-600 mt-1 leading-relaxed">
+                Chapter 1 is free for everyone. Access to Chapter 2 and beyond requires an active StudySaathy Subscription.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setShowSubModal(false);
+                navigate("/parent/subscription");
+              }}
+              className="w-full py-3.5 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-400 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-black rounded-2xl shadow-lg shadow-amber-500/20 active:scale-95 transition-all uppercase tracking-wider text-xs"
+            >
+              Upgrade Subscription →
+            </button>
+            <button
+              onClick={() => setShowSubModal(false)}
+              className="text-xs font-bold text-slate-400 hover:text-slate-600"
+            >
+              Maybe Later
+            </button>
+          </motion.div>
+        </div>
+      )}
 
       {/* Toast Message */}
       {toastMessage && (
