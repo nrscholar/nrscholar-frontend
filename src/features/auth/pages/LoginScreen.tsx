@@ -45,7 +45,7 @@ export default function LoginScreen() {
           sessionStorage.clear();
           navigate("/parent/gate");
         } else {
-          setErrorMsg(data.message || "Invalid Family Link Code or PIN.");
+          setErrorMsg(data.detail || data.message || "Invalid Family Link Code or PIN.");
         }
       } catch (e) {
         setErrorMsg("Unable to connect. Is the server running?");
@@ -73,7 +73,7 @@ export default function LoginScreen() {
           sessionStorage.clear();
           navigate("/home");
         } else {
-          setErrorMsg(data.message || "Invalid Child Code.");
+          setErrorMsg(data.detail || data.message || "Invalid Child Code.");
         }
       } catch (e) {
         setErrorMsg("Unable to connect. Is the server running?");
@@ -113,7 +113,7 @@ export default function LoginScreen() {
           navigate("/home");
         }
       } else {
-        setErrorMsg(data.message || "Invalid mobile number or password.");
+        setErrorMsg(data.detail || data.message || "Invalid mobile number or password.");
       }
     } catch (e) {
       setErrorMsg("Unable to connect. Is the server running?");
@@ -155,12 +155,12 @@ export default function LoginScreen() {
         </div>
 
         {/* ROLE SELECTION TABS */}
-        <div className="w-full max-w-[350px] bg-slate-100 p-1.5 rounded-2xl flex gap-1 mb-4 border border-slate-200/80">
+        <div className="w-full max-w-[350px] bg-slate-100 p-1.5 rounded-full flex gap-1 mb-5 border border-slate-200/80">
           <button
             type="button"
             onClick={() => { setLoginRole("child"); setErrorMsg(""); }}
-            className={`flex-1 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 ${
-              loginRole === "child" ? "bg-[#141779] text-white shadow-md" : "text-slate-600 hover:text-[#141779]"
+            className={`flex-1 py-2.5 rounded-full text-xs font-bold transition-all flex items-center justify-center gap-1 ${
+              loginRole === "child" ? "bg-[#141779] text-white shadow-[0_2px_8px_rgba(20,23,121,0.25)]" : "text-slate-600 hover:text-[#141779]"
             }`}
           >
             <span>Scholar 🎓</span>
@@ -169,8 +169,8 @@ export default function LoginScreen() {
           <button
             type="button"
             onClick={() => { setLoginRole("parent"); setErrorMsg(""); }}
-            className={`flex-1 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 ${
-              loginRole === "parent" ? "bg-[#141779] text-white shadow-md" : "text-slate-600 hover:text-[#141779]"
+            className={`flex-1 py-2.5 rounded-full text-xs font-bold transition-all flex items-center justify-center gap-1 ${
+              loginRole === "parent" ? "bg-[#141779] text-white shadow-[0_2px_8px_rgba(20,23,121,0.25)]" : "text-slate-600 hover:text-[#141779]"
             }`}
           >
             <span>Parent 👨‍👩‍👧</span>
@@ -179,8 +179,8 @@ export default function LoginScreen() {
           <button
             type="button"
             onClick={() => { setLoginRole("family_code"); setErrorMsg(""); }}
-            className={`flex-1 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 ${
-              loginRole === "family_code" ? "bg-[#141779] text-white shadow-md" : "text-slate-600 hover:text-[#141779]"
+            className={`flex-1 py-2.5 rounded-full text-xs font-bold transition-all flex items-center justify-center gap-1 ${
+              loginRole === "family_code" ? "bg-[#141779] text-white shadow-[0_2px_8px_rgba(20,23,121,0.25)]" : "text-slate-600 hover:text-[#141779]"
             }`}
           >
             <span>Family 🔑</span>
@@ -286,16 +286,18 @@ export default function LoginScreen() {
             <button
               type="submit"
               disabled={loading}
-              className={`w-full h-13 bg-[#141779] rounded-2xl flex items-center justify-center gap-2 shadow-lg hover:bg-[#101362] active:scale-98 transition-all ${loading ? 'opacity-80 cursor-wait' : ''}`}
+              className={`w-full h-14 bg-[#141779] rounded-full flex items-center justify-center gap-3 shadow-[0_4px_15px_rgba(20,23,121,0.3)] transition-all ${
+                loading ? 'opacity-70 cursor-wait' : 'hover:opacity-90 active:scale-98'
+              }`}
             >
               {loading ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  <span className="text-white text-sm font-black uppercase tracking-wider">
+                  <span className="text-white text-base font-semibold uppercase tracking-wider">
                     {loginRole === "parent" ? "Access Parent Portal" : loginRole === "family_code" ? "Link Family Device" : "Start Learning"}
                   </span>
-                  <ArrowRight size={18} color="white" />
+                  <ArrowRight size={20} color="white" />
                 </>
               )}
             </button>

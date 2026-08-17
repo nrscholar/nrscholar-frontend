@@ -116,6 +116,18 @@ export default function ParentDashboardScreen() {
 
   useEffect(() => {
     loadData();
+
+    const handleUserDataUpdate = () => {
+      const stored = localStorage.getItem("userData");
+      if (stored) {
+        try {
+          const u = JSON.parse(stored);
+          setUserData(u);
+        } catch (e) {}
+      }
+    };
+    window.addEventListener("userDataUpdated", handleUserDataUpdate);
+    return () => window.removeEventListener("userDataUpdated", handleUserDataUpdate);
   }, [loadData]);
 
   const markAllRead = async () => {

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Copy, Check, Users, KeyRound, ShieldAlert } from "lucide-react";
+import { X, Copy, Check, Users, ShieldAlert, RefreshCw } from "lucide-react";
 import { apiFetch } from "../api";
 
 interface FamilyLinkModalProps {
@@ -12,23 +12,26 @@ export default function FamilyLinkModal({ isOpen, onClose }: FamilyLinkModalProp
   const [familyCode, setFamilyCode] = useState<string>("");
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const fetchCode = async () => {
+    setLoading(true);
+    setErrorMsg("");
+    try {
+      const res = await apiFetch("/api/users/family-link/generate", { method: "POST" });
+      const json = await res.json();
+      if (json.success && json.familyCode) {
+        setFamilyCode(json.familyCode);
+      }
+    } catch (e) {
+      console.error("Failed to generate Family Link Code", e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
-      async function fetchCode() {
-        setLoading(true);
-        try {
-          const res = await apiFetch("/api/users/family-link/generate", { method: "POST" });
-          const json = await res.json();
-          if (json.success && json.familyCode) {
-            setFamilyCode(json.familyCode);
-          }
-        } catch (e) {
-          console.error("Failed to generate Family Link Code", e);
-        } finally {
-          setLoading(false);
-        }
-      }
       fetchCode();
     }
   }, [isOpen]);
@@ -38,6 +41,33 @@ export default function FamilyLinkModal({ isOpen, onClose }: FamilyLinkModalProp
       navigator.clipboard.writeText(familyCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
+    }
+  };
+
+  const handleRegenerate = async () => {
+    setLoading(true);
+    setErrorMsg("");
+    try {
+      const res = await apiFetch("/api/users/family-link/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({})
+      });
+      const json = await res.json();
+      if (json.success && json.familyCode) {
+        setFamilyCode(json.familyCode);
+        if (json.user) {
+          const updatedUser = { ...json.user, familyCode: json.familyCode };
+          localStorage.setItem("userData", JSON.stringify(updatedUser));
+          window.dispatchEvent(new Event("userDataUpdated"));
+        }
+      } else {
+        setErrorMsg(json.detail || json.message || "Failed to regenerate code.");
+      }
+    } catch (e) {
+      setErrorMsg("Failed to connect to the server.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -67,26 +97,45 @@ export default function FamilyLinkModal({ isOpen, onClose }: FamilyLinkModalProp
             Family Link Code
           </h3>
           <p className="text-xs font-semibold text-slate-500 mb-5 leading-relaxed px-2">
-            Share this 6-character Unique Code with co-parents (Father, Mother) or connect another smartphone.
+            Share this Unique Code with co-parents or link another smartphone to monitor learning reports.
           </p>
 
+          {errorMsg && (
+            <div className="w-full text-xs font-bold text-red-500 mb-3 text-center bg-red-50 p-2 rounded-xl border border-red-100">
+              {errorMsg}
+            </div>
+          )}
+
           {loading ? (
-            <div className="h-16 flex items-center justify-center">
+            <div className="h-20 flex items-center justify-center">
               <div className="w-6 h-6 border-2 border-[#141779] border-t-transparent rounded-full animate-spin" />
             </div>
           ) : (
-            <div className="w-full bg-slate-50 border-2 border-dashed border-indigo-200 rounded-2xl p-4 mb-4 flex items-center justify-between">
-              <span className="text-2xl font-black tracking-widest text-[#141779]">
-                {familyCode || "FAM-8492"}
-              </span>
+            <div className="w-full bg-slate-50 border-2 border-dashed border-indigo-200 rounded-2xl p-4 mb-4 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="text-lg font-black tracking-widest text-[#141779] whitespace-nowrap">
+                  {familyCode || "FAM-8492"}
+                </span>
 
-              <button
-                onClick={copyToClipboard}
-                className="px-3.5 py-2 rounded-xl bg-[#141779] text-white text-xs font-black flex items-center gap-1.5 active:scale-95 transition-all shadow-sm"
-              >
-                {copied ? <Check size={16} /> : <Copy size={16} />}
-                <span>{copied ? "Copied!" : "Copy"}</span>
-              </button>
+                <button
+                  onClick={copyToClipboard}
+                  className="px-3.5 py-2 rounded-xl bg-[#141779] text-white text-xs font-black flex items-center gap-1.5 active:scale-95 transition-all shadow-sm"
+                >
+                  {copied ? <Check size={16} /> : <Copy size={16} />}
+                  <span>{copied ? "Copied!" : "Copy"}</span>
+                </button>
+              </div>
+              
+              <div className="flex gap-2 justify-end border-t border-slate-200/80 pt-2.5 mt-1">
+                <button
+                  onClick={handleRegenerate}
+                  className="px-2.5 py-1.5 rounded-lg text-slate-500 hover:text-[#141779] hover:bg-slate-100 text-xs font-bold flex items-center gap-1 transition-colors"
+                  title="Generate a new random code"
+                >
+                  <RefreshCw size={14} />
+                  <span>Regenerate</span>
+                </button>
+              </div>
             </div>
           )}
 

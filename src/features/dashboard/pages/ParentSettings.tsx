@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, Variants } from "framer-motion";
-import { ArrowLeft, Bell, BookOpen, Camera, Save, ShieldCheck, Timer, Trash2, UserRound, GraduationCap, Cake, ChevronDown, Check, Plus, Globe, LogOut } from "lucide-react";
+import { ArrowLeft, Bell, BookOpen, Camera, Save, ShieldCheck, Timer, Trash2, UserRound, GraduationCap, Cake, ChevronDown, Check, Plus, Globe, LogOut, Edit3, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch, clearAuthSession } from "../../../api";
@@ -289,6 +289,18 @@ export default function ParentSettings() {
       }
     }
     loadControls();
+
+    const handleUserDataUpdate = () => {
+      const stored = localStorage.getItem("userData");
+      if (stored) {
+        try {
+          const u = JSON.parse(stored);
+          setUser(u);
+        } catch(e) {}
+      }
+    };
+    window.addEventListener("userDataUpdated", handleUserDataUpdate);
+    return () => window.removeEventListener("userDataUpdated", handleUserDataUpdate);
   }, []);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -383,6 +395,7 @@ export default function ParentSettings() {
       if (finalUser) {
         localStorage.setItem("userData", JSON.stringify(finalUser));
         setUser(finalUser);
+        window.dispatchEvent(new Event("userDataUpdated"));
         
         // Refresh code values from backend response
         const kids = finalUser.children || [];
@@ -752,6 +765,77 @@ export default function ParentSettings() {
               </div>
             </motion.div>
 
+            {/* Family Link Code Card */}
+            <motion.div 
+              variants={itemVariants}
+              className="bg-white/70 backdrop-blur-md rounded-3xl p-7 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative overflow-hidden group"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#141779]/10 to-transparent rounded-bl-full pointer-events-none transition-transform group-hover:scale-110 duration-500" />
+              <div className="flex items-center gap-3 mb-6 relative z-10">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#141779]/20 to-[#141779]/5 flex items-center justify-center shrink-0">
+                  <ShieldCheck size={24} color="#141779" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-[#141779]">Family Link & Devices</h2>
+                  <p className="text-sm text-[#767683] mt-0.5">Connect co-parents (Father & Mother) or extra devices</p>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-4 flex flex-col gap-3 relative z-10">
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[10px] font-bold text-[#767683] uppercase tracking-wider truncate">Your Family Link Code</span>
+                    <span className="text-lg font-black text-[#141779] tracking-widest whitespace-nowrap">{user?.familyCode || "FAM-8492"}</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (user?.familyCode) {
+                        navigator.clipboard.writeText(user.familyCode);
+                        setToastMessage("Family Code copied!");
+                        setTimeout(() => setToastMessage(null), 2500);
+                      }
+                    }}
+                    className="h-11 px-6 rounded-xl bg-[#141779] text-white text-xs font-black uppercase tracking-wider hover:bg-[#141779]/90 hover:scale-105 active:scale-95 transition-all shadow-sm"
+                  >
+                    Copy Code
+                  </button>
+                </div>
+                
+                <div className="flex gap-2 justify-end border-t border-slate-200/50 pt-2.5 mt-1">
+                  <button
+                    onClick={async () => {
+                      if (window.confirm("Regenerate a new random Family Link Code?")) {
+                        try {
+                          const res = await apiFetch("/api/users/family-link/update", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({})
+                          });
+                          const json = await res.json();
+                          if (json.success && json.familyCode) {
+                            if (json.user) {
+                              const updatedUser = { ...json.user, familyCode: json.familyCode };
+                              localStorage.setItem("userData", JSON.stringify(updatedUser));
+                              setUser(updatedUser);
+                              window.dispatchEvent(new Event("userDataUpdated"));
+                            }
+                          } else {
+                            alert(json.detail || json.message || "Failed to regenerate code.");
+                          }
+                        } catch (e) {
+                          alert("Error connecting to server.");
+                        }
+                      }
+                    }}
+                    className="px-3 py-2 rounded-xl text-slate-500 hover:text-[#141779] hover:bg-slate-100/80 text-xs font-bold flex items-center gap-1.5 transition-all"
+                  >
+                    <RefreshCw size={14} />
+                    <span>Regenerate</span>
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+
             {/* Logout Option */}
             <motion.button 
               variants={itemVariants}
@@ -890,6 +974,47 @@ export default function ParentSettings() {
                     placeholder="Select"
                   />
                 </div>
+
+                <div className="flex flex-col gap-2 mt-2">
+                  <label className="text-sm font-semibold text-[#767683] ml-2">Child Device Code (Scholar Login)</label>
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center justify-between">
+                    <span className="text-lg font-black tracking-widest text-[#141779]">
+                      {child1Code || "N/A"}
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (window.confirm("Regenerate a new random device code for this child?")) {
+                            try {
+                              const res = await apiFetch("/api/users/child-code/update", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ childId: "child_1" })
+                              });
+                              const json = await res.json();
+                              if (json.success && json.uniqueCode) {
+                                setChild1Code(json.uniqueCode);
+                                if (json.user) {
+                                  localStorage.setItem("userData", JSON.stringify(json.user));
+                                  setUser(json.user);
+                                  window.dispatchEvent(new Event("userDataUpdated"));
+                                }
+                              } else {
+                                alert(json.detail || json.message || "Failed to regenerate code.");
+                              }
+                            } catch (e) {
+                              alert("Error connecting to server.");
+                            }
+                          }
+                        }}
+                        className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-indigo-50 text-[#141779] border border-indigo-100 hover:bg-indigo-100 transition-colors"
+                      >
+                        Regenerate
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </motion.div>
  
@@ -976,6 +1101,47 @@ export default function ParentSettings() {
                       placeholder="Select"
                     />
                   </div>
+
+                  <div className="flex flex-col gap-2 mt-2">
+                    <label className="text-sm font-semibold text-[#767683] ml-2">Child Device Code (Scholar Login)</label>
+                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center justify-between">
+                      <span className="text-lg font-black tracking-widest text-[#141779]">
+                        {child2Code || "N/A"}
+                      </span>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (window.confirm("Regenerate a new random device code for this child?")) {
+                              try {
+                                const res = await apiFetch("/api/users/child-code/update", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ childId: "child_2" })
+                                });
+                                const json = await res.json();
+                                if (json.success && json.uniqueCode) {
+                                  setChild2Code(json.uniqueCode);
+                                  if (json.user) {
+                                    localStorage.setItem("userData", JSON.stringify(json.user));
+                                    setUser(json.user);
+                                    window.dispatchEvent(new Event("userDataUpdated"));
+                                  }
+                                } else {
+                                  alert(json.detail || json.message || "Failed to regenerate code.");
+                                }
+                              } catch (e) {
+                                alert("Error connecting to server.");
+                              }
+                            }
+                          }}
+                          className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-indigo-50 text-[#141779] border border-indigo-100 hover:bg-indigo-100 transition-colors"
+                        >
+                          Regenerate
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             ) : (
@@ -1017,40 +1183,6 @@ export default function ParentSettings() {
         {/* HIDDEN: All Bento Grid Controls — Kid-Safe Mode, Edu Reels, AI Teacher, Premium Plans, Support, Update Pin kept for future use */}
 
         {/* HIDDEN: Factory Reset Journey — kept for future use */}
-        {/* Family Link Code Card */}
-        <motion.div 
-          variants={itemVariants}
-          className="bg-white rounded-3xl p-6 border-2 border-slate-100 shadow-sm flex flex-col gap-4"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-[#141779] shrink-0">
-              <ShieldCheck size={24} />
-            </div>
-            <div>
-              <h2 className="text-lg font-black text-[#141779]">Family Link & Devices</h2>
-              <p className="text-xs font-semibold text-slate-500">Connect co-parents (Father & Mother) or extra devices</p>
-            </div>
-          </div>
-
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center justify-between">
-            <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Your Family Link Code</span>
-              <span className="text-xl font-black text-[#141779] tracking-widest">{user?.familyCode || "FAM-8492"}</span>
-            </div>
-            <button
-              onClick={() => {
-                if (user?.familyCode) {
-                  navigator.clipboard.writeText(user.familyCode);
-                  setToastMessage("Family Code copied!");
-                  setTimeout(() => setToastMessage(null), 2500);
-                }
-              }}
-              className="px-3.5 py-2 rounded-xl bg-[#141779] text-white text-xs font-black uppercase tracking-wider"
-            >
-              Copy Code
-            </button>
-          </div>
-        </motion.div>
       {/* Reset Modal */}
       <AnimatePresence>
         {showResetModal && (
