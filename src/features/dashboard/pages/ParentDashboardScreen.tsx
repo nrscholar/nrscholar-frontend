@@ -415,62 +415,86 @@ export default function ParentDashboardScreen() {
         </div>
 
         {/* Top 3 Subjects Trend Chart */}
-        {top3SubjectsTrend && top3SubjectsTrend.length > 0 && (
-          <div className="w-full bg-white rounded-[24px] p-5 border border-slate-200/80 shadow-sm flex flex-col gap-3">
-            <h3 className="text-sm font-black text-[#141779] uppercase tracking-wider">Top Subjects Daily Trend</h3>
-            <p className="text-[11px] text-slate-500 font-bold -mt-1">Performance over the last 7 active days</p>
-            
-            {/* Graph Legend */}
-            <div className="flex flex-wrap items-center gap-3.5 mt-1 text-[10px] font-black">
+        <div className="w-full bg-white rounded-[24px] p-5 border border-slate-200/80 shadow-sm flex flex-col gap-3">
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className="text-sm font-black text-[#141779] uppercase tracking-wider">Top Subjects Daily Trend</h3>
+              <p className="text-[11px] text-slate-500 font-bold mt-0.5">Performance over the last 7 active days</p>
+            </div>
+            <span className="text-[10px] bg-indigo-50 text-[#141779] px-2.5 py-1 rounded-full font-black uppercase tracking-wider border border-indigo-100">
+              7-Day Graph
+            </span>
+          </div>
+
+          {/* Graph Legend */}
+          {top3SubjectsTrend && top3SubjectsTrend.length > 0 && (
+            <div className="flex flex-wrap items-center gap-3 mt-1 text-[11px] font-black">
               {top3SubjectsTrend.map((t, idx) => {
                 const colors = ["#006a62", "#141779", "#7b1fa2"];
                 const color = colors[idx % colors.length];
+                const latestScore = t.timeline && t.timeline.length > 0 ? t.timeline[t.timeline.length - 1].score : 0;
                 return (
-                  <div key={idx} className="flex items-center gap-1.5" style={{ color }}>
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                  <div key={idx} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200/70" style={{ color }}>
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
                     <span>{t.subject}</span>
+                    <span className="text-[10px] opacity-75 font-bold">({latestScore}%)</span>
                   </div>
                 );
               })}
             </div>
-            
-            {/* SVG Line Graph */}
-            <div className="relative w-full h-[130px] mt-3">
-              <svg viewBox="0 0 300 120" className="w-full h-full overflow-visible">
-                {/* Horizontal Grid Lines */}
-                <line x1="0" y1="0" x2="300" y2="0" stroke="#f1f5f9" strokeWidth="1.5" strokeDasharray="4 4" />
-                <line x1="0" y1="60" x2="300" y2="60" stroke="#f1f5f9" strokeWidth="1.5" strokeDasharray="4 4" />
-                <line x1="0" y1="120" x2="300" y2="120" stroke="#f1f5f9" strokeWidth="1.5" strokeDasharray="4 4" />
+          )}
 
-                {top3SubjectsTrend.map((t, idx) => {
-                  const colors = ["#006a62", "#141779", "#7b1fa2"];
-                  const color = colors[idx % colors.length];
-                  const points = t.timeline.map((pt: any, i: number) => {
-                    const x = (i / (t.timeline.length - 1)) * 300;
-                    const y = 120 - (pt.score / 100) * 120;
-                    return { x, y };
-                  });
-                  const pathLine = `M ${points.map((p: any) => `${p.x},${p.y}`).join(" L ")}`;
-                  return (
-                    <g key={idx}>
-                      <path d={pathLine} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                      {points.map((p: any, pIdx: number) => (
-                        <circle key={pIdx} cx={p.x} cy={p.y} r="3.5" fill="#ffffff" stroke={color} strokeWidth="2.5" />
-                      ))}
-                    </g>
-                  );
-                })}
+          {/* SVG Line Graph Container */}
+          <div className="w-full flex flex-col gap-2 mt-1">
+            <div className="relative w-full h-[140px] px-1 pt-1">
+              <svg viewBox="0 0 300 130" className="w-full h-full overflow-visible" preserveAspectRatio="none">
+                {/* Horizontal Grid Lines */}
+                <line x1="0" y1="10" x2="300" y2="10" stroke="#f1f5f9" strokeWidth="1.5" strokeDasharray="4 4" />
+                <line x1="0" y1="62.5" x2="300" y2="62.5" stroke="#f1f5f9" strokeWidth="1.5" strokeDasharray="4 4" />
+                <line x1="0" y1="115" x2="300" y2="115" stroke="#f1f5f9" strokeWidth="1.5" strokeDasharray="4 4" />
+
+                {top3SubjectsTrend && top3SubjectsTrend.length > 0 ? (
+                  top3SubjectsTrend.map((t, idx) => {
+                    const colors = ["#006a62", "#141779", "#7b1fa2"];
+                    const color = colors[idx % colors.length];
+                    const points = (t.timeline || []).map((pt: any, i: number) => {
+                      const len = Math.max(1, (t.timeline.length - 1));
+                      const x = (i / len) * 300;
+                      // Map score (0..100) to Y range (115..10)
+                      const y = 115 - (pt.score / 100) * 105;
+                      return { x, y, score: pt.score };
+                    });
+                    const pathLine = points.length > 0 ? `M ${points.map((p: any) => `${p.x},${p.y}`).join(" L ")}` : "";
+                    return (
+                      <g key={idx}>
+                        <path d={pathLine} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                        {points.map((p: any, pIdx: number) => (
+                          <circle key={pIdx} cx={p.x} cy={p.y} r="4" fill="#ffffff" stroke={color} strokeWidth="2.5" />
+                        ))}
+                      </g>
+                    );
+                  })
+                ) : (
+                  <text x="150" y="65" textAnchor="middle" fill="#94a3b8" fontSize="12" fontWeight="bold">
+                    No 7-day trend data available yet
+                  </text>
+                )}
               </svg>
-              
-              {/* X Axis Labels */}
-              <div className="flex justify-between text-[9px] font-black text-slate-500 mt-2.5 px-1">
-                {top3SubjectsTrend[0]?.timeline.map((pt: any, i: number) => (
+            </div>
+
+            {/* Dedicated X Axis Labels */}
+            <div className="flex justify-between text-[10px] font-extrabold text-slate-500 px-1 pt-1 border-t border-slate-100">
+              {top3SubjectsTrend && top3SubjectsTrend[0]?.timeline ? (
+                top3SubjectsTrend[0].timeline.map((pt: any, i: number) => (
                   <span key={i}>{pt.day}</span>
-                ))}
-              </div>
+                ))
+              ) : (
+                <span>Mon</span>
+              )}
             </div>
           </div>
-        )}
+        </div>
+
 
         {/* Parent Learning Section */}
         <div className="flex flex-col gap-3 w-full">

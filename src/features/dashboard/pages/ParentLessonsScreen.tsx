@@ -5,7 +5,7 @@ import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
 
 export default function ParentLessonsScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [allTopics, setAllTopics] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState("For You");
@@ -13,7 +13,7 @@ export default function ParentLessonsScreen() {
   const [xp, setXp] = useState(0);
   const [username, setUsername] = useState("Parent");
   const [profilePic, setProfilePic] = useState("");
-  const [contentLanguage, setContentLanguage] = useState("en");
+  const [contentLanguage, setContentLanguage] = useState(() => (i18n?.language || "en").split("-")[0]);
 
   function getXpForLevel(lvl: number): number {
     if (lvl <= 1) return 0;
@@ -117,13 +117,18 @@ export default function ParentLessonsScreen() {
             onChange={async (e) => {
               const newLang = e.target.value;
               setContentLanguage(newLang);
+              if (i18n && typeof i18n.changeLanguage === 'function') {
+                i18n.changeLanguage(newLang);
+              }
               try {
                 await apiFetch('/api/parent/controls', {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ contentLanguage: newLang })
                 });
-                const res = await apiFetch('/api/parent/learning-library');
+                const res = await apiFetch('/api/parent/learning-library', {
+                  headers: { 'Accept-Language': newLang }
+                });
                 const data = await res.json();
                 if (data.success) {
                   setAllTopics(data.data.topics);
@@ -147,8 +152,12 @@ export default function ParentLessonsScreen() {
           <div className="glass-card rounded-2xl p-5 glow-teal">
             <div className="flex justify-between items-end mb-2">
               <div>
-                <p className="text-xs font-bold text-[#006a62] uppercase tracking-wider">Growth Status</p>
-                <h2 className="text-2xl font-bold text-[#141779]">Level {level} Parent</h2>
+                <p className="text-xs font-bold text-[#006a62] uppercase tracking-wider">
+                  {contentLanguage === "hi" ? "विकास की स्थिति" : contentLanguage === "gu" ? "વિકાસ સ્થિતિ" : "Growth Status"}
+                </p>
+                <h2 className="text-2xl font-bold text-[#141779]">
+                  {contentLanguage === "hi" ? `स्तर ${level} अभिभावक` : contentLanguage === "gu" ? `સ્તર ${level} વાલી` : `Level ${level} Parent`}
+                </h2>
               </div>
               <span className="text-[#141779] font-bold text-base">
                 {xp} / {getXpForLevel(level + 1)} XP
@@ -174,18 +183,23 @@ export default function ParentLessonsScreen() {
           </div>
         </section>
 
-
-
         {/* Categories Chips */}
         <section className="py-4">
           <div className="flex overflow-x-auto no-scrollbar gap-3 px-6">
-            {["For You", "Completed", "Emotional Intelligence", "Child Psychology", "Communication", "Digital Parenting"].map(filter => (
+            {[
+              { id: "For You", label: contentLanguage === "hi" ? "आपके लिए" : contentLanguage === "gu" ? "તમારા માટે" : "For You" },
+              { id: "Completed", label: contentLanguage === "hi" ? "पूर्ण पाठ" : contentLanguage === "gu" ? "પૂર્ણ થયેલા પાઠ" : "Completed" },
+              { id: "Emotional Intelligence", label: contentLanguage === "hi" ? "भावनात्मक बुद्धिमत्ता" : contentLanguage === "gu" ? "ભાવનાત્મક બુદ્ધિમત્તા" : "Emotional Intelligence" },
+              { id: "Child Psychology", label: contentLanguage === "hi" ? "बाल मनोविज्ञान" : contentLanguage === "gu" ? "બાળ મનોવિજ્ઞાન" : "Child Psychology" },
+              { id: "Communication", label: contentLanguage === "hi" ? "संचार एवं बातचीत" : contentLanguage === "gu" ? "સંચાર અને વાતચીત" : "Communication" },
+              { id: "Digital Parenting", label: contentLanguage === "hi" ? "डिजिटल पैरेंटिंग" : contentLanguage === "gu" ? "ડિજિટલ પેરિન્ટિંગ" : "Digital Parenting" }
+            ].map(filter => (
               <button 
-                key={filter}
-                onClick={() => setActiveFilter(filter)}
-                className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap active:scale-95 transition-all ${activeFilter === filter ? 'bg-[#141779] text-white' : 'bg-[#e6e8ea] text-[#464652] hover:bg-[#e0e3e5]'}`}
+                key={filter.id}
+                onClick={() => setActiveFilter(filter.id)}
+                className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap active:scale-95 transition-all ${activeFilter === filter.id ? 'bg-[#141779] text-white' : 'bg-[#e6e8ea] text-[#464652] hover:bg-[#e0e3e5]'}`}
               >
-                {filter}
+                {filter.label}
               </button>
             ))}
           </div>
@@ -195,9 +209,13 @@ export default function ParentLessonsScreen() {
         <section className="mt-4">
           <div className="px-6 flex justify-between items-center mb-4">
             <h3 className="text-[20px] font-bold text-[#191c1e]">
-              {activeFilter === "Completed" ? "Completed Lessons" : "Recommended for You"}
+              {activeFilter === "Completed" 
+                ? (contentLanguage === "hi" ? "पूर्ण किए गए पाठ" : contentLanguage === "gu" ? "પૂર્ણ થયેલા પાઠ" : "Completed Lessons") 
+                : (contentLanguage === "hi" ? "आपके लिए अनुशंसित" : contentLanguage === "gu" ? "તમારા માટે ભલામણ કરેલ" : "Recommended for You")}
             </h3>
-            <button onClick={() => navigate('/parent/learning-library')} className="text-[#006a62] font-bold text-sm hover:underline">See All</button>
+            <button onClick={() => navigate('/parent/learning-library')} className="text-[#006a62] font-bold text-sm hover:underline">
+              {contentLanguage === "hi" ? "सभी देखें" : contentLanguage === "gu" ? "બધું જુઓ" : "See All"}
+            </button>
           </div>
           <div className="grid grid-cols-2 gap-4 px-6 pb-4">
             {allTopics
@@ -205,7 +223,10 @@ export default function ParentLessonsScreen() {
                 if (activeFilter === "Completed") {
                   return t.status === "completed";
                 }
-                return unlockedTopicIds.has(t.topicId) && (activeFilter === "For You" || t.category === activeFilter);
+                const matchesCategory = activeFilter === "For You" ||
+                  t.category === activeFilter ||
+                  t.originalCategory === activeFilter;
+                return unlockedTopicIds.has(t.topicId) && matchesCategory;
               })
               .map((topic, index) => {
                 const isLocked = false;

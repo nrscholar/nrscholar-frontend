@@ -5,8 +5,9 @@ import { useNavigate } from "react-router-dom";
 import { apiFetch, clearAuthSession } from "../../../api";
 import { useTranslation } from "react-i18next";
 
-const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect, placeholder }: any) => {
+const CustomDropdown = ({ label, icon: Icon, iconColor, value, options = [], onSelect, placeholder }: any) => {
   const [isOpen, setIsOpen] = useState(false);
+  const safeOptions = Array.isArray(options) ? options : [];
 
   return (
     <div className="flex flex-col gap-1 md:gap-2 flex-1 relative min-w-0">
@@ -39,7 +40,7 @@ const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect
               className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-gray-100 z-50 flex flex-col max-h-[250px] overflow-hidden"
             >
               <div className="overflow-y-auto w-full scrollbar-hide">
-                {options.map((opt: string) => (
+                {safeOptions.map((opt: string) => (
                   <button
                     key={opt}
                     type="button"
@@ -65,9 +66,10 @@ const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect
   );
 };
 
-const LanguageDropdown = ({ value, onChange, options }: any) => {
+const LanguageDropdown = ({ value, onChange, options = [] }: any) => {
   const [isOpen, setIsOpen] = useState(false);
-  const selectedLabel = options.find((o: any) => o.value === value)?.label || value;
+  const safeOptions = Array.isArray(options) ? options : [];
+  const selectedLabel = safeOptions.find((o: any) => o.value === value)?.label || value;
 
   return (
     <div className={`relative shrink-0 sm:w-48 w-full ${isOpen ? 'z-30' : 'z-10'}`}>
@@ -94,7 +96,7 @@ const LanguageDropdown = ({ value, onChange, options }: any) => {
               className="absolute top-full right-0 mt-1.5 bg-white rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.15)] border border-gray-100 z-50 flex flex-col w-full overflow-hidden"
             >
               <div className="overflow-y-auto w-full max-h-[200px]">
-                {options.map((opt: any) => (
+                {safeOptions.map((opt: any) => (
                   <button
                     key={opt.value}
                     type="button"
@@ -564,259 +566,433 @@ export default function ParentSettings() {
   const isScreenTimeOn = screenTimeMinutes > 0 && screenTimeMinutes < 9999;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#f0f4f8] to-[#e6eef5] font-sans pb-24 overflow-x-hidden">
-      {/* Dynamic Header */}
-      <header className="flex items-center justify-between px-6 h-20 bg-white/60 backdrop-blur-xl border-b border-white/40 sticky top-0 z-40 shadow-sm">
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => {
-              if (activeTab === "profile") {
-                setActiveTab("main");
-              } else {
-                navigate(-1);
-              }
-            }} 
-            className="w-11 h-11 flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-gray-50 hover:scale-105 active:scale-95 transition-all"
-          >
-            <ArrowLeft size={22} className="text-[#141779]" />
-          </button>
-          <div className="w-10 h-10 rounded-full border-2 border-[#141779]/20 overflow-hidden bg-white shrink-0">
-            <img 
-              alt="User Profile" 
-              className="w-full h-full object-cover"
-              src={parentPhoto || `https://ui-avatars.com/api/?name=Parent&background=random`}
-            />
-          </div>
-          <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#141779] to-[#30007f]">
-            {activeTab === "profile" ? "Profile Settings" : t("settings")}
-          </h1>
-        </div>
-        <button className="w-11 h-11 flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-gray-50 hover:scale-105 active:scale-95 transition-all">
-          <Bell size={22} className="text-[#141779]" />
+  <div className="bg-gradient-to-b from-[#f0f4f8] to-[#e6eef5] text-[#141779] flex flex-col min-h-screen w-full relative overflow-x-hidden font-sans">
+    {/* Header */}
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs flex items-center justify-between px-6 h-16">
+      <div className="flex items-center gap-3">
+        <button 
+          onClick={() => {
+            if (activeTab === "profile") {
+              setActiveTab("main");
+            } else {
+              navigate(-1);
+            }
+          }} 
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 hover:bg-slate-100 active:scale-95 transition-all"
+        >
+          <ArrowLeft size={20} className="text-[#141779]" />
         </button>
-      </header>
+        <div className="w-9 h-9 rounded-full border border-[#141779]/20 overflow-hidden bg-white shrink-0 shadow-xs">
+          <img 
+            alt="User Profile" 
+            className="w-full h-full object-cover"
+            src={parentPhoto || `https://ui-avatars.com/api/?name=Parent&background=random`}
+          />
+        </div>
+        <h1 className="text-xl font-black text-[#141779] tracking-tight">
+          {activeTab === "profile" ? "Profile Settings" : t("settings")}
+        </h1>
+      </div>
+      <button className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 hover:bg-slate-100 text-[#141779] transition-all">
+        <Bell size={20} />
+      </button>
+    </header>
 
-      <motion.main 
-        variants={containerVariants}
-        initial="hidden"
-        animate="show"
-        className="px-6 pt-8 flex flex-col gap-8 max-w-3xl mx-auto w-full"
-      >
-        {activeTab === "main" ? (
-          <>
-            {/* Profile Settings Option Card (First) */}
-            <motion.div
-              variants={itemVariants}
-              onClick={() => setActiveTab("profile")}
-              className="bg-white/70 backdrop-blur-md rounded-3xl p-6 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.08)] transition-all cursor-pointer flex items-center justify-between group relative overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-[#141779]/10 to-transparent rounded-bl-full pointer-events-none transition-transform group-hover:scale-110 duration-500" />
-              <div className="flex items-center gap-4 relative z-10">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#141779]/20 to-[#141779]/5 flex items-center justify-center">
-                  <UserRound size={24} color="#141779" />
+    <motion.main 
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="w-full max-w-lg mx-auto pt-20 pb-32 px-5 flex flex-col gap-6 relative z-10"
+    >
+      {activeTab === "main" ? (
+        <>
+          {/* Profile Settings Option Card */}
+          <motion.div
+            variants={itemVariants}
+            onClick={() => setActiveTab("profile")}
+            className="bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center justify-between group relative overflow-hidden"
+          >
+            <div className="flex items-center gap-4 relative z-10">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779]">
+                <UserRound size={24} />
+              </div>
+              <div>
+                <h2 className="text-lg font-black text-[#141779]">Profile Settings</h2>
+                <p className="text-xs font-bold text-slate-600 mt-0.5">Manage parent and kids profiles</p>
+              </div>
+            </div>
+            <div className="w-9 h-9 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 group-hover:translate-x-1 transition-transform relative z-10">
+              <ArrowLeft size={18} className="text-[#141779] rotate-180" />
+            </div>
+          </motion.div>
+
+          {/* Screen Time Section */}
+          <motion.div variants={itemVariants} className="bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md flex flex-col gap-5">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-[#006a62]">
+                  <Timer size={24} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-[#141779]">Profile Settings</h2>
-                  <p className="text-sm text-[#767683] mt-0.5">Manage parent and kids profiles</p>
+                  <h2 className="text-lg font-black text-[#141779]">Screen Time Limit</h2>
+                  <p className="text-xs font-bold text-slate-600 mt-0.5">Manage app usage duration</p>
                 </div>
               </div>
-              <div className="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm group-hover:translate-x-1 transition-transform relative z-10">
-                <ArrowLeft size={18} className="text-[#141779] rotate-180" />
+              <CustomSwitch checked={isScreenTimeOn} onChange={(v) => {
+                const val = v ? 60 : 9999;
+                setScreenTimeMinutes(val);
+                updateSetting("screenTimeMinutes", val);
+              }} />
+            </div>
+            
+            {isScreenTimeOn ? (
+              <div className="mt-2 flex flex-col gap-3">
+                <div className="flex justify-between items-end">
+                  <span className="text-3xl font-black text-[#006a62]">{screenTimeMinutes} <span className="text-xs font-extrabold text-slate-600">Minutes / Day</span></span>
+                </div>
+                <input 
+                  type="range" 
+                  min="5" 
+                  max="120" 
+                  step="5" 
+                  value={screenTimeMinutes} 
+                  onChange={(e) => setScreenTimeMinutes(parseInt(e.target.value))}
+                  onMouseUp={() => updateSetting("screenTimeMinutes", screenTimeMinutes)}
+                  onTouchEnd={() => updateSetting("screenTimeMinutes", screenTimeMinutes)}
+                  className="w-full h-3 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#006a62]"
+                />
+                <div className="flex justify-between text-xs font-black text-slate-500 px-1">
+                  <span>5m</span>
+                  <span>30m</span>
+                  <span>60m</span>
+                  <span>90m</span>
+                  <span>120m</span>
+                </div>
               </div>
-            </motion.div>
+            ) : (
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-center">
+                <p className="font-black text-[#141779] text-sm">Screen Time is Unlimited</p>
+                <p className="text-xs font-bold text-slate-600 mt-1">Your child can use the app without any time restrictions.</p>
+              </div>
+            )}
+          </motion.div>
 
-            {/* Screen Time Section */}
-            <motion.div variants={itemVariants} className="bg-white/70 backdrop-blur-md rounded-3xl p-7 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#006a62]/10 to-transparent rounded-bl-full pointer-events-none transition-transform group-hover:scale-110 duration-500" />
-              <div className="flex justify-between items-center mb-6 relative z-10">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#006a62]/20 to-[#006a62]/5 flex items-center justify-center">
-                    <Timer size={24} color="#006a62" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-[#141779]">Screen Time Limit</h2>
-                    <p className="text-sm text-[#767683] mt-0.5">Manage app usage duration</p>
-                  </div>
-                </div>
-                <CustomSwitch checked={isScreenTimeOn} onChange={(v) => {
-                  const val = v ? 60 : 9999;
-                  setScreenTimeMinutes(val);
-                  updateSetting("screenTimeMinutes", val);
-                }} />
+          {/* Subject Restrictions */}
+          <motion.div variants={itemVariants} className="bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#30007f]">
+                <BookOpen size={24} />
               </div>
-              
-              {isScreenTimeOn ? (
-                <div className="mt-4 relative z-10">
-                  <div className="flex justify-between items-end mb-2">
-                    <span className="text-3xl font-bold text-[#006a62]">{screenTimeMinutes} <span className="text-sm text-[#767683] font-semibold">Minutes / Day</span></span>
+              <div>
+                <h2 className="text-lg font-black text-[#141779]">Subject Focus</h2>
+                <p className="text-xs font-bold text-slate-600 mt-0.5">Restrict access to certain subjects</p>
+              </div>
+            </div>
+            
+            <div className="flex flex-col gap-3 mt-1">
+              {subjects.length > 0 ? subjects.map((subject, i) => (
+                <div key={i} className="flex justify-between items-center p-4 bg-slate-50 rounded-2xl border border-slate-200/80">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">
+                      {subject.toLowerCase().includes("math") ? "➗" : 
+                       subject.toLowerCase().includes("science") ? "🔬" : 
+                       subject.toLowerCase().includes("english") || subject.toLowerCase().includes("language") ? "📚" : "📖"}
+                    </span>
+                    <span className="text-sm font-black text-[#141779]">{subject}</span>
                   </div>
-                  <input 
-                    type="range" 
-                    min="5" 
-                    max="120" 
-                    step="5" 
-                    value={screenTimeMinutes} 
-                    onChange={(e) => setScreenTimeMinutes(parseInt(e.target.value))}
-                    onMouseUp={() => updateSetting("screenTimeMinutes", screenTimeMinutes)}
-                    onTouchEnd={() => updateSetting("screenTimeMinutes", screenTimeMinutes)}
-                    className="w-full h-3 bg-[#e0e3e5] rounded-lg appearance-none cursor-pointer accent-[#006a62]"
+                  <CustomSwitch 
+                    checked={!restrictedSubjects[subject]} 
+                    onChange={(v) => toggleSubjectRestriction(subject, !v)} 
                   />
-                  <div className="flex justify-between text-xs font-bold text-[#c7c5d4] mt-2 px-1">
-                    <span>5m</span>
-                    <span>30m</span>
-                    <span>60m</span>
-                    <span>90m</span>
-                    <span>120m</span>
-                  </div>
                 </div>
-              ) : (
-                <div className="mt-4 relative z-10 p-4 bg-gray-50 rounded-2xl border border-gray-100 text-center">
-                  <p className="font-bold text-[#464652]">Screen Time is Unlimited</p>
-                  <p className="text-sm text-[#767683] mt-1">Your child can use the app without any time restrictions.</p>
+              )) : (
+                <div className="text-center py-4 text-slate-500 font-bold text-xs">
+                  No subjects found for current standard.
                 </div>
               )}
-            </motion.div>
+            </div>
+          </motion.div>
 
-            {/* Subject Restrictions */}
-            <motion.div variants={itemVariants} className="bg-white/70 backdrop-blur-md rounded-3xl p-7 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#30007f]/20 to-[#30007f]/5 flex items-center justify-center">
-                  <BookOpen size={24} color="#30007f" />
+          {/* Language Settings */}
+          <motion.div variants={itemVariants} className="bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md flex flex-col gap-4 relative z-20">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779]">
+                <Globe size={24} />
+              </div>
+              <div>
+                <h2 className="text-lg font-black text-[#141779]">{t("language_settings")}</h2>
+                <p className="text-xs font-bold text-slate-600 mt-0.5">{t("manage_language_pref")}</p>
+              </div>
+            </div>
+            
+            <div className="flex flex-col gap-3 mt-1">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200/80 gap-3">
+                <div className="flex flex-col">
+                  <span className="text-sm font-black text-[#141779]">{t("app_language")}</span>
+                  <span className="text-xs font-bold text-slate-600">{t("select_language")}</span>
                 </div>
-                <div>
-                  <h2 className="text-xl font-bold text-[#141779]">Subject Focus</h2>
-                  <p className="text-sm text-[#767683] mt-0.5">Restrict access to certain subjects</p>
+                <LanguageDropdown 
+                  value={(i18n?.language || "en").split('-')[0]}
+                  onChange={(val: string) => i18n.changeLanguage(val)}
+                  options={[
+                    { value: "en", label: "English" },
+                    { value: "hi", label: "हिंदी (Hindi)" },
+                    { value: "gu", label: "ગુજરાતી (Gujarati)" }
+                  ]}
+                />
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200/80 gap-3">
+                <div className="flex flex-col">
+                  <span className="text-sm font-black text-[#141779]">{t("lessons_language")}</span>
+                  <span className="text-xs font-bold text-slate-600">{t("select_language")}</span>
                 </div>
+                <LanguageDropdown 
+                  value={contentLanguage}
+                  onChange={(val: string) => {
+                    setContentLanguage(val);
+                    updateSetting("contentLanguage", val);
+                  }}
+                  options={[
+                    { value: "en", label: "English" },
+                    { value: "hi", label: "हिंदी (Hindi)" },
+                    { value: "gu", label: "ગુજરાતી (Gujarati)" }
+                  ]}
+                />
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Family Link Code Card */}
+          <motion.div 
+            variants={itemVariants}
+            className="bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md flex flex-col gap-4"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-[#006a62] shrink-0">
+                <ShieldCheck size={24} />
+              </div>
+              <div>
+                <h2 className="text-lg font-black text-[#141779]">Family Link & Devices</h2>
+                <p className="text-xs font-bold text-slate-600 mt-0.5">Connect co-parents (Father & Mother) or extra devices</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex flex-col min-w-0">
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider truncate">Your Family Link Code</span>
+                <span className="text-xl font-black text-[#141779] tracking-widest whitespace-nowrap">{user?.familyCode || "FAM-8492"}</span>
               </div>
               
-              <div className="flex flex-col gap-3">
-                {subjects.length > 0 ? subjects.map((subject, i) => (
-                  <div key={i} className="flex justify-between items-center p-4 bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xl">
-                        {subject.toLowerCase().includes("math") ? "➗" : 
-                         subject.toLowerCase().includes("science") ? "🔬" : 
-                         subject.toLowerCase().includes("english") || subject.toLowerCase().includes("language") ? "📚" : "📖"}
-                      </span>
-                      <span className="text-base font-bold text-[#191c1e]">{subject}</span>
-                    </div>
-                    <CustomSwitch 
-                      checked={!restrictedSubjects[subject]} 
-                      onChange={(v) => toggleSubjectRestriction(subject, !v)} 
-                    />
-                  </div>
-                )) : (
-                  <div className="text-center py-4 text-[#767683] font-medium text-sm">
-                    No subjects found for current standard.
-                  </div>
-                )}
-              </div>
-            </motion.div>
+              <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+                <button
+                  onClick={() => {
+                    if (user?.familyCode) {
+                      navigator.clipboard.writeText(user.familyCode);
+                      setToastMessage("Family Code copied!");
+                      setTimeout(() => setToastMessage(null), 2500);
+                    }
+                  }}
+                  className="flex-1 sm:flex-none h-10 px-4 rounded-xl bg-[#141779] hover:bg-[#1e23a0] text-white text-xs font-black uppercase tracking-wider active:scale-95 transition-all shadow-xs flex items-center justify-center gap-1.5"
+                >
+                  <span>Copy Code</span>
+                </button>
 
-            {/* Language Settings */}
-            <motion.div variants={itemVariants} className="bg-white/70 backdrop-blur-md rounded-3xl p-7 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative z-20">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#141779]/20 to-[#141779]/5 flex items-center justify-center">
-                  <Globe size={24} color="#141779" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-[#141779]">{t("language_settings")}</h2>
-                  <p className="text-sm text-[#767683] mt-0.5">{t("manage_language_pref")}</p>
-                </div>
-              </div>
-              
-              <div className="flex flex-col gap-4">
-                {/* App Language Selector */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white rounded-2xl shadow-sm border border-gray-100 gap-3">
-                  <div className="flex flex-col">
-                    <span className="text-base font-bold text-[#191c1e]">{t("app_language")}</span>
-                    <span className="text-xs text-[#767683]">{t("select_language")}</span>
-                  </div>
-                  <LanguageDropdown 
-                    value={i18n.language.split('-')[0]}
-                    onChange={(val: string) => i18n.changeLanguage(val)}
-                    options={[
-                      { value: "en", label: "English" },
-                      { value: "hi", label: "हिंदी (Hindi)" },
-                      { value: "gu", label: "ગુજરાતી (Gujarati)" }
-                    ]}
-                  />
-                </div>
-
-                {/* Lessons Language Selector */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white rounded-2xl shadow-sm border border-gray-100 gap-3">
-                  <div className="flex flex-col">
-                    <span className="text-base font-bold text-[#191c1e]">{t("lessons_language")}</span>
-                    <span className="text-xs text-[#767683]">{t("select_language")}</span>
-                  </div>
-                  <LanguageDropdown 
-                    value={contentLanguage}
-                    onChange={(val: string) => {
-                      setContentLanguage(val);
-                      updateSetting("contentLanguage", val);
-                    }}
-                    options={[
-                      { value: "en", label: "English" },
-                      { value: "hi", label: "हिंदी (Hindi)" },
-                      { value: "gu", label: "ગુજરાતી (Gujarati)" }
-                    ]}
-                  />
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Family Link Code Card */}
-            <motion.div 
-              variants={itemVariants}
-              className="bg-white/70 backdrop-blur-md rounded-3xl p-7 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative overflow-hidden group"
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#141779]/10 to-transparent rounded-bl-full pointer-events-none transition-transform group-hover:scale-110 duration-500" />
-              <div className="flex items-center gap-3 mb-6 relative z-10">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#141779]/20 to-[#141779]/5 flex items-center justify-center shrink-0">
-                  <ShieldCheck size={24} color="#141779" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-[#141779]">Family Link & Devices</h2>
-                  <p className="text-sm text-[#767683] mt-0.5">Connect co-parents (Father & Mother) or extra devices</p>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-4 flex flex-col gap-3 relative z-10">
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-[10px] font-bold text-[#767683] uppercase tracking-wider truncate">Your Family Link Code</span>
-                    <span className="text-lg font-black text-[#141779] tracking-widest whitespace-nowrap">{user?.familyCode || "FAM-8492"}</span>
-                  </div>
-                  <button
-                    onClick={() => {
-                      if (user?.familyCode) {
-                        navigator.clipboard.writeText(user.familyCode);
-                        setToastMessage("Family Code copied!");
-                        setTimeout(() => setToastMessage(null), 2500);
+                <button
+                  title="Regenerate Code"
+                  onClick={async () => {
+                    if (window.confirm("Regenerate a new random Family Link Code?")) {
+                      try {
+                        const res = await apiFetch("/api/users/family-link/update", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({})
+                        });
+                        const json = await res.json();
+                        if (json.success && json.familyCode) {
+                          if (json.user) {
+                            const updatedUser = { ...json.user, familyCode: json.familyCode };
+                            localStorage.setItem("userData", JSON.stringify(updatedUser));
+                            setUser(updatedUser);
+                            window.dispatchEvent(new Event("userDataUpdated"));
+                          }
+                        } else {
+                          alert(json.detail || json.message || "Failed to regenerate code.");
+                        }
+                      } catch (e) {
+                        alert("Error connecting to server.");
                       }
-                    }}
-                    className="h-11 px-6 rounded-xl bg-[#141779] text-white text-xs font-black uppercase tracking-wider hover:bg-[#141779]/90 hover:scale-105 active:scale-95 transition-all shadow-sm"
-                  >
-                    Copy Code
-                  </button>
+                    }
+                  }}
+                  className="h-10 px-3 rounded-xl bg-slate-200/80 hover:bg-slate-200 text-slate-700 hover:text-[#141779] text-xs font-black active:scale-95 flex items-center justify-center gap-1.5 transition-all"
+                >
+                  <RefreshCw size={14} />
+                  <span>Regenerate</span>
+                </button>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Logout Option */}
+          <motion.button 
+            variants={itemVariants}
+            onClick={() => setShowLogoutModal(true)}
+            className="bg-rose-50 hover:bg-rose-100 rounded-[24px] p-6 border border-rose-200 shadow-sm flex items-center gap-4 text-left transition-colors w-full"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 flex items-center justify-center shrink-0">
+              <LogOut size={24} className="text-rose-600" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-lg font-black text-rose-700">Logout</h2>
+              <p className="text-xs font-bold text-rose-800/70 mt-0.5">Sign out of your account</p>
+            </div>
+          </motion.button>
+        </>
+      ) : (
+        <>
+          {/* Parent Profile Card */}
+          <motion.div variants={itemVariants} className="bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md flex flex-col gap-4">
+            <h3 className="text-lg font-black text-[#141779] flex items-center gap-2">
+              <ShieldCheck size={20} className="text-[#006a62]" /> Parent Profile
+            </h3>
+            <div className="flex flex-col sm:flex-row items-center gap-5">
+              <div className="relative w-20 h-20 rounded-full border-4 border-slate-100 shadow-md bg-slate-100 flex items-center justify-center text-3xl overflow-hidden cursor-pointer group/parentphoto shrink-0">
+                {parentPhoto ? (
+                  <img src={parentPhoto} alt="Parent" className="w-full h-full object-cover" />
+                ) : (
+                  <span>👨‍👩‍👦</span>
+                )}
+                <label htmlFor="parent-photo-upload" className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/parentphoto:opacity-100 transition-opacity cursor-pointer">
+                  <Camera size={22} color="white" />
+                </label>
+                <input 
+                  id="parent-photo-upload" 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handlePhotoUpload} 
+                  className="hidden" 
+                />
+              </div>
+              
+              <div className="flex-1 w-full flex flex-col gap-2">
+                <label className="text-xs font-black text-slate-600 uppercase tracking-wider ml-1">Parent Name</label>
+                <input
+                  type="text"
+                  value={parentName}
+                  onChange={(e) => setParentName(e.target.value)}
+                  placeholder="Enter Parent Name"
+                  className="w-full h-12 bg-slate-50 rounded-2xl px-5 text-sm font-extrabold text-slate-800 border border-slate-200 focus:border-[#141779] outline-none shadow-xs"
+                />
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Child 1 Profile Card */}
+          <motion.div variants={itemVariants} className="bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md flex flex-col gap-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-black text-[#141779] flex items-center gap-2">
+                <UserRound size={20} className="text-[#141779]" /> Child 1 Profile
+              </h3>
+              {hasChild2 && (
+                <button 
+                  type="button" 
+                  onClick={() => handleDeleteChild("child_1")} 
+                  className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
+                  title="Delete this child profile"
+                >
+                  <Trash2 size={18} />
+                </button>
+              )}
+            </div>
+            
+            <div className="flex flex-col gap-4">
+              {/* Child 1 Photo */}
+              <div className="flex flex-col items-center">
+                <div className="relative w-20 h-20 rounded-full border-4 border-slate-100 shadow-md bg-slate-100 flex items-center justify-center overflow-hidden cursor-pointer group/c1photo">
+                  {child1Photo ? (
+                    <img src={child1Photo} alt="Child 1" className="w-full h-full object-cover" />
+                  ) : (
+                    <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(child1Name || "Kid")}&background=random`} alt="Avatar" className="w-full h-full object-cover" />
+                  )}
+                  <label htmlFor="child1-photo-upload" className="absolute inset-0 bg-black/45 flex items-center justify-center opacity-0 group-hover/c1photo:opacity-100 transition-opacity cursor-pointer">
+                    <Camera size={20} color="white" />
+                  </label>
+                  <input 
+                    id="child1-photo-upload" 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={handleChild1PhotoUpload} 
+                    className="hidden" 
+                  />
                 </div>
-                
-                <div className="flex gap-2 justify-end border-t border-slate-200/50 pt-2.5 mt-1">
+                <span className="text-[11px] font-black text-slate-500 mt-1.5">Tap photo to edit</span>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-black text-slate-600 uppercase tracking-wider ml-1">Child Name</label>
+                <input
+                  type="text"
+                  value={child1Name}
+                  onChange={(e) => setChild1Name(e.target.value)}
+                  placeholder="Enter Child Name"
+                  className="w-full h-12 bg-slate-50 rounded-2xl px-5 text-sm font-extrabold text-slate-800 border border-slate-200 focus:border-[#141779] outline-none shadow-xs"
+                />
+              </div>
+
+              <CustomDropdown
+                label="Education Board"
+                icon={BookOpen}
+                iconColor="#006a62"
+                value={child1Board}
+                options={boards}
+                onSelect={setChild1Board}
+                placeholder="Select Board"
+              />
+
+              <div className="flex gap-3 w-full relative z-10">
+                <CustomDropdown
+                  label="Class / Grade"
+                  icon={GraduationCap}
+                  iconColor="#30007f"
+                  value={child1Class}
+                  options={classes}
+                  onSelect={setChild1Class}
+                  placeholder="Select"
+                />
+
+                <CustomDropdown
+                  label="Age"
+                  icon={Cake}
+                  iconColor="#141779"
+                  value={child1Age}
+                  options={ages}
+                  onSelect={setChild1Age}
+                  placeholder="Select"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2 mt-1">
+                <label className="text-xs font-black text-slate-600 uppercase tracking-wider ml-1">Child Device Code (Scholar Login)</label>
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center justify-between">
+                  <span className="text-lg font-black tracking-widest text-[#141779]">
+                    {child1Code || "N/A"}
+                  </span>
                   <button
+                    type="button"
                     onClick={async () => {
-                      if (window.confirm("Regenerate a new random Family Link Code?")) {
+                      if (window.confirm("Regenerate a new random device code for this child?")) {
                         try {
-                          const res = await apiFetch("/api/users/family-link/update", {
+                          const res = await apiFetch("/api/users/child-code/update", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({})
+                            body: JSON.stringify({ childId: "child_1" })
                           });
                           const json = await res.json();
-                          if (json.success && json.familyCode) {
+                          if (json.success && json.uniqueCode) {
+                            setChild1Code(json.uniqueCode);
                             if (json.user) {
-                              const updatedUser = { ...json.user, familyCode: json.familyCode };
-                              localStorage.setItem("userData", JSON.stringify(updatedUser));
-                              setUser(updatedUser);
+                              localStorage.setItem("userData", JSON.stringify(json.user));
+                              setUser(json.user);
                               window.dispatchEvent(new Event("userDataUpdated"));
                             }
                           } else {
@@ -827,447 +1003,255 @@ export default function ParentSettings() {
                         }
                       }
                     }}
-                    className="px-3 py-2 rounded-xl text-slate-500 hover:text-[#141779] hover:bg-slate-100/80 text-xs font-bold flex items-center gap-1.5 transition-all"
+                    className="px-3 py-1.5 rounded-full text-xs font-black bg-indigo-50 text-[#141779] border border-indigo-100 hover:bg-indigo-100 transition-colors"
                   >
-                    <RefreshCw size={14} />
-                    <span>Regenerate</span>
+                    Regenerate
                   </button>
                 </div>
               </div>
-            </motion.div>
+            </div>
+          </motion.div>
 
-            {/* Logout Option */}
-            <motion.button 
-              variants={itemVariants}
-              onClick={() => setShowLogoutModal(true)}
-              className="bg-red-50 hover:bg-red-100 rounded-3xl p-6 border-2 border-red-100 shadow-sm flex items-center gap-4 text-left group overflow-hidden relative w-full transition-colors"
-            >
-              <div className="w-12 h-12 rounded-2xl bg-red-100 flex items-center justify-center shrink-0">
-                <LogOut size={24} className="text-red-600" />
-              </div>
-              <div className="flex-1">
-                <h2 className="text-lg font-bold text-red-700">Logout</h2>
-                <p className="text-sm font-medium text-red-900/60 mt-1">Sign out of your account</p>
-              </div>
-            </motion.button>
-          </>
-        ) : (
-          <>
-            {/* Parent Profile Card */}
-            <motion.div variants={itemVariants} className="bg-white/70 backdrop-blur-md rounded-3xl p-7 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#30007f]/10 to-transparent rounded-bl-full pointer-events-none transition-transform group-hover:scale-110 duration-500" />
-              <h3 className="text-lg font-bold text-[#141779] mb-4 flex items-center gap-2 relative z-10">
-                <ShieldCheck size={20} className="text-[#006a62]" /> Parent Profile
-              </h3>
-              <div className="flex flex-col sm:flex-row items-center gap-5 relative z-10">
-                <div className="relative w-20 h-20 rounded-full border-4 border-white shadow-lg bg-gray-100 flex items-center justify-center text-3xl overflow-hidden cursor-pointer group/parentphoto shrink-0">
-                  {parentPhoto ? (
-                    <img src={parentPhoto} alt="Parent" className="w-full h-full object-cover" />
-                  ) : (
-                    <span>👨‍👩‍👦</span>
-                  )}
-                  <label htmlFor="parent-photo-upload" className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/parentphoto:opacity-100 transition-opacity cursor-pointer">
-                    <Camera size={22} color="white" />
-                  </label>
-                  <input 
-                    id="parent-photo-upload" 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={handlePhotoUpload} 
-                    className="hidden" 
-                  />
-                </div>
-                
-                <div className="flex-1 w-full flex flex-col gap-2">
-                  <label className="text-sm font-semibold text-[#767683] ml-2">Parent Name</label>
-                  <input
-                    type="text"
-                    value={parentName}
-                    onChange={(e) => setParentName(e.target.value)}
-                    placeholder="Enter Parent Name"
-                    className="w-full h-14 bg-white rounded-2xl px-5 text-base font-medium text-[#191c1e] border-2 border-transparent focus:border-[#141779] outline-none shadow-sm hover:shadow-md transition-shadow"
-                  />
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Child 1 Profile Card */}
-            <motion.div variants={itemVariants} className="bg-white/70 backdrop-blur-md rounded-3xl p-7 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative group overflow-visible z-20">
-              <div className="flex justify-between items-center mb-5">
-                <h3 className="text-lg font-bold text-[#141779] flex items-center gap-2">
-                  <UserRound size={20} className="text-[#141779]" /> Child 1 Profile
+          {/* Child 2 Profile Card (if exists) */}
+          {hasChild2 ? (
+            <motion.div variants={itemVariants} className="bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md flex flex-col gap-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-black text-[#141779] flex items-center gap-2">
+                  <UserRound size={20} className="text-[#141779]" /> Child 2 Profile
                 </h3>
-                {hasChild2 && (
-                  <button 
-                    type="button" 
-                    onClick={() => handleDeleteChild("child_1")} 
-                    className="p-1 text-red-500 hover:text-red-700 transition-colors"
-                    title="Delete this child profile"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                )}
+                <button 
+                  type="button" 
+                  onClick={deleteChild2Click} 
+                  className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
+                  title="Remove second child details"
+                >
+                  <Trash2 size={18} />
+                </button>
               </div>
               
-              <div className="flex flex-col gap-5">
-                {/* Child 1 Photo */}
+              <div className="flex flex-col gap-4">
                 <div className="flex flex-col items-center">
-                  <div className="relative w-20 h-20 rounded-full border-4 border-white shadow-md bg-gray-100 flex items-center justify-center overflow-hidden cursor-pointer group/c1photo">
-                    {child1Photo ? (
-                      <img src={child1Photo} alt="Child 1" className="w-full h-full object-cover" />
+                  <div className="relative w-20 h-20 rounded-full border-4 border-slate-100 shadow-md bg-slate-100 flex items-center justify-center overflow-hidden cursor-pointer group/c2photo">
+                    {child2Photo ? (
+                      <img src={child2Photo} alt="Child 2" className="w-full h-full object-cover" />
                     ) : (
-                      <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(child1Name || "Kid")}&background=random`} alt="Avatar" className="w-full h-full object-cover" />
+                      <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(child2Name || "Kid")}&background=random`} alt="Avatar" className="w-full h-full object-cover" />
                     )}
-                    <label htmlFor="child1-photo-upload" className="absolute inset-0 bg-black/45 flex items-center justify-center opacity-0 group-hover/c1photo:opacity-100 transition-opacity cursor-pointer">
+                    <label htmlFor="child2-photo-upload" className="absolute inset-0 bg-black/45 flex items-center justify-center opacity-0 group-hover/c2photo:opacity-100 transition-opacity cursor-pointer">
                       <Camera size={20} color="white" />
                     </label>
                     <input 
-                      id="child1-photo-upload" 
+                      id="child2-photo-upload" 
                       type="file" 
                       accept="image/*" 
-                      onChange={handleChild1PhotoUpload} 
+                      onChange={handleChild2PhotoUpload} 
                       className="hidden" 
                     />
                   </div>
-                  <span className="text-[11px] font-bold text-[#767683] mt-1.5">Tap photo to edit</span>
+                  <span className="text-[11px] font-black text-slate-500 mt-1.5">Tap photo to edit</span>
                 </div>
- 
+
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-semibold text-[#767683] ml-2">Child Name</label>
+                  <label className="text-xs font-black text-slate-600 uppercase tracking-wider ml-1">Child Name</label>
                   <input
                     type="text"
-                    value={child1Name}
-                    onChange={(e) => setChild1Name(e.target.value)}
-                    placeholder="Enter Child Name"
-                    className="w-full h-14 bg-white rounded-2xl px-5 text-base font-medium text-[#191c1e] border-2 border-transparent focus:border-[#141779] outline-none shadow-sm hover:shadow-md transition-shadow"
+                    value={child2Name}
+                    onChange={(e) => setChild2Name(e.target.value)}
+                    className="w-full h-12 bg-slate-50 rounded-2xl px-5 text-sm font-extrabold text-slate-800 border border-slate-200 focus:border-[#141779] outline-none shadow-xs"
                   />
                 </div>
- 
+
                 <CustomDropdown
                   label="Education Board"
                   icon={BookOpen}
                   iconColor="#006a62"
-                  value={child1Board}
+                  value={child2Board}
                   options={boards}
-                  onSelect={setChild1Board}
+                  onSelect={setChild2Board}
                   placeholder="Select Board"
                 />
 
-                <div className="flex gap-2 md:gap-3 w-full relative z-10">
+                <div className="flex gap-3 w-full relative z-10">
                   <CustomDropdown
                     label="Class / Grade"
                     icon={GraduationCap}
                     iconColor="#30007f"
-                    value={child1Class}
+                    value={child2Class}
                     options={classes}
-                    onSelect={setChild1Class}
+                    onSelect={setChild2Class}
                     placeholder="Select"
                   />
- 
+
                   <CustomDropdown
                     label="Age"
                     icon={Cake}
                     iconColor="#141779"
-                    value={child1Age}
+                    value={child2Age}
                     options={ages}
-                    onSelect={setChild1Age}
+                    onSelect={setChild2Age}
                     placeholder="Select"
                   />
                 </div>
 
-                <div className="flex flex-col gap-2 mt-2">
-                  <label className="text-sm font-semibold text-[#767683] ml-2">Child Device Code (Scholar Login)</label>
+                <div className="flex flex-col gap-2 mt-1">
+                  <label className="text-xs font-black text-slate-600 uppercase tracking-wider ml-1">Child Device Code (Scholar Login)</label>
                   <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center justify-between">
                     <span className="text-lg font-black tracking-widest text-[#141779]">
-                      {child1Code || "N/A"}
+                      {child2Code || "N/A"}
                     </span>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          if (window.confirm("Regenerate a new random device code for this child?")) {
-                            try {
-                              const res = await apiFetch("/api/users/child-code/update", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ childId: "child_1" })
-                              });
-                              const json = await res.json();
-                              if (json.success && json.uniqueCode) {
-                                setChild1Code(json.uniqueCode);
-                                if (json.user) {
-                                  localStorage.setItem("userData", JSON.stringify(json.user));
-                                  setUser(json.user);
-                                  window.dispatchEvent(new Event("userDataUpdated"));
-                                }
-                              } else {
-                                alert(json.detail || json.message || "Failed to regenerate code.");
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (window.confirm("Regenerate a new random device code for this child?")) {
+                          try {
+                            const res = await apiFetch("/api/users/child-code/update", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ childId: "child_2" })
+                            });
+                            const json = await res.json();
+                            if (json.success && json.uniqueCode) {
+                              setChild2Code(json.uniqueCode);
+                              if (json.user) {
+                                localStorage.setItem("userData", JSON.stringify(json.user));
+                                setUser(json.user);
+                                window.dispatchEvent(new Event("userDataUpdated"));
                               }
-                            } catch (e) {
-                              alert("Error connecting to server.");
+                            } else {
+                              alert(json.detail || json.message || "Failed to regenerate code.");
                             }
+                          } catch (e) {
+                            alert("Error connecting to server.");
                           }
-                        }}
-                        className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-indigo-50 text-[#141779] border border-indigo-100 hover:bg-indigo-100 transition-colors"
-                      >
-                        Regenerate
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
- 
-            {/* Child 2 Profile Card (if exists or enabled) */}
-            {hasChild2 ? (
-              <motion.div variants={itemVariants} className="bg-white/70 backdrop-blur-md rounded-3xl p-7 border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative group overflow-visible z-10">
-                <div className="flex justify-between items-center mb-5">
-                  <h3 className="text-lg font-bold text-[#141779] flex items-center gap-2">
-                    <UserRound size={20} className="text-[#141779]" /> Child 2 Profile
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <button 
-                      type="button" 
-                      onClick={deleteChild2Click} 
-                      className="p-1 text-red-500 hover:text-red-700 transition-colors"
-                      title="Remove second child details from this form"
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-full text-xs font-black bg-indigo-50 text-[#141779] border border-indigo-100 hover:bg-indigo-100 transition-colors"
                     >
-                      <Trash2 size={18} />
+                      Regenerate
                     </button>
                   </div>
                 </div>
-                
-                <div className="flex flex-col gap-5">
-                  {/* Child 2 Photo */}
-                  <div className="flex flex-col items-center">
-                    <div className="relative w-20 h-20 rounded-full border-4 border-white shadow-md bg-gray-100 flex items-center justify-center overflow-hidden cursor-pointer group/c2photo">
-                      {child2Photo ? (
-                        <img src={child2Photo} alt="Child 2" className="w-full h-full object-cover" />
-                      ) : (
-                        <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(child2Name || "Kid")}&background=random`} alt="Avatar" className="w-full h-full object-cover" />
-                      )}
-                      <label htmlFor="child2-photo-upload" className="absolute inset-0 bg-black/45 flex items-center justify-center opacity-0 group-hover/c2photo:opacity-100 transition-opacity cursor-pointer">
-                        <Camera size={20} color="white" />
-                      </label>
-                      <input 
-                        id="child2-photo-upload" 
-                        type="file" 
-                        accept="image/*" 
-                        onChange={handleChild2PhotoUpload} 
-                        className="hidden" 
-                      />
-                    </div>
-                    <span className="text-[11px] font-bold text-[#767683] mt-1.5">Tap photo to edit</span>
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm font-semibold text-[#767683] ml-2">Child Name</label>
-                    <input
-                      type="text"
-                      value={child2Name}
-                      onChange={(e) => setChild2Name(e.target.value)}
-                      className="w-full h-14 bg-white rounded-2xl px-5 text-base font-medium text-[#191c1e] border-2 border-transparent focus:border-[#141779] outline-none shadow-sm hover:shadow-md transition-shadow"
-                    />
-                  </div>
-
-                  <CustomDropdown
-                    label="Education Board"
-                    icon={BookOpen}
-                    iconColor="#006a62"
-                    value={child2Board}
-                    options={boards}
-                    onSelect={setChild2Board}
-                    placeholder="Select Board"
-                  />
-
-                  <div className="flex gap-2 md:gap-3 w-full relative z-10">
-                    <CustomDropdown
-                      label="Class / Grade"
-                      icon={GraduationCap}
-                      iconColor="#30007f"
-                      value={child2Class}
-                      options={classes}
-                      onSelect={setChild2Class}
-                      placeholder="Select"
-                    />
-
-                    <CustomDropdown
-                      label="Age"
-                      icon={Cake}
-                      iconColor="#141779"
-                      value={child2Age}
-                      options={ages}
-                      onSelect={setChild2Age}
-                      placeholder="Select"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-2 mt-2">
-                    <label className="text-sm font-semibold text-[#767683] ml-2">Child Device Code (Scholar Login)</label>
-                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center justify-between">
-                      <span className="text-lg font-black tracking-widest text-[#141779]">
-                        {child2Code || "N/A"}
-                      </span>
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            if (window.confirm("Regenerate a new random device code for this child?")) {
-                              try {
-                                const res = await apiFetch("/api/users/child-code/update", {
-                                  method: "POST",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({ childId: "child_2" })
-                                });
-                                const json = await res.json();
-                                if (json.success && json.uniqueCode) {
-                                  setChild2Code(json.uniqueCode);
-                                  if (json.user) {
-                                    localStorage.setItem("userData", JSON.stringify(json.user));
-                                    setUser(json.user);
-                                    window.dispatchEvent(new Event("userDataUpdated"));
-                                  }
-                                } else {
-                                  alert(json.detail || json.message || "Failed to regenerate code.");
-                                }
-                              } catch (e) {
-                                alert("Error connecting to server.");
-                              }
-                            }
-                          }}
-                          className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-indigo-50 text-[#141779] border border-indigo-100 hover:bg-indigo-100 transition-colors"
-                        >
-                          Regenerate
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            ) : (
-              /* Add Second Child Trigger Button */
-              <motion.button
-                variants={itemVariants}
-                type="button"
-                onClick={() => {
-                  setHasChild2(true);
-                  setChild2Name("");
-                  setChild2Class("Class 1");
-                  setChild2Age("6 Years");
-                  setChild2Board("CBSE (NCERT)");
-                  setChild2Photo("");
-                  setChild2Code("");
-                }}
-                className="w-full py-5 border-2 border-dashed border-[#141779]/30 rounded-3xl text-[#141779] font-bold text-base flex items-center justify-center gap-2 hover:bg-[#141779]/5 hover:border-[#141779] transition-all bg-white/40"
-              >
-                <Plus size={20} />
-                <span>Add Second Child Profile</span>
-              </motion.button>
-            )}
-
-            {/* Save Profiles Button */}
-            <motion.div variants={itemVariants} className="mt-2">
-              <button
-                onClick={handleSaveProfiles}
-                disabled={isSavingProfile}
-                className="w-full h-14 bg-[#141779] rounded-2xl flex items-center justify-center gap-3 shadow-[0_4px_15px_rgba(20,23,121,0.2)] hover:shadow-[0_6px_20px_rgba(20,23,121,0.3)] hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:hover:translate-y-0 text-white font-bold text-lg"
-              >
-                <span>{isSavingProfile ? "Saving Profiles..." : "Save Profiles"}</span>
-                {!isSavingProfile && <Save size={20} color="white" />}
-              </button>
+              </div>
             </motion.div>
-          </>
-        )}
-      </motion.main>
-
-        {/* HIDDEN: All Bento Grid Controls — Kid-Safe Mode, Edu Reels, AI Teacher, Premium Plans, Support, Update Pin kept for future use */}
-
-        {/* HIDDEN: Factory Reset Journey — kept for future use */}
-      {/* Reset Modal */}
-      <AnimatePresence>
-        {showResetModal && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-6"
-          >
-            <motion.div 
-              initial={{ scale: 0.9, y: 20, opacity: 0 }}
-              animate={{ scale: 1, y: 0, opacity: 1 }}
-              exit={{ scale: 0.9, y: 20, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              className="bg-white rounded-[32px] p-8 w-full max-w-[360px] flex flex-col items-center shadow-2xl relative overflow-hidden"
+          ) : (
+            <motion.button
+              variants={itemVariants}
+              type="button"
+              onClick={() => {
+                setHasChild2(true);
+                setChild2Name("");
+                setChild2Class("Class 1");
+                setChild2Age("6 Years");
+                setChild2Board("CBSE (NCERT)");
+                setChild2Photo("");
+                setChild2Code("");
+              }}
+              className="w-full py-4 border-2 border-dashed border-[#141779]/30 rounded-[24px] text-[#141779] font-black text-sm flex items-center justify-center gap-2 hover:bg-[#141779]/5 transition-all bg-white"
             >
-              <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-red-500 to-rose-600" />
-              <div className="w-20 h-20 rounded-full bg-red-50 flex items-center justify-center mb-5 ring-8 ring-red-50/50">
-                <Trash2 size={36} className="text-red-600" />
-              </div>
-              <h2 className="text-xl font-bold text-[#191c1e] text-center mb-3">
-                Wipe All Data?
-              </h2>
-              <p className="text-[15px] text-[#464652] text-center leading-relaxed mb-8">
-                This action is <span className="font-bold text-red-600">irreversible</span>. It will permanently delete all coins, level achievements, completed chapters, and badges.
-              </p>
-              <div className="flex flex-col w-full gap-3">
-                <button 
-                  onClick={handleResetJourney}
-                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 shadow-lg shadow-red-500/30 transition-all flex items-center justify-center"
-                >
-                  <span className="text-[16px] font-bold text-white tracking-wide">Yes, Wipe Data</span>
-                </button>
-                <button 
-                  onClick={() => setShowResetModal(false)}
-                  className="w-full py-4 rounded-2xl bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center"
-                >
-                  <span className="text-[16px] font-bold text-[#464652]">Cancel</span>
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <Plus size={20} />
+              <span>Add Second Child Profile</span>
+            </motion.button>
+          )}
 
-      {/* Toast Notification */}
-      <AnimatePresence>
-        {toastMessage && (
+          {/* Save Profiles Button */}
+          <motion.div variants={itemVariants} className="mt-2">
+            <button
+              onClick={handleSaveProfiles}
+              disabled={isSavingProfile}
+              className="w-full h-14 bg-[#141779] hover:bg-[#1e23a0] rounded-full flex items-center justify-center gap-3 shadow-md active:scale-95 transition-all disabled:opacity-70 text-white font-black text-base"
+            >
+              <span>{isSavingProfile ? "Saving Profiles..." : "Save Profiles"}</span>
+              {!isSavingProfile && <Save size={20} color="white" />}
+            </button>
+          </motion.div>
+        </>
+      )}
+    </motion.main>
+
+    {/* Reset Modal */}
+    <AnimatePresence>
+      {showResetModal && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-6"
+        >
           <motion.div 
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className="fixed bottom-10 left-4 right-4 mx-auto w-fit max-w-[400px] bg-gray-900/90 backdrop-blur-md text-white px-6 py-4 rounded-2xl flex items-center justify-center gap-3 z-50 shadow-2xl border border-gray-700/50"
+            initial={{ scale: 0.9, y: 20, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            exit={{ scale: 0.9, y: 20, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            className="bg-white rounded-[32px] p-8 w-full max-w-[360px] flex flex-col items-center shadow-2xl relative overflow-hidden"
           >
-            <Save size={20} className="text-green-400 shrink-0" />
-            <span className="text-[15px] font-semibold tracking-wide text-center leading-tight">{toastMessage}</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Custom Logout Modal */}
-      {showLogoutModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-5">
-          <div className="bg-white w-full max-w-sm rounded-[24px] p-6 shadow-2xl">
-            <h3 className="text-xl font-bold text-[#141779] text-center mb-2">{t('logout') || 'Logout'}</h3>
-            <p className="text-sm text-[#464652] text-center mb-6">
-              Are you sure you want to logout?
+            <div className="w-16 h-16 rounded-full bg-rose-50 border border-rose-200 flex items-center justify-center mb-4">
+              <Trash2 size={32} className="text-rose-600" />
+            </div>
+            <h2 className="text-lg font-black text-[#141779] text-center mb-2">
+              Wipe All Data?
+            </h2>
+            <p className="text-xs text-slate-600 font-bold text-center leading-relaxed mb-6">
+              This action is <span className="font-black text-rose-600">irreversible</span>. It will permanently delete all coins, level achievements, completed chapters, and badges.
             </p>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col w-full gap-3">
               <button 
-                onClick={handleLogout}
-                className="w-full py-3.5 bg-[#ba1a1a] text-white rounded-xl font-bold text-sm shadow-md hover:bg-red-700 transition-colors"
+                onClick={handleResetJourney}
+                className="w-full py-3 rounded-full bg-rose-600 hover:bg-rose-700 text-white font-black text-sm shadow-md transition-all flex items-center justify-center"
               >
-                Yes, Logout
+                Yes, Wipe Data
               </button>
               <button 
-                onClick={() => setShowLogoutModal(false)}
-                className="w-full py-3.5 bg-[#f0f2f5] text-[#141779] rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors"
+                onClick={() => setShowResetModal(false)}
+                className="w-full py-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-sm transition-colors flex items-center justify-center"
               >
                 Cancel
               </button>
             </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+
+    {/* Toast Notification */}
+    <AnimatePresence>
+      {toastMessage && (
+        <motion.div 
+          initial={{ opacity: 0, y: 50, scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 20, scale: 0.9 }}
+          className="fixed bottom-10 left-4 right-4 mx-auto w-fit max-w-[400px] bg-slate-900/90 backdrop-blur-md text-white px-6 py-4 rounded-full flex items-center justify-center gap-3 z-50 shadow-2xl border border-slate-700/50"
+        >
+          <Save size={18} className="text-teal-400 shrink-0" />
+          <span className="text-xs font-black tracking-wide text-center leading-tight">{toastMessage}</span>
+        </motion.div>
+      )}
+    </AnimatePresence>
+
+    {/* Custom Logout Modal */}
+    {showLogoutModal && (
+      <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-[100] flex items-center justify-center p-5">
+        <div className="bg-white w-full max-w-sm rounded-[32px] p-6 shadow-2xl border border-slate-200">
+          <h3 className="text-lg font-black text-[#141779] text-center mb-2">{t('logout') || 'Logout'}</h3>
+          <p className="text-xs font-bold text-slate-600 text-center mb-6">
+            Are you sure you want to logout?
+          </p>
+          <div className="flex flex-col gap-3">
+            <button 
+              onClick={handleLogout}
+              className="w-full py-3 bg-rose-600 text-white rounded-full font-black text-sm shadow-md hover:bg-rose-700 transition-colors"
+            >
+              Yes, Logout
+            </button>
+            <button 
+              onClick={() => setShowLogoutModal(false)}
+              className="w-full py-3 bg-slate-100 text-slate-700 rounded-full font-black text-sm hover:bg-slate-200 transition-colors"
+            >
+              Cancel
+            </button>
           </div>
         </div>
-      )}
-    </div>
-  );
+      </div>
+    )}
+  </div>
+);
 }
