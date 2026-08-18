@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, Search, BookOpen, TrendingUp, Users, Settings, Plus, PlayCircle, ArrowLeft, Lock } from "lucide-react";
+import { Menu, Search, BookOpen, TrendingUp, Users, Settings, Plus, PlayCircle, ArrowLeft, Lock, ChevronDown } from "lucide-react";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
 
@@ -14,6 +14,8 @@ export default function ParentLessonsScreen() {
   const [username, setUsername] = useState("Parent");
   const [profilePic, setProfilePic] = useState("");
   const [contentLanguage, setContentLanguage] = useState(() => (i18n?.language || "en").split("-")[0]);
+  const [loading, setLoading] = useState(true);
+  const [langDropdownOpen, setLangDropdownOpen] = useState(false);
 
   function getXpForLevel(lvl: number): number {
     if (lvl <= 1) return 0;
@@ -25,6 +27,7 @@ export default function ParentLessonsScreen() {
   useEffect(() => {
     const fetchLibrary = async () => {
       try {
+        setLoading(true);
         const res = await apiFetch('/api/parent/learning-library');
         const data = await res.json();
         if (data.success) {
@@ -32,6 +35,8 @@ export default function ParentLessonsScreen() {
         }
       } catch (e) {
         console.error("Failed to fetch dashboard topics", e);
+      } finally {
+        setLoading(false);
       }
     };
     const fetchUser = async () => {
@@ -97,52 +102,81 @@ export default function ParentLessonsScreen() {
       `}</style>
 
       {/* TopAppBar Navigation */}
-      <header className="bg-[rgba(247,249,251,0.8)] backdrop-blur-lg border-b border-white/20 w-full top-0 z-50 flex justify-between items-center px-6 py-4 sticky">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/parent/dashboard')} className="p-1 -ml-1 hover:bg-[rgba(20,23,121,0.05)] rounded-full transition-colors">
+      <header className="bg-[rgba(247,249,251,0.8)] backdrop-blur-lg border-b border-white/20 w-full top-0 z-50 flex justify-between items-center px-6 py-4 sticky gap-4">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <button onClick={() => navigate('/parent/dashboard')} className="p-1 -ml-1 hover:bg-[rgba(20,23,121,0.05)] rounded-full transition-colors flex-shrink-0">
             <ArrowLeft size={24} color="#141779" />
           </button>
-          <div className="w-10 h-10 rounded-full border-2 border-[#2d328f] overflow-hidden bg-white">
+          <div className="w-9 h-9 rounded-full border-2 border-[#2d328f] overflow-hidden bg-white flex-shrink-0">
             <img
               alt="Parent Avatar"
               src={profilePic || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`}
               className="w-full h-full object-cover"
             />
           </div>
-          <h1 className="text-xl font-bold text-[#141779]">{t("lessons") || "Daily Parenting Lessons"}</h1>
+          <h1 className="text-lg font-bold text-[#141779] truncate">{t("lessons") || "Daily Parenting Lessons"}</h1>
         </div>
         <div className="relative">
-          <select 
-            value={contentLanguage}
-            onChange={async (e) => {
-              const newLang = e.target.value;
-              setContentLanguage(newLang);
-              if (i18n && typeof i18n.changeLanguage === 'function') {
-                i18n.changeLanguage(newLang);
-              }
-              try {
-                await apiFetch('/api/parent/controls', {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ contentLanguage: newLang })
-                });
-                const res = await apiFetch('/api/parent/learning-library', {
-                  headers: { 'Accept-Language': newLang }
-                });
-                const data = await res.json();
-                if (data.success) {
-                  setAllTopics(data.data.topics);
-                }
-              } catch (err) {
-                console.error(err);
-              }
-            }}
-            className="bg-white border border-[#141779]/20 text-[#141779] rounded-xl px-2.5 py-1.5 text-xs font-bold shadow-sm outline-none focus:border-[#141779]"
+          <button 
+            onClick={() => setLangDropdownOpen(!langDropdownOpen)}
+            className="flex items-center gap-1.5 bg-white border border-[#141779]/15 text-[#141779] rounded-xl px-3 py-2 text-xs font-bold shadow-xs hover:border-[#141779]/30 active:scale-95 transition-all outline-none"
           >
-            <option value="en">English</option>
-            <option value="hi">हिंदी (Hindi)</option>
-            <option value="gu">ગુજરાતી (Gujarati)</option>
-          </select>
+            <span>
+              {contentLanguage === "en" ? "English" : contentLanguage === "hi" ? "हिंदी (Hindi)" : "ગુજરાતી (Gujarati)"}
+            </span>
+            <ChevronDown size={14} className={`text-[#141779]/60 transition-transform ${langDropdownOpen ? 'rotate-180' : ''}`} />
+          </button>
+          
+          {langDropdownOpen && (
+            <>
+              {/* Backdrop to close when clicking outside */}
+              <div className="fixed inset-0 z-40" onClick={() => setLangDropdownOpen(false)}></div>
+              
+              <div className="absolute right-0 mt-1.5 w-40 bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-xl shadow-lg py-1 z-50 animate-in fade-in slide-in-from-top-1 duration-100 origin-top-right">
+                {[
+                  { value: "en", label: "English" },
+                  { value: "hi", label: "हिंदी (Hindi)" },
+                  { value: "gu", label: "ગુજરાતી (Gujarati)" }
+                ].map(option => (
+                  <button
+                    key={option.value}
+                    onClick={async () => {
+                      setLangDropdownOpen(false);
+                      const newLang = option.value;
+                      setContentLanguage(newLang);
+                      
+                      if (i18n && typeof i18n.changeLanguage === 'function') {
+                        i18n.changeLanguage(newLang);
+                      }
+                      try {
+                        setLoading(true);
+                        await apiFetch('/api/parent/controls', {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ contentLanguage: newLang })
+                        });
+                        const res = await apiFetch('/api/parent/learning-library', {
+                          headers: { 'Accept-Language': newLang }
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                          setAllTopics(data.data.topics);
+                        }
+                      } catch (err) {
+                        console.error(err);
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                    className={`w-full text-left px-4 py-2 text-xs font-bold leading-normal transition-colors flex justify-between items-center ${contentLanguage === option.value ? 'bg-indigo-50 text-[#141779]' : 'text-slate-700 hover:bg-slate-50'}`}
+                  >
+                    <span>{option.label}</span>
+                    {contentLanguage === option.value && <div className="w-1.5 h-1.5 rounded-full bg-[#141779]"></div>}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </header>
 
@@ -207,8 +241,8 @@ export default function ParentLessonsScreen() {
 
         {/* First Row: Recommended */}
         <section className="mt-4">
-          <div className="px-6 flex justify-between items-center mb-4">
-            <h3 className="text-[20px] font-bold text-[#191c1e]">
+          <div className="px-6 flex justify-between items-center mb-4 gap-2">
+            <h3 className="text-[20px] font-bold text-[#191c1e] leading-normal flex-1 min-w-0 py-1">
               {activeFilter === "Completed" 
                 ? (contentLanguage === "hi" ? "पूर्ण किए गए पाठ" : contentLanguage === "gu" ? "પૂર્ણ થયેલા પાઠ" : "Completed Lessons") 
                 : (contentLanguage === "hi" ? "आपके लिए अनुशंसित" : contentLanguage === "gu" ? "તમારા માટે ભલામણ કરેલ" : "Recommended for You")}
@@ -218,8 +252,20 @@ export default function ParentLessonsScreen() {
             </button>
           </div>
           <div className="grid grid-cols-2 gap-4 px-6 pb-4">
-            {allTopics
-              .filter(t => {
+            {(() => {
+              if (loading) {
+                return Array.from({ length: 4 }).map((_, idx) => (
+                  <div key={idx} className="w-full h-full flex flex-col rounded-2xl overflow-hidden glass-card animate-pulse">
+                    <div className="relative h-28 md:h-36 bg-slate-200/80"></div>
+                    <div className="p-3 bg-white/50 backdrop-blur-md flex-1">
+                      <div className="h-2 w-16 bg-slate-200/80 rounded mb-2"></div>
+                      <div className="h-4 w-3/4 bg-slate-200/80 rounded"></div>
+                    </div>
+                  </div>
+                ));
+              }
+
+              const filtered = allTopics.filter(t => {
                 if (activeFilter === "Completed") {
                   return t.status === "completed";
                 }
@@ -227,14 +273,61 @@ export default function ParentLessonsScreen() {
                   t.category === activeFilter ||
                   t.originalCategory === activeFilter;
                 return unlockedTopicIds.has(t.topicId) && matchesCategory;
-              })
-              .map((topic, index) => {
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <div className="col-span-2 w-full py-12 px-6 text-center flex flex-col items-center justify-center bg-white/50 border border-slate-200/50 rounded-3xl shadow-xs backdrop-blur-xs">
+                    <BookOpen size={48} className="text-[#141779]/30 mb-4 animate-pulse" />
+                    <p className="text-base font-bold text-[#141779]">
+                      {activeFilter === "Completed" ? (
+                        contentLanguage === "hi" 
+                          ? "कोई पूर्ण पाठ नहीं" 
+                          : contentLanguage === "gu" 
+                          ? "કોઈ પૂર્ણ થયેલ પાઠ નથી" 
+                          : "No Completed Lessons Yet"
+                      ) : (
+                        contentLanguage === "hi" 
+                          ? "कोई पाठ उपलब्ध नहीं" 
+                          : contentLanguage === "gu" 
+                          ? "કોઈ પાઠ ઉપલબ્ધ નથી" 
+                          : "No Lessons Available"
+                      )}
+                    </p>
+                    <p className="text-xs font-semibold text-slate-500 mt-2 max-w-[280px] leading-relaxed">
+                      {activeFilter === "Completed" ? (
+                        contentLanguage === "hi"
+                          ? "आपने अभी तक कोई पाठ पूरा नहीं किया है। सीखना शुरू करने के लिए 'आपके लिए' पर जाएं!"
+                          : contentLanguage === "gu"
+                          ? "તમે હજુ સુધી કોઈ પાઠ પૂર્ણ કર્યો નથી. શીખવાનું શરૂ કરવા માટે 'તમારા માટે' પર જાઓ!"
+                          : "You haven't completed any lessons yet. Start learning from the 'For You' tab to see them here!"
+                      ) : (
+                        contentLanguage === "hi"
+                          ? "इस श्रेणी में वर्तमान में कोई पाठ उपलब्ध नहीं है।"
+                          : contentLanguage === "gu"
+                          ? "આ શ્રેણીમાં હાલમાં કોઈ પાઠ ઉપલબ્ધ નથી."
+                          : "There are currently no lessons available in this category."
+                      )}
+                    </p>
+                    {activeFilter === "Completed" && (
+                      <button 
+                        onClick={() => setActiveFilter("For You")}
+                        className="mt-5 px-5 py-2.5 bg-[#141779] text-white rounded-full text-xs font-bold shadow-md hover:bg-[#30007f] active:scale-95 transition-all"
+                      >
+                        {contentLanguage === "hi" ? "पाठ ब्राउज़ करें" : contentLanguage === "gu" ? "પાઠ બ્રાઉઝ કરો" : "Browse Lessons"}
+                      </button>
+                    )}
+                  </div>
+                );
+              }
+
+              return filtered.map((topic, index) => {
                 const isLocked = false;
                 return (
                   <div
                     key={topic.topicId}
                     onClick={() => !isLocked && navigate(`/parent/lessons/player?id=${topic.topicId}`)}
-                    className={`w-full flex flex-col rounded-2xl overflow-hidden glass-card group transition-all ${isLocked ? 'opacity-70 grayscale' : 'cursor-pointer hover:shadow-xl active:scale-[0.98]'}`}
+                    className={`w-full h-full flex flex-col rounded-2xl overflow-hidden glass-card group transition-all ${isLocked ? 'opacity-70 grayscale' : 'cursor-pointer hover:shadow-xl active:scale-[0.98]'}`}
                   >
                     <div className="relative h-28 md:h-36 overflow-hidden bg-gray-200">
                       <img
@@ -254,15 +347,18 @@ export default function ParentLessonsScreen() {
                         </div>
                       )}
                     </div>
-                    <div className="p-3 bg-white/50 backdrop-blur-md">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[#006a62] text-[9px] font-bold uppercase tracking-widest">{topic.category}</span>
+                    <div className="p-3 bg-white/50 backdrop-blur-md flex-1 flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[#006a62] text-[9px] font-bold uppercase tracking-widest">{topic.category}</span>
+                        </div>
+                        <h4 className="text-[14px] font-bold text-[#141779] leading-[1.6] pt-2 pb-1">{topic.title}</h4>
                       </div>
-                      <h4 className="text-[14px] font-bold text-[#141779] leading-tight line-clamp-2">{topic.title}</h4>
                     </div>
                   </div>
                 );
-              })}
+              });
+            })()}
           </div>
         </section>
       </main>

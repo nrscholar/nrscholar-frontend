@@ -211,8 +211,8 @@ export default function KidsActivityScreen() {
                               
                               {/* Content Card */}
                               <div 
-                                onClick={() => activity.details && setSelectedActivity(activity)}
-                                className={`ml-6 bg-white rounded-[20px] p-4 border border-slate-200/80 shadow-xs hover:shadow-md transition-all ${activity.details ? 'cursor-pointer hover:scale-[1.01]' : 'cursor-default'}`}
+                                onClick={() => setSelectedActivity(activity)}
+                                className="ml-6 bg-white rounded-[20px] p-4 border border-slate-200/80 shadow-xs hover:shadow-md transition-all cursor-pointer hover:scale-[1.01]"
                               >
                                 <div className="flex justify-between items-start mb-1.5">
                                   <h3 className="text-sm font-black text-[#141779] pr-3 leading-tight">{activity.title}</h3>
@@ -258,7 +258,17 @@ export default function KidsActivityScreen() {
                                   )}
                                 </div>
 
-                                {activity.details && (
+                                {activity.type === 'reading' || !activity.details || activity.details.length === 0 ? (
+                                  <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs font-black">
+                                    <span className="flex items-center gap-1 text-slate-600 font-bold">
+                                      <BookOpen size={12} className="text-slate-500" />
+                                      {activity.type === 'reading' ? 'Reading Session' : '0 Questions'}
+                                    </span>
+                                    <span className="flex items-center gap-0.5 text-[#141779] font-black hover:underline transition-all">
+                                      {activity.type === 'reading' ? 'view details' : 'show more'} <ChevronRight size={14} className="mt-[0.5px]" />
+                                    </span>
+                                  </div>
+                                ) : (
                                   <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs font-black">
                                     <span className="flex items-center gap-1 text-slate-600 font-bold">
                                       <BookOpen size={12} className="text-slate-500" />
@@ -312,25 +322,41 @@ export default function KidsActivityScreen() {
             
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto flex-1 bg-slate-50">
-              <h3 className="text-xs font-black text-slate-500 uppercase tracking-wider mb-4">Question Breakdown</h3>
+              <h3 className="text-xs font-black text-slate-500 uppercase tracking-wider mb-4">
+                {selectedActivity.type === 'reading' ? 'Session Details' : 'Question Breakdown'}
+              </h3>
               
               <div className="flex flex-col gap-3">
-                {selectedActivity.details.map((detail: any, idx: number) => (
-                  <div key={idx} className="bg-white rounded-[20px] p-4 border border-slate-200/80 shadow-xs flex gap-4 items-start">
-                    <div className={`mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${detail.isCorrect ? 'bg-teal-50 border border-teal-200 text-[#006a62]' : 'bg-red-50 border border-red-200 text-red-600'}`}>
-                      {detail.isCorrect ? <CheckCircle2 size={16} strokeWidth={3} /> : <X size={16} strokeWidth={3} />}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-extrabold text-slate-800 mb-2 leading-snug">{detail.questionText}</p>
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600">
-                        <Clock size={12} />
-                        <span className="text-xs font-black">
-                          {formatTime(detail.timeSpent)}
-                        </span>
+                {Array.isArray(selectedActivity.details) && selectedActivity.details.length > 0 ? (
+                  selectedActivity.details.map((detail: any, idx: number) => (
+                    <div key={idx} className="bg-white rounded-[20px] p-4 border border-slate-200/80 shadow-xs flex gap-4 items-start">
+                      <div className={`mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${detail.isCorrect ? 'bg-teal-50 border border-teal-200 text-[#006a62]' : 'bg-red-50 border border-red-200 text-red-600'}`}>
+                        {detail.isCorrect ? <CheckCircle2 size={16} strokeWidth={3} /> : <X size={16} strokeWidth={3} />}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-extrabold text-slate-800 mb-2 leading-snug">{detail.questionText}</p>
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600">
+                          <Clock size={12} />
+                          <span className="text-xs font-black">
+                            {formatTime(detail.timeSpent)}
+                          </span>
+                        </div>
                       </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="bg-white rounded-[24px] p-8 border border-slate-200/80 shadow-xs text-center flex flex-col items-center justify-center">
+                    <BookOpen size={48} className="text-slate-400 mb-4" />
+                    <p className="text-base font-black text-[#141779]">
+                      {selectedActivity.type === 'reading' ? 'Reading Session' : 'No Details Available'}
+                    </p>
+                    <p className="text-xs font-bold text-slate-500 mt-2 max-w-[240px] mx-auto leading-relaxed">
+                      {selectedActivity.type === 'reading' 
+                        ? 'No questions were attempted during this reading session.' 
+                        : 'There is no detailed question breakdown for this activity.'}
+                    </p>
                   </div>
-                ))}
+                )}
               </div>
             </div>
             

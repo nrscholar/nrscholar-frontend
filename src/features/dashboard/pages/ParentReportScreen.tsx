@@ -105,8 +105,22 @@ export default function ParentReportScreen() {
   const [showSubjectSheet, setShowSubjectSheet] = useState(false);
   const [showCustomizeSheet, setShowCustomizeSheet] = useState(false);
   const [showExportSheet, setShowExportSheet] = useState(false);
-  const [customStartDate, setCustomStartDate] = useState("");
-  const [customEndDate, setCustomEndDate] = useState("");
+  const getTodayString = () => {
+    const d = new Date();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${d.getFullYear()}-${month}-${day}`;
+  };
+  const getPastDateString = (daysAgo: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() - daysAgo);
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${d.getFullYear()}-${month}-${day}`;
+  };
+
+  const [customStartDate, setCustomStartDate] = useState(getPastDateString(7));
+  const [customEndDate, setCustomEndDate] = useState(getTodayString());
   const svgRef = useRef<SVGSVGElement | null>(null);
 
   const getDateLabel = () => {
@@ -134,11 +148,6 @@ export default function ParentReportScreen() {
         const monthName = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
         return { label: "📅 This Month", range: monthName };
       }
-      case "last_30_days": {
-        const past = new Date(today);
-        past.setDate(today.getDate() - 30);
-        return { label: "📅 Last 30 Days", range: `${formatDate(past)} – ${formatDate(today)}` };
-      }
       case "custom":
         if (customStartDate && customEndDate) {
           const s = new Date(customStartDate);
@@ -158,8 +167,11 @@ export default function ParentReportScreen() {
       const offsetMinutes = -tzOffset;
 
       let downloadFilter = "daily";
-      if (dateFilter === "this_week" || dateFilter === "custom") downloadFilter = "weekly";
-      else if (dateFilter === "this_month" || dateFilter === "last_30_days") downloadFilter = "monthly";
+      if (dateFilter === "this_week") downloadFilter = "weekly";
+      else if (dateFilter === "this_month") downloadFilter = "monthly";
+      else if (dateFilter === "yesterday") downloadFilter = "daily";
+      else if (dateFilter === "custom") downloadFilter = "weekly";
+      // "today" stays as "daily"
 
       const url = `/api/parent/report/download?filter=${downloadFilter}&subject=${subjectFilter}&format=${format}&tz_offset_minutes=${offsetMinutes}`;
       const response = await apiFetch(url);
@@ -332,6 +344,7 @@ export default function ParentReportScreen() {
   const qA: any          = reportData?.questionAnalytics    || {};
   const rA: any          = reportData?.readingAnalytics     || {};
   const bA: any          = reportData?.bossAnalytics        || {};
+  const bossHistory: any[] = reportData?.bossHistory        || [];
   const subjects: any[]  = reportData?.subjectBreakdown     || [];
   const chapters: any[]  = reportData?.chapterBreakdown     || [];
   const improvements: any[] = reportData?.improvementTracking || [];
@@ -345,13 +358,47 @@ export default function ParentReportScreen() {
   const hasWeaknesses = weaknesses.length > 0 && !weaknesses.some(w => w.toLowerCase().includes("not enough data") || w.toLowerCase().includes("no weakness"));
   const hasRisks = risks.length > 0 && !risks.some(r => r.toLowerCase().includes("not enough data") || r.toLowerCase().includes("no risk"));
 
-  // Dynamic metrics based on selected filters
-  let displaySolved = reportData?.todaySolved ?? 0;
-  let displayTime = reportData?.todayTimeMinutes ?? 0;
-  let displayAccuracy = reportData?.todayConfidenceScore ?? 0;
-  let displayLabel = "Today's Activity";
+  // 1. Identify overall timeline points based on dateFilter
+  let activePts: any[] = [];
+  if (dateFilter === "today") {
+    activePts = monthlyHistory.length > 0 ? monthlyHistory.slice(-1) : (dailyHistory.length > 0 ? dailyHistory.slice(-1) : []);
+  } else if (dateFilter === "yesterday") {
+    activePts = monthlyHistory.length >= 2 ? monthlyHistory.slice(-2, -1) : (dailyHistory.length >= 2 ? dailyHistory.slice(-2, -1) : []);
+  } else if (dateFilter === "this_week") {
+    activePts = monthlyHistory.slice(-7);
+  } else if (dateFilter === "this_month") {
+    activePts = monthlyHistory.slice(-30);
+  } else if (dateFilter === "custom") {
+    if (customStartDate && customEndDate) {
+      const s = new Date(customStartDate);
+      const e = new Date(customEndDate);
+      activePts = monthlyHistory.filter((pt: any) => {
+        const [d, m] = pt.date?.split("/") || pt.day?.split("/") || [];
+        if (d && m) {
+          const ptYear = new Date().getFullYear();
+          const ptDate = new Date(ptYear, parseInt(m) - 1, parseInt(d));
+          return ptDate >= s && ptDate <= e;
+        }
+        return true;
+      });
+    } else {
+      activePts = monthlyHistory;
+    }
+  }
 
-  // Filter based on subject first
+  // 2. Compute displaySolved, displayAccuracy, displayTime based on subjectFilter and dateFilter
+  let displaySolved = 0;
+  let displayAccuracy = 0;
+  let displayTime = 0;
+  let displayLabel = "Activity";
+
+  if (dateFilter === "today") displayLabel = "Today's Activity";
+  else if (dateFilter === "yesterday") displayLabel = "Yesterday's Activity";
+  else if (dateFilter === "this_week") displayLabel = "This Week's Activity";
+  else if (dateFilter === "this_month") displayLabel = "This Month's Activity";
+  else if (dateFilter === "custom") displayLabel = "Custom Range Activity";
+
+  // Compute filteredQA for the card
   let filteredQA = { ...qA };
   if (subjectFilter !== "all") {
     const sObj = subjects.find(s => s?.subject && s.subject.toLowerCase() === subjectFilter.toLowerCase());
@@ -363,88 +410,60 @@ export default function ParentReportScreen() {
         wrong: sObj.wrongAnswers ?? 0,
         avgTimePerQuestion: qA.avgTimePerQuestion
       };
-      displayAccuracy = sObj.accuracy ?? 0;
     }
   }
 
-  // Yesterday — use real data only, show 0 if unavailable
-  if (dateFilter === "yesterday") {
-    displayLabel = "Yesterday's Activity";
-    const prevHistory = reportData?.monthlyTimelineHistory || [];
-    // Try to find the second-to-last entry (yesterday)
-    const yesterdayPt = prevHistory.length >= 2 ? prevHistory[prevHistory.length - 2] : null;
-    if (yesterdayPt && (yesterdayPt.total ?? 0) > 0) {
-      displayAccuracy = yesterdayPt.masteryScore ?? 0;
-      displaySolved = yesterdayPt.total ?? 0;
-      displayTime = Math.max(1, Math.round(displaySolved * 1.5));
+  if (subjectFilter === "all") {
+    // Overall metrics
+    if (dateFilter === "today") {
+      displaySolved = reportData?.todaySolved ?? 0;
+      displayTime = reportData?.todayTimeMinutes ?? 0;
+      displayAccuracy = reportData?.todayConfidenceScore ?? 0;
     } else {
-      displaySolved = 0;
-      displayAccuracy = 0;
-      displayTime = 0;
+      const activeDays = activePts.filter(pt => (pt.total ?? 0) > 0);
+      displaySolved = activePts.reduce((acc, pt) => acc + (pt.total ?? 0), 0);
+      if (displaySolved > 0 && activeDays.length > 0) {
+        const sumAcc = activeDays.reduce((acc, pt) => acc + (pt.masteryScore ?? pt.score ?? 0), 0);
+        displayAccuracy = Math.round(sumAcc / activeDays.length);
+        displayTime = Math.max(1, Math.round(displaySolved * 1.5));
+      }
     }
-  } else if (dateFilter === "this_week") {
-    displayLabel = "This Week's Activity";
-    const monthlyHist = reportData?.monthlyTimelineHistory || [];
-    const last7 = monthlyHist.slice(-7);
-    const activeDays = last7.filter((curr: any) => (curr.total ?? 0) > 0);
-    displaySolved = last7.reduce((acc: number, curr: any) => acc + (curr.total ?? 0), 0);
-    if (displaySolved > 0 && activeDays.length > 0) {
-      const sumAcc = activeDays.reduce((acc: number, curr: any) => acc + (curr.masteryScore ?? 0), 0);
-      displayAccuracy = Math.round(sumAcc / activeDays.length);
-      displayTime = Math.max(1, Math.round(displaySolved * 1.5));
-    } else {
-      displaySolved = 0;
-      displayTime = 0;
-      displayAccuracy = 0;
-    }
-  } else if (dateFilter === "this_month" || dateFilter === "last_30_days") {
-    displayLabel = "This Month's Activity";
-    const monthlyHist = reportData?.monthlyTimelineHistory || [];
-    const activeDays = monthlyHist.filter((curr: any) => (curr.total ?? 0) > 0);
-    displaySolved = monthlyHist.reduce((acc: number, curr: any) => acc + (curr.total ?? 0), 0);
-    if (displaySolved > 0 && activeDays.length > 0) {
-      const sumAcc = activeDays.reduce((acc: number, curr: any) => acc + (curr.masteryScore ?? 0), 0);
-      displayAccuracy = Math.round(sumAcc / activeDays.length);
-      displayTime = Math.max(1, Math.round(displaySolved * 1.5));
-    } else {
-      displaySolved = 0;
-      displayTime = 0;
-      displayAccuracy = 0;
-    }
-  } else if (dateFilter === "custom") {
-    displayLabel = "Custom Range Activity";
-    const monthlyHist = reportData?.monthlyTimelineHistory || [];
-    let customList = monthlyHist;
-    if (customStartDate && customEndDate) {
-      const s = new Date(customStartDate);
-      const e = new Date(customEndDate);
-      customList = monthlyHist.filter((pt: any) => {
-        const [d, m] = pt.date?.split("/") || pt.day?.split("/") || [];
-        if (d && m) {
-          const ptYear = new Date().getFullYear();
-          const ptDate = new Date(ptYear, parseInt(m) - 1, parseInt(d));
-          return ptDate >= s && ptDate <= e;
+  } else {
+    // Subject-specific metrics
+    const sObj = subjects.find(s => s?.subject && s.subject.toLowerCase() === subjectFilter.toLowerCase());
+    if (sObj) {
+      const sTimeline = sObj.timeline || [];
+      const targetDates = new Set(activePts.map(pt => pt.date || pt.day).filter(Boolean));
+      
+      // If targetDates is empty (e.g. today's point isn't in monthlyHistory yet), fallback to today's date string
+      if (targetDates.size === 0 && dateFilter === "today") {
+        const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' }).replace(/\//g, '/');
+        targetDates.add(todayStr);
+      }
+      
+      const matchedPts = sTimeline.filter((pt: any) => targetDates.has(pt.day || pt.date));
+      
+      if (matchedPts.length > 0) {
+        displaySolved = matchedPts.reduce((acc, pt) => acc + (pt.total ?? 0), 0);
+        const activeDays = matchedPts.filter(pt => (pt.total ?? 0) > 0);
+        if (displaySolved > 0 && activeDays.length > 0) {
+          const sumAcc = activeDays.reduce((acc, pt) => acc + (pt.score ?? pt.masteryScore ?? 0), 0);
+          displayAccuracy = Math.round(sumAcc / activeDays.length);
+          displayTime = Math.max(1, Math.round(displaySolved * 1.5));
         }
-        return true;
-      });
-    }
-    const activeDays = customList.filter((pt: any) => (pt.total ?? 0) > 0);
-    displaySolved = customList.reduce((acc: number, curr: any) => acc + (curr.total ?? 0), 0);
-    if (displaySolved > 0 && activeDays.length > 0) {
-      const sumAcc = activeDays.reduce((acc: number, curr: any) => acc + (curr.masteryScore ?? 0), 0);
-      displayAccuracy = Math.round(sumAcc / activeDays.length);
-      displayTime = Math.max(1, Math.round(displaySolved * 1.5));
-    } else {
-      displaySolved = 0;
-      displayAccuracy = 0;
-      displayTime = 0;
+      } else {
+        // No practice inside targeted date range
+        displaySolved = 0;
+        displayAccuracy = 0;
+        displayTime = 0;
+      }
     }
   }
   displayTime = Math.max(0, Math.round(displayTime));
 
   // Dynamic chart selection based on dateFilter and subjectFilter
   let chartHistory = dailyHistory;
-  if (dateFilter === "this_month" || dateFilter === "last_30_days") {
+  if (dateFilter === "this_month") {
     chartHistory = reportData?.monthlyTimelineHistory || [];
   } else if (dateFilter === "custom") {
     const monthly = reportData?.monthlyTimelineHistory || [];
@@ -512,18 +531,10 @@ export default function ParentReportScreen() {
         <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80">
           <ArrowLeft size={24} color="#141779" />
         </button>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <h1 className="text-[20px] font-bold text-[#141779]">Learning Reports</h1>
           <p className="text-xs text-[#767683]">Real-time analytics from activity data</p>
         </div>
-        
-        {/* Compact export action button */}
-        <button
-          onClick={() => setShowExportSheet(true)}
-          className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-black rounded-xl border border-indigo-100 transition-colors flex items-center gap-1 shrink-0 active:scale-95"
-        >
-          ↓ Export
-        </button>
       </header>
 
       <main className="px-5 pt-5 flex flex-col gap-5 max-w-lg mx-auto">
@@ -580,38 +591,92 @@ export default function ParentReportScreen() {
         )}
 
         {/* 1. Large compact date/time selector */}
-        <button 
-          onClick={() => setShowDateSheet(true)}
-          className="w-full bg-white border-2 border-slate-100 p-4 rounded-[24px] flex items-center justify-between shadow-xs hover:border-slate-200 transition-all active:scale-[0.99]"
-        >
-          <div className="text-left">
-            <span className="text-sm font-black text-slate-800 flex items-center gap-1.5">
-              {getDateLabel().label}
-            </span>
-            <p className="text-xs font-bold text-slate-500 mt-0.5">
-              {getDateLabel().range}
-            </p>
+        {dateFilter === "custom" ? (
+          <div className="w-full bg-white border-2 border-indigo-200 p-4 rounded-[24px] shadow-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-black text-[#141779] flex items-center gap-1.5">
+                📅 Custom Date Range
+              </span>
+              <button 
+                onClick={() => setShowDateSheet(true)}
+                className="text-xs font-black text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-0.5"
+              >
+                Change Period <ChevronDown size={14} />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500">Start Date</label>
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  className="w-full bg-white border-2 border-slate-200 rounded-xl p-2 text-xs font-bold text-slate-800 focus:border-[#141779] outline-none transition-colors"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500">End Date</label>
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  className="w-full bg-white border-2 border-slate-200 rounded-xl p-2 text-xs font-bold text-slate-800 focus:border-[#141779] outline-none transition-colors"
+                />
+              </div>
+            </div>
           </div>
-          <ChevronDown size={20} className="text-slate-400" />
-        </button>
+        ) : (
+          <button 
+            onClick={() => setShowDateSheet(true)}
+            className="w-full bg-white border-2 border-slate-100 p-4 rounded-[24px] flex items-center justify-between shadow-xs hover:border-slate-200 transition-all active:scale-[0.99]"
+          >
+            <div className="text-left">
+              <span className="text-sm font-black text-slate-800 flex items-center gap-1.5">
+                {getDateLabel().label}
+              </span>
+              <p className="text-xs font-bold text-slate-500 mt-0.5">
+                {getDateLabel().range}
+              </p>
+            </div>
+            <ChevronDown size={20} className="text-slate-400" />
+          </button>
+        )}
 
-        {/* 2. Sub-filters */}
+        {/* 2. Sub-filters row 1: Subject & Customize */}
         <div className="flex gap-3 w-full">
+          {/* Subject pill */}
           <button
             onClick={() => setShowSubjectSheet(true)}
-            className="flex-1 bg-white border-2 border-slate-100 py-3 px-4 rounded-xl text-xs font-black text-slate-800 flex items-center justify-center gap-2 shadow-xs hover:border-slate-200 active:scale-[0.98] transition-all"
+            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-black border-2 shadow-xs active:scale-[0.98] transition-all ${
+              subjectFilter !== "all"
+                ? "border-[#141779] text-[#141779] bg-indigo-50"
+                : "bg-white border-slate-100 text-slate-700 hover:border-slate-200"
+            }`}
           >
-            📚 {subjectFilter === "all" ? "All Subjects" : subjectFilter}
+            <span>📚</span>
+            <span>{subjectFilter === "all" ? "All Subjects" : subjectFilter}</span>
             <ChevronDown size={14} className="text-slate-400" />
           </button>
+
+          {/* Customize pill */}
           <button
             onClick={() => setShowCustomizeSheet(true)}
-            className="flex-1 bg-white border-2 border-slate-100 py-3 px-4 rounded-xl text-xs font-black text-slate-800 flex items-center justify-center gap-2 shadow-xs hover:border-slate-200 active:scale-[0.98] transition-all"
+            className="flex-1 flex items-center justify-center gap-2 bg-white border-2 border-slate-100 py-3 px-4 rounded-xl text-xs font-black text-slate-700 shadow-xs hover:border-slate-200 active:scale-[0.98] transition-all"
           >
-            ⚙️ Customize
+            <span>⚙️</span>
+            <span>Customize</span>
             <ChevronDown size={14} className="text-slate-400" />
           </button>
         </div>
+
+        {/* Sub-filters row 2: Export */}
+        <button
+          onClick={() => setShowExportSheet(true)}
+          className="w-full flex items-center justify-center gap-2 bg-white border-2 border-slate-100 py-3 px-4 rounded-xl text-xs font-black text-slate-700 shadow-xs hover:border-indigo-200 hover:bg-indigo-50 active:scale-[0.98] transition-all"
+        >
+          <span>↓</span>
+          <span>Export Report Data</span>
+        </button>
 
         {/* Today's Activity Card */}
         <Card>
@@ -705,6 +770,52 @@ export default function ParentReportScreen() {
             <StatBox label="Losses" value={bA.losses ?? 0} color="text-[#ba1a1a]" />
           </div>
           <ProgressBar value={bA.passRate ?? 0} color={(bA.passRate ?? 0) >= 60 ? "bg-[#006a62]" : "bg-[#ba1a1a]"} />
+          
+          {bossHistory.length > 0 && (
+            <div className="mt-4 border-t border-slate-100 pt-4 space-y-2">
+              <h4 className="text-[10px] font-bold text-[#464652] uppercase tracking-wide">Recent Battles</h4>
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                {bossHistory.map((b: any, idx: number) => {
+                  const statusUpper = (b.status || "").toUpperCase();
+                  const isWon = statusUpper === "WON";
+                  const isLost = statusUpper === "LOST";
+                  const statusText = statusUpper === "WON" ? "Victory" : (statusUpper === "LOST" ? "Defeat" : statusUpper);
+                  const statusBg = isWon 
+                    ? "bg-green-50 text-green-700 border-green-200" 
+                    : (isLost ? "bg-red-50 text-red-700 border-red-200" : "bg-amber-50 text-amber-700 border-amber-200");
+                  
+                  let formattedDate = "";
+                  try {
+                    if (b.date) {
+                      formattedDate = new Date(b.date).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit"
+                      });
+                    }
+                  } catch (e) {}
+
+                  return (
+                    <div key={idx} className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex justify-between items-center transition-all">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-slate-800 truncate">{b.bossName || "Boss Round"}</p>
+                        <p className="text-[10px] font-bold text-[#767683] mt-0.5">{formattedDate}</p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[9px] bg-slate-200/80 text-slate-700 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
+                          {b.difficulty}
+                        </span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wide ${statusBg}`}>
+                          {statusText}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* Daily Mastery & Risk Trend Chart */}
@@ -887,12 +998,14 @@ export default function ParentReportScreen() {
       {/* Date Sheet Modal */}
       <BottomSheet isOpen={showDateSheet} onClose={() => setShowDateSheet(false)} title="Select Time Period">
         <div className="flex flex-col gap-2">
-          {["today", "yesterday", "this_week", "this_month", "last_30_days", "custom"].map((opt) => (
+          {["today", "yesterday", "this_week", "this_month", "custom"].map((opt) => (
             <button
               key={opt}
               onClick={() => {
                 setDateFilter(opt);
-                setShowDateSheet(false);
+                if (opt !== "custom") {
+                  setShowDateSheet(false);
+                }
               }}
               className={`w-full py-3.5 px-4 rounded-2xl text-sm font-black text-left capitalize transition-colors flex justify-between items-center ${
                 dateFilter === opt
@@ -927,6 +1040,12 @@ export default function ParentReportScreen() {
                   />
                 </div>
               </div>
+              <button
+                onClick={() => setShowDateSheet(false)}
+                className="w-full mt-2 bg-[#141779] text-white py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-transform active:scale-[0.98]"
+              >
+                Apply Custom Range
+              </button>
             </div>
           )}
         </div>
@@ -971,32 +1090,58 @@ export default function ParentReportScreen() {
 
       {/* Customize Sheet Modal */}
       <BottomSheet isOpen={showCustomizeSheet} onClose={() => setShowCustomizeSheet(false)} title="Customize Report">
-        <div className="space-y-4">
+        <div className="space-y-5">
+          {/* Time Period */}
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Time Period</label>
             <div className="grid grid-cols-3 gap-2">
-              {["today", "this_week", "this_month"].map((opt) => (
+              {(["today", "this_week", "this_month", "yesterday", "custom"] as const).map((opt) => (
                 <button
                   key={opt}
                   onClick={() => setDateFilter(opt)}
-                  className={`py-2 px-1 text-[10px] sm:text-xs font-black rounded-xl border text-center transition-colors capitalize ${
+                  className={`py-2.5 px-1 text-[10px] font-black rounded-xl border text-center transition-colors capitalize ${
                     dateFilter === opt
                       ? "bg-[#141779] text-white border-[#141779]"
                       : "bg-slate-50 text-slate-800 border-slate-200"
                   }`}
                 >
-                  {opt.replace("_", " ")}
+                  {opt.replace(/_/g, " ")}
                 </button>
               ))}
             </div>
+            {dateFilter === "custom" && (
+              <div className="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-0.5">
+                    <label className="text-[9px] font-bold text-slate-500">Start Date</label>
+                    <input
+                      type="date"
+                      value={customStartDate}
+                      onChange={(e) => setCustomStartDate(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-[10px] font-bold text-slate-800"
+                    />
+                  </div>
+                  <div className="space-y-0.5">
+                    <label className="text-[9px] font-bold text-slate-500">End Date</label>
+                    <input
+                      type="date"
+                      value={customEndDate}
+                      onChange={(e) => setCustomEndDate(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-[10px] font-bold text-slate-800"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
+          {/* Subject */}
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Subject</label>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => setSubjectFilter("all")}
-                className={`py-2 px-3 text-xs font-black rounded-xl border text-center transition-colors ${
+                className={`py-2.5 px-3 text-xs font-black rounded-xl border text-center transition-colors ${
                   subjectFilter === "all"
                     ? "bg-[#141779] text-white border-[#141779]"
                     : "bg-slate-50 text-slate-800 border-slate-200"
@@ -1004,11 +1149,11 @@ export default function ParentReportScreen() {
               >
                 All Subjects
               </button>
-              {subjects.slice(0, 3).map((s: any) => (
+              {subjects.map((s: any) => (
                 <button
                   key={s.subject}
                   onClick={() => setSubjectFilter(s.subject)}
-                  className={`py-2 px-3 text-xs font-black rounded-xl border text-center transition-colors capitalize ${
+                  className={`py-2.5 px-3 text-xs font-black rounded-xl border text-center transition-colors capitalize ${
                     subjectFilter === s.subject
                       ? "bg-[#141779] text-white border-[#141779]"
                       : "bg-slate-50 text-slate-800 border-slate-200"
@@ -1020,35 +1165,11 @@ export default function ParentReportScreen() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Activity Type</label>
-            <p className="text-xs text-slate-400 font-bold">Coming soon — filter by quiz, reading, or boss activity.</p>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Compare With</label>
-            <div className="grid grid-cols-2 gap-2">
-              {[{ id: "none", label: "None" }, { id: "previous", label: "Previous Period" }].map((opt) => (
-                <button
-                  key={opt.id}
-                  onClick={() => setCompareFilter(opt.id)}
-                  className={`py-2 px-3 text-xs font-black rounded-xl border text-center transition-colors ${
-                    compareFilter === opt.id
-                      ? "bg-emerald-600 text-white border-emerald-600"
-                      : "bg-slate-50 text-slate-800 border-slate-200"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          
           <button
             onClick={() => setShowCustomizeSheet(false)}
-            className="w-full mt-4 bg-[#141779] text-white py-3.5 rounded-2xl text-sm font-black uppercase tracking-wider transition-transform active:scale-[0.98]"
+            className="w-full bg-[#141779] text-white py-3.5 rounded-2xl text-sm font-black uppercase tracking-wider transition-transform active:scale-[0.98]"
           >
-            Apply Customization
+            ✓ Apply &amp; Close
           </button>
         </div>
       </BottomSheet>
@@ -1118,9 +1239,9 @@ export default function ParentReportScreen() {
 function BottomSheet({ isOpen, onClose, title, children }: { isOpen: boolean, onClose: () => void, title: string, children: React.ReactNode }) {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 bg-slate-950/60 z-50 flex items-end justify-center animate-in fade-in duration-200">
+    <div className="fixed inset-0 bg-slate-950/60 z-[200] flex items-end justify-center animate-in fade-in duration-200">
       <div className="absolute inset-0" onClick={onClose} />
-      <div className="bg-white rounded-t-[32px] w-full max-w-[430px] p-6 pb-8 relative z-10 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[90vh] overflow-y-auto font-sans">
+      <div className="bg-white rounded-t-[32px] w-full max-w-[430px] p-6 pb-10 relative z-10 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[90vh] overflow-y-auto font-sans">
         <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-5" />
         <div className="flex justify-between items-center mb-5">
           <h3 className="text-base font-black text-[#141779]">{title}</h3>

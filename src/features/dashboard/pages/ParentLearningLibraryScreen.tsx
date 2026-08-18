@@ -26,6 +26,7 @@ export default function ParentLearningLibraryScreen() {
   const [progress, setProgress] = useState({ completed: 0, total: 100 });
   const [showMore, setShowMore] = useState(false);
   const [contentLanguage, setContentLanguage] = useState("en");
+  const [langDropdownOpen, setLangDropdownOpen] = useState(false);
 
   const categoryStats = topics.reduce((acc, topic) => {
     const cat = topic.category || "Other";
@@ -117,33 +118,59 @@ export default function ParentLearningLibraryScreen() {
           <h1 className="text-xl font-bold text-[#141779]">Library</h1>
         </div>
         <div className="relative">
-          <select 
-            value={contentLanguage}
-            onChange={async (e) => {
-              const newLang = e.target.value;
-              setContentLanguage(newLang);
-              try {
-                await apiFetch('/api/parent/controls', {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ contentLanguage: newLang })
-                });
-                const res = await apiFetch('/api/parent/learning-library');
-                const data = await res.json();
-                if (data.success) {
-                  setTopics(data.data.topics);
-                  setProgress(data.data.progress);
-                }
-              } catch (err) {
-                console.error(err);
-              }
-            }}
-            className="bg-white border border-[#141779]/20 text-[#141779] rounded-xl px-2.5 py-1.5 text-xs font-bold shadow-sm outline-none focus:border-[#141779]"
+          <button 
+            onClick={() => setLangDropdownOpen(!langDropdownOpen)}
+            className="flex items-center gap-1.5 bg-white border border-[#141779]/15 text-[#141779] rounded-xl px-3 py-2 text-xs font-bold shadow-xs hover:border-[#141779]/30 active:scale-95 transition-all outline-none"
           >
-            <option value="en">English</option>
-            <option value="hi">हिंदी (Hindi)</option>
-            <option value="gu">ગુજરાતી (Gujarati)</option>
-          </select>
+            <span>
+              {contentLanguage === "en" ? "English" : contentLanguage === "hi" ? "हिंदी (Hindi)" : "ગુજરાતી (Gujarati)"}
+            </span>
+            <ChevronDown size={14} className={`text-[#141779]/60 transition-transform ${langDropdownOpen ? 'rotate-180' : ''}`} />
+          </button>
+          
+          {langDropdownOpen && (
+            <>
+              {/* Backdrop to close when clicking outside */}
+              <div className="fixed inset-0 z-40" onClick={() => setLangDropdownOpen(false)}></div>
+              
+              <div className="absolute right-0 mt-1.5 w-40 bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-xl shadow-lg py-1 z-50 animate-in fade-in slide-in-from-top-1 duration-100 origin-top-right">
+                {[
+                  { value: "en", label: "English" },
+                  { value: "hi", label: "हिंदी (Hindi)" },
+                  { value: "gu", label: "ગુજરાતી (Gujarati)" }
+                ].map(option => (
+                  <button
+                    key={option.value}
+                    onClick={async () => {
+                      setLangDropdownOpen(false);
+                      const newLang = option.value;
+                      setContentLanguage(newLang);
+                      
+                      try {
+                        await apiFetch('/api/parent/controls', {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ contentLanguage: newLang })
+                        });
+                        const res = await apiFetch('/api/parent/learning-library');
+                        const data = await res.json();
+                        if (data.success) {
+                          setTopics(data.data.topics);
+                          setProgress(data.data.progress);
+                        }
+                      } catch (err) {
+                        console.error(err);
+                      }
+                    }}
+                    className={`w-full text-left px-4 py-2 text-xs font-bold leading-normal transition-colors flex justify-between items-center ${contentLanguage === option.value ? 'bg-indigo-50 text-[#141779]' : 'text-slate-700 hover:bg-slate-50'}`}
+                  >
+                    <span>{option.label}</span>
+                    {contentLanguage === option.value && <div className="w-1.5 h-1.5 rounded-full bg-[#141779]"></div>}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </header>
 
