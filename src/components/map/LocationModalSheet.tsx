@@ -77,7 +77,7 @@ export default function LocationModalSheet({
                 {stage.name}
               </h2>
               <p className="text-xs font-bold text-slate-500 truncate mt-0.5">
-                {stage.subtitle}
+                {stage.subtitle || stage.description || `Milestone Quest Node`}
               </p>
             </div>
           </div>
@@ -86,57 +86,65 @@ export default function LocationModalSheet({
           <div className="bg-white border border-indigo-100/90 rounded-2xl p-3.5 flex items-start gap-2.5 shadow-2xs">
             <span className="text-lg shrink-0">📜</span>
             <p className="text-xs font-bold leading-relaxed italic text-slate-700">
-              "{stage.storyQuote}"
+              "{stage.storyQuote || stage.description || "Complete chapter learning quests to unlock this milestone!"}"
             </p>
           </div>
 
           {/* MISSIONS BREAKDOWN LIST */}
-          <div className="flex flex-col gap-2">
-            <h4 className="text-[10.5px] font-black uppercase tracking-wider text-[#2D328F] px-1 flex items-center gap-1.5">
-              <Swords size={12} className="text-[#14C8C6]" />
-              AVAILABLE MISSIONS ({stage.missions.length})
-            </h4>
+          {(() => {
+            const missionsList = (stage.missions && stage.missions.length > 0) ? stage.missions : [
+              { title: "Chapter Reading Quest", icon: "📖", xp: 25 },
+              { title: "Practice Challenge", icon: "✍️", xp: 25 }
+            ];
+            return (
+              <div className="flex flex-col gap-2">
+                <h4 className="text-[10.5px] font-black uppercase tracking-wider text-[#2D328F] px-1 flex items-center gap-1.5">
+                  <Swords size={12} className="text-[#14C8C6]" />
+                  AVAILABLE MISSIONS ({missionsList.length})
+                </h4>
 
-            <div className="flex flex-col gap-1.5">
-              {stage.missions.map((m, i) => (
-                <div
-                  key={i}
-                  className="bg-white border border-slate-200/80 rounded-xl p-2.5 flex items-center justify-between gap-2 shadow-2xs"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="text-base shrink-0">{m.icon}</span>
-                    <span className="text-xs font-bold text-slate-800 truncate">
-                      {m.title}
-                    </span>
-                  </div>
-                  <span className="text-[10px] font-black bg-indigo-50 text-[#2D328F] px-2 py-0.5 rounded-full shrink-0">
-                    +{m.xp} XP
-                  </span>
+                <div className="flex flex-col gap-1.5">
+                  {missionsList.map((m, i) => (
+                    <div
+                      key={i}
+                      className="bg-white border border-slate-200/80 rounded-xl p-2.5 flex items-center justify-between gap-2 shadow-2xs"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="text-base shrink-0">{m.icon}</span>
+                        <span className="text-xs font-bold text-slate-800 truncate">
+                          {m.title}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-black bg-indigo-50 text-[#2D328F] px-2 py-0.5 rounded-full shrink-0">
+                        +{m.xp} XP
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
+            );
+          })()}
 
           {/* AREA REWARDS SUMMARY BADGE */}
           <div className="grid grid-cols-3 gap-2 bg-white border border-slate-200 rounded-2xl p-2.5 shadow-2xs">
             <div className="flex flex-col items-center justify-center text-center">
               <span className="text-amber-600 text-xs font-black flex items-center gap-1">
                 <Zap size={13} className="fill-amber-500 text-amber-500" />
-                +{stage.xpReward} XP
+                +{stage.xpReward || 50} XP
               </span>
             </div>
 
             <div className="flex flex-col items-center justify-center text-center border-x border-slate-100">
               <span className="text-[#2D328F] text-xs font-black flex items-center gap-1">
                 <Coins size={13} className="text-[#FFC857]" />
-                +{stage.coinReward} Coins
+                +{stage.coinReward || 25} Coins
               </span>
             </div>
 
             <div className="flex flex-col items-center justify-center text-center">
               <span className="text-[#14C8C6] text-xs font-black flex items-center gap-1 truncate">
                 <Gift size={13} />
-                {stage.itemReward}
+                {stage.itemReward || "Badge"}
               </span>
             </div>
           </div>

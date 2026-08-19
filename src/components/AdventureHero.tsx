@@ -150,39 +150,48 @@ interface AdventureHeroProps {
   themeKey?: string;
   xp?: number;
   targetXp?: number;
-  currentCityName?: string;
-  nextCityName?: string;
+  currentLocationName?: string;
+  destinationName?: string;
+  progressPercentage?: number;
+  chaptersNeededForNext?: number;
   onCtaClick?: () => void;
   onMissionClick?: () => void;
   // Overrides for dynamic backend values
   missionTitle?: string;
   missionProgress?: { current: number; total: number };
   missionRewardText?: string;
+  journeyData?: any;
 }
 
 export default function AdventureHero({
   themeKey = "dragon",
   xp = 1105,
   targetXp = 2500,
-  currentCityName,
-  nextCityName,
+  currentLocationName,
+  destinationName,
+  progressPercentage,
+  chaptersNeededForNext,
   onCtaClick,
   onMissionClick,
   missionTitle,
   missionProgress,
   missionRewardText,
+  journeyData,
 }: AdventureHeroProps) {
   const theme = ADVENTURE_THEMES[themeKey] || ADVENTURE_THEMES.dragon;
 
-  const startName = currentCityName || theme.currentLocationName;
-  const endName = nextCityName || theme.destinationName;
+  const startName = journeyData?.currentLocation || currentLocationName || "Egg Village";
+  const endName = journeyData?.nextNodeName || destinationName || "Hatchling Haven";
 
   const displayMissionTitle = missionTitle || theme.missionTitle;
   const displayMissionProgress = missionProgress || theme.missionProgress;
   const displayMissionRewardText = missionRewardText || theme.missionRewardText;
 
-  // Calculate percentage along the leg (0% to 100%)
-  const legProgress = Math.min(100, Math.max(0, Math.round((xp / targetXp) * 100)));
+  // Calculate percentage along the leg
+  const legProgress = journeyData?.progressPercentage !== undefined 
+    ? journeyData.progressPercentage 
+    : (progressPercentage !== undefined ? progressPercentage : Math.min(100, Math.max(0, Math.round((xp / targetXp) * 100))));
+  const chaptersRemaining = journeyData?.chaptersNeededForNext !== undefined ? journeyData.chaptersNeededForNext : chaptersNeededForNext;
   const xpRemaining = Math.max(0, targetXp - xp);
 
   // SVG curved path calculation
@@ -345,8 +354,12 @@ export default function AdventureHero({
             />
           </div>
           <div className="flex justify-between items-center text-[9.5px] font-extrabold text-slate-300 mt-0.5">
-            <span>{theme.rewardIcon} {theme.rewardName} Unlock</span>
-            <span className="text-amber-300">{xpRemaining > 0 ? `${xpRemaining} XP Remaining` : "Ready to Unlock!"}</span>
+            <span>{endName} Unlock</span>
+            <span className="text-amber-300">
+              {chaptersRemaining !== undefined 
+                ? (chaptersRemaining > 0 ? `${chaptersRemaining} chapter(s) remaining` : "Stage Complete!")
+                : (xpRemaining > 0 ? `${xpRemaining} XP Remaining` : "Ready to Unlock!")}
+            </span>
           </div>
         </div>
 

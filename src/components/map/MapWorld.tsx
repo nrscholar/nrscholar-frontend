@@ -10,6 +10,8 @@ interface MapWorldProps {
   userLevel?: number;
   companionEmoji?: string;
   onEnterStage: (stage: MapStageConfig) => void;
+  nodes?: any[];
+  progressPercentage?: number;
 }
 
 export default function MapWorld({
@@ -18,20 +20,55 @@ export default function MapWorld({
   userLevel = 7,
   companionEmoji,
   onEnterStage,
+  nodes,
+  progressPercentage = 0
 }: MapWorldProps) {
   const theme: MapWorldThemeConfig = WORLD_THEMES[themeKey] || WORLD_THEMES.dragon;
   const [selectedStage, setSelectedStage] = useState<MapStageConfig | null>(null);
 
-  // Determine current stage index based on XP
-  let currentStageIndex = 0;
-  if (xp >= 1000) currentStageIndex = 3;
-  else if (xp >= 600) currentStageIndex = 2;
-  else if (xp >= 350) currentStageIndex = 1;
+  // If dynamic backend nodes are provided, map them to stage objects
+  const stages: MapStageConfig[] = nodes && nodes.length > 0
+    ? nodes.map((n: any, idx: number) => {
+        const xpR = n.xpReward || Math.max(100, (n.requiredChapters || 0) * 50);
+        const coinR = n.coinReward || Math.max(50, (n.requiredChapters || 0) * 25);
+        const missionXp = Math.max(50, Math.round(xpR / 2));
+        return {
+          id: `node-${idx}`,
+          name: n.name,
+          subtitle: `Required Chapters: ${n.requiredChapters}`,
+          storyQuote: `Complete chapter learning quests to unlock ${n.name}! (${n.requiredPercentage}% Journey Completion required)`,
+          description: `Unlocks at ${n.requiredPercentage}% tier completion (${n.requiredChapters} chapters)`,
+          xpReward: xpR,
+          coinReward: coinR,
+          unlocked: Boolean(n.unlocked),
+          itemIcon: n.emoji,
+          itemReward: `${n.requiredChapters} Chapters`,
+          emoji: n.emoji,
+          missions: [
+            { title: `${n.name} Chapter Reading Quest`, icon: "📖", xp: missionXp },
+            { title: `${n.name} Practice Challenge`, icon: "✍️", xp: missionXp }
+          ]
+        };
+      })
+    : theme.stages;
 
-  const stages = theme.stages;
-  const currentStage = stages[currentStageIndex] || stages[0];
+  // Determine current stage index based on nodes unlocked or XP
+  let currentStageIndex = 0;
+  if (nodes && nodes.length > 0) {
+    const lastUnlocked = nodes.map(n => n.unlocked).lastIndexOf(true);
+    currentStageIndex = lastUnlocked !== -1 ? Math.min(nodes.length - 1, lastUnlocked) : 0;
+  } else {
+    if (xp >= 1000) currentStageIndex = 3;
+    else if (xp >= 600) currentStageIndex = 2;
+    else if (xp >= 350) currentStageIndex = 1;
+  }
 
   const getStageState = (index: number) => {
+    if (nodes && nodes.length > 0) {
+      if (nodes[index]?.unlocked) return "completed";
+      if (index === currentStageIndex + 1 || (currentStageIndex === 0 && index === 0 && !nodes[0]?.unlocked)) return "current";
+      return "upcoming";
+    }
     if (index < currentStageIndex) return "completed";
     if (index === currentStageIndex) return "current";
     return "upcoming";
@@ -116,7 +153,7 @@ export default function MapWorld({
 
                   <div className="flex items-center gap-1 mb-1 bg-teal-50 px-3 py-0.5 rounded-full border border-teal-200">
                     <Star size={13} className="fill-[#006a62] text-[#006a62]" />
-                    <span className="text-xs text-[#006a62] font-black uppercase tracking-wider">{stage.xpReward} XP</span>
+                    <span className="text-xs text-[#006a62] font-black uppercase tracking-wider">🎯 Target: {stage.itemReward}</span>
                   </div>
 
                   <h3 className="text-xl font-black text-[#141779] text-center mb-2">{stage.name}</h3>
@@ -124,11 +161,10 @@ export default function MapWorld({
                   <div className="w-full bg-[#eceef0] rounded-full h-2 mb-1 overflow-hidden">
                     <div className="bg-[#006a62] h-full rounded-full transition-all duration-1000" style={{ width: `${stageProgress}%` }} />
                   </div>
-                  <p className="text-[10px] text-slate-500 font-bold mb-3">{stageProgress}% to {nextStage ? nextStage.name : "Mastery"}</p>
+                  <p className="text-[10px] text-slate-500 font-bold mb-3">{stageProgress}% Completed</p>
 
                   <div className="flex gap-2 text-[11px] font-bold text-slate-700 bg-[#57fae9]/20 px-3.5 py-1.5 rounded-full border border-[#14C8C6]/30">
-                    <span className="flex items-center gap-1"><BookOpen size={12} /> {stage.lessonsCount || 5} Lessons</span>
-                    <span className="flex items-center gap-1"><Trophy size={12} /> {stage.questsCount || 2} Chal.</span>
+                    <span className="flex items-center gap-1"><BookOpen size={12} /> {stage.itemReward}</span>
                   </div>
                 </motion.div>
               </div>
@@ -150,7 +186,7 @@ export default function MapWorld({
                 <h3 className="text-base font-black text-[#464652] text-center">{stage.name}</h3>
 
                 <div className="mt-2 text-[10px] text-[#767683] font-bold bg-white/70 px-3 py-1 rounded-full border border-slate-200">
-                  <span>🔒 Required: {stage.xpReward} XP</span>
+                  <span>🔒 Required: {stage.itemReward || "Chapters"}</span>
                 </div>
               </motion.div>
             </div>

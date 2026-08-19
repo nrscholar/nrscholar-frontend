@@ -71,15 +71,22 @@ export default function ChaptersScreen() {
           apiFetch("/api/parent/controls")
         ]);
         
-        const subData = await subRes.json();
-        const controlsData = await controlsRes.json();
+        let subData: any = { success: false, data: [] };
+        try {
+          if (subRes.ok) subData = await subRes.json();
+        } catch (e) {}
+
+        let controlsData: any = { success: false };
+        try {
+          if (controlsRes.ok) controlsData = await controlsRes.json();
+        } catch (e) {}
         
         let restricted: Record<string, boolean> = {};
-        if (controlsData.success && controlsData.data?.parentControls?.restrictedSubjects) {
+        if (controlsData?.success && controlsData.data?.parentControls?.restrictedSubjects) {
           restricted = controlsData.data.parentControls.restrictedSubjects;
         }
 
-        if (subData.success && subData.data.length > 0) {
+        if (subData?.success && Array.isArray(subData.data) && subData.data.length > 0) {
           const allowedSubjects = subData.data.filter((s: any) => !restricted[s.name]);
           
           if (allowedSubjects.length > 0) {
@@ -97,10 +104,11 @@ export default function ChaptersScreen() {
             setLoading(false);
           }
         } else {
+          setSubjects([]);
           setLoading(false);
         }
       } catch (e) {
-        console.error("Failed to fetch subjects");
+        console.error("Failed to fetch subjects", e);
         setLoading(false);
       }
     };
@@ -118,19 +126,25 @@ export default function ChaptersScreen() {
           apiFetch(`/api/practice/chapter-progress`)
         ]);
         
-        const chData = await chRes.json();
-        const pData = await pRes.json();
+        let chData: any = { success: false, data: [] };
+        try {
+          if (chRes.ok) chData = await chRes.json();
+        } catch (e) {}
 
-        if (chData.success) {
+        let pData: any = { success: false, data: [] };
+        try {
+          if (pRes.ok) pData = await pRes.json();
+        } catch (e) {}
+
+        if (chData?.success && Array.isArray(chData.data)) {
           setChapters(chData.data);
         } else {
           setChapters([]);
         }
         
-        if (pData.success && pData.data) {
+        if (pData?.success && Array.isArray(pData.data)) {
           const progMap: Record<string, any> = {};
           pData.data.forEach((p: any) => {
-            // handle legacy completed status as chapterCompleted
             if (p.completed && !p.chapterCompleted) p.chapterCompleted = true;
             progMap[p.chapterId] = p;
           });

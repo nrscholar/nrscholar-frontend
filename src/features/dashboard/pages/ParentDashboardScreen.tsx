@@ -32,6 +32,9 @@ export default function ParentDashboardScreen() {
   const [lastActivity, setLastActivity] = useState<string>("Exploring new quests...");
   const [lastActivityDetails, setLastActivityDetails] = useState<any>(null);
   const [top3SubjectsTrend, setTop3SubjectsTrend] = useState<any[]>([]);
+  const [hasEnoughData, setHasEnoughData] = useState(true);
+  const [hasRiskAlert, setHasRiskAlert] = useState(false);
+  const [riskTrend, setRiskTrend] = useState<{ day: string, score: number, isPredicted?: boolean }[]>([]);
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -59,14 +62,18 @@ export default function ParentDashboardScreen() {
     }
   };
 
+  const getActiveChildId = () => userData?.activeChildId || null;
+
   const loadData = useCallback(async () => {
     try {
+      const activeChildId = getActiveChildId();
+      const childParam = activeChildId ? `&childId=${activeChildId}` : "";
       const tzOffset = -new Date().getTimezoneOffset();
       
       const [userRes, reportRes, notifRes] = await Promise.all([
         apiFetch("/api/users/me").catch(() => null),
-        apiFetch(`/api/parent/report?tz_offset_minutes=${tzOffset}`).catch(() => null),
-        apiFetch("/api/notifications?role=parent").catch(() => null)
+        apiFetch(`/api/parent/report?tz_offset_minutes=${tzOffset}${childParam}`).catch(() => null),
+        apiFetch("/api/notifications").catch(() => null)
       ]);
 
       if (userRes && userRes.ok) {
@@ -84,6 +91,9 @@ export default function ParentDashboardScreen() {
       if (reportRes && reportRes.ok) {
         const repJson = await reportRes.json();
         if (repJson.success && repJson.data) {
+          if (repJson.data.hasEnoughData !== undefined) setHasEnoughData(Boolean(repJson.data.hasEnoughData));
+          if (repJson.data.hasRiskAlert !== undefined) setHasRiskAlert(Boolean(repJson.data.hasRiskAlert));
+          if (repJson.data.riskTrend) setRiskTrend(repJson.data.riskTrend);
           if (repJson.data.strengths) setStrengths(repJson.data.strengths);
           if (repJson.data.weaknesses) setWeaknesses(repJson.data.weaknesses);
           if (repJson.data.risks) setRisks(repJson.data.risks);
@@ -138,15 +148,16 @@ export default function ParentDashboardScreen() {
     } catch (e) { }
   };
 
-  const generateChartData = (targetAcc?: number) => {
-    if (!weeklyTrend || weeklyTrend.length === 0) return { pathLine: "", pathArea: "", points: [], labels: [] };
+  const generateChartData = (customTrend?: { day: string, score: number }[], targetAcc?: number) => {
+    const dataset = (customTrend && customTrend.length > 0) ? customTrend : weeklyTrend;
+    if (!dataset || dataset.length === 0) return { pathLine: "", pathArea: "", points: [], labels: [] };
     const width = 300;
     const height = 120;
-    const baseFinalScore = weeklyTrend[weeklyTrend.length - 1].score;
-    const offset = targetAcc !== undefined ? targetAcc - baseFinalScore : 0;
+    const baseFinalScore = dataset[dataset.length - 1].score;
+    const offset = (targetAcc !== undefined && (!customTrend || customTrend.length === 0)) ? targetAcc - baseFinalScore : 0;
 
-    const points = weeklyTrend.map((t, i) => {
-      const x = (i / (weeklyTrend.length - 1)) * width;
+    const points = dataset.map((t, i) => {
+      const x = (i / Math.max(1, (dataset.length - 1))) * width;
       let score = t.score + offset;
       score = Math.max(0, Math.min(100, score)); // clamp
       const y = height - (score / 100) * height;
@@ -156,7 +167,7 @@ export default function ParentDashboardScreen() {
     const pathLine = `M ${points.map(p => `${p.x},${p.y}`).join(" L ")}`;
     const pathArea = `M 0,${height} L 0,${points[0].y} ${pathLine.substring(1)} L ${width},${height} Z`;
 
-    return { pathLine, pathArea, points, labels: weeklyTrend.map(t => t.day) };
+    return { pathLine, pathArea, points, labels: dataset.map(t => t.day) };
   };
 
   let highestSubject: string | null = null;
@@ -171,15 +182,17 @@ export default function ParentDashboardScreen() {
     lowestAcc = sorted[sorted.length - 1].accuracy;
   }
 
-  const chartTitle = modalType === "strengths" ? (highestSubject ?? "Top Subject") : modalType === "weaknesses" ? (lowestSubject ?? "Focus Area") : modalType === "risks" ? "Confidence Decline" : "Overall Logic & Reasoning";
+  const cleanChildName = (!childName || childName === "999" || /^\d+$/.test(childName)) ? "your child" : childName;
+  const activeTrend = modalType === "risks" ? riskTrend : undefined;
   const targetAcc = modalType === "strengths" ? (highestAcc ?? undefined) : modalType === "weaknesses" ? (lowestAcc ?? undefined) : undefined;
+  const chartTitle = modalType === "strengths" ? (highestSubject ? `${highestSubject} Trend` : "Top Subject Trend") : modalType === "weaknesses" ? (lowestSubject ? `${lowestSubject} Focus Trend` : "Focus Area Trend") : modalType === "risks" ? "At-Risk Subject Trend" : "Overall Trend";
 
-  const chart = generateChartData(targetAcc);
+  const chart = generateChartData(activeTrend, targetAcc);
   const currentScore = chart.points.length > 0 ? chart.points[chart.points.length - 1].score : 0;
   const startScore = chart.points.length > 0 ? chart.points[0].score : 0;
   const diff = chart.points.length > 0 ? currentScore - startScore : 0;
   const diffStr = chart.points.length > 0 ? (diff >= 0 ? `+${diff}% this week` : `${diff}% this week`) : "";
-  const chartColor = modalType === "weaknesses" ? "#ba1a1a" : modalType === "risks" ? "#ff5e00" : "#006a62";
+  const chartColor = (modalType === "weaknesses" || modalType === "risks") ? "#ba1a1a" : "#006a62";
 
   if (loading) {
     return (
@@ -365,53 +378,103 @@ export default function ParentDashboardScreen() {
             <h3 className="text-base font-extrabold text-slate-800">Cognitive Strengths & Weaknesses</h3>
           </div>
 
-          <button onClick={() => setModalType("strengths")} className="text-left w-full bg-white rounded-[20px] p-5 border border-slate-200/80 shadow-sm border-l-[6px] border-l-[#006a62] hover:shadow-md transition-all">
-            <h4 className="text-base font-extrabold text-[#006a62] mb-3">💪 Strengths (Fast Processor)</h4>
-            {strengths.length === 0 || strengths[0] === "No strength for now." ? (
-              <p className="text-xs text-slate-500">No strength for now.</p>
-            ) : strengths[0] === "Not enough Data for now wait few Days" ? (
-              <p className="text-xs text-slate-500">Not enough Data for now wait few Days</p>
-            ) : (
-              strengths.map((s: string, i: number) => (
-                <div key={i} className="bg-green-50 border border-green-100 rounded-xl p-3 mb-2 flex gap-2 items-start">
-                  <CheckCircle size={14} className="text-green-600 shrink-0 mt-0.5" />
-                  <p className="text-xs text-green-800 font-semibold">{s}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Strengths Card */}
+            <button
+              onClick={() => setModalType("strengths")}
+              className="bg-white rounded-[20px] p-4 border border-slate-200/80 shadow-xs border-t-4 border-t-[#006a62] flex flex-col justify-between text-left hover:scale-[1.02] hover:shadow-md transition-all relative overflow-hidden group min-h-[110px]"
+            >
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-base">💪</span>
+                    <h4 className="text-sm font-black text-[#006a62]">Strengths</h4>
+                  </div>
+                  <ChevronRight size={18} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
                 </div>
-              ))
-            )}
-          </button>
+                {!hasEnoughData || strengths.length === 0 || strengths[0] === "No strength for now." || strengths[0]?.includes("Not enough Data") ? (
+                  <span className="inline-block text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full mt-1">
+                    Not enough data for now
+                  </span>
+                ) : (
+                  <div className="space-y-1 mt-1">
+                    {strengths.slice(0, 2).map((s: string, i: number) => (
+                      <p key={i} className="text-xs text-slate-700 font-bold line-clamp-1 flex items-center gap-1">
+                        <CheckCircle size={12} className="text-green-600 shrink-0" />
+                        <span>{s}</span>
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider mt-3">Fast Processor 🔍</span>
+            </button>
 
-          <button onClick={() => setModalType("weaknesses")} className="text-left w-full bg-white rounded-[20px] p-5 border border-slate-200/80 shadow-sm border-l-[6px] border-l-[#ba1a1a] hover:shadow-md transition-all">
-            <h4 className="text-base font-extrabold text-[#ba1a1a] mb-3">⚠️ Weaknesses / Review Needed</h4>
-            {weaknesses.length === 0 || weaknesses[0] === "No weakness for now." ? (
-              <p className="text-xs text-slate-500">No weakness for now.</p>
-            ) : weaknesses[0] === "Not enough Data for now wait few Days" ? (
-              <p className="text-xs text-slate-500">Not enough Data for now wait few Days</p>
-            ) : (
-              weaknesses.map((w: string, i: number) => (
-                <div key={i} className="bg-orange-50 border border-orange-100 rounded-xl p-3 mb-2 flex gap-2 items-start">
-                  <AlertTriangle size={14} className="text-orange-600 shrink-0 mt-0.5" />
-                  <p className="text-xs text-orange-800 font-semibold">{w}</p>
+            {/* Weaknesses Card */}
+            <button
+              onClick={() => setModalType("weaknesses")}
+              className="bg-white rounded-[20px] p-4 border border-slate-200/80 shadow-xs border-t-4 border-t-[#ba1a1a] flex flex-col justify-between text-left hover:scale-[1.02] hover:shadow-md transition-all relative overflow-hidden group min-h-[110px]"
+            >
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-base">⚠️</span>
+                    <h4 className="text-sm font-black text-[#ba1a1a]">Weaknesses</h4>
+                  </div>
+                  <ChevronRight size={18} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
                 </div>
-              ))
-            )}
-          </button>
+                {!hasEnoughData || weaknesses.length === 0 || weaknesses[0] === "No weakness for now." || weaknesses[0]?.includes("Not enough Data") ? (
+                  <span className="inline-block text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full mt-1">
+                    Not enough data for now
+                  </span>
+                ) : (
+                  <div className="space-y-1 mt-1">
+                    {weaknesses.slice(0, 2).map((w: string, i: number) => {
+                      const isRecovery = w.includes("right track") || w.includes("recovered") || w.includes("improved");
+                      return (
+                        <p key={i} className={`text-xs font-bold line-clamp-1 flex items-center gap-1 ${isRecovery ? 'text-emerald-700' : 'text-amber-800'}`}>
+                          <AlertTriangle size={12} className={`${isRecovery ? 'text-emerald-600' : 'text-amber-600'} shrink-0`} />
+                          <span>{w}</span>
+                        </p>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider mt-3">Review Needed 🔍</span>
+            </button>
 
-          <button onClick={() => setModalType("risks")} className="text-left w-full bg-white rounded-[20px] p-5 border border-slate-200/80 shadow-sm border-l-[6px] border-l-[#d97706] hover:shadow-md transition-all">
-            <h4 className="text-base font-extrabold text-[#d97706] mb-3">🔔 Risk Alerts</h4>
-            {risks.length === 0 || risks[0] === "No risk for now." ? (
-              <p className="text-xs text-slate-500">No risk for now.</p>
-            ) : risks[0] === "Not enough Data for now wait few Days" ? (
-              <p className="text-xs text-slate-500">Not enough Data for now wait few Days</p>
-            ) : (
-              risks.map((r: string, i: number) => (
-                <div key={i} className="bg-red-50 border border-red-100 rounded-xl p-3 mb-2 flex gap-2 items-start">
-                  <AlertTriangle size={14} className="text-red-600 shrink-0 mt-0.5" />
-                  <p className="text-xs text-red-800 font-semibold">{r}</p>
+            {/* Risk Alerts Card */}
+            <button
+              onClick={() => setModalType("risks")}
+              className="bg-white rounded-[20px] p-4 border border-slate-200/80 shadow-xs border-t-4 border-t-[#d97706] flex flex-col justify-between text-left hover:scale-[1.02] hover:shadow-md transition-all relative overflow-hidden group min-h-[110px]"
+            >
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-base">🔔</span>
+                    <h4 className="text-sm font-black text-[#d97706]">Risk Alerts</h4>
+                  </div>
+                  <ChevronRight size={18} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
                 </div>
-              ))
-            )}
-          </button>
+                {!hasEnoughData || risks.length === 0 || risks[0] === "No risk for now." || risks[0]?.includes("Not enough Data") ? (
+                  <span className="inline-block text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full mt-1">
+                    Not enough data for now
+                  </span>
+                ) : (
+                  <div className="space-y-1 mt-1">
+                    {risks.slice(0, 2).map((r: string, i: number) => (
+                      <p key={i} className="text-xs text-rose-800 font-bold line-clamp-1 flex items-center gap-1">
+                        <AlertTriangle size={12} className="text-rose-600 shrink-0" />
+                        <span>{r}</span>
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider mt-3">3-Day Alerts 🔍</span>
+            </button>
+          </div>
         </div>
 
         {/* Top 3 Subjects Trend Chart */}
@@ -426,73 +489,76 @@ export default function ParentDashboardScreen() {
             </span>
           </div>
 
-          {/* Graph Legend */}
-          {top3SubjectsTrend && top3SubjectsTrend.length > 0 && (
-            <div className="flex flex-wrap items-center gap-3 mt-1 text-[11px] font-black">
-              {top3SubjectsTrend.map((t, idx) => {
-                const colors = ["#006a62", "#141779", "#7b1fa2"];
-                const color = colors[idx % colors.length];
-                const latestScore = t.timeline && t.timeline.length > 0 ? t.timeline[t.timeline.length - 1].score : 0;
-                return (
-                  <div key={idx} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200/70" style={{ color }}>
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                    <span>{t.subject}</span>
-                    <span className="text-[10px] opacity-75 font-bold">({latestScore}%)</span>
-                  </div>
-                );
-              })}
+          {!hasEnoughData || !top3SubjectsTrend || top3SubjectsTrend.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-6 bg-slate-50 border border-slate-200/80 rounded-2xl text-center">
+              <span className="text-2xl mb-1">📊</span>
+              <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">Not Enough Data For Now</h4>
+              <p className="text-[11px] text-slate-500 font-bold mt-1">
+                Complete 2-3 chapters to unlock daily trends and subject performance graphs!
+              </p>
             </div>
+          ) : (
+            <>
+              {/* Graph Legend */}
+              <div className="flex flex-wrap items-center gap-3 mt-1 text-[11px] font-black">
+                {top3SubjectsTrend.map((t, idx) => {
+                  const colors = ["#006a62", "#141779", "#7b1fa2"];
+                  const color = colors[idx % colors.length];
+                  const latestScore = t.timeline && t.timeline.length > 0 ? t.timeline[t.timeline.length - 1].score : 0;
+                  return (
+                    <div key={idx} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200/70" style={{ color }}>
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                      <span>{t.subject}</span>
+                      <span className="text-[10px] opacity-75 font-bold">({latestScore}%)</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* SVG Line Graph Container */}
+              <div className="w-full flex flex-col gap-2 mt-1">
+                <div className="relative w-full h-[140px] px-1 pt-1">
+                  <svg viewBox="0 0 300 130" className="w-full h-full overflow-visible" preserveAspectRatio="none">
+                    {/* Horizontal Grid Lines */}
+                    <line x1="0" y1="10" x2="300" y2="10" stroke="#f1f5f9" strokeWidth="1.5" strokeDasharray="4 4" />
+                    <line x1="0" y1="62.5" x2="300" y2="62.5" stroke="#f1f5f9" strokeWidth="1.5" strokeDasharray="4 4" />
+                    <line x1="0" y1="115" x2="300" y2="115" stroke="#f1f5f9" strokeWidth="1.5" strokeDasharray="4 4" />
+
+                    {top3SubjectsTrend.map((t, idx) => {
+                      const colors = ["#006a62", "#141779", "#7b1fa2"];
+                      const color = colors[idx % colors.length];
+                      const points = (t.timeline || []).map((pt: any, i: number) => {
+                        const len = Math.max(1, (t.timeline.length - 1));
+                        const x = (i / len) * 300;
+                        const y = 115 - (pt.score / 100) * 105;
+                        return { x, y, score: pt.score };
+                      });
+                      const pathLine = points.length > 0 ? `M ${points.map((p: any) => `${p.x},${p.y}`).join(" L ")}` : "";
+                      return (
+                        <g key={idx}>
+                          <path d={pathLine} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                          {points.map((p: any, pIdx: number) => (
+                            <circle key={pIdx} cx={p.x} cy={p.y} r="4" fill="#ffffff" stroke={color} strokeWidth="2.5" />
+                          ))}
+                        </g>
+                      );
+                    })}
+                  </svg>
+                </div>
+
+                {/* Dedicated X Axis Labels */}
+                <div className="flex justify-between text-[10px] font-extrabold text-slate-500 px-1 pt-1 border-t border-slate-100">
+                  {top3SubjectsTrend[0]?.timeline ? (
+                    top3SubjectsTrend[0].timeline.map((pt: any, i: number) => (
+                      <span key={i}>{pt.day}</span>
+                    ))
+                  ) : (
+                    <span>Mon</span>
+                  )}
+                </div>
+              </div>
+            </>
           )}
-
-          {/* SVG Line Graph Container */}
-          <div className="w-full flex flex-col gap-2 mt-1">
-            <div className="relative w-full h-[140px] px-1 pt-1">
-              <svg viewBox="0 0 300 130" className="w-full h-full overflow-visible" preserveAspectRatio="none">
-                {/* Horizontal Grid Lines */}
-                <line x1="0" y1="10" x2="300" y2="10" stroke="#f1f5f9" strokeWidth="1.5" strokeDasharray="4 4" />
-                <line x1="0" y1="62.5" x2="300" y2="62.5" stroke="#f1f5f9" strokeWidth="1.5" strokeDasharray="4 4" />
-                <line x1="0" y1="115" x2="300" y2="115" stroke="#f1f5f9" strokeWidth="1.5" strokeDasharray="4 4" />
-
-                {top3SubjectsTrend && top3SubjectsTrend.length > 0 ? (
-                  top3SubjectsTrend.map((t, idx) => {
-                    const colors = ["#006a62", "#141779", "#7b1fa2"];
-                    const color = colors[idx % colors.length];
-                    const points = (t.timeline || []).map((pt: any, i: number) => {
-                      const len = Math.max(1, (t.timeline.length - 1));
-                      const x = (i / len) * 300;
-                      // Map score (0..100) to Y range (115..10)
-                      const y = 115 - (pt.score / 100) * 105;
-                      return { x, y, score: pt.score };
-                    });
-                    const pathLine = points.length > 0 ? `M ${points.map((p: any) => `${p.x},${p.y}`).join(" L ")}` : "";
-                    return (
-                      <g key={idx}>
-                        <path d={pathLine} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                        {points.map((p: any, pIdx: number) => (
-                          <circle key={pIdx} cx={p.x} cy={p.y} r="4" fill="#ffffff" stroke={color} strokeWidth="2.5" />
-                        ))}
-                      </g>
-                    );
-                  })
-                ) : (
-                  <text x="150" y="65" textAnchor="middle" fill="#94a3b8" fontSize="12" fontWeight="bold">
-                    No 7-day trend data available yet
-                  </text>
-                )}
-              </svg>
-            </div>
-
-            {/* Dedicated X Axis Labels */}
-            <div className="flex justify-between text-[10px] font-extrabold text-slate-500 px-1 pt-1 border-t border-slate-100">
-              {top3SubjectsTrend && top3SubjectsTrend[0]?.timeline ? (
-                top3SubjectsTrend[0].timeline.map((pt: any, i: number) => (
-                  <span key={i}>{pt.day}</span>
-                ))
-              ) : (
-                <span>Mon</span>
-              )}
-            </div>
-          </div>
         </div>
 
 
@@ -668,179 +734,207 @@ export default function ParentDashboardScreen() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-5 space-y-4">
-              <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-                <div className="flex justify-between items-end mb-2">
-                  <div>
-                    <p className="text-[10px] font-bold text-[#767683] uppercase tracking-wider mb-1">{chartTitle} (7-Day Trend)</p>
-                    {chart.points.length > 0 ? (
-                      <p className="text-3xl font-black" style={{ color: chartColor }}>{currentScore}%</p>
-                    ) : (
-                      <p className="text-3xl font-black text-slate-400">--%</p>
-                    )}
+              {!hasEnoughData ? (
+                <div className="flex flex-col items-center justify-center p-8 bg-slate-50 border border-slate-200/80 rounded-2xl text-center my-4">
+                  <span className="text-4xl mb-2">📊</span>
+                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">Not Enough Data For Now</h4>
+                  <p className="text-xs text-slate-500 font-bold mt-2 leading-relaxed">
+                    Complete 2 to 3 chapters to unlock personalized cognitive strengths, weakness analysis, and 7-day trend graphs!
+                  </p>
+                </div>
+              ) : modalType === "risks" && (!hasRiskAlert || risks[0] === "No risk for now.") ? (
+                <div className="flex flex-col items-center justify-center p-8 bg-emerald-50 border border-emerald-200 rounded-2xl text-center my-4">
+                  <span className="text-4xl mb-2">✅</span>
+                  <h4 className="text-sm font-black text-emerald-900 uppercase tracking-wider">No Risk Alerts</h4>
+                  <p className="text-xs text-emerald-700 font-bold mt-2 leading-relaxed">
+                    All clear! {cleanChildName} is performing consistently with scores above 60% across all subjects.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                    <div className="flex justify-between items-end mb-2">
+                      <div>
+                        <p className="text-[10px] font-bold text-[#767683] uppercase tracking-wider mb-1">{chartTitle} (7-Day Trend)</p>
+                        {chart.points.length > 0 ? (
+                          <p className="text-3xl font-black" style={{ color: chartColor }}>{currentScore}%</p>
+                        ) : (
+                          <p className="text-3xl font-black text-slate-400">--%</p>
+                        )}
+                      </div>
+                      {chart.points.length > 0 && diffStr && (
+                        <div className={`px-2 py-1 rounded-md text-[10px] font-bold ${diff >= 0 ? 'bg-[#006a62]/10 text-[#006a62]' : 'bg-[#ba1a1a]/10 text-[#ba1a1a]'}`}>
+                          {diffStr}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Custom SVG Line Graph */}
+                    <div className="relative w-full h-[160px] mt-6">
+                      {chart.points.length === 0 ? (
+                        <div className="w-full h-[120px] bg-gray-50 border border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-center p-4">
+                          <Activity size={24} className="text-gray-400 mb-2 animate-pulse" />
+                          <p className="text-xs font-bold text-[#7c7d8a]">Weekly trend requires completed quizzes.</p>
+                          <p className="text-[10px] text-gray-400 mt-1">No performance data recorded for this week yet.</p>
+                        </div>
+                      ) : (
+                        <>
+                          <svg viewBox="0 0 300 120" className="w-full h-full overflow-visible">
+                            <defs>
+                              <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor={chartColor} stopOpacity="0.4" />
+                                <stop offset="100%" stopColor={chartColor} stopOpacity="0" />
+                              </linearGradient>
+                            </defs>
+
+                            {/* Grid Lines */}
+                            <line x1="0" y1="0" x2="300" y2="0" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
+                            <line x1="0" y1="60" x2="300" y2="60" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
+                            <line x1="0" y1="120" x2="300" y2="120" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
+
+                            {/* Area Fill */}
+                            <path
+                              d={chart.pathArea}
+                              fill="url(#lineGradient)"
+                              className="animate-in fade-in duration-700"
+                            />
+
+                            {/* The Line */}
+                            <path
+                              d={chart.pathLine}
+                              fill="none"
+                              stroke={chartColor}
+                              strokeWidth="3.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="drop-shadow-sm animate-in slide-in-from-left-4 duration-700"
+                            />
+
+                            {/* Data Points */}
+                            {chart.points.map((p, idx) => (
+                              <circle
+                                key={idx}
+                                cx={p.x}
+                                cy={p.y}
+                                r={idx === chart.points.length - 1 ? 5 : 4}
+                                fill={idx === chart.points.length - 1 ? chartColor : "#ffffff"}
+                                stroke={idx === chart.points.length - 1 ? "#ffffff" : chartColor}
+                                strokeWidth="2.5"
+                                className={idx === chart.points.length - 1 ? "animate-pulse" : ""}
+                              />
+                            ))}
+                          </svg>
+
+                          {/* X Axis Labels */}
+                          <div className="flex justify-between text-[10px] font-bold text-[#767683] mt-4 px-1">
+                            {chart.labels.map((lbl, idx) => (
+                              <span key={idx} style={{ color: idx === chart.labels.length - 1 ? chartColor : undefined }}>{lbl}</span>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  {chart.points.length > 0 && diffStr && (
-                    <div className={`px-2 py-1 rounded-md text-[10px] font-bold ${diff >= 0 ? 'bg-[#006a62]/10 text-[#006a62]' : 'bg-[#ba1a1a]/10 text-[#ba1a1a]'}`}>
-                      {diffStr}
-                    </div>
-                  )}
-                </div>
 
-                {/* Custom SVG Line Graph */}
-                <div className="relative w-full h-[160px] mt-6">
-                  {(!weeklyTrend || weeklyTrend.length === 0 || weeklyTrend.every(t => t.score === 0)) ? (
-                    <div className="w-full h-[120px] bg-gray-50 border border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-center p-4">
-                      <Activity size={24} className="text-gray-400 mb-2 animate-pulse" />
-                      <p className="text-xs font-bold text-[#7c7d8a]">Weekly trend requires completed quizzes.</p>
-                      <p className="text-[10px] text-gray-400 mt-1">No performance data recorded for this week yet.</p>
-                    </div>
-                  ) : (
-                    <>
-                      <svg viewBox="0 0 300 120" className="w-full h-full overflow-visible">
-                        <defs>
-                          <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor={chartColor} stopOpacity="0.4" />
-                            <stop offset="100%" stopColor={chartColor} stopOpacity="0" />
-                          </linearGradient>
-                        </defs>
+                  {/* Subject Breakdown Bars */}
+                  <div className="space-y-4">
+                    <h3 className="text-[13px] font-bold text-[#141779] mb-3 border-b border-gray-100 pb-2">
+                      {modalType === "strengths" ? "Top Subjects (≥ 60%)" : modalType === "weaknesses" ? "Needs Attention (< 60%)" : modalType === "risks" ? "At-Risk Subjects (< 60%)" : "Performance by Subject"}
+                    </h3>
+                    {subjectBreakdown
+                      .slice()
+                      .filter(sb => {
+                        if (modalType === "strengths") return sb.accuracy >= 60;
+                        if (modalType === "weaknesses" || modalType === "risks") return sb.accuracy < 60;
+                        return true;
+                      })
+                      .sort((a, b) => {
+                        if (modalType === "weaknesses" || modalType === "risks") return a.accuracy - b.accuracy;
+                        return b.accuracy - a.accuracy;
+                      })
+                      .map((sb, idx) => {
+                        const isStrength = sb.accuracy >= 60;
+                        const barColor = isStrength ? "#006a62" : "#ba1a1a";
+                        const bgColor = isStrength ? "bg-[#006a62]/10" : "bg-[#ba1a1a]/10";
 
-                        {/* Grid Lines */}
-                        <line x1="0" y1="0" x2="300" y2="0" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
-                        <line x1="0" y1="60" x2="300" y2="60" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
-                        <line x1="0" y1="120" x2="300" y2="120" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
+                        return (
+                          <div key={idx}>
+                            <div className="flex justify-between text-xs font-bold mb-1.5">
+                              <span className={isStrength ? "text-[#006a62]" : "text-[#ba1a1a]"}>
+                                {sb.subject} {isStrength ? "💪" : "⚠️"}
+                              </span>
+                              <span className={isStrength ? "text-[#006a62]" : "text-[#ba1a1a]"}>{sb.accuracy}%</span>
+                            </div>
+                            <div className={`h-2.5 w-full ${bgColor} rounded-full overflow-hidden`}>
+                              <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${sb.accuracy}%`, backgroundColor: barColor }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    {subjectBreakdown.length === 0 && (
+                      <p className="text-xs text-[#767683]">Play more quests to see detailed subject breakdown!</p>
+                    )}
+                    {subjectBreakdown.length > 0 &&
+                      (modalType === "weaknesses" || modalType === "risks") &&
+                      subjectBreakdown.every(sb => sb.accuracy >= 60) && (
+                        <p className="text-xs text-[#006a62] font-semibold bg-[#006a62]/10 p-3 rounded-lg text-center mt-2">
+                          🎉 Fantastic! {cleanChildName} has no subjects below 60% right now.
+                        </p>
+                      )}
+                    {subjectBreakdown.length > 0 &&
+                      modalType === "strengths" &&
+                      subjectBreakdown.every(sb => sb.accuracy < 60) && (
+                        <p className="text-xs text-[#ba1a1a] font-semibold bg-[#ba1a1a]/10 p-3 rounded-lg text-center mt-2">
+                          Keep playing to build up strong subjects above 60%!
+                        </p>
+                      )}
+                  </div>
 
-                        {/* Area Fill */}
-                        <path
-                          d={chart.pathArea}
-                          fill="url(#lineGradient)"
-                          className="animate-in fade-in duration-700"
-                        />
-
-                        {/* The Line */}
-                        <path
-                          d={chart.pathLine}
-                          fill="none"
-                          stroke={chartColor}
-                          strokeWidth="3.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="drop-shadow-sm animate-in slide-in-from-left-4 duration-700"
-                        />
-
-                        {/* Data Points */}
-                        {chart.points.map((p, idx) => (
-                          <circle
-                            key={idx}
-                            cx={p.x}
-                            cy={p.y}
-                            r={idx === chart.points.length - 1 ? 5 : 4}
-                            fill={idx === chart.points.length - 1 ? chartColor : "#ffffff"}
-                            stroke={idx === chart.points.length - 1 ? "#ffffff" : chartColor}
-                            strokeWidth="2.5"
-                            className={idx === chart.points.length - 1 ? "animate-pulse" : ""}
-                          />
-                        ))}
-                      </svg>
-
-                      {/* X Axis Labels */}
-                      <div className="flex justify-between text-[10px] font-bold text-[#767683] mt-4 px-1">
-                        {chart.labels.map((lbl, idx) => (
-                          <span key={idx} style={{ color: idx === chart.labels.length - 1 ? chartColor : undefined }}>{lbl}</span>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Subject Breakdown Bars */}
-              <div className="space-y-4">
-                <h3 className="text-[13px] font-bold text-[#141779] mb-3 border-b border-gray-100 pb-2">
-                  {modalType === "strengths" ? "Top Subjects" : modalType === "weaknesses" ? "Needs Attention" : modalType === "risks" ? "At-Risk Subjects" : "Performance by Subject"}
-                </h3>
-                {subjectBreakdown
-                  .slice()
-                  .filter(sb => {
-                    if (modalType === "strengths") return sb.accuracy >= 70;
-                    if (modalType === "weaknesses") return sb.accuracy < 70;
-                    return true;
-                  })
-                  .sort((a, b) => {
-                    if (modalType === "weaknesses") return a.accuracy - b.accuracy;
-                    return b.accuracy - a.accuracy;
-                  })
-                  .map((sb, idx) => {
-                    const isStrength = sb.accuracy >= 70;
-                    const barColor = isStrength ? "#006a62" : "#ba1a1a";
-                    const bgColor = isStrength ? "bg-[#006a62]/10" : "bg-[#ba1a1a]/10";
-
-                    return (
-                      <div key={idx}>
-                        <div className="flex justify-between text-xs font-bold mb-1.5">
-                          <span className={isStrength ? "text-[#006a62]" : "text-[#ba1a1a]"}>
-                            {sb.subject} {isStrength ? "💪" : "⚠️"}
-                          </span>
-                          <span className={isStrength ? "text-[#006a62]" : "text-[#ba1a1a]"}>{sb.accuracy}%</span>
-                        </div>
-                        <div className={`h-2.5 w-full ${bgColor} rounded-full overflow-hidden`}>
-                          <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${sb.accuracy}%`, backgroundColor: barColor }} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                {subjectBreakdown.length === 0 && (
-                  <p className="text-xs text-[#767683]">Play more quests to see detailed subject breakdown!</p>
-                )}
-                {subjectBreakdown.length > 0 &&
-                  modalType === "weaknesses" &&
-                  subjectBreakdown.every(sb => sb.accuracy >= 70) && (
-                    <p className="text-xs text-[#006a62] font-semibold bg-[#006a62]/10 p-3 rounded-lg text-center mt-2">
-                      🎉 Fantastic! Your child has no weak subjects right now.
-                    </p>
-                  )}
-                {subjectBreakdown.length > 0 &&
-                  modalType === "strengths" &&
-                  subjectBreakdown.every(sb => sb.accuracy < 70) && (
-                    <p className="text-xs text-[#ba1a1a] font-semibold bg-[#ba1a1a]/10 p-3 rounded-lg text-center mt-2">
-                      Keep playing to build up strong subjects!
-                    </p>
-                  )}
-              </div>
-
-              {(() => {
-                return (
                   <div className="bg-indigo-50 p-4 rounded-xl shadow-sm border border-indigo-100">
                     <p className="text-xs text-[#141779] leading-relaxed">
                       <span className="font-bold text-[#141779]">Actionable Insight: </span>
                       {modalType === "risks" ? (
-                        <>Noticeable decline in confidence recently. We recommend a <strong>15-minute review session</strong> today focusing on basics, avoiding complex new quests to rebuild {childName}'s confidence slowly.</>
-                      ) : subjectBreakdown.length > 0 ? (
-                        modalType === "strengths" ?
-                          `Your child is currently excelling at ${highestSubject}! These strong foundations help boost overall confidence.`
-                          : modalType === "weaknesses" ?
-                            `They should give more attention to ${lowestSubject} to build a more balanced cognitive profile.`
-                            : <>Your child is currently excelling at <strong>{highestSubject}</strong>! However, they should give more attention to <strong>{lowestSubject}</strong> to build a more balanced cognitive profile.</>
-                      ) : chart.points.length > 0 ? (
-                        <>{diff >= 0 ? "Consistent upward trend this week!" : "Noticed a slight dip recently."} {strengths.join(" ")}</>
+                        risks && risks.length > 0 && risks[0] !== "No risk for now." ? (
+                          risks.join(" ")
+                        ) : (
+                          <>{cleanChildName} is maintaining good scores across all subjects.</>
+                        )
+                      ) : modalType === "weaknesses" ? (
+                        weaknesses && weaknesses.length > 0 && weaknesses[0] !== "No weakness for now." ? (
+                          weaknesses.join(" ")
+                        ) : (
+                          <>No weak subjects identified right now.</>
+                        )
+                      ) : modalType === "strengths" ? (
+                        strengths && strengths.length > 0 && strengths[0] !== "No strength for now." ? (
+                          strengths.join(" ")
+                        ) : (
+                          <>{cleanChildName} is showing good performance in active subjects.</>
+                        )
                       ) : (
                         <>No trend data available yet. Complete more quizzes to get personalized insights.</>
                       )}
                     </p>
                   </div>
-                );
-              })()}
-
-              {/* View Reports CTA */}
-              <button
-                onClick={() => { setModalType(null); navigate('/parent/reports'); }}
-                className="w-full flex items-center justify-center gap-2 bg-[#141779] text-white font-extrabold text-sm py-3.5 px-6 rounded-2xl hover:bg-[#1e23a0] active:scale-95 transition-all shadow-md shadow-[#141779]/25 shrink-0"
-              >
-                <span>📊</span>
-                <span>
-                  {modalType === "weaknesses" ? "Review Mistakes & Reports" : "View Subject Reports"}
-                </span>
-                <ChevronRight size={16} />
-              </button>
+                </>
+              )}
             </div>
+
+            {/* View Reports CTA */}
+            {hasEnoughData && (
+              <div className="p-5 pt-2 border-t border-slate-100 bg-white/50 shrink-0">
+                <button
+                  onClick={() => { setModalType(null); navigate('/parent/reports'); }}
+                  className="w-full flex items-center justify-center gap-2 bg-[#141779] text-white font-extrabold text-sm py-3 px-5 rounded-2xl hover:bg-[#1e23a0] active:scale-[0.98] transition-all shadow-md shadow-[#141779]/20"
+                >
+                  <span>📊</span>
+                  <span>
+                    {modalType === "weaknesses" ? "Review Mistakes & Reports" : "View Subject Reports"}
+                  </span>
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

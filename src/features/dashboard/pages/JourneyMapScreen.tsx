@@ -42,6 +42,8 @@ export default function JourneyMapScreen() {
     { name: "Galactic Core", emoji: "🌌", fallbackXp: 50000, reward: "Cosmic Dragon", rewardColor: "text-indigo-500" },
   ];
 
+  const [journeyData, setJourneyData] = useState<any>(null);
+
   useEffect(() => {
     const fetchJourney = async () => {
       // Fetch user data
@@ -57,7 +59,7 @@ export default function JourneyMapScreen() {
           const uData = await uRes.json();
           if (uData.success) {
             userFuel = uData.data.user.fuel !== undefined ? uData.data.user.fuel : 0;
-            userXp = uData.data.user.xp !== undefined ? uData.data.user.xp : 0; // Fixed default
+            userXp = uData.data.user.xp !== undefined ? uData.data.user.xp : 0;
             userCoins = uData.data.user.coins !== undefined ? uData.data.user.coins : 0;
             userName = uData.data.user.childName || uData.data.user.fullName || "Explorer";
             setChildPhoto(uData.data.user.childPhoto || "");
@@ -66,79 +68,23 @@ export default function JourneyMapScreen() {
         } catch (e) {}
       }
       
-      // Fallback
-      if (userXp === undefined || userXp === null || userName === "Explorer") {
-        const cached = localStorage.getItem("userData");
-        if (cached) {
-          try {
-            const u = JSON.parse(cached);
-            userFuel = u.fuel !== undefined ? u.fuel : 0;
-            userName = u.childName || u.fullName || u.name || "Explorer";
-            userXp = u.xp !== undefined ? u.xp : 0;
-            userCoins = u.coins !== undefined ? u.coins : 0;
-            setChildPhoto(u.childPhoto || "");
-            setUserLevel(u.level || 1);
-          } catch(e) {}
-        }
-      }
       setFuel(userFuel);
       setXp(userXp);
       setCoins(userCoins);
       setUsername(userName);
 
-      const xpThresholds = [0, 1000, 2500, 5000, 10000, 15000, 20000, 30000, 40000, 50000];
-
-      // Fetch cities
+      // Fetch 3-tier multi-year journey progress
       try {
-        const cRes = await apiFetch("/api/practice/cities");
-        const cData = await cRes.json();
-        if (cData.success && cData.data.length > 0) {
-          const mapped = cData.data.map((c: any, index: number) => {
-            const reqXp = xpThresholds[index] || 0;
-            return {
-              _id: c._id || c.id,
-              name: c.name,
-              landmark: c.landmark,
-              fact: c.fact,
-              badge: c.badge,
-              requiredXp: reqXp,
-              unlocked: userXp >= reqXp
-            };
-          });
-          setCities(mapped);
-        } else {
-          // Fallback to static if no cities from API
-          setCities(uiCities.map((c, index) => {
-            const reqXp = xpThresholds[index] || 0;
-            return {
-              name: c.name,
-              landmark: "", fact: "", badge: "",
-              requiredXp: reqXp,
-              unlocked: userXp >= reqXp
-            };
-          }));
+        const jRes = await apiFetch("/api/journey/progress");
+        if (jRes.ok) {
+          const jData = await jRes.json();
+          if (jData.success && jData.data) {
+            setJourneyData(jData.data);
+          }
         }
       } catch (e) {
-        console.error("Failed to fetch cities", e);
-        setCities(uiCities.map((c, index) => {
-          const reqXp = xpThresholds[index] || 0;
-          return {
-            name: c.name,
-            landmark: "", fact: "", badge: "",
-            requiredXp: reqXp,
-            unlocked: userXp >= reqXp
-          };
-        }));
+        console.error("Failed to fetch journey progress", e);
       }
-
-      // Fetch unread notifications
-      try {
-        const notifRes = await apiFetch("/api/notifications");
-        const notifData = await notifRes.json();
-        if (notifData.success && notifData.data) {
-          setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
-        }
-      } catch (e) {}
 
       setLoading(false);
     };
@@ -314,37 +260,43 @@ export default function JourneyMapScreen() {
               <ArrowLeft size={20} />
             </button>
             <div className="w-9 h-9 rounded-full bg-[#141779] text-white flex items-center justify-center font-black text-xs border-2 border-white shadow-xs">
-              {userLevel}
+              {journeyData?.classLevel || userLevel}
             </div>
             <div>
               <h1 className="text-sm font-black text-[#141779] uppercase tracking-wider leading-none">
-                Growth Journey
+                {journeyData?.tierTitle || "Growth Journey"}
               </h1>
               <p className="text-[10px] font-bold text-[#006a62] mt-0.5">
-                Explorer
+                {journeyData?.character || "Explorer"} {journeyData?.rank !== "None" ? `(${journeyData.rank})` : ""}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5">
             <div className="flex items-center gap-1 bg-teal-50 border border-teal-200 px-2.5 py-1 rounded-full text-[10px] font-black text-[#006a62]">
-              <span>🗺️ {cities.length > 0 ? Math.round((cities.filter(c => c.unlocked).length / cities.length) * 100) : 0}%</span>
+              <span>📚 {journeyData ? `${journeyData.completedChapters}/${journeyData.totalTierChapters}` : "0/0"} ({journeyData?.progressPercentage || 0}%)</span>
             </div>
             <div className="flex items-center gap-1 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full text-[10px] font-black text-[#141779]">
               <span>⭐ {xp} XP</span>
             </div>
-            <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full text-[10px] font-black text-amber-800">
-              <span>🪙 {coins}</span>
-            </div>
           </div>
         </header>
+
+        {/* Evolving Character Alert Banner */}
+        {journeyData?.isEvolved && (
+          <div className="bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950 px-4 py-2 text-center text-xs font-black uppercase tracking-wider shadow-md animate-pulse">
+            ✨ DRAGON EVOLVED INTO SCIENTIST! 🔬
+          </div>
+        )}
 
         {/* Growth Journey Roadmap View */}
         <main className="flex-1 w-full overflow-y-auto no-scrollbar relative">
           <MapWorld
-            themeKey="dragon"
+            themeKey={journeyData?.tierKey === "scientist" ? "science" : journeyData?.tierKey === "social_proof" ? "social" : "dragon"}
             xp={xp}
             userLevel={userLevel}
+            nodes={journeyData?.nodes}
+            progressPercentage={journeyData?.progressPercentage}
             onEnterStage={(stage) => {
               navigate('/practice/chapters');
             }}

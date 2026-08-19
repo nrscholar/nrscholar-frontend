@@ -299,6 +299,17 @@ export default function HomeScreen() {
         setCoins(json.coins);
         setStreakDays(json.current_streak);
         fetchProfile();
+        
+        // Re-fetch retention streak details so UI updates streakDaysOfWeek and currentStreak
+        try {
+          const stRes = await apiFetch("/api/retention/streak");
+          if (stRes.ok) {
+            const stData = await stRes.json();
+            setRetentionStreak(stData);
+          }
+        } catch (e) {}
+
+        setShowStreakModal(true);
       } else {
         setRevivalError(json.message || "You don't have enough coins to revive your streak!");
       }
@@ -316,9 +327,18 @@ export default function HomeScreen() {
     setShowRevivalModal(false);
     setStreakDays(0);
     fetchProfile();
+
+    try {
+      const stRes = await apiFetch("/api/retention/streak");
+      if (stRes.ok) {
+        const stData = await stRes.json();
+        setRetentionStreak(stData);
+      }
+    } catch (e) {}
   };
 
   const [citiesData, setCitiesData] = useState<any[]>([]);
+  const [journeyData, setJourneyData] = useState<any>(null);
 
   useEffect(() => {
     if (pendingSpinPopup && !surpriseData) {
@@ -336,6 +356,20 @@ export default function HomeScreen() {
         setUnreadCount(json.data.filter((n: any) => !n.isRead).length);
       }
     } catch (e) { }
+  };
+
+  const fetchJourneyData = async () => {
+    try {
+      const res = await apiFetch("/api/journey/progress");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          setJourneyData(json.data);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to fetch journey progress", e);
+    }
   };
 
 
@@ -456,6 +490,8 @@ export default function HomeScreen() {
         }
       })();
 
+      const journeyPromise = fetchJourneyData();
+
       await Promise.allSettled([
         profilePromise,
         missionsPromise,
@@ -463,7 +499,8 @@ export default function HomeScreen() {
         citiesPromise,
         surprisePromise,
         spinWheelPromise,
-        streakSequencePromise
+        streakSequencePromise,
+        journeyPromise
       ]);
     };
 
@@ -672,11 +709,12 @@ export default function HomeScreen() {
           const activeMission = missions.find(m => m.status !== 'claimed') || missions[0];
           return (
             <AdventureHero
-              themeKey={theme.type}
+              themeKey={journeyData?.tierKey === "scientist" ? "science" : journeyData?.tierKey === "social_proof" ? "social" : "dragon"}
               xp={xp}
               targetXp={targetXp}
-              currentCityName={currentCityName}
-              nextCityName={nextCityName}
+              currentLocationName={journeyData?.currentLocation || currentCityName}
+              destinationName={journeyData?.nextNodeName || nextCityName}
+              journeyData={journeyData}
               onCtaClick={() => navigate("/practice/journey-map")}
               onMissionClick={() => navigate("/practice/chapters")}
               missionTitle={activeMission?.title}
@@ -686,32 +724,39 @@ export default function HomeScreen() {
           );
         })()}
 
-        {/* 2. RECENT UNLOCK */}
+        {/* 2. RECENT UNLOCK / NEXT UNLOCK */}
         <div className="flex flex-col gap-2 relative z-10">
           <div className="flex justify-between items-center px-1">
-            <h2 className="text-[10px] font-black text-[#141779] tracking-widest uppercase">Recent Unlock</h2>
+            <h2 className="text-[10px] font-black text-[#141779] tracking-widest uppercase">
+              {journeyData?.completedChapters > 0 ? "Recent Unlock" : "Next Unlock"}
+            </h2>
             <span className="text-[9px] font-black bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 px-2 py-0.5 rounded-full border border-amber-300 shadow-xs uppercase tracking-wider animate-pulse">
-              ✨ JUST UNLOCKED
+              {journeyData?.completedChapters > 0 ? "✨ UNLOCKED" : "🎯 IN PROGRESS"}
             </span>
           </div>
-          <div className="bg-gradient-to-r from-amber-50/70 to-yellow-50/70 border-2 border-amber-100 rounded-[24px] p-4 flex items-center gap-4 shadow-sm relative overflow-hidden">
-            <div className="w-12 h-12 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center text-2xl shadow-inner animate-pulse shrink-0 select-none">
-              {theme.rewardIcon}
+          <div 
+            onClick={() => navigate("/practice/journey-map")}
+            className="bg-gradient-to-r from-amber-50/70 to-yellow-50/70 border-2 border-amber-100 rounded-[24px] p-4 flex items-center gap-4 shadow-sm relative overflow-hidden cursor-pointer hover:scale-[1.01] transition-transform"
+          >
+            <div className="w-12 h-12 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center text-2xl shadow-inner shrink-0 select-none">
+              {journeyData?.currentEmoji || "🐉"}
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-xs font-black text-amber-950 uppercase tracking-tight">{theme.rewardName}</h3>
+              <h3 className="text-xs font-black text-amber-950 uppercase tracking-tight">
+                {journeyData?.completedChapters > 0 ? journeyData.currentLocation : (journeyData?.nextNodeName || nextCityName)}
+              </h3>
               <div className="flex justify-between items-center text-[9px] font-black text-amber-700 mt-1 uppercase">
-                <span>Hatch Progress</span>
-                <span>{hatchPct}%</span>
+                <span>{journeyData ? `Next: ${journeyData.nextNodeName}` : "Unlock Progress"}</span>
+                <span>{journeyData?.progressPercentage || currentLegXpPercentage}%</span>
               </div>
               <div className="w-full h-2 bg-amber-200/50 rounded-full overflow-hidden p-0.5 border border-amber-200/40 mt-1">
                 <div 
-                  className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full" 
-                  style={{ width: `${hatchPct}%` }}
+                  className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all duration-500" 
+                  style={{ width: `${journeyData?.progressPercentage || currentLegXpPercentage}%` }}
                 />
               </div>
-              <p className="text-[9px] font-bold text-amber-800 mt-1.5">
-                🎯 {remainingQuests > 0 ? `${remainingQuests} Quests remaining to hatch!` : "Egg is fully hatched! Claim your reward!"}
+              <p className="text-[9px] font-bold text-amber-800 mt-1.5 truncate">
+                🎯 {journeyData ? (journeyData.chaptersNeededForNext > 0 ? `${journeyData.chaptersNeededForNext} chapter(s) remaining to unlock ${journeyData.nextNodeName}!` : "Stage Completed! All chapters clear!") : `${xpNeeded} XP needed to unlock ${nextCityName}!`}
               </p>
             </div>
           </div>
@@ -1237,8 +1282,7 @@ export default function HomeScreen() {
                 {/* Day of Week Row (Sun to Sat) */}
                 <div className="flex justify-between w-full px-1 gap-1">
                   {["S", "M", "T", "W", "T", "F", "S"].map((day, idx) => {
-                    const isToday = new Date().getDay() === idx;
-                    const isActive = retentionStreak?.streakDaysOfWeek?.[idx] || (isToday && (retentionStreak?.currentStreak ?? streakDays) > 0);
+                    const isActive = Boolean(retentionStreak?.streakDaysOfWeek?.[idx]);
                     
                     return (
                       <div key={idx} className="flex flex-col items-center gap-1 flex-1">
