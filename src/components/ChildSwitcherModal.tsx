@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Plus, Check, Sparkles, Copy, CheckCircle2, KeyRound } from "lucide-react";
+import { X, Plus, Check, Sparkles, Copy, CheckCircle2, KeyRound, ChevronDown } from "lucide-react";
 import { apiFetch } from "../api";
 
 interface ChildProfile {
@@ -34,6 +34,8 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
   const [newClass, setNewClass] = useState("Class 1");
   const [newAge, setNewAge] = useState(6);
   const [newBoard, setNewBoard] = useState("CBSE");
+  const [isClassOpen, setIsClassOpen] = useState(false);
+  const classes = ["Nursery", "KG", "Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"];
 
   if (!isOpen) return null;
 
@@ -59,7 +61,9 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
       if (json.success && json.data?.user) {
         localStorage.setItem("userToken", json.data.token);
         localStorage.setItem("userData", JSON.stringify(json.data.user));
+        const pin = sessionStorage.getItem("parentPinVerified");
         sessionStorage.clear();
+        if (pin) sessionStorage.setItem("parentPinVerified", pin);
         onUserUpdated(json.data.user);
         setShowLinkForm(false);
         setLinkCode("");
@@ -75,7 +79,7 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
     }
   };
 
-  const children: ChildProfile[] = user?.children || [
+  const rawChildren: ChildProfile[] = user?.children || [
     {
       childId: "child_1",
       childName: user?.childName || "Child 1",
@@ -85,6 +89,12 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
       childPhoto: user?.childPhoto || ""
     }
   ];
+  // Deduplicate by childId — last entry wins (backend may have migration duplicates)
+  const childMap = new Map<string, ChildProfile>();
+  for (const c of rawChildren) {
+    childMap.set(c.childId, c);
+  }
+  const children: ChildProfile[] = Array.from(childMap.values());
 
   const activeChildId = user?.activeChildId || children[0]?.childId || "child_1";
 
@@ -100,7 +110,9 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
       const json = await res.json();
       if (json.success && json.data?.user) {
         localStorage.setItem("userData", JSON.stringify(json.data.user));
+        const pin = sessionStorage.getItem("parentPinVerified");
         sessionStorage.clear(); // Clear cached subject/chapter progress for previous child
+        if (pin) sessionStorage.setItem("parentPinVerified", pin);
         onUserUpdated(json.data.user);
         onClose();
         if (onSwitched) onSwitched(); else window.location.reload();
@@ -130,7 +142,9 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
       const json = await res.json();
       if (json.success && json.data?.user) {
         localStorage.setItem("userData", JSON.stringify(json.data.user));
+        const pin = sessionStorage.getItem("parentPinVerified");
         sessionStorage.clear(); // Clear cached progress
+        if (pin) sessionStorage.setItem("parentPinVerified", pin);
         onUserUpdated(json.data.user);
         setShowAddForm(false);
         setNewName("");
@@ -322,19 +336,34 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
+                <div className="relative">
                   <label className="block text-xs font-extrabold text-[#141779] uppercase tracking-wider mb-1">Grade / Class</label>
-                  <select
-                    value={newClass}
-                    onChange={(e) => setNewClass(e.target.value)}
-                    className="w-full px-3 h-12 rounded-xl border border-gray-200 font-semibold text-sm focus:outline-none focus:border-[#141779] bg-white"
+                  <button
+                    type="button"
+                    onClick={() => setIsClassOpen(!isClassOpen)}
+                    className="w-full px-3 h-12 rounded-xl border border-gray-200 font-semibold text-sm focus:outline-none focus:border-[#141779] bg-white flex items-center justify-between text-left"
                   >
-                    <option value="Class 1">Class 1</option>
-                    <option value="Class 2">Class 2</option>
-                    <option value="Class 3">Class 3</option>
-                    <option value="Class 4">Class 4</option>
-                    <option value="Class 5">Class 5</option>
-                  </select>
+                    <span>{newClass}</span>
+                    <ChevronDown size={18} className="text-gray-400" />
+                  </button>
+                  {isClassOpen && (
+                    <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50">
+                      {classes.map((cls) => (
+                        <button
+                          key={cls}
+                          type="button"
+                          onClick={() => {
+                            setNewClass(cls);
+                            setIsClassOpen(false);
+                          }}
+                          className={`w-full px-4 py-2.5 text-left text-sm font-semibold hover:bg-indigo-50/60 transition-colors flex items-center justify-between ${newClass === cls ? 'text-indigo-600 bg-indigo-50/30' : 'text-gray-700'}`}
+                        >
+                          <span>{cls}</span>
+                          {newClass === cls && <Check size={14} className="text-indigo-600" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div>

@@ -265,11 +265,11 @@ export default function JourneyMapScreen() {
   else if (xp >= 1000) startXpOfStage = 1000;
 
   return (
-    <div className="bg-[#F7F9FB] text-slate-900 font-sans flex items-center justify-center min-h-screen">
-      <div className="relative w-full max-w-[430px] min-h-screen bg-[#F7F9FB] flex flex-col overflow-hidden shadow-2xl">
+    <div className="bg-[#F7F9FB] text-slate-900 font-sans flex items-center justify-center h-screen">
+      <div className="relative w-full max-w-[430px] h-screen bg-[#F7F9FB] flex flex-col overflow-hidden shadow-2xl">
         
         {/* Header */}
-        <header className="sticky top-0 w-full max-w-[430px] z-50 flex justify-between items-center px-4 py-3.5 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-xs">
+        <header className="shrink-0 w-full z-50 flex justify-between items-center px-4 py-3.5 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-xs">
           <div className="flex items-center gap-2.5">
             <button 
               onClick={() => navigate('/home')} 
@@ -302,7 +302,7 @@ export default function JourneyMapScreen() {
 
         {/* Evolving Character Alert Banner */}
         {journeyData?.isEvolved && (
-          <div className="bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950 px-4 py-2 text-center text-xs font-black uppercase tracking-wider shadow-md animate-pulse">
+          <div className="shrink-0 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950 px-4 py-2 text-center text-xs font-black uppercase tracking-wider shadow-md animate-pulse">
             ✨ DRAGON EVOLVED INTO SCIENTIST! 🔬
           </div>
         )}

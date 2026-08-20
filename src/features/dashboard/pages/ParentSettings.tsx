@@ -188,6 +188,10 @@ export default function ParentSettings() {
   const [child2Board, setChild2Board] = useState("");
   const [child2Photo, setChild2Photo] = useState("");
   const [child2Code, setChild2Code] = useState("");
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [childIdToDelete, setChildIdToDelete] = useState<string | null>(null);
+  const [regenConfirmOpen, setRegenConfirmOpen] = useState(false);
+  const [childIdToRegen, setChildIdToRegen] = useState<string | null>(null);
 
   const classes = ["Nursery", "KG", "Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"];
   const ages = ["4 Years", "5 Years", "6 Years", "7 Years", "8 Years", "9 Years", "10 Years", "11 Years", "12 Years", "13 Years", "14 Years", "15 Years"];
@@ -245,7 +249,7 @@ export default function ParentSettings() {
                 setChild1Photo(u.childPhoto || "");
               }
 
-              const k2 = kids.find((k: any) => k.childId === "child_2") || (kids.length > 1 ? kids[1] : null);
+              const k2 = kids.length > 1 ? (kids.find((k: any) => k.childId === "child_2") || kids[1]) : null;
               if (k2) {
                 setHasChild2(true);
                 setChild2Name(k2.childName || "");
@@ -298,6 +302,32 @@ export default function ParentSettings() {
         try {
           const u = JSON.parse(stored);
           setUser(u);
+          // Re-hydrate ALL child state vars so edit-form fields reflect the latest data
+          const kids = u.children || [];
+          const k1 = kids.find((k: any) => k.childId === "child_1") || kids[0];
+          if (k1) {
+            setChild1Name(k1.childName || "");
+            setChild1Class(k1.childClass || "");
+            const age1 = k1.childAge;
+            setChild1Age(age1 ? (typeof age1 === "string" && age1.includes("Years") ? age1 : `${age1} Years`) : "");
+            setChild1Board(k1.childBoard || "");
+            setChild1Photo(k1.childPhoto || "");
+            setChild1Code(k1.uniqueCode || "");
+          }
+          const k2 = kids.length > 1 ? (kids.find((k: any) => k.childId === "child_2") || kids[1]) : null;
+          if (k2) {
+            setHasChild2(true);
+            setChild2Name(k2.childName || "");
+            setChild2Class(k2.childClass || "");
+            setChild2Age(k2.childAge ? `${k2.childAge} Years` : "");
+            setChild2Board(k2.childBoard || "");
+            setChild2Photo(k2.childPhoto || "");
+            setChild2Code(k2.uniqueCode || "");
+          } else {
+            setHasChild2(false);
+            setChild2Name(""); setChild2Class(""); setChild2Age("");
+            setChild2Board(""); setChild2Photo(""); setChild2Code("");
+          }
         } catch(e) {}
       }
     };
@@ -398,13 +428,33 @@ export default function ParentSettings() {
         localStorage.setItem("userData", JSON.stringify(finalUser));
         setUser(finalUser);
         window.dispatchEvent(new Event("userDataUpdated"));
-        
-        // Refresh code values from backend response
+
+        // Fully refresh ALL child field states from the API response
         const kids = finalUser.children || [];
-        const k1 = kids.find((k: any) => k.childId === "child_1");
-        if (k1 && k1.uniqueCode) setChild1Code(k1.uniqueCode);
-        const k2 = kids.find((k: any) => k.childId === "child_2");
-        if (k2 && k2.uniqueCode) setChild2Code(k2.uniqueCode);
+        const k1 = kids.find((k: any) => k.childId === "child_1") || kids[0];
+        if (k1) {
+          setChild1Name(k1.childName || "");
+          setChild1Class(k1.childClass || "");
+          const a1 = k1.childAge;
+          setChild1Age(a1 ? (typeof a1 === "string" && a1.includes("Years") ? a1 : `${a1} Years`) : "");
+          setChild1Board(k1.childBoard || "");
+          setChild1Photo(k1.childPhoto || "");
+          setChild1Code(k1.uniqueCode || "");
+        }
+        const k2 = kids.length > 1 ? (kids.find((k: any) => k.childId === "child_2") || kids[1]) : null;
+        if (k2) {
+          setHasChild2(true);
+          setChild2Name(k2.childName || "");
+          setChild2Class(k2.childClass || "");
+          setChild2Age(k2.childAge ? `${k2.childAge} Years` : "");
+          setChild2Board(k2.childBoard || "");
+          setChild2Photo(k2.childPhoto || "");
+          setChild2Code(k2.uniqueCode || "");
+        } else {
+          setHasChild2(false);
+          setChild2Name(""); setChild2Class(""); setChild2Age("");
+          setChild2Board(""); setChild2Photo(""); setChild2Code("");
+        }
       }
 
       setToastMessage("All profiles updated successfully! 🎉");
@@ -489,10 +539,16 @@ export default function ParentSettings() {
     navigate("/login");
   };
 
-  const handleDeleteChild = async (childId: string) => {
-    if (!window.confirm("Are you sure you want to delete this child profile? All progress for this child will be lost.")) {
-      return;
-    }
+  const requestDeleteChild = (childId: string) => {
+    setChildIdToDelete(childId);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDeleteChild = async () => {
+    if (!childIdToDelete) return;
+    const childId = childIdToDelete;
+    setDeleteConfirmOpen(false);
+    setChildIdToDelete(null);
     try {
       const res = await apiFetch(`/api/users/children/${childId}`, {
         method: "DELETE"
@@ -500,10 +556,17 @@ export default function ParentSettings() {
       const json = await res.json();
       if (json.success && json.data?.user) {
         const u = json.data.user;
-        setUser(u);
+        // Write to localStorage FIRST before updating any state,
+        // so the handleUserDataUpdate listener sees the correct post-delete data.
         localStorage.setItem("userData", JSON.stringify(u));
-        
-        // Update states
+        setUser(u);
+
+        // Always clear child2 state first to avoid showing ghost data
+        setHasChild2(false);
+        setChild2Name(""); setChild2Class(""); setChild2Age("");
+        setChild2Board(""); setChild2Photo(""); setChild2Code("");
+
+        // Re-hydrate from fresh API response — never from stale pre-delete localStorage
         const kids = u.children || [];
         const k1 = kids.find((k: any) => k.childId === "child_1") || kids[0];
         if (k1) {
@@ -514,8 +577,7 @@ export default function ParentSettings() {
           setChild1Photo(k1.childPhoto || "");
           setChild1Code(k1.uniqueCode || "");
         }
-        
-        const k2 = kids.find((k: any) => k.childId === "child_2") || (kids.length > 1 ? kids[1] : null);
+        const k2 = kids.length > 1 ? kids.find((k: any) => k.childId === "child_2") : null;
         if (k2) {
           setHasChild2(true);
           setChild2Name(k2.childName || "");
@@ -524,16 +586,8 @@ export default function ParentSettings() {
           setChild2Board(k2.childBoard || "");
           setChild2Photo(k2.childPhoto || "");
           setChild2Code(k2.uniqueCode || "");
-        } else {
-          setHasChild2(false);
-          setChild2Name("");
-          setChild2Class("");
-          setChild2Age("");
-          setChild2Board("");
-          setChild2Photo("");
-          setChild2Code("");
         }
-        
+
         setToastMessage("Child profile deleted successfully! 🗑️");
         setTimeout(() => setToastMessage(null), 3000);
       } else {
@@ -551,7 +605,7 @@ export default function ParentSettings() {
     const kids = user?.children || [];
     const hasSavedChild2 = kids.some((k: any) => k.childId === "child_2");
     if (hasSavedChild2) {
-      handleDeleteChild("child_2");
+      requestDeleteChild("child_2");
     } else {
       setHasChild2(false);
       setChild2Name("");
@@ -560,6 +614,68 @@ export default function ParentSettings() {
       setChild2Board("");
       setChild2Photo("");
       setChild2Code("");
+    }
+  };
+
+  const requestRegenCode = (childId: string) => {
+    setChildIdToRegen(childId);
+    setRegenConfirmOpen(true);
+  };
+
+  const confirmRegenCode = async () => {
+    if (!childIdToRegen) return;
+    const childId = childIdToRegen;
+    setRegenConfirmOpen(false);
+    setChildIdToRegen(null);
+    try {
+      if (childId === "family") {
+        const res = await apiFetch("/api/users/family-link/update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({})
+        });
+        const json = await res.json();
+        if (json.success && json.familyCode) {
+          if (json.user) {
+            const updatedUser = { ...json.user, familyCode: json.familyCode };
+            localStorage.setItem("userData", JSON.stringify(updatedUser));
+            setUser(updatedUser);
+            window.dispatchEvent(new Event("userDataUpdated"));
+          }
+          setToastMessage("Family code regenerated successfully! 🔑");
+          setTimeout(() => setToastMessage(null), 3000);
+        } else {
+          setToastMessage(json.detail || json.message || "Failed to regenerate code.");
+          setTimeout(() => setToastMessage(null), 3000);
+        }
+      } else {
+        const res = await apiFetch("/api/users/child-code/update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ childId })
+        });
+        const json = await res.json();
+        if (json.success && json.uniqueCode) {
+          if (childId === "child_1") {
+            setChild1Code(json.uniqueCode);
+          } else {
+            setChild2Code(json.uniqueCode);
+          }
+          if (json.user) {
+            localStorage.setItem("userData", JSON.stringify(json.user));
+            setUser(json.user);
+            window.dispatchEvent(new Event("userDataUpdated"));
+          }
+          setToastMessage("Device code regenerated successfully! 🔑");
+          setTimeout(() => setToastMessage(null), 3000);
+        } else {
+          setToastMessage(json.detail || json.message || "Failed to regenerate code.");
+          setTimeout(() => setToastMessage(null), 3000);
+        }
+      }
+    } catch (e) {
+      setToastMessage("Error connecting to server.");
+      setTimeout(() => setToastMessage(null), 3000);
     }
   };
 
@@ -800,30 +916,7 @@ export default function ParentSettings() {
 
                 <button
                   title="Regenerate Code"
-                  onClick={async () => {
-                    if (window.confirm("Regenerate a new random Family Link Code?")) {
-                      try {
-                        const res = await apiFetch("/api/users/family-link/update", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({})
-                        });
-                        const json = await res.json();
-                        if (json.success && json.familyCode) {
-                          if (json.user) {
-                            const updatedUser = { ...json.user, familyCode: json.familyCode };
-                            localStorage.setItem("userData", JSON.stringify(updatedUser));
-                            setUser(updatedUser);
-                            window.dispatchEvent(new Event("userDataUpdated"));
-                          }
-                        } else {
-                          alert(json.detail || json.message || "Failed to regenerate code.");
-                        }
-                      } catch (e) {
-                        alert("Error connecting to server.");
-                      }
-                    }
-                  }}
+                  onClick={() => requestRegenCode("family")}
                   className="h-10 px-3 rounded-xl bg-slate-200/80 hover:bg-slate-200 text-slate-700 hover:text-[#141779] text-xs font-black active:scale-95 flex items-center justify-center gap-1.5 transition-all"
                 >
                   <RefreshCw size={14} />
@@ -896,7 +989,7 @@ export default function ParentSettings() {
               {hasChild2 && (
                 <button 
                   type="button" 
-                  onClick={() => handleDeleteChild("child_1")} 
+                  onClick={() => requestDeleteChild("child_1")} 
                   className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
                   title="Delete this child profile"
                 >
@@ -979,30 +1072,7 @@ export default function ParentSettings() {
                   </span>
                   <button
                     type="button"
-                    onClick={async () => {
-                      if (window.confirm("Regenerate a new random device code for this child?")) {
-                        try {
-                          const res = await apiFetch("/api/users/child-code/update", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ childId: "child_1" })
-                          });
-                          const json = await res.json();
-                          if (json.success && json.uniqueCode) {
-                            setChild1Code(json.uniqueCode);
-                            if (json.user) {
-                              localStorage.setItem("userData", JSON.stringify(json.user));
-                              setUser(json.user);
-                              window.dispatchEvent(new Event("userDataUpdated"));
-                            }
-                          } else {
-                            alert(json.detail || json.message || "Failed to regenerate code.");
-                          }
-                        } catch (e) {
-                          alert("Error connecting to server.");
-                        }
-                      }
-                    }}
+                    onClick={() => requestRegenCode("child_1")}
                     className="px-3 py-1.5 rounded-full text-xs font-black bg-indigo-50 text-[#141779] border border-indigo-100 hover:bg-indigo-100 transition-colors"
                   >
                     Regenerate
@@ -1101,30 +1171,7 @@ export default function ParentSettings() {
                     </span>
                     <button
                       type="button"
-                      onClick={async () => {
-                        if (window.confirm("Regenerate a new random device code for this child?")) {
-                          try {
-                            const res = await apiFetch("/api/users/child-code/update", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ childId: "child_2" })
-                            });
-                            const json = await res.json();
-                            if (json.success && json.uniqueCode) {
-                              setChild2Code(json.uniqueCode);
-                              if (json.user) {
-                                localStorage.setItem("userData", JSON.stringify(json.user));
-                                setUser(json.user);
-                                window.dispatchEvent(new Event("userDataUpdated"));
-                              }
-                            } else {
-                              alert(json.detail || json.message || "Failed to regenerate code.");
-                            }
-                          } catch (e) {
-                            alert("Error connecting to server.");
-                          }
-                        }
-                      }}
+                      onClick={() => requestRegenCode("child_2")}
                       className="px-3 py-1.5 rounded-full text-xs font-black bg-indigo-50 text-[#141779] border border-indigo-100 hover:bg-indigo-100 transition-colors"
                     >
                       Regenerate
@@ -1244,6 +1291,87 @@ export default function ParentSettings() {
             </button>
             <button 
               onClick={() => setShowLogoutModal(false)}
+              className="w-full py-3 bg-slate-100 text-slate-700 rounded-full font-black text-sm hover:bg-slate-200 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Custom Delete Confirmation Modal */}
+    {deleteConfirmOpen && (
+      <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-[100] flex items-center justify-center p-5 animate-in fade-in duration-200">
+        <div className="bg-white w-full max-w-sm rounded-[32px] p-6 shadow-2xl border border-slate-200 text-center flex flex-col items-center gap-4">
+          <div className="w-14 h-14 rounded-full bg-rose-50 flex items-center justify-center text-rose-600">
+            <Trash2 size={28} />
+          </div>
+          
+          <div>
+            <h3 className="text-lg font-black text-[#141779]">Delete Profile</h3>
+            <p className="text-xs font-bold text-slate-600 mt-2">
+              Are you sure you want to delete this child profile? All progress for this child will be lost.
+            </p>
+          </div>
+          
+          <div className="flex flex-col gap-3 w-full mt-2">
+            <button
+              type="button"
+              onClick={confirmDeleteChild}
+              className="w-full py-3 bg-rose-600 text-white rounded-full font-black text-sm shadow-md hover:bg-rose-700 transition-colors"
+            >
+              Yes, Delete
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setDeleteConfirmOpen(false);
+                setChildIdToDelete(null);
+              }}
+              className="w-full py-3 bg-slate-100 text-slate-700 rounded-full font-black text-sm hover:bg-slate-200 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Custom Regenerate Code Confirmation Modal */}
+    {regenConfirmOpen && (
+      <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-[100] flex items-center justify-center p-5 animate-in fade-in duration-200">
+        <div className="bg-white w-full max-w-sm rounded-[32px] p-6 shadow-2xl border border-slate-200 text-center flex flex-col items-center gap-4 font-sans">
+          <div className="w-14 h-14 rounded-full bg-indigo-50 flex items-center justify-center text-[#141779]">
+            <RefreshCw size={28} />
+          </div>
+          
+          <div>
+            <h3 className="text-lg font-black text-[#141779]">
+              {childIdToRegen === "family" ? "Regenerate Family Code" : "Regenerate Code"}
+            </h3>
+            <p className="text-xs font-bold text-slate-600 mt-2">
+              {childIdToRegen === "family"
+                ? "Are you sure you want to regenerate a new random Family Link Code? All co-parents using the old code will need to link again."
+                : "Are you sure you want to regenerate a new random device code for this child? The old code will stop working immediately."
+              }
+            </p>
+          </div>
+          
+          <div className="flex flex-col gap-3 w-full mt-2">
+            <button
+              type="button"
+              onClick={confirmRegenCode}
+              className="w-full py-3 bg-[#141779] text-white rounded-full font-black text-sm shadow-md hover:opacity-90 transition-opacity"
+            >
+              Yes, Regenerate
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setRegenConfirmOpen(false);
+                setChildIdToRegen(null);
+              }}
               className="w-full py-3 bg-slate-100 text-slate-700 rounded-full font-black text-sm hover:bg-slate-200 transition-colors"
             >
               Cancel

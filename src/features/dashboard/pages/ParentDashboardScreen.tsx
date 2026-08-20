@@ -282,7 +282,9 @@ export default function ParentDashboardScreen() {
                       const json = await res.json();
                       if (json.success && json.data?.user) {
                         localStorage.setItem("userData", JSON.stringify(json.data.user));
+                        const pin = sessionStorage.getItem("parentPinVerified");
                         sessionStorage.clear();
+                        if (pin) sessionStorage.setItem("parentPinVerified", pin);
                         setUserData(json.data.user);
                         setLoading(true);
                         setRefreshKey(k => k + 1);
