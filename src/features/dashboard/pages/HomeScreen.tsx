@@ -358,9 +358,22 @@ export default function HomeScreen() {
     } catch (e) { }
   };
 
-  const fetchJourneyData = async () => {
+  const fetchJourneyData = async (userDoc?: any) => {
     try {
-      const res = await apiFetch("/api/journey/progress");
+      const u = userDoc || userData;
+      let url = "/api/journey/progress";
+      if (u) {
+        const params = new URLSearchParams();
+        if (u.childClass) params.append("classLevel", u.childClass);
+        if (u.childBoard) params.append("board", u.childBoard);
+        if (u.activeChildId) params.append("child_id", u.activeChildId);
+        
+        const q = params.toString();
+        if (q) {
+          url += `?${q}`;
+        }
+      }
+      const res = await apiFetch(url);
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data) {
@@ -390,6 +403,7 @@ export default function HomeScreen() {
         setUserLevel(u.level || 1);
         setStreakDays(u.streakDays || 0);
         localStorage.setItem("userData", JSON.stringify(u));
+        fetchJourneyData(u);
       }
     } catch (e) {
       console.error("Failed to fetch profile");
@@ -409,6 +423,7 @@ export default function HomeScreen() {
         setChildPhoto(u.childPhoto || "");
         setUserLevel(u.level || 1);
         setStreakDays(u.streakDays || 0);
+        fetchJourneyData(u);
       } catch (e) { }
     }
 
@@ -1281,7 +1296,7 @@ export default function HomeScreen() {
 
                 {/* Day of Week Row (Sun to Sat) */}
                 <div className="flex justify-between w-full px-1 gap-1">
-                  {["S", "M", "T", "W", "T", "F", "S"].map((day, idx) => {
+                  {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day, idx) => {
                     const isActive = Boolean(retentionStreak?.streakDaysOfWeek?.[idx]);
                     
                     return (

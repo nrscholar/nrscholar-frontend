@@ -51,6 +51,9 @@ export default function JourneyMapScreen() {
       let userXp = 0;
       let userCoins = 0;
       let userName = "Explorer";
+      let activeChildClass = "";
+      let activeChildBoard = "";
+      let activeChildId = "";
 
       const token = localStorage.getItem("userToken");
       if (token) {
@@ -58,12 +61,16 @@ export default function JourneyMapScreen() {
           const uRes = await apiFetch("/api/users/me");
           const uData = await uRes.json();
           if (uData.success) {
-            userFuel = uData.data.user.fuel !== undefined ? uData.data.user.fuel : 0;
-            userXp = uData.data.user.xp !== undefined ? uData.data.user.xp : 0;
-            userCoins = uData.data.user.coins !== undefined ? uData.data.user.coins : 0;
-            userName = uData.data.user.childName || uData.data.user.fullName || "Explorer";
-            setChildPhoto(uData.data.user.childPhoto || "");
-            setUserLevel(uData.data.user.level || 1);
+            const u = uData.data.user;
+            userFuel = u.fuel !== undefined ? u.fuel : 0;
+            userXp = u.xp !== undefined ? u.xp : 0;
+            userCoins = u.coins !== undefined ? u.coins : 0;
+            userName = u.childName || u.fullName || "Explorer";
+            setChildPhoto(u.childPhoto || "");
+            setUserLevel(u.level || 1);
+            activeChildClass = u.childClass || "";
+            activeChildBoard = u.childBoard || "";
+            activeChildId = u.activeChildId || "";
           }
         } catch (e) {}
       }
@@ -75,7 +82,18 @@ export default function JourneyMapScreen() {
 
       // Fetch 3-tier multi-year journey progress
       try {
-        const jRes = await apiFetch("/api/journey/progress");
+        let url = "/api/journey/progress";
+        const params = new URLSearchParams();
+        if (activeChildClass) params.append("classLevel", activeChildClass);
+        if (activeChildBoard) params.append("board", activeChildBoard);
+        if (activeChildId) params.append("child_id", activeChildId);
+        
+        const q = params.toString();
+        if (q) {
+          url += `?${q}`;
+        }
+        
+        const jRes = await apiFetch(url);
         if (jRes.ok) {
           const jData = await jRes.json();
           if (jData.success && jData.data) {

@@ -194,69 +194,83 @@ export default function LoginScreen() {
         )}
 
         {/* LOGIN FORM */}
-        <form onSubmit={handleLogin} className="w-full max-w-[350px] flex flex-col gap-3.5 mb-6">
+        <form onSubmit={handleLogin} className="w-full max-w-[350px] flex flex-col gap-4 mb-6">
           {loginRole === "family_code" ? (
             <>
-              <div className="relative flex items-center">
-                <Users size={18} color="#767683" className="absolute left-4" />
-                <input
-                  type="text"
-                  placeholder="Family Code (e.g. FAM-8492)"
-                  value={familyCode}
-                  onChange={(e) => setFamilyCode(e.target.value.toUpperCase())}
-                  className="w-full h-13 bg-[#eceef0] rounded-2xl pl-11 pr-4 text-sm font-black tracking-wider uppercase text-[#141779] focus:outline-none focus:ring-2 focus:ring-[#141779] transition-shadow placeholder:font-medium placeholder:tracking-normal"
-                  required
-                />
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-bold text-slate-600 px-1 uppercase tracking-wider">Family Link Code</label>
+                <div className="relative flex items-center">
+                  <Users size={20} className="text-slate-400 absolute left-4 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="E.G. FAM-8492"
+                    value={familyCode}
+                    onChange={(e) => setFamilyCode(e.target.value.toUpperCase())}
+                    className="w-full h-14 bg-slate-50 rounded-2xl pl-12 pr-4 text-sm font-black tracking-wider uppercase text-[#141779] border border-slate-200/90 focus:outline-none focus:ring-2 focus:ring-[#141779]/20 focus:border-[#141779] focus:bg-white transition-all placeholder:font-medium placeholder:tracking-normal placeholder:text-slate-400"
+                    required
+                  />
+                </div>
               </div>
 
-              <div className="relative flex items-center">
-                <Lock size={18} color="#767683" className="absolute left-4" />
-                <input
-                  type="password"
-                  maxLength={4}
-                  placeholder="Parent 4-Digit PIN"
-                  value={parentPin}
-                  onChange={(e) => setParentPin(e.target.value)}
-                  className="w-full h-13 bg-[#eceef0] rounded-2xl pl-11 pr-4 text-sm font-black tracking-widest text-[#141779] focus:outline-none focus:ring-2 focus:ring-[#141779] transition-shadow placeholder:font-medium placeholder:tracking-normal"
-                  required
-                />
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-bold text-slate-600 px-1 uppercase tracking-wider">Parent 4-Digit PIN</label>
+                <div className="relative flex items-center">
+                  <Lock size={20} className="text-slate-400 absolute left-4 pointer-events-none" />
+                  <input
+                    type="password"
+                    maxLength={4}
+                    placeholder="Enter 4-Digit PIN"
+                    value={parentPin}
+                    onChange={(e) => setParentPin(e.target.value)}
+                    className="w-full h-14 bg-slate-50 rounded-2xl pl-12 pr-4 text-sm font-black tracking-widest text-[#141779] border border-slate-200/90 focus:outline-none focus:ring-2 focus:ring-[#141779]/20 focus:border-[#141779] focus:bg-white transition-all placeholder:font-medium placeholder:tracking-normal placeholder:text-slate-400"
+                    required
+                  />
+                </div>
               </div>
-              <p className="text-[11px] text-slate-500 font-semibold px-2">
-                Enter the 6-digit Family Link Code generated from Parent Settings on your main device.
+              <p className="text-[11px] text-slate-500 font-semibold px-1 leading-relaxed">
+                Enter the 6-character Family Link Code & PIN generated from Parent Settings on your primary device.
               </p>
             </>
           ) : (
             <>
-              <div className="relative flex items-center">
-                <Phone size={18} color="#767683" className="absolute left-4" />
-                <input
-                  type="tel"
-                  placeholder="Enter Mobile Number"
-                  value={mobile}
-                  onChange={(e) => setMobile(e.target.value)}
-                  className="w-full h-13 bg-[#eceef0] rounded-2xl pl-11 pr-4 text-sm font-bold text-[#191c1e] focus:outline-none focus:ring-2 focus:ring-[#141779] transition-shadow placeholder:text-[#767683]"
-                />
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-bold text-slate-600 px-1 uppercase tracking-wider">
+                  {loginRole === "parent" ? "Parent Mobile Number" : "Mobile Number"}
+                </label>
+                <div className="relative flex items-center">
+                  <Phone size={20} className="text-slate-400 absolute left-4 pointer-events-none" />
+                  <input
+                    type="tel"
+                    placeholder="Enter 10-digit mobile number"
+                    value={mobile}
+                    onChange={(e) => setMobile(e.target.value)}
+                    className="w-full h-14 bg-slate-50 rounded-2xl pl-12 pr-4 text-sm font-bold text-[#141779] border border-slate-200/90 focus:outline-none focus:ring-2 focus:ring-[#141779]/20 focus:border-[#141779] focus:bg-white transition-all placeholder:text-slate-400 placeholder:font-medium"
+                  />
+                </div>
               </div>
 
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-bold text-slate-600 px-1 uppercase tracking-wider">
+                  {loginRole === "parent" ? "Parent Password" : "Password"}
+                </label>
                 <div className="relative flex items-center">
-                  <Lock size={18} color="#767683" className="absolute left-4" />
+                  <Lock size={20} className="text-slate-400 absolute left-4 pointer-events-none" />
                   <input
                     type={showPassword ? "text" : "password"}
-                    placeholder="Enter Password"
+                    placeholder="Enter password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full h-13 bg-[#eceef0] rounded-2xl pl-11 pr-11 text-sm font-bold text-[#191c1e] focus:outline-none focus:ring-2 focus:ring-[#141779] transition-shadow placeholder:text-[#767683]"
+                    className="w-full h-14 bg-slate-50 rounded-2xl pl-12 pr-12 text-sm font-bold text-[#141779] border border-slate-200/90 focus:outline-none focus:ring-2 focus:ring-[#141779]/20 focus:border-[#141779] focus:bg-white transition-all placeholder:text-slate-400 placeholder:font-medium"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 p-1 hover:bg-gray-200 rounded-full transition-colors"
+                    className="absolute right-3.5 p-1.5 hover:bg-slate-200/80 rounded-full transition-colors"
                   >
-                    {showPassword ? <Eye size={18} color="#767683" /> : <EyeOff size={18} color="#767683" />}
+                    {showPassword ? <Eye size={18} className="text-slate-500" /> : <EyeOff size={18} className="text-slate-500" />}
                   </button>
                 </div>
-                <div className="flex justify-end px-2">
+                <div className="flex justify-end px-1 mt-0.5">
                   <button type="button" onClick={() => navigate("/forgot-password")} className="text-xs font-bold text-[#006a62] hover:underline">
                     Forgot Password?
                   </button>
@@ -264,16 +278,16 @@ export default function LoginScreen() {
               </div>
 
               {loginRole === "child" && (
-                <div className="mt-1 pt-3 border-t border-slate-200/80">
-                  <p className="text-[11px] font-bold text-slate-500 mb-2 px-1">Or log in with Unique Child Code:</p>
+                <div className="mt-1 pt-3.5 border-t border-slate-200/80 flex flex-col gap-1.5">
+                  <p className="text-[11px] font-bold text-slate-500 px-1">Or log in with Unique Child Code:</p>
                   <div className="relative flex items-center">
-                    <KeyRound size={18} color="#767683" className="absolute left-4" />
+                    <KeyRound size={20} className="text-slate-400 absolute left-4 pointer-events-none" />
                     <input
                       type="text"
                       placeholder="e.g. ARY3821"
                       value={childCode}
                       onChange={(e) => setChildCode(e.target.value.toUpperCase())}
-                      className="w-full h-12 bg-[#eceef0] rounded-2xl pl-11 pr-4 text-xs font-black tracking-wider uppercase text-[#141779] focus:outline-none focus:ring-2 focus:ring-[#141779] placeholder:font-normal placeholder:tracking-normal"
+                      className="w-full h-14 bg-slate-50 rounded-2xl pl-12 pr-4 text-sm font-black tracking-wider uppercase text-[#141779] border border-slate-200/90 focus:outline-none focus:ring-2 focus:ring-[#141779]/20 focus:border-[#141779] focus:bg-white transition-all placeholder:font-medium placeholder:tracking-normal placeholder:text-slate-400"
                     />
                   </div>
                 </div>

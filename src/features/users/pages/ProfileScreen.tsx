@@ -52,7 +52,10 @@ export default function ProfileScreen() {
     );
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await apiFetch("/api/users/logout", { method: "POST" });
+    } catch (e) {}
     clearAuthSession();
     navigate("/login");
   };
@@ -157,6 +160,22 @@ export default function ProfileScreen() {
             <ArrowLeft size={24} color="#767683" className="rotate-180" />
           </button>
 
+          {/* Logout Device Button */}
+          <button 
+            onClick={() => setShowLogoutModal(true)}
+            className="w-full flex items-center justify-between bg-red-50/80 rounded-2xl p-4 border border-red-200/80 shadow-xs hover:bg-red-100/80 transition-colors group mt-1"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <LogOut size={20} />
+              </div>
+              <div className="text-left">
+                <span className="text-base font-extrabold text-red-700 block">Logout Device</span>
+                <span className="text-xs font-semibold text-red-500/90 block">Sign out from this device</span>
+              </div>
+            </div>
+            <ArrowLeft size={20} className="text-red-400 group-hover:translate-x-0.5 transition-transform rotate-180" />
+          </button>
 
         </div>
 
@@ -190,22 +209,25 @@ export default function ProfileScreen() {
       {showLogoutModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-5">
           <div className="bg-white w-full max-w-sm rounded-[24px] p-6 shadow-2xl">
-            <h3 className="text-xl font-bold text-[#141779] text-center mb-2">{t('logout')}</h3>
-            <p className="text-sm text-[#464652] text-center mb-6">
-              {t('logout_confirm_message')}
+            <div className="w-14 h-14 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-3 border border-red-100">
+              <LogOut size={28} />
+            </div>
+            <h3 className="text-xl font-bold text-[#141779] text-center mb-1">Logout Device</h3>
+            <p className="text-xs text-[#464652] text-center mb-6 leading-relaxed">
+              Are you sure you want to log out from this device? You will need your PIN or login details to sign back in.
             </p>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2.5">
               <button 
                 onClick={handleLogout}
-                className="w-full py-3.5 bg-[#ba1a1a] text-white rounded-xl font-bold text-sm shadow-md hover:bg-red-700 transition-colors"
+                className="w-full py-3.5 bg-[#ba1a1a] text-white rounded-xl font-extrabold text-xs uppercase tracking-wider shadow-md hover:bg-red-700 active:scale-95 transition-all"
               >
-                {t('yes_logout')}
+                Yes, Logout Device
               </button>
               <button 
                 onClick={() => setShowLogoutModal(false)}
-                className="w-full py-3.5 bg-[#f0f2f5] text-[#141779] rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors"
+                className="w-full py-3.5 bg-[#f0f2f5] text-[#141779] rounded-xl font-bold text-xs hover:bg-gray-200 active:scale-95 transition-all"
               >
-                {t('cancel')}
+                Cancel
               </button>
             </div>
           </div>
