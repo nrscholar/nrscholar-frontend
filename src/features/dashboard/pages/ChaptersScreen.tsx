@@ -30,12 +30,12 @@ export default function ChaptersScreen() {
   const [questionsLoading, setQuestionsLoading] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [showSubModal, setShowSubModal] = useState(false);
-  
+
   const showToast = (message: string) => {
     setToastMessage(message);
     setTimeout(() => setToastMessage(null), 3000);
   };
-  
+
   useEffect(() => {
     const fetchSubjects = async () => {
       try {
@@ -46,7 +46,7 @@ export default function ChaptersScreen() {
             setChildName(u.childName || u.name || "Kid");
             setChildPhoto(u.childPhoto || u.photo || "");
             setIsSubscribed(Boolean(u.is_subscribed || u.isSubscribed));
-          } catch(e) {}
+          } catch (e) { }
         }
         const meRes = await apiFetch("/api/users/me");
         const meJson = await meRes.json();
@@ -55,7 +55,7 @@ export default function ChaptersScreen() {
           setChildPhoto(meJson.data.user.childPhoto || meJson.data.user.photo || "");
           setIsSubscribed(Boolean(meJson.data.user.is_subscribed || meJson.data.user.isSubscribed));
         }
-      } catch (e) {}
+      } catch (e) { }
 
       try {
         const notifRes = await apiFetch("/api/notifications");
@@ -63,24 +63,24 @@ export default function ChaptersScreen() {
         if (notifData.success && notifData.data) {
           setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
         }
-      } catch (e) {}
+      } catch (e) { }
 
       try {
         const [subRes, controlsRes] = await Promise.all([
           apiFetch("/api/practice/subjects"),
           apiFetch("/api/parent/controls")
         ]);
-        
+
         let subData: any = { success: false, data: [] };
         try {
           if (subRes.ok) subData = await subRes.json();
-        } catch (e) {}
+        } catch (e) { }
 
         let controlsData: any = { success: false };
         try {
           if (controlsRes.ok) controlsData = await controlsRes.json();
-        } catch (e) {}
-        
+        } catch (e) { }
+
         let restricted: Record<string, boolean> = {};
         if (controlsData?.success && controlsData.data?.parentControls?.restrictedSubjects) {
           restricted = controlsData.data.parentControls.restrictedSubjects;
@@ -88,7 +88,7 @@ export default function ChaptersScreen() {
 
         if (subData?.success && Array.isArray(subData.data) && subData.data.length > 0) {
           const allowedSubjects = subData.data.filter((s: any) => !restricted[s.name]);
-          
+
           if (allowedSubjects.length > 0) {
             setSubjects(allowedSubjects);
             const savedSubjectId = sessionStorage.getItem("activeSubjectId");
@@ -117,7 +117,7 @@ export default function ChaptersScreen() {
 
   useEffect(() => {
     if (!activeSubject) return;
-    
+
     const fetchChapters = async () => {
       setLoading(true);
       try {
@@ -125,23 +125,23 @@ export default function ChaptersScreen() {
           apiFetch(`/api/practice/chapters/${activeSubject._id}`),
           apiFetch(`/api/practice/chapter-progress`)
         ]);
-        
+
         let chData: any = { success: false, data: [] };
         try {
           if (chRes.ok) chData = await chRes.json();
-        } catch (e) {}
+        } catch (e) { }
 
         let pData: any = { success: false, data: [] };
         try {
           if (pRes.ok) pData = await pRes.json();
-        } catch (e) {}
+        } catch (e) { }
 
         if (chData?.success && Array.isArray(chData.data)) {
           setChapters(chData.data);
         } else {
           setChapters([]);
         }
-        
+
         if (pData?.success && Array.isArray(pData.data)) {
           const progMap: Record<string, any> = {};
           pData.data.forEach((p: any) => {
@@ -149,7 +149,7 @@ export default function ChaptersScreen() {
             progMap[p.chapterId] = p;
           });
           setChapterProgressMap(progMap);
-          
+
           const completedIds = pData.data
             .filter((p: any) => p.chapterCompleted || p.completed)
             .map((p: any) => p.chapterId);
@@ -167,7 +167,7 @@ export default function ChaptersScreen() {
   const totalChapters = chapters.length;
   const isChapterCompleted = (chapterId: string) => completedChapters.includes(chapterId) || completedChapters.includes(`${chapterId}_hard`);
   const completedChaptersCount = chapters.filter(ch => isChapterCompleted(ch._id)).length;
-  
+
   let totalCompletedMissionsCount = 0;
   chapters.forEach(ch => {
     const prog = chapterProgressMap[ch._id] || {};
@@ -183,7 +183,7 @@ export default function ChaptersScreen() {
   const missionProgressPercent = (totalCompletedMissionsCount / totalMissions) * 100;
   const chapterProgressPercent = totalChapters > 0 ? (completedChaptersCount / totalChapters) * 100 : 0;
   const progressPercent = Math.max(missionProgressPercent, chapterProgressPercent);
-  
+
   const currentChapterIndex = chapters.findIndex(ch => !isChapterCompleted(ch._id));
 
   const handleToggleChapter = async (index: number, chapterId: string, chapterName: string) => {
@@ -212,19 +212,19 @@ export default function ChaptersScreen() {
             <button onClick={() => navigate("/home")} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors shrink-0">
               <ArrowLeft size={24} color="#141779" />
             </button>
-            <button 
-              onClick={() => navigate("/profile")} 
+            <button
+              onClick={() => navigate("/profile")}
               className="w-10 h-10 rounded-full border-2 border-white bg-[#2d328f] overflow-hidden hover:opacity-80 transition-opacity shrink-0"
             >
               {childPhoto ? (
-                <img 
-                  src={childPhoto} 
+                <img
+                  src={childPhoto}
                   alt="Avatar"
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <img 
-                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(childName || "Kid")}&background=random`} 
+                <img
+                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(childName || "Kid")}&background=random`}
                   alt="Avatar"
                   className="w-full h-full object-cover"
                 />
@@ -234,7 +234,7 @@ export default function ChaptersScreen() {
           </div>
 
           {/* Right Side: Bell Icon */}
-          <button 
+          <button
             onClick={() => navigate("/notifications")}
             className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all shrink-0"
           >
@@ -248,7 +248,7 @@ export default function ChaptersScreen() {
             </div>
           </button>
         </div>
-        
+
         {/* Subject Selector Tabs */}
         {subjects.length > 0 && (
           <div className="flex overflow-x-auto hide-scrollbar px-6 pb-3 gap-3">
@@ -346,9 +346,9 @@ export default function ChaptersScreen() {
                   const isCurrent = !isCompleted && index === currentChapterIndex;
                   const status = isCompleted ? "completed" : isCurrent ? "current" : "locked";
                   const IconComponent = chapterIcons[index % chapterIcons.length];
-                  
+
                   const isExpanded = expandedChapter === chap._id;
-                  
+
                   // Question accordion render function for completed chapter
                   const renderQuestions = () => (
                     isExpanded && (
@@ -393,50 +393,58 @@ export default function ChaptersScreen() {
 
                   if (status === "current") {
                     return (
-                      <div key={chap._id} className={`flex flex-col relative ${isSubLocked ? 'bg-amber-50/70 border-amber-300' : 'bg-[rgba(87,250,233,0.3)] border-[rgba(0,106,98,0.3)]'} rounded-2xl p-4 border-2 overflow-hidden shadow-[0_4px_10px_rgba(0,0,0,0.1)] transition-all ${isExpanded ? 'ring-2 ring-[#006a62]' : 'hover:opacity-95'}`}>
+                      <div key={chap._id} className={`flex flex-col relative ${isSubLocked ? 'bg-amber-50/70 border-amber-300 shadow-[0_4px_10px_rgba(245,158,11,0.15)]' : 'bg-[rgba(87,250,233,0.3)] border-[rgba(0,106,98,0.3)]'} rounded-2xl p-4 border-2 overflow-hidden shadow-[0_4px_10px_rgba(0,0,0,0.1)] transition-all ${isExpanded ? 'ring-2 ring-[#006a62]' : 'hover:opacity-95'}`}>
                         {!isExpanded && (
-                            <motion.div
+                          <motion.div
                             animate={{ scale: [1, 1.05, 1] }}
                             transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-                            className="absolute -top-8 -right-8 w-24 h-24 rounded-full bg-[rgba(0,106,98,0.05)] pointer-events-none"
-                            />
+                            className={`absolute -top-8 -right-8 w-24 h-24 rounded-full ${isSubLocked ? 'bg-amber-400/10' : 'bg-[rgba(0,106,98,0.05)]'} pointer-events-none`}
+                          />
                         )}
                         <div onClick={() => handleToggleChapter(index, chap._id, `${index + 1}. ${chap.name}`)} className="flex items-center gap-4 cursor-pointer relative z-10 w-full">
-                            <div className={`w-12 h-12 rounded-full ${isSubLocked ? 'bg-amber-500 text-slate-950' : 'bg-[#006a62] text-white'} flex items-center justify-center shrink-0 shadow-[0_4px_8px_rgba(0,0,0,0.3)]`}>
-                              {isSubLocked ? <Lock size={24} /> : <IconComponent size={24} color="white" />}
-                            </div>
-                            <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <p className="text-xs font-bold text-[#006a62] tracking-[1px] mb-0.5 uppercase">{t('chapter')} {index + 1}</p>
+                          <div className={`w-12 h-12 rounded-full ${isSubLocked ? 'bg-amber-100 text-amber-700 border border-amber-300' : 'bg-[#006a62] text-white'} flex items-center justify-center shrink-0 shadow-[0_4px_8px_rgba(0,0,0,0.15)]`}>
+                            {isSubLocked ? <Lock size={20} className="text-amber-700 animate-pulse" /> : <IconComponent size={24} color="white" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1">
+                              <p className={`text-xs font-bold ${isSubLocked ? 'text-amber-800' : 'text-[#006a62]'} tracking-[1px] uppercase`}>{t('chapter')} {index + 1}</p>
                               {isSubLocked && (
-                                <span className="text-[9px] font-black uppercase bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full border border-amber-300">
-                                  PREMIUM
+                                <span className="text-[9px] font-black uppercase bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 shrink-0">
+                                  PREMIUM 🔒
                                 </span>
                               )}
                             </div>
-                            <h3 className="text-lg font-bold text-[#141779]">{chap.name}</h3>
-                            </div>
-                            {!isExpanded && (
-                                <button onClick={(e) => { e.stopPropagation(); handleToggleChapter(index, chap._id, `${index + 1}. ${chap.name}`); }} className={`${isSubLocked ? 'bg-amber-500' : 'bg-[#141779]'} px-6 py-2 rounded-full hover:opacity-90 transition-opacity`}>
-                                <span className="text-white text-sm font-semibold">{isSubLocked ? 'Unlock 🔒' : t('start')}</span>
-                                </button>
-                            )}
+                            <h3 className="text-lg font-bold text-[#141779] leading-tight">{chap.name}</h3>
+                          </div>
+                          {!isExpanded && (
+                            <button onClick={(e) => { e.stopPropagation(); handleToggleChapter(index, chap._id, `${index + 1}. ${chap.name}`); }} className={`${isSubLocked ? 'bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-amber-950 shadow-md shadow-amber-500/20 active:scale-95' : 'bg-[#141779] text-white hover:opacity-90 active:scale-95'} px-3 py-1.5 md:px-5 md:py-2 rounded-full transition-all shrink-0 flex items-center justify-center gap-1 ml-1`}>
+                              <span className="text-xs md:text-sm font-extrabold">{isSubLocked ? 'Unlock' : t('start')}</span>
+                              {isSubLocked && <Lock size={12} className="text-amber-900 md:w-[14px] md:h-[14px]" />}
+                            </button>
+                          )}
                         </div>
                       </div>
                     );
                   }
 
                   return (
-                    <div key={chap._id} className={`flex flex-col bg-[#f2f4f6] opacity-60 rounded-2xl p-4 border border-[rgba(118,118,131,0.1)] transition-all`}>
-                      <button onClick={() => { if(isSubLocked) { setShowSubModal(true); } else if(!isExpanded) showToast(t('complete_chapter_to_unlock', { chapter: currentChapterIndex + 1 })); }} className="flex items-center gap-4 text-left w-full cursor-pointer">
-                          <div className="w-12 h-12 rounded-full bg-[rgba(118,118,131,0.1)] flex items-center justify-center shrink-0">
-                            <IconComponent size={24} color="#767683" />
+                    <div key={chap._id} className={`flex flex-col ${isSubLocked ? 'bg-amber-50/20 border-amber-200/50 opacity-75' : 'bg-[#f2f4f6] border-[rgba(118,118,131,0.1)] opacity-60'} rounded-2xl p-4 border transition-all`}>
+                      <button onClick={() => { if (isSubLocked) { setShowSubModal(true); } else if (!isExpanded) showToast(t('complete_chapter_to_unlock', { chapter: currentChapterIndex + 1 })); }} className="flex items-center gap-4 text-left w-full cursor-pointer">
+                        <div className={`w-12 h-12 rounded-full ${isSubLocked ? 'bg-amber-100/60 border border-amber-200/40 text-amber-700' : 'bg-[rgba(118,118,131,0.1)] text-[#767683]'} flex items-center justify-center shrink-0`}>
+                          <IconComponent size={24} className={isSubLocked ? 'text-amber-600' : 'text-[#767683]'} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1">
+                            <p className={`text-xs font-bold ${isSubLocked ? 'text-amber-700' : 'text-[#767683]'} tracking-[1px] uppercase`}>{t('chapter')} {index + 1}</p>
+                            {isSubLocked && (
+                              <span className="text-[9px] font-black uppercase bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 shrink-0">
+                                PREMIUM 🔒
+                              </span>
+                            )}
                           </div>
-                          <div className="flex-1">
-                            <p className="text-xs font-bold text-[#767683] tracking-[1px] mb-0.5 uppercase">{t('chapter')} {index + 1}</p>
-                            <h3 className="text-lg font-medium text-[#464652]">{chap.name}</h3>
-                          </div>
-                          <Lock size={24} color="#767683" />
+                          <h3 className={`text-lg font-medium ${isSubLocked ? 'text-[#141779]' : 'text-[#464652]'}`}>{chap.name}</h3>
+                        </div>
+                        <Lock size={24} className={isSubLocked ? 'text-amber-600' : 'text-[#767683]'} />
                       </button>
                     </div>
                   );
