@@ -42,10 +42,45 @@ export default function MultiplayerBattleScreen() {
   const [userAnswers, setUserAnswers] = useState<any[]>([]);
 
   const gameStateRef = useRef({ isFinished, opponentQuit, roomId });
+  const socketRef = useRef<WebSocket | null>(null);
   
   useEffect(() => {
     gameStateRef.current = { isFinished, opponentQuit, roomId };
   }, [isFinished, opponentQuit, roomId]);
+
+  useEffect(() => {
+    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const backendHost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+      ? "127.0.0.1:5000"
+      : window.location.host;
+    const wsUrl = `${wsProtocol}//${backendHost}/api/multiplayer/room/${roomId}/ws`;
+
+    const socket = new WebSocket(wsUrl);
+
+    socket.onopen = () => {
+      console.log("WebSocket connected to Shadow Arena room:", roomId);
+    };
+
+    socket.onmessage = (event) => {
+      console.log("WebSocket message received:", event.data);
+      if (event.data.includes("opponent_quit")) {
+        setOpponentQuit(true);
+      } else if (event.data.includes("progress_updated") || event.data.includes("Update:")) {
+        // Fetch the updated room status immediately to sync scores and progress
+        fetchRoomStatus();
+      }
+    };
+
+    socket.onclose = () => {
+      console.log("WebSocket disconnected");
+    };
+
+    socketRef.current = socket;
+
+    return () => {
+      socket.close();
+    };
+  }, [roomId]);
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -106,15 +141,23 @@ export default function MultiplayerBattleScreen() {
   const isOppWinning = oppScore > myScore;
 
   useEffect(() => {
+    let attempts = 0;
     const loadQuestions = async () => {
       try {
         const res = await apiFetch(`/api/multiplayer/room/${roomId}/questions`);
         const data = await res.json();
         if (data.success && data.data && data.data.length > 0) {
           setQuestions(data.data);
+        } else if (attempts < 5) {
+          attempts++;
+          setTimeout(loadQuestions, 1000);
         }
       } catch (e) {
         console.error("Failed to load questions:", e);
+        if (attempts < 5) {
+          attempts++;
+          setTimeout(loadQuestions, 1000);
+        }
       }
     };
     loadQuestions();
@@ -170,11 +213,16 @@ export default function MultiplayerBattleScreen() {
       });
       // Force an immediate fetch to sync state
       fetchRoomStatus();
+
+      // Notify opponent via WebSocket
+      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+        socketRef.current.send("progress_updated");
+      }
     } catch (e) {}
   };
 
   const handleAnswer = (selectedIndex: number) => {
-    if (isFinished || selectedOption !== null) return;
+    if (isFinished || opponentQuit || selectedOption !== null) return;
     
     setSelectedOption(selectedIndex);
     const timeTaken = 15 - timeLeft; // calculate time taken
@@ -223,7 +271,7 @@ export default function MultiplayerBattleScreen() {
 
   // Timer logic
   useEffect(() => {
-    if (isFinished || countdown !== null) return;
+    if (isFinished || opponentQuit || countdown !== null) return;
     const t = setInterval(() => {
       if (selectedOption !== null && !isAdvancing) {
         setWaitTimer(prev => prev + 1);
@@ -242,7 +290,7 @@ export default function MultiplayerBattleScreen() {
       });
     }, 1000);
     return () => clearInterval(t);
-  }, [currentQ, isFinished, selectedOption, isAdvancing, countdown]);
+  }, [currentQ, isFinished, opponentQuit, selectedOption, isAdvancing, countdown]);
 
   // Synchronous Advancement logic
   useEffect(() => {
@@ -342,19 +390,23 @@ export default function MultiplayerBattleScreen() {
     return () => { mounted = false; };
   }, [isFinished, winnerId, myId, userAnswers]);
 
-  if (!room || questions.length === 0) return <div className="min-h-screen bg-[#1d0052] flex items-center justify-center"><div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin"/></div>;
+  if (!room || !myId || questions.length === 0) return (
+    <div className="min-h-screen bg-[#f4efff] flex items-center justify-center">
+      <div className="w-12 h-12 border-4 border-[#141779] border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
 
   if (countdown !== null) {
     return (
-      <div className="min-h-screen bg-[#141779] flex flex-col items-center justify-center text-white relative">
+      <div className="min-h-screen bg-[#f4efff] flex flex-col items-center justify-center text-[#141779] relative">
         {/* Background Decor */}
-        <div className="absolute top-[10%] left-[10%] w-64 h-64 bg-[#30007f] rounded-full blur-[80px] opacity-60"></div>
-        <div className="absolute bottom-[20%] right-[10%] w-64 h-64 bg-[#57fae9] rounded-full blur-[100px] opacity-20"></div>
+        <div className="absolute top-[10%] left-[10%] w-64 h-64 bg-[#e8ddff] rounded-full blur-[80px] opacity-60"></div>
+        <div className="absolute bottom-[20%] right-[10%] w-64 h-64 bg-[#ffd700] rounded-full blur-[100px] opacity-10"></div>
         
         <div className="relative z-10 flex flex-col items-center gap-6">
           <div className="text-[60px] animate-bounce">⚔️</div>
-          <h2 className="text-2xl font-black uppercase tracking-widest text-[#57fae9]">Battle Starts In</h2>
-          <div className="text-8xl font-black text-[#ff9f43] drop-shadow-[0_0_20px_rgba(255,159,67,0.8)] scale-110 transition-transform duration-200">
+          <h2 className="text-2xl font-black uppercase tracking-widest text-[#141779]">Battle Starts In</h2>
+          <div className="text-8xl font-black text-[#ff9f43] drop-shadow-md scale-110 transition-transform duration-200">
             {countdown}
           </div>
         </div>
@@ -363,18 +415,18 @@ export default function MultiplayerBattleScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-[#141779] font-sans flex flex-col relative overflow-hidden text-white">
-      {/* Background FX */}
-      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-[2px] bg-white/10 blur-[2px]"></div>
+    <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col relative overflow-hidden text-[#141779]">
+      {/* Background Decor */}
+      <div className="absolute top-[10%] left-[10%] w-64 h-64 bg-[#e8ddff] rounded-full blur-[80px] opacity-60"></div>
+      <div className="absolute bottom-[20%] right-[10%] w-64 h-64 bg-[#ffd700] rounded-full blur-[100px] opacity-10"></div>
 
       {/* VS Header with Progress Bars */}
-      <header className="px-4 py-4 relative z-10 bg-[#0b0d4d]/80 backdrop-blur-md shadow-lg border-b border-white/10">
+      <header className="px-4 py-4 relative z-10 bg-white shadow-md border-b border-[#e0e0e0]">
         <div className="flex justify-between items-center mb-4">
-          <button onClick={() => setShowQuitModal(true)} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors">
-             <X size={20} color="white" />
+          <button onClick={() => setShowQuitModal(true)} className="p-2 bg-[#f4efff] rounded-full hover:bg-[#e8ddff] border border-[#e0e0e0] transition-colors">
+             <X size={20} color="#141779" />
           </button>
-          <span className="text-white/50 text-xs font-bold uppercase tracking-widest">Live Battle</span>
+          <span className="text-[#767683] text-xs font-bold uppercase tracking-widest">Live Battle</span>
           <div className="w-9" />
         </div>
         <div className="flex items-center justify-between gap-4">
@@ -382,43 +434,43 @@ export default function MultiplayerBattleScreen() {
           {/* MY SIDE */}
           <div className="flex-1 flex flex-col items-start gap-2">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full border-2 border-[#57fae9] overflow-hidden bg-white">
+              <div className="w-12 h-12 rounded-full border-2 border-[#141779] overflow-hidden bg-white shadow-sm">
                 <img src={myAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${myName || 'Me'}`} className="w-full h-full object-cover" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <p className="font-black text-[#57fae9] text-lg uppercase tracking-wide">{myName || "You"}</p>
-                  {amIWinning && <Trophy size={16} color="#ffd700" className="animate-pulse" />}
+                  <p className="font-black text-[#141779] text-base uppercase tracking-wide truncate max-w-[80px]">{myName || "You"}</p>
+                  {amIWinning && <Trophy size={16} color="#ff9f43" className="animate-pulse" />}
                 </div>
-                <p className="text-sm font-bold text-white">{myScore} PTS</p>
+                <p className="text-xs font-bold text-[#767683]">{myScore} PTS</p>
               </div>
             </div>
             {/* Health/Progress Bar */}
-            <div className="w-full h-3 bg-white/10 rounded-full overflow-hidden border border-white/20">
-              <div className="h-full bg-gradient-to-r from-[#57fae9] to-[#006a62] transition-all duration-300" style={{ width: `${myProgress}%` }} />
+            <div className="w-full h-3 bg-[#e8ddff] rounded-full overflow-hidden border border-[#d0d0d0]">
+              <div className="h-full bg-gradient-to-r from-[#006a62] to-[#57fae9] transition-all duration-300" style={{ width: `${myProgress}%` }} />
             </div>
           </div>
 
           <div className="shrink-0 flex flex-col items-center justify-center">
-             <span className="text-3xl font-black italic text-[#ff9f43] drop-shadow-[0_0_10px_rgba(255,159,67,0.8)]">VS</span>
+             <span className="text-2xl font-black italic text-[#ff9f43]">VS</span>
           </div>
 
           {/* OPPONENT SIDE */}
           <div className="flex-1 flex flex-col items-end gap-2">
             <div className="flex items-center gap-3 flex-row-reverse">
-              <div className="w-12 h-12 rounded-full border-2 border-[#ff9f43] overflow-hidden bg-white">
+              <div className="w-12 h-12 rounded-full border-2 border-[#ff9f43] overflow-hidden bg-white shadow-sm">
                 <img src={oppAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${oppName || 'Opp'}`} className="w-full h-full object-cover" />
               </div>
               <div className="text-right">
                 <div className="flex items-center gap-2 justify-end">
                   {isOppWinning && <Trophy size={16} color="#ffd700" className="animate-pulse" />}
-                  <p className="font-black text-[#ff9f43] text-lg uppercase tracking-wide">{oppName || "Opponent"}</p>
+                  <p className="font-black text-[#141779] text-base uppercase tracking-wide truncate max-w-[80px]">{oppName || "Opponent"}</p>
                 </div>
-                <p className="text-sm font-bold text-white">{oppScore} PTS</p>
+                <p className="text-xs font-bold text-[#767683]">{oppScore} PTS</p>
               </div>
             </div>
             {/* Health/Progress Bar */}
-            <div className="w-full h-3 bg-white/10 rounded-full overflow-hidden border border-white/20 flex justify-end">
+            <div className="w-full h-3 bg-[#e8ddff] rounded-full overflow-hidden border border-[#d0d0d0] flex justify-end">
               <div className="h-full bg-gradient-to-l from-[#ff9f43] to-[#d17e30] transition-all duration-300" style={{ width: `${oppProgress}%` }} />
             </div>
           </div>
@@ -432,12 +484,12 @@ export default function MultiplayerBattleScreen() {
           <div className="flex-1 flex flex-col">
             <div className="mb-8 relative">
                <div className="flex justify-between items-center mb-2">
-                 <span className="text-[#57fae9] font-bold text-sm tracking-widest uppercase">Question {currentQ + 1}/{questions.length}</span>
-                 <span className={`font-black text-xl px-3 py-1 rounded-full ${timeLeft <= 5 ? 'bg-red-500 animate-pulse' : 'bg-white/20'}`}>
+                 <span className="text-[#141779] font-bold text-sm tracking-widest uppercase">Question {currentQ + 1}/{questions.length}</span>
+                 <span className={`font-black text-sm px-3 py-1 rounded-full border border-[#d0d0d0] ${timeLeft <= 5 ? 'bg-red-100 text-red-700 animate-pulse border-red-300' : 'bg-white text-[#141779]'}`}>
                    ⏳ {timeLeft}s
                  </span>
                </div>
-               <h2 className="text-3xl font-black mt-2 leading-tight drop-shadow-md">
+               <h2 className="text-3xl font-black mt-2 leading-tight text-[#141779] drop-shadow-sm">
                  {questions[currentQ]?.q || ""}
                </h2>
             </div>
@@ -447,14 +499,14 @@ export default function MultiplayerBattleScreen() {
                 const isSelected = selectedOption === idx;
                 const isCorrect = idx === questions[currentQ]?.a;
                 
-                let btnStyle = "bg-white/10 hover:bg-white/20 border-white/20";
+                let btnStyle = "bg-white hover:bg-[#f4efff] border-[#e0e0e0] text-[#141779]";
                 if (selectedOption !== null) {
                    if (isSelected) {
-                      btnStyle = isCorrect ? "bg-[#006a62] border-[#57fae9]" : "bg-[#ba1a1a] border-[#ffb4ab]";
+                      btnStyle = isCorrect ? "bg-[#e0f2f1] border-[#006a62] text-[#006a62]" : "bg-[#ffebee] border-[#ba1a1a] text-[#ba1a1a]";
                    } else if (isCorrect) {
-                      btnStyle = "bg-[#006a62]/50 border-[#57fae9]/50"; 
+                      btnStyle = "bg-[#e0f2f1]/50 border-[#006a62]/50 text-[#006a62]/80"; 
                    } else {
-                      btnStyle = "bg-white/5 border-white/10 opacity-50";
+                      btnStyle = "bg-gray-50 border-gray-200 text-gray-400 opacity-50";
                    }
                 }
 
@@ -463,7 +515,7 @@ export default function MultiplayerBattleScreen() {
                     key={idx}
                     disabled={selectedOption !== null}
                     onClick={() => handleAnswer(idx)}
-                    className={`backdrop-blur-md border text-white font-bold text-xl py-5 px-6 rounded-2xl text-left transition-all ${btnStyle} ${selectedOption === null ? 'active:scale-[0.98]' : ''}`}
+                    className={`border font-bold text-lg py-5 px-6 rounded-2xl text-left transition-all shadow-sm ${btnStyle} ${selectedOption === null ? 'active:scale-[0.98]' : ''}`}
                   >
                     {opt}
                   </button>
@@ -473,7 +525,7 @@ export default function MultiplayerBattleScreen() {
               {/* Unobtrusive "Waiting" text that doesn't block the screen */}
               {selectedOption !== null && (
                 <div className="absolute -bottom-8 w-full text-center animate-pulse">
-                  <span className="text-white/60 font-bold text-sm">Waiting for {oppName}...</span>
+                  <span className="text-[#767683] font-bold text-sm">Waiting for {oppName}...</span>
                 </div>
               )}
             </div>
@@ -485,44 +537,44 @@ export default function MultiplayerBattleScreen() {
                 <motion.div 
                   animate={{ scale: [1, 1.2, 1], rotate: [0, 5, -5, 0] }}
                   transition={{ repeat: Infinity, duration: 2 }}
-                  className="w-24 h-24 mb-4 bg-gradient-to-br from-[#ffd700] to-[#ff8c00] rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(255,215,0,0.6)]"
+                  className="w-24 h-24 mb-4 bg-gradient-to-br from-[#ffd700] to-[#ff8c00] rounded-full flex items-center justify-center shadow-lg"
                 >
                   <Trophy size={48} color="white" />
                 </motion.div>
-                <h2 className="text-4xl font-black text-white mb-1 drop-shadow-lg">VICTORY!</h2>
-                <p className="text-lg text-[#57fae9] font-bold mb-4">You crushed your opponent.</p>
+                <h2 className="text-4xl font-black text-[#141779] mb-1">VICTORY!</h2>
+                <p className="text-lg text-[#006a62] font-bold mb-4">You crushed your opponent.</p>
               </>
             ) : winnerId === null || winnerId === "tie" ? (
               <>
                 {winnerId === null ? (
                   <>
-                    <div className="w-16 h-16 mb-4 bg-white/10 rounded-full flex items-center justify-center border-4 border-white/20 animate-pulse">
-                      <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"/>
+                    <div className="w-16 h-16 mb-4 bg-white rounded-full flex items-center justify-center border-4 border-[#141779] animate-pulse">
+                      <div className="w-8 h-8 border-4 border-[#141779] border-t-transparent rounded-full animate-spin"/>
                     </div>
-                    <h2 className="text-3xl font-black text-white mb-2">Calculating...</h2>
+                    <h2 className="text-3xl font-black text-[#141779] mb-2">Calculating...</h2>
                   </>
                 ) : (
                   <>
-                    <h2 className="text-4xl font-black text-white mb-2">IT'S A TIE!</h2>
+                    <h2 className="text-4xl font-black text-[#141779] mb-2">IT'S A TIE!</h2>
                   </>
                 )}
               </>
             ) : (
               <>
-                <div className="w-24 h-24 mb-4 bg-white/10 rounded-full flex items-center justify-center border-4 border-[#ba1a1a]">
+                <div className="w-24 h-24 mb-4 bg-[#ffebee] rounded-full flex items-center justify-center border-4 border-[#ba1a1a] shadow-sm">
                   <X size={48} color="#ba1a1a" />
                 </div>
-                <h2 className="text-4xl font-black text-white mb-1">DEFEAT</h2>
+                <h2 className="text-4xl font-black text-[#ba1a1a] mb-1">DEFEAT</h2>
                 <p className="text-[#ba1a1a] font-bold text-lg mb-4">Your opponent was faster!</p>
               </>
             )}
 
             {/* Detailed Post-Game Scoreboard */}
             {winnerId !== null && (
-               <div className="w-full bg-white/10 rounded-2xl border border-white/20 p-5 mb-4 flex flex-col gap-3 shadow-xl text-left">
+               <div className="w-full bg-white rounded-2xl border-2 border-[#d0d0d0] p-5 mb-4 flex flex-col gap-3 shadow-md text-left">
                  <h3 className="text-sm font-black text-[#ff9f43] tracking-widest uppercase text-center mb-1">Final Result</h3>
                  
-                 <div className="flex justify-between font-bold text-xs uppercase text-white/50 border-b border-white/10 pb-2">
+                 <div className="flex justify-between font-bold text-xs uppercase text-[#767683] border-b border-[#e0e0e0] pb-2">
                     <span className="w-1/3 text-center">Q#</span>
                     <span className="w-1/3 text-center">{myName || "You"}</span>
                     <span className="w-1/3 text-center">{oppName || "Opp"}</span>
@@ -547,29 +599,29 @@ export default function MultiplayerBattleScreen() {
                     }
 
                     return (
-                      <div key={i} className="flex justify-between items-center text-sm font-bold border-b border-white/5 pb-1">
-                        <span className="w-1/3 text-center text-white/70">Q{i + 1}</span>
-                        <span className={`w-1/3 text-center ${iWonT ? 'text-[#57fae9]' : 'text-white'}`}>
+                      <div key={i} className="flex justify-between items-center text-sm font-bold border-b border-[#f0f0f0] pb-1.5 pt-1">
+                        <span className="w-1/3 text-center text-[#767683]">Q{i + 1}</span>
+                        <span className={`w-1/3 text-center py-0.5 rounded ${iWonT ? 'text-[#006a62] bg-[#e0f2f1]/40 font-black' : 'text-[#464652]'}`}>
                            {myC ? '✅' : '❌'} {myT}s
                         </span>
-                        <span className={`w-1/3 text-center ${oppWonT ? 'text-[#ff9f43]' : 'text-white'}`}>
+                        <span className={`w-1/3 text-center py-0.5 rounded ${oppWonT ? 'text-[#ff9f43] bg-[#ffeed1]/40 font-black' : 'text-[#464652]'}`}>
                            {oppC ? '✅' : '❌'} {oppT}s
                         </span>
                       </div>
                     )
                  })}
                  
-                 <div className="flex justify-between font-black text-lg pt-2 mt-2 border-t border-white/30">
-                    <span className="w-1/3 text-center text-white/70">Total</span>
-                    <span className="w-1/3 text-center text-[#57fae9]">{myScore} pts</span>
+                 <div className="flex justify-between font-black text-lg pt-2 mt-2 border-t border-[#d0d0d0]">
+                    <span className="w-1/3 text-center text-[#767683]">Total</span>
+                    <span className="w-1/3 text-center text-[#006a62]">{myScore} pts</span>
                     <span className="w-1/3 text-center text-[#ff9f43]">{oppScore} pts</span>
                  </div>
                </div>
             )}
             
             {winnerId === myId && (
-               <div className="bg-white/10 px-6 py-3 rounded-2xl border border-white/20 mb-6 w-full shadow-lg">
-                  <p className="text-white/80 font-bold uppercase text-xs mb-1">Win Streak</p>
+               <div className="bg-white px-6 py-3 rounded-2xl border-2 border-[#d0d0d0] mb-6 w-full shadow-sm text-center">
+                  <p className="text-[#767683] font-bold uppercase text-xs mb-1">Win Streak</p>
                   <p className="text-2xl font-black text-[#ff9f43]">{continuousWins} ⚔️</p>
                </div>
             )}
@@ -578,7 +630,7 @@ export default function MultiplayerBattleScreen() {
               <button 
                 onClick={() => navigate("/multiplayer-hub")}
                 disabled={checkingReward}
-                className="w-full max-w-[250px] bg-white text-[#141779] py-3 rounded-2xl font-black uppercase tracking-widest hover:bg-gray-100 shadow-[0_4px_15px_rgba(255,255,255,0.3)] mb-4 disabled:opacity-50"
+                className="w-full max-w-[250px] bg-[#141779] text-white py-3 rounded-2xl font-black uppercase tracking-widest hover:bg-[#30007f] shadow-md mb-4 disabled:opacity-50 border-2 border-[#141779]"
               >
                 {checkingReward ? "Checking rewards..." : "Back to Arena"}
               </button>
@@ -590,11 +642,11 @@ export default function MultiplayerBattleScreen() {
       {/* PHYSICAL REWARD MODAL */}
       <AnimatePresence>
         {showRewardModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm">
             <motion.div 
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="bg-gradient-to-b from-[#ffeed1] to-white rounded-[32px] p-8 w-full max-w-sm flex flex-col items-center text-center shadow-[0_0_60px_rgba(255,159,67,0.5)] border-4 border-[#ff9f43]"
+              className="bg-gradient-to-b from-[#ffeed1] to-white rounded-[32px] p-8 w-full max-w-sm flex flex-col items-center text-center shadow-[0_0_40px_rgba(255,159,67,0.3)] border-4 border-[#ff9f43]"
             >
               <div className="text-[80px] mb-2">🎁</div>
               <h2 className="text-3xl font-black text-[#141779] mb-2 uppercase">Incredible!</h2>
@@ -620,18 +672,18 @@ export default function MultiplayerBattleScreen() {
       {/* QUIT CONFIRMATION MODAL */}
       <AnimatePresence>
         {showQuitModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm">
             <motion.div 
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
-              className="bg-[#141779] rounded-[24px] p-6 w-full max-w-sm flex flex-col items-center text-center shadow-2xl border border-white/20"
+              className="bg-white rounded-[24px] p-6 w-full max-w-sm flex flex-col items-center text-center shadow-2xl border-2 border-[#e0e0e0]"
             >
-              <div className="w-16 h-16 rounded-full bg-[#ba1a1a]/20 flex items-center justify-center mb-4">
-                <X size={32} color="#ffb4ab" />
+              <div className="w-16 h-16 rounded-full bg-[#ffebee] flex items-center justify-center mb-4 border border-[#ffb4ab]">
+                <X size={32} color="#ba1a1a" />
               </div>
-              <h2 className="text-2xl font-black text-white mb-2">Are you sure?</h2>
-              <p className="text-white/70 font-semibold mb-6">
+              <h2 className="text-2xl font-black text-[#141779] mb-2">Are you sure?</h2>
+              <p className="text-[#464652] font-semibold mb-6">
                 {myStreak === 0
                   ? "If you leave now, you will lose the game and be penalized 100 coins!"
                   : quitCount === 0 
@@ -644,7 +696,7 @@ export default function MultiplayerBattleScreen() {
               <div className="flex gap-3 w-full">
                 <button 
                   onClick={() => setShowQuitModal(false)}
-                  className="flex-1 bg-white/10 text-white py-3 rounded-xl font-bold hover:bg-white/20 transition-all"
+                  className="flex-grow bg-[#f4efff] text-[#141779] py-3 rounded-xl font-bold hover:bg-[#e8ddff] transition-all border-2 border-[#e0e0e0]"
                 >
                   Cancel
                 </button>
@@ -657,7 +709,7 @@ export default function MultiplayerBattleScreen() {
                     } catch(e) {}
                     navigate("/multiplayer-hub");
                   }}
-                  className="flex-1 bg-[#ba1a1a] text-white py-3 rounded-xl font-bold hover:bg-[#ba1a1a]/80 transition-all"
+                  className="flex-grow bg-[#ba1a1a] text-white py-3 rounded-xl font-bold hover:bg-[#ba1a1a]/80 transition-all"
                 >
                   Yes, Quit
                 </button>
@@ -670,21 +722,21 @@ export default function MultiplayerBattleScreen() {
       {/* OPPONENT QUIT MODAL */}
       <AnimatePresence>
         {opponentQuit && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm">
             <motion.div 
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="bg-[#141779] rounded-[24px] p-6 w-full max-w-sm flex flex-col items-center text-center shadow-2xl border border-[#57fae9]"
+              className="bg-white rounded-[24px] p-6 w-full max-w-sm flex flex-col items-center text-center shadow-2xl border-2 border-[#e0e0e0]"
             >
               <div className="text-[60px] mb-2">🏃‍♂️💨</div>
-              <h2 className="text-2xl font-black text-white mb-2 uppercase">Opponent Fled!</h2>
-              <p className="text-[#57fae9] font-bold mb-6">
+              <h2 className="text-2xl font-black text-[#141779] mb-2 uppercase">Opponent Fled!</h2>
+              <p className="text-[#006a62] font-bold mb-6">
                 Your opponent left the game. You win by default!
               </p>
               
               <button 
                 onClick={() => navigate("/multiplayer-hub")}
-                className="w-full bg-[#57fae9] text-[#141779] py-3 rounded-xl font-black uppercase tracking-wider hover:bg-[#57fae9]/80 transition-all"
+                className="w-full bg-[#141779] text-white py-3 rounded-xl font-black uppercase tracking-wider hover:bg-[#30007f] transition-all border-2 border-[#141779]"
               >
                 Back to Arena
               </button>

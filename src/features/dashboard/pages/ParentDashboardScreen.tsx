@@ -83,8 +83,8 @@ export default function ParentDashboardScreen() {
           setUserData(user);
           setChildName(user.childName || "Explorer");
           setParentPhoto(user.parentPhoto || "");
-          setUserLevel(user.level || 1);
-          setXp(user.xp || 0);
+          setUserLevel(user.parentLevel || 1);
+          setXp(user.parentXp || 0);
         }
       }
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, UserCircle, Award, Flame, Bell, Rocket, Atom, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Award, Flame, Bell, Rocket, Atom, ShieldCheck, Zap, Trophy, Compass, ChevronRight, Star, CheckCircle, Lock } from "lucide-react";
+import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
 
@@ -31,6 +32,7 @@ function getLevelInfo(xp: number) {
     }
   }
 }
+
 export default function ProgressScreen() {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -41,7 +43,6 @@ export default function ProgressScreen() {
   const [username, setUsername] = useState("Explorer");
   const [userPhoto, setUserPhoto] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
-  const [missions, setMissions] = useState<any[]>([]);
   const [badges, setBadges] = useState<any[]>([]);
 
   const [subjects, setSubjects] = useState<any[]>([]);
@@ -50,10 +51,8 @@ export default function ProgressScreen() {
   const [missionsList, setMissionsList] = useState<any[]>([]);
   const [loadingMissions, setLoadingMissions] = useState(false);
 
-  const { level, percent: progressPercent } = getLevelInfo(xp);
-  const radius = 88;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (progressPercent / 100) * circumference;
+  const { level, percent: progressPercent, nextXp, currentXp } = getLevelInfo(xp);
+  const xpNeededForNext = Math.max(0, nextXp - xp);
 
   useEffect(() => {
     const fetchProgress = async () => {
@@ -169,40 +168,23 @@ export default function ProgressScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f9fb] font-sans pb-24 animate-pulse flex flex-col max-w-lg mx-auto">
-        <header className="flex items-center justify-between px-6 py-4 bg-[rgba(247,249,251,0.8)] border-b border-gray-100 sticky top-0 z-50">
+      <div className="min-h-screen bg-[#F5F6FB] font-sans pb-28 animate-pulse flex flex-col max-w-lg mx-auto">
+        <header className="flex items-center justify-between px-4 py-4 bg-white/80 border-b border-[#E0E3E5]">
           <div className="flex items-center gap-3 w-full">
             <div className="w-8 h-8 bg-gray-200 rounded-full shrink-0" />
-            <div className="w-10 h-10 bg-gray-200 rounded-full shrink-0" />
-            <div className="h-6 bg-gray-200 rounded w-1/3" />
+            <div className="w-9 h-9 bg-gray-200 rounded-full shrink-0" />
+            <div className="h-5 bg-gray-200 rounded w-1/3" />
           </div>
-          <div className="w-11 h-11 bg-gray-200 rounded-full shrink-0 ml-2" />
+          <div className="w-9 h-9 bg-gray-200 rounded-full shrink-0" />
         </header>
-        <main className="px-6 pt-8 flex flex-col gap-8">
-          <div className="flex items-center justify-center">
-            <div className="w-[192px] h-[192px] bg-gray-200 rounded-full" />
-          </div>
-          <div className="flex flex-col gap-4">
-            <div className="h-4 bg-gray-200 rounded w-1/4 px-1" />
-            <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-6 border border-gray-100 flex flex-col gap-5">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex flex-col gap-2">
-                  <div className="flex justify-between items-end px-1">
-                    <div className="h-4 bg-gray-200 rounded w-1/4" />
-                    <div className="h-3 bg-gray-200 rounded w-10" />
-                  </div>
-                  <div className="w-full h-3 bg-gray-200 rounded-full" />
-                </div>
-              ))}
-            </div>
-          </div>
+        <main className="px-4 pt-6 flex flex-col gap-6">
+          <div className="h-36 bg-gray-200 rounded-2xl w-full" />
+          <div className="h-28 bg-gray-200 rounded-2xl w-full" />
+          <div className="h-44 bg-gray-200 rounded-2xl w-full" />
         </main>
       </div>
     );
   }
-
-  // activeMissions removed — the missionsList from the API is used directly above
-  // with proper empty states for no chapter / no missions cases
 
   // Dynamic achievement unlock check matching real child stats
   const hasMathAce = badges.some((b: any) => typeof b === 'string' ? b.toLowerCase().includes("math") : b?.name?.toLowerCase().includes("math"));
@@ -211,24 +193,30 @@ export default function ProgressScreen() {
   const hasArenaMaster = level >= 5 || badges.some((b: any) => typeof b === 'string' ? b.toLowerCase().includes("arena") : b?.name?.toLowerCase().includes("arena"));
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] font-sans pb-24 max-w-lg mx-auto">
-      {/* TopAppBar */}
-      <header className="flex flex-col bg-[rgba(247,249,251,0.8)] border-b border-[rgba(255,255,255,0.2)] sticky top-0 z-50 backdrop-blur-sm pb-3">
-        <div className="flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity">
-              <ArrowLeft size={24} color="#141779" />
+    <div className="min-h-screen bg-gradient-to-b from-[#F5F6FB] via-[#FAFAFF] to-[#FFFFFF] text-[#17177F] font-sans pb-28 max-w-lg mx-auto relative selection:bg-[#4D4BFF] selection:text-white overflow-x-hidden">
+      {/* Background World Glow Accents */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[35%] rounded-full bg-[#4D4BFF]/10 blur-[90px]" />
+        <div className="absolute top-[40%] right-[-10%] w-[50%] h-[40%] rounded-full bg-[#FFC83D]/15 blur-[90px]" />
+      </div>
+
+      {/* TOP APP BAR / GAME HUD */}
+      <header className="flex flex-col bg-white/85 backdrop-blur-md border-b border-[#E0E3E5] sticky top-0 z-50 shadow-sm pb-2.5">
+        <div className="flex items-center justify-between px-4 py-3.5">
+          <div className="flex items-center gap-2.5">
+            <button 
+              onClick={() => navigate(-1)} 
+              className="w-9 h-9 rounded-full bg-[#F5F6FB] border border-[#E0E3E5] hover:bg-[#EEF1FF] flex items-center justify-center transition-all active:scale-95 shrink-0"
+              aria-label="Back"
+            >
+              <ArrowLeft size={18} className="text-[#17177F]" />
             </button>
             <button 
               onClick={() => navigate("/profile")}
-              className="w-10 h-10 rounded-full border-2 border-[#57fae9] overflow-hidden bg-white shrink-0 active:scale-95 transition-all"
+              className="w-9 h-9 rounded-full border-2 border-[#38E4D4] overflow-hidden bg-white shrink-0 active:scale-95 transition-all shadow-xs"
             >
               {userPhoto ? (
-                <img 
-                  src={userPhoto} 
-                  alt="Avatar"
-                  className="w-full h-full object-cover"
-                />
+                <img src={userPhoto} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
                 <img 
                   src={`https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`} 
@@ -237,26 +225,35 @@ export default function ProgressScreen() {
                 />
               )}
             </button>
-            <h1 className="text-2xl font-bold text-[#141779] tracking-[-0.5px]">My Progress</h1>
+            <div>
+              <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#4D4BFF] block leading-none">
+                PLAYER PROFILE
+              </span>
+              <h1 className="text-base font-black text-[#17177F] tracking-wide uppercase leading-tight">
+                MY JOURNEY
+              </h1>
+            </div>
           </div>
           
-          {/* Right side: Bell icon */}
+          {/* Right Bell Notification */}
           <button 
             onClick={() => navigate("/notifications")}
-            className="w-11 h-11 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all relative shrink-0"
+            className="w-9 h-9 rounded-full bg-white border border-[#E0E3E5] shadow-sm flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all shrink-0"
           >
-            <Bell size={20} className="text-[#141779]" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-bold border-2 border-white">
-                {unreadCount}
-              </span>
-            )}
+            <div className="relative">
+              <Bell size={18} className="text-[#17177F]" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full text-[8px] text-white flex items-center justify-center font-black border border-white pointer-events-none z-10">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </div>
           </button>
         </div>
 
-        {/* Subject Selector Tabs */}
+        {/* SUBJECT SELECTION HORIZONTAL TABS */}
         {subjects.length > 0 && (
-          <div className="flex overflow-x-auto hide-scrollbar px-6 pb-1 gap-3">
+          <div className="flex overflow-x-auto hide-scrollbar px-4 pb-1 gap-2 pr-6">
             {subjects.map((sub) => {
               const isActive = activeSubject?._id === sub._id;
               return (
@@ -266,13 +263,14 @@ export default function ProgressScreen() {
                     setActiveSubject(sub);
                     sessionStorage.setItem("activeSubjectId", sub._id);
                   }}
-                  className={`px-5 py-2 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${
+                  className={`px-4 py-1.5 rounded-full font-black text-xs whitespace-nowrap transition-all uppercase tracking-wider shrink-0 flex items-center gap-1.5 ${
                     isActive 
-                      ? 'bg-[#141779] text-white shadow-md' 
-                      : 'bg-white text-[#767683] border border-[#e0e3e5] hover:border-[#141779]'
+                      ? 'bg-gradient-to-r from-[#4D4BFF] to-[#17177F] text-white shadow-md border border-[#4D4BFF]' 
+                      : 'bg-white text-[#767683] border border-[#E0E3E5] hover:border-[#4D4BFF]/60'
                   }`}
                 >
-                  {sub.name}
+                  <Compass size={13} className={isActive ? "text-[#FFC83D]" : "text-[#767683]"} />
+                  <span>{sub.name}</span>
                 </button>
               );
             })}
@@ -280,70 +278,129 @@ export default function ProgressScreen() {
         )}
       </header>
 
-      <main className="px-6 pt-8 flex flex-col gap-8">
-        {/* Hero Section: Level & Circular Progress */}
-        <div className="flex items-center justify-center">
-          <div className="relative w-[192px] h-[192px] flex items-center justify-center">
-            <svg width="192" height="192" viewBox="0 0 192 192" className="-rotate-90 absolute">
-              <circle
-                cx="96"
-                cy="96"
-                r={radius}
-                stroke="#eceef0"
-                strokeWidth="12"
-                fill="transparent"
+      <main className="px-4 pt-4 flex flex-col gap-4 relative z-10">
+        {/* 1. PLAYER PROGRESSION HERO CARD */}
+        <section className="bg-gradient-to-br from-[#180C4F] via-[#2824A3] to-[#17177F] border-2 border-[#4D4BFF]/40 rounded-2xl p-4 text-white shadow-lg relative overflow-hidden">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1.5 bg-[#4D4BFF]/30 px-2.5 py-1 rounded-full border border-[#4D4BFF]/50">
+              <Zap size={15} className="text-[#FFC83D]" />
+              <span className="text-xs font-black uppercase tracking-wider text-white">
+                LEVEL {level} • ADVENTURER
+              </span>
+            </div>
+            <span className="text-xs font-black text-[#FFC83D]">
+              {xp.toLocaleString()} XP EARNED
+            </span>
+          </div>
+
+          {/* XP Progress Bar */}
+          <div className="my-2.5">
+            <div className="w-full h-3.5 bg-black/30 rounded-full overflow-hidden p-0.5 border border-white/20">
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${progressPercent}%` }}
+                transition={{ duration: 1, ease: "easeOut" }}
+                className="h-full bg-gradient-to-r from-[#5B5CFF] via-[#4D4BFF] to-[#38E4D4] rounded-full shadow-[0_0_10px_rgba(56,228,212,0.5)]"
               />
-              <circle
-                cx="96"
-                cy="96"
-                r={radius}
-                stroke="#2addcd"
-                strokeWidth="12"
-                fill="transparent"
-                strokeDasharray={circumference}
-                strokeDashoffset={strokeDashoffset}
-                strokeLinecap="round"
-                className="transition-all duration-1000 ease-out"
-              />
-            </svg>
-            <div className="flex flex-col items-center justify-center">
-              <span className="text-xs font-bold text-[#464652] uppercase tracking-[1px]">{t('level')}</span>
-              <span className="text-4xl font-bold text-[#141779] my-0.5">{level}</span>
-              <span className="text-sm font-semibold text-[#006a62] mt-1">{progressPercent}{t('percent_to_next')}</span>
             </div>
           </div>
-        </div>
 
-        {/* Mid Section: Mission Progress Roadmap */}
-        <div className="flex flex-col gap-4">
-          <div className="flex justify-between items-center px-1">
-            <h2 className="text-sm font-bold text-[#141779] tracking-[1px] uppercase truncate max-w-[240px]">
-              {activeChapter ? `Active: ${activeChapter.name}` : "Active Mission Progression"}
-            </h2>
+          <div className="flex items-center justify-between text-[11px] font-bold text-[#EEF1FF]">
+            <span>{progressPercent}% Complete</span>
+            <span className="text-[#38E4D4] font-black">
+              {xpNeededForNext > 0 ? `${xpNeededForNext} XP until Level ${level + 1}` : `Max Level Reached!`} →
+            </span>
+          </div>
+        </section>
+
+        {/* 2. GAME STATS COMPACT ROW */}
+        <section className="grid grid-cols-4 gap-2">
+          <div className="bg-white border border-[#E0E3E5] rounded-xl p-2 text-center shadow-xs">
+            <p className="text-[9px] font-extrabold text-[#767683] uppercase tracking-wider">XP POWER</p>
+            <p className="text-sm font-black text-[#4D4BFF]">{xp.toLocaleString()}</p>
+          </div>
+          <div className="bg-white border border-[#E0E3E5] rounded-xl p-2 text-center shadow-xs">
+            <p className="text-[9px] font-extrabold text-[#767683] uppercase tracking-wider">STREAK</p>
+            <p className="text-sm font-black text-[#FFC83D] flex items-center justify-center gap-0.5">
+              <span>{streakDays}</span>
+              <span className="text-xs">🔥</span>
+            </p>
+          </div>
+          <div className="bg-white border border-[#E0E3E5] rounded-xl p-2 text-center shadow-xs">
+            <p className="text-[9px] font-extrabold text-[#767683] uppercase tracking-wider">BADGES</p>
+            <p className="text-sm font-black text-[#38E4D4]">{badges.length}</p>
+          </div>
+          <div className="bg-white border border-[#E0E3E5] rounded-xl p-2 text-center shadow-xs">
+            <p className="text-[9px] font-extrabold text-[#767683] uppercase tracking-wider">LEVEL</p>
+            <p className="text-sm font-black text-[#17177F]">Lvl {level}</p>
+          </div>
+        </section>
+
+        {/* 3. FEATURED CURRENT ADVENTURE QUEST CARD */}
+        <section className="bg-white border-2 border-[#E0E3E5] rounded-2xl p-4 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1.5">
+              <Rocket size={16} className="text-[#4D4BFF]" />
+              <span className="text-xs font-black uppercase tracking-wider text-[#17177F]">
+                🚀 CURRENT ADVENTURE
+              </span>
+            </div>
             {activeChapter && (
               <button 
                 onClick={() => navigate(`/mission-roadmap?chapterId=${activeChapter._id}&title=${encodeURIComponent(activeChapter.name)}`)}
-                className="text-xs font-bold text-[#006a62] hover:underline shrink-0"
+                className="text-xs font-black text-[#4D4BFF] hover:underline flex items-center gap-0.5"
               >
-                View Full Map →
+                <span>View Map</span>
+                <ChevronRight size={14} />
               </button>
             )}
           </div>
-          <p className="text-[11px] text-gray-500 font-medium px-1 -mt-2.5">Conquer all realms to reach the Dragon King!</p>
 
-          <div className="bg-[rgba(255,255,255,0.8)] backdrop-blur-md rounded-3xl p-6 border-[1.5px] border-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] flex flex-col gap-4">
+          <div className="my-2">
+            <h2 className="text-base font-black text-[#17177F] leading-tight">
+              {activeChapter ? activeChapter.name : "Active Mission Progression"}
+            </h2>
+            <p className="text-xs font-semibold text-[#767683] mt-0.5">
+              Conquer all realms in {activeSubject?.name || "this subject"} to unlock rewards!
+            </p>
+          </div>
+
+          {activeChapter && (
+            <button
+              onClick={() => navigate(`/mission-roadmap?chapterId=${activeChapter._id}&title=${encodeURIComponent(activeChapter.name)}`)}
+              className="w-full mt-2 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider bg-gradient-to-r from-[#4D4BFF] to-[#17177F] text-white shadow-md hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-1.5"
+            >
+              <span>CONTINUE ADVENTURE</span>
+              <ChevronRight size={16} />
+            </button>
+          )}
+        </section>
+
+        {/* 4. YOUR MISSIONS SECTION */}
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-xs font-black text-[#17177F] uppercase tracking-wider flex items-center gap-1.5">
+              <Trophy size={14} className="text-[#FFC83D]" />
+              YOUR MISSIONS
+            </span>
+            <span className="text-[11px] font-bold text-[#4D4BFF]">
+              {missionsList.filter(m => m.status === "completed").length} / {missionsList.length} COMPLETED
+            </span>
+          </div>
+
+          <div className="bg-white rounded-2xl p-3 border-2 border-[#E0E3E5] shadow-sm flex flex-col gap-2.5">
             {loadingMissions ? (
-              <div className="flex flex-col items-center py-8">
-                <div className="w-8 h-8 border-4 border-[#141779] border-t-transparent rounded-full animate-spin mb-2" />
+              <div className="flex flex-col items-center py-6">
+                <div className="w-7 h-7 border-3 border-[#4D4BFF] border-t-transparent rounded-full animate-spin mb-2" />
                 <p className="text-xs text-gray-500 font-bold animate-pulse">Syncing mission data...</p>
               </div>
             ) : !activeChapter ? (
-              <div className="text-center py-8 text-[#767683] font-semibold text-sm">
+              <div className="text-center py-6 text-[#767683] font-semibold text-xs">
                 No active chapters found for this subject.
               </div>
             ) : missionsList.length === 0 ? (
-              <div className="text-center py-8 text-[#767683] font-semibold text-sm flex flex-col items-center gap-2">
-                <Rocket size={32} className="text-gray-300 animate-bounce" />
+              <div className="text-center py-6 text-[#767683] font-semibold text-xs flex flex-col items-center gap-2">
+                <Rocket size={28} className="text-gray-300 animate-bounce" />
                 <span>No missions loaded for this chapter.</span>
               </div>
             ) : (
@@ -360,61 +417,64 @@ export default function ProgressScreen() {
                         navigate(`/mission-play?chapterId=${activeChapter._id}&missionSeq=${m.seq}${(isCompleted || isRetest) ? "&replay=true" : ""}`);
                       }
                     }}
-                    className={`p-4 rounded-2xl border flex items-center justify-between transition-all ${
+                    className={`p-3 rounded-xl border-2 flex items-center justify-between transition-all ${
                       isCompleted
-                        ? "bg-emerald-50/80 border-emerald-200 text-emerald-950 cursor-pointer hover:bg-emerald-100/50"
+                        ? "bg-[#40C98A]/10 border-[#40C98A]/50 text-[#17177F] cursor-pointer hover:bg-[#40C98A]/20"
                         : isRetest
-                        ? "bg-amber-50/90 border-amber-300 text-amber-950 ring-2 ring-amber-400/20 cursor-pointer hover:bg-amber-100/50"
+                        ? "bg-[#FFC83D]/10 border-[#FFC83D]/60 text-[#17177F] cursor-pointer hover:bg-[#FFC83D]/20"
                         : isUnlocked
-                        ? "bg-blue-50/90 border-blue-200 text-blue-950 ring-2 ring-blue-400/20 cursor-pointer hover:bg-blue-100/50"
-                        : "bg-gray-100/60 border-gray-200 text-gray-400 cursor-not-allowed"
+                        ? "bg-[#EEF1FF] border-[#4D4BFF]/60 text-[#17177F] cursor-pointer hover:bg-[#EEF1FF]/80 shadow-xs"
+                        : "bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed opacity-65"
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-2xl">{m.icon}</span>
+                      <span className="text-2xl">{m.icon || "🚀"}</span>
                       <div className="text-left">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/60">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-white border border-gray-200">
                             Mission {m.seq}
                           </span>
                           {isCompleted && (
-                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                            <span className="text-[9px] font-bold text-[#22C55E] bg-[#22C55E]/15 px-2 py-0.5 rounded-full">
                               Completed ✓
                             </span>
                           )}
                           {isRetest && (
-                            <span className="text-[10px] font-bold text-[#b45309] bg-amber-100 px-2 py-0.5 rounded-full">
+                            <span className="text-[9px] font-bold text-[#D97706] bg-[#FFC83D]/20 px-2 py-0.5 rounded-full">
                               Re-test 🔄
                             </span>
                           )}
                           {isUnlocked && !isRetest && (
-                            <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
+                            <span className="text-[9px] font-bold text-[#4D4BFF] bg-[#4D4BFF]/15 px-2 py-0.5 rounded-full">
                               Next Up! 🚀
                             </span>
                           )}
                         </div>
-                        <h4 className="text-sm font-bold mt-1 text-[#141779]">{m.title}</h4>
+                        <h4 className="text-xs font-black mt-1 text-[#17177F]">{m.title}</h4>
                       </div>
                     </div>
 
-                    <div className="text-right">
+                    <div className="text-right shrink-0">
                       {isCompleted || isRetest ? (
                         <div className="flex gap-0.5">
                           {[1, 2, 3].map((starIndex) => (
                             <span 
                               key={starIndex} 
-                              className={`text-xs font-black ${starIndex <= m.stars ? "text-amber-500" : "text-gray-300"}`}
+                              className={`text-xs font-black ${starIndex <= m.stars ? "text-[#FFC83D]" : "text-gray-300"}`}
                             >
                               ★
                             </span>
                           ))}
                         </div>
                       ) : isUnlocked ? (
-                        <span className="text-xs font-black text-blue-600 bg-blue-100 px-3 py-1 rounded-xl">
-                          Play
+                        <span className="text-xs font-black text-white bg-gradient-to-r from-[#4D4BFF] to-[#17177F] px-3 py-1 rounded-lg shadow-xs">
+                          PLAY
                         </span>
                       ) : (
-                        <span className="text-xs font-semibold text-gray-400">Locked 🔒</span>
+                        <span className="text-xs font-bold text-gray-400 flex items-center gap-1">
+                          <Lock size={12} />
+                          Locked
+                        </span>
                       )}
                     </div>
                   </div>
@@ -422,64 +482,67 @@ export default function ProgressScreen() {
               })
             )}
           </div>
-        </div>
+        </section>
 
-        {/* Bottom Section: Recent Achievements */}
-        <div className="flex flex-col gap-4">
-          <h2 className="text-sm font-semibold text-[#464652] tracking-[1px] px-1">{t('recent_achievements')}</h2>
-          <div className="grid grid-cols-2 gap-4">
-            
+        {/* 5. ACHIEVEMENTS SHOWCASE */}
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-xs font-black text-[#17177F] uppercase tracking-wider flex items-center gap-1.5">
+              <Award size={14} className="text-[#4D4BFF]" />
+              🏆 RECENT ACHIEVEMENTS
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
             {/* 1. Math Ace */}
-            <div className={`rounded-2xl p-4 border border-gray-100 shadow-[0_4px_16px_rgba(20,23,121,0.03)] flex flex-col items-center gap-3 transition-all duration-300 hover:scale-[1.02] ${
-              hasMathAce ? 'bg-white border-indigo-200' : 'bg-gray-50/70 opacity-60 grayscale-[0.6]'
+            <div className={`rounded-2xl p-3 border-2 flex flex-col items-center gap-2 transition-all ${
+              hasMathAce ? 'bg-white border-[#4D4BFF]/50 shadow-sm' : 'bg-gray-50 border-gray-200 opacity-60 grayscale-[0.6]'
             }`}>
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${hasMathAce ? 'bg-[rgba(20,23,121,0.08)] scale-110' : 'bg-gray-200'}`}>
-                <Award size={28} className={hasMathAce ? 'text-[#141779]' : 'text-gray-400'} />
+              <div className={`w-11 h-11 rounded-full flex items-center justify-center ${hasMathAce ? 'bg-[#4D4BFF]/15' : 'bg-gray-200'}`}>
+                <Award size={24} className={hasMathAce ? 'text-[#4D4BFF]' : 'text-gray-400'} />
               </div>
-              <span className="text-xs font-black text-[#191c1e] text-center leading-tight">
+              <span className="text-xs font-black text-[#17177F] text-center leading-tight">
                 {t('math_ace') || 'Math Ace'} {hasMathAce ? '🏆' : '🔒'}
               </span>
             </div>
 
             {/* 2. Streak Champion */}
-            <div className={`rounded-2xl p-4 border border-gray-100 shadow-[0_4px_16px_rgba(20,23,121,0.03)] flex flex-col items-center gap-3 transition-all duration-300 hover:scale-[1.02] ${
-              isStreakUnlocked ? 'bg-white border-teal-200' : 'bg-gray-50/70 opacity-60 grayscale-[0.6]'
+            <div className={`rounded-2xl p-3 border-2 flex flex-col items-center gap-2 transition-all ${
+              isStreakUnlocked ? 'bg-white border-[#FFC83D]/60 shadow-sm' : 'bg-gray-50 border-gray-200 opacity-60 grayscale-[0.6]'
             }`}>
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${isStreakUnlocked ? 'bg-[rgba(87,250,233,0.2)] scale-110' : 'bg-gray-200'}`}>
-                <Flame size={28} className={isStreakUnlocked ? 'text-[#006a62]' : 'text-gray-400'} />
+              <div className={`w-11 h-11 rounded-full flex items-center justify-center ${isStreakUnlocked ? 'bg-[#FFC83D]/20' : 'bg-gray-200'}`}>
+                <Flame size={24} className={isStreakUnlocked ? 'text-[#D97706]' : 'text-gray-400'} />
               </div>
-              <span className="text-xs font-black text-[#191c1e] text-center leading-tight">
+              <span className="text-xs font-black text-[#17177F] text-center leading-tight">
                 {t('day_streak', { days: streakDays }) || `Streak: ${streakDays} Days`} {isStreakUnlocked ? '🔥' : '🔒'}
               </span>
             </div>
 
             {/* 3. Science Prodigy */}
-            <div className={`rounded-2xl p-4 border border-gray-100 shadow-[0_4px_16px_rgba(20,23,121,0.03)] flex flex-col items-center gap-3 transition-all duration-300 hover:scale-[1.02] ${
-              hasScienceProdigy ? 'bg-white border-purple-200' : 'bg-gray-50/70 opacity-60 grayscale-[0.6]'
+            <div className={`rounded-2xl p-3 border-2 flex flex-col items-center gap-2 transition-all ${
+              hasScienceProdigy ? 'bg-white border-[#38E4D4]/60 shadow-sm' : 'bg-gray-50 border-gray-200 opacity-60 grayscale-[0.6]'
             }`}>
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${hasScienceProdigy ? 'bg-[rgba(48,0,127,0.08)] scale-110' : 'bg-gray-200'}`}>
-                <Atom size={28} className={hasScienceProdigy ? 'text-[#30007f]' : 'text-gray-400'} />
+              <div className={`w-11 h-11 rounded-full flex items-center justify-center ${hasScienceProdigy ? 'bg-[#38E4D4]/20' : 'bg-gray-200'}`}>
+                <Atom size={24} className={hasScienceProdigy ? 'text-[#0284C7]' : 'text-gray-400'} />
               </div>
-              <span className="text-xs font-black text-[#191c1e] text-center leading-tight">
+              <span className="text-xs font-black text-[#17177F] text-center leading-tight">
                 {t('science_prodigy') || 'Science Prodigy'} {hasScienceProdigy ? '⚛️' : '🔒'}
               </span>
             </div>
 
             {/* 4. Arena Master */}
-            <div className={`rounded-2xl p-4 border border-gray-100 shadow-[0_4px_16px_rgba(20,23,121,0.03)] flex flex-col items-center gap-3 transition-all duration-300 hover:scale-[1.02] ${
-              hasArenaMaster ? 'bg-white border-rose-200' : 'bg-gray-50/70 opacity-60 grayscale-[0.6]'
+            <div className={`rounded-2xl p-3 border-2 flex flex-col items-center gap-2 transition-all ${
+              hasArenaMaster ? 'bg-white border-purple-300 shadow-sm' : 'bg-gray-50 border-gray-200 opacity-60 grayscale-[0.6]'
             }`}>
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${hasArenaMaster ? 'bg-[rgba(186,26,26,0.08)] scale-110' : 'bg-gray-200'}`}>
-                <ShieldCheck size={28} className={hasArenaMaster ? 'text-[#ba1a1a]' : 'text-gray-400'} />
+              <div className={`w-11 h-11 rounded-full flex items-center justify-center ${hasArenaMaster ? 'bg-purple-100' : 'bg-gray-200'}`}>
+                <ShieldCheck size={24} className={hasArenaMaster ? 'text-purple-700' : 'text-gray-400'} />
               </div>
-              <span className="text-xs font-black text-[#191c1e] text-center leading-tight">
+              <span className="text-xs font-black text-[#17177F] text-center leading-tight">
                 {t('arena_master') || 'Arena Master'} {hasArenaMaster ? '🛡️' : '🔒'}
               </span>
             </div>
-
           </div>
-        </div>
-
+        </section>
       </main>
     </div>
   );

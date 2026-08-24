@@ -156,7 +156,6 @@ interface AdventureHeroProps {
   chaptersNeededForNext?: number;
   onCtaClick?: () => void;
   onMissionClick?: () => void;
-  // Overrides for dynamic backend values
   missionTitle?: string;
   missionProgress?: { current: number; total: number };
   missionRewardText?: string;
@@ -187,25 +186,22 @@ export default function AdventureHero({
   const displayMissionProgress = missionProgress || theme.missionProgress;
   const displayMissionRewardText = missionRewardText || theme.missionRewardText;
 
-  // Calculate percentage along the leg
   const legProgress = journeyData?.progressPercentage !== undefined 
     ? journeyData.progressPercentage 
     : (progressPercentage !== undefined ? progressPercentage : Math.min(100, Math.max(0, Math.round((xp / targetXp) * 100))));
   const chaptersRemaining = journeyData?.chaptersNeededForNext !== undefined ? journeyData.chaptersNeededForNext : chaptersNeededForNext;
   const xpRemaining = Math.max(0, targetXp - xp);
 
-  // SVG curved path calculation
   const pathD = "M 20 40 C 90 10, 230 70, 310 35";
 
   return (
     <div className="w-full max-w-[430px] mx-auto flex flex-col gap-3 font-sans">
-      {/* 1. IMMERSIVE ENVIRONMENT CARD */}
+      {/* 1. IMMERSIVE ENVIRONMENT HERO CARD (DARK GRADIENT) */}
       <div
-        className={`w-full rounded-[32px] bg-gradient-to-b ${theme.bgGradient} p-3 border-4 ${theme.accentBorderColor} shadow-[0_12px_32px_rgba(0,0,0,0.3)] relative overflow-hidden text-white flex flex-col gap-3 select-none`}
+        className={`w-full rounded-[32px] bg-gradient-to-b ${theme.bgGradient} p-3.5 border-4 ${theme.accentBorderColor} shadow-[0_12px_32px_rgba(0,0,0,0.3)] relative overflow-hidden text-white flex flex-col gap-3 select-none`}
       >
         {/* Ambient environmental particles / animations */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          {/* Drifting Clouds / Stars */}
           <motion.div
             animate={{ x: [-60, 380] }}
             transition={{ repeat: Infinity, duration: 24, ease: "linear" }}
@@ -221,7 +217,6 @@ export default function AdventureHero({
             {theme.bgDecorations[0] || "☁️"}
           </motion.div>
 
-          {/* Floating magical particles */}
           {Array.from({ length: 4 }).map((_, i) => (
             <motion.div
               key={i}
@@ -235,10 +230,10 @@ export default function AdventureHero({
           ))}
         </div>
 
-        {/* TOP BAR: World Title & Supporting XP Pill */}
+        {/* TOP BAR: World Title & XP Pill */}
         <div className="flex items-center justify-between z-10 gap-2">
           <div className="flex items-center gap-2">
-            <span className="px-3 py-1 rounded-full bg-white/15 border border-white/20 backdrop-blur-md text-[11px] font-black tracking-wider uppercase shadow-xs flex items-center gap-1.5">
+            <span className="px-3 py-1 rounded-full bg-white/15 border border-white/20 backdrop-blur-md text-[11px] font-black tracking-wider uppercase shadow-xs flex items-center gap-1.5 text-white">
               {theme.worldTitle}
             </span>
           </div>
@@ -249,29 +244,16 @@ export default function AdventureHero({
           </div>
         </div>
 
-        {/* STORY CALLOUT BANNER */}
-        <div className="z-10 bg-white/10 border border-white/15 backdrop-blur-md rounded-2xl p-2.5 shadow-inner flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center text-base shrink-0 border border-white/20 shadow-xs">
-            📜
-          </div>
-          <p className="text-xs font-bold text-slate-100 leading-snug tracking-tight">
-            "{theme.storyText}"
-          </p>
-        </div>
-
-        {/* LIVING ADVENTURE WORLD SCENE (Dragon flying over path to destination) */}
-        <div className="relative w-full h-[72px] z-10 flex flex-col justify-between">
-          {/* Background Scenery Elements */}
+        {/* LIVING ADVENTURE WORLD SCENE (Flying Mascot over path to destination) */}
+        <div className="relative w-full h-[76px] z-10 flex flex-col justify-between my-1">
           <div className="absolute inset-0 flex justify-between items-end px-2 opacity-40 pointer-events-none">
             <span className="text-4xl">{theme.bgDecorations[1] || "🏔️"}</span>
             <span className="text-3xl mb-4">{theme.bgDecorations[0] || "☁️"}</span>
             <span className="text-4xl">{theme.bgDecorations[2] || "🏰"}</span>
           </div>
 
-          {/* CURVED ORGANIC ADVENTURE PATH SVG */}
           <div className="absolute inset-0 flex items-center justify-center">
             <svg viewBox="0 0 330 70" className="w-full h-full overflow-visible">
-              {/* Background Path Line */}
               <path
                 d={pathD}
                 fill="none"
@@ -280,7 +262,6 @@ export default function AdventureHero({
                 strokeDasharray="6 6"
                 strokeLinecap="round"
               />
-              {/* Progress Path Line */}
               <path
                 d={pathD}
                 fill="none"
@@ -293,7 +274,7 @@ export default function AdventureHero({
               />
             </svg>
 
-            {/* START NODE: Current Location */}
+            {/* START NODE */}
             <div className="absolute left-2 bottom-3 flex flex-col items-center z-10">
               <div className="w-7 h-7 rounded-full bg-white border-2 border-slate-700 flex items-center justify-center text-xs shadow-md">
                 📍
@@ -303,7 +284,7 @@ export default function AdventureHero({
               </span>
             </div>
 
-            {/* CHARACTER: Flying / Floating Mascot IN THE WORLD */}
+            {/* CHARACTER MASCOT */}
             <div className="absolute inset-x-6 inset-y-0 pointer-events-none z-20">
               <div
                 className="h-full flex items-center transition-all duration-1000"
@@ -324,7 +305,7 @@ export default function AdventureHero({
               </div>
             </div>
 
-            {/* DESTINATION NODE: Target Reward Item */}
+            {/* DESTINATION NODE */}
             <div className="absolute right-2 top-2 flex flex-col items-center z-10">
               <motion.div
                 animate={{ scale: [1, 1.15, 1] }}
@@ -342,7 +323,7 @@ export default function AdventureHero({
         </div>
 
         {/* PROGRESS SUPPORTING INDICATOR */}
-        <div className="z-10 bg-black/30 border border-white/10 rounded-2xl p-2.5 flex flex-col gap-1">
+        <div className="z-10 bg-black/30 border border-white/10 rounded-2xl p-2.5 flex flex-col gap-1 backdrop-blur-md">
           <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-200">
             <span>Progress to {endName}</span>
             <span className={theme.accentTextColor}>{legProgress}% Completed</span>
@@ -372,7 +353,7 @@ export default function AdventureHero({
         </button>
       </div>
 
-      {/* 2. TODAY'S QUEST CARD (Clear Mission Hierarchy) */}
+      {/* TODAY'S QUEST CARD */}
       <div className="w-full bg-white rounded-3xl p-4 border-2 border-slate-100 shadow-sm flex flex-col gap-3">
         <div className="flex justify-between items-center border-b border-slate-100 pb-2.5">
           <div className="flex items-center gap-2">
@@ -413,7 +394,7 @@ export default function AdventureHero({
 
         <button
           onClick={onMissionClick || onCtaClick}
-          className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-black text-[11px] uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5"
+          className="w-full py-2.5 bg-gradient-to-r from-[#141779] to-[#30007f] hover:brightness-110 active:scale-95 text-white font-black text-[11px] uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5"
         >
           <span>CONTINUE QUEST →</span>
         </button>

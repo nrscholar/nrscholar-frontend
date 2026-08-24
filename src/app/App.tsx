@@ -286,6 +286,18 @@ const ProtectedRoute = () => {
   return <Outlet />;
 };
 
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [pathname]);
+
+  return null;
+};
+
 function App() {
   // Intercept token from query parameter (passed from mobile webview)
   const params = new URLSearchParams(window.location.search);
@@ -300,6 +312,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <AuthHandler />
       <ScreenTimeTracker />
       <GlobalNotificationBanner />

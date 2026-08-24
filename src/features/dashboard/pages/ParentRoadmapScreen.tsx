@@ -171,7 +171,10 @@ export default function ParentRoadmapScreen() {
             if (isCompleted) {
               return (
                 <div key={stage.id} className={`relative z-10 w-full mb-20 flex justify-center ${translateClass}`}>
-                  <div className="glass-card p-4 rounded-xl w-48 shadow-sm flex flex-col items-center">
+                  <div 
+                    onClick={() => navigate(`/parent/lessons?category=${encodeURIComponent(stage.title)}`)}
+                    className="glass-card p-4 rounded-xl w-48 shadow-sm flex flex-col items-center cursor-pointer hover:shadow-md hover:scale-105 active:scale-95 transition-all"
+                  >
                     <div className="w-10 h-10 bg-[#006a62] rounded-full flex items-center justify-center mb-2 shadow-lg shadow-[#006a62]/20">
                       <IconComp size={20} color="white" strokeWidth={3} />
                     </div>
@@ -202,7 +205,10 @@ export default function ParentRoadmapScreen() {
             if (isActive) {
               return (
                 <div key={stage.id} className={`relative z-20 w-full mb-20 flex justify-center ${translateClass}`}>
-                  <div className="glass-card p-5 rounded-2xl w-56 shadow-xl border-[#006a62] border-2 animate-pulse-teal flex flex-col items-center scale-105 bg-white/90">
+                  <div 
+                    onClick={() => navigate(`/parent/lessons?category=${encodeURIComponent(stage.title)}`)}
+                    className="glass-card p-5 rounded-2xl w-56 shadow-xl border-[#006a62] border-2 animate-pulse-teal flex flex-col items-center scale-105 bg-white/90 cursor-pointer hover:shadow-2xl active:scale-[1.02] transition-all"
+                  >
                     <div className="w-12 h-12 bg-[#2d328f] rounded-full flex items-center justify-center mb-3 shadow-lg ring-4 ring-[#006a62]/30">
                       <IconComp size={24} color="#9ba1ff" />
                     </div>

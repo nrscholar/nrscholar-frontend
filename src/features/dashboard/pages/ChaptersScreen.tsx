@@ -1,19 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Rocket, Sun, Compass, Globe, Moon, CheckCircle, Lock, Bell } from "lucide-react";
+import { ArrowLeft, Rocket, Sun, Compass, Globe, Moon, CheckCircle, Lock, Bell, Sparkles, Trophy, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
-
-
-const chapterIcons = [Rocket, Sun, Compass, Globe, Moon];
 
 export default function ChaptersScreen() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
-  const subjectName = searchParams.get("subjectName") || "Solar System";
 
   const [loading, setLoading] = useState(true);
   const [subjects, setSubjects] = useState<any[]>([]);
@@ -26,8 +22,6 @@ export default function ChaptersScreen() {
   const [childPhoto, setChildPhoto] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
   const [expandedChapter, setExpandedChapter] = useState<string | null>(null);
-  const [questions, setQuestions] = useState<any[]>([]);
-  const [questionsLoading, setQuestionsLoading] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [showSubModal, setShowSubModal] = useState(false);
 
@@ -185,6 +179,7 @@ export default function ChaptersScreen() {
   const progressPercent = Math.max(missionProgressPercent, chapterProgressPercent);
 
   const currentChapterIndex = chapters.findIndex(ch => !isChapterCompleted(ch._id));
+  const activeCurrentChapter = currentChapterIndex >= 0 ? chapters[currentChapterIndex] : chapters[chapters.length - 1];
 
   const handleToggleChapter = async (index: number, chapterId: string, chapterName: string) => {
     if (index >= 1 && !isSubscribed) {
@@ -199,29 +194,31 @@ export default function ChaptersScreen() {
     }
   };
 
-  const radius = 20;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (progressPercent / 100) * circumference;
-
   return (
-    <div className="min-h-screen bg-[#f7f9fb] font-sans pb-10">
-      {/* TopAppBar */}
-      <header className="flex flex-col bg-[rgba(247,249,251,0.8)] border-b border-[rgba(255,255,255,0.2)] sticky top-0 z-50 backdrop-blur-sm">
-        <div className="flex items-center justify-between px-6 h-16">
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigate("/home")} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors shrink-0">
-              <ArrowLeft size={24} color="#141779" />
+    <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#17157F] font-sans pb-28 relative selection:bg-[#5B5CFF] selection:text-white overflow-x-hidden">
+      {/* Background World Glow Accents */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[35%] rounded-full bg-[#5B5CFF]/10 blur-[90px]" />
+        <div className="absolute top-[40%] right-[-10%] w-[50%] h-[40%] rounded-full bg-[#FFC83D]/15 blur-[90px]" />
+      </div>
+
+      {/* TOP APP BAR / GAME HUD */}
+      <header className="flex flex-col bg-white/85 backdrop-blur-md border-b border-[#E0E3E5] sticky top-0 z-50 shadow-sm">
+        <div className="flex items-center justify-between px-4 h-16 max-w-[430px] mx-auto w-full">
+          <div className="flex items-center gap-2.5">
+            <button 
+              onClick={() => navigate("/home")} 
+              className="w-9 h-9 rounded-full bg-[#F5F3FF] border border-[#E0E3E5] hover:bg-[#EEF1FF] flex items-center justify-center transition-all active:scale-95 shrink-0"
+              aria-label="Back"
+            >
+              <ArrowLeft size={18} className="text-[#17157F]" />
             </button>
             <button
               onClick={() => navigate("/profile")}
-              className="w-10 h-10 rounded-full border-2 border-white bg-[#2d328f] overflow-hidden hover:opacity-80 transition-opacity shrink-0"
+              className="w-9 h-9 rounded-full border-2 border-white bg-[#17157F] overflow-hidden hover:opacity-90 transition-opacity shrink-0 shadow-sm"
             >
               {childPhoto ? (
-                <img
-                  src={childPhoto}
-                  alt="Avatar"
-                  className="w-full h-full object-cover"
-                />
+                <img src={childPhoto} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
                 <img
                   src={`https://ui-avatars.com/api/?name=${encodeURIComponent(childName || "Kid")}&background=random`}
@@ -230,18 +227,25 @@ export default function ChaptersScreen() {
                 />
               )}
             </button>
-            <h1 className="text-xl font-bold text-[#141779] whitespace-nowrap">Learning Path</h1>
+            <div>
+              <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#5B5CFF] block leading-none">
+                LEVEL {Math.min(99, completedChaptersCount + 1)} ADVENTURER
+              </span>
+              <h1 className="text-sm font-black text-[#17157F] tracking-wide uppercase leading-tight">
+                LEARNING JOURNEY
+              </h1>
+            </div>
           </div>
 
-          {/* Right Side: Bell Icon */}
+          {/* Right Notification Bell */}
           <button
             onClick={() => navigate("/notifications")}
-            className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all shrink-0"
+            className="w-9 h-9 rounded-full bg-white border border-[#E0E3E5] shadow-sm flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all shrink-0"
           >
             <div className="relative">
-              <Bell size={20} className="text-[#141779]" />
+              <Bell size={18} className="text-[#17157F]" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border border-white pointer-events-none z-10">
+                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full text-[8px] text-white flex items-center justify-center font-black border border-white pointer-events-none z-10">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
@@ -249,9 +253,9 @@ export default function ChaptersScreen() {
           </button>
         </div>
 
-        {/* Subject Selector Tabs */}
+        {/* SUBJECT SELECTION TABS */}
         {subjects.length > 0 && (
-          <div className="flex overflow-x-auto hide-scrollbar px-6 pb-3 gap-3">
+          <div className="flex overflow-x-auto hide-scrollbar px-4 pb-2.5 gap-2 max-w-[430px] mx-auto w-full pr-6">
             {subjects.map((sub) => {
               const isActive = activeSubject?._id === sub._id;
               return (
@@ -261,9 +265,14 @@ export default function ChaptersScreen() {
                     setActiveSubject(sub);
                     sessionStorage.setItem("activeSubjectId", sub._id);
                   }}
-                  className={`px-5 py-2 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${isActive ? 'bg-[#141779] text-white shadow-md' : 'bg-white text-[#767683] border border-[#e0e3e5] hover:border-[#141779]'}`}
+                  className={`px-4 py-1.5 rounded-full font-black text-xs whitespace-nowrap transition-all uppercase tracking-wider flex items-center gap-1.5 shrink-0 ${
+                    isActive 
+                      ? 'bg-gradient-to-r from-[#5B5CFF] to-[#17157F] text-white shadow-md border border-[#5B5CFF]' 
+                      : 'bg-white text-[#767683] border border-[#E0E3E5] hover:border-[#5B5CFF]/60'
+                  }`}
                 >
-                  {sub.name}
+                  <Globe size={13} className={isActive ? "text-[#FFC83D]" : "text-[#767683]"} />
+                  <span>{sub.name}</span>
                 </button>
               );
             })}
@@ -271,191 +280,248 @@ export default function ChaptersScreen() {
         )}
       </header>
 
-      <main className="px-6 pt-6 flex flex-col gap-6">
+      {/* MAIN ADVENTURE CONTENT */}
+      <main className="px-4 pt-4 max-w-[430px] mx-auto w-full relative z-10 flex flex-col gap-4">
         {loading ? (
-          <>
-            <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-6 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_2px_10px_rgba(0,0,0,0.05)] flex flex-col gap-4 animate-pulse">
-              <div className="flex justify-between items-end">
-                <div className="flex-1">
-                  <div className="h-3 bg-gray-200 rounded w-1/3 mb-2" />
-                  <div className="h-6 bg-gray-200 rounded w-1/2" />
-                </div>
-                <div className="w-12 h-12 rounded-full border-4 border-gray-200" />
-              </div>
-              <div className="w-full h-2.5 bg-gray-200 rounded-full" />
+          <div className="flex flex-col gap-4 animate-pulse">
+            <div className="bg-white rounded-2xl p-5 border border-[#E0E3E5] shadow-sm flex flex-col gap-3">
+              <div className="h-4 bg-gray-200 rounded w-1/3" />
+              <div className="h-6 bg-gray-200 rounded w-2/3" />
+              <div className="h-3 bg-gray-200 rounded-full w-full mt-2" />
             </div>
             <div className="flex flex-col gap-4">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="flex flex-col bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.8)] animate-pulse">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-gray-200 shrink-0" />
-                    <div className="flex-1">
-                      <div className="h-3 bg-gray-200 rounded w-1/4 mb-2" />
-                      <div className="h-5 bg-gray-200 rounded w-2/3" />
-                    </div>
-                    <div className="w-6 h-6 rounded-full bg-gray-200" />
-                  </div>
-                </div>
+                <div key={i} className="h-24 bg-white rounded-2xl border border-[#E0E3E5]" />
               ))}
             </div>
-          </>
+          </div>
         ) : (
           <>
-            {/* Progress Summary Card */}
-            <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-6 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_2px_10px_rgba(0,0,0,0.05)] flex flex-col gap-4">
-              <div className="flex justify-between items-end">
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-[#767683] mb-1">
-                    {t('mission_progress')} {totalCompletedMissionsCount > 0 && <span className="text-xs font-bold text-[#006a62] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 ml-1">• {totalCompletedMissionsCount} {totalCompletedMissionsCount === 1 ? 'Mission' : 'Missions'} Done</span>}
-                  </p>
-                  <h2 className="text-2xl font-bold text-[#141779]">{t('chapters_complete', { completed: completedChaptersCount, total: totalChapters })}</h2>
+            {/* MISSION PROGRESS HERO CARD */}
+            <section className="bg-white border-2 border-[#E0E3E5] rounded-2xl p-4 shadow-sm relative overflow-hidden">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5">
+                  <Rocket size={16} className="text-[#5B5CFF]" />
+                  <span className="text-xs font-black uppercase tracking-wider text-[#17157F]">
+                    🚀 YOUR JOURNEY
+                  </span>
                 </div>
-                <div className="relative w-12 h-12 rounded-full border-4 border-[rgba(0,106,98,0.2)] flex items-center justify-center">
-                  <span className="text-xs font-bold text-[#006a62]">{Math.round(progressPercent)}%</span>
-                  <svg width="48" height="48" viewBox="0 0 48 48" className="absolute -rotate-90 top-[-4px] left-[-4px]">
-                    <circle
-                      cx="24"
-                      cy="24"
-                      r={radius}
-                      stroke="#006a62"
-                      strokeWidth="4"
-                      fill="none"
-                      strokeDasharray={circumference}
-                      strokeDashoffset={strokeDashoffset}
-                      strokeLinecap="round"
-                      className="transition-all duration-1000 ease-out"
-                    />
-                  </svg>
-                </div>
+                <span className="text-[10px] font-black text-[#006a62] bg-[#35E5D4]/20 px-2 py-0.5 rounded-full border border-[#35E5D4]/50">
+                  {completedChaptersCount} OF {totalChapters} MISSIONS
+                </span>
               </div>
-              <div className="w-full h-2.5 bg-[#e0e3e5] rounded-full overflow-hidden">
-                <div className="h-full bg-[#006a62] transition-all duration-1000 ease-out" style={{ width: `${progressPercent}%` }} />
-              </div>
-            </div>
 
-            {/* Chapter List */}
-            <div className="flex flex-col gap-4">
+              <div className="mb-2.5">
+                <h2 className="text-base font-black text-[#17157F] leading-tight">
+                  {activeCurrentChapter ? activeCurrentChapter.name : "Journey Completed!"}
+                </h2>
+              </div>
+
+              {/* Progress Bar & Percentage Alignment */}
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-3 bg-[#EEF1FF] rounded-full overflow-hidden p-0.5 border border-[#E0E3E5]">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progressPercent}%` }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                    className="h-full bg-gradient-to-r from-[#5B5CFF] via-[#35E5D4] to-[#45D483] rounded-full shadow-sm"
+                  />
+                </div>
+                <span className="text-xs font-black text-[#17157F] shrink-0">
+                  {Math.round(progressPercent)}%
+                </span>
+              </div>
+
+              <p className="text-[10px] font-bold text-[#5B5CFF] mt-2 italic">
+                {completedChaptersCount === totalChapters 
+                  ? "🎉 You mastered this entire learning world!" 
+                  : "Keep going! Your next mission is waiting."}
+              </p>
+            </section>
+
+            {/* VERTICAL LEARNING ADVENTURE MAP WITH FIXED TIMELINE AXIS */}
+            <section className="relative py-2 flex flex-col gap-5">
+              {/* Continuous Vertical Timeline Axis Line (Centered on 28px inside 56px Timeline Column) */}
+              <div className="absolute left-[28px] top-6 bottom-6 w-1 -translate-x-1/2 bg-gradient-to-b from-[#45D483] via-[#5B5CFF] to-[#B9BBC8]/40 -z-10 rounded-full" />
+
               {chapters.length === 0 ? (
-                <div className="flex flex-col items-center justify-center bg-[rgba(255,255,255,0.7)] rounded-2xl p-8 border-[1.5px] border-[rgba(255,255,255,0.8)] text-center mt-4">
-                  <Rocket size={40} color="#c7c5d4" className="mb-3" />
-                  <p className="text-[#767683] font-medium">{t('new_chapters_launching_soon', { subject: activeSubject?.name })}</p>
+                <div className="flex flex-col items-center justify-center bg-white rounded-2xl p-8 border-2 border-[#E0E3E5] border-dashed text-center my-4">
+                  <Rocket size={40} className="text-[#5B5CFF] mb-2" />
+                  <p className="text-sm font-bold text-[#17157F]">New Missions Launching Soon!</p>
+                  <p className="text-xs text-[#767683] mt-1">Check back shortly for new adventures in {activeSubject?.name}.</p>
                 </div>
               ) : (
                 chapters.map((chap, index) => {
                   const isCompleted = isChapterCompleted(chap._id);
                   const isCurrent = !isCompleted && index === currentChapterIndex;
                   const status = isCompleted ? "completed" : isCurrent ? "current" : "locked";
-                  const IconComponent = chapterIcons[index % chapterIcons.length];
-
+                  const isSubLocked = index >= 1 && !isSubscribed;
                   const isExpanded = expandedChapter === chap._id;
 
-                  // Question accordion render function for completed chapter
+                  // Accordion Options for Completed Chapter
                   const renderQuestions = () => (
                     isExpanded && (
-                      <div className="mt-4 pt-4 border-t border-[rgba(0,0,0,0.05)] w-full text-left">
-                        <div className="flex flex-col gap-3">
-                          <button onClick={(e) => { e.stopPropagation(); navigate(`/chapter-reader?chapterId=${chap._id}&title=${encodeURIComponent(`${index + 1}. ${chap.name}`)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}`); }} className="bg-white border-2 border-[#141779] text-[#141779] px-4 py-2 rounded-xl hover:bg-gray-50 transition-all font-bold text-sm w-full text-left flex justify-between">
-                            <span>Read PDF</span>
-                            <span>→</span>
-                          </button>
-                          <button onClick={(e) => { e.stopPropagation(); navigate(`/chapter-questions?chapterId=${chap._id}&chapterName=${encodeURIComponent(`${index + 1}. ${chap.name}`)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}`); }} className="bg-white border-2 border-[#141779] text-[#141779] px-4 py-2 rounded-xl hover:bg-gray-50 transition-all font-bold text-sm w-full text-left flex justify-between">
-                            <span>Practice Questions</span>
-                            <span>→</span>
-                          </button>
-                          <button onClick={(e) => { e.stopPropagation(); navigate(`/boss-battle?worldId=w1&chapterId=${chap._id}&difficulty=easy&returnTo=/practice/journey-map&subjectName=${encodeURIComponent(activeSubject?.name || "")}&chapterName=${encodeURIComponent(`${index + 1}. ${chap.name}`)}`); }} className="bg-white border-2 border-[#141779] text-[#141779] px-4 py-2 rounded-xl hover:bg-gray-50 transition-all font-bold text-sm w-full text-left flex justify-between">
-                            <span>Boss Round</span>
-                            <span>→</span>
-                          </button>
-                        </div>
-                      </div>
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mt-3 pt-3 border-t border-gray-100 w-full text-left flex flex-col gap-2"
+                      >
+                        <button 
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            navigate(`/chapter-reader?chapterId=${chap._id}&title=${encodeURIComponent(`${index + 1}. ${chap.name}`)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}`); 
+                          }} 
+                          className="bg-[#EEF1FF] border border-[#5B5CFF]/30 text-[#17157F] px-3.5 py-2 rounded-xl font-bold text-xs hover:bg-[#5B5CFF] hover:text-white transition-all flex items-center justify-between"
+                        >
+                          <span>📖 Read Chapter PDF</span>
+                          <ChevronRight size={16} />
+                        </button>
+
+                        <button 
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            navigate(`/chapter-questions?chapterId=${chap._id}&chapterName=${encodeURIComponent(`${index + 1}. ${chap.name}`)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}`); 
+                          }} 
+                          className="bg-[#EEF1FF] border border-[#5B5CFF]/30 text-[#17157F] px-3.5 py-2 rounded-xl font-bold text-xs hover:bg-[#5B5CFF] hover:text-white transition-all flex items-center justify-between"
+                        >
+                          <span>⚡ Practice Mission Questions</span>
+                          <ChevronRight size={16} />
+                        </button>
+
+                        <button 
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            navigate(`/boss-battle?worldId=w1&chapterId=${chap._id}&difficulty=easy&returnTo=/practice/journey-map&subjectName=${encodeURIComponent(activeSubject?.name || "")}&chapterName=${encodeURIComponent(`${index + 1}. ${chap.name}`)}`); 
+                          }} 
+                          className="bg-[#FFC83D]/20 border border-[#FFC83D] text-[#17157F] px-3.5 py-2 rounded-xl font-bold text-xs hover:bg-[#FFC83D] transition-all flex items-center justify-between"
+                        >
+                          <span>🏆 Chapter Boss Round</span>
+                          <ChevronRight size={16} />
+                        </button>
+                      </motion.div>
                     )
                   );
 
-                  if (status === "completed") {
-                    return (
-                      <div key={chap._id} className={`flex flex-col bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.8)] ${isExpanded ? 'shadow-md' : 'hover:bg-white'} transition-all w-full`}>
-                        <button onClick={() => handleToggleChapter(index, chap._id, `${index + 1}. ${chap.name}`)} className="flex items-center gap-4 text-left w-full">
-                          <div className="w-12 h-12 rounded-full bg-[rgba(0,106,98,0.1)] border border-[rgba(0,106,98,0.2)] flex items-center justify-center shrink-0">
-                            <IconComponent size={24} color="#006a62" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-xs font-bold text-[#006a62] tracking-[1px] mb-0.5 uppercase">{t('chapter')} {index + 1}</p>
-                            <h3 className="text-lg font-medium text-[#141779]">{chap.name}</h3>
-                          </div>
-                          <CheckCircle size={24} color="#006a62" />
-                        </button>
-                        {renderQuestions()}
-                      </div>
-                    );
-                  }
-
-                  const isSubLocked = index >= 1 && !isSubscribed;
-
-                  if (status === "current") {
-                    return (
-                      <div key={chap._id} className={`flex flex-col relative ${isSubLocked ? 'bg-amber-50/70 border-amber-300 shadow-[0_4px_10px_rgba(245,158,11,0.15)]' : 'bg-[rgba(87,250,233,0.3)] border-[rgba(0,106,98,0.3)]'} rounded-2xl p-4 border-2 overflow-hidden shadow-[0_4px_10px_rgba(0,0,0,0.1)] transition-all ${isExpanded ? 'ring-2 ring-[#006a62]' : 'hover:opacity-95'}`}>
-                        {!isExpanded && (
-                          <motion.div
-                            animate={{ scale: [1, 1.05, 1] }}
-                            transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-                            className={`absolute -top-8 -right-8 w-24 h-24 rounded-full ${isSubLocked ? 'bg-amber-400/10' : 'bg-[rgba(0,106,98,0.05)]'} pointer-events-none`}
-                          />
-                        )}
-                        <div onClick={() => handleToggleChapter(index, chap._id, `${index + 1}. ${chap.name}`)} className="flex items-center gap-4 cursor-pointer relative z-10 w-full">
-                          <div className={`w-12 h-12 rounded-full ${isSubLocked ? 'bg-amber-100 text-amber-700 border border-amber-300' : 'bg-[#006a62] text-white'} flex items-center justify-center shrink-0 shadow-[0_4px_8px_rgba(0,0,0,0.15)]`}>
-                            {isSubLocked ? <Lock size={20} className="text-amber-700 animate-pulse" /> : <IconComponent size={24} color="white" />}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1">
-                              <p className={`text-xs font-bold ${isSubLocked ? 'text-amber-800' : 'text-[#006a62]'} tracking-[1px] uppercase`}>{t('chapter')} {index + 1}</p>
-                              {isSubLocked && (
-                                <span className="text-[9px] font-black uppercase bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 shrink-0">
-                                  PREMIUM 🔒
-                                </span>
-                              )}
-                            </div>
-                            <h3 className="text-lg font-bold text-[#141779] leading-tight">{chap.name}</h3>
-                          </div>
-                          {!isExpanded && (
-                            <button onClick={(e) => { e.stopPropagation(); handleToggleChapter(index, chap._id, `${index + 1}. ${chap.name}`); }} className={`${isSubLocked ? 'bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-amber-950 shadow-md shadow-amber-500/20 active:scale-95' : 'bg-[#141779] text-white hover:opacity-90 active:scale-95'} px-3 py-1.5 md:px-5 md:py-2 rounded-full transition-all shrink-0 flex items-center justify-center gap-1 ml-1`}>
-                              <span className="text-xs md:text-sm font-extrabold">{isSubLocked ? 'Unlock' : t('start')}</span>
-                              {isSubLocked && <Lock size={12} className="text-amber-900 md:w-[14px] md:h-[14px]" />}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  }
-
                   return (
-                    <div key={chap._id} className={`flex flex-col ${isSubLocked ? 'bg-amber-50/20 border-amber-200/50 opacity-75' : 'bg-[#f2f4f6] border-[rgba(118,118,131,0.1)] opacity-60'} rounded-2xl p-4 border transition-all`}>
-                      <button onClick={() => { if (isSubLocked) { setShowSubModal(true); } else if (!isExpanded) showToast(t('complete_chapter_to_unlock', { chapter: currentChapterIndex + 1 })); }} className="flex items-center gap-4 text-left w-full cursor-pointer">
-                        <div className={`w-12 h-12 rounded-full ${isSubLocked ? 'bg-amber-100/60 border border-amber-200/40 text-amber-700' : 'bg-[rgba(118,118,131,0.1)] text-[#767683]'} flex items-center justify-center shrink-0`}>
-                          <IconComponent size={24} className={isSubLocked ? 'text-amber-600' : 'text-[#767683]'} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1">
-                            <p className={`text-xs font-bold ${isSubLocked ? 'text-amber-700' : 'text-[#767683]'} tracking-[1px] uppercase`}>{t('chapter')} {index + 1}</p>
-                            {isSubLocked && (
-                              <span className="text-[9px] font-black uppercase bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 shrink-0">
-                                PREMIUM 🔒
-                              </span>
-                            )}
+                    <div key={chap._id} className="flex items-start gap-3 w-full">
+                      {/* FIXED TIMELINE COLUMN (56px Wide - Exact Center Alignment across all nodes) */}
+                      <div className="w-14 shrink-0 flex items-center justify-center pt-1">
+                        {status === "completed" && (
+                          <div className="w-11 h-11 rounded-full bg-[#45D483] border-4 border-white text-white flex items-center justify-center shadow-md">
+                            <CheckCircle size={22} strokeWidth={2.5} />
                           </div>
-                          <h3 className={`text-lg font-medium ${isSubLocked ? 'text-[#141779]' : 'text-[#464652]'}`}>{chap.name}</h3>
-                        </div>
-                        <Lock size={24} className={isSubLocked ? 'text-amber-600' : 'text-[#767683]'} />
-                      </button>
+                        )}
+                        {status === "current" && (
+                          <div className="w-11 h-11 rounded-full bg-[#5B5CFF] border-4 border-white text-white flex items-center justify-center shadow-[0_0_16px_rgba(91,92,255,0.6)] animate-pulse">
+                            <Rocket size={20} className="text-[#FFC83D]" />
+                          </div>
+                        )}
+                        {status === "locked" && (
+                          <div className={`w-11 h-11 rounded-full border-4 flex items-center justify-center ${
+                            isSubLocked 
+                              ? 'bg-[#FEF3C7] border-white text-[#D97706]' 
+                              : 'bg-[#F1F3F5] border-white text-[#B9BBC8]'
+                          }`}>
+                            <Lock size={18} className={isSubLocked ? 'text-[#D97706]' : 'text-[#B9BBC8]'} />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* CHAPTER CARD (RIGHT OF TIMELINE) */}
+                      <div className="flex-1 min-w-0">
+                        {status === "completed" && (
+                          <div className="bg-white border-2 border-[#45D483]/60 rounded-2xl p-3.5 shadow-sm transition-all">
+                            <button 
+                              onClick={() => {
+                                if (expandedChapter === chap._id) setExpandedChapter(null);
+                                else setExpandedChapter(chap._id);
+                              }} 
+                              className="flex items-center justify-between text-left w-full"
+                            >
+                              <div className="flex-1 pr-2">
+                                <span className="text-[9px] font-black uppercase tracking-wider text-[#45D483] bg-[#45D483]/15 px-2 py-0.5 rounded-full border border-[#45D483]/40 inline-block mb-1">
+                                  ✓ MISSION COMPLETED
+                                </span>
+                                <p className="text-[10px] font-bold text-[#767683]">
+                                  Chapter {index + 1}
+                                </p>
+                                <h3 className="text-sm font-black text-[#17157F] leading-tight">
+                                  {chap.name}
+                                </h3>
+                              </div>
+                              <span className="text-xs text-[#5B5CFF] font-bold underline shrink-0">
+                                {isExpanded ? "Close" : "Review"}
+                              </span>
+                            </button>
+                            {renderQuestions()}
+                          </div>
+                        )}
+
+                        {status === "current" && (
+                          <div className={`flex-1 ${isSubLocked ? 'bg-amber-50 border-amber-300' : 'bg-gradient-to-br from-white to-[#EEF1FF] border-2 border-[#5B5CFF] shadow-[0_4px_16px_rgba(91,92,255,0.2)]'} rounded-2xl p-4 relative overflow-hidden transition-all`}>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${isSubLocked ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-[#5B5CFF] text-white border-[#5B5CFF]'}`}>
+                                {isSubLocked ? '👑 PREMIUM MISSION 🔒' : '🚀 CURRENT MISSION'}
+                              </span>
+                            </div>
+
+                            <p className="text-[11px] font-bold text-[#5B5CFF] mb-0.5">
+                              Chapter {index + 1}
+                            </p>
+                            <h3 className="text-base font-black text-[#17157F] leading-tight mb-2.5">
+                              {chap.name}
+                            </h3>
+
+                            <button
+                              onClick={() => handleToggleChapter(index, chap._id, `${index + 1}. ${chap.name}`)}
+                              className={`w-full py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+                                isSubLocked
+                                  ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-amber-950 shadow-md active:scale-95'
+                                  : 'bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white shadow-[0_4px_14px_rgba(91,92,255,0.4)] hover:brightness-110 active:scale-95 border border-[#5B5CFF]'
+                              }`}
+                            >
+                              <span>{isSubLocked ? 'UNLOCK PREMIUM MISSION' : 'START MISSION →'}</span>
+                            </button>
+                          </div>
+                        )}
+
+                        {status === "locked" && (
+                          <div 
+                            onClick={() => {
+                              if (isSubLocked) setShowSubModal(true);
+                              else showToast(t('complete_chapter_to_unlock', { chapter: currentChapterIndex + 1 }));
+                            }}
+                            className={`rounded-2xl p-3.5 border-2 transition-all cursor-pointer ${
+                              isSubLocked 
+                                ? 'bg-amber-50/60 border-amber-200' 
+                                : 'bg-white/80 border-[#E0E3E5]'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${isSubLocked ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                                {isSubLocked ? '👑 PREMIUM 🔒' : '🔒 LOCKED'}
+                              </span>
+                            </div>
+                            <p className="text-[10px] font-bold text-[#767683]">
+                              Chapter {index + 1}
+                            </p>
+                            <h3 className="text-sm font-bold text-[#767683] leading-tight">
+                              {chap.name}
+                            </h3>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   );
                 })
               )}
-            </div>
+            </section>
           </>
         )}
       </main>
 
-      {/* Subscription Lock Modal */}
+      {/* SUBSCRIPTION LOCK MODAL */}
       {showSubModal && (
         <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-6 text-center">
           <motion.div
@@ -464,10 +530,10 @@ export default function ChaptersScreen() {
             className="bg-white rounded-[32px] p-6 max-w-sm w-full border-2 border-amber-300 shadow-2xl flex flex-col items-center gap-4"
           >
             <div className="w-16 h-16 rounded-full bg-amber-100 border border-amber-300 flex items-center justify-center text-3xl shadow-inner animate-bounce">
-              🔒
+              👑
             </div>
             <div>
-              <h3 className="text-xl font-black text-slate-900">Unlock Full Access!</h3>
+              <h3 className="text-xl font-black text-slate-900">Unlock Full Adventure!</h3>
               <p className="text-xs font-semibold text-slate-600 mt-1 leading-relaxed">
                 Chapter 1 is free for everyone. Access to Chapter 2 and beyond requires an active StudySaathy Subscription.
               </p>
@@ -491,10 +557,10 @@ export default function ChaptersScreen() {
         </div>
       )}
 
-      {/* Toast Message */}
+      {/* TOAST NOTIFICATION */}
       {toastMessage && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-[#141779] text-white px-6 py-3 rounded-full shadow-lg z-[9999] font-medium text-sm flex items-center gap-2 whitespace-nowrap max-w-[90vw]">
-          <Lock size={16} color="white" className="shrink-0" />
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-[#17157F] text-white px-5 py-2.5 rounded-full shadow-xl z-[9999] font-bold text-xs flex items-center gap-2 whitespace-nowrap max-w-[90vw]">
+          <Lock size={15} className="text-[#FFC83D] shrink-0" />
           <span className="truncate">{toastMessage}</span>
         </div>
       )}

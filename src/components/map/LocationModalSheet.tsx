@@ -77,7 +77,7 @@ export default function LocationModalSheet({
                 {stage.name}
               </h2>
               <p className="text-xs font-bold text-slate-500 truncate mt-0.5">
-                {stage.subtitle || stage.description || `Milestone Quest Node`}
+                {stage.subtitle || (stage as any).description || `Milestone Quest Node`}
               </p>
             </div>
           </div>
@@ -86,7 +86,7 @@ export default function LocationModalSheet({
           <div className="bg-white border border-indigo-100/90 rounded-2xl p-3.5 flex items-start gap-2.5 shadow-2xs">
             <span className="text-lg shrink-0">📜</span>
             <p className="text-xs font-bold leading-relaxed italic text-slate-700">
-              "{stage.storyQuote || stage.description || "Complete chapter learning quests to unlock this milestone!"}"
+              "{(stage as any).storyQuote || (stage as any).description || "Complete chapter learning quests to unlock this milestone!"}"
             </p>
           </div>
 

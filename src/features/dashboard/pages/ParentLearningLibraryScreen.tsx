@@ -80,17 +80,7 @@ export default function ParentLearningLibraryScreen() {
     return matchesFilter && matchesSearch;
   });
 
-  const unlockedTopicIds = new Set<string>();
-  const seenCategories = new Set<string>();
-  topics.forEach(topic => {
-    if (topic.status !== "completed") {
-      const cat = topic.category || "Other";
-      if (!seenCategories.has(cat)) {
-        seenCategories.add(cat);
-        unlockedTopicIds.add(topic.topicId);
-      }
-    }
-  });
+
 
   return (
     <div className="bg-[#f7f9fb] text-[#191c1e] min-h-screen font-sans pb-24 relative overflow-x-hidden">
@@ -281,7 +271,7 @@ export default function ParentLearningLibraryScreen() {
             }
 
             // Active UI
-            if (unlockedTopicIds.has(topic.topicId)) {
+            if (topic.status === "active") {
               return (
                 <div key={topic.topicId} onClick={() => navigate(`/parent/lessons/player?id=${topic.topicId}`)} className="flex items-center gap-4 p-4 bg-white border border-[#c7c5d4]/40 hover:border-[#141779]/30 rounded-2xl shadow-sm group active:scale-[0.98] transition-all cursor-pointer">
                   <div className="w-20 h-20 rounded-xl overflow-hidden bg-[#e0e0ff] flex-shrink-0 relative group-hover:shadow-md transition-shadow">

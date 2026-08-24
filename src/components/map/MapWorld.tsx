@@ -5,7 +5,7 @@ import LocationModalSheet from "./LocationModalSheet";
 import { Check, Lock, Star, Play, Sparkles, BookOpen } from "lucide-react";
 
 interface MapWorldProps {
-  themeKey?: "dragon" | "science" | "reading" | "space";
+  themeKey?: "dragon" | "science" | "reading" | "space" | "social";
   xp?: number;
   userLevel?: number;
   companionEmoji?: string;

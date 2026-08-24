@@ -8,7 +8,10 @@ export default function ParentLessonsScreen() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [allTopics, setAllTopics] = useState<any[]>([]);
-  const [activeFilter, setActiveFilter] = useState("For You");
+  const [activeFilter, setActiveFilter] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("category") || "For You";
+  });
   const [level, setLevel] = useState(1);
   const [xp, setXp] = useState(0);
   const [username, setUsername] = useState("Parent");
@@ -223,10 +226,16 @@ export default function ParentLessonsScreen() {
             {[
               { id: "For You", label: contentLanguage === "hi" ? "आपके लिए" : contentLanguage === "gu" ? "તમારા માટે" : "For You" },
               { id: "Completed", label: contentLanguage === "hi" ? "पूर्ण पाठ" : contentLanguage === "gu" ? "પૂર્ણ થયેલા પાઠ" : "Completed" },
-              { id: "Emotional Intelligence", label: contentLanguage === "hi" ? "भावनात्मक बुद्धिमत्ता" : contentLanguage === "gu" ? "ભાવનાત્મક બુદ્ધિમત્તા" : "Emotional Intelligence" },
-              { id: "Child Psychology", label: contentLanguage === "hi" ? "बाल मनोविज्ञान" : contentLanguage === "gu" ? "બાળ મનોવિજ્ઞાન" : "Child Psychology" },
               { id: "Communication", label: contentLanguage === "hi" ? "संचार एवं बातचीत" : contentLanguage === "gu" ? "સંચાર અને વાતચીત" : "Communication" },
-              { id: "Digital Parenting", label: contentLanguage === "hi" ? "डिजिटल पैरेंटिंग" : contentLanguage === "gu" ? "ડિજિટલ પેરિન્ટિંગ" : "Digital Parenting" }
+              { id: "Anger Management", label: contentLanguage === "hi" ? "क्रोध नियंत्रण" : contentLanguage === "gu" ? "ક્રોધ નિયંત્રણ" : "Anger Management" },
+              { id: "Focus", label: contentLanguage === "hi" ? "एकाग्रता एवं ध्यान" : contentLanguage === "gu" ? "અભ્યાસની ટેવો" : "Focus" },
+              { id: "Study Habits", label: contentLanguage === "hi" ? "अध्ययन की आदतें" : contentLanguage === "gu" ? "અભ્યાસની ટેવો" : "Study Habits" },
+              { id: "Confidence Building", label: contentLanguage === "hi" ? "आत्मविश्वास निर्माण" : contentLanguage === "gu" ? "આત્મવિશ્વાસ નિર્માણ" : "Confidence Building" },
+              { id: "Digital Parenting", label: contentLanguage === "hi" ? "डिजिटल पैरेंटिंग" : contentLanguage === "gu" ? "ડિજિટલ પેરિન્ટિંગ" : "Digital Parenting" },
+              { id: "Child Psychology", label: contentLanguage === "hi" ? "बाल मनोविज्ञान" : contentLanguage === "gu" ? "બાળ મનોવિજ્ઞાન" : "Child Psychology" },
+              { id: "Emotional Intelligence", label: contentLanguage === "hi" ? "भावनात्मक बुद्धिमत्ता" : contentLanguage === "gu" ? "ભાવનાત્મક બુદ્ધિમત્તા" : "Emotional Intelligence" },
+              { id: "Family Growth", label: contentLanguage === "hi" ? "पारिवारिक विकास" : contentLanguage === "gu" ? "પારિવારિક વિકાસ" : "Family Growth" },
+              { id: "Advanced Parenting", label: contentLanguage === "hi" ? "उन्नत पैरेंटिंग" : contentLanguage === "gu" ? "ઉન્નત પેરિન્ટિંગ" : "Advanced Parenting" }
             ].map(filter => (
               <button 
                 key={filter.id}
@@ -272,7 +281,10 @@ export default function ParentLessonsScreen() {
                 const matchesCategory = activeFilter === "For You" ||
                   t.category === activeFilter ||
                   t.originalCategory === activeFilter;
-                return unlockedTopicIds.has(t.topicId) && matchesCategory;
+                if (activeFilter === "For You") {
+                  return (t.status === "active" || t.status === "completed") && matchesCategory;
+                }
+                return matchesCategory;
               });
 
               if (filtered.length === 0) {
@@ -322,7 +334,7 @@ export default function ParentLessonsScreen() {
               }
 
               return filtered.map((topic, index) => {
-                const isLocked = false;
+                const isLocked = topic.status === "locked";
                 return (
                   <div
                     key={topic.topicId}
