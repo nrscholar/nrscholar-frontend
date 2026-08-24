@@ -175,7 +175,7 @@ export default function ParentLessonPlayerScreen() {
                 }`}
               >
                 {opt.label && <span className="font-bold block mb-1">{opt.label}</span>}
-                <span className="text-lg">{opt.text}</span>
+                <span className="text-lg block break-words w-full">{opt.text}</span>
               </button>
             ))}
           </div>

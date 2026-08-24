@@ -251,7 +251,7 @@ export default function WeeklyTestQuestionsScreen() {
                     {OPTION_LABELS[idx]}
                   </span>
                 </div>
-                <span className={`text-xl font-black mt-2 ${textClass}`}>{opt}</span>
+                <span className={`text-xl font-black mt-2 w-full break-words text-center px-2 ${textClass}`}>{opt}</span>
                 
                 {confirmed && idx === q.correct && (
                   <Check className="absolute bottom-2 right-3 text-[#30007f]" size={20} strokeWidth={4} />

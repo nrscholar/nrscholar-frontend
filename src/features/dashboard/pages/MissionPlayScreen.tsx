@@ -515,7 +515,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
         // Trigger Interactive Desktop Push Notification & Floating Banner Toast
         showInteractiveNotification(
           "🧩 MYSTERY SOLVED!",
-          `You bagged +${json.data.earnedXp || 20} XP & ${json.data.earnedCoins || 50} Coins! Your dragon egg is glowing 🐉`,
+          `You bagged ${json.data.earnedXp || 20} XP & ${json.data.earnedCoins || 50} Coins! Your dragon egg is glowing 🐉`,
           "/home",
           "gamification"
         );
@@ -932,7 +932,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
               Question #{currentQuizIndex + 1} {isDragObjects ? "• Drag & Drop" : ""}
             </span>
             <h3 className="text-lg font-bold text-[#141779] leading-snug">
-              {currentQ?.question}
+              {currentQ?.question?.normalize("NFD").replace(/[\u0300-\u036f]/g, "")}
             </h3>
           </div>
 
@@ -1057,7 +1057,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                     onClick={() => !quizConfirmed && setQuizSelected(idx)}
                     className={`w-full p-4 rounded-2xl border text-left font-semibold text-base transition-all flex items-center justify-between shadow-xs ${style}`}
                   >
-                    <span>{opt}</span>
+                    <span className="flex-1 mr-4 break-words text-left">{opt}</span>
                     {quizConfirmed && !isTimeout && isCorrect && <CheckCircle2 size={20} className="text-white" />}
                     {quizConfirmed && !isTimeout && isSelected && !isCorrect && <XCircle size={20} className="text-white" />}
                   </button>
@@ -1067,45 +1067,6 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           )}
 
           <div className="flex flex-col gap-3">
-            {quizConfirmed && (
-              <div
-                className={`p-4 rounded-2xl flex items-center gap-3 ${isTimeout
-                    ? "bg-amber-100 text-amber-900 border border-amber-300"
-                    : quizIsCorrect
-                      ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
-                      : "bg-red-100 text-red-900 border border-red-300"
-                  }`}
-              >
-                {isTimeout ? (
-                  <Clock size={24} className="text-amber-600 shrink-0" />
-                ) : quizIsCorrect ? (
-                  <CheckCircle2 size={24} className="text-emerald-600 shrink-0" />
-                ) : (
-                  <XCircle size={24} className="text-red-600 shrink-0" />
-                )}
-                 <div className="flex-1">
-                  <h4 className="font-extrabold text-sm">
-                    {isTimeout ? "Time's Up!" : quizIsCorrect ? getSuccessFeedback().main : "Not quite right!"}
-                  </h4>
-                  <p className="text-xs font-semibold">
-                    {isTimeout
-                      ? "You did not answer within 30 seconds."
-                      : quizIsCorrect
-                        ? getSuccessFeedback().sub
-                        : isDragObjects
-                          ? `Target was ${targetCount} ${objectEmoji}`
-                          : `Correct Answer: ${currentQ?.answer}`}
-                  </p>
-                  {quizIsCorrect && !isTimeout && (
-                    <div className="text-xs font-extrabold text-emerald-800/80 mt-1 flex items-center gap-1.5">
-                      <span>⭐ +15 XP</span>
-                      <span>·</span>
-                      <span>🪙 +10 Coins</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
 
             <button
               disabled={!isDragObjects && quizSelected === null && !quizConfirmed}
@@ -1125,41 +1086,101 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
         </main>
       )}
 
-      {phase === "MINI_REWARD" && (
-        <main className="px-6 py-8 flex-1 flex flex-col items-center justify-center max-w-md mx-auto text-center">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1.1 }}
-            className="w-24 h-24 rounded-full bg-emerald-100 border-4 border-emerald-400 flex items-center justify-center text-4xl mb-6 shadow-lg"
-          >
-            🌟
-          </motion.div>
+      {phase === "MINI_REWARD" && (() => {
+        const quizAccuracy = quizQuestions.length > 0 ? Math.round((quizCorrectCount / quizQuestions.length) * 100) : 0;
+        const hasPassed = quizAccuracy >= 70;
+        return (
+          <main className="px-6 py-8 flex-1 flex flex-col items-center justify-center max-w-md mx-auto text-center">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1.1 }}
+              className={`w-24 h-24 rounded-full flex items-center justify-center text-4xl mb-6 shadow-lg border-4 ${
+                hasPassed ? "bg-emerald-100 border-emerald-400" : "bg-amber-100 border-amber-400"
+              }`}
+            >
+              {hasPassed ? "🌟" : "⚠️"}
+            </motion.div>
 
-          <h2 className="text-2xl font-black text-[#141779] mb-2">Quiz Phase Complete!</h2>
-          <p className="text-[#464652] text-sm mb-6 font-medium">
-            Awesome! You answered {quizCorrectCount} out of {quizQuestions.length} correctly. Your energy is fully charged for the Boss Battle!
-          </p>
+            <h2 className="text-2xl font-black text-[#141779] mb-2">
+              {hasPassed ? "Quiz Phase Complete!" : "Keep Practicing!"}
+            </h2>
+            <p className="text-[#464652] text-sm mb-6 font-medium leading-relaxed">
+              {hasPassed
+                ? `Awesome! You answered ${quizCorrectCount} out of ${quizQuestions.length} correctly. Your energy is fully charged for the Boss Battle!`
+                : `You answered ${quizCorrectCount} out of ${quizQuestions.length} correctly (Accuracy: ${quizAccuracy}%). You need at least 70% accuracy to challenge the Boss!`
+              }
+            </p>
 
-          <div className="bg-white border border-gray-200 p-5 rounded-3xl w-full mb-8 flex justify-around shadow-xs">
-            <div>
-              <span className="text-xs text-[#767683] block font-semibold">Bonus XP</span>
-              <span className="text-xl font-black text-amber-600">+{quizCorrectCount * 15}</span>
+            <div className="bg-white border border-gray-200 p-5 rounded-3xl w-full mb-8 flex justify-around shadow-xs">
+              <div>
+                <span className="text-xs text-[#767683] block font-semibold">Bonus XP</span>
+                <span className="text-xl font-black text-amber-600">+{quizCorrectCount * 15}</span>
+              </div>
+              <div className="w-px bg-gray-200" />
+              <div>
+                <span className="text-xs text-[#767683] block font-semibold">Bonus Coins</span>
+                <span className="text-xl font-black text-teal-600">+{quizCorrectCount * 10}</span>
+              </div>
             </div>
-            <div className="w-px bg-gray-200" />
-            <div>
-              <span className="text-xs text-[#767683] block font-semibold">Bonus Coins</span>
-              <span className="text-xl font-black text-teal-600">+{quizCorrectCount * 10}</span>
-            </div>
-          </div>
 
-          <button
-            onClick={() => setPhase("BOSS")}
-            className="w-full py-4 rounded-2xl bg-[#141779] text-white font-black text-base shadow-lg hover:bg-[#101362] flex items-center justify-center gap-3 active:scale-95 transition-all"
-          >
-            <span>Enter Boss Arena 👹</span>
-          </button>
-        </main>
-      )}
+            {hasPassed ? (
+              <button
+                onClick={() => setPhase("BOSS")}
+                className="w-full py-4 rounded-2xl bg-[#141779] text-white font-black text-base shadow-lg hover:bg-[#101362] flex items-center justify-center gap-3 active:scale-95 transition-all"
+              >
+                <span>Enter Boss Arena 👹</span>
+              </button>
+            ) : (
+              <div className="w-full flex flex-col gap-3">
+                <button
+                  onClick={() => {
+                    sessionStorage.removeItem(`user_answers_${chapterId}_${missionSeq}`);
+                    sessionStorage.removeItem(`mission_phase_${chapterId}_${missionSeq}`);
+                    sessionStorage.removeItem(`mission_timer_${chapterId}_${missionSeq}`);
+                    sessionStorage.removeItem(`boss_damage_${chapterId}_${missionSeq}`);
+                    sessionStorage.removeItem(`boss_wrong_${chapterId}_${missionSeq}`);
+                    sessionStorage.removeItem(`boss_index_${chapterId}_${missionSeq}`);
+                    
+                    setCurrentQuizIndex(0);
+                    setQuizCorrectCount(0);
+                    setUserAnswers([]);
+                    setStreak(1);
+                    setQuizSelected(null);
+                    setQuizConfirmed(false);
+                    setBasketCount(0);
+                    setQuestionTimeLeft(QUESTION_TIME_LIMIT);
+                    setIsTimeout(false);
+                    setXpEarned(0);
+                    setCoinsEarned(0);
+                    setTotalSessionSec(0);
+                    setPhase("QUIZ");
+                  }}
+                  className="w-full py-4 rounded-2xl bg-[#141779] text-white font-black text-base shadow-lg hover:bg-[#101362] flex items-center justify-center gap-3 active:scale-95 transition-all"
+                >
+                  <span>Retry Quiz 🔄</span>
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/retreat`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ answers: userAnswers })
+                      });
+                    } catch (e) {
+                      console.error("Retreat on exit click failed:", e);
+                    }
+                    navigate(-1);
+                  }}
+                  className="w-full py-4 rounded-2xl bg-white border-2 border-gray-300 text-gray-700 font-black text-base hover:bg-gray-50 flex items-center justify-center gap-3 active:scale-95 transition-all"
+                >
+                  <span>Exit Mission 🚪</span>
+                </button>
+              </div>
+            )}
+          </main>
+        );
+      })()}
 
       {phase === "BOSS" && (
         <main className="px-6 py-6 flex-1 flex flex-col justify-between max-w-md mx-auto w-full">
@@ -1280,7 +1301,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
               Boss Strike #{safeBossIndex + 1} {isBossDrag ? "• Drag & Drop Strike" : "• Direct Strike"}
             </span>
             <h3 className="text-lg font-bold text-[#141779] leading-snug">
-              {activeBossQ?.question}
+              {activeBossQ?.question?.replace(/^(Boss\s+)?(Challenge|Question)(\s*#\d+)?(\s*\([^)]+\))?:\s*/i, "").trim().replace(/^\w/, c => c.toUpperCase()).normalize("NFD").replace(/[\u0300-\u036f]/g, "")}
             </h3>
           </div>
 

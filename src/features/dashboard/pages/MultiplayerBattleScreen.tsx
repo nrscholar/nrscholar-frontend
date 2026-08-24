@@ -517,7 +517,7 @@ export default function MultiplayerBattleScreen() {
                     onClick={() => handleAnswer(idx)}
                     className={`border font-bold text-lg py-5 px-6 rounded-2xl text-left transition-all shadow-sm ${btnStyle} ${selectedOption === null ? 'active:scale-[0.98]' : ''}`}
                   >
-                    {opt}
+                    <span className="break-words w-full text-left">{opt}</span>
                   </button>
                 );
               })}

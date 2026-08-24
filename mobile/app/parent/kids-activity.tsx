@@ -276,7 +276,7 @@ export default function KidsActivityScreen() {
                   ]}
                 />
                 <Text style={styles.detailText} numberOfLines={2}>
-                  {d.questionText || `Question ${qi + 1}`}
+                  {(d.questionText || `Question ${qi + 1}`).normalize("NFD").replace(/[\u0300-\u036f]/g, "")}
                 </Text>
                 <MaterialIcons
                   name={d.isCorrect ? "check-circle" : "cancel"}
