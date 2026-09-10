@@ -125,9 +125,11 @@ export default function ParentChallengesScreen() {
     <div className="bg-[#f7f9fb] text-[#191c1e] min-h-screen flex flex-col items-center font-sans relative pb-24">
       <style>{`
         .glass-card {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(16px);
-            border: 1.5px solid rgba(255, 255, 255, 0.4);
+            background: #ffffff;
+            border: 1px solid rgba(20, 23, 121, 0.15);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
         .progress-bar-glow {
             box-shadow: 0 0 12px rgba(87, 250, 233, 0.4);
@@ -248,42 +250,42 @@ export default function ParentChallengesScreen() {
             const progressPercent = Math.min(100, Math.round((chal.completedDays / chal.totalDays) * 100));
 
             return (
-              <div key={chal.id} className="glass-card rounded-2xl p-5 flex flex-col gap-4 shadow-sm active:scale-95 transition-transform cursor-pointer">
+              <div key={chal.id} className="glass-card rounded-2xl p-5 flex flex-col gap-4 shadow-sm hover:border-[#141779]/30 transition-all">
                 <div className="flex items-start gap-4">
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center`} style={{ backgroundColor: `${chal.color}15`, color: chal.color }}>
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0`} style={{ backgroundColor: `${chal.color}18`, color: chal.color }}>
                     <Icon size={24} />
                   </div>
-                  <div className="flex-1">
-                    <h4 className="font-bold" style={{ color: chal.color }}>{chal.title}</h4>
-                    <p className="text-[#464652] text-sm">{chal.desc}</p>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-base font-bold text-[#141779] leading-snug">{chal.title}</h4>
+                    <p className="text-slate-800 text-[13px] font-semibold leading-relaxed mt-1">{chal.desc}</p>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <div className="flex justify-between text-xs font-bold text-[#464652]">
+                  <div className="flex justify-between text-xs font-bold text-slate-800">
                     <span>Day {chal.completedDays} / {chal.totalDays} Complete</span>
-                    <span className="text-[#006a62]">{progressPercent}%</span>
+                    <span className="text-[#006a62] font-extrabold">{progressPercent}%</span>
                   </div>
-                  <div className="h-3 w-full bg-[#e0e3e5] rounded-full overflow-hidden">
+                  <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200/80">
                     <div className="h-full bg-[#006a62] progress-bar-glow rounded-full" style={{ width: `${progressPercent}%` }}></div>
                   </div>
                 </div>
-                <div className="flex justify-between items-center bg-[#f2f4f6] p-2 rounded-full px-4 border border-[#c7c5d4]/30">
+                <div className="flex justify-between items-center bg-slate-50 p-2.5 rounded-xl px-4 border border-slate-200/80">
                   <div className="flex items-center gap-2">
                     <Star className="text-[#141779]" size={18} fill="currentColor" />
                     <span className="text-xs font-bold text-[#141779]">+{chal.xp} XP</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="text-[#006a62]" size={18} fill="currentColor" />
-                    <span className="text-xs font-bold text-[#464652]">{chal.badge}</span>
+                    <span className="text-xs font-bold text-slate-800">{chal.badge}</span>
                   </div>
                 </div>
                 <button
                   onClick={(e) => handleIncrement(chal.id, e)}
                   disabled={chal.incrementedToday}
-                  className={`w-full font-bold py-2 mt-2 rounded-xl border-2 active:scale-95 transition-all text-sm flex items-center justify-center gap-2 ${
+                  className={`w-full font-black tracking-wide py-2.5 mt-1 rounded-xl border-2 active:scale-95 transition-all text-xs flex items-center justify-center gap-2 ${
                     chal.incrementedToday 
-                      ? "border-[#c7c5d4] text-[#8e8d9a] bg-[#f2f4f6]" 
-                      : "border-[#141779] text-[#141779] hover:bg-[#141779]/5"
+                      ? "border-slate-200 text-slate-400 bg-slate-100 font-bold" 
+                      : "border-[#141779] text-[#141779] bg-[#141779]/5 hover:bg-[#141779]/10"
                   }`}
                 >
                   <Star size={16} />
@@ -299,15 +301,15 @@ export default function ParentChallengesScreen() {
               <h3 className="text-lg font-bold text-[#141779] mt-4">Upcoming Challenges</h3>
               
               {upcoming.map(uc => (
-                <div key={uc.id} className="bg-[#e0e3e5]/50 border border-[#c7c5d4]/30 rounded-2xl p-5 flex items-center gap-4 grayscale opacity-60">
-                  <div className="w-12 h-12 bg-[#767683]/20 rounded-full flex items-center justify-center text-[#767683]">
+                <div key={uc.id} className="bg-white border border-slate-200/80 rounded-2xl p-5 flex items-center gap-4 shadow-xs">
+                  <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-600 shrink-0">
                     <BookOpen size={24} />
                   </div>
-                  <div className="flex-1">
-                    <h4 className="font-bold text-[#141779]">{uc.title}</h4>
-                    <p className="text-[#464652] text-sm italic">{uc.desc}</p>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-[#141779] text-base">{uc.title}</h4>
+                    <p className="text-slate-800 text-[13px] font-semibold mt-1">{uc.desc}</p>
                   </div>
-                  <Lock className="text-[#767683]" size={24} />
+                  <Lock className="text-slate-400 shrink-0" size={24} />
                 </div>
               ))}
             </>
@@ -323,25 +325,25 @@ export default function ParentChallengesScreen() {
                 const cState = claimState[chal.id] || "idle";
 
                 return (
-                  <div key={chal.id} className="border-2 border-dashed border-[#006a62]/40 bg-[#006a62]/5 rounded-2xl p-5 flex flex-col gap-4">
-                    <div className="flex items-start gap-4 opacity-70">
-                      <div className="w-12 h-12 bg-[#006a62]/20 rounded-full flex items-center justify-center text-[#006a62]">
+                  <div key={chal.id} className="border-2 border-dashed border-[#006a62]/40 bg-white rounded-2xl p-5 flex flex-col gap-4 shadow-sm">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 bg-[#006a62]/15 rounded-full flex items-center justify-center text-[#006a62] shrink-0">
                         <Icon size={24} fill="currentColor" />
                       </div>
-                      <div className="flex-1">
-                        <h4 className="font-bold text-[#141779]">{chal.title}</h4>
-                        <p className="text-[#464652] text-sm">{chal.desc}</p>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-[#141779] text-base">{chal.title}</h4>
+                        <p className="text-slate-800 text-[13px] font-semibold mt-1">{chal.desc}</p>
                       </div>
-                      <span className="bg-[#006a62] text-white text-[10px] px-2 py-0.5 rounded-full font-bold">COMPLETED</span>
+                      <span className="bg-[#006a62] text-white text-[10px] px-2 py-0.5 rounded-full font-bold shrink-0">COMPLETED</span>
                     </div>
-                    <div className="flex justify-between items-center bg-[#006a62]/10 p-2 rounded-full px-4 border border-[#006a62]/20">
+                    <div className="flex justify-between items-center bg-slate-50 p-2.5 rounded-xl px-4 border border-slate-200/80">
                       <div className="flex items-center gap-2">
                         <Star className="text-[#006a62]" size={18} fill="currentColor" />
                         <span className="text-xs font-bold text-[#006a62]">+{chal.xp} XP</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <ShieldCheck className="text-[#006a62]" size={18} fill="currentColor" />
-                        <span className="text-xs font-bold text-[#464652]">{chal.badge}</span>
+                        <span className="text-xs font-bold text-slate-800">{chal.badge}</span>
                       </div>
                     </div>
                     <button 

@@ -8,12 +8,12 @@ const filters = [
   "Completed",
   "Communication", 
   "Anger Management", 
+  "Child Psychology", 
+  "Emotional Intelligence", 
   "Focus", 
   "Study Habits", 
   "Confidence Building", 
   "Digital Parenting", 
-  "Child Psychology", 
-  "Emotional Intelligence", 
   "Family Growth", 
   "Advanced Parenting"
 ];
