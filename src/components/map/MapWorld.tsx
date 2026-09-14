@@ -83,21 +83,22 @@ export default function MapWorld({
         const coinR = n.coinReward || Math.max(50, (n.requiredChapters || 0) * 25);
         const missionXp = Math.max(50, Math.round(xpR / 2));
         const biomes: Array<"forest" | "cave" | "volcano" | "castle"> = ["forest", "cave", "volcano", "castle"];
+        const nodeCh = n.nodeChapters || 4;
         return {
           id: `node-${idx}`,
           stageNumber: idx + 1,
           name: n.name,
-          subtitle: `Required Chapters: ${n.requiredChapters}`,
+          subtitle: `Region: ${nodeCh} Chapters (${n.requiredChapters} Cumulative)`,
           emoji: n.emoji || "⭐",
           storyQuote: `Complete chapter learning quests to unlock ${n.name}! (${n.requiredPercentage}% Journey Completion required)`,
-          description: `Unlocks at ${n.requiredPercentage}% tier completion (${n.requiredChapters} chapters)`,
-          questsCount: n.requiredChapters || 0,
-          lessonsCount: Math.ceil((n.requiredChapters || 0) / 2),
+          description: `Unlocks at ${n.requiredPercentage}% tier completion (${n.requiredChapters} cumulative chapters)`,
+          questsCount: nodeCh,
+          lessonsCount: Math.ceil(nodeCh / 2),
           xpReward: xpR,
           coinReward: coinR,
           unlocked: Boolean(n.unlocked),
           itemIcon: n.emoji || "⭐",
-          itemReward: `${n.requiredChapters} Chapters`,
+          itemReward: `${nodeCh} Chapters`,
           x: 50,
           y: Math.max(10, 90 - idx * 20),
           biomeType: biomes[idx % biomes.length],

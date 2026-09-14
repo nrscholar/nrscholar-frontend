@@ -1087,28 +1087,21 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       )}
 
       {phase === "MINI_REWARD" && (() => {
-        const quizAccuracy = quizQuestions.length > 0 ? Math.round((quizCorrectCount / quizQuestions.length) * 100) : 0;
-        const hasPassed = quizAccuracy >= 70;
         return (
           <main className="px-6 py-8 flex-1 flex flex-col items-center justify-center max-w-md mx-auto text-center">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1.1 }}
-              className={`w-24 h-24 rounded-full flex items-center justify-center text-4xl mb-6 shadow-lg border-4 ${
-                hasPassed ? "bg-emerald-100 border-emerald-400" : "bg-amber-100 border-amber-400"
-              }`}
+              className="w-24 h-24 rounded-full flex items-center justify-center text-4xl mb-6 shadow-lg border-4 bg-emerald-100 border-emerald-400"
             >
-              {hasPassed ? "🌟" : "⚠️"}
+              🌟
             </motion.div>
 
             <h2 className="text-2xl font-black text-[#141779] mb-2">
-              {hasPassed ? "Quiz Phase Complete!" : "Keep Practicing!"}
+              Quiz Phase Complete!
             </h2>
             <p className="text-[#464652] text-sm mb-6 font-medium leading-relaxed">
-              {hasPassed
-                ? `Awesome! You answered ${quizCorrectCount} out of ${quizQuestions.length} correctly. Your energy is fully charged for the Boss Battle!`
-                : `You answered ${quizCorrectCount} out of ${quizQuestions.length} correctly (Accuracy: ${quizAccuracy}%). You need at least 70% accuracy to challenge the Boss!`
-              }
+              Awesome job! You answered {quizCorrectCount} out of {quizQuestions.length} correctly. Your energy is charged for the Boss Battle!
             </p>
 
             <div className="bg-white border border-gray-200 p-5 rounded-3xl w-full mb-8 flex justify-around shadow-xs">
@@ -1123,61 +1116,12 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
               </div>
             </div>
 
-            {hasPassed ? (
-              <button
-                onClick={() => setPhase("BOSS")}
-                className="w-full py-4 rounded-2xl bg-[#141779] text-white font-black text-base shadow-lg hover:bg-[#101362] flex items-center justify-center gap-3 active:scale-95 transition-all"
-              >
-                <span>Enter Boss Arena 👹</span>
-              </button>
-            ) : (
-              <div className="w-full flex flex-col gap-3">
-                <button
-                  onClick={() => {
-                    sessionStorage.removeItem(`user_answers_${chapterId}_${missionSeq}`);
-                    sessionStorage.removeItem(`mission_phase_${chapterId}_${missionSeq}`);
-                    sessionStorage.removeItem(`mission_timer_${chapterId}_${missionSeq}`);
-                    sessionStorage.removeItem(`boss_damage_${chapterId}_${missionSeq}`);
-                    sessionStorage.removeItem(`boss_wrong_${chapterId}_${missionSeq}`);
-                    sessionStorage.removeItem(`boss_index_${chapterId}_${missionSeq}`);
-                    
-                    setCurrentQuizIndex(0);
-                    setQuizCorrectCount(0);
-                    setUserAnswers([]);
-                    setStreak(1);
-                    setQuizSelected(null);
-                    setQuizConfirmed(false);
-                    setBasketCount(0);
-                    setQuestionTimeLeft(QUESTION_TIME_LIMIT);
-                    setIsTimeout(false);
-                    setXpEarned(0);
-                    setCoinsEarned(0);
-                    setTotalSessionSec(0);
-                    setPhase("QUIZ");
-                  }}
-                  className="w-full py-4 rounded-2xl bg-[#141779] text-white font-black text-base shadow-lg hover:bg-[#101362] flex items-center justify-center gap-3 active:scale-95 transition-all"
-                >
-                  <span>Retry Quiz 🔄</span>
-                </button>
-                <button
-                  onClick={async () => {
-                    try {
-                      await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/retreat`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ answers: userAnswers })
-                      });
-                    } catch (e) {
-                      console.error("Retreat on exit click failed:", e);
-                    }
-                    navigate(-1);
-                  }}
-                  className="w-full py-4 rounded-2xl bg-white border-2 border-gray-300 text-gray-700 font-black text-base hover:bg-gray-50 flex items-center justify-center gap-3 active:scale-95 transition-all"
-                >
-                  <span>Exit Mission 🚪</span>
-                </button>
-              </div>
-            )}
+            <button
+              onClick={() => setPhase("BOSS")}
+              className="w-full py-4 rounded-2xl bg-[#141779] text-white font-black text-base shadow-lg hover:bg-[#101362] flex items-center justify-center gap-3 active:scale-95 transition-all"
+            >
+              <span>Enter Boss Arena 👹</span>
+            </button>
           </main>
         );
       })()}
@@ -1821,15 +1765,77 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                 )}
               </div>
 
-              <div className="w-full flex flex-col gap-3">
-                <button
-                  onClick={() => navigate(`/mission-roadmap?chapterId=${chapterId}`)}
-                  className="w-full py-4 rounded-2xl bg-[#141779] text-white font-black text-base shadow-lg hover:bg-[#101362] flex items-center justify-center gap-2 active:scale-95 transition-all"
-                >
-                  <span>Continue to Next Mission</span>
-                  <Play size={18} className="fill-white" />
-                </button>
-              </div>
+              {(() => {
+                const finalAcc = completionResult?.accuracy ?? Math.round((quizCorrectCount / Math.max(1, quizQuestions.length)) * 100);
+                const hasPassedMission = finalAcc >= 75;
+
+                const handleReplayMission = () => {
+                  sessionStorage.removeItem(`user_answers_${chapterId}_${missionSeq}`);
+                  sessionStorage.removeItem(`mission_phase_${chapterId}_${missionSeq}`);
+                  sessionStorage.removeItem(`mission_timer_${chapterId}_${missionSeq}`);
+                  sessionStorage.removeItem(`boss_damage_${chapterId}_${missionSeq}`);
+                  sessionStorage.removeItem(`boss_wrong_${chapterId}_${missionSeq}`);
+                  sessionStorage.removeItem(`boss_index_${chapterId}_${missionSeq}`);
+
+                  setCurrentQuizIndex(0);
+                  setQuizCorrectCount(0);
+                  setCurrentBossIndex(0);
+                  setBossDamageCount(0);
+                  setChildDamageCount(0);
+                  setUserAnswers([]);
+                  setStreak(1);
+                  setQuizSelected(null);
+                  setQuizConfirmed(false);
+                  setBasketCount(0);
+                  setQuestionTimeLeft(QUESTION_TIME_LIMIT);
+                  setIsTimeout(false);
+                  setXpEarned(0);
+                  setCoinsEarned(0);
+                  setTotalSessionSec(0);
+
+                  window.location.reload();
+                };
+
+                return (
+                  <div className="w-full flex flex-col gap-3">
+                    {hasPassedMission ? (
+                      <>
+                        <button
+                          onClick={() => navigate(`/mission-roadmap?chapterId=${chapterId}`)}
+                          className="w-full py-4 rounded-2xl bg-[#141779] text-white font-black text-base shadow-lg hover:bg-[#101362] flex items-center justify-center gap-2 active:scale-95 transition-all"
+                        >
+                          <span>Next Mission 🚀</span>
+                          <Play size={18} className="fill-white" />
+                        </button>
+                        <button
+                          onClick={handleReplayMission}
+                          className="w-full py-3 rounded-2xl bg-white border-2 border-indigo-200 text-[#141779] font-black text-sm hover:bg-indigo-50 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                        >
+                          <span>Replay Mission 🔄</span>
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-2xl text-xs font-bold text-center">
+                          ⚠️ 75% accuracy is required to unlock the Next Mission. Replay to master unmastered questions!
+                        </div>
+                        <button
+                          onClick={handleReplayMission}
+                          className="w-full py-4 rounded-2xl bg-[#141779] text-white font-black text-base shadow-lg hover:bg-[#101362] flex items-center justify-center gap-2 active:scale-95 transition-all"
+                        >
+                          <span>Replay Mission 🔄</span>
+                        </button>
+                        <button
+                          onClick={() => navigate(`/mission-roadmap?chapterId=${chapterId}`)}
+                          className="w-full py-3 rounded-2xl bg-white border-2 border-gray-200 text-gray-700 font-bold text-sm hover:bg-gray-50 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                        >
+                          <span>Back to Roadmap 🚪</span>
+                        </button>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
             </main>
           )}
         </>
