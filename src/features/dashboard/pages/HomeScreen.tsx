@@ -377,9 +377,18 @@ export default function HomeScreen() {
           </button>
           <div className="flex flex-col min-w-0">
             <h1 className="text-sm font-black text-slate-900 leading-tight truncate">{childName}</h1>
-            <div className="flex items-center gap-1 mt-0.5">
-              <Star size={10} fill="#141779" color="#141779" className="shrink-0" />
-              <span className="text-[10px] text-slate-500 font-extrabold truncate">{t('explorer_level')} {userLevel}</span>
+            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+              <span className="text-[10px] text-[#5B5CFF] bg-[#EEF1FF] font-black px-1.5 py-0.5 rounded-md border border-[#5B5CFF]/20 shrink-0">
+                {userData?.childClass || "Class 1"}
+              </span>
+              {userData?.childAge && (
+                <span className="text-[10px] text-amber-700 bg-amber-50 font-black px-1.5 py-0.5 rounded-md border border-amber-200/60 shrink-0">
+                  {userData.childAge} yrs
+                </span>
+              )}
+              <span className="text-[10px] text-slate-500 font-extrabold truncate">
+                {t('explorer_level')} {userLevel}
+              </span>
             </div>
           </div>
         </div>

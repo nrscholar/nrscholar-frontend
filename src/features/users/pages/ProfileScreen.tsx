@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Zap, Coins, Flame, Users, HelpCircle, LogOut, Award, Sparkles, Rocket, Gift, ChevronRight, Trophy, ShieldCheck, Atom } from "lucide-react";
+import { ArrowLeft, Zap, Coins, Flame, Users, HelpCircle, LogOut, Award, Sparkles, Rocket, Gift, ChevronRight, Trophy, ShieldCheck, Atom, GraduationCap, Cake, BookOpen } from "lucide-react";
 import { motion } from "framer-motion";
 import { apiFetch, clearAuthSession } from "../../../api";
 import { useTranslation } from "react-i18next";
@@ -153,6 +153,28 @@ export default function ProfileScreen() {
           <p className="text-xs font-bold text-[#777A91]">
             {t('explorer_extraordinaire') || "Explorer Extraordinaire"}
           </p>
+
+          {/* Child Class & Age Badges */}
+          <div className="flex items-center justify-center gap-2 mt-2.5 flex-wrap">
+            {(user.childClass || user.activeChild?.childClass) && (
+              <span className="bg-[#EEF1FF] text-[#17177F] border border-[#5B5CFF]/30 text-[11px] font-black px-3 py-1 rounded-full flex items-center gap-1.5 shadow-xs">
+                <GraduationCap size={14} className="text-[#5B5CFF]" />
+                {user.childClass || user.activeChild?.childClass}
+              </span>
+            )}
+            {(user.childAge || user.activeChild?.childAge) && (
+              <span className="bg-[#FFF8E6] text-[#D97706] border border-[#FFC83D]/40 text-[11px] font-black px-3 py-1 rounded-full flex items-center gap-1.5 shadow-xs">
+                <Cake size={14} className="text-[#D97706]" />
+                {user.childAge || user.activeChild?.childAge} Years Old
+              </span>
+            )}
+            {(user.childBoard || user.activeChild?.childBoard) && (
+              <span className="bg-[#EBFDFB] text-[#0D9488] border border-[#3FE4D5]/40 text-[11px] font-black px-3 py-1 rounded-full flex items-center gap-1.5 shadow-xs">
+                <BookOpen size={14} className="text-[#0D9488]" />
+                {user.childBoard || user.activeChild?.childBoard}
+              </span>
+            )}
+          </div>
 
           {/* XP Progression Bar */}
           <div className="w-full mt-3 pt-3 border-t border-gray-100">
