@@ -63,6 +63,48 @@ export default function ParentRoadmapScreen() {
     fetchRoadmap();
   }, []);
 
+  const translateStageTitle = (title: string) => {
+    if (!title) return "";
+    const lower = title.toLowerCase().trim();
+    if (lower.includes("communication")) return t("communication", "સંદેશાવ્યવહાર");
+    if (lower.includes("anger")) return t("anger_management", "ગુસ્સાનું સંચાલન");
+    if (lower.includes("emotional")) return t("emotional_intelligence", "ભાવનાત્મક બુદ્ધિમત્તા");
+    if (lower.includes("focus")) return t("focus_skills", "એકાગ્રતા");
+    if (lower.includes("study")) return t("study_habits", "અભ્યાસની આદતો");
+    if (lower.includes("confidence")) return t("confidence_building", "આત્મવિશ્વાસ નિર્માણ");
+    if (lower.includes("digital")) return t("digital_parenting", "ડિજિટલ પેરેન્ટિંગ");
+    if (lower.includes("psychology")) return t("child_psychology", "બાળ મનોવિજ્ઞાન");
+    if (lower.includes("family")) return t("family_growth", "કૌટુંબિક વિકાસ");
+    if (lower.includes("advanced")) return t("advanced_parenting", "અદ્યતન પેરેન્ટિંગ");
+    return t(title, title);
+  };
+
+  const translateStageDesc = (desc: string) => {
+    if (!desc) return "";
+    const lower = desc.toLowerCase().trim();
+    if (lower.includes("improve your dialogs")) return t("desc_communication", "તમારા બાળક સાથે તમારા સંવાદો અને જવાબોમાં સુધારો કરો.");
+    if (lower.includes("keep a calm mind")) return t("desc_anger_management", "મુશ્કેલ ક્ષણોમાં શાંત મન રાખો.");
+    if (lower.includes("boost concentration")) return t("desc_focus", "એકાગ્રતા અને અભ્યાસ સમયનું ધ્યાન વધારો.");
+    if (lower.includes("instill long-term discipline")) return t("desc_study_habits", "લાંબા ગાળાનું શિસ્ત અને દિનચર્યા કેળવો.");
+    if (lower.includes("help your child believe")) return t("desc_confidence_building", "તમારા બાળકને તેમનામાં વિશ્વાસ રાખવામાં મદદ કરો.");
+    if (lower.includes("guide screen time")) return t("desc_digital_parenting", "સ્ક્રીન સમય અને ડિજિટલ ટેવોને સુરક્ષિત રીતે માર્ગદર્શન આપો.");
+    if (lower.includes("understand their developmental")) return t("desc_child_psychology", "તેમના વિકાસના તબક્કાઓને સમજો.");
+    if (lower.includes("build empathy")) return t("desc_emotional_intelligence", "સહાનુભૂતિ અને ભાવનાત્મક નિયમન કેળવો.");
+    if (lower.includes("create a peaceful")) return t("desc_family_growth", "શાંતિપૂર્ણ, શીખવા માટેનું ઘર વાતાવરણ બનાવો.");
+    if (lower.includes("master the art")) return t("desc_advanced_parenting", "હકારાત્મક કોચિંગની કળામાં પ્રભુત્વ મેળવો.");
+    return t(desc, desc);
+  };
+
+  const translateRewardLabel = (label: string) => {
+    if (!label) return "";
+    if (/(\d+)\s*XP\s*(?:Reward|ઇનામ|ઈનામ)/i.test(label) || /(\d+)\s*XP/i.test(label)) {
+      const match = label.match(/(\d+)/);
+      const xp = match ? match[1] : "50";
+      return t("xp_reward_fmt", { xp, defaultValue: `${xp} XP ઈનામ` });
+    }
+    return t(label, label);
+  };
+
   useEffect(() => {
     if (!loading && containerRef.current) {
       setTimeout(() => {
@@ -184,15 +226,15 @@ export default function ParentRoadmapScreen() {
                         <span className="text-xs text-[#464652] font-bold uppercase">{stage.xpRequired} XP</span>
                       </div>
                     ) : (
-                      <span className="text-xs text-[#006a62] font-bold uppercase tracking-wider mb-1">Unlocked</span>
+                      <span className="text-xs text-[#006a62] font-bold uppercase tracking-wider mb-1">{t("unlocked", "Unlocked")}</span>
                     )}
-                    <h3 className="text-base font-bold text-[#191c1e] text-center">{stage.title}</h3>
+                    <h3 className="text-base font-bold text-[#191c1e] text-center">{translateStageTitle(stage.title)}</h3>
                     {stage.rewards && (
                       <div className="mt-2 text-[10px] text-[#464652] grid grid-cols-2 gap-x-2 gap-y-1">
                         {stage.rewards.map((rw: any, i: number) => {
                           const RIcon = IconMap[rw.icon] || Star;
                           return (
-                            <span key={i} className="flex items-center gap-1"><RIcon size={12} /> {rw.label}</span>
+                            <span key={i} className="flex items-center gap-1"><RIcon size={12} /> {translateRewardLabel(rw.label)}</span>
                           );
                         })}
                       </div>
@@ -216,13 +258,15 @@ export default function ParentRoadmapScreen() {
                       <Star size={16} color="#006a62" />
                       <span className="text-sm text-[#141779] font-bold uppercase">{stage.xpRequired} XP</span>
                     </div>
-                    <h3 className="text-2xl font-bold text-[#141779] mb-2">{stage.title}</h3>
+                    <h3 className="text-2xl font-bold text-[#141779] mb-2">{translateStageTitle(stage.title)}</h3>
                     
                     <div className="w-full bg-[#eceef0] rounded-full h-2 mb-1 overflow-hidden">
                       <div className="bg-[#006a62] h-full rounded-full transition-all duration-1000" style={{ width: `${stage.progress}%` }}></div>
                     </div>
                     {stage.nextStageName && (
-                      <p className="text-[10px] text-[#464652] font-medium mb-3">{stage.progress}% to {stage.nextStageName}</p>
+                      <p className="text-[10px] text-[#464652] font-medium mb-3">
+                        {t("percent_to_target", { percent: stage.progress, target: translateStageTitle(stage.nextStageName), defaultValue: `${stage.progress}% to ${translateStageTitle(stage.nextStageName)}` })}
+                      </p>
                     )}
                     
                     {stage.rewards && (
@@ -230,7 +274,7 @@ export default function ParentRoadmapScreen() {
                         {stage.rewards.map((rw: any, i: number) => {
                           const RIcon = IconMap[rw.icon] || Star;
                           return (
-                            <span key={i} className="flex items-center gap-1"><RIcon size={14} /> {rw.label}</span>
+                            <span key={i} className="flex items-center gap-1"><RIcon size={14} /> {translateRewardLabel(rw.label)}</span>
                           );
                         })}
                       </div>
@@ -247,17 +291,17 @@ export default function ParentRoadmapScreen() {
                     <div className="w-10 h-10 bg-[#767683] rounded-full flex items-center justify-center mb-2">
                       <IconComp size={20} color="white" />
                     </div>
-                    <span className="text-xs text-[#767683] font-bold uppercase tracking-wider mb-1">Locked</span>
-                    <h3 className="text-base font-bold text-[#464652] text-center">{stage.title}</h3>
+                    <span className="text-xs text-[#767683] font-bold uppercase tracking-wider mb-1">{t("locked_caps", "LOCKED")}</span>
+                    <h3 className="text-base font-bold text-[#464652] text-center">{translateStageTitle(stage.title)}</h3>
                     {stage.description && (
-                      <p className="text-[10px] text-center mt-1 text-[#767683]">{stage.description}</p>
+                      <p className="text-[10px] text-center mt-1 text-[#767683]">{translateStageDesc(stage.description)}</p>
                     )}
                     {stage.rewards && (
                       <div className="mt-2 text-[10px] text-[#767683] flex items-center gap-1">
                         {stage.rewards.map((rw: any, i: number) => {
                           const RIcon = IconMap[rw.icon] || Star;
                           return (
-                            <span key={i} className="flex items-center gap-1"><RIcon size={12} /> {rw.label}</span>
+                            <span key={i} className="flex items-center gap-1"><RIcon size={12} /> {translateRewardLabel(rw.label)}</span>
                           );
                         })}
                       </div>

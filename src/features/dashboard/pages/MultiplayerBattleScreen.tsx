@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Trophy, X } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
 
 // Hardcoded rapid fire questions for MVP multiplayer
@@ -19,8 +20,10 @@ const BATTLE_QUESTIONS = [
 ];
 
 export default function MultiplayerBattleScreen() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { roomId } = useParams();
+
   
   const [room, setRoom] = useState<any>(null);
   const [myId, setMyId] = useState<string>("");
@@ -82,10 +85,36 @@ export default function MultiplayerBattleScreen() {
     };
   }, [roomId]);
 
+  // Lock out re-entry if user already left this battle session
+  useEffect(() => {
+    if (roomId && sessionStorage.getItem(`left_battle_${roomId}`) === "true") {
+      navigate("/multiplayer-hub", { replace: true });
+    }
+  }, [roomId, navigate]);
+
+  // Intercept back-slide gesture and browser back button during active battle
+  useEffect(() => {
+    window.history.pushState(null, "", window.location.href);
+
+    const handlePopState = () => {
+      const { isFinished: finished, opponentQuit: oppQuit } = gameStateRef.current;
+      if (!finished && !oppQuit) {
+        window.history.pushState(null, "", window.location.href);
+        setShowQuitModal(true);
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
+
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       const { isFinished: finished, opponentQuit: oppQuit, roomId: rId } = gameStateRef.current;
       if (!finished && !oppQuit) {
+        if (rId) sessionStorage.setItem(`left_battle_${rId}`, "true");
         const token = localStorage.getItem("userToken");
         if (token) {
           fetch(`/api/multiplayer/room/${rId}/quit`, {
@@ -103,10 +132,11 @@ export default function MultiplayerBattleScreen() {
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
       
-      // Handle component unmount (React Router navigation / back button)
+      // Handle component unmount (React Router navigation / back gesture)
       const { isFinished: finished, opponentQuit: oppQuit, roomId: rId } = gameStateRef.current;
       const isStillOnBattlePage = window.location.pathname.includes(`/multiplayer-battle/${rId}`);
       if (!finished && !oppQuit && !isStillOnBattlePage) {
+        if (rId) sessionStorage.setItem(`left_battle_${rId}`, "true");
         const token = localStorage.getItem("userToken");
         if (token) {
           fetch(`/api/multiplayer/room/${rId}/quit`, {
@@ -147,16 +177,29 @@ export default function MultiplayerBattleScreen() {
         const res = await apiFetch(`/api/multiplayer/room/${roomId}/questions`);
         const data = await res.json();
         if (data.success && data.data && data.data.length > 0) {
-          setQuestions(data.data);
+          let loadedQs = [...data.data];
+          if (loadedQs.length < 10) {
+            for (const bq of BATTLE_QUESTIONS) {
+              if (loadedQs.length >= 10) break;
+              if (!loadedQs.some(q => q.q === bq.q)) {
+                loadedQs.push(bq);
+              }
+            }
+          }
+          setQuestions(loadedQs);
         } else if (attempts < 5) {
           attempts++;
-          setTimeout(loadQuestions, 1000);
+          setTimeout(loadQuestions, 800);
+        } else {
+          setQuestions(BATTLE_QUESTIONS);
         }
       } catch (e) {
         console.error("Failed to load questions:", e);
         if (attempts < 5) {
           attempts++;
-          setTimeout(loadQuestions, 1000);
+          setTimeout(loadQuestions, 800);
+        } else {
+          setQuestions(BATTLE_QUESTIONS);
         }
       }
     };
@@ -189,9 +232,17 @@ export default function MultiplayerBattleScreen() {
         if (data.data.status === "finished") {
           setIsFinished(true);
           setWinnerId(data.data.winnerId);
-        } else if (data.data.status === "opponent_quit" && myId && data.data.winnerId === myId) {
-          setOpponentQuit(true);
+        } else if (data.data.status === "opponent_quit") {
+          if (myId && data.data.winnerId === myId) {
+            setOpponentQuit(true);
+          } else {
+            if (roomId) sessionStorage.setItem(`left_battle_${roomId}`, "true");
+            navigate("/multiplayer-hub", { replace: true });
+          }
         }
+      } else {
+        if (roomId) sessionStorage.setItem(`left_battle_${roomId}`, "true");
+        navigate("/multiplayer-hub", { replace: true });
       }
     } catch (e) {
       console.error(e);
@@ -204,12 +255,20 @@ export default function MultiplayerBattleScreen() {
     return () => clearInterval(interval);
   }, [roomId]);
 
-  const updateBackendProgress = async (prog: number, sc: number, fin: boolean, timeTaken: number = 0, isCorrect: boolean = false) => {
+  const [myLives, setMyLives] = useState(3);
+  const oppLives = isHost 
+    ? (room?.guestLives !== undefined && room?.guestLives !== null ? room.guestLives : 3) 
+    : (room?.hostLives !== undefined && room?.hostLives !== null ? room.hostLives : 3);
+
+  const updateBackendProgress = async (prog: number, sc: number, fin: boolean, timeTaken: number = 0, isCorrect: boolean = false, currentLives: number = 3) => {
     try {
+      const safeProg = typeof prog === 'number' && Number.isFinite(prog) ? Math.max(0, Math.min(100, Math.round(prog))) : 0;
+      const safeScore = typeof sc === 'number' && Number.isFinite(sc) ? Math.max(0, Math.round(sc)) : 0;
+
       await apiFetch(`/api/multiplayer/room/${roomId}/progress`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ progress: prog, score: sc, isFinished: fin, timeTaken, isCorrect })
+        body: JSON.stringify({ progress: safeProg, score: safeScore, lives: currentLives, isFinished: fin, timeTaken, isCorrect })
       });
       // Force an immediate fetch to sync state
       fetchRoomStatus();
@@ -232,6 +291,12 @@ export default function MultiplayerBattleScreen() {
     if (isCorrect) {
       newScore += 10;
     }
+
+    let newLives = myLives;
+    if (!isCorrect) {
+      newLives = Math.max(0, myLives - 1);
+      setMyLives(newLives);
+    }
     
     setMyScore(newScore);
     
@@ -242,99 +307,108 @@ export default function MultiplayerBattleScreen() {
     };
     setUserAnswers(prev => [...prev, newAnswer]);
     
-    const isLast = currentQ === questions.length - 1;
-    const newProgress = Math.round(((currentQ + 1) / questions.length) * 100);
+    const totalQ = Math.max(10, questions.length || 10);
+    const isLast = (currentQ >= totalQ - 1) || newLives <= 0;
+    const rawProg = Math.round(((currentQ + 1) / totalQ) * 100);
+    const newProgress = Math.max(0, Math.min(100, rawProg));
     
     setMyProgress(newProgress);
-    updateBackendProgress(newProgress, newScore, isLast, timeTaken, isCorrect);
+    updateBackendProgress(newProgress, newScore, isLast, timeTaken, isCorrect, newLives);
   };
 
-  // Synchronized countdown logic
   useEffect(() => {
-    if (!room || !room.startedAt || questions.length === 0) return;
-    
-    const startTime = new Date(room.startedAt).getTime() + 4000; // 4 seconds countdown
-    
-    const updateCountdown = () => {
-      const diff = startTime - Date.now();
-      if (diff > 0) {
-        setCountdown(Math.ceil(diff / 1000));
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchRoomStatus();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [roomId]);
+
+  // Synchronized Wall-Clock Timer & Countdown (Resilient to tab switching & backgrounding)
+  useEffect(() => {
+    if (!room || !room.startedAt || isFinished || opponentQuit || questions.length === 0) return;
+
+    const startedAtMs = new Date(room.startedAt).getTime();
+
+    const tick = () => {
+      const elapsedSec = (Date.now() - startedAtMs) / 1000;
+
+      // 1. Initial 4s countdown
+      if (elapsedSec < 4) {
+        setCountdown(Math.ceil(4 - elapsedSec));
+        return;
       } else {
         setCountdown(null);
       }
-    };
-    
-    updateCountdown();
-    const t = setInterval(updateCountdown, 200);
-    return () => clearInterval(t);
-  }, [room?.startedAt, questions.length]);
 
-  // Timer logic
-  useEffect(() => {
-    if (isFinished || opponentQuit || countdown !== null) return;
-    const t = setInterval(() => {
-      if (selectedOption !== null && !isAdvancing) {
-        setWaitTimer(prev => prev + 1);
+      // 2. Wall-clock question time calculation (15s timer + 1s buffer)
+      const matchSec = elapsedSec - 4;
+      const wallQIndex = Math.min(questions.length - 1, Math.max(0, Math.floor(matchSec / 16)));
+      const qTimeSec = matchSec % 16;
+      const currentRemaining = Math.max(0, Math.ceil(15 - qTimeSec));
+
+      // Auto-sync current question index if tab was backgrounded or minimized
+      if (wallQIndex > currentQ && !isAdvancing) {
+        setCurrentQ(wallQIndex);
+        setSelectedOption(null);
+        setTimeLeft(15);
+        setIsAdvancing(false);
         return;
       }
-      setWaitTimer(0);
-      
-      setTimeLeft((prev) => {
-        if (selectedOption !== null) return prev;
-        if (prev <= 1) {
-          clearInterval(t);
-          handleAnswer(-1); // Auto-fail on timeout
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(t);
-  }, [currentQ, isFinished, opponentQuit, selectedOption, isAdvancing, countdown]);
 
-  // Synchronous Advancement logic
+      if (selectedOption === null) {
+        setTimeLeft(currentRemaining);
+        if (currentRemaining <= 0) {
+          handleAnswer(-1); // Auto-fail on wall-clock timeout (deducts 1 life)
+        }
+      }
+    };
+
+    tick();
+    const interval = setInterval(tick, 400);
+    return () => clearInterval(interval);
+  }, [room?.startedAt, currentQ, selectedOption, isAdvancing, isFinished, opponentQuit, questions.length]);
+
+  // Synchronous Wall-Clock Advancement logic
   useEffect(() => {
-    // Auto-advance if opponent disconnects/AFKs for >15 seconds
-    if (waitTimer > 15 && selectedOption !== null && !isAdvancing) {
-       setIsAdvancing(true);
-       const isLast = currentQ === questions.length - 1;
-       setTimeout(() => {
-          if (isLast) {
-            setIsFinished(true);
-          } else {
-            setCurrentQ(q => q + 1);
-            setSelectedOption(null);
-            setTimeLeft(15);
-            setWaitTimer(0);
-            setIsAdvancing(false);
-          }
-       }, 500);
-       return;
-    }
-    
     if (room && selectedOption !== null && myProgress > 0 && !isAdvancing) {
       const isHost = room.hostId === myId;
-      const oppProgress = isHost ? room.guestProgress : room.hostProgress;
+      const oppProgress = isHost ? (room.guestProgress || 0) : (room.hostProgress || 0);
+      const currentOppLives = isHost 
+        ? (room?.guestLives !== undefined && room?.guestLives !== null ? room.guestLives : 3) 
+        : (room?.hostLives !== undefined && room?.hostLives !== null ? room.hostLives : 3);
       
-      // If opponent has caught up to our progress
-      if (oppProgress >= myProgress) {
+      const oppEliminated = (isHost ? !!room.guestId : !!room.hostId) && currentOppLives <= 0;
+      const myEliminated = myLives <= 0;
+
+      const startedAtMs = room.startedAt ? new Date(room.startedAt).getTime() : 0;
+      const elapsedSec = startedAtMs ? (Date.now() - startedAtMs) / 1000 : 0;
+      const matchSec = Math.max(0, elapsedSec - 4);
+      const qTimeSec = matchSec % 16;
+
+      // Advance question smoothly after selection or 15s deadline
+      if ((selectedOption !== null) || oppEliminated || myEliminated || qTimeSec >= 15.2) {
         setIsAdvancing(true);
-        const isLast = currentQ === questions.length - 1;
-        
-        setTimeout(() => {
+        const totalQ = Math.max(10, questions.length || 10);
+        const isLast = (currentQ >= totalQ - 1) || myEliminated || oppEliminated;
+
+        const timerId = setTimeout(() => {
           if (isLast) {
             setIsFinished(true);
           } else {
             setCurrentQ(q => q + 1);
             setSelectedOption(null);
             setTimeLeft(15);
-            setWaitTimer(0);
-            setIsAdvancing(false); // allow next question advancement
+            setIsAdvancing(false);
           }
-        }, 1000); // 1-second delay so you can see your selected answer
+        }, 1000);
+
+        return () => clearTimeout(timerId);
       }
     }
-  }, [room, selectedOption, myProgress, isAdvancing, currentQ, questions.length, waitTimer]);
+  }, [room, selectedOption, myProgress, isAdvancing, currentQ, questions.length, myLives]);
 
   
   const submitActivityLog = async (answersToSubmit: any[]) => {
@@ -426,52 +500,84 @@ export default function MultiplayerBattleScreen() {
           <button onClick={() => setShowQuitModal(true)} className="p-2 bg-[#f4efff] rounded-full hover:bg-[#e8ddff] border border-[#e0e0e0] transition-colors">
              <X size={20} color="#141779" />
           </button>
-          <span className="text-[#767683] text-xs font-bold uppercase tracking-widest">Live Battle</span>
+          <span className="text-[#767683] text-xs font-bold uppercase tracking-widest">{t('live_battle', 'Live Battle')}</span>
           <div className="w-9" />
         </div>
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-2 sm:gap-4 max-w-full">
           
           {/* MY SIDE */}
-          <div className="flex-1 flex flex-col items-start gap-2">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full border-2 border-[#141779] overflow-hidden bg-white shadow-sm">
-                <img src={myAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${myName || 'Me'}`} className="w-full h-full object-cover" />
+          <div className="flex-1 min-w-0 flex flex-col items-start gap-1.5">
+            <div className="flex items-center gap-2 max-w-full">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-[#141779] overflow-hidden bg-white shadow-sm shrink-0">
+                <img 
+                  src={myAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(myName || 'Me')}`} 
+                  alt={myName || 'You'}
+                  className="w-full h-full object-cover" 
+                  onError={(e: any) => {
+                    e.target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(myName || 'Me')}`;
+                  }}
+                />
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="font-black text-[#141779] text-base uppercase tracking-wide truncate max-w-[80px]">{myName || "You"}</p>
-                  {amIWinning && <Trophy size={16} color="#ff9f43" className="animate-pulse" />}
+              <div className="min-w-0">
+                <div className="flex items-center gap-1">
+                  <p className="font-black text-[#141779] text-xs sm:text-sm uppercase tracking-wide truncate max-w-[70px] sm:max-w-[100px]">{myName || t('you', 'You')}</p>
+                  {amIWinning && <Trophy size={14} color="#ff9f43" className="animate-pulse shrink-0" />}
                 </div>
-                <p className="text-xs font-bold text-[#767683]">{myScore} PTS</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-[11px] font-bold text-[#767683]">{myScore} {t('pts', 'PTS')}</p>
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    {[1, 2, 3].map((h) => (
+                      <span key={h} className="text-xs">
+                        {h <= myLives ? "❤️" : "🩶"}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
             {/* Health/Progress Bar */}
-            <div className="w-full h-3 bg-[#e8ddff] rounded-full overflow-hidden border border-[#d0d0d0]">
-              <div className="h-full bg-gradient-to-r from-[#006a62] to-[#57fae9] transition-all duration-300" style={{ width: `${myProgress}%` }} />
+            <div className="w-full h-2.5 bg-[#e8ddff] rounded-full overflow-hidden border border-[#d0d0d0]">
+              <div className="h-full bg-gradient-to-r from-[#006a62] to-[#57fae9] transition-all duration-300 rounded-full" style={{ width: `${myProgress}%` }} />
             </div>
           </div>
 
-          <div className="shrink-0 flex flex-col items-center justify-center">
-             <span className="text-2xl font-black italic text-[#ff9f43]">VS</span>
+          <div className="shrink-0 flex flex-col items-center justify-center px-1">
+             <span className="text-xl sm:text-2xl font-black italic text-[#ff9f43]">VS</span>
           </div>
 
           {/* OPPONENT SIDE */}
-          <div className="flex-1 flex flex-col items-end gap-2">
-            <div className="flex items-center gap-3 flex-row-reverse">
-              <div className="w-12 h-12 rounded-full border-2 border-[#ff9f43] overflow-hidden bg-white shadow-sm">
-                <img src={oppAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${oppName || 'Opp'}`} className="w-full h-full object-cover" />
-              </div>
-              <div className="text-right">
-                <div className="flex items-center gap-2 justify-end">
-                  {isOppWinning && <Trophy size={16} color="#ffd700" className="animate-pulse" />}
-                  <p className="font-black text-[#141779] text-base uppercase tracking-wide truncate max-w-[80px]">{oppName || "Opponent"}</p>
+          <div className="flex-1 min-w-0 flex flex-col items-end gap-1.5">
+            <div className="flex items-center gap-2 max-w-full">
+              <div className="text-right min-w-0">
+                <div className="flex items-center gap-1 justify-end">
+                  {isOppWinning && <Trophy size={14} color="#ffd700" className="animate-pulse shrink-0" />}
+                  <p className="font-black text-[#141779] text-xs sm:text-sm uppercase tracking-wide truncate max-w-[70px] sm:max-w-[100px]">{oppName || t('opponent', 'Opponent')}</p>
                 </div>
-                <p className="text-xs font-bold text-[#767683]">{oppScore} PTS</p>
+                <div className="flex items-center gap-1.5 justify-end">
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    {[1, 2, 3].map((h) => (
+                      <span key={h} className="text-xs">
+                        {h <= oppLives ? "❤️" : "🩶"}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="text-[11px] font-bold text-[#767683]">{oppScore} {t('pts', 'PTS')}</p>
+                </div>
+              </div>
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-[#ff9f43] overflow-hidden bg-white shadow-sm shrink-0">
+                <img 
+                  src={oppAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(oppName || 'Opponent')}`} 
+                  alt={oppName || 'Opponent'}
+                  className="w-full h-full object-cover" 
+                  onError={(e: any) => {
+                    e.target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(oppName || 'Opponent')}`;
+                  }}
+                />
               </div>
             </div>
             {/* Health/Progress Bar */}
-            <div className="w-full h-3 bg-[#e8ddff] rounded-full overflow-hidden border border-[#d0d0d0] flex justify-end">
-              <div className="h-full bg-gradient-to-l from-[#ff9f43] to-[#d17e30] transition-all duration-300" style={{ width: `${oppProgress}%` }} />
+            <div className="w-full h-2.5 bg-[#e8ddff] rounded-full overflow-hidden border border-[#d0d0d0] flex justify-end">
+              <div className="h-full bg-gradient-to-l from-[#ff9f43] to-[#d17e30] transition-all duration-300 rounded-full" style={{ width: `${oppProgress}%` }} />
             </div>
           </div>
 
@@ -484,7 +590,7 @@ export default function MultiplayerBattleScreen() {
           <div className="flex-1 flex flex-col">
             <div className="mb-8 relative">
                <div className="flex justify-between items-center mb-2">
-                 <span className="text-[#141779] font-bold text-sm tracking-widest uppercase">Question {currentQ + 1}/{questions.length}</span>
+                 <span className="text-[#141779] font-bold text-sm tracking-widest uppercase">{t('question_progress', { current: currentQ + 1, total: questions.length, defaultValue: `Question ${currentQ + 1}/${questions.length}` })}</span>
                  <span className={`font-black text-sm px-3 py-1 rounded-full border border-[#d0d0d0] ${timeLeft <= 5 ? 'bg-red-100 text-red-700 animate-pulse border-red-300' : 'bg-white text-[#141779]'}`}>
                    ⏳ {timeLeft}s
                  </span>
@@ -525,7 +631,7 @@ export default function MultiplayerBattleScreen() {
               {/* Unobtrusive "Waiting" text that doesn't block the screen */}
               {selectedOption !== null && (
                 <div className="absolute -bottom-8 w-full text-center animate-pulse">
-                  <span className="text-[#767683] font-bold text-sm">Waiting for {oppName}...</span>
+                  <span className="text-[#767683] font-bold text-sm">{t('waiting_for_player', { name: oppName, defaultValue: `Waiting for ${oppName}...` })}</span>
                 </div>
               )}
             </div>
@@ -541,8 +647,18 @@ export default function MultiplayerBattleScreen() {
                 >
                   <Trophy size={48} color="white" />
                 </motion.div>
-                <h2 className="text-4xl font-black text-[#141779] mb-1">VICTORY!</h2>
-                <p className="text-lg text-[#006a62] font-bold mb-4">You crushed your opponent.</p>
+                <h2 className="text-4xl font-black text-[#141779] mb-1">{t('battle_victory', 'VICTORY!')}</h2>
+                <p className="text-lg text-[#006a62] font-bold mb-4">{t('you_crushed_opponent', 'You crushed your opponent.')}</p>
+              </>
+            ) : winnerId === "both_lost" ? (
+              <>
+                <div className="w-24 h-24 mb-4 bg-red-100 rounded-full flex items-center justify-center border-4 border-red-500 shadow-md">
+                  <span className="text-4xl">💥</span>
+                </div>
+                <h2 className="text-3xl font-black text-red-600 mb-1 uppercase">{t('double_elimination', 'DOUBLE ELIMINATION!')}</h2>
+                <p className="text-sm font-bold text-red-700 max-w-xs mb-4">
+                  {t('double_elim_desc', 'Both players lost all 3 lives! No winner awarded — wagered coins forfeit.')}
+                </p>
               </>
             ) : winnerId === null || winnerId === "tie" ? (
               <>
@@ -551,11 +667,11 @@ export default function MultiplayerBattleScreen() {
                     <div className="w-16 h-16 mb-4 bg-white rounded-full flex items-center justify-center border-4 border-[#141779] animate-pulse">
                       <div className="w-8 h-8 border-4 border-[#141779] border-t-transparent rounded-full animate-spin"/>
                     </div>
-                    <h2 className="text-3xl font-black text-[#141779] mb-2">Calculating...</h2>
+                    <h2 className="text-3xl font-black text-[#141779] mb-2">{t('calculating', 'Calculating...')}</h2>
                   </>
                 ) : (
                   <>
-                    <h2 className="text-4xl font-black text-[#141779] mb-2">IT'S A TIE!</h2>
+                    <h2 className="text-4xl font-black text-[#141779] mb-2">{t('its_a_tie', "IT'S A TIE!")}</h2>
                   </>
                 )}
               </>
@@ -564,20 +680,20 @@ export default function MultiplayerBattleScreen() {
                 <div className="w-24 h-24 mb-4 bg-[#ffebee] rounded-full flex items-center justify-center border-4 border-[#ba1a1a] shadow-sm">
                   <X size={48} color="#ba1a1a" />
                 </div>
-                <h2 className="text-4xl font-black text-[#ba1a1a] mb-1">DEFEAT</h2>
-                <p className="text-[#ba1a1a] font-bold text-lg mb-4">Your opponent was faster!</p>
+                <h2 className="text-4xl font-black text-[#ba1a1a] mb-1">{t('battle_defeat', 'DEFEAT')}</h2>
+                <p className="text-[#ba1a1a] font-bold text-lg mb-4">{t('opponent_was_faster', 'Your opponent was faster!')}</p>
               </>
             )}
 
             {/* Detailed Post-Game Scoreboard */}
             {winnerId !== null && (
                <div className="w-full bg-white rounded-2xl border-2 border-[#d0d0d0] p-5 mb-4 flex flex-col gap-3 shadow-md text-left">
-                 <h3 className="text-sm font-black text-[#ff9f43] tracking-widest uppercase text-center mb-1">Final Result</h3>
+                 <h3 className="text-sm font-black text-[#ff9f43] tracking-widest uppercase text-center mb-1">{t('final_result', 'Final Result')}</h3>
                  
                  <div className="flex justify-between font-bold text-xs uppercase text-[#767683] border-b border-[#e0e0e0] pb-2">
-                    <span className="w-1/3 text-center">Q#</span>
-                    <span className="w-1/3 text-center">{myName || "You"}</span>
-                    <span className="w-1/3 text-center">{oppName || "Opp"}</span>
+                    <span className="w-1/3 text-center">{t('q_number', 'Q#')}</span>
+                    <span className="w-1/3 text-center">{myName || t('you', 'You')}</span>
+                    <span className="w-1/3 text-center">{oppName || t('opponent', 'Opp')}</span>
                  </div>
                  
                  {questions.map((_, i) => {
@@ -612,16 +728,16 @@ export default function MultiplayerBattleScreen() {
                  })}
                  
                  <div className="flex justify-between font-black text-lg pt-2 mt-2 border-t border-[#d0d0d0]">
-                    <span className="w-1/3 text-center text-[#767683]">Total</span>
-                    <span className="w-1/3 text-center text-[#006a62]">{myScore} pts</span>
-                    <span className="w-1/3 text-center text-[#ff9f43]">{oppScore} pts</span>
+                    <span className="w-1/3 text-center text-[#767683]">{t('total', 'Total')}</span>
+                    <span className="w-1/3 text-center text-[#006a62]">{myScore} {t('pts_lower', 'pts')}</span>
+                    <span className="w-1/3 text-center text-[#ff9f43]">{oppScore} {t('pts_lower', 'pts')}</span>
                  </div>
                </div>
             )}
             
             {winnerId === myId && (
                <div className="bg-white px-6 py-3 rounded-2xl border-2 border-[#d0d0d0] mb-6 w-full shadow-sm text-center">
-                  <p className="text-[#767683] font-bold uppercase text-xs mb-1">Win Streak</p>
+                  <p className="text-[#767683] font-bold uppercase text-xs mb-1">{t('win_streak', 'Win Streak')}</p>
                   <p className="text-2xl font-black text-[#ff9f43]">{continuousWins} ⚔️</p>
                </div>
             )}
@@ -632,12 +748,13 @@ export default function MultiplayerBattleScreen() {
                 disabled={checkingReward}
                 className="w-full max-w-[250px] bg-[#141779] text-white py-3 rounded-2xl font-black uppercase tracking-widest hover:bg-[#30007f] shadow-md mb-4 disabled:opacity-50 border-2 border-[#141779]"
               >
-                {checkingReward ? "Checking rewards..." : "Back to Arena"}
+                {checkingReward ? t('checking_rewards', 'Checking rewards...') : t('back_to_arena', 'BACK TO ARENA')}
               </button>
             )}
           </div>
         )}
       </main>
+
 
       {/* PHYSICAL REWARD MODAL */}
       <AnimatePresence>
@@ -649,10 +766,10 @@ export default function MultiplayerBattleScreen() {
               className="bg-gradient-to-b from-[#ffeed1] to-white rounded-[32px] p-8 w-full max-w-sm flex flex-col items-center text-center shadow-[0_0_40px_rgba(255,159,67,0.3)] border-4 border-[#ff9f43]"
             >
               <div className="text-[80px] mb-2">🎁</div>
-              <h2 className="text-3xl font-black text-[#141779] mb-2 uppercase">Incredible!</h2>
-              <div className="bg-[#141779] text-white px-4 py-1 rounded-full text-xs font-bold tracking-widest mb-4">25 WINS IN A ROW</div>
+              <h2 className="text-3xl font-black text-[#141779] mb-2 uppercase">{t('incredible', 'Incredible!')}</h2>
+              <div className="bg-[#141779] text-white px-4 py-1 rounded-full text-xs font-bold tracking-widest mb-4">{t('25_wins_in_row', '25 WINS IN A ROW')}</div>
               <p className="text-[#4b4b4b] font-bold mb-6">
-                You have reached 25 continuous wins! A physical reward box is being prepared by our team and will be shipped to your registered address!
+                {t('physical_reward_desc', 'You have reached 25 continuous wins! A physical reward box is being prepared by our team and will be shipped to your registered address!')}
               </p>
               
               <button 
@@ -662,7 +779,7 @@ export default function MultiplayerBattleScreen() {
                 }}
                 className="w-full bg-[#ff9f43] text-white py-4 rounded-xl font-black uppercase text-lg shadow-[0_4px_0_#d17e30] active:translate-y-[4px] active:shadow-none transition-all"
               >
-                Claim My Prize!
+                {t('claim_my_prize', 'Claim My Prize!')}
               </button>
             </motion.div>
           </div>
@@ -682,15 +799,15 @@ export default function MultiplayerBattleScreen() {
               <div className="w-16 h-16 rounded-full bg-[#ffebee] flex items-center justify-center mb-4 border border-[#ffb4ab]">
                 <X size={32} color="#ba1a1a" />
               </div>
-              <h2 className="text-2xl font-black text-[#141779] mb-2">Are you sure?</h2>
+              <h2 className="text-2xl font-black text-[#141779] mb-2">{t('are_you_sure', 'Are you sure?')}</h2>
               <p className="text-[#464652] font-semibold mb-6">
                 {myStreak === 0
-                  ? "If you leave now, you will lose the game and be penalized 100 coins!"
+                  ? t('quit_penalty_coins', 'If you leave now, you will lose the game and be penalized 100 coins!')
                   : quitCount === 0 
-                  ? "If you leave now, you will lose the game! This is your first warning, so your streak is safe."
+                  ? t('quit_warning_safe', 'If you leave now, you will lose the game! This is your first warning, so your streak is safe.')
                   : quitCount === 1 
-                  ? "If you leave now, you will lose the game and your win streak will decrease by 1!"
-                  : "If you leave now, you will lose the game and your win streak will be completely reset!"}
+                  ? t('quit_warning_streak_minus1', 'If you leave now, you will lose the game and your win streak will decrease by 1!')
+                  : t('quit_warning_streak_reset', 'If you leave now, you will lose the game and your win streak will be completely reset!')}
               </p>
               
               <div className="flex gap-3 w-full">
@@ -698,20 +815,21 @@ export default function MultiplayerBattleScreen() {
                   onClick={() => setShowQuitModal(false)}
                   className="flex-grow bg-[#f4efff] text-[#141779] py-3 rounded-xl font-bold hover:bg-[#e8ddff] transition-all border-2 border-[#e0e0e0]"
                 >
-                  Cancel
+                  {t('cancel', 'Cancel')}
                 </button>
                 <button 
                   onClick={async () => {
                     setShowQuitModal(false);
+                    if (roomId) sessionStorage.setItem(`left_battle_${roomId}`, "true");
                     try {
                       await submitActivityLog(userAnswers);
                       await apiFetch(`/api/multiplayer/room/${roomId}/quit`, { method: "POST" });
                     } catch(e) {}
-                    navigate("/multiplayer-hub");
+                    navigate("/multiplayer-hub", { replace: true });
                   }}
                   className="flex-grow bg-[#ba1a1a] text-white py-3 rounded-xl font-bold hover:bg-[#ba1a1a]/80 transition-all"
                 >
-                  Yes, Quit
+                  {t('yes_quit', 'Yes, Quit')}
                 </button>
               </div>
             </motion.div>
@@ -729,21 +847,25 @@ export default function MultiplayerBattleScreen() {
               className="bg-white rounded-[24px] p-6 w-full max-w-sm flex flex-col items-center text-center shadow-2xl border-2 border-[#e0e0e0]"
             >
               <div className="text-[60px] mb-2">🏃‍♂️💨</div>
-              <h2 className="text-2xl font-black text-[#141779] mb-2 uppercase">Opponent Fled!</h2>
+              <h2 className="text-2xl font-black text-[#141779] mb-2 uppercase">{t('opponent_fled', 'Opponent Fled!')}</h2>
               <p className="text-[#006a62] font-bold mb-6">
-                Your opponent left the game. You win by default!
+                {t('opponent_left_you_win', 'Your opponent left the game. You win by default!')}
               </p>
               
               <button 
-                onClick={() => navigate("/multiplayer-hub")}
+                onClick={() => {
+                  if (roomId) sessionStorage.setItem(`left_battle_${roomId}`, "true");
+                  navigate("/multiplayer-hub", { replace: true });
+                }}
                 className="w-full bg-[#141779] text-white py-3 rounded-xl font-black uppercase tracking-wider hover:bg-[#30007f] transition-all border-2 border-[#141779]"
               >
-                Back to Arena
+                {t('back_to_arena', 'BACK TO ARENA')}
               </button>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+
 
     </div>
   );

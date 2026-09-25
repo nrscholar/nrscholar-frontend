@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Award, Flame, Bell, Rocket, Atom, ShieldCheck, Zap, Trophy, Compass, ChevronRight, Star, CheckCircle, Lock } from "lucide-react";
+import { ArrowLeft, Award, Flame, Bell, Rocket, Atom, ShieldCheck, Zap, Trophy, Compass, ChevronRight, Star, CheckCircle, Lock, BarChart3 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
@@ -50,9 +50,50 @@ export default function ProgressScreen() {
   const [activeChapter, setActiveChapter] = useState<any>(null);
   const [missionsList, setMissionsList] = useState<any[]>([]);
   const [loadingMissions, setLoadingMissions] = useState(false);
+  const [weeklyGrowth, setWeeklyGrowth] = useState<any[]>([]);
+  const [loadingGrowth, setLoadingGrowth] = useState(true);
+  const [subjectCompletionStats, setSubjectCompletionStats] = useState<Record<string, { completed: number; total: number; percent: number }>>({});
 
   const { level, percent: progressPercent, nextXp, currentXp } = getLevelInfo(xp);
   const xpNeededForNext = Math.max(0, nextXp - xp);
+
+  const fetchAllSubjectCompletion = async (subs: any[]) => {
+    try {
+      const pRes = await apiFetch('/api/practice/chapter-progress');
+      const pData = await pRes.json();
+      const completedSet = new Set<string>();
+      if (pData.success && pData.data) {
+        pData.data.forEach((p: any) => {
+          if (p.chapterCompleted || p.completed) {
+            completedSet.add(String(p.chapterId));
+            completedSet.add(`${p.chapterId}_hard`);
+          }
+        });
+      }
+
+      await Promise.all(
+        subs.map(async (sub) => {
+          try {
+            const chRes = await apiFetch(`/api/practice/chapters/${sub._id}`);
+            const chData = await chRes.json();
+            if (chData.success && Array.isArray(chData.data)) {
+              const total = chData.data.length;
+              const completed = chData.data.filter((ch: any) => 
+                completedSet.has(String(ch._id)) || completedSet.has(`${ch._id}_hard`)
+              ).length;
+              const percent = total > 0 ? Math.round((completed / total) * 100) : (completed > 0 ? 100 : 0);
+              setSubjectCompletionStats(prev => ({
+                ...prev,
+                [sub._id]: { completed, total, percent }
+              }));
+            }
+          } catch (e) {}
+        })
+      );
+    } catch (e) {
+      console.error("Error fetching subject completion:", e);
+    }
+  };
 
   useEffect(() => {
     const fetchProgress = async () => {
@@ -65,6 +106,7 @@ export default function ProgressScreen() {
           setUsername(u.childName || u.name || "Explorer");
           setUserPhoto(u.childPhoto || u.photo || "");
           setBadges(u.badges || []);
+          setLoading(false); // Render UI instantly from cache!
         } catch(e) {}
       }
 
@@ -100,15 +142,33 @@ export default function ProgressScreen() {
           if (subData.success && subData.data && subData.data.length > 0) {
             setSubjects(subData.data);
             const savedSubId = sessionStorage.getItem("activeSubjectId");
-            const found = subData.data.find((s: any) => s._id === savedSubId);
+            const found = (savedSubId && savedSubId !== "all") ? subData.data.find((s: any) => s._id === savedSubId) : null;
             setActiveSubject(found || subData.data[0]);
+            // Run completion stats fetch asynchronously in background
+            setTimeout(() => fetchAllSubjectCompletion(subData.data), 0);
           }
         } catch (e) {
           console.error("Failed to fetch subjects:", e);
+        } finally {
+          setLoading(false);
         }
       })();
 
-      await Promise.allSettled([mePromise, notifPromise, subjectsPromise]);
+      const growthPromise = (async () => {
+        try {
+          const res = await apiFetch("/api/practice/subjects/weekly-growth");
+          const data = await res.json();
+          if (data.success && data.data) {
+            setWeeklyGrowth(data.data);
+          }
+        } catch (e) {
+          console.error("Failed to fetch weekly subject growth:", e);
+        } finally {
+          setLoadingGrowth(false);
+        }
+      })();
+
+      await Promise.allSettled([mePromise, notifPromise, subjectsPromise, growthPromise]);
       setLoading(false);
     };
     fetchProgress();
@@ -117,11 +177,14 @@ export default function ProgressScreen() {
   useEffect(() => {
     if (!activeSubject) return;
 
+    const targetSubId = activeSubject._id;
+    if (!targetSubId) return;
+
     const fetchMissionsForActiveSubject = async () => {
       setLoadingMissions(true);
       try {
         const [chRes, pRes] = await Promise.all([
-          apiFetch(`/api/practice/chapters/${activeSubject._id}`),
+          apiFetch(`/api/practice/chapters/${targetSubId}`),
           apiFetch(`/api/practice/chapter-progress`)
         ]);
         const chData = await chRes.json();
@@ -164,7 +227,7 @@ export default function ProgressScreen() {
     };
 
     fetchMissionsForActiveSubject();
-  }, [activeSubject]);
+  }, [activeSubject, subjects]);
 
   if (loading) {
     return (
@@ -192,45 +255,63 @@ export default function ProgressScreen() {
   const hasScienceProdigy = badges.some((b: any) => typeof b === 'string' ? b.toLowerCase().includes("science") : b?.name?.toLowerCase().includes("science"));
   const hasArenaMaster = level >= 5 || badges.some((b: any) => typeof b === 'string' ? b.toLowerCase().includes("arena") : b?.name?.toLowerCase().includes("arena"));
 
+  const unlockedMilestonesCount = [hasMathAce, isStreakUnlocked, hasScienceProdigy, hasArenaMaster].filter(Boolean).length;
+  const totalBadgesCount = Math.max(badges.length, unlockedMilestonesCount);
+
+  // Filter growth list based on active subject selection
+  const filteredGrowth = activeSubject
+    ? weeklyGrowth.filter((item: any) => 
+        item.subjectId === activeSubject._id || 
+        item.name.toLowerCase().replace(/ /g, '_') === activeSubject.name.toLowerCase().replace(/ /g, '_') ||
+        item.name.toLowerCase().includes(activeSubject.name.toLowerCase()) || 
+        activeSubject.name.toLowerCase().includes(item.name.toLowerCase())
+      )
+    : weeklyGrowth;
+
+  const displayedGrowth = filteredGrowth.length > 0 ? filteredGrowth : weeklyGrowth;
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#F5F6FB] via-[#FAFAFF] to-[#FFFFFF] text-[#17177F] font-sans pb-28 max-w-lg mx-auto relative selection:bg-[#4D4BFF] selection:text-white overflow-x-hidden">
-      {/* Background World Glow Accents */}
+    <div className="min-h-screen bg-[#F7F9FB] text-[#17177F] font-sans pb-28 max-w-lg mx-auto relative selection:bg-[#4D4BFF] selection:text-white overflow-x-hidden">
+      {/* Background Soft Glow Accents */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[35%] rounded-full bg-[#4D4BFF]/10 blur-[90px]" />
-        <div className="absolute top-[40%] right-[-10%] w-[50%] h-[40%] rounded-full bg-[#FFC83D]/15 blur-[90px]" />
+        <div className="absolute top-[-10%] left-[-10%] w-[55%] h-[40%] rounded-full bg-[#17177F]/8 blur-[100px]" />
+        <div className="absolute top-[40%] right-[-10%] w-[55%] h-[40%] rounded-full bg-[#4D4BFF]/8 blur-[100px]" />
       </div>
 
       {/* TOP APP BAR / GAME HUD */}
-      <header className="flex flex-col bg-white/85 backdrop-blur-md border-b border-[#E0E3E5] sticky top-0 z-50 shadow-sm pb-2.5">
-        <div className="flex items-center justify-between px-4 py-3.5">
-          <div className="flex items-center gap-2.5">
+      <header className="flex flex-col bg-white/90 backdrop-blur-xl border-b border-[#E0E3E5]/70 sticky top-0 z-50 shadow-[0_4px_20px_rgba(0,0,0,0.02)] pb-3">
+        <div className="flex items-center justify-between px-5 py-4">
+          <div className="flex items-center gap-3">
             <button 
               onClick={() => navigate(-1)} 
-              className="w-9 h-9 rounded-full bg-[#F5F6FB] border border-[#E0E3E5] hover:bg-[#EEF1FF] flex items-center justify-center transition-all active:scale-95 shrink-0"
+              className="w-10 h-10 rounded-full bg-[#F7F9FB] border border-[#E0E3E5] hover:bg-[#EEF1FF] flex items-center justify-center transition-all active:scale-95 shrink-0 shadow-2xs"
               aria-label="Back"
             >
-              <ArrowLeft size={18} className="text-[#17177F]" />
+              <ArrowLeft size={20} className="text-[#17177F]" />
             </button>
             <button 
               onClick={() => navigate("/profile")}
-              className="w-9 h-9 rounded-full border-2 border-[#38E4D4] overflow-hidden bg-white shrink-0 active:scale-95 transition-all shadow-xs"
+              className="w-10 h-10 rounded-full border-2 border-[#17177F]/40 overflow-hidden bg-white shrink-0 active:scale-95 transition-all shadow-sm"
             >
               {userPhoto ? (
                 <img src={userPhoto} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
                 <img 
-                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`} 
+                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=17177F&color=fff`} 
                   alt="Avatar"
                   className="w-full h-full object-cover"
                 />
               )}
             </button>
-            <div>
-              <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#4D4BFF] block leading-none">
-                PLAYER PROFILE
-              </span>
-              <h1 className="text-base font-black text-[#17177F] tracking-wide uppercase leading-tight">
-                MY JOURNEY
+            <div className="text-left">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
+                <span className="text-[12px] font-medium text-[#767683]">
+                  {t('updated_just_now', 'Updated just now')}
+                </span>
+              </div>
+              <h1 className="text-[22px] font-bold text-[#17177F] tracking-tight leading-tight">
+                {t('my_journey', 'My Journey')}
               </h1>
             </div>
           </div>
@@ -238,24 +319,121 @@ export default function ProgressScreen() {
           {/* Right Bell Notification */}
           <button 
             onClick={() => navigate("/notifications")}
-            className="w-9 h-9 rounded-full bg-white border border-[#E0E3E5] shadow-sm flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all shrink-0"
+            className="w-10 h-10 rounded-full bg-white border border-[#E0E3E5] shadow-xs flex items-center justify-center hover:bg-[#F7F9FB] active:scale-95 transition-all shrink-0"
           >
             <div className="relative">
-              <Bell size={18} className="text-[#17177F]" />
+              <Bell size={20} className="text-[#17177F]" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full text-[8px] text-white flex items-center justify-center font-black border border-white pointer-events-none z-10">
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#EF4444] rounded-full text-[9px] text-white flex items-center justify-center font-bold border-2 border-white pointer-events-none z-10 shadow-xs">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
             </div>
           </button>
         </div>
+      </header>
 
-        {/* SUBJECT SELECTION HORIZONTAL TABS */}
-        {subjects.length > 0 && (
-          <div className="flex overflow-x-auto hide-scrollbar px-4 pb-1 gap-2 pr-6">
+      <main className="px-5 pt-3.5 sm:pt-5 flex flex-col gap-4 relative z-10">
+        {/* 1. TOP XP HERO CARD */}
+        <section className="bg-gradient-to-br from-[#17177F] via-[#141779] to-[#0D0E4C] rounded-[24px] p-5 sm:p-6 text-white shadow-[0_10px_35px_-8px_rgba(23,23,127,0.35)] relative overflow-hidden">
+          <div className="w-48 h-48 rounded-full bg-white/5 blur-2xl absolute -right-6 -bottom-6 pointer-events-none" />
+          <div className="w-32 h-32 rounded-full bg-white/5 blur-xl absolute -left-6 -top-6 pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/25 shadow-xs text-[11px] sm:text-[13px] font-bold text-white uppercase shrink-0">
+                <Zap size={14} className="text-[#FFC83D] fill-[#FFC83D]" />
+                <span>
+                  {t('level_adventurer', { level, defaultValue: `LEVEL ${level} • ADVENTURER` })}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/25 shadow-xs text-[11px] sm:text-[13px] font-bold text-white tracking-wide shrink-0">
+                <span className="text-[#FFC83D]">⚡</span>
+                <span>{t('xp_earned', 'XP Earned Today')}:</span>
+                <span className="text-[#FFC83D]">{xp.toLocaleString()} XP</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col text-left mt-1">
+              <div className="flex items-baseline gap-2">
+                <span className="text-[32px] sm:text-[36px] font-black tracking-tight leading-none text-white">
+                  {xp.toLocaleString()}
+                </span>
+                <span className="text-[16px] sm:text-[18px] font-bold text-[#EEF1FF]">XP</span>
+              </div>
+              <span className="text-[12px] sm:text-[13px] font-medium text-[#E0E7FF] mt-1">
+                {t('total_xp_accumulated', 'Total Experience Points Accumulated')}
+              </span>
+            </div>
+
+            <div className="w-full h-3.5 sm:h-4 bg-black/30 rounded-full overflow-hidden p-0.5 border border-white/20 shadow-inner">
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${progressPercent}%` }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                className="h-full bg-gradient-to-r from-[#38E4D4] via-[#40C98A] to-[#FFC83D] rounded-full shadow-[0_0_12px_rgba(255,255,255,0.4)]"
+              />
+            </div>
+
+            <div className="flex items-center justify-between text-[11px] sm:text-[13px] font-medium text-[#EEF1FF]">
+              <span>{progressPercent}% {t('complete', 'Complete')}</span>
+              <span className="text-white font-bold flex items-center gap-1">
+                {xpNeededForNext > 0 ? t('xp_until_level', { xp: xpNeededForNext, level: level + 1, defaultValue: `${xpNeededForNext} XP until Level ${level + 1}` }) : t('max_level_reached', 'Max Level Reached!')} →
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {/* 2. STAT CARDS GRID */}
+        <section className="grid grid-cols-4 gap-2 sm:gap-3">
+          <div className="bg-white rounded-[16px] sm:rounded-[20px] p-2.5 sm:p-4 text-center shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-[#E0E3E5]/60 flex flex-col items-center justify-center gap-1.5 sm:gap-2 hover:shadow-[0_8px_25px_rgba(0,0,0,0.06)] transition-all overflow-hidden">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#EEF1FF] flex items-center justify-center text-[#17177F] shadow-2xs shrink-0">
+              <Zap size={16} className="fill-[#17177F]" />
+            </div>
+            <div className="w-full">
+              <p className="text-[15px] sm:text-[22px] font-black text-[#17177F] leading-tight truncate">{xp.toLocaleString()}</p>
+              <p className="text-[10px] sm:text-[12px] font-medium text-[#767683] mt-0.5 truncate">{t('xp_power', 'XP Power')}</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-[16px] sm:rounded-[20px] p-2.5 sm:p-4 text-center shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-[#E0E3E5]/60 flex flex-col items-center justify-center gap-1.5 sm:gap-2 hover:shadow-[0_8px_25px_rgba(0,0,0,0.06)] transition-all overflow-hidden">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#FFC83D]/20 flex items-center justify-center text-[#D97706] shadow-2xs shrink-0">
+              <Flame size={16} className="fill-[#D97706]" />
+            </div>
+            <div className="w-full">
+              <p className="text-[15px] sm:text-[22px] font-black text-[#17177F] leading-tight truncate">{streakDays}</p>
+              <p className="text-[10px] sm:text-[12px] font-medium text-[#767683] mt-0.5 truncate">{t('streak', 'Streak 🔥')}</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-[16px] sm:rounded-[20px] p-2.5 sm:p-4 text-center shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-[#E0E3E5]/60 flex flex-col items-center justify-center gap-1.5 sm:gap-2 hover:shadow-[0_8px_25px_rgba(0,0,0,0.06)] transition-all overflow-hidden">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#38E4D4]/20 flex items-center justify-center text-[#006A62] shadow-2xs shrink-0">
+              <Award size={16} />
+            </div>
+            <div className="w-full">
+              <p className="text-[15px] sm:text-[22px] font-black text-[#17177F] leading-tight truncate">{totalBadgesCount}</p>
+              <p className="text-[10px] sm:text-[12px] font-medium text-[#767683] mt-0.5 truncate">{t('badges', 'Badges')}</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-[16px] sm:rounded-[20px] p-2.5 sm:p-4 text-center shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-[#E0E3E5]/60 flex flex-col items-center justify-center gap-1.5 sm:gap-2 hover:shadow-[0_8px_25px_rgba(0,0,0,0.06)] transition-all overflow-hidden">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#17177F]/10 flex items-center justify-center text-[#17177F] shadow-2xs shrink-0">
+              <Trophy size={16} />
+            </div>
+            <div className="w-full">
+              <p className="text-[15px] sm:text-[22px] font-black text-[#17177F] leading-tight truncate">Lvl {level}</p>
+              <p className="text-[10px] sm:text-[12px] font-medium text-[#767683] mt-0.5 truncate">{t('level', 'Level')}</p>
+            </div>
+          </div>
+        </section>
+
+        {/* 3. REDESIGNED PREMIUM SUBJECT ANALYTICS & CHARTS SECTION (BAR GRAPH) */}
+        <section className="flex flex-col gap-3">
+          {/* SUBJECT SELECTION HORIZONTAL TABS */}
+          <div className="flex overflow-x-auto hide-scrollbar py-1 gap-2.5">
             {subjects.map((sub) => {
               const isActive = activeSubject?._id === sub._id;
+              const translatedSubName = t(sub.name.toLowerCase().replace(/ /g, '_'), { defaultValue: sub.name });
               return (
                 <button
                   key={sub._id}
@@ -263,282 +441,357 @@ export default function ProgressScreen() {
                     setActiveSubject(sub);
                     sessionStorage.setItem("activeSubjectId", sub._id);
                   }}
-                  className={`px-4 py-1.5 rounded-full font-black text-xs whitespace-nowrap transition-all uppercase tracking-wider shrink-0 flex items-center gap-1.5 ${
+                  className={`px-4 py-2 rounded-full font-semibold text-[13px] whitespace-nowrap transition-all shrink-0 flex items-center gap-2 ${
                     isActive 
-                      ? 'bg-gradient-to-r from-[#4D4BFF] to-[#17177F] text-white shadow-md border border-[#4D4BFF]' 
-                      : 'bg-white text-[#767683] border border-[#E0E3E5] hover:border-[#4D4BFF]/60'
+                      ? 'bg-gradient-to-r from-[#17177F] to-[#141779] text-white shadow-md shadow-[#17177F]/25 border border-[#17177F]' 
+                      : 'bg-white text-[#767683] border border-[#E0E3E5] hover:border-[#17177F]/40 shadow-2xs'
                   }`}
                 >
-                  <Compass size={13} className={isActive ? "text-[#FFC83D]" : "text-[#767683]"} />
-                  <span>{sub.name}</span>
+                  <Compass size={14} className={isActive ? "text-white" : "text-[#767683]"} />
+                  <span>{translatedSubName}</span>
                 </button>
               );
             })}
           </div>
-        )}
-      </header>
 
-      <main className="px-4 pt-4 flex flex-col gap-4 relative z-10">
-        {/* 1. PLAYER PROGRESSION HERO CARD */}
-        <section className="bg-gradient-to-br from-[#180C4F] via-[#2824A3] to-[#17177F] border-2 border-[#4D4BFF]/40 rounded-2xl p-4 text-white shadow-lg relative overflow-hidden">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-1.5 bg-[#4D4BFF]/30 px-2.5 py-1 rounded-full border border-[#4D4BFF]/50">
-              <Zap size={15} className="text-[#FFC83D]" />
-              <span className="text-xs font-black uppercase tracking-wider text-white">
-                LEVEL {level} • ADVENTURER
-              </span>
+          <div className="bg-white rounded-[24px] p-5 sm:p-6 shadow-[0_10px_35px_-8px_rgba(0,0,0,0.06)] border border-[#E0E3E5]/60 flex flex-col gap-4">
+            <div className="flex flex-col gap-1 text-left">
+              <h2 className="text-[20px] font-bold text-[#17177F] tracking-tight leading-snug">
+                {t('weekly_subject_growth_title', 'Subject Analytics & Growth')}
+              </h2>
+              <p className="text-[14px] font-medium text-[#767683]">
+                {t('weekly_subject_growth_sub', 'Compare weekly mastery breakdown across your subjects')}
+              </p>
             </div>
-            <span className="text-xs font-black text-[#FFC83D]">
-              {xp.toLocaleString()} XP EARNED
-            </span>
-          </div>
 
-          {/* XP Progress Bar */}
-          <div className="my-2.5">
-            <div className="w-full h-3.5 bg-black/30 rounded-full overflow-hidden p-0.5 border border-white/20">
-              <motion.div 
-                initial={{ width: 0 }}
-                animate={{ width: `${progressPercent}%` }}
-                transition={{ duration: 1, ease: "easeOut" }}
-                className="h-full bg-gradient-to-r from-[#5B5CFF] via-[#4D4BFF] to-[#38E4D4] rounded-full shadow-[0_0_10px_rgba(56,228,212,0.5)]"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between text-[11px] font-bold text-[#EEF1FF]">
-            <span>{progressPercent}% Complete</span>
-            <span className="text-[#38E4D4] font-black">
-              {xpNeededForNext > 0 ? `${xpNeededForNext} XP until Level ${level + 1}` : `Max Level Reached!`} →
-            </span>
-          </div>
-        </section>
-
-        {/* 2. GAME STATS COMPACT ROW */}
-        <section className="grid grid-cols-4 gap-2">
-          <div className="bg-white border border-[#E0E3E5] rounded-xl p-2 text-center shadow-xs">
-            <p className="text-[9px] font-extrabold text-[#767683] uppercase tracking-wider">XP POWER</p>
-            <p className="text-sm font-black text-[#4D4BFF]">{xp.toLocaleString()}</p>
-          </div>
-          <div className="bg-white border border-[#E0E3E5] rounded-xl p-2 text-center shadow-xs">
-            <p className="text-[9px] font-extrabold text-[#767683] uppercase tracking-wider">STREAK</p>
-            <p className="text-sm font-black text-[#FFC83D] flex items-center justify-center gap-0.5">
-              <span>{streakDays}</span>
-              <span className="text-xs">🔥</span>
-            </p>
-          </div>
-          <div className="bg-white border border-[#E0E3E5] rounded-xl p-2 text-center shadow-xs">
-            <p className="text-[9px] font-extrabold text-[#767683] uppercase tracking-wider">BADGES</p>
-            <p className="text-sm font-black text-[#38E4D4]">{badges.length}</p>
-          </div>
-          <div className="bg-white border border-[#E0E3E5] rounded-xl p-2 text-center shadow-xs">
-            <p className="text-[9px] font-extrabold text-[#767683] uppercase tracking-wider">LEVEL</p>
-            <p className="text-sm font-black text-[#17177F]">Lvl {level}</p>
-          </div>
-        </section>
-
-        {/* 3. FEATURED CURRENT ADVENTURE QUEST CARD */}
-        <section className="bg-white border-2 border-[#E0E3E5] rounded-2xl p-4 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-1.5">
-              <Rocket size={16} className="text-[#4D4BFF]" />
-              <span className="text-xs font-black uppercase tracking-wider text-[#17177F]">
-                🚀 CURRENT ADVENTURE
-              </span>
-            </div>
-            {activeChapter && (
-              <button 
-                onClick={() => navigate(`/mission-roadmap?chapterId=${activeChapter._id}&title=${encodeURIComponent(activeChapter.name)}`)}
-                className="text-xs font-black text-[#4D4BFF] hover:underline flex items-center gap-0.5"
-              >
-                <span>View Map</span>
-                <ChevronRight size={14} />
-              </button>
-            )}
-          </div>
-
-          <div className="my-2">
-            <h2 className="text-base font-black text-[#17177F] leading-tight">
-              {activeChapter ? activeChapter.name : "Active Mission Progression"}
-            </h2>
-            <p className="text-xs font-semibold text-[#767683] mt-0.5">
-              Conquer all realms in {activeSubject?.name || "this subject"} to unlock rewards!
-            </p>
-          </div>
-
-          {activeChapter && (
-            <button
-              onClick={() => navigate(`/mission-roadmap?chapterId=${activeChapter._id}&title=${encodeURIComponent(activeChapter.name)}`)}
-              className="w-full mt-2 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider bg-gradient-to-r from-[#4D4BFF] to-[#17177F] text-white shadow-md hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-1.5"
-            >
-              <span>CONTINUE ADVENTURE</span>
-              <ChevronRight size={16} />
-            </button>
-          )}
-        </section>
-
-        {/* 4. YOUR MISSIONS SECTION */}
-        <section className="flex flex-col gap-3">
-          <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-black text-[#17177F] uppercase tracking-wider flex items-center gap-1.5">
-              <Trophy size={14} className="text-[#FFC83D]" />
-              YOUR MISSIONS
-            </span>
-            <span className="text-[11px] font-bold text-[#4D4BFF]">
-              {missionsList.filter(m => m.status === "completed").length} / {missionsList.length} COMPLETED
-            </span>
-          </div>
-
-          <div className="bg-white rounded-2xl p-3 border-2 border-[#E0E3E5] shadow-sm flex flex-col gap-2.5">
-            {loadingMissions ? (
-              <div className="flex flex-col items-center py-6">
-                <div className="w-7 h-7 border-3 border-[#4D4BFF] border-t-transparent rounded-full animate-spin mb-2" />
-                <p className="text-xs text-gray-500 font-bold animate-pulse">Syncing mission data...</p>
+            <div className="flex items-center gap-4">
+              <div className="bg-[#EEF1FF] border border-[#4D4BFF]/20 text-[#17177F] px-3.5 py-1 rounded-full text-[13px] font-medium flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#4D4BFF]" />
+                <span>{t('current_week', 'Current Week')}</span>
               </div>
-            ) : !activeChapter ? (
-              <div className="text-center py-6 text-[#767683] font-semibold text-xs">
-                No active chapters found for this subject.
+              <div className="bg-[#CBD5E1]/30 border border-[#CBD5E1]/50 text-[#64748B] px-3.5 py-1 rounded-full text-[13px] font-medium flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#94A3B8]" />
+                <span>{t('previous_week', 'Previous Week')}</span>
               </div>
-            ) : missionsList.length === 0 ? (
-              <div className="text-center py-6 text-[#767683] font-semibold text-xs flex flex-col items-center gap-2">
-                <Rocket size={28} className="text-gray-300 animate-bounce" />
-                <span>No missions loaded for this chapter.</span>
+            </div>
+
+            {loadingGrowth ? (
+              <div className="flex flex-col items-center py-10">
+                <div className="w-8 h-8 border-3 border-[#17177F] border-t-transparent rounded-full animate-spin mb-3" />
+                <p className="text-[13px] font-medium text-[#767683] animate-pulse">{t('loading_analytics', 'Loading subject growth analytics...')}</p>
+              </div>
+            ) : displayedGrowth.length === 0 ? (
+              <div className="text-center py-8 text-[#767683] font-medium text-[14px]">
+                {t('no_growth_data', 'Complete quizzes across subjects to see weekly growth breakdown!')}
               </div>
             ) : (
-              missionsList.map((m) => {
-                const isCompleted = m.status === "completed";
-                const isRetest = m.status === "retest";
-                const isUnlocked = m.status === "unlocked" || isRetest;
+              <div className="flex flex-col gap-4">
+                {displayedGrowth.map((item: any, idx: number) => {
+                  const delta = item.growthDelta !== undefined ? item.growthDelta : (item.thisWeekAccuracy - item.lastWeekAccuracy);
+                  const isPositive = delta >= 0;
+                  const translatedSubName = t(item.name.toLowerCase().replace(/ /g, '_'), { defaultValue: item.name });
 
-                return (
-                  <div
-                    key={m.seq}
-                    onClick={() => {
-                      if (isUnlocked || isCompleted) {
-                        navigate(`/mission-play?chapterId=${activeChapter._id}&missionSeq=${m.seq}${(isCompleted || isRetest) ? "&replay=true" : ""}`);
-                      }
-                    }}
-                    className={`p-3 rounded-xl border-2 flex items-center justify-between transition-all ${
-                      isCompleted
-                        ? "bg-[#40C98A]/10 border-[#40C98A]/50 text-[#17177F] cursor-pointer hover:bg-[#40C98A]/20"
-                        : isRetest
-                        ? "bg-[#FFC83D]/10 border-[#FFC83D]/60 text-[#17177F] cursor-pointer hover:bg-[#FFC83D]/20"
-                        : isUnlocked
-                        ? "bg-[#EEF1FF] border-[#4D4BFF]/60 text-[#17177F] cursor-pointer hover:bg-[#EEF1FF]/80 shadow-xs"
-                        : "bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed opacity-65"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">{m.icon || "🚀"}</span>
-                      <div className="text-left">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-white border border-gray-200">
-                            Mission {m.seq}
+                  const getIcon = (n: string) => {
+                    const lower = n.toLowerCase();
+                    if (lower.includes("guj")) return "📘";
+                    if (lower.includes("math")) return "🧮";
+                    if (lower.includes("sci")) return "🔬";
+                    if (lower.includes("eng")) return "📖";
+                    return "🌎";
+                  };
+
+                  const icon = item.icon || getIcon(item.name);
+
+                  const getPerfLabel = (acc: number) => {
+                    if (acc >= 85) return t('excellent_progress', 'Excellent Progress');
+                    if (acc >= 75) return t('great_mastery', 'Great Mastery');
+                    if (acc >= 65) return t('building_skill', 'Building Skill');
+                    return t('needs_practice', 'Needs Practice');
+                  };
+
+                  const stats = (activeSubject && subjectCompletionStats[activeSubject._id]) || 
+                                (item.subjectId && subjectCompletionStats[item.subjectId]) || 
+                                { completed: 0, total: 0, percent: 0 };
+                  const circleRadius = 48;
+                  const circumference = 2 * Math.PI * circleRadius;
+                  const strokeDashoffset = circumference - (stats.percent / 100) * circumference;
+
+                  return (
+                    <motion.div
+                      key={item.subjectId || idx}
+                      initial={{ opacity: 0, y: 15, scale: 0.97 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ duration: 0.5, delay: idx * 0.08 }}
+                      className="bg-white rounded-[20px] p-[18px] shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-[#E0E3E5]/60 flex flex-col gap-5 hover:shadow-[0_8px_25px_rgba(0,0,0,0.06)] transition-all duration-300"
+                    >
+                      {/* 1. SUBJECT HEADER & ACCURACY SCORE */}
+                      <div className="flex items-start justify-between">
+                        <div className="flex flex-col gap-0.5 text-left">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl">{icon}</span>
+                            <h3 className="text-[16px] font-bold text-[#17177F]">
+                              {translatedSubName}
+                            </h3>
+                          </div>
+                          <span className="text-[13px] font-medium text-[#767683]">
+                            {getPerfLabel(item.thisWeekAccuracy)}
                           </span>
-                          {isCompleted && (
-                            <span className="text-[9px] font-bold text-[#22C55E] bg-[#22C55E]/15 px-2 py-0.5 rounded-full">
-                              Completed ✓
-                            </span>
-                          )}
-                          {isRetest && (
-                            <span className="text-[9px] font-bold text-[#D97706] bg-[#FFC83D]/20 px-2 py-0.5 rounded-full">
-                              Re-test 🔄
-                            </span>
-                          )}
-                          {isUnlocked && !isRetest && (
-                            <span className="text-[9px] font-bold text-[#4D4BFF] bg-[#4D4BFF]/15 px-2 py-0.5 rounded-full">
-                              Next Up! 🚀
-                            </span>
-                          )}
                         </div>
-                        <h4 className="text-xs font-black mt-1 text-[#17177F]">{m.title}</h4>
-                      </div>
-                    </div>
 
-                    <div className="text-right shrink-0">
-                      {isCompleted || isRetest ? (
-                        <div className="flex gap-0.5">
-                          {[1, 2, 3].map((starIndex) => (
-                            <span 
-                              key={starIndex} 
-                              className={`text-xs font-black ${starIndex <= m.stars ? "text-[#FFC83D]" : "text-gray-300"}`}
-                            >
-                              ★
-                            </span>
-                          ))}
+                        <div className="flex items-center gap-3">
+                          <span className="text-[34px] font-black text-[#17177F] tracking-tight leading-none">
+                            {item.thisWeekAccuracy}%
+                          </span>
+
+                          <motion.span
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.5, delay: idx * 0.1 + 0.2 }}
+                            className={`px-[10px] py-[5px] rounded-[100px] text-[13px] font-bold flex items-center gap-1 shadow-2xs ${
+                              isPositive
+                                ? "bg-[#DCFCE7] text-[#16A34A]"
+                                : "bg-[#FEE2E2] text-[#DC2626]"
+                            }`}
+                          >
+                            <span>{isPositive ? "▲" : "▼"}</span>
+                            <span>{isPositive ? `+${delta}%` : `${delta}%`}</span>
+                          </motion.span>
                         </div>
-                      ) : isUnlocked ? (
-                        <span className="text-xs font-black text-white bg-gradient-to-r from-[#4D4BFF] to-[#17177F] px-3 py-1 rounded-lg shadow-xs">
-                          PLAY
+                      </div>
+
+                      {/* 2. FIRST: PREMIUM REDESIGNED WEEKLY COMPARISON BAR CHART */}
+                      <div className="bg-[#FAFBFD] rounded-[24px] p-6 shadow-[0_10px_30px_rgba(0,0,0,0.04)] border border-[#F1F5F9] flex flex-col">
+                        {/* Chart Header */}
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex flex-col text-left">
+                            <span className="text-[13px] font-bold text-[#17177F] tracking-wide">
+                              {t('weekly_comparison', 'Weekly Comparison')}
+                            </span>
+                            <span className="text-[11px] font-medium text-[#64748B]">
+                              {t('current_vs_previous', 'Current Week vs Previous Week')}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Chart Body with Grid & Bars */}
+                        <div className="relative pt-4 pb-2">
+                          {/* Subtle Horizontal Grid Lines */}
+                          <div className="absolute inset-x-0 top-10 bottom-8 flex flex-col justify-between pointer-events-none opacity-60 z-0">
+                            <div className="border-b border-[#E2E8F0] border-dashed w-full h-0" />
+                            <div className="border-b border-[#E2E8F0] border-dashed w-full h-0" />
+                            <div className="border-b border-[#E2E8F0] border-dashed w-full h-0" />
+                          </div>
+
+                          <div className="relative z-10 flex items-end justify-center gap-12 sm:gap-16 h-44 pt-4">
+                            {/* Current Week Bar Group */}
+                            <div className="flex flex-col items-center group cursor-pointer">
+                              <span className="text-[16px] font-semibold text-[#17177F] mb-3 leading-none">
+                                {item.thisWeekAccuracy}%
+                              </span>
+                              <div className="h-32 flex items-end">
+                                <motion.div
+                                  initial={{ height: 0 }}
+                                  animate={{ height: `${Math.max(16, (item.thisWeekAccuracy / 100) * 120)}px` }}
+                                  transition={{ duration: 0.7, ease: "easeOut" }}
+                                  className="w-12 sm:w-14 rounded-t-[16px] rounded-b-[4px] bg-gradient-to-t from-[#4F46E5] to-[#7C6CFF] shadow-[0_6px_16px_rgba(79,70,229,0.25)] hover:scale-[1.03] transition-transform duration-200 overflow-hidden relative"
+                                >
+                                  {/* Subtle top highlight cap */}
+                                  <div className="w-full h-[2px] bg-white/40 rounded-t-[16px]" />
+                                </motion.div>
+                              </div>
+                              <span className="text-[13px] font-medium text-[#64748B] mt-3 leading-none text-center">
+                                {t('current_week', 'Current Week')}
+                              </span>
+                            </div>
+
+                            {/* Previous Week Bar Group */}
+                            <div className="flex flex-col items-center group cursor-pointer">
+                              <span className="text-[16px] font-semibold text-[#64748B] mb-3 leading-none">
+                                {item.lastWeekAccuracy}%
+                              </span>
+                              <div className="h-32 flex items-end">
+                                <motion.div
+                                  initial={{ height: 0 }}
+                                  animate={{ height: `${Math.max(16, (item.lastWeekAccuracy / 100) * 120)}px` }}
+                                  transition={{ duration: 0.7, delay: 0.1, ease: "easeOut" }}
+                                  className="w-12 sm:w-14 rounded-t-[16px] rounded-b-[4px] bg-gradient-to-t from-[#94A3B8] to-[#CBD5E1] shadow-[0_6px_16px_rgba(148,163,184,0.2)] hover:scale-[1.03] transition-transform duration-200 overflow-hidden relative"
+                                >
+                                  {/* Subtle top highlight cap */}
+                                  <div className="w-full h-[2px] bg-white/30 rounded-t-[16px]" />
+                                </motion.div>
+                              </div>
+                              <span className="text-[13px] font-medium text-[#64748B] mt-3 leading-none text-center">
+                                {t('previous_week', 'Previous Week')}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Compact Summary Row (Insight) */}
+                        <div className="mt-3 pt-3 border-t border-[#F1F5F9] flex items-center gap-2 text-left">
+                          <span className={`px-3 py-1 rounded-full text-[13px] font-semibold flex items-center gap-1 shadow-2xs ${
+                            isPositive ? "bg-[#DCFCE7] text-[#16A34A]" : "bg-[#FEE2E2] text-[#DC2626]"
+                          }`}>
+                            <span>{isPositive ? "▲" : "▼"}</span>
+                            <span>{isPositive ? `+${delta}%` : `${delta}%`}</span>
+                          </span>
+                          <span className="text-[13px] font-medium text-[#64748B]">
+                            {isPositive 
+                              ? t('higher_than_last_week', 'Higher than last week') 
+                              : t('lower_than_last_week', 'Lower than last week')
+                            }
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 3. AFTER THAT: CIRCLE PROGRESS GRAPH (Chapter / Syllabus Completion for Active Subject) */}
+                      <div className="bg-[#F8FAFC] rounded-[18px] p-4 border border-[#E0E3E5]/70 flex flex-col items-center justify-center gap-2">
+                        <span className="text-[11px] font-extrabold tracking-wider text-[#767683] uppercase">
+                          {t('chapter_completion', 'CHAPTER COMPLETION')}
                         </span>
-                      ) : (
-                        <span className="text-xs font-bold text-gray-400 flex items-center gap-1">
-                          <Lock size={12} />
-                          Locked
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
+                        
+                        <div className="relative w-36 h-36 flex items-center justify-center my-1">
+                          <svg className="w-full h-full transform -rotate-90 overflow-visible" viewBox="0 0 120 120">
+                            <defs>
+                              {/* Radium Cyan-Green Gradient matching top XP card 100% */}
+                              <linearGradient id={`radium-grad-${item.subjectId || idx}`} x1="60" y1="12" x2="60" y2="108" gradientUnits="userSpaceOnUse">
+                                <stop offset="0%" stopColor="#20E2D7" />
+                                <stop offset="25%" stopColor="#38E4D4" />
+                                <stop offset="60%" stopColor="#40C98A" />
+                                <stop offset="100%" stopColor="#FFC83D" />
+                              </linearGradient>
+
+                              {/* Subtle Radium Glow Effect */}
+                              <filter id={`radium-glow-${item.subjectId || idx}`} x="-20%" y="-20%" width="140%" height="140%">
+                                <feGaussianBlur stdDeviation="2.5" result="blur" />
+                                <feMerge>
+                                  <feMergeNode in="blur" />
+                                  <feMergeNode in="SourceGraphic" />
+                                </feMerge>
+                              </filter>
+                            </defs>
+
+                            {/* Background Track Circle Line */}
+                            <circle
+                              cx="60"
+                              cy="60"
+                              r={circleRadius}
+                              stroke="#EEF2FF"
+                              strokeWidth="12"
+                              fill="transparent"
+                            />
+
+                            {/* Radium Glowing Progress Completion Ring */}
+                            <motion.circle
+                              cx="60"
+                              cy="60"
+                              r={circleRadius}
+                              stroke={`url(#radium-grad-${item.subjectId || idx})`}
+                              strokeWidth="14"
+                              strokeDasharray={circumference}
+                              initial={{ strokeDashoffset: circumference }}
+                              animate={{ strokeDashoffset }}
+                              transition={{ duration: 0.9, ease: "easeOut" }}
+                              strokeLinecap="round"
+                              fill="transparent"
+                              filter={`url(#radium-glow-${item.subjectId || idx})`}
+                            />
+                          </svg>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                            <span className="text-2xl mb-0.5">{icon}</span>
+                            <span className="text-[24px] font-black text-[#17177F] leading-none tracking-tight">
+                              {stats.percent}%
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="text-center flex flex-col items-center">
+                          <span className="text-[12px] font-bold text-[#4D4BFF]">
+                            {stats.total > 0 
+                              ? `${stats.completed}/${stats.total} ${t('chapters', 'Chapters')} ${t('completed', 'Completed')}`
+                              : `${stats.percent}% ${t('mastered', 'Mastered')}`
+                            }
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 4. AFTER THAT: APPRECIATION PARAGRAPH / INSIGHT BOX */}
+                      <div className="bg-[#EEF1FF] rounded-[18px] p-[16px] flex items-start gap-3 border border-[#4D4BFF]/20 text-left">
+                        <div className="w-8 h-8 rounded-full bg-[#4D4BFF]/15 flex items-center justify-center text-base shrink-0 mt-0.5 text-[#17177F]">
+                          💡
+                        </div>
+                        <div className="flex flex-col gap-0.5 text-left">
+                          <h4 className="text-[14px] font-bold text-[#17177F]">
+                            {t('great_progress_title', '💡 Great Progress!')}
+                          </h4>
+                          <p className="text-[13px] font-medium text-[#767683] leading-relaxed">
+                            {t('insight_growth_desc', { 
+                              subject: translatedSubName, 
+                              delta: delta >= 0 ? `+${delta}%` : `${delta}%`,
+                              defaultValue: `Your ${translatedSubName} score improved by ${delta >= 0 ? `+${delta}%` : `${delta}%`} compared to last week.`
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
             )}
           </div>
         </section>
 
         {/* 5. ACHIEVEMENTS SHOWCASE */}
-        <section className="flex flex-col gap-3">
+        <section className="flex flex-col gap-3 text-left">
           <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-black text-[#17177F] uppercase tracking-wider flex items-center gap-1.5">
-              <Award size={14} className="text-[#4D4BFF]" />
-              🏆 RECENT ACHIEVEMENTS
-            </span>
+            <h2 className="text-[18px] font-semibold text-[#17177F] flex items-center gap-2">
+              <Award size={18} className="text-[#4D4BFF]" />
+              <span>🏆 {t('recent_achievements', 'Recent Achievements')}</span>
+            </h2>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            {/* 1. Math Ace */}
-            <div className={`rounded-2xl p-3 border-2 flex flex-col items-center gap-2 transition-all ${
-              hasMathAce ? 'bg-white border-[#4D4BFF]/50 shadow-sm' : 'bg-gray-50 border-gray-200 opacity-60 grayscale-[0.6]'
+            <div className={`rounded-[24px] p-5 border flex flex-col items-center gap-2.5 transition-all ${
+              hasMathAce ? 'bg-white border-[#4D4BFF]/40 shadow-[0_4px_20px_rgba(0,0,0,0.03)]' : 'bg-gray-50 border-gray-200 opacity-60 grayscale-[0.6]'
             }`}>
-              <div className={`w-11 h-11 rounded-full flex items-center justify-center ${hasMathAce ? 'bg-[#4D4BFF]/15' : 'bg-gray-200'}`}>
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${hasMathAce ? 'bg-[#EEF1FF]' : 'bg-gray-200'}`}>
                 <Award size={24} className={hasMathAce ? 'text-[#4D4BFF]' : 'text-gray-400'} />
               </div>
-              <span className="text-xs font-black text-[#17177F] text-center leading-tight">
-                {t('math_ace') || 'Math Ace'} {hasMathAce ? '🏆' : '🔒'}
+              <span className="text-[14px] font-semibold text-[#17177F] text-center leading-tight">
+                {t('math_ace', 'Math Ace')} {hasMathAce ? '🏆' : '🔒'}
               </span>
             </div>
 
-            {/* 2. Streak Champion */}
-            <div className={`rounded-2xl p-3 border-2 flex flex-col items-center gap-2 transition-all ${
-              isStreakUnlocked ? 'bg-white border-[#FFC83D]/60 shadow-sm' : 'bg-gray-50 border-gray-200 opacity-60 grayscale-[0.6]'
+            <div className={`rounded-[24px] p-5 border flex flex-col items-center gap-2.5 transition-all ${
+              isStreakUnlocked ? 'bg-white border-[#FFC83D]/60 shadow-[0_4px_20px_rgba(0,0,0,0.03)]' : 'bg-gray-50 border-gray-200 opacity-60 grayscale-[0.6]'
             }`}>
-              <div className={`w-11 h-11 rounded-full flex items-center justify-center ${isStreakUnlocked ? 'bg-[#FFC83D]/20' : 'bg-gray-200'}`}>
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${isStreakUnlocked ? 'bg-[#FFC83D]/20' : 'bg-gray-200'}`}>
                 <Flame size={24} className={isStreakUnlocked ? 'text-[#D97706]' : 'text-gray-400'} />
               </div>
-              <span className="text-xs font-black text-[#17177F] text-center leading-tight">
-                {t('day_streak', { days: streakDays }) || `Streak: ${streakDays} Days`} {isStreakUnlocked ? '🔥' : '🔒'}
+              <span className="text-[14px] font-semibold text-[#17177F] text-center leading-tight">
+                {t('day_streak', { days: streakDays, streak: streakDays, count: streakDays, defaultValue: `Streak: ${streakDays} Days` })} {isStreakUnlocked ? '🔥' : '🔒'}
               </span>
             </div>
 
-            {/* 3. Science Prodigy */}
-            <div className={`rounded-2xl p-3 border-2 flex flex-col items-center gap-2 transition-all ${
-              hasScienceProdigy ? 'bg-white border-[#38E4D4]/60 shadow-sm' : 'bg-gray-50 border-gray-200 opacity-60 grayscale-[0.6]'
+            <div className={`rounded-[24px] p-5 border flex flex-col items-center gap-2.5 transition-all ${
+              hasScienceProdigy ? 'bg-white border-[#38E4D4]/60 shadow-[0_4px_20px_rgba(0,0,0,0.03)]' : 'bg-gray-50 border-gray-200 opacity-60 grayscale-[0.6]'
             }`}>
-              <div className={`w-11 h-11 rounded-full flex items-center justify-center ${hasScienceProdigy ? 'bg-[#38E4D4]/20' : 'bg-gray-200'}`}>
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${hasScienceProdigy ? 'bg-[#38E4D4]/20' : 'bg-gray-200'}`}>
                 <Atom size={24} className={hasScienceProdigy ? 'text-[#0284C7]' : 'text-gray-400'} />
               </div>
-              <span className="text-xs font-black text-[#17177F] text-center leading-tight">
-                {t('science_prodigy') || 'Science Prodigy'} {hasScienceProdigy ? '⚛️' : '🔒'}
+              <span className="text-[14px] font-semibold text-[#17177F] text-center leading-tight">
+                {t('science_prodigy', 'Science Prodigy')} {hasScienceProdigy ? '⚛️' : '🔒'}
               </span>
             </div>
 
-            {/* 4. Arena Master */}
-            <div className={`rounded-2xl p-3 border-2 flex flex-col items-center gap-2 transition-all ${
-              hasArenaMaster ? 'bg-white border-purple-300 shadow-sm' : 'bg-gray-50 border-gray-200 opacity-60 grayscale-[0.6]'
+            <div className={`rounded-[24px] p-5 border flex flex-col items-center gap-2.5 transition-all ${
+              hasArenaMaster ? 'bg-white border-purple-200 shadow-[0_4px_20px_rgba(0,0,0,0.03)]' : 'bg-gray-50 border-gray-200 opacity-60 grayscale-[0.6]'
             }`}>
-              <div className={`w-11 h-11 rounded-full flex items-center justify-center ${hasArenaMaster ? 'bg-purple-100' : 'bg-gray-200'}`}>
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${hasArenaMaster ? 'bg-purple-100' : 'bg-gray-200'}`}>
                 <ShieldCheck size={24} className={hasArenaMaster ? 'text-purple-700' : 'text-gray-400'} />
               </div>
-              <span className="text-xs font-black text-[#17177F] text-center leading-tight">
-                {t('arena_master') || 'Arena Master'} {hasArenaMaster ? '🛡️' : '🔒'}
+              <span className="text-[14px] font-semibold text-[#17177F] text-center leading-tight">
+                {t('arena_master', 'Arena Master')} {hasArenaMaster ? '🛡️' : '🔒'}
               </span>
             </div>
           </div>

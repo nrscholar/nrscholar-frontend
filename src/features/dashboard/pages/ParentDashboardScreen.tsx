@@ -5,6 +5,7 @@ import FamilyLinkModal from "../../../components/FamilyLinkModal";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
 import ChildSwitcherModal from "../../../components/ChildSwitcherModal";
+import { translateNotificationTitle, translateNotificationMessage } from "../../../utils/notificationTranslator";
 
 export default function ParentDashboardScreen() {
   const { t } = useTranslation();
@@ -66,15 +67,11 @@ export default function ParentDashboardScreen() {
 
   const loadData = useCallback(async () => {
     try {
-      const activeChildId = getActiveChildId();
-      const childParam = activeChildId ? `&childId=${activeChildId}` : "";
+      setLoading(true);
       const tzOffset = -new Date().getTimezoneOffset();
       
-      const [userRes, reportRes, notifRes] = await Promise.all([
-        apiFetch("/api/users/me").catch(() => null),
-        apiFetch(`/api/parent/report?tz_offset_minutes=${tzOffset}${childParam}`).catch(() => null),
-        apiFetch("/api/notifications").catch(() => null)
-      ]);
+      const userRes = await apiFetch("/api/users/me").catch(() => null);
+      let currentChildId = null;
 
       if (userRes && userRes.ok) {
         const json = await userRes.json();
@@ -85,8 +82,16 @@ export default function ParentDashboardScreen() {
           setParentPhoto(user.parentPhoto || "");
           setUserLevel(user.parentLevel || 1);
           setXp(user.parentXp || 0);
+          currentChildId = user.activeChildId || null;
         }
       }
+
+      const childParam = currentChildId ? `&childId=${currentChildId}` : "";
+      
+      const [reportRes, notifRes] = await Promise.all([
+        apiFetch(`/api/parent/report?tz_offset_minutes=${tzOffset}${childParam}`).catch(() => null),
+        apiFetch("/api/notifications").catch(() => null)
+      ]);
 
       if (reportRes && reportRes.ok) {
         const repJson = await reportRes.json();
@@ -170,6 +175,121 @@ export default function ParentDashboardScreen() {
     return { pathLine, pathArea, points, labels: dataset.map(t => t.day) };
   };
 
+  const translateSubjectName = (subj: string) => {
+    if (!subj) return "";
+    const lower = subj.toLowerCase();
+    if (lower.includes("gujarati")) return t("gujarati", "Gujarati");
+    if (lower.includes("math")) return t("maths", "Maths");
+    if (lower.includes("english")) return t("english_subject", "English");
+    if (lower.includes("science")) return t("science", "Science");
+    if (lower.includes("social")) return t("social_studies", "Social Studies");
+    if (lower.includes("hindi")) return t("hindi_subject", "Hindi");
+    return t(subj, subj);
+  };
+
+  const translateModeName = (name: string) => {
+    if (!name) return "";
+    const lower = name.toLowerCase();
+    if (lower.includes("practice")) return t("practice_quest", "Practice Quest");
+    if (lower.includes("reading")) return t("reading_session", "Reading Session");
+    if (lower.includes("battle") || lower.includes("shadow")) return t("shadow_arena", "Shadow Arena");
+    return t(name, name);
+  };
+
+  const formatTimeFormatted = (str: string) => {
+    if (!str) return "";
+    return str
+      .replace(/(\d+)\s*m\b/g, `$1 ${t("min_short", "m")}`)
+      .replace(/(\d+)\s*s\b/g, `$1 ${t("sec_short", "s")}`)
+      .replace(/(\d+)\s*h\b/g, `$1 ${t("hr_short", "h")}`);
+  };
+
+  const translateActivityTitle = (title: string) => {
+    if (!title) return "";
+    if (title === "Exploring new quests..." || title.includes("Exploring new quests")) {
+      return t("exploring_new_quests", "Exploring new quests...");
+    }
+    if (title === "Practice Session") return t("practice_session", "Practice Session");
+    if (title === "Reading Session") return t("reading_session", "Reading Session");
+    if (title === "Shadow Arena Battle" || title.includes("Shadow Arena")) return t("shadow_arena_battle", "Shadow Arena Battle");
+    if (title === "Quiz") return t("quiz", "Quiz");
+    if (title.startsWith("Completed reading:")) {
+      const rest = title.replace("Completed reading:", "").trim();
+      return `${t("completed_reading", "Completed reading")}: ${t(rest, rest)}`;
+    }
+    if (title.startsWith("Completed Chapter")) {
+      const chapNum = title.replace(/Completed Chapter\s*/i, "").trim();
+      return t("completed_chapter_num", { num: chapNum, defaultValue: `અધ્યાય ${chapNum} પૂર્ણ કર્યો` });
+    }
+    if (title.startsWith("Completed")) {
+      const rest = title.replace("Completed", "").trim();
+      return `${t("completed", "Completed")} ${t(rest, rest)}`;
+    }
+    return t(title, title);
+  };
+
+  const translateInsightText = (text: string) => {
+    if (!text) return "";
+    let translated = text;
+    const subjectMap: Record<string, string> = {
+      "Mathematics": t("maths", "Maths"),
+      "Gujarati": t("gujarati", "Gujarati"),
+      "Maths": t("maths", "Maths"),
+      "Math": t("maths", "Maths"),
+      "Science": t("science", "Science"),
+      "English": t("english_subject", "English"),
+      "Social Studies": t("social_studies", "Social Studies"),
+      "Hindi": t("hindi_subject", "Hindi")
+    };
+
+    for (const [subjEng, subjTrans] of Object.entries(subjectMap)) {
+      translated = translated.replace(new RegExp(`\\b${subjEng}\\b`, "gi"), subjTrans);
+    }
+
+    translated = translated
+      .replace(/is currently high performing with (\d+)% accuracy/g, (_, acc) =>
+        t("insight_high_performing", { acc, defaultValue: `${acc}% ચોકસાઈ સાથે વર્તમાનમાં ઉચ્ચ પ્રદર્શન કરી રહ્યું છે.` })
+      )
+      .replace(/is showing an increasing trend with (\d+)% accuracy/g, (_, acc) =>
+        t("insight_increasing_trend", { acc, defaultValue: `${acc}% ચોકસાઈ સાથે વધતી ક્ષમતા દર્શાવે છે.` })
+      )
+      .replace(/accuracy is currently (\d+)%\. Requires targeted practice\./g, (_, acc) =>
+        t("insight_requires_practice", { acc, defaultValue: `ચોકસાઈ વર્તમાનમાં ${acc}% છે. લક્ષ્યાંકિત પ્રેક્ટિસની જરૂર છે.` })
+      )
+      .replace(/⚠️ Risk Alert: (.*?) score has stayed below 60% for 3 consecutive days \((.*?)\)\./g, (_, subj, trend) =>
+        t("insight_risk_alert", { subj, trend, defaultValue: `⚠️ જોખમ ચેતવણી: ${subj} સ્કોર સતત 3 દિવસથી 60% થી નીચે રહ્યો છે (${trend}).` })
+      )
+      .replace(/🎉 You are on the right track! (.*?) accuracy has recovered above 60% \((\d+)%\)\./g, (_, subj, acc) =>
+        t("insight_recovery_track", { subj, acc, defaultValue: `🎉 તમે યોગ્ય માર્ગ પર છો! ${subj} ચોકસાઈ 60% થી ઉપર સુધરી ગઈ છે (${acc}%).` })
+      )
+      .replace(/🎉 You are on the right track! (.*?) accuracy has improved to (\d+)% over the last 2 days\./g, (_, subj, acc) =>
+        t("insight_improved_track", { subj, acc, defaultValue: `🎉 તમે યોગ્ય માર્ગ પર છો! ${subj} ચોકસાઈ છેલ્લા 2 દિવસમાં ${acc}% સુધી સુધરી છે.` })
+      )
+      .replace(/needs attention with (\d+)% accuracy/g, (_, acc) =>
+        t("insight_needs_attention", { acc, defaultValue: `${acc}% ચોકસાઈ સાથે વધુ ધ્યાન આપવાની જરૂર છે.` })
+      )
+      .replace(/is maintaining good scores across all subjects/g,
+        t("insight_maintaining_good", "તમામ વિષયોમાં સારું પ્રદર્શન જાળવી રહ્યું છે.")
+      )
+      .replace(/No weakness for now/g,
+        t("no_weakness_for_now", "હાલમાં કોઈ નબળાઈ નથી.")
+      )
+      .replace(/No strength for now/g,
+        t("no_strength_for_now", "હાલમાં કોઈ તાકાત નથી.")
+      )
+      .replace(/No risk for now/g,
+        t("no_risk_for_now", "હાલમાં કોઈ જોખમ નથી.")
+      )
+      .replace(/Not enough Data for now wait few Days/gi,
+        t("not_enough_data_for_now", "હાલમાં પૂરતો ડેટા નથી, થોડા દિવસ રાહ જુઓ")
+      );
+
+    return translated;
+  };
+
+  const formatNotifTitle = (title: string) => translateNotificationTitle(title, t);
+  const formatNotifMsg = (msg: string) => translateNotificationMessage(msg, t);
+
   let highestSubject: string | null = null;
   let lowestSubject: string | null = null;
   let highestAcc: number | null = null;
@@ -185,13 +305,22 @@ export default function ParentDashboardScreen() {
   const cleanChildName = (!childName || childName === "999" || /^\d+$/.test(childName)) ? "your child" : childName;
   const activeTrend = modalType === "risks" ? riskTrend : undefined;
   const targetAcc = modalType === "strengths" ? (highestAcc ?? undefined) : modalType === "weaknesses" ? (lowestAcc ?? undefined) : undefined;
-  const chartTitle = modalType === "strengths" ? (highestSubject ? `${highestSubject} Trend` : "Top Subject Trend") : modalType === "weaknesses" ? (lowestSubject ? `${lowestSubject} Focus Trend` : "Focus Area Trend") : modalType === "risks" ? "At-Risk Subject Trend" : "Overall Trend";
+  const translatedHighest = highestSubject ? translateSubjectName(highestSubject) : "";
+  const translatedLowest = lowestSubject ? translateSubjectName(lowestSubject) : "";
+
+  const chartTitle = modalType === "strengths"
+    ? (translatedHighest ? `${translatedHighest} ${t("trend", "Trend")}` : t("top_subject_trend", "Top Subject Trend"))
+    : modalType === "weaknesses"
+    ? (translatedLowest ? `${translatedLowest} ${t("focus_trend", "Focus Trend")}` : t("focus_area_trend", "Focus Area Trend"))
+    : modalType === "risks"
+    ? t("at_risk_subject_trend", "At-Risk Subject Trend")
+    : t("overall_trend", "Overall Trend");
 
   const chart = generateChartData(activeTrend, targetAcc);
   const currentScore = chart.points.length > 0 ? chart.points[chart.points.length - 1].score : 0;
   const startScore = chart.points.length > 0 ? chart.points[0].score : 0;
   const diff = chart.points.length > 0 ? currentScore - startScore : 0;
-  const diffStr = chart.points.length > 0 ? (diff >= 0 ? `+${diff}% this week` : `${diff}% this week`) : "";
+  const diffStr = chart.points.length > 0 ? (diff >= 0 ? `+${diff}% ${t("this_week", "this week")}` : `${diff}% ${t("this_week", "this week")}`) : "";
   const chartColor = (modalType === "weaknesses" || modalType === "risks") ? "#ba1a1a" : "#006a62";
 
   if (loading) {
@@ -246,7 +375,7 @@ export default function ParentDashboardScreen() {
             className="h-10 px-3 flex items-center gap-1.5 rounded-full bg-indigo-50 border border-indigo-200 text-[#141779] font-black text-xs hover:bg-indigo-100 active:scale-95 transition-all shadow-xs"
           >
             <Users size={16} />
-            <span className="hidden sm:inline">Family Code</span>
+            <span className="hidden sm:inline">{t("family_code", "Family Code")}</span>
           </button>
           <button onClick={() => { setShowNotifications(true); markAllRead(); }} className="relative w-11 h-11 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 shadow-xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all">
             <Bell size={22} className="text-[#141779]" />
@@ -310,25 +439,45 @@ export default function ParentDashboardScreen() {
           </div>
         )}
 
+        {/* Kids Space Link Card (Navigate back to Child Home page) */}
+        <button
+          onClick={() => navigate("/home")}
+          className="w-full bg-white rounded-[20px] p-3.5 flex justify-between items-center border-2 border-indigo-100 shadow-xs hover:bg-indigo-50/50 hover:border-indigo-200 transition-all group cursor-pointer"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center shrink-0 border border-indigo-100">
+              <Sparkles size={18} className="text-[#141779]" />
+            </div>
+            <div className="text-left">
+              <h3 className="text-xs font-black text-[#141779] flex items-center gap-1.5">
+                <span>{t('back_to_kids_home', 'Back to Kids Home')}</span>
+                <span className="text-[9px] bg-indigo-100 text-[#141779] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{t('kids_space', 'Kids Space')}</span>
+              </h3>
+              <p className="text-[10px] text-slate-500 font-semibold">{t('kids_space_sub', 'Return directly to student learning dashboard')}</p>
+            </div>
+          </div>
+          <ChevronRight size={20} className="text-[#141779] group-hover:translate-x-0.5 transition-transform" />
+        </button>
+
         {/* Child Summary Hero */}
         <div className="bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-[#006a62]/10 to-transparent rounded-bl-full pointer-events-none transition-transform group-hover:scale-110 duration-500" />
           <div className="flex justify-between items-start mb-4 gap-2 relative z-10">
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-extrabold text-slate-500 tracking-[1.5px] mb-1">{t("student_profile") || "STUDENT PROFILE"}</p>
+              <p className="text-xs font-extrabold text-slate-500 tracking-[1.5px] mb-1">{t("student_profile", "STUDENT PROFILE")}</p>
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-[22px] sm:text-[26px] font-black text-[#141779] leading-snug break-words">{childName}'s {t("journey") || "Journey"}</h2>
+                <h2 className="text-[22px] sm:text-[26px] font-black text-[#141779] leading-snug break-words">{childName}'s {t("journey", "Journey")}</h2>
                 <button
                   onClick={() => setShowSwitcher(true)}
                   className="px-2.5 py-1 rounded-full bg-indigo-50 text-[#141779] border border-indigo-200 font-extrabold text-xs flex items-center gap-1 hover:bg-indigo-100 transition-colors shadow-2xs"
                 >
                   <Users size={12} />
-                  <span>Switch</span>
+                  <span>{t("switch", "Switch")}</span>
                 </button>
               </div>
             </div>
             <div className="bg-[#57fae9] px-3 py-1 rounded-full whitespace-nowrap shrink-0 border border-[#007168]/20 shadow-2xs">
-              <span className="text-xs font-black text-[#007168]">Lvl {userLevel} Explorer</span>
+              <span className="text-xs font-black text-[#007168]">{t('lvl_explorer', { level: userLevel, defaultValue: `Lvl ${userLevel} Explorer` })}</span>
             </div>
           </div>
 
@@ -339,7 +488,7 @@ export default function ParentDashboardScreen() {
             >
               <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-[#006a62]/10 to-transparent rounded-bl-full" />
               <span className="text-4xl font-black text-[#006a62] mb-1">{todayTime}<span className="text-xl">m</span></span>
-              <span className="text-[11px] font-extrabold text-slate-600 uppercase tracking-wider group-hover/card:text-[#141779]">Today's Time 🔍</span>
+              <span className="text-[11px] font-extrabold text-slate-600 uppercase tracking-wider group-hover/card:text-[#141779]">{t('todays_time', "TODAY'S TIME")} 🔍</span>
             </div>
 
             <div 
@@ -348,15 +497,15 @@ export default function ParentDashboardScreen() {
             >
               <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-[#30007f]/10 to-transparent rounded-bl-full" />
               <span className="text-4xl font-black text-[#30007f] mb-1">{solvedToday}</span>
-              <span className="text-[11px] font-extrabold text-slate-600 uppercase tracking-wider group-hover/card:text-[#141779]">Solved Today 🔍</span>
+              <span className="text-[11px] font-extrabold text-slate-600 uppercase tracking-wider group-hover/card:text-[#141779]">{t('solved_today', 'SOLVED TODAY')} 🔍</span>
             </div>
           </div>
 
           <div onClick={openBreakdown} className="w-full cursor-pointer group/score">
             <div className="flex justify-between items-center mb-2">
               <span className="text-[12px] font-extrabold text-[#141779] tracking-wider group-hover/score:underline flex items-center gap-1">
-                <span>DAILY CONFIDENCE SCORE</span>
-                <span className="text-[10px] bg-indigo-50 text-[#141779] px-2 py-0.5 rounded-full font-bold">Details 🔍</span>
+                <span>{t('daily_confidence_score', 'DAILY CONFIDENCE SCORE')}</span>
+                <span className="text-[10px] bg-indigo-50 text-[#141779] px-2 py-0.5 rounded-full font-bold">{t('details', 'Details')} 🔍</span>
               </span>
               <span className="text-[15px] font-black text-[#141779]">{todayConfidenceScore}%</span>
             </div>
@@ -369,7 +518,7 @@ export default function ParentDashboardScreen() {
               </div>
             </div>
             <p className="text-xs text-slate-600 font-bold">
-              Based on today's correct answers ({solvedToday} attempts) • Tap for time breakdown
+              {t('confidence_score_sub', { attempts: solvedToday, defaultValue: `Based on today's correct answers (${solvedToday} attempts) • Tap for time breakdown` })}
             </p>
           </div>
         </div>
@@ -377,7 +526,7 @@ export default function ParentDashboardScreen() {
         {/* Learning DNA */}
         <div id="dna-section" className="flex flex-col gap-3">
           <div className="flex items-center justify-between px-1">
-            <h3 className="text-base font-extrabold text-slate-800">Cognitive Strengths & Weaknesses</h3>
+            <h3 className="text-base font-extrabold text-slate-800">{t('cognitive_strengths_weaknesses', 'Cognitive Strengths & Weaknesses')}</h3>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -390,26 +539,26 @@ export default function ParentDashboardScreen() {
                 <div className="flex justify-between items-center mb-2">
                   <div className="flex items-center gap-1.5">
                     <span className="text-base">💪</span>
-                    <h4 className="text-sm font-black text-[#006a62]">Strengths</h4>
+                    <h4 className="text-sm font-black text-[#006a62]">{t('strengths', 'Strengths')}</h4>
                   </div>
                   <ChevronRight size={18} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
                 </div>
                 {!hasEnoughData || strengths.length === 0 || strengths[0] === "No strength for now." || strengths[0]?.includes("Not enough Data") ? (
                   <span className="inline-block text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full mt-1">
-                    Not enough data for now
+                    {t('not_enough_data_for_now', 'Not enough data for now')}
                   </span>
                 ) : (
                   <div className="space-y-1 mt-1">
                     {strengths.slice(0, 2).map((s: string, i: number) => (
                       <p key={i} className="text-xs text-slate-700 font-bold line-clamp-1 flex items-center gap-1">
                         <CheckCircle size={12} className="text-green-600 shrink-0" />
-                        <span>{s}</span>
+                        <span>{translateInsightText(s)}</span>
                       </p>
                     ))}
                   </div>
                 )}
               </div>
-              <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider mt-3">Fast Processor 🔍</span>
+              <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider mt-3">{t('fast_processor', 'Fast Processor 🔍')}</span>
             </button>
 
             {/* Weaknesses Card */}
@@ -421,13 +570,13 @@ export default function ParentDashboardScreen() {
                 <div className="flex justify-between items-center mb-2">
                   <div className="flex items-center gap-1.5">
                     <span className="text-base">⚠️</span>
-                    <h4 className="text-sm font-black text-[#ba1a1a]">Weaknesses</h4>
+                    <h4 className="text-sm font-black text-[#ba1a1a]">{t('weaknesses', 'Weaknesses')}</h4>
                   </div>
                   <ChevronRight size={18} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
                 </div>
                 {!hasEnoughData || weaknesses.length === 0 || weaknesses[0] === "No weakness for now." || weaknesses[0]?.includes("Not enough Data") ? (
                   <span className="inline-block text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full mt-1">
-                    Not enough data for now
+                    {t('not_enough_data_for_now', 'Not enough data for now')}
                   </span>
                 ) : (
                   <div className="space-y-1 mt-1">
@@ -436,14 +585,14 @@ export default function ParentDashboardScreen() {
                       return (
                         <p key={i} className={`text-xs font-bold line-clamp-1 flex items-center gap-1 ${isRecovery ? 'text-emerald-700' : 'text-amber-800'}`}>
                           <AlertTriangle size={12} className={`${isRecovery ? 'text-emerald-600' : 'text-amber-600'} shrink-0`} />
-                          <span>{w}</span>
+                          <span>{translateInsightText(w)}</span>
                         </p>
                       );
                     })}
                   </div>
                 )}
               </div>
-              <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider mt-3">Review Needed 🔍</span>
+              <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider mt-3">{t('review_needed', 'Review Needed 🔍')}</span>
             </button>
 
             {/* Risk Alerts Card */}
@@ -455,26 +604,26 @@ export default function ParentDashboardScreen() {
                 <div className="flex justify-between items-center mb-2">
                   <div className="flex items-center gap-1.5">
                     <span className="text-base">🔔</span>
-                    <h4 className="text-sm font-black text-[#d97706]">Risk Alerts</h4>
+                    <h4 className="text-sm font-black text-[#d97706]">{t('risk_alerts', 'Risk Alerts')}</h4>
                   </div>
                   <ChevronRight size={18} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
                 </div>
                 {!hasEnoughData || risks.length === 0 || risks[0] === "No risk for now." || risks[0]?.includes("Not enough Data") ? (
                   <span className="inline-block text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full mt-1">
-                    Not enough data for now
+                    {t('not_enough_data_for_now', 'Not enough data for now')}
                   </span>
                 ) : (
                   <div className="space-y-1 mt-1">
                     {risks.slice(0, 2).map((r: string, i: number) => (
                       <p key={i} className="text-xs text-rose-800 font-bold line-clamp-1 flex items-center gap-1">
                         <AlertTriangle size={12} className="text-rose-600 shrink-0" />
-                        <span>{r}</span>
+                        <span>{translateInsightText(r)}</span>
                       </p>
                     ))}
                   </div>
                 )}
               </div>
-              <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider mt-3">3-Day Alerts 🔍</span>
+              <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider mt-3">{t('three_day_alerts', '3-Day Alerts 🔍')}</span>
             </button>
           </div>
         </div>
@@ -483,20 +632,20 @@ export default function ParentDashboardScreen() {
         <div className="w-full bg-white rounded-[24px] p-5 border border-slate-200/80 shadow-sm flex flex-col gap-3">
           <div className="flex justify-between items-start">
             <div>
-              <h3 className="text-sm font-black text-[#141779] uppercase tracking-wider">Top Subjects Daily Trend</h3>
-              <p className="text-[11px] text-slate-500 font-bold mt-0.5">Performance over the last 7 active days</p>
+              <h3 className="text-sm font-black text-[#141779] uppercase tracking-wider">{t("top_subjects_daily_trend", "Top Subjects Daily Trend")}</h3>
+              <p className="text-[11px] text-slate-500 font-bold mt-0.5">{t("performance_last_7_days", "Performance over the last 7 active days")}</p>
             </div>
             <span className="text-[10px] bg-indigo-50 text-[#141779] px-2.5 py-1 rounded-full font-black uppercase tracking-wider border border-indigo-100">
-              7-Day Graph
+              {t("seven_day_graph", "7-Day Graph")}
             </span>
           </div>
 
           {!hasEnoughData || !top3SubjectsTrend || top3SubjectsTrend.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-6 bg-slate-50 border border-slate-200/80 rounded-2xl text-center">
               <span className="text-2xl mb-1">📊</span>
-              <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">Not Enough Data For Now</h4>
+              <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">{t("not_enough_data_for_now", "Not Enough Data For Now")}</h4>
               <p className="text-[11px] text-slate-500 font-bold mt-1">
-                Complete 2-3 chapters to unlock daily trends and subject performance graphs!
+                {t("complete_2_3_chapters_unlock", "Complete 2 to 3 chapters to unlock daily trends and subject performance graphs!")}
               </p>
             </div>
           ) : (
@@ -504,13 +653,13 @@ export default function ParentDashboardScreen() {
               {/* Graph Legend */}
               <div className="flex flex-wrap items-center gap-3 mt-1 text-[11px] font-black">
                 {top3SubjectsTrend.map((t, idx) => {
-                  const colors = ["#006a62", "#141779", "#7b1fa2"];
+                  const colors = ["#006a62", "#141779", "#7b1fa2", "#d97706", "#2563eb", "#e11d48", "#059669"];
                   const color = colors[idx % colors.length];
                   const latestScore = t.timeline && t.timeline.length > 0 ? t.timeline[t.timeline.length - 1].score : 0;
                   return (
                     <div key={idx} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200/70" style={{ color }}>
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                      <span>{t.subject}</span>
+                      <span>{translateSubjectName(t.subject)}</span>
                       <span className="text-[10px] opacity-75 font-bold">({latestScore}%)</span>
                     </div>
                   );
@@ -527,7 +676,7 @@ export default function ParentDashboardScreen() {
                     <line x1="0" y1="115" x2="300" y2="115" stroke="#f1f5f9" strokeWidth="1.5" strokeDasharray="4 4" />
 
                     {top3SubjectsTrend.map((t, idx) => {
-                      const colors = ["#006a62", "#141779", "#7b1fa2"];
+                      const colors = ["#006a62", "#141779", "#7b1fa2", "#d97706", "#2563eb", "#e11d48", "#059669"];
                       const color = colors[idx % colors.length];
                       const points = (t.timeline || []).map((pt: any, i: number) => {
                         const len = Math.max(1, (t.timeline.length - 1));
@@ -566,7 +715,7 @@ export default function ParentDashboardScreen() {
 
         {/* Parent Learning Section */}
         <div className="flex flex-col gap-3 w-full">
-          <h3 className="text-base font-extrabold text-slate-800 px-1">Parent Learning</h3>
+          <h3 className="text-base font-extrabold text-slate-800 px-1">{t("parent_learning", "Parent Learning")}</h3>
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => navigate('/parent/daily-tip')}
@@ -578,10 +727,10 @@ export default function ParentDashboardScreen() {
               </div>
               <div className="relative z-10">
                 <div className="flex items-center gap-1.5 mb-0.5">
-                  <h3 className="text-[15px] font-black text-[#141779] leading-tight">{t("daily_tip") || "Daily Tip"}</h3>
-                  <span className="bg-[#006a62] text-white text-[9px] px-1.5 py-0.5 rounded-full uppercase font-bold tracking-tighter">Hot</span>
+                  <h3 className="text-[15px] font-black text-[#141779] leading-tight">{t("daily_tip", "Daily Tip")}</h3>
+                  <span className="bg-[#006a62] text-white text-[9px] px-1.5 py-0.5 rounded-full uppercase font-bold tracking-tighter">{t("hot", "Hot")}</span>
                 </div>
-                <p className="text-xs text-slate-600 font-bold leading-tight mt-1">Quick family harmony ideas.</p>
+                <p className="text-xs text-slate-600 font-bold leading-tight mt-1">{t("daily_tip_sub", "Quick family harmony ideas.")}</p>
               </div>
             </button>
 
@@ -595,10 +744,10 @@ export default function ParentDashboardScreen() {
               </div>
               <div className="relative z-10">
                 <div className="flex items-center gap-1.5 mb-0.5">
-                  <h3 className="text-[15px] font-black text-[#141779] leading-tight">{t("lessons") || "Lessons"}</h3>
-                  <span className="bg-[#30007f] text-white text-[9px] px-1.5 py-0.5 rounded-full uppercase font-bold tracking-tighter">New</span>
+                  <h3 className="text-[15px] font-black text-[#141779] leading-tight">{t("lessons", "Lessons")}</h3>
+                  <span className="bg-[#30007f] text-white text-[9px] px-1.5 py-0.5 rounded-full uppercase font-bold tracking-tighter">{t("new", "New")}</span>
                 </div>
-                <p className="text-xs text-slate-600 font-bold leading-tight mt-1">Bite-sized parent growth.</p>
+                <p className="text-xs text-slate-600 font-bold leading-tight mt-1">{t("lessons_sub", "Bite-sized parent growth.")}</p>
               </div>
             </button>
 
@@ -612,10 +761,10 @@ export default function ParentDashboardScreen() {
               </div>
               <div className="relative z-10">
                 <div className="flex items-center gap-1.5 mb-0.5">
-                  <h3 className="text-[13px] font-black text-[#141779] leading-tight">{t("challenges") || "Challenges"}</h3>
-                  <span className="bg-[#ba1a1a] text-white text-[8px] px-1.5 py-0.5 rounded-full uppercase font-bold tracking-tighter">Live</span>
+                  <h3 className="text-[13px] font-black text-[#141779] leading-tight">{t("challenges", "Challenges")}</h3>
+                  <span className="bg-[#ba1a1a] text-white text-[8px] px-1.5 py-0.5 rounded-full uppercase font-bold tracking-tighter">{t("live", "Live")}</span>
                 </div>
-                <p className="text-[10px] text-slate-600 font-extrabold leading-tight">Build strong daily habits.</p>
+                <p className="text-[10px] text-slate-600 font-extrabold leading-tight">{t("challenges_sub", "Build strong daily habits.")}</p>
               </div>
             </button>
 
@@ -629,10 +778,10 @@ export default function ParentDashboardScreen() {
               </div>
               <div className="relative z-10">
                 <div className="flex items-center gap-1.5 mb-0.5">
-                  <h3 className="text-[13px] font-black text-[#141779] leading-tight">{t("rewards") || "Rewards"}</h3>
-                  <span className="bg-[#007168] text-white text-[8px] px-1.5 py-0.5 rounded-full uppercase font-bold tracking-tighter">Badges</span>
+                  <h3 className="text-[13px] font-black text-[#141779] leading-tight">{t("rewards", "Rewards")}</h3>
+                  <span className="bg-[#007168] text-white text-[8px] px-1.5 py-0.5 rounded-full uppercase font-bold tracking-tighter">{t("badges", "Badges")}</span>
                 </div>
-                <p className="text-[10px] text-slate-600 font-extrabold leading-tight">View your milestones.</p>
+                <p className="text-[10px] text-slate-600 font-extrabold leading-tight">{t("rewards_sub", "View your milestones.")}</p>
               </div>
             </button>
           </div>
@@ -648,7 +797,7 @@ export default function ParentDashboardScreen() {
               <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
                 <Settings size={20} className="text-slate-700" />
               </div>
-              <span className="text-[16px] font-extrabold text-[#141779]">Settings</span>
+              <span className="text-[16px] font-extrabold text-[#141779]">{t("settings", "Settings")}</span>
             </button>
             <button
               onClick={() => navigate('/parent/learning-dna')}
@@ -657,7 +806,7 @@ export default function ParentDashboardScreen() {
               <div className="w-10 h-10 rounded-xl bg-[#ccf4f0] flex items-center justify-center">
                 <BrainCircuit size={20} className="text-[#006a62]" />
               </div>
-              <span className="text-[16px] font-extrabold text-[#141779]">DNA</span>
+              <span className="text-[16px] font-extrabold text-[#141779]">{t("dna", "DNA")}</span>
             </button>
           </div>
 
@@ -671,7 +820,7 @@ export default function ParentDashboardScreen() {
               </div>
               <div className="text-left min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <h4 className="text-[16px] font-extrabold text-[#141779] leading-none">Kids Activity</h4>
+                  <h4 className="text-[16px] font-extrabold text-[#141779] leading-none">{t("kids_activity", "Kids Activity")}</h4>
                   {lastActivityDetails && (
                     <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
                       lastActivityDetails.type === "reading" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
@@ -679,16 +828,16 @@ export default function ParentDashboardScreen() {
                       lastActivityDetails.type === "multiplayer" ? "bg-purple-50 text-purple-700 border border-purple-200" :
                       "bg-indigo-50 text-indigo-700 border border-indigo-200"
                     }`}>
-                      {lastActivityDetails.type === "reading" ? "📖 Reading" :
-                       lastActivityDetails.type === "battle" ? "🐉 Boss" :
-                       lastActivityDetails.type === "multiplayer" ? "⚔️ Arena" :
-                       "🎯 Quiz"}
+                      {lastActivityDetails.type === "reading" ? `📖 ${t("reading", "Reading")}` :
+                       lastActivityDetails.type === "battle" ? `🐉 ${t("boss", "Boss")}` :
+                       lastActivityDetails.type === "multiplayer" ? `⚔️ ${t("arena", "Arena")}` :
+                       `🎯 ${t("quiz", "Quiz")}`}
                     </span>
                   )}
                 </div>
                 {lastActivityDetails ? (
                   <div className="flex flex-col gap-0.5">
-                    <p className="text-sm font-bold text-slate-800 break-words leading-snug">{lastActivityDetails.title}</p>
+                    <p className="text-sm font-bold text-slate-800 break-words leading-snug">{translateActivityTitle(lastActivityDetails.title)}</p>
                     <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500 mt-0.5">
                       {lastActivityDetails.timeTaken > 0 && (
                         <span>⏱️ {Math.round(lastActivityDetails.timeTaken / 60) || 1}m</span>
@@ -696,13 +845,13 @@ export default function ParentDashboardScreen() {
                       {lastActivityDetails.timeTaken > 0 && lastActivityDetails.totalQuestions > 0 && <span>•</span>}
                       {lastActivityDetails.totalQuestions > 0 && (
                         <span className="text-indigo-600 font-extrabold">
-                          🎯 {lastActivityDetails.correctQuestions}/{lastActivityDetails.totalQuestions} Correct
+                          🎯 {lastActivityDetails.correctQuestions}/{lastActivityDetails.totalQuestions} {t("correct", "Correct")}
                         </span>
                       )}
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm font-semibold text-slate-700 break-words line-clamp-2">{lastActivity}</p>
+                  <p className="text-sm font-semibold text-slate-700 break-words line-clamp-2">{translateActivityTitle(lastActivity)}</p>
                 )}
               </div>
             </div>
@@ -724,10 +873,10 @@ export default function ParentDashboardScreen() {
                   <ArrowLeft size={20} color="#141779" />
                 </button>
                 <h2 className="text-lg font-bold text-[#141779]">
-                  {modalType === "strengths" ? "💪 Cognitive Strengths" :
-                    modalType === "weaknesses" ? "⚠️ Areas for Review" :
-                    modalType === "risks" ? "🔔 Risk Alerts" :
-                      "Cognitive Profile Graph"}
+                  {modalType === "strengths" ? t("cognitive_strengths_modal_title", "💪 Cognitive Strengths") :
+                    modalType === "weaknesses" ? t("areas_for_review_modal_title", "⚠️ Areas for Review") :
+                    modalType === "risks" ? t("risk_alerts_modal_title", "🔔 Risk Alerts") :
+                      t("cognitive_profile_graph", "Cognitive Profile Graph")}
                 </h2>
               </div>
               <button onClick={() => setModalType(null)} className="p-2 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">
@@ -739,17 +888,17 @@ export default function ParentDashboardScreen() {
               {!hasEnoughData ? (
                 <div className="flex flex-col items-center justify-center p-8 bg-slate-50 border border-slate-200/80 rounded-2xl text-center my-4">
                   <span className="text-4xl mb-2">📊</span>
-                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">Not Enough Data For Now</h4>
+                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">{t("not_enough_data_for_now", "Not Enough Data For Now")}</h4>
                   <p className="text-xs text-slate-500 font-bold mt-2 leading-relaxed">
-                    Complete 2 to 3 chapters to unlock personalized cognitive strengths, weakness analysis, and 7-day trend graphs!
+                    {t("not_enough_data_desc", "Complete 2 to 3 chapters to unlock personalized cognitive strengths, weakness analysis, and 7-day trend graphs!")}
                   </p>
                 </div>
               ) : modalType === "risks" && (!hasRiskAlert || risks[0] === "No risk for now.") ? (
                 <div className="flex flex-col items-center justify-center p-8 bg-emerald-50 border border-emerald-200 rounded-2xl text-center my-4">
                   <span className="text-4xl mb-2">✅</span>
-                  <h4 className="text-sm font-black text-emerald-900 uppercase tracking-wider">No Risk Alerts</h4>
+                  <h4 className="text-sm font-black text-emerald-900 uppercase tracking-wider">{t("no_risk_alerts", "No Risk Alerts")}</h4>
                   <p className="text-xs text-emerald-700 font-bold mt-2 leading-relaxed">
-                    All clear! {cleanChildName} is performing consistently with scores above 60% across all subjects.
+                    {t("no_risk_alerts_desc", { name: cleanChildName, defaultValue: `All clear! ${cleanChildName} is performing consistently with scores above 60% across all subjects.` })}
                   </p>
                 </div>
               ) : (
@@ -757,7 +906,7 @@ export default function ParentDashboardScreen() {
                   <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                     <div className="flex justify-between items-end mb-2">
                       <div>
-                        <p className="text-[10px] font-bold text-[#767683] uppercase tracking-wider mb-1">{chartTitle} (7-Day Trend)</p>
+                        <p className="text-[10px] font-bold text-[#767683] uppercase tracking-wider mb-1">{chartTitle} ({t("seven_day_trend", "7-Day Trend")})</p>
                         {chart.points.length > 0 ? (
                           <p className="text-3xl font-black" style={{ color: chartColor }}>{currentScore}%</p>
                         ) : (
@@ -766,7 +915,7 @@ export default function ParentDashboardScreen() {
                       </div>
                       {chart.points.length > 0 && diffStr && (
                         <div className={`px-2 py-1 rounded-md text-[10px] font-bold ${diff >= 0 ? 'bg-[#006a62]/10 text-[#006a62]' : 'bg-[#ba1a1a]/10 text-[#ba1a1a]'}`}>
-                          {diffStr}
+                          {t("this_week_change", { diff: diffStr, defaultValue: diffStr })}
                         </div>
                       )}
                     </div>
@@ -776,8 +925,8 @@ export default function ParentDashboardScreen() {
                       {chart.points.length === 0 ? (
                         <div className="w-full h-[120px] bg-gray-50 border border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-center p-4">
                           <Activity size={24} className="text-gray-400 mb-2 animate-pulse" />
-                          <p className="text-xs font-bold text-[#7c7d8a]">Weekly trend requires completed quizzes.</p>
-                          <p className="text-[10px] text-gray-400 mt-1">No performance data recorded for this week yet.</p>
+                          <p className="text-xs font-bold text-[#7c7d8a]">{t("weekly_trend_requires_quizzes", "Weekly trend requires completed quizzes.")}</p>
+                          <p className="text-[10px] text-gray-400 mt-1">{t("no_performance_data_yet", "No performance data recorded for this week yet.")}</p>
                         </div>
                       ) : (
                         <>
@@ -841,7 +990,7 @@ export default function ParentDashboardScreen() {
                   {/* Subject Breakdown Bars */}
                   <div className="space-y-4">
                     <h3 className="text-[13px] font-bold text-[#141779] mb-3 border-b border-gray-100 pb-2">
-                      {modalType === "strengths" ? "Top Subjects (≥ 60%)" : modalType === "weaknesses" ? "Needs Attention (< 60%)" : modalType === "risks" ? "At-Risk Subjects (< 60%)" : "Performance by Subject"}
+                      {modalType === "strengths" ? t("top_subjects_ge_60", "Top Subjects (≥ 60%)") : modalType === "weaknesses" ? t("needs_attention_lt_60", "Needs Attention (< 60%)") : modalType === "risks" ? t("at_risk_subjects_lt_60", "At-Risk Subjects (< 60%)") : t("performance_by_subject", "Performance by Subject")}
                     </h3>
                     {subjectBreakdown
                       .slice()
@@ -863,7 +1012,7 @@ export default function ParentDashboardScreen() {
                           <div key={idx}>
                             <div className="flex justify-between text-xs font-bold mb-1.5">
                               <span className={isStrength ? "text-[#006a62]" : "text-[#ba1a1a]"}>
-                                {sb.subject} {isStrength ? "💪" : "⚠️"}
+                                {translateSubjectName(sb.subject)} {isStrength ? "💪" : "⚠️"}
                               </span>
                               <span className={isStrength ? "text-[#006a62]" : "text-[#ba1a1a]"}>{sb.accuracy}%</span>
                             </div>
@@ -874,47 +1023,47 @@ export default function ParentDashboardScreen() {
                         );
                       })}
                     {subjectBreakdown.length === 0 && (
-                      <p className="text-xs text-[#767683]">Play more quests to see detailed subject breakdown!</p>
+                      <p className="text-xs text-[#767683]">{t("play_more_quests_breakdown", "Play more quests to see detailed subject breakdown!")}</p>
                     )}
                     {subjectBreakdown.length > 0 &&
                       (modalType === "weaknesses" || modalType === "risks") &&
                       subjectBreakdown.every(sb => sb.accuracy >= 60) && (
                         <p className="text-xs text-[#006a62] font-semibold bg-[#006a62]/10 p-3 rounded-lg text-center mt-2">
-                          🎉 Fantastic! {cleanChildName} has no subjects below 60% right now.
+                          {t("fantastic_no_subjects_below_60", { name: cleanChildName, defaultValue: `🎉 Fantastic! ${cleanChildName} has no subjects below 60% right now.` })}
                         </p>
                       )}
                     {subjectBreakdown.length > 0 &&
                       modalType === "strengths" &&
                       subjectBreakdown.every(sb => sb.accuracy < 60) && (
                         <p className="text-xs text-[#ba1a1a] font-semibold bg-[#ba1a1a]/10 p-3 rounded-lg text-center mt-2">
-                          Keep playing to build up strong subjects above 60%!
+                          {t("keep_playing_build_strengths", "Keep playing to build up strong subjects above 60%!")}
                         </p>
                       )}
                   </div>
 
                   <div className="bg-indigo-50 p-4 rounded-xl shadow-sm border border-indigo-100">
                     <p className="text-xs text-[#141779] leading-relaxed">
-                      <span className="font-bold text-[#141779]">Actionable Insight: </span>
+                      <span className="font-bold text-[#141779]">{t("actionable_insight", "Actionable Insight: ")} </span>
                       {modalType === "risks" ? (
                         risks && risks.length > 0 && risks[0] !== "No risk for now." ? (
-                          risks.join(" ")
+                          translateInsightText(risks.join(" "))
                         ) : (
-                          <>{cleanChildName} is maintaining good scores across all subjects.</>
+                          <>{t("maintaining_good_scores", { name: cleanChildName, defaultValue: `${cleanChildName} is maintaining good scores across all subjects.` })}</>
                         )
                       ) : modalType === "weaknesses" ? (
                         weaknesses && weaknesses.length > 0 && weaknesses[0] !== "No weakness for now." ? (
-                          weaknesses.join(" ")
+                          translateInsightText(weaknesses.join(" "))
                         ) : (
-                          <>No weak subjects identified right now.</>
+                          <>{t("no_weak_subjects_identified", "No weak subjects identified right now.")}</>
                         )
                       ) : modalType === "strengths" ? (
                         strengths && strengths.length > 0 && strengths[0] !== "No strength for now." ? (
-                          strengths.join(" ")
+                          translateInsightText(strengths.join(" "))
                         ) : (
-                          <>{cleanChildName} is showing good performance in active subjects.</>
+                          <>{t("showing_good_performance", { name: cleanChildName, defaultValue: `${cleanChildName} is showing good performance in active subjects.` })}</>
                         )
                       ) : (
-                        <>No trend data available yet. Complete more quizzes to get personalized insights.</>
+                        <>{t("no_trend_data_available", "No trend data available yet. Complete more quizzes to get personalized insights.")}</>
                       )}
                     </p>
                   </div>
@@ -931,7 +1080,7 @@ export default function ParentDashboardScreen() {
                 >
                   <span>📊</span>
                   <span>
-                    {modalType === "weaknesses" ? "Review Mistakes & Reports" : "View Subject Reports"}
+                    {modalType === "weaknesses" ? t("review_mistakes_reports", "Review Mistakes & Reports") : t("view_subject_reports", "View Subject Reports")}
                   </span>
                   <ChevronRight size={16} />
                 </button>
@@ -947,7 +1096,7 @@ export default function ParentDashboardScreen() {
           <div className="w-full sm:w-[400px] h-full bg-[#f7f9fb] shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
             <div className="flex justify-between items-center p-6 border-b border-gray-200 bg-white">
               <h2 className="text-xl font-bold text-[#141779] flex items-center gap-2">
-                <Bell size={24} /> Notifications
+                <Bell size={24} /> {t("notifications", "Notifications")}
               </h2>
               <button onClick={() => setShowNotifications(false)} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
                 <X size={20} color="#464652" />
@@ -957,7 +1106,7 @@ export default function ParentDashboardScreen() {
               {notifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center opacity-50">
                   <Bell size={48} className="mb-4 text-gray-400" />
-                  <p className="text-gray-500 font-medium">No recent activity to show.</p>
+                  <p className="text-gray-500 font-medium">{t("no_recent_activity", "No recent activity to show.")}</p>
                 </div>
               ) : (
                 notifications.map((notif, idx) => {
@@ -971,8 +1120,8 @@ export default function ParentDashboardScreen() {
                     <div key={idx} className={`p-4 rounded-xl shadow-sm border border-gray-100 flex gap-4 ${bg} hover:shadow-md transition-shadow`}>
                       <div className="text-2xl pt-1">{icon}</div>
                       <div>
-                        <h4 className="text-[14px] font-bold text-[#141779] mb-1">{notif.title}</h4>
-                        <p className="text-[12px] text-[#464652] leading-tight">{notif.message}</p>
+                        <h4 className="text-[14px] font-bold text-[#141779] mb-1">{formatNotifTitle(notif.title)}</h4>
+                        <p className="text-[12px] text-[#464652] leading-tight">{formatNotifMsg(notif.message)}</p>
                         <p className="text-[10px] text-gray-400 mt-2 font-medium">
                           {new Date(notif.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </p>
@@ -996,10 +1145,10 @@ export default function ParentDashboardScreen() {
               <div>
                 <h3 className="text-lg sm:text-xl font-extrabold text-[#141779] flex items-center gap-2">
                   <span>⏱️</span>
-                  <span>Today's Time Breakdown</span>
+                  <span>{t("todays_time_breakdown_title", "Today's Time Breakdown")}</span>
                 </h3>
                 <p className="text-[11px] sm:text-xs text-slate-500 font-bold mt-0.5">
-                  Detailed calculation for <span className="text-[#141779] font-extrabold">{childName}</span>
+                  {t("detailed_calc_for", { name: childName, defaultValue: `Detailed calculation for ${childName}` })}
                 </p>
               </div>
               <button 
@@ -1013,7 +1162,7 @@ export default function ParentDashboardScreen() {
             {loadingBreakdown ? (
               <div className="flex flex-col items-center justify-center py-12 gap-3 text-slate-400">
                 <div className="w-8 h-8 border-3 border-[#141779] border-t-transparent rounded-full animate-spin" />
-                <span className="text-xs font-bold text-slate-500">Calculating today's time & attempts...</span>
+                <span className="text-xs font-bold text-slate-500">{t("calculating_todays_time", "Calculating today's time & attempts...")}</span>
               </div>
             ) : (
               <div className="flex-1 overflow-y-auto pr-0.5 space-y-4">
@@ -1021,37 +1170,37 @@ export default function ParentDashboardScreen() {
                 {/* 3 Summary Stats */}
                 <div className="grid grid-cols-3 gap-2 sm:gap-3">
                   <div className="bg-emerald-50/80 border border-emerald-200/80 p-3 rounded-2xl text-center">
-                    <span className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider block">Total Time</span>
-                    <span className="text-lg sm:text-xl font-black text-emerald-700">{breakdownData?.totalTimeFormatted || "0m"}</span>
+                    <span className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider block">{t("total_time", "Total Time")}</span>
+                    <span className="text-lg sm:text-xl font-black text-emerald-700">{formatTimeFormatted(breakdownData?.totalTimeFormatted || "0m")}</span>
                   </div>
 
                   <div className="bg-indigo-50/80 border border-indigo-200/80 p-3 rounded-2xl text-center">
-                    <span className="text-[10px] font-extrabold text-indigo-800 uppercase tracking-wider block">Questions</span>
+                    <span className="text-[10px] font-extrabold text-indigo-800 uppercase tracking-wider block">{t("questions", "Questions")}</span>
                     <span className="text-lg sm:text-xl font-black text-[#141779]">{breakdownData?.totalSolved || 0}</span>
-                    <span className="text-[10px] text-indigo-600 font-bold block">{breakdownData?.totalCorrect || 0} Correct</span>
+                    <span className="text-[10px] text-indigo-600 font-bold block">{t("num_correct", { count: breakdownData?.totalCorrect || 0, defaultValue: `${breakdownData?.totalCorrect || 0} correct!` })}</span>
                   </div>
 
                   <div className="bg-purple-50/80 border border-purple-200/80 p-3 rounded-2xl text-center">
-                    <span className="text-[10px] font-extrabold text-purple-800 uppercase tracking-wider block">Confidence</span>
+                    <span className="text-[10px] font-extrabold text-purple-800 uppercase tracking-wider block">{t("confidence", "Confidence")}</span>
                     <span className="text-lg sm:text-xl font-black text-purple-700">{breakdownData?.confidenceScore || 0}%</span>
                   </div>
                 </div>
 
                 {/* Mode Breakdown Cards */}
                 <div>
-                  <h4 className="text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2">Time Spent by Mode</h4>
+                  <h4 className="text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2">{t("time_spent_by_mode", "Time Spent by Mode")}</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     {breakdownData?.modeBreakdown && Object.entries(breakdownData.modeBreakdown).map(([key, m]: [string, any]) => (
                       <div key={key} className="bg-slate-50 border border-slate-200/80 p-3 rounded-xl flex items-center justify-between gap-2">
                         <div className="min-w-0">
                           <p className="text-xs font-extrabold text-slate-800 flex items-center gap-1">
                             <span>{m.icon}</span>
-                            <span className="truncate">{m.name.split('/')[0]}</span>
+                            <span className="truncate">{translateModeName(m.name.split('/')[0])}</span>
                           </p>
-                          <p className="text-[10px] text-slate-500 font-bold">{m.count} questions</p>
+                          <p className="text-[10px] text-slate-500 font-bold">{m.count} {t("questions", "questions")}</p>
                         </div>
                         <span className="text-xs font-black text-[#141779] bg-white px-2 py-1 rounded-lg border border-slate-200 shrink-0">
-                          {Math.floor(m.timeSec / 60)}m {m.timeSec % 60}s
+                          {Math.floor(m.timeSec / 60)}{t("min_short", "m")} {m.timeSec % 60}{t("sec_short", "s")}
                         </span>
                       </div>
                     ))}
@@ -1061,14 +1210,14 @@ export default function ParentDashboardScreen() {
                 {/* Itemized Question & Answer List */}
                 <div>
                   <h4 className="text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2 flex items-center justify-between">
-                    <span>Today's Question Attempts</span>
-                    <span className="text-[10px] font-bold text-slate-500">({breakdownData?.attempts?.length || 0} items)</span>
+                    <span>{t("todays_question_attempts", "Today's Question Attempts")}</span>
+                    <span className="text-[10px] font-bold text-slate-500">({breakdownData?.attempts?.length || 0} {t("items_upper", "ITEMS")})</span>
                   </h4>
 
                   {(!breakdownData?.attempts || breakdownData.attempts.length === 0) ? (
                     <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 text-center">
-                      <p className="text-xs font-bold text-slate-500">No question attempts logged today yet.</p>
-                      <p className="text-[11px] text-slate-400 mt-1">Play a Quiz, Shadow Arena battle, or AI quest to record live time!</p>
+                      <p className="text-xs font-bold text-slate-500">{t("no_question_attempts_logged", "No question attempts logged today yet.")}</p>
+                      <p className="text-[11px] text-slate-400 mt-1">{t("play_quiz_shadow_arena", "Play a Quiz, Shadow Arena battle, or AI quest to record live time!")}</p>
                     </div>
                   ) : (
                     <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
@@ -1081,7 +1230,7 @@ export default function ParentDashboardScreen() {
                             <div className="flex items-center gap-1.5 mb-1">
                               <span className="text-xs">{att.modeIcon}</span>
                               <span className="text-[10px] font-bold text-slate-600 bg-white px-2 py-0.5 rounded-full border border-slate-200">
-                                {att.mode}
+                                {translateModeName(att.mode)}
                               </span>
                               <span className="text-[10px] text-slate-400 font-bold ml-auto">{att.timestamp}</span>
                             </div>
@@ -1090,14 +1239,14 @@ export default function ParentDashboardScreen() {
 
                           <div className="flex items-center gap-2 shrink-0">
                             <span className="text-xs font-mono font-extrabold text-slate-600 bg-slate-200/60 px-2 py-1 rounded-lg">
-                              ⏱️ {att.timeFormatted}
+                              ⏱️ {formatTimeFormatted(att.timeFormatted)}
                             </span>
                             <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full border ${
                               att.isCorrect 
                                 ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
                                 : "bg-rose-50 text-rose-700 border-rose-200"
                             }`}>
-                              {att.isCorrect ? "Correct ✓" : "Incorrect ✕"}
+                              {att.isCorrect ? t("correct_check", "Correct ✓") : t("incorrect_cross", "Incorrect ✕")}
                             </span>
                           </div>
                         </div>
@@ -1108,9 +1257,9 @@ export default function ParentDashboardScreen() {
 
                 {/* Calculation Summary Box */}
                 <div className="bg-indigo-50/80 border border-indigo-100 p-3 rounded-2xl text-xs text-[#141779] font-bold flex items-center justify-between">
-                  <span>Total Calculated Time:</span>
+                  <span>{t("total_calculated_time", "Total Calculated Time:")}</span>
                   <span className="text-sm font-black text-[#141779] bg-white px-3 py-1 rounded-xl border border-indigo-200 shadow-2xs">
-                    {breakdownData?.totalTimeFormatted || "0m"} ({breakdownData?.totalSolved || 0} attempts)
+                    {formatTimeFormatted(breakdownData?.totalTimeFormatted || "0m")} ({breakdownData?.totalSolved || 0} {t("attempts", "attempts")})
                   </span>
                 </div>
 

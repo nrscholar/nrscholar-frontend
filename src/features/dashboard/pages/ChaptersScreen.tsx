@@ -162,24 +162,48 @@ export default function ChaptersScreen() {
   const isChapterCompleted = (chapterId: string) => completedChapters.includes(chapterId) || completedChapters.includes(`${chapterId}_hard`);
   const completedChaptersCount = chapters.filter(ch => isChapterCompleted(ch._id)).length;
 
-  let totalCompletedMissionsCount = 0;
-  chapters.forEach(ch => {
-    const prog = chapterProgressMap[ch._id] || {};
-    const missions = prog.completedMissions || [];
-    if (Array.isArray(missions)) {
-      totalCompletedMissionsCount += missions.length;
-    } else if (prog.chapterCompleted || prog.completed) {
-      totalCompletedMissionsCount += 4;
-    }
-  });
+  // Track Mission Progress for active subject (removing chapter duplication with Progress Screen)
+  const MISSIONS_PER_CHAPTER = 5;
+  const totalMissions = chapters.reduce((sum, ch) => {
+    const chMissions = Array.isArray(ch.missions) && ch.missions.length > 0 ? ch.missions.length : MISSIONS_PER_CHAPTER;
+    return sum + chMissions;
+  }, 0);
 
-  const totalMissions = Math.max(1, totalChapters * 4);
-  const missionProgressPercent = (totalCompletedMissionsCount / totalMissions) * 100;
-  const chapterProgressPercent = totalChapters > 0 ? (completedChaptersCount / totalChapters) * 100 : 0;
-  const progressPercent = Math.max(missionProgressPercent, chapterProgressPercent);
+  const completedMissionsCount = chapters.reduce((sum, ch) => {
+    const chIdStr = String(ch._id);
+    const p = chapterProgressMap[chIdStr] || chapterProgressMap[ch._id] || chapterProgressMap[`${chIdStr}_hard`];
+    const isDone = isChapterCompleted(chIdStr);
+    const chMissionsTotal = Array.isArray(ch.missions) && ch.missions.length > 0 ? ch.missions.length : MISSIONS_PER_CHAPTER;
+
+    if (isDone) {
+      return sum + chMissionsTotal;
+    }
+
+    if (p) {
+      if (Array.isArray(p.completedMissions) && p.completedMissions.length > 0) {
+        return sum + Math.min(chMissionsTotal, p.completedMissions.length);
+      }
+      if (p.readingCompleted || p.questionsCompleted) {
+        return sum + 1;
+      }
+    }
+
+    return sum;
+  }, 0);
+
+  const progressPercent = totalMissions > 0 ? Math.round((completedMissionsCount / totalMissions) * 100) : 0;
 
   const currentChapterIndex = chapters.findIndex(ch => !isChapterCompleted(ch._id));
   const activeCurrentChapter = currentChapterIndex >= 0 ? chapters[currentChapterIndex] : chapters[chapters.length - 1];
+
+  const getChapterTitle = (chap: any, index: number) => {
+    if (!chap) return `${t('chapter', 'Chapter')} ${index + 1}`;
+    const raw = chap.name || chap.title || chap.chapter_name || chap.chapterName;
+    if (raw && typeof raw === 'string' && raw.trim().length > 0 && isNaN(Number(raw.trim()))) {
+      return raw.trim();
+    }
+    return `${t('chapter', 'Chapter')} ${index + 1}`;
+  };
 
   const handleToggleChapter = async (index: number, chapterId: string, chapterName: string) => {
     if (index >= 1 && !isSubscribed) {
@@ -229,10 +253,10 @@ export default function ChaptersScreen() {
             </button>
             <div>
               <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#5B5CFF] block leading-none">
-                LEVEL {Math.min(99, completedChaptersCount + 1)} ADVENTURER
+                {t('level_adventurer', { level: Math.min(99, completedChaptersCount + 1), defaultValue: `LEVEL ${Math.min(99, completedChaptersCount + 1)} ADVENTURER` })}
               </span>
               <h1 className="text-sm font-black text-[#17157F] tracking-wide uppercase leading-tight">
-                LEARNING JOURNEY
+                {t('learning_journey', 'LEARNING JOURNEY')}
               </h1>
             </div>
           </div>
@@ -254,9 +278,9 @@ export default function ChaptersScreen() {
         </div>
 
         {/* SUBJECT SELECTION TABS */}
-        {subjects.length > 0 && (
-          <div className="flex overflow-x-auto hide-scrollbar px-4 pb-2.5 gap-2 max-w-[430px] mx-auto w-full pr-6">
-            {subjects.map((sub) => {
+        <div className="flex overflow-x-auto hide-scrollbar px-4 pb-2.5 gap-2 max-w-[430px] mx-auto w-full pr-6">
+          {subjects.length > 0 ? (
+            subjects.map((sub) => {
               const isActive = activeSubject?._id === sub._id;
               return (
                 <button
@@ -272,30 +296,64 @@ export default function ChaptersScreen() {
                   }`}
                 >
                   <Globe size={13} className={isActive ? "text-[#FFC83D]" : "text-[#767683]"} />
-                  <span>{sub.name}</span>
+                  <span>{t(sub.name.toLowerCase(), { defaultValue: sub.name })}</span>
                 </button>
               );
-            })}
-          </div>
-        )}
+            })
+          ) : (
+            <>
+              <div className="h-7 w-24 rounded-full animate-skeleton shrink-0 border border-[#5B5CFF]/20" />
+              <div className="h-7 w-28 rounded-full animate-skeleton shrink-0 border border-[#5B5CFF]/20" />
+              <div className="h-7 w-24 rounded-full animate-skeleton shrink-0 border border-[#5B5CFF]/20" />
+            </>
+          )}
+        </div>
       </header>
 
       {/* MAIN ADVENTURE CONTENT */}
       <main className="px-4 pt-4 max-w-[430px] mx-auto w-full relative z-10 flex flex-col gap-4">
         {loading ? (
-          <div className="flex flex-col gap-4 animate-pulse">
-            <div className="bg-white rounded-2xl p-5 border border-[#E0E3E5] shadow-sm flex flex-col gap-3">
-              <div className="h-4 bg-gray-200 rounded w-1/3" />
-              <div className="h-6 bg-gray-200 rounded w-2/3" />
-              <div className="h-3 bg-gray-200 rounded-full w-full mt-2" />
+          <div className="flex flex-col gap-5 animate-in fade-in duration-300">
+            {/* MISSION PROGRESS HERO CARD SKELETON */}
+            <div className="bg-[#EEF1FF]/90 border-2 border-[#5B5CFF]/30 rounded-2xl p-4 shadow-md backdrop-blur-sm space-y-3 relative overflow-hidden">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full animate-skeleton shrink-0" />
+                  <div className="h-4 w-28 rounded-md animate-skeleton" />
+                </div>
+                <div className="h-5 w-24 rounded-full animate-skeleton" />
+              </div>
+              <div className="h-6 w-52 rounded-lg animate-skeleton" />
+              <div className="flex items-center gap-3 pt-1">
+                <div className="flex-1 h-3.5 rounded-full animate-skeleton" />
+                <div className="h-4 w-8 rounded-md animate-skeleton shrink-0" />
+              </div>
+              <div className="h-3 w-56 rounded-md animate-skeleton" />
             </div>
-            <div className="flex flex-col gap-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-24 bg-white rounded-2xl border border-[#E0E3E5]" />
+
+            {/* CHAPTER TIMELINE SKELETON (4 Cards matching 1:1 layout) */}
+            <div className="relative flex flex-col gap-4">
+              {/* Timeline Axis Background Line */}
+              <div className="absolute left-[28px] top-6 bottom-6 w-1 -translate-x-1/2 bg-[#5B5CFF]/20 rounded-full" />
+
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex items-start gap-3 w-full">
+                  <div className="w-14 shrink-0 flex items-center justify-center pt-1">
+                    <div className="w-11 h-11 rounded-full animate-skeleton border-4 border-white shadow-md shrink-0" />
+                  </div>
+                  <div className="flex-1 bg-[#EEF1FF]/80 border-2 border-[#5B5CFF]/20 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+                    <div className="space-y-2.5 flex-1 pr-2">
+                      <div className="h-3.5 w-24 rounded-full animate-skeleton" />
+                      <div className="h-5 w-3/4 rounded-md animate-skeleton" />
+                      <div className="h-8 w-full rounded-xl animate-skeleton mt-2" />
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
         ) : (
+
           <>
             {/* MISSION PROGRESS HERO CARD */}
             <section className="bg-white border-2 border-[#E0E3E5] rounded-2xl p-4 shadow-sm relative overflow-hidden">
@@ -303,17 +361,17 @@ export default function ChaptersScreen() {
                 <div className="flex items-center gap-1.5">
                   <Rocket size={16} className="text-[#5B5CFF]" />
                   <span className="text-xs font-black uppercase tracking-wider text-[#17157F]">
-                    🚀 YOUR JOURNEY
+                    {t('your_journey', '🚀 YOUR JOURNEY')}
                   </span>
                 </div>
                 <span className="text-[10px] font-black text-[#006a62] bg-[#35E5D4]/20 px-2 py-0.5 rounded-full border border-[#35E5D4]/50">
-                  {completedChaptersCount} OF {totalChapters} MISSIONS
+                  {t('of_missions', { completed: completedMissionsCount, total: totalMissions, defaultValue: `${completedMissionsCount} OF ${totalMissions} MISSIONS` })}
                 </span>
               </div>
 
               <div className="mb-2.5">
                 <h2 className="text-base font-black text-[#17157F] leading-tight">
-                  {activeCurrentChapter ? activeCurrentChapter.name : "Journey Completed!"}
+                  {activeCurrentChapter ? getChapterTitle(activeCurrentChapter, currentChapterIndex >= 0 ? currentChapterIndex : 0) : t('journey_completed', 'Journey Completed!')}
                 </h2>
               </div>
 
@@ -328,14 +386,14 @@ export default function ChaptersScreen() {
                   />
                 </div>
                 <span className="text-xs font-black text-[#17157F] shrink-0">
-                  {Math.round(progressPercent)}%
+                  {progressPercent}%
                 </span>
               </div>
 
               <p className="text-[10px] font-bold text-[#5B5CFF] mt-2 italic">
-                {completedChaptersCount === totalChapters 
-                  ? "🎉 You mastered this entire learning world!" 
-                  : "Keep going! Your next mission is waiting."}
+                {completedMissionsCount === totalMissions && totalMissions > 0
+                  ? t('mastered_learning_world', '🎉 You mastered this entire learning world!')
+                  : t('next_mission_waiting', 'Keep going! Your next mission is waiting.')}
               </p>
             </section>
 
@@ -347,8 +405,8 @@ export default function ChaptersScreen() {
               {chapters.length === 0 ? (
                 <div className="flex flex-col items-center justify-center bg-white rounded-2xl p-8 border-2 border-[#E0E3E5] border-dashed text-center my-4">
                   <Rocket size={40} className="text-[#5B5CFF] mb-2" />
-                  <p className="text-sm font-bold text-[#17157F]">New Missions Launching Soon!</p>
-                  <p className="text-xs text-[#767683] mt-1">Check back shortly for new adventures in {activeSubject?.name}.</p>
+                  <p className="text-sm font-bold text-[#17157F]">{t('new_missions_soon', 'New Missions Launching Soon!')}</p>
+                  <p className="text-xs text-[#767683] mt-1">{t('check_back_shortly', { subject: activeSubject?.name, defaultValue: `Check back shortly for new adventures in ${activeSubject?.name}.` })}</p>
                 </div>
               ) : (
                 chapters.map((chap, index) => {
@@ -357,6 +415,7 @@ export default function ChaptersScreen() {
                   const status = isCompleted ? "completed" : isCurrent ? "current" : "locked";
                   const isSubLocked = index >= 1 && !isSubscribed;
                   const isExpanded = expandedChapter === chap._id;
+                  const displayTitle = getChapterTitle(chap, index);
 
                   // Accordion Options for Completed Chapter
                   const renderQuestions = () => (
@@ -370,33 +429,33 @@ export default function ChaptersScreen() {
                         <button 
                           onClick={(e) => { 
                             e.stopPropagation(); 
-                            navigate(`/chapter-reader?chapterId=${chap._id}&title=${encodeURIComponent(`${index + 1}. ${chap.name}`)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}`); 
+                            navigate(`/chapter-reader?chapterId=${chap._id}&title=${encodeURIComponent(displayTitle)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}`); 
                           }} 
                           className="bg-[#EEF1FF] border border-[#5B5CFF]/30 text-[#17157F] px-3.5 py-2 rounded-xl font-bold text-xs hover:bg-[#5B5CFF] hover:text-white transition-all flex items-center justify-between"
                         >
-                          <span>📖 Read Chapter PDF</span>
+                          <span>{t('read_chapter_pdf', '📖 Read Chapter PDF')}</span>
                           <ChevronRight size={16} />
                         </button>
 
                         <button 
                           onClick={(e) => { 
                             e.stopPropagation(); 
-                            navigate(`/chapter-questions?chapterId=${chap._id}&chapterName=${encodeURIComponent(`${index + 1}. ${chap.name}`)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}`); 
+                            navigate(`/mission-roadmap?chapterId=${chap._id}&title=${encodeURIComponent(displayTitle)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}`); 
                           }} 
                           className="bg-[#EEF1FF] border border-[#5B5CFF]/30 text-[#17157F] px-3.5 py-2 rounded-xl font-bold text-xs hover:bg-[#5B5CFF] hover:text-white transition-all flex items-center justify-between"
                         >
-                          <span>⚡ Practice Mission Questions</span>
+                          <span>{t('practice_mission_questions', '⚡ Practice Mission Questions')}</span>
                           <ChevronRight size={16} />
                         </button>
 
                         <button 
                           onClick={(e) => { 
                             e.stopPropagation(); 
-                            navigate(`/boss-battle?worldId=w1&chapterId=${chap._id}&difficulty=easy&returnTo=/practice/journey-map&subjectName=${encodeURIComponent(activeSubject?.name || "")}&chapterName=${encodeURIComponent(`${index + 1}. ${chap.name}`)}`); 
+                            navigate(`/boss-battle?worldId=w1&chapterId=${chap._id}&difficulty=easy&returnTo=/practice/journey-map&subjectName=${encodeURIComponent(activeSubject?.name || "")}&chapterName=${encodeURIComponent(displayTitle)}`); 
                           }} 
                           className="bg-[#FFC83D]/20 border border-[#FFC83D] text-[#17157F] px-3.5 py-2 rounded-xl font-bold text-xs hover:bg-[#FFC83D] transition-all flex items-center justify-between"
                         >
-                          <span>🏆 Chapter Boss Round</span>
+                          <span>{t('chapter_boss_round', '🏆 Chapter Boss Round')}</span>
                           <ChevronRight size={16} />
                         </button>
                       </motion.div>
@@ -441,17 +500,17 @@ export default function ChaptersScreen() {
                             >
                               <div className="flex-1 pr-2">
                                 <span className="text-[9px] font-black uppercase tracking-wider text-[#45D483] bg-[#45D483]/15 px-2 py-0.5 rounded-full border border-[#45D483]/40 inline-block mb-1">
-                                  ✓ MISSION COMPLETED
+                                  {t('mission_completed_badge', '✓ MISSION COMPLETED')}
                                 </span>
                                 <p className="text-[10px] font-bold text-[#767683]">
-                                  Chapter {index + 1}
+                                  {t('chapter', 'Chapter')} {index + 1}
                                 </p>
                                 <h3 className="text-sm font-black text-[#17157F] leading-tight">
-                                  {chap.name}
+                                  {displayTitle}
                                 </h3>
                               </div>
                               <span className="text-xs text-[#5B5CFF] font-bold underline shrink-0">
-                                {isExpanded ? "Close" : "Review"}
+                                {isExpanded ? t('close', 'Close') : t('review', 'Review')}
                               </span>
                             </button>
                             {renderQuestions()}
@@ -462,27 +521,44 @@ export default function ChaptersScreen() {
                           <div className={`flex-1 ${isSubLocked ? 'bg-amber-50 border-amber-300' : 'bg-gradient-to-br from-white to-[#EEF1FF] border-2 border-[#5B5CFF] shadow-[0_4px_16px_rgba(91,92,255,0.2)]'} rounded-2xl p-4 relative overflow-hidden transition-all`}>
                             <div className="flex items-center justify-between mb-1">
                               <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${isSubLocked ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-[#5B5CFF] text-white border-[#5B5CFF]'}`}>
-                                {isSubLocked ? '👑 PREMIUM MISSION 🔒' : '🚀 CURRENT MISSION'}
+                                {isSubLocked ? t('premium_mission_badge', '👑 PREMIUM MISSION 🔒') : t('current_mission_badge', '🚀 CURRENT MISSION')}
                               </span>
                             </div>
 
                             <p className="text-[11px] font-bold text-[#5B5CFF] mb-0.5">
-                              Chapter {index + 1}
+                              {t('chapter', 'Chapter')} {index + 1}
                             </p>
                             <h3 className="text-base font-black text-[#17157F] leading-tight mb-2.5">
-                              {chap.name}
+                              {displayTitle}
                             </h3>
 
-                            <button
-                              onClick={() => handleToggleChapter(index, chap._id, `${index + 1}. ${chap.name}`)}
-                              className={`w-full py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
-                                isSubLocked
-                                  ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-amber-950 shadow-md active:scale-95'
-                                  : 'bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white shadow-[0_4px_14px_rgba(91,92,255,0.4)] hover:brightness-110 active:scale-95 border border-[#5B5CFF]'
-                              }`}
-                            >
-                              <span>{isSubLocked ? 'UNLOCK PREMIUM MISSION' : 'START MISSION →'}</span>
-                            </button>
+                            {(() => {
+                              const savedAns = sessionStorage.getItem(`user_answers_${chap._id}_1`);
+                              const savedPhase = sessionStorage.getItem(`mission_phase_${chap._id}_1`);
+                              let isChapInProgress = false;
+                              if (savedAns) {
+                                try {
+                                  const arr = JSON.parse(savedAns);
+                                  if (Array.isArray(arr) && arr.length > 0) isChapInProgress = true;
+                                } catch (e) {}
+                              }
+                              if (savedPhase && savedPhase !== "SUMMARY") isChapInProgress = true;
+
+                              return (
+                                <div className="flex flex-col gap-2">
+                                  <button
+                                    onClick={() => handleToggleChapter(index, chap._id, displayTitle)}
+                                    className={`w-full py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+                                      isSubLocked
+                                        ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-amber-950 shadow-md active:scale-95'
+                                        : 'bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white shadow-[0_4px_14px_rgba(91,92,255,0.4)] hover:brightness-110 active:scale-95 border border-[#5B5CFF]'
+                                    }`}
+                                  >
+                                    <span>{isSubLocked ? t('unlock_premium_mission', 'UNLOCK PREMIUM MISSION') : isChapInProgress ? t('continue_mission_btn', 'CONTINUE MISSION →') : t('start_mission_btn', 'START MISSION →')}</span>
+                                  </button>
+                                </div>
+                              );
+                            })()}
                           </div>
                         )}
 
@@ -500,14 +576,14 @@ export default function ChaptersScreen() {
                           >
                             <div className="flex items-center justify-between mb-1">
                               <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${isSubLocked ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
-                                {isSubLocked ? '👑 PREMIUM 🔒' : '🔒 LOCKED'}
+                                {isSubLocked ? t('premium_badge', '👑 PREMIUM 🔒') : t('locked_badge', '🔒 LOCKED')}
                               </span>
                             </div>
                             <p className="text-[10px] font-bold text-[#767683]">
-                              Chapter {index + 1}
+                              {t('chapter', 'Chapter')} {index + 1}
                             </p>
                             <h3 className="text-sm font-bold text-[#767683] leading-tight">
-                              {chap.name}
+                              {displayTitle}
                             </h3>
                           </div>
                         )}
@@ -533,9 +609,9 @@ export default function ChaptersScreen() {
               👑
             </div>
             <div>
-              <h3 className="text-xl font-black text-slate-900">Unlock Full Adventure!</h3>
+              <h3 className="text-xl font-black text-slate-900">{t('unlock_full_adventure', 'Unlock Full Adventure!')}</h3>
               <p className="text-xs font-semibold text-slate-600 mt-1 leading-relaxed">
-                Chapter 1 is free for everyone. Access to Chapter 2 and beyond requires an active StudySaathy Subscription.
+                {t('chapter_1_free_desc', 'Chapter 1 is free for everyone. Access to Chapter 2 and beyond requires an active StudySaathy Subscription.')}
               </p>
             </div>
             <button
@@ -545,13 +621,13 @@ export default function ChaptersScreen() {
               }}
               className="w-full py-3.5 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-400 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-black rounded-2xl shadow-lg shadow-amber-500/20 active:scale-95 transition-all uppercase tracking-wider text-xs"
             >
-              Upgrade Subscription →
+              {t('upgrade_subscription', 'Upgrade Subscription →')}
             </button>
             <button
               onClick={() => setShowSubModal(false)}
               className="text-xs font-bold text-slate-400 hover:text-slate-600"
             >
-              Maybe Later
+              {t('maybe_later', 'Maybe Later')}
             </button>
           </motion.div>
         </div>

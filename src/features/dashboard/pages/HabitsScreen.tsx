@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Bell, Star, Heart, Lock, Sparkles, PartyPopper, CheckCircle2 } from "lucide-react";
 import { apiFetch } from "../../../api";
+import { useTranslation } from "react-i18next";
 
 
 export default function HabitsScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [completed, setCompleted] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
@@ -80,7 +82,7 @@ export default function HabitsScreen() {
           >
             <ArrowLeft size={24} className="text-[#141779]" />
           </button>
-          <h1 className="text-xl font-black tracking-wide text-[#141779]">Good Habits</h1>
+          <h1 className="text-xl font-black tracking-wide text-[#141779]">{t('good_habits', 'Good Habits')}</h1>
         </div>
         <button 
           onClick={() => navigate("/notifications")} 
@@ -99,8 +101,8 @@ export default function HabitsScreen() {
         
         {/* Title Section */}
         <div className="text-center space-y-1">
-          <h2 className="text-2xl font-black text-[#141779] tracking-tight">Daily Habit Journey</h2>
-          <p className="text-xs font-black text-amber-700 uppercase tracking-widest">Build smart habits, gain gold stars! ⭐</p>
+          <h2 className="text-2xl font-black text-[#141779] tracking-tight">{t('daily_habit_journey', 'Daily Habit Journey')}</h2>
+          <p className="text-xs font-black text-amber-700 uppercase tracking-widest">{t('build_smart_habits_desc', 'Build smart habits, gain gold stars! ⭐')}</p>
         </div>
 
         {/* Progress Orbit Tracker (Cute Stepping Stones) */}
@@ -114,7 +116,7 @@ export default function HabitsScreen() {
               <div className="w-11 h-11 rounded-full bg-gradient-to-br from-amber-400 to-amber-500 text-white flex items-center justify-center shadow-sm border-2 border-white">
                 <Star size={18} className="fill-white text-white" />
               </div>
-              <span className="text-[10px] font-black text-amber-900">Day {habit.currentDay - 2}</span>
+              <span className="text-[10px] font-black text-amber-900">{t('day_label', { day: habit.currentDay - 2, defaultValue: `Day ${habit.currentDay - 2}` })}</span>
             </div>
           ) : (
             <div className="w-11 h-11 opacity-0 pointer-events-none" />
@@ -126,7 +128,7 @@ export default function HabitsScreen() {
               <div className="w-11 h-11 rounded-full bg-gradient-to-br from-amber-400 to-amber-500 text-white flex items-center justify-center shadow-sm border-2 border-white">
                 <Star size={18} className="fill-white text-white" />
               </div>
-              <span className="text-[10px] font-black text-amber-900">Day {habit.currentDay - 1}</span>
+              <span className="text-[10px] font-black text-amber-900">{t('day_label', { day: habit.currentDay - 1, defaultValue: `Day ${habit.currentDay - 1}` })}</span>
             </div>
           ) : (
             <div className="w-11 h-11 opacity-0 pointer-events-none" />
@@ -135,7 +137,7 @@ export default function HabitsScreen() {
           {/* Today (currentDay) */}
           <div className="flex flex-col items-center gap-1.5 relative z-10">
             <div className="absolute -top-5 bg-emerald-500 text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full border border-white shadow-xs animate-bounce">
-              TODAY
+              {t('today', 'TODAY')}
             </div>
             <div className={`w-13 h-13 rounded-full flex items-center justify-center border-2 border-white relative z-10 shadow-md ${
               completed 
@@ -148,7 +150,7 @@ export default function HabitsScreen() {
                 <Heart size={22} className="fill-white text-white animate-pulse" />
               )}
             </div>
-            <span className="text-[10px] font-black text-emerald-950">Day {habit?.currentDay || 1}</span>
+            <span className="text-[10px] font-black text-emerald-950">{t('day_label', { day: habit?.currentDay || 1, defaultValue: `Day ${habit?.currentDay || 1}` })}</span>
           </div>
 
           {/* Next Day (currentDay + 1) */}
@@ -156,7 +158,7 @@ export default function HabitsScreen() {
             <div className="w-11 h-11 rounded-full bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400">
               <Lock size={16} />
             </div>
-            <span className="text-[10px] font-black text-slate-500">Day {(habit?.currentDay || 1) + 1}</span>
+            <span className="text-[10px] font-black text-slate-500">{t('day_label', { day: (habit?.currentDay || 1) + 1, defaultValue: `Day ${(habit?.currentDay || 1) + 1}` })}</span>
           </div>
         </div>
 
@@ -178,12 +180,12 @@ export default function HabitsScreen() {
                 <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 text-white border border-white text-[9px] rounded-full flex items-center justify-center font-black">✓</span>
               </div>
 
-              <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-1.5">LESSON {habit?.currentDay || 1}</span>
+              <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-1.5">{t('lesson_label', { day: habit?.currentDay || 1, defaultValue: `LESSON ${habit?.currentDay || 1}` })}</span>
               <h3 className="text-xl sm:text-2xl font-black text-[#141779] text-center mb-3 tracking-tight">
-                {habit?.title || "Daily Lesson"}
+                {habit?.title || t('daily_lesson', 'Daily Lesson')}
               </h3>
               <p className="text-sm font-bold text-slate-600 text-center leading-relaxed mb-6 px-1">
-                {habit?.description || "Loading your daily story..."}
+                {habit?.description || t('loading_daily_story', 'Loading your daily story...')}
               </p>
 
               {/* Interaction Button */}
@@ -201,7 +203,7 @@ export default function HabitsScreen() {
                 ) : (
                   <>
                     <span className="text-base font-black uppercase tracking-wider">
-                      {completed ? `Claimed +${habit?.rewardPoints || 10} Points` : "Complete Story"}
+                      {completed ? t('claimed_points', { points: habit?.rewardPoints || 10, defaultValue: `Claimed +${habit?.rewardPoints || 10} Points` }) : t('complete_story', 'Complete Story')}
                     </span>
                     {completed ? (
                       <CheckCircle2 size={20} className="text-emerald-700" />
@@ -222,15 +224,15 @@ export default function HabitsScreen() {
               <div className="w-18 h-18 bg-amber-100 border border-amber-200 rounded-full flex items-center justify-center mb-5 animate-bounce">
                 <PartyPopper size={36} className="text-amber-500" />
               </div>
-              <h3 className="text-2xl font-black text-[#141779] text-center mb-2">🎉 Splendid!</h3>
+              <h3 className="text-2xl font-black text-[#141779] text-center mb-2">🎉 {t('splendid', 'Splendid!')}</h3>
               <p className="text-slate-600 text-center mb-6 leading-relaxed">
-                You earned <span className="font-extrabold text-amber-500 text-lg">+{habit?.rewardPoints || 10} Points</span> for practicing this habit today!
+                {t('earned_points_desc', { points: habit?.rewardPoints || 10, defaultValue: `You earned +${habit?.rewardPoints || 10} Points for practicing this habit today!` })}
               </p>
               <button 
                 onClick={() => { setShowModal(false); navigate(-1); }}
                 className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white py-3.5 rounded-2xl font-black uppercase tracking-wider transition-all shadow-md active:scale-95 border border-orange-500/10"
               >
-                Continue Journey
+                {t('continue_journey', 'Continue Journey')}
               </button>
             </div>
           </div>

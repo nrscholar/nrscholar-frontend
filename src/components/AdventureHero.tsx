@@ -1,9 +1,11 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { ChevronRight, Sparkles, Trophy, Zap, Target } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export interface AdventureThemeConfig {
   type: "dragon" | "science" | "social" | "space" | "ocean" | "history";
+  worldTitleKey: string;
   worldTitle: string;
   storyText: string;
   missionTitle: string;
@@ -15,6 +17,7 @@ export interface AdventureThemeConfig {
   rewardIcon: string;
   characterIcon: string;
   characterName: string;
+  ctaTextKey: string;
   ctaText: string;
   bgGradient: string;
   accentBorderColor: string;
@@ -26,6 +29,7 @@ export interface AdventureThemeConfig {
 export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
   dragon: {
     type: "dragon",
+    worldTitleKey: "dragon_valley",
     worldTitle: "🐉 DRAGON VALLEY",
     storyText: "The dragon needs your help finding its lost egg in the mystic valley!",
     missionTitle: "Complete today's learning quest to cross Dragon Valley",
@@ -37,6 +41,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     rewardIcon: "🥚",
     characterIcon: "🐉",
     characterName: "Flame Dragon",
+    ctaTextKey: "continue_adventure",
     ctaText: "CONTINUE ADVENTURE →",
     bgGradient: "from-emerald-700 via-teal-800 to-slate-900",
     accentBorderColor: "border-amber-400",
@@ -46,6 +51,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
   },
   science: {
     type: "science",
+    worldTitleKey: "science_lab",
     worldTitle: "🧪 SCIENCE LAB",
     storyText: "Help Professor Owl finish Experiment #04 to synthesize the Quantum Catalyst!",
     missionTitle: "Complete 4 science challenges to ignite the lab furnace",
@@ -57,6 +63,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     rewardIcon: "🔬",
     characterIcon: "🦉",
     characterName: "Scientist Owl",
+    ctaTextKey: "enter_lab",
     ctaText: "ENTER LAB →",
     bgGradient: "from-indigo-800 via-purple-900 to-slate-950",
     accentBorderColor: "border-cyan-400",
@@ -66,6 +73,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
   },
   social: {
     type: "social",
+    worldTitleKey: "champions_arena",
     worldTitle: "🏆 CHAMPION'S ARENA",
     storyText: "Step into the arena and master confidence challenges to earn the Silver Medal!",
     missionTitle: "Complete 3 daily habit challenges",
@@ -77,6 +85,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     rewardIcon: "🥈",
     characterIcon: "🦁",
     characterName: "Champion Lion",
+    ctaTextKey: "take_challenge",
     ctaText: "TAKE CHALLENGE →",
     bgGradient: "from-amber-700 via-orange-800 to-slate-950",
     accentBorderColor: "border-yellow-300",
@@ -86,6 +95,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
   },
   space: {
     type: "space",
+    worldTitleKey: "galaxy_quest",
     worldTitle: "🚀 GALAXY QUEST",
     storyText: "Pilot your rover across the starlight asteroid belt toward Planet Nebula!",
     missionTitle: "Complete 5 space problems to charge thrusters",
@@ -97,6 +107,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     rewardIcon: "🛸",
     characterIcon: "🚀",
     characterName: "Astronaut Rover",
+    ctaTextKey: "launch_rocket",
     ctaText: "LAUNCH ROCKET →",
     bgGradient: "from-slate-950 via-indigo-950 to-purple-950",
     accentBorderColor: "border-purple-400",
@@ -106,6 +117,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
   },
   ocean: {
     type: "ocean",
+    worldTitleKey: "ocean_explorer",
     worldTitle: "🌊 OCEAN EXPLORER",
     storyText: "Dive into the coral reef trenches to locate the sunken Royal Treasure Chest!",
     missionTitle: "Complete 4 reading quests underwater",
@@ -117,6 +129,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     rewardIcon: "🏴‍☠️",
     characterIcon: "🤿",
     characterName: "Deep Diver",
+    ctaTextKey: "dive_deep",
     ctaText: "DIVE DEEP →",
     bgGradient: "from-sky-800 via-cyan-900 to-slate-950",
     accentBorderColor: "border-teal-300",
@@ -126,6 +139,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
   },
   history: {
     type: "history",
+    worldTitleKey: "ancient_ruins",
     worldTitle: "📜 ANCIENT RUINS",
     storyText: "Uncover forgotten scrolls in the Sunken Temple of Alexandria!",
     missionTitle: "Complete 3 history investigations",
@@ -137,6 +151,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     rewardIcon: "🏺",
     characterIcon: "🧭",
     characterName: "Ruins Explorer",
+    ctaTextKey: "explore_ruins",
     ctaText: "EXPLORE RUINS →",
     bgGradient: "from-amber-800 via-stone-900 to-slate-950",
     accentBorderColor: "border-amber-400",
@@ -177,10 +192,13 @@ export default function AdventureHero({
   missionRewardText,
   journeyData,
 }: AdventureHeroProps) {
+  const { t } = useTranslation();
   const theme = ADVENTURE_THEMES[themeKey] || ADVENTURE_THEMES.dragon;
 
-  const startName = journeyData?.currentLocation || currentLocationName || "Egg Village";
-  const endName = journeyData?.nextNodeName || destinationName || "Hatchling Haven";
+  const rawStart = journeyData?.currentLocation || currentLocationName || "Egg Village";
+  const rawEnd = journeyData?.nextNodeName || destinationName || "Hatchling Haven";
+  const startName = rawStart === "Egg Village" ? t('egg_village', { defaultValue: "Egg Village" }) : rawStart;
+  const endName = rawEnd === "Hatchling Haven" ? t('hatchling_haven', { defaultValue: "Hatchling Haven" }) : rawEnd;
 
   const displayMissionTitle = missionTitle || theme.missionTitle;
   const displayMissionProgress = missionProgress || theme.missionProgress;
@@ -192,7 +210,9 @@ export default function AdventureHero({
   const chaptersRemaining = journeyData?.chaptersNeededForNext !== undefined ? journeyData.chaptersNeededForNext : chaptersNeededForNext;
   const xpRemaining = Math.max(0, targetXp - xp);
 
-  const pathD = "M 20 40 C 90 10, 230 70, 310 35";
+  const pathD = "M 62 46 C 110 5, 215 65, 278 32";
+  const pathLength = 250;
+  const mascotLeftPercent = 20 + (legProgress / 100) * 59;
 
   return (
     <div className="w-full max-w-[430px] mx-auto flex flex-col gap-3 font-sans">
@@ -234,7 +254,7 @@ export default function AdventureHero({
         <div className="flex items-center justify-between z-10 gap-2">
           <div className="flex items-center gap-2">
             <span className="px-3 py-1 rounded-full bg-white/15 border border-white/20 backdrop-blur-md text-[11px] font-black tracking-wider uppercase shadow-xs flex items-center gap-1.5 text-white">
-              {theme.worldTitle}
+              {t(theme.worldTitleKey, { defaultValue: theme.worldTitle })}
             </span>
           </div>
 
@@ -267,8 +287,8 @@ export default function AdventureHero({
                 fill="none"
                 stroke={theme.pathColor}
                 strokeWidth="5"
-                strokeDasharray="330"
-                strokeDashoffset={330 - (330 * legProgress) / 100}
+                strokeDasharray={pathLength}
+                strokeDashoffset={pathLength - (pathLength * legProgress) / 100}
                 strokeLinecap="round"
                 className="transition-all duration-1000"
               />
@@ -285,10 +305,10 @@ export default function AdventureHero({
             </div>
 
             {/* CHARACTER MASCOT */}
-            <div className="absolute inset-x-6 inset-y-0 pointer-events-none z-20">
+            <div className="absolute inset-x-0 inset-y-0 pointer-events-none z-20">
               <div
                 className="h-full flex items-center transition-all duration-1000"
-                style={{ marginLeft: `calc(${Math.min(82, Math.max(5, legProgress))}% - 20px)` }}
+                style={{ marginLeft: `calc(${mascotLeftPercent}% - 18px)` }}
               >
                 <motion.div
                   animate={{ y: [-4, 4, -4], rotate: [-4, 4, -4] }}
@@ -299,7 +319,7 @@ export default function AdventureHero({
                     {theme.characterIcon}
                   </div>
                   <span className="text-[9px] font-black bg-amber-400 text-slate-950 px-1.5 py-0.5 rounded-full uppercase shadow-md -mt-1 tracking-wider border border-amber-300">
-                    YOU
+                    {t('you', { defaultValue: "YOU" })}
                   </span>
                 </motion.div>
               </div>
@@ -316,7 +336,7 @@ export default function AdventureHero({
                 <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full animate-ping" />
               </motion.div>
               <span className="text-[9px] font-black text-amber-300 uppercase mt-0.5 tracking-tighter bg-black/40 px-1.5 py-0.5 rounded backdrop-blur-xs">
-                {theme.rewardName}
+                {t(theme.rewardName.toLowerCase().replace(/ /g, '_'), { defaultValue: theme.rewardName })}
               </span>
             </div>
           </div>
@@ -325,8 +345,8 @@ export default function AdventureHero({
         {/* PROGRESS SUPPORTING INDICATOR */}
         <div className="z-10 bg-black/30 border border-white/10 rounded-2xl p-2.5 flex flex-col gap-1 backdrop-blur-md">
           <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-200">
-            <span>Progress to {endName}</span>
-            <span className={theme.accentTextColor}>{legProgress}% Completed</span>
+            <span>{t('progress_to', { destination: endName, defaultValue: `Progress to ${endName}` })}</span>
+            <span className={theme.accentTextColor}>{t('completed_label', { percent: legProgress, defaultValue: `${legProgress}% COMPLETED` })}</span>
           </div>
           <div className="w-full h-2 bg-white/15 rounded-full overflow-hidden p-0.5">
             <div
@@ -335,11 +355,11 @@ export default function AdventureHero({
             />
           </div>
           <div className="flex justify-between items-center text-[9.5px] font-extrabold text-slate-300 mt-0.5">
-            <span>{endName} Unlock</span>
+            <span>{t('unlock_label', { destination: endName, defaultValue: `${endName} Unlock` })}</span>
             <span className="text-amber-300">
               {chaptersRemaining !== undefined 
-                ? (chaptersRemaining > 0 ? `${chaptersRemaining} chapter(s) remaining` : "Stage Complete!")
-                : (xpRemaining > 0 ? `${xpRemaining} XP Remaining` : "Ready to Unlock!")}
+                ? (chaptersRemaining > 0 ? t('chapters_remaining_count', { count: chaptersRemaining, defaultValue: `${chaptersRemaining} chapter(s) remaining` }) : t('stage_complete', { defaultValue: "Stage Complete!" }))
+                : (xpRemaining > 0 ? t('xp_remaining_count', { count: xpRemaining, defaultValue: `${xpRemaining} XP Remaining` }) : t('ready_to_unlock', { defaultValue: "Ready to Unlock!" }))}
             </span>
           </div>
         </div>
@@ -349,7 +369,7 @@ export default function AdventureHero({
           onClick={onCtaClick}
           className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-[0_6px_20px_rgba(245,158,11,0.4)] active:scale-95 transition-all border-2 border-amber-300 flex items-center justify-center gap-2 z-10"
         >
-          <span>{theme.ctaText}</span>
+          <span>{t(theme.ctaTextKey, { defaultValue: theme.ctaText })}</span>
         </button>
       </div>
 
@@ -362,10 +382,10 @@ export default function AdventureHero({
             </div>
             <div>
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block leading-none">
-                TODAY'S QUEST
+                {t('todays_quest', { defaultValue: "TODAY'S QUEST" })}
               </span>
               <h4 className="text-xs font-black text-slate-900 mt-0.5 leading-snug">
-                {displayMissionTitle}
+                {t(displayMissionTitle.toLowerCase().replace(/ /g, '_'), { defaultValue: displayMissionTitle })}
               </h4>
             </div>
           </div>
@@ -374,7 +394,7 @@ export default function AdventureHero({
         <div className="flex items-center justify-between gap-2.5 sm:gap-3">
           <div className="flex-1 flex flex-col gap-1 min-w-0">
             <div className="flex justify-between text-[10px] font-black text-slate-600 uppercase gap-1">
-              <span className="whitespace-nowrap truncate">Mission Progress</span>
+              <span className="whitespace-nowrap truncate">{t('mission_progress', { defaultValue: "Mission Progress" })}</span>
               <span className="text-indigo-600 font-extrabold whitespace-nowrap">
                 {displayMissionProgress.current} / {displayMissionProgress.total}
               </span>
@@ -396,7 +416,7 @@ export default function AdventureHero({
           onClick={onMissionClick || onCtaClick}
           className="w-full py-2.5 bg-gradient-to-r from-[#141779] to-[#30007f] hover:brightness-110 active:scale-95 text-white font-black text-[11px] uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5"
         >
-          <span>CONTINUE QUEST →</span>
+          <span>{t('continue_quest', { defaultValue: "CONTINUE QUEST →" })}</span>
         </button>
       </div>
     </div>

@@ -5,8 +5,10 @@ import {
   Flame, Sparkles, Compass, Trophy, Star, BookOpen, Heart 
 } from "lucide-react";
 import { apiFetch } from "../../../api";
+import { useTranslation } from "react-i18next";
 
 export default function ParentLearningDNAScreen() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   
   const cachedDna = (() => {
@@ -129,16 +131,126 @@ export default function ParentLearningDNAScreen() {
         { name: "Practice Together", icon: Heart, desc: "Run flashcard visual drills together.", stars: 3 }
       ];
 
-  // SVG Bezier graph coordinates based on metrics
-  const chartPoints = [
-    { x: 30, y: 70 - focusVal * 0.4 },
-    { x: 75, y: 70 - confidenceVal * 0.4 },
-    { x: 120, y: 70 - consistencyVal * 0.4 },
-    { x: 165, y: 70 - curiosityVal * 0.4 },
-    { x: 210, y: 70 - resilienceVal * 0.4 },
-    { x: 255, y: 70 - creativityVal * 0.4 },
-    { x: 290, y: 70 - ((focusVal + confidenceVal) / 2) * 0.4 }
-  ];
+  // Helper translations for DNA Screen
+  const translateLearnerIdentity = (identity: string) => {
+    if (!identity) return "";
+    if (identity.includes("Hands-on Builder")) return t("hands_on_builder", "Hands-on Builder");
+    if (identity.includes("Creative Thinker")) return t("creative_thinker", "Creative Thinker");
+    if (identity.includes("Visual Explorer")) return t("visual_explorer", "Visual Explorer");
+    return t(identity, identity);
+  };
+
+  const translateIdentityBadge = (badge: string) => {
+    if (!badge) return "";
+    if (badge.includes("Kinesthetic")) {
+      const match = badge.match(/Top\s*(\d+)%/i);
+      const top = match ? match[1] : "20";
+      return t("badge_top_kinesthetic", { top, defaultValue: `Top ${top}% Kinesthetic Learner` });
+    }
+    if (badge.includes("Focused Reader") || badge.includes("Reading")) {
+      const match = badge.match(/Top\s*(\d+)%/i);
+      const top = match ? match[1] : "20";
+      return t("badge_top_reading", { top, defaultValue: `Top ${top}% Focused Reader` });
+    }
+    if (badge.includes("Visual")) {
+      const match = badge.match(/Top\s*(\d+)%/i);
+      const top = match ? match[1] : "20";
+      return t("badge_top_visual", { top, defaultValue: `Top ${top}% Visual Learner` });
+    }
+    return t(badge, badge);
+  };
+
+  const translateDnaDescription = (desc: string) => {
+    if (!desc) return "";
+    if (desc.includes("hands-on learner who thrives on interaction")) {
+      return t("desc_kinesthetic_learner", "Your child is a hands-on learner who thrives on interaction, physical activity, and drag-and-drop challenges. They learn best by doing and experimenting.");
+    }
+    if (desc.includes("spatial concepts dynamically")) {
+      return t("desc_visual_learner", "Processes spatial concepts dynamically, resolving math and science models through interactive games rather than plain text descriptions.");
+    }
+    if (desc.includes("reading texts") || desc.includes("word problems") || desc.includes("textual instructions")) {
+      return t("desc_reading_learner", "Your child processes information best through reading texts and writing answers. They show strong retention with word problems and textual instructions.");
+    }
+    return t(desc, desc);
+  };
+
+  const translateCoachTitle = (title: string) => {
+    if (!title) return "";
+    if (title.includes("Hands-on quizzes")) return t("coach_hands_on_quizzes", "Hands-on quizzes");
+    if (title.includes("Write down summaries") || title.includes("summaries")) return t("coach_write_summaries", "Write down summaries");
+    if (title.includes("diagrams") || title.includes("visual")) return t("coach_use_diagrams", "Use more diagrams");
+    if (title.includes("chunks")) return t("coach_short_chunks", "Short text chunks");
+    if (title.includes("breaks")) return t("coach_frequent_breaks", "Frequent active breaks");
+    if (title.includes("read aloud")) return t("coach_read_aloud", "Read aloud");
+    return t(title, title);
+  };
+
+  const translateCoachDesc = (desc: string) => {
+    if (!desc) return "";
+    if (desc.includes("Incorporate interactive/drag-and-drop practice games")) {
+      return t("desc_coach_interactive_games", "Incorporate interactive/drag-and-drop practice games to keep engagement high.");
+    }
+    if (desc.includes("summarize their learning in a journal")) {
+      return t("desc_coach_summaries", "Encourage the child to summarize their learning in a journal or notepad.");
+    }
+    if (desc.includes("diagrams") || desc.includes("visual connection")) {
+      return t("desc_coach_diagrams", "Try drawing out concepts when explaining complex problems. Visual connection helps retain memory.");
+    }
+    if (desc.includes("short visual bullet points")) {
+      return t("desc_coach_short_chunks", "Break down text-heavy explanations into short visual bullet points.");
+    }
+    if (desc.includes("2-minute stretch")) {
+      return t("desc_coach_frequent_breaks", "Encourage taking a 2-minute stretch or movement break between chapters.");
+    }
+    if (desc.includes("read word problems out loud")) {
+      return t("desc_coach_read_aloud", "Let them read word problems out loud to boost comprehension.");
+    }
+    return t(desc, desc);
+  };
+
+  const translateActivityName = (name: string) => {
+    if (name === "Build It") return t("act_build_it", "Build It");
+    if (name === "Practice Together") return t("act_practice_together", "Practice Together");
+    if (name === "Draw It") return t("act_draw_it", "Draw It");
+    if (name === "Watch It") return t("act_watch_it", "Watch It");
+    return t(name, name);
+  };
+
+  const translateActivityDesc = (desc: string) => {
+    if (desc.includes("spatial drag-and-drop actions")) return t("desc_act_build_it_spatial", "Solve quizzes containing spatial drag-and-drop actions.");
+    if (desc.includes("multiplayer quiz and compete")) return t("desc_act_practice_multiplayer", "Run a multiplayer quiz and compete in teams.");
+    if (desc.includes("shapes and concepts")) return t("desc_act_draw_math", "Draw shapes and concepts to explain math puzzles.");
+    if (desc.includes("concept video cards")) return t("desc_act_watch_roadmap", "Watch concept video cards on the roadmap.");
+    if (desc.includes("word problems aloud")) return t("desc_act_practice_aloud", "Collaboratively read word problems aloud.");
+    if (desc.includes("reader summaries")) return t("desc_act_watch_summaries", "Read chapter reader summaries on the dashboard.");
+    if (desc.includes("diagrams associated")) return t("desc_act_draw_text", "Draw diagrams associated with text descriptions.");
+    if (desc.includes("word sorting games")) return t("desc_act_build_sorting", "Solve vocabulary word sorting games.");
+    if (desc.includes("concepts and models")) return t("desc_act_draw_models", "Draw concepts and models to process questions.");
+    if (desc.includes("animations of math")) return t("desc_act_watch_animations", "Watch active animations of math and science.");
+    if (desc.includes("block puzzles")) return t("desc_act_build_blocks", "Construct spatial block puzzles in practice games.");
+    if (desc.includes("flashcard visual drills")) return t("desc_act_practice_flashcards", "Run flashcard visual drills together.");
+    return t(desc, desc);
+  };
+
+  // Dynamic Weekly Trend graph coordinates based on weeklyTrend telemetry array from backend
+  const weeklyTrendData: number[] = Array.isArray(dnaData?.weeklyTrend) && dnaData.weeklyTrend.length === 7
+    ? dnaData.weeklyTrend
+    : [
+        focusVal || 65, 
+        confidenceVal || 70, 
+        consistencyVal || 68, 
+        curiosityVal || 72, 
+        resilienceVal || 60, 
+        creativityVal || 80, 
+        Math.round(((focusVal || 65) + (confidenceVal || 70)) / 2)
+      ];
+
+  const chartPoints = weeklyTrendData.map((val, idx) => {
+    const x = 30 + idx * 43.33; // 30 (Mon), 73.3 (Tue), 116.6 (Wed), 160 (Thu), 203.3 (Fri), 246.6 (Sat), 290 (Sun)
+    const clampedVal = Math.max(10, Math.min(100, val));
+    const y = 68 - (clampedVal / 100) * 52; // 0% -> y=68, 100% -> y=16
+    return { x: Math.round(x), y: Math.round(y), val: clampedVal };
+  });
   
   const pathD = `M ${chartPoints[0].x} ${chartPoints[0].y} ` +
     chartPoints.slice(1).map(p => `L ${p.x} ${p.y}`).join(" ");
@@ -158,7 +270,7 @@ export default function ParentLearningDNAScreen() {
             src={profilePic || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=141779&color=fff`}
           />
         </div>
-        <h1 className="text-xl font-extrabold text-[#141779]">Learning DNA</h1>
+        <h1 className="text-xl font-extrabold text-[#141779]">{t("learning_dna", "Learning DNA")}</h1>
       </header>
 
       {!hasData ? (
@@ -166,15 +278,15 @@ export default function ParentLearningDNAScreen() {
           <div className="w-20 h-20 bg-white rounded-[28px] border border-gray-100 shadow-md flex items-center justify-center mb-2">
             <BrainCircuit size={40} className="text-[#141779]/30" />
           </div>
-          <h2 className="text-2xl font-black text-[#141779]">Awaiting Telemetry</h2>
+          <h2 className="text-2xl font-black text-[#141779]">{t("awaiting_telemetry", "Awaiting Telemetry")}</h2>
           <p className="text-[15px] text-[#555562] leading-relaxed max-w-[280px]">
-            Your child needs to solve more questions and complete roadmaps to build their cognitive Learning DNA profile.
+            {t("telemetry_desc", "Your child needs to solve more questions and complete roadmaps to build their cognitive Learning DNA profile.")}
           </p>
           <button 
             onClick={() => navigate('/home')}
             className="mt-4 px-8 py-4 bg-[#141779] text-white font-bold rounded-2xl shadow-md hover:scale-105 active:scale-95 transition-all text-sm"
           >
-            Return to Dashboard
+            {t("return_to_dashboard", "Return to Dashboard")}
           </button>
         </main>
       ) : (
@@ -215,17 +327,17 @@ export default function ParentLearningDNAScreen() {
             </div>
 
             <span className="bg-[#e9e8ff] text-[#4d40b3] text-[11px] font-extrabold tracking-wider px-3 py-1 rounded-full mb-1 border border-[#4d40b3]/10">
-              {identityBadge}
+              {translateIdentityBadge(identityBadge)}
             </span>
-            <h2 className="text-2xl font-black text-[#141779] mb-3">{learnerIdentity}</h2>
+            <h2 className="text-2xl font-black text-[#141779] mb-3">{translateLearnerIdentity(learnerIdentity)}</h2>
             <p className="text-[14px] text-[#555562] leading-relaxed max-w-[340px]">
-              {dnaData?.description || "Processes spatial concepts dynamically, resolving math and science models through interactive games rather than plain text descriptions."}
+              {translateDnaDescription(dnaData?.description || "Processes spatial concepts dynamically, resolving math and science models through interactive games rather than plain text descriptions.")}
             </p>
           </div>
 
           {/* Section 1: Learning Style */}
           <div className="bg-white border border-gray-100 rounded-[28px] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.02)]">
-            <h3 className="text-sm font-extrabold text-[#7c7d8a] tracking-wider uppercase mb-5">Learning Modality Style</h3>
+            <h3 className="text-sm font-extrabold text-[#7c7d8a] tracking-wider uppercase mb-5">{t("learning_modality_style", "Learning Modality Style")}</h3>
             <div className="flex flex-col gap-5">
               
               {/* Visual Modality */}
@@ -233,7 +345,7 @@ export default function ParentLearningDNAScreen() {
                 <div className="flex justify-between items-center text-[14px]">
                   <span className="font-extrabold text-[#1e1e24] flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-[#8b35c5]"></span>
-                    Visual modality
+                    {t("visual_modality", "Visual modality")}
                   </span>
                   <span className="font-extrabold text-[#8b35c5]">{visualPct}%</span>
                 </div>
@@ -247,7 +359,7 @@ export default function ParentLearningDNAScreen() {
                 <div className="flex justify-between items-center text-[14px]">
                   <span className="font-extrabold text-[#1e1e24] flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-[#008272]"></span>
-                    Hands-on modality
+                    {t("handson_modality", "Hands-on modality")}
                   </span>
                   <span className="font-extrabold text-[#008272]">{kinestheticPct}%</span>
                 </div>
@@ -261,7 +373,7 @@ export default function ParentLearningDNAScreen() {
                 <div className="flex justify-between items-center text-[14px]">
                   <span className="font-extrabold text-[#1e1e24] flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-[#b07b00]"></span>
-                    Reading & Writing
+                    {t("reading_writing_modality", "Reading & Writing")}
                   </span>
                   <span className="font-extrabold text-[#b07b00]">{readingPct}%</span>
                 </div>
@@ -275,7 +387,7 @@ export default function ParentLearningDNAScreen() {
 
           {/* Section 2: Learning Power */}
           <div>
-            <h3 className="text-sm font-extrabold text-[#7c7d8a] tracking-wider uppercase mb-3 px-1">Learning Power</h3>
+            <h3 className="text-sm font-extrabold text-[#7c7d8a] tracking-wider uppercase mb-3 px-1">{t("learning_power", "Learning Power")}</h3>
             <div className="grid grid-cols-3 gap-3">
               
               {/* Focus Card */}
@@ -283,7 +395,7 @@ export default function ParentLearningDNAScreen() {
                 <div className="w-10 h-10 rounded-full bg-[#e8e9fc] flex items-center justify-center text-[#141779] mb-2 shrink-0">
                   <Target size={18} />
                 </div>
-                <span className="text-[11px] font-extrabold text-[#7c7d8a] mb-1">Focus</span>
+                <span className="text-[11px] font-extrabold text-[#7c7d8a] mb-1">{t("focus", "Focus")}</span>
                 <span className="text-lg font-black text-[#141779]">{focusVal}%</span>
               </div>
 
@@ -292,30 +404,29 @@ export default function ParentLearningDNAScreen() {
                 <div className="w-10 h-10 rounded-full bg-[#dcf5f2] flex items-center justify-center text-[#008272] mb-2 shrink-0">
                   <Activity size={18} />
                 </div>
-                <span className="text-[11px] font-extrabold text-[#7c7d8a] mb-1">Confidence</span>
+                <span className="text-[11px] font-extrabold text-[#7c7d8a] mb-1">{t("confidence", "Confidence")}</span>
                 <span className="text-lg font-black text-[#008272]">{confidenceVal}%</span>
               </div>
 
               {/* Consistency Card */}
               <div className="bg-gradient-to-b from-white to-[#f9fafe] border border-gray-100 rounded-[22px] p-4 text-center shadow-[0_4px_16px_rgba(0,0,0,0.01)] flex flex-col items-center">
-                <div className="w-10 h-10 rounded-full bg-[#fcf1e2] flex items-center justify-center text-[#b07b00] mb-2 shrink-0">
+                <div className="w-10 h-10 rounded-full bg-[#faedd8] flex items-center justify-center text-[#b07b00] mb-2 shrink-0">
                   <Flame size={18} />
                 </div>
-                <span className="text-[11px] font-extrabold text-[#7c7d8a] mb-1">Consistency</span>
+                <span className="text-[11px] font-extrabold text-[#7c7d8a] mb-1">{t("consistency", "Consistency")}</span>
                 <span className="text-lg font-black text-[#b07b00]">{consistencyVal}%</span>
               </div>
-
             </div>
           </div>
 
           {/* Section 3: Growth Mindset */}
           <div className="bg-white border border-gray-100 rounded-[28px] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.02)]">
-            <h3 className="text-sm font-extrabold text-[#7c7d8a] tracking-wider uppercase mb-5">Growth Mindset Profiling</h3>
+            <h3 className="text-sm font-extrabold text-[#7c7d8a] tracking-wider uppercase mb-5">{t("growth_mindset_profiling", "Growth Mindset Profiling")}</h3>
             <div className="flex flex-col gap-4">
               
               {/* Curiosity */}
               <div className="flex items-center justify-between">
-                <span className="text-sm font-extrabold text-[#1e1e24]">Curiosity</span>
+                <span className="text-sm font-extrabold text-[#1e1e24]">{t("curiosity", "Curiosity")}</span>
                 <div className="flex items-center gap-2">
                   <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div className="h-full bg-[#2f61d5] rounded-full" style={{ width: `${curiosityVal}%` }} />
@@ -326,7 +437,7 @@ export default function ParentLearningDNAScreen() {
 
               {/* Resilience */}
               <div className="flex items-center justify-between">
-                <span className="text-sm font-extrabold text-[#1e1e24]">Resilience</span>
+                <span className="text-sm font-extrabold text-[#1e1e24]">{t("resilience", "Resilience")}</span>
                 <div className="flex items-center gap-2">
                   <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div className="h-full bg-[#8b35c5] rounded-full" style={{ width: `${resilienceVal}%` }} />
@@ -337,7 +448,7 @@ export default function ParentLearningDNAScreen() {
 
               {/* Creativity */}
               <div className="flex items-center justify-between">
-                <span className="text-sm font-extrabold text-[#1e1e24]">Creativity</span>
+                <span className="text-sm font-extrabold text-[#1e1e24]">{t("creativity", "Creativity")}</span>
                 <div className="flex items-center gap-2">
                   <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div className="h-full bg-[#1a874b] rounded-full" style={{ width: `${creativityVal}%` }} />
@@ -355,22 +466,22 @@ export default function ParentLearningDNAScreen() {
             <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full blur-2xl"></div>
             <div className="flex items-center gap-2 mb-3">
               <Sparkles size={16} className="text-[#57fae9]" />
-              <span className="text-xs font-extrabold uppercase tracking-widest text-[#57fae9]">Today's AI Coach</span>
+              <span className="text-xs font-extrabold uppercase tracking-widest text-[#57fae9]">{t("todays_ai_coach", "TODAY'S AI COACH")}</span>
             </div>
-            <h4 className="text-lg font-black mb-2">{firstTip.title}</h4>
+            <h4 className="text-lg font-black mb-2">{translateCoachTitle(firstTip.title)}</h4>
             <p className="text-xs text-white/80 leading-relaxed mb-4">
-              {firstTip.desc}
+              {translateCoachDesc(firstTip.desc)}
             </p>
             <div className="bg-white/10 rounded-xl px-4 py-2 border border-white/10 flex items-center justify-between w-max gap-8">
-              <span className="text-[11px] font-extrabold text-white/70">Efficiency Boost</span>
-              <span className="text-sm font-black text-[#57fae9]">+{Math.round(confidenceVal * 0.2 + 10)}% boost</span>
+              <span className="text-[11px] font-extrabold text-white/70">{t("efficiency_boost", "Efficiency Boost")}</span>
+              <span className="text-sm font-black text-[#57fae9]">+{Math.round(confidenceVal * 0.2 + 10)}% {t("boost", "boost")}</span>
             </div>
           </div>
           )}
 
           {/* Section 5: Recommended Activities */}
           <div>
-            <h3 className="text-sm font-extrabold text-[#7c7d8a] tracking-wider uppercase mb-3 px-1">Recommended Activities</h3>
+            <h3 className="text-sm font-extrabold text-[#7c7d8a] tracking-wider uppercase mb-3 px-1">{t("recommended_activities", "RECOMMENDED ACTIVITIES")}</h3>
             <div className="grid grid-cols-2 gap-3">
               {activities.slice(0, 4).map((act, index) => {
                 const ActIcon = act.icon;
@@ -379,9 +490,9 @@ export default function ParentLearningDNAScreen() {
                     <div className="w-8 h-8 rounded-xl bg-[#e3eafc] text-[#2f61d5] flex items-center justify-center shrink-0 mb-0.5">
                       <ActIcon size={16} />
                     </div>
-                    <h4 className="text-[14px] font-black text-[#1e1e24]">{act.name}</h4>
+                    <h4 className="text-[14px] font-black text-[#1e1e24]">{translateActivityName(act.name)}</h4>
                     <p className="text-[10px] text-[#7c7d8a] leading-normal font-medium grow">
-                      {act.desc}
+                      {translateActivityDesc(act.desc)}
                     </p>
                     <div className="flex gap-0.5 text-[#ffb300]">
                       {Array.from({ length: 5 }).map((_, i) => (
@@ -401,11 +512,11 @@ export default function ParentLearningDNAScreen() {
 
           {/* Section 6: Achievements */}
           <div className="bg-white border border-gray-100 rounded-[28px] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.02)]">
-            <h3 className="text-sm font-extrabold text-[#7c7d8a] tracking-wider uppercase mb-2">Collectible Badges</h3>
+            <h3 className="text-sm font-extrabold text-[#7c7d8a] tracking-wider uppercase mb-2">{t("collectible_badges", "Collectible Badges")}</h3>
             {(dnaData?.totalAttempts ?? 0) < 5 ? (
               <div className="bg-gray-50/70 border border-dashed border-gray-200 rounded-[22px] p-4 text-center mb-4">
-                <p className="text-xs font-bold text-[#7c7d8a]">Solve at least 5 quizzes to start unlocking badges!</p>
-                <p className="text-[10px] text-gray-400 mt-1 font-semibold">Current Progress: {dnaData?.totalAttempts ?? 0} / 5</p>
+                <p className="text-xs font-bold text-[#7c7d8a]">{t("badge_unlock_hint", "Solve at least 5 quizzes to start unlocking badges!")}</p>
+                <p className="text-[10px] text-gray-400 mt-1 font-semibold">{t("current_progress", { current: dnaData?.totalAttempts ?? 0, total: 5, defaultValue: `Current Progress: ${dnaData?.totalAttempts ?? 0} / 5` })}</p>
               </div>
             ) : null}
             <div className="grid grid-cols-2 gap-4">
@@ -417,8 +528,8 @@ export default function ParentLearningDNAScreen() {
                   : "bg-gray-50/50 border-dashed border-gray-200 opacity-50"
               }`}>
                 <Trophy size={20} className={focusVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? "text-[#141779]" : "text-gray-400"} />
-                <h4 className="text-[13px] font-extrabold text-[#191c1e]">Focus Master</h4>
-                <span className="text-[9px] font-bold text-[#7c7d8a]">{focusVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? "Unlocked" : "Locked"}</span>
+                <h4 className="text-[13px] font-extrabold text-[#191c1e]">{t("badge_focus_master", "Focus Master")}</h4>
+                <span className="text-[9px] font-bold text-[#7c7d8a]">{focusVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? t("unlocked", "Unlocked") : t("locked", "Locked")}</span>
               </div>
 
               {/* 7-Day Streak */}
@@ -428,8 +539,8 @@ export default function ParentLearningDNAScreen() {
                   : "bg-gray-50/50 border-dashed border-gray-200 opacity-50"
               }`}>
                 <Flame size={20} className={consistencyVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? "text-[#b07b00]" : "text-gray-400"} />
-                <h4 className="text-[13px] font-extrabold text-[#191c1e]">7-Day Streak</h4>
-                <span className="text-[9px] font-bold text-[#7c7d8a]">{consistencyVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? "Unlocked" : "Locked"}</span>
+                <h4 className="text-[13px] font-extrabold text-[#191c1e]">{t("badge_7day_streak", "7-Day Streak")}</h4>
+                <span className="text-[9px] font-bold text-[#7c7d8a]">{consistencyVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? t("unlocked", "Unlocked") : t("locked", "Locked")}</span>
               </div>
 
               {/* Curious Mind */}
@@ -439,8 +550,8 @@ export default function ParentLearningDNAScreen() {
                   : "bg-gray-50/50 border-dashed border-gray-200 opacity-50"
               }`}>
                 <Compass size={20} className={curiosityVal >= 65 && (dnaData?.totalAttempts ?? 0) >= 5 ? "text-[#008272]" : "text-gray-400"} />
-                <h4 className="text-[13px] font-extrabold text-[#191c1e]">Curious Mind</h4>
-                <span className="text-[9px] font-bold text-[#7c7d8a]">{curiosityVal >= 65 && (dnaData?.totalAttempts ?? 0) >= 5 ? "Unlocked" : "Locked"}</span>
+                <h4 className="text-[13px] font-extrabold text-[#191c1e]">{t("badge_curious_mind", "Curious Mind")}</h4>
+                <span className="text-[9px] font-bold text-[#7c7d8a]">{curiosityVal >= 65 && (dnaData?.totalAttempts ?? 0) >= 5 ? t("unlocked", "Unlocked") : t("locked", "Locked")}</span>
               </div>
 
               {/* Fast Learner */}
@@ -450,8 +561,8 @@ export default function ParentLearningDNAScreen() {
                   : "bg-gray-50/50 border-dashed border-gray-200 opacity-50"
               }`}>
                 <Zap size={20} className={creativityVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? "text-[#1a874b]" : "text-gray-400"} />
-                <h4 className="text-[13px] font-extrabold text-[#191c1e]">Fast Learner</h4>
-                <span className="text-[9px] font-bold text-[#7c7d8a]">{creativityVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? "Unlocked" : "Locked"}</span>
+                <h4 className="text-[13px] font-extrabold text-[#191c1e]">{t("badge_fast_learner", "Fast Learner")}</h4>
+                <span className="text-[9px] font-bold text-[#7c7d8a]">{creativityVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? t("unlocked", "Unlocked") : t("locked", "Locked")}</span>
               </div>
 
             </div>
@@ -459,13 +570,13 @@ export default function ParentLearningDNAScreen() {
 
           {/* Section 7: Progress Chart */}
           <div className="bg-white border border-gray-100 rounded-[28px] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.02)]">
-            <h3 className="text-sm font-extrabold text-[#7c7d8a] tracking-wider uppercase mb-5">Weekly Trend</h3>
+            <h3 className="text-sm font-extrabold text-[#7c7d8a] tracking-wider uppercase mb-5">{t("weekly_trend", "Weekly Trend")}</h3>
             
             {(dnaData?.totalAttempts ?? 0) < 3 ? (
               <div className="w-full bg-gray-50 border border-dashed border-gray-200 rounded-[22px] py-8 text-center flex flex-col items-center justify-center gap-2">
                 <Activity size={24} className="text-gray-400 animate-pulse" />
-                <p className="text-xs font-bold text-[#7c7d8a]">Weekly trend requires at least 3 completed quizzes.</p>
-                <p className="text-[10px] text-gray-400 font-semibold">Current Progress: {dnaData?.totalAttempts ?? 0} / 3</p>
+                <p className="text-xs font-bold text-[#7c7d8a]">{t("weekly_trend_hint", "Weekly trend requires at least 3 completed quizzes.")}</p>
+                <p className="text-[10px] text-gray-400 font-semibold">{t("current_progress", { current: dnaData?.totalAttempts ?? 0, total: 3, defaultValue: `Current Progress: ${dnaData?.totalAttempts ?? 0} / 3` })}</p>
               </div>
             ) : (
               <>
@@ -505,7 +616,7 @@ export default function ParentLearningDNAScreen() {
                         cx={p.x} 
                         cy={p.y} 
                         r="4" 
-                        fill="#white" 
+                        fill="white" 
                         stroke="#7b1fa2" 
                         strokeWidth="2.5" 
                       />
@@ -515,13 +626,13 @@ export default function ParentLearningDNAScreen() {
                 
                 {/* Days labels */}
                 <div className="flex justify-between text-[11px] font-extrabold text-[#7c7d8a] px-2.5">
-                  <span>Mon</span>
-                  <span>Tue</span>
-                  <span>Wed</span>
-                  <span>Thu</span>
-                  <span>Fri</span>
-                  <span>Sat</span>
-                  <span>Sun</span>
+                  <span>{t("day_mon", "Mon")}</span>
+                  <span>{t("day_tue", "Tue")}</span>
+                  <span>{t("day_wed", "Wed")}</span>
+                  <span>{t("day_thu", "Thu")}</span>
+                  <span>{t("day_fri", "Fri")}</span>
+                  <span>{t("day_sat", "Sat")}</span>
+                  <span>{t("day_sun", "Sun")}</span>
                 </div>
               </>
             )}

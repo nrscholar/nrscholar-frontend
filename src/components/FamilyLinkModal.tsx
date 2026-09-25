@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Copy, Check, Users, ShieldAlert, RefreshCw } from "lucide-react";
 import { apiFetch } from "../api";
+import { useTranslation } from "react-i18next";
 
 interface FamilyLinkModalProps {
   isOpen: boolean;
@@ -9,6 +10,7 @@ interface FamilyLinkModalProps {
 }
 
 export default function FamilyLinkModal({ isOpen, onClose }: FamilyLinkModalProps) {
+  const { t } = useTranslation();
   const [familyCode, setFamilyCode] = useState<string>("");
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -94,10 +96,10 @@ export default function FamilyLinkModal({ isOpen, onClose }: FamilyLinkModalProp
           </div>
 
           <h3 className="text-xl font-black text-[#141779] mb-1">
-            Family Link Code
+            {t("family_link_code_title", "Family Link Code")}
           </h3>
           <p className="text-xs font-semibold text-slate-500 mb-5 leading-relaxed px-2">
-            Share this Unique Code with co-parents or link another smartphone to monitor learning reports.
+            {t("share_unique_code_desc", "Share this Unique Code with co-parents or link another smartphone to monitor learning reports.")}
           </p>
 
           {errorMsg && (
@@ -122,7 +124,7 @@ export default function FamilyLinkModal({ isOpen, onClose }: FamilyLinkModalProp
                   className="px-3.5 py-2 rounded-xl bg-[#141779] text-white text-xs font-black flex items-center gap-1.5 active:scale-95 transition-all shadow-sm"
                 >
                   {copied ? <Check size={16} /> : <Copy size={16} />}
-                  <span>{copied ? "Copied!" : "Copy"}</span>
+                  <span>{copied ? t("copied", "Copied!") : t("copy", "Copy")}</span>
                 </button>
               </div>
               
@@ -133,7 +135,7 @@ export default function FamilyLinkModal({ isOpen, onClose }: FamilyLinkModalProp
                   title="Generate a new random code"
                 >
                   <RefreshCw size={14} />
-                  <span>Regenerate</span>
+                  <span>{t("regenerate", "Regenerate")}</span>
                 </button>
               </div>
             </div>
@@ -142,7 +144,7 @@ export default function FamilyLinkModal({ isOpen, onClose }: FamilyLinkModalProp
           <div className="bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold p-3 rounded-xl flex items-start gap-2 text-left w-full">
             <ShieldAlert size={18} className="shrink-0 mt-0.5" />
             <span>
-              Anyone with this Family Code and your 4-digit Parent PIN can link their phone to monitor learning reports.
+              {t("family_link_security_warning", "Anyone with this Family Code and your 4-digit Parent PIN can link their phone to monitor learning reports.")}
             </span>
           </div>
 
@@ -150,7 +152,7 @@ export default function FamilyLinkModal({ isOpen, onClose }: FamilyLinkModalProp
             onClick={onClose}
             className="w-full h-12 bg-slate-100 text-slate-700 font-black text-xs uppercase tracking-wider rounded-2xl mt-5 hover:bg-slate-200 transition-colors"
           >
-            Done
+            {t("done", "Done")}
           </button>
         </motion.div>
       </div>

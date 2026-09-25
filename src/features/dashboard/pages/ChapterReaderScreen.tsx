@@ -8,7 +8,14 @@ import HTMLFlipBook from 'react-pageflip';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+try {
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+    'pdfjs-dist/build/pdf.worker.min.mjs',
+    import.meta.url,
+  ).toString();
+} catch (_) {
+  pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+}
 
 const pdfOptions = {
   cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
@@ -343,9 +350,19 @@ export default function ChapterReaderScreen() {
               <Document
                 file={pdfUrl}
                 options={pdfOptions}
-                onLoadSuccess={({ numPages: n }) => setNumPages(n)}
+                onLoadSuccess={({ numPages: n }) => {
+                  setNumPages(n);
+                  setPdfError(null);
+                }}
+                onLoadError={(err: Error) => {
+                  console.error("PDF Document render error:", err);
+                  setPdfError(err?.message || "Failed to parse PDF file content");
+                }}
                 loading={
-                  <div className="w-12 h-12 border-4 border-white border-t-[#141779] rounded-full animate-spin mt-20 shadow-md" />
+                  <div className="flex flex-col items-center justify-center p-12 gap-3 mt-16">
+                    <div className="w-12 h-12 border-4 border-white border-t-[#141779] rounded-full animate-spin shadow-md" />
+                    <p className="text-[#141779] font-extrabold text-sm tracking-wide">Opening Magic Book...</p>
+                  </div>
                 }
               >
                 {numPages && (

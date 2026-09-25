@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Copy, CheckCircle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
 
 export default function MultiplayerRoomScreen() {
   const navigate = useNavigate();
   const { roomId } = useParams();
+  const { t } = useTranslation();
   const [room, setRoom] = useState<any>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
@@ -61,7 +63,7 @@ export default function MultiplayerRoomScreen() {
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#f4efff] px-6 text-center">
         <h2 className="text-2xl font-bold text-[#ba1a1a] mb-4">{error}</h2>
         <button onClick={() => navigate("/multiplayer-hub")} className="bg-[#141779] text-white px-6 py-3 rounded-full font-bold">
-          Go Back
+          {t('go_back', 'Go Back')}
         </button>
       </div>
     );
@@ -85,13 +87,13 @@ export default function MultiplayerRoomScreen() {
         <button onClick={() => setShowLeaveModal(true)} className="p-2 bg-white border border-[#e0e0e0] shadow-sm rounded-full hover:bg-[#e8ddff] transition-colors">
           <ArrowLeft size={24} color="#141779" />
         </button>
-        <h1 className="text-[18px] font-black text-[#141779] tracking-[2px] uppercase">Waiting Room</h1>
+        <h1 className="text-[18px] font-black text-[#141779] tracking-[2px] uppercase">{t('waiting_room', 'WAITING ROOM')}</h1>
         <div className="w-10" />
       </header>
 
       <main className="px-6 flex-1 flex flex-col items-center justify-center relative z-10">
         <div className="bg-white border-2 border-[#d0d0d0] rounded-[32px] p-8 w-full max-w-sm flex flex-col items-center shadow-lg">
-          <p className="text-[#767683] font-bold text-sm mb-2 uppercase tracking-wider">Room Code</p>
+          <p className="text-[#767683] font-bold text-sm mb-2 uppercase tracking-wider">{t('room_code', 'ROOM CODE')}</p>
           <div className="bg-[#f4efff] border-2 border-[#e0e0e0] px-6 py-4 rounded-2xl flex items-center gap-4 mb-4 shadow-sm">
             <span className="text-4xl font-black text-[#141779] tracking-[8px]">{room.code}</span>
             <button onClick={copyCode} className="p-2 bg-white rounded-xl hover:bg-[#e8ddff] transition-colors border border-[#e0e0e0]">
@@ -112,7 +114,7 @@ export default function MultiplayerRoomScreen() {
                  <img src={room.hostAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${room.hostName || 'Host'}`} alt="Host" className="w-full h-full object-cover" />
               </div>
               <p className="mt-3 text-[#141779] font-black max-w-[80px] text-center truncate">{room.hostName}</p>
-              <span className="text-[10px] bg-[#f4efff] border border-[#e0e0e0] px-2 py-1 rounded mt-1 text-[#141779] font-bold uppercase">Host</span>
+              <span className="text-[10px] bg-[#f4efff] border border-[#e0e0e0] px-2 py-1 rounded mt-1 text-[#141779] font-bold uppercase">{t('host', 'HOST')}</span>
             </div>
 
             <div className="text-3xl font-black text-[#ff9f43] italic px-4">VS</div>
@@ -123,11 +125,11 @@ export default function MultiplayerRoomScreen() {
                  {room.guestId ? (
                    <img src={room.guestAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${room.guestName || 'Guest'}`} alt="Guest" className="w-full h-full object-cover" />
                  ) : (
-                   <span className="text-[#767683] opacity-60 text-xs font-bold text-center">Waiting...</span>
+                   <span className="text-[#767683] opacity-60 text-xs font-bold text-center">{t('waiting_dots', 'Waiting...')}</span>
                  )}
               </div>
-              <p className="mt-3 text-[#141779] font-black max-w-[80px] text-center truncate">{room.guestName || "Guest"}</p>
-              {room.guestId && <span className="text-[10px] bg-[#ffeed1] border border-[#ff9f43] px-2 py-1 rounded mt-1 text-[#ff9f43] font-bold uppercase">Ready</span>}
+              <p className="mt-3 text-[#141779] font-black max-w-[80px] text-center truncate">{room.guestName || t('guest', 'Guest')}</p>
+              {room.guestId && <span className="text-[10px] bg-[#ffeed1] border border-[#ff9f43] px-2 py-1 rounded mt-1 text-[#ff9f43] font-bold uppercase">{t('ready', 'READY')}</span>}
             </div>
           </div>
           
@@ -135,12 +137,12 @@ export default function MultiplayerRoomScreen() {
             {!room.guestId ? (
                <div className="flex flex-col items-center">
                  <div className="w-6 h-6 border-2 border-[#141779] border-t-transparent rounded-full animate-spin mb-3"></div>
-                 <p className="text-[#464652] font-bold text-sm animate-pulse">Waiting for opponent to join...</p>
+                 <p className="text-[#464652] font-bold text-sm animate-pulse">{t('waiting_for_opponent', 'Waiting for opponent to join...')}</p>
                </div>
             ) : (
                <div className="flex flex-col items-center">
-                 <p className="text-[#006a62] font-black text-lg animate-pulse mb-2">Opponent joined!</p>
-                 <p className="text-[#464652] font-bold text-xs">Battle starting momentarily...</p>
+                 <p className="text-[#006a62] font-black text-lg animate-pulse mb-2">{t('opponent_joined', 'Opponent joined!')}</p>
+                 <p className="text-[#464652] font-bold text-xs">{t('battle_starting_momentarily', 'Battle starting momentarily...')}</p>
                </div>
             )}
           </div>
@@ -152,22 +154,22 @@ export default function MultiplayerRoomScreen() {
       {showLeaveModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-[24px] p-6 w-full max-w-sm flex flex-col items-center text-center shadow-2xl border-2 border-[#e0e0e0] animate-in zoom-in-95 duration-200">
-            <h2 className="text-2xl font-black text-[#141779] mb-2">Leave Room?</h2>
+            <h2 className="text-2xl font-black text-[#141779] mb-2">{t('leave_room_title', 'Leave Room?')}</h2>
             <p className="text-[#464652] font-semibold mb-6">
-              Are you sure you want to leave this waiting room?
+              {t('leave_room_confirm', 'Are you sure you want to leave this waiting room?')}
             </p>
             <div className="flex gap-3 w-full">
               <button 
                 onClick={() => setShowLeaveModal(false)}
                 className="flex-grow bg-[#f4efff] text-[#141779] py-3 rounded-xl font-bold hover:bg-[#e8ddff] transition-all border-2 border-[#e0e0e0]"
               >
-                Cancel
+                {t('cancel', 'Cancel')}
               </button>
               <button 
                 onClick={handleLeaveRoom}
                 className="flex-grow bg-[#ba1a1a] text-white py-3 rounded-xl font-bold hover:bg-[#ba1a1a]/80 transition-all"
               >
-                Leave
+                {t('leave', 'Leave')}
               </button>
             </div>
           </div>

@@ -3,6 +3,7 @@ import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Gift, History, HelpCircle, Shield, Sparkles, Star } from "lucide-react";
 import { apiFetch } from "../../../api";
+import { useTranslation } from "react-i18next";
 
 interface Reward {
   name: string;
@@ -17,6 +18,7 @@ interface Reward {
 
 export default function DailyRewardsScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const initialType = searchParams.get("type") || "daily";
@@ -372,7 +374,7 @@ export default function DailyRewardsScreen() {
           <ArrowLeft className="w-6 h-6" />
         </button>
         <h1 className="text-lg font-black tracking-widest text-indigo-950">
-          {spinType === "boss_revival" ? "REVIVAL WHEEL" : "LUCKY WHEEL"}
+          {spinType === "boss_revival" ? t('revival_wheel', 'REVIVAL WHEEL') : t('lucky_wheel', 'LUCKY WHEEL')}
         </h1>
         <div className="w-6 h-6" />
       </header>
@@ -381,8 +383,8 @@ export default function DailyRewardsScreen() {
       {spinType !== "boss_revival" && (
         <div className="flex gap-2 p-1.5 bg-slate-100 border border-slate-200 rounded-full mt-5 max-w-[360px] w-[90%] mx-auto relative z-10 shadow-inner">
           {[
-            { id: "daily", label: `Daily (${balances.daily_spins_balance || 0} Left)` },
-            { id: "event", label: `Event (${balances.event_spins_balance || 0} Left)` }
+            { id: "daily", label: `${t('daily', 'DAILY')} (${balances.daily_spins_balance || 0} ${t('left', 'LEFT')})` },
+            { id: "event", label: `${t('event', 'EVENT')} (${balances.event_spins_balance || 0} ${t('left', 'LEFT')})` }
           ].map((tab) => {
             const isActive = spinType === tab.id;
             return (
@@ -413,15 +415,15 @@ export default function DailyRewardsScreen() {
         {/* Reward Info Header */}
         <div className="text-center space-y-1.5">
           <p className="text-[10px] font-black uppercase tracking-[3px] text-indigo-600">
-            {spinType === "boss_revival" ? "BOSS EMERGENCY" : "DAILY REWARDS"}
+            {spinType === "boss_revival" ? t('boss_emergency', 'BOSS EMERGENCY') : t('daily_rewards', 'DAILY REWARDS')}
           </p>
           <h2 className="text-xl sm:text-2xl font-black text-slate-900">
-            {spinType === "boss_revival" ? "Spin the Revival Wheel" : "Unlock Special Rewards"}
+            {spinType === "boss_revival" ? t('spin_the_revival_wheel', 'Spin the Revival Wheel') : t('unlock_special_rewards', 'Unlock Special Rewards')}
           </h2>
           <p className="text-xs sm:text-sm font-bold text-slate-500">
             {spinType === "boss_revival" 
-              ? "Recover hearts to jump back into the battle!"
-              : "Upgrade your learning kit with premium rewards."}
+              ? t('recover_hearts_desc', 'Recover hearts to jump back into the battle!')
+              : t('upgrade_learning_kit_desc', 'Upgrade your learning kit with premium rewards.')}
           </p>
         </div>
 
@@ -484,6 +486,8 @@ export default function DailyRewardsScreen() {
             <div className="absolute inset-0 pointer-events-none">
               {currentRewards.map((reward, i) => {
                 const angle = i * segmentAngle + segmentAngle / 2;
+                const rawName = getShortName(reward.name);
+                const translatedName = t(rawName.toLowerCase().replace(/ /g, '_'), { defaultValue: rawName });
                 return (
                   <div
                     key={i}
@@ -501,7 +505,7 @@ export default function DailyRewardsScreen() {
                         textShadow: "0px 1px 2px rgba(0, 0, 0, 0.8)"
                       }}
                     >
-                      {getShortName(reward.name)}
+                      {translatedName}
                     </span>
                   </div>
                 );
@@ -538,7 +542,7 @@ export default function DailyRewardsScreen() {
                   : "bg-gradient-to-r from-violet-600 via-indigo-600 to-violet-600 hover:scale-[1.01] hover:shadow-[0_0_25px_rgba(124,58,237,0.6)] text-white border-violet-500/40 animate-pulse"
               }`}
             >
-              {isSpinning ? "🌀 Spinning..." : "Spin"}
+              {isSpinning ? t('spinning', '🌀 Spinning...') : t('spin', 'SPIN')}
             </button>
           ) : (
             <button
@@ -546,14 +550,14 @@ export default function DailyRewardsScreen() {
               disabled={isSpinning || isBuying}
               className="w-full py-4 rounded-full font-black text-base sm:text-lg tracking-wider uppercase transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/25 border border-amber-300"
             >
-              <span>{isBuying ? "Purchasing..." : `🛒 Buy 1 Spin (${(spinType === "daily" || spinType === "boss_revival") ? "100 🪙" : "150 🪙"})`}</span>
+              <span>{isBuying ? t('purchasing', 'Purchasing...') : t('buy_spin', { cost: (spinType === "daily" || spinType === "boss_revival") ? 100 : 150, defaultValue: `🛒 Buy 1 Spin (${(spinType === "daily" || spinType === "boss_revival") ? "100 🪙" : "150 🪙"})` })}</span>
             </button>
           )}
 
           <div className="flex items-center justify-center gap-2 text-indigo-300 text-xs font-black">
             <History className="w-4 h-4 text-cyan-400" />
             <span className="font-bold uppercase tracking-widest text-slate-600">
-              {getSpinBalance()} attempts left
+              {getSpinBalance()} {t('attempts_left', 'ATTEMPTS LEFT')}
             </span>
           </div>
         </div>
@@ -599,18 +603,18 @@ export default function DailyRewardsScreen() {
 
               <div>
                 <h3 className="text-2xl font-black text-slate-950 tracking-wide">
-                  🎉 Nailed It!
+                  {t('nailed_it', '🎉 Nailed It!')}
                 </h3>
                 <p className="text-sm text-slate-600 mt-2">
-                  You've unlocked:{" "}
+                  {t('youve_unlocked', "You've unlocked:")}{" "}
                   <span className="font-extrabold text-lg block mt-1" style={{ color: wonReward.color }}>
-                    {wonReward.name}
+                    {t(wonReward.name.toLowerCase().replace(/[^a-z0-9]/g, '_'), { defaultValue: wonReward.name })}
                   </span>
                 </p>
                 
                 {/* Motivation message */}
                 <div className="mt-4 p-4 bg-indigo-50/50 rounded-2xl text-xs font-semibold text-indigo-950 border border-indigo-100 italic">
-                  "Awesome! Use this reward to help in your next mission. Keep up the great work!"
+                  {t('reward_motivation_msg', '"Awesome! Use this reward to help in your next mission. Keep up the great work!"')}
                 </div>
               </div>
 
@@ -622,7 +626,7 @@ export default function DailyRewardsScreen() {
                   boxShadow: `0 4px 15px ${wonReward.color}40`
                 }}
               >
-                Claim Reward
+                {t('claim_reward', 'Claim Reward')}
               </button>
             </motion.div>
           </div>

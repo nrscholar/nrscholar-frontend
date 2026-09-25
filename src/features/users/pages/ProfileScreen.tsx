@@ -31,19 +31,20 @@ function getLevelInfo(xp: number) {
 
 export default function ProfileScreen() {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [loading] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  const [user, setUser] = useState<any>(null);
-
-  useState(() => {
+  const [user, setUser] = useState<any>(() => {
     const stored = localStorage.getItem("userData");
     if (stored) {
       try {
-        setUser(JSON.parse(stored));
-      } catch(e) {}
+        return JSON.parse(stored);
+      } catch (e) {
+        return null;
+      }
     }
+    return null;
   });
 
   useEffect(() => {
@@ -113,10 +114,12 @@ export default function ProfileScreen() {
         >
           <ArrowLeft size={18} className="text-[#17177F]" />
         </button>
-        <div className="flex items-center gap-1.5">
-          <Sparkles size={16} className="text-[#5B5CFF] animate-pulse" />
+        <div className="flex flex-col items-center justify-center text-center">
+          <span className="text-[9px] font-extrabold text-[#5B5CFF] tracking-widest uppercase">
+            {t('player_profile', 'PLAYER PROFILE')}
+          </span>
           <h1 className="text-base font-black text-[#17177F] tracking-wide uppercase">
-            PLAYER PROFILE
+            {t('my_journey', 'MY JOURNEY')}
           </h1>
         </div>
         <div className="w-9" />
@@ -159,13 +162,13 @@ export default function ProfileScreen() {
             {(user.childClass || user.activeChild?.childClass) && (
               <span className="bg-[#EEF1FF] text-[#17177F] border border-[#5B5CFF]/30 text-[11px] font-black px-3 py-1 rounded-full flex items-center gap-1.5 shadow-xs">
                 <GraduationCap size={14} className="text-[#5B5CFF]" />
-                {user.childClass || user.activeChild?.childClass}
+                {t((user.childClass || user.activeChild?.childClass || 'class_1').toLowerCase().replace(/ /g, '_'), { defaultValue: user.childClass || user.activeChild?.childClass })}
               </span>
             )}
             {(user.childAge || user.activeChild?.childAge) && (
               <span className="bg-[#FFF8E6] text-[#D97706] border border-[#FFC83D]/40 text-[11px] font-black px-3 py-1 rounded-full flex items-center gap-1.5 shadow-xs">
                 <Cake size={14} className="text-[#D97706]" />
-                {user.childAge || user.activeChild?.childAge} Years Old
+                {user.childAge || user.activeChild?.childAge} {t('years_old', 'Years Old')}
               </span>
             )}
             {(user.childBoard || user.activeChild?.childBoard) && (
@@ -179,7 +182,7 @@ export default function ProfileScreen() {
           {/* XP Progression Bar */}
           <div className="w-full mt-3 pt-3 border-t border-gray-100">
             <div className="flex items-center justify-between text-[11px] font-bold mb-1">
-              <span className="text-[#17177F] uppercase tracking-wider">LEVEL {userLevel} PROGRESS</span>
+              <span className="text-[#17177F] uppercase tracking-wider">{t('level_progress_title', { level: userLevel, defaultValue: `LEVEL ${userLevel} PROGRESS` })}</span>
               <span className="text-[#5B5CFF] font-black">{xp.toLocaleString()} XP</span>
             </div>
             <div className="w-full h-3 bg-[#F5F6FB] rounded-full overflow-hidden p-0.5 border border-[#E0E3E5]">
@@ -191,7 +194,7 @@ export default function ProfileScreen() {
               />
             </div>
             <p className="text-[10px] font-bold text-[#777A91] mt-1 text-right">
-              {xpNeeded > 0 ? `${xpNeeded} XP to Level ${userLevel + 1}` : 'Max Level Reached!'}
+              {xpNeeded > 0 ? t('xp_to_next_level', { xp: xpNeeded, nextLevel: userLevel + 1, defaultValue: `${xpNeeded} XP to Level ${userLevel + 1}` }) : t('max_level_reached', 'Max Level Reached!')}
             </p>
           </div>
         </section>
@@ -203,7 +206,7 @@ export default function ProfileScreen() {
               <Zap size={20} className="text-[#5B5CFF]" />
             </div>
             <span className="text-lg font-black text-[#17177F]">{xp.toLocaleString()}</span>
-            <span className="text-[9px] font-extrabold text-[#777A91] uppercase tracking-wider">POINTS</span>
+            <span className="text-[9px] font-extrabold text-[#777A91] uppercase tracking-wider">{t('points', 'POINTS')}</span>
           </div>
 
           <div className="bg-white border-2 border-[#FFC83D]/40 rounded-xl p-3 flex flex-col items-center text-center shadow-xs">
@@ -211,7 +214,7 @@ export default function ProfileScreen() {
               <Coins size={20} className="text-[#D97706]" />
             </div>
             <span className="text-lg font-black text-[#17177F]">{coins.toLocaleString()}</span>
-            <span className="text-[9px] font-extrabold text-[#D97706] uppercase tracking-wider">COINS</span>
+            <span className="text-[9px] font-extrabold text-[#D97706] uppercase tracking-wider">{t('coins', 'COINS')}</span>
           </div>
 
           <div className="bg-white border-2 border-[#FF9D3D]/40 rounded-xl p-3 flex flex-col items-center text-center shadow-xs">
@@ -219,7 +222,7 @@ export default function ProfileScreen() {
               <Flame size={20} className="text-[#EA580C]" />
             </div>
             <span className="text-lg font-black text-[#17177F]">{streakDays}</span>
-            <span className="text-[9px] font-extrabold text-[#EA580C] uppercase tracking-wider">STREAK</span>
+            <span className="text-[9px] font-extrabold text-[#EA580C] uppercase tracking-wider">{t('streak', 'STREAK')}</span>
           </div>
         </section>
 
@@ -235,8 +238,8 @@ export default function ProfileScreen() {
                 <Gift size={20} className="text-[#0284C7]" />
               </div>
               <div className="text-left">
-                <h3 className="text-xs font-black text-[#17177F] uppercase tracking-wider">MY COLLECTION</h3>
-                <p className="text-[10px] font-bold text-[#777A91]">Boxes • Dragons • Badges • Vault</p>
+                <h3 className="text-xs font-black text-[#17177F] uppercase tracking-wider">{t('my_collections', 'MY COLLECTION')}</h3>
+                <p className="text-[10px] font-bold text-[#777A91]">{t('collection_subtitle', 'Boxes • Dragons • Badges • Vault')}</p>
               </div>
             </div>
             <ChevronRight size={18} className="text-[#5B5CFF]" />
@@ -252,8 +255,8 @@ export default function ProfileScreen() {
                 <Rocket size={20} className="text-[#5B5CFF]" />
               </div>
               <div className="text-left">
-                <h3 className="text-xs font-black text-[#17177F] uppercase tracking-wider">LEARNING JOURNEY</h3>
-                <p className="text-[10px] font-bold text-[#777A91]">Continue your chapter adventure</p>
+                <h3 className="text-xs font-black text-[#17177F] uppercase tracking-wider">{t('learning_journey', 'LEARNING JOURNEY')}</h3>
+                <p className="text-[10px] font-bold text-[#777A91]">{t('learning_journey_subtitle', 'Continue your chapter adventure')}</p>
               </div>
             </div>
             <ChevronRight size={18} className="text-[#5B5CFF]" />
@@ -265,32 +268,32 @@ export default function ProfileScreen() {
           <div className="flex items-center justify-between px-1">
             <span className="text-xs font-black text-[#17177F] uppercase tracking-wider flex items-center gap-1.5">
               <Trophy size={14} className="text-[#FFC83D]" />
-              🏆 ACHIEVEMENTS
+              🏆 {t('achievements', 'ACHIEVEMENTS')}
             </span>
             <button 
               onClick={() => navigate("/practice/inventory")}
               className="text-[11px] font-bold text-[#5B5CFF] hover:underline"
             >
-              View All →
+              {t('view_all', 'View All →')}
             </button>
           </div>
 
           <div className="grid grid-cols-4 gap-2">
             <div className={`bg-white border rounded-xl p-2 flex flex-col items-center text-center ${hasMathAce ? 'border-[#5B5CFF]/50 shadow-xs' : 'border-gray-200 opacity-50 grayscale'}`}>
               <span className="text-lg">🏆</span>
-              <span className="text-[8px] font-black text-[#17177F] mt-1 truncate w-full">Math Ace</span>
+              <span className="text-[8px] font-black text-[#17177F] mt-1 truncate w-full">{t('math_ace', 'Math Ace')}</span>
             </div>
             <div className={`bg-white border rounded-xl p-2 flex flex-col items-center text-center ${isStreakUnlocked ? 'border-[#FFC83D]/60 shadow-xs' : 'border-gray-200 opacity-50 grayscale'}`}>
               <span className="text-lg">🔥</span>
-              <span className="text-[8px] font-black text-[#17177F] mt-1 truncate w-full">Streak</span>
+              <span className="text-[8px] font-black text-[#17177F] mt-1 truncate w-full">{t('streak', 'Streak')}</span>
             </div>
             <div className={`bg-white border rounded-xl p-2 flex flex-col items-center text-center ${hasScienceProdigy ? 'border-[#3FE4D5]/60 shadow-xs' : 'border-gray-200 opacity-50 grayscale'}`}>
               <span className="text-lg">⚛️</span>
-              <span className="text-[8px] font-black text-[#17177F] mt-1 truncate w-full">Science</span>
+              <span className="text-[8px] font-black text-[#17177F] mt-1 truncate w-full">{t('science', 'Science')}</span>
             </div>
             <div className={`bg-white border rounded-xl p-2 flex flex-col items-center text-center ${hasArenaMaster ? 'border-purple-300 shadow-xs' : 'border-gray-200 opacity-50 grayscale'}`}>
               <span className="text-lg">🛡️</span>
-              <span className="text-[8px] font-black text-[#17177F] mt-1 truncate w-full">Arena</span>
+              <span className="text-[8px] font-black text-[#17177F] mt-1 truncate w-full">{t('arena', 'Arena')}</span>
             </div>
           </div>
         </section>
@@ -298,7 +301,7 @@ export default function ProfileScreen() {
         {/* 5. UTILITY SETTINGS SECTION */}
         <section className="flex flex-col gap-2.5 pt-2 border-t border-gray-100">
           <span className="text-xs font-black text-[#777A91] uppercase tracking-wider px-1">
-            ACCOUNT & SETTINGS
+            {t('account_and_settings', 'ACCOUNT & SETTINGS')}
           </span>
 
           {/* Parental Controls */}
@@ -316,7 +319,7 @@ export default function ProfileScreen() {
                   <Users size={18} className="text-[#17177F]" />
                 </div>
               )}
-              <span className="text-xs font-bold text-[#16165F]">{t('parental_controls') || "Parental Controls"}</span>
+              <span className="text-xs font-bold text-[#16165F]">{t('parental_controls', 'Parental Controls')}</span>
             </div>
             <ChevronRight size={18} className="text-[#777A91]" />
           </button>
@@ -330,30 +333,30 @@ export default function ProfileScreen() {
               <div className="w-8 h-8 rounded-lg bg-[#17177F]/10 flex items-center justify-center shrink-0">
                 <HelpCircle size={18} className="text-[#17177F]" />
               </div>
-              <span className="text-xs font-bold text-[#16165F]">{t('help_center') || "Help Center"}</span>
+              <span className="text-xs font-bold text-[#16165F]">{t('help_center', 'Help Center')}</span>
             </div>
             <ChevronRight size={18} className="text-[#777A91]" />
           </button>
 
           {/* App Language Selector */}
           <div className="bg-white rounded-xl p-3 flex flex-col gap-2 border border-[#E0E3E5] shadow-xs">
-            <span className="text-xs font-bold text-[#16165F]">{t('app_language') || "App Language"}</span>
+            <span className="text-xs font-bold text-[#16165F]">{t('app_language', 'App Language')}</span>
             <div className="flex gap-2">
               <button 
-                onClick={() => { localStorage.setItem('i18nextLng', 'en'); window.location.reload(); }}
-                className={`flex-1 py-1.5 rounded-lg border ${localStorage.getItem('i18nextLng') === 'en' || !localStorage.getItem('i18nextLng') ? 'bg-[#17177F] text-white border-[#17177F]' : 'bg-gray-50 text-[#17177F] border-gray-200'} text-xs font-bold transition-colors`}
+                onClick={() => { localStorage.setItem('i18nextLng', 'en'); i18n?.changeLanguage('en'); }}
+                className={`flex-1 py-1.5 rounded-lg border ${(i18n?.language || localStorage.getItem('i18nextLng') || 'en').startsWith('en') ? 'bg-[#17177F] text-white border-[#17177F]' : 'bg-gray-50 text-[#17177F] border-gray-200'} text-xs font-bold transition-colors`}
               >
                 English
               </button>
               <button 
-                onClick={() => { localStorage.setItem('i18nextLng', 'hi'); window.location.reload(); }}
-                className={`flex-1 py-1.5 rounded-lg border ${localStorage.getItem('i18nextLng') === 'hi' ? 'bg-[#17177F] text-white border-[#17177F]' : 'bg-gray-50 text-[#17177F] border-gray-200'} text-xs font-bold transition-colors`}
+                onClick={() => { localStorage.setItem('i18nextLng', 'hi'); i18n?.changeLanguage('hi'); }}
+                className={`flex-1 py-1.5 rounded-lg border ${(i18n?.language || localStorage.getItem('i18nextLng') || 'en').startsWith('hi') ? 'bg-[#17177F] text-white border-[#17177F]' : 'bg-gray-50 text-[#17177F] border-gray-200'} text-xs font-bold transition-colors`}
               >
                 हिन्दी
               </button>
               <button 
-                onClick={() => { localStorage.setItem('i18nextLng', 'gu'); window.location.reload(); }}
-                className={`flex-1 py-1.5 rounded-lg border ${localStorage.getItem('i18nextLng') === 'gu' ? 'bg-[#17177F] text-white border-[#17177F]' : 'bg-gray-50 text-[#17177F] border-gray-200'} text-xs font-bold transition-colors`}
+                onClick={() => { localStorage.setItem('i18nextLng', 'gu'); i18n?.changeLanguage('gu'); }}
+                className={`flex-1 py-1.5 rounded-lg border ${(i18n?.language || localStorage.getItem('i18nextLng') || 'en').startsWith('gu') ? 'bg-[#17177F] text-white border-[#17177F]' : 'bg-gray-50 text-[#17177F] border-gray-200'} text-xs font-bold transition-colors`}
               >
                 ગુજરાતી
               </button>
@@ -370,8 +373,8 @@ export default function ProfileScreen() {
                 <LogOut size={16} />
               </div>
               <div className="text-left">
-                <span className="text-xs font-bold text-red-700 block">Logout Device</span>
-                <span className="text-[10px] font-semibold text-red-500 block">Sign out from this device</span>
+                <span className="text-xs font-bold text-red-700 block">{t('logout_device', 'Logout Device')}</span>
+                <span className="text-[10px] font-semibold text-red-500 block">{t('logout_subtitle', 'Sign out from this device')}</span>
               </div>
             </div>
             <ChevronRight size={18} className="text-red-400" />
@@ -386,22 +389,22 @@ export default function ProfileScreen() {
             <div className="w-14 h-14 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-3 border border-red-100">
               <LogOut size={28} />
             </div>
-            <h3 className="text-lg font-black text-[#17177F] mb-1">Logout Device</h3>
+            <h3 className="text-lg font-black text-[#17177F] mb-1">{t('logout_device', 'Logout Device')}</h3>
             <p className="text-xs text-[#777A91] mb-5 leading-relaxed">
-              Are you sure you want to log out from this device? You will need your credentials to sign back in.
+              {t('logout_confirm_msg', 'Are you sure you want to log out from this device? You will need your credentials to sign back in.')}
             </p>
             <div className="flex flex-col gap-2">
               <button 
                 onClick={handleLogout}
                 className="w-full py-3 bg-red-600 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-md hover:bg-red-700 active:scale-95 transition-all"
               >
-                Yes, Logout Device
+                {t('yes_logout_device', 'Yes, Logout Device')}
               </button>
               <button 
                 onClick={() => setShowLogoutModal(false)}
                 className="w-full py-3 bg-gray-100 text-[#17177F] rounded-xl font-bold text-xs hover:bg-gray-200 active:scale-95 transition-all"
               >
-                Cancel
+                {t('cancel', 'Cancel')}
               </button>
             </div>
           </div>

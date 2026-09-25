@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
   Heart,
@@ -201,6 +202,7 @@ const RenderClassIllustration = ({ classNum }: { classNum: number }) => {
 
 export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scholar Mission Play Engine (Updated)
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const chapterId = searchParams.get("chapterId") || "ch1";
   const missionSeq = parseInt(searchParams.get("missionSeq") || "1", 10);
@@ -208,6 +210,12 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
   const [loading, setLoading] = useState(true);
   const [missionData, setMissionData] = useState<any>(null);
+  // Check if an in-progress session exists in sessionStorage for this specific mission
+  const savedPhase = sessionStorage.getItem(`mission_phase_${chapterId}_${missionSeq}`);
+  const hasSavedSession = Boolean(
+    savedPhase && (savedPhase === "BOSS" || savedPhase === "QUIZ" || savedPhase === "MINI_REWARD" || savedPhase === "SUMMARY")
+  );
+
   const [phase, setPhase] = useState<StepPhase>(() => {
     if (isReplay) {
       sessionStorage.removeItem(`mission_phase_${chapterId}_${missionSeq}`);
@@ -216,23 +224,55 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       sessionStorage.removeItem(`boss_index_${chapterId}_${missionSeq}`);
       sessionStorage.removeItem(`mission_timer_${chapterId}_${missionSeq}`);
       sessionStorage.removeItem(`user_answers_${chapterId}_${missionSeq}`);
+      sessionStorage.removeItem(`quiz_correct_${chapterId}_${missionSeq}`);
+      sessionStorage.removeItem(`xp_earned_${chapterId}_${missionSeq}`);
+      sessionStorage.removeItem(`coins_earned_${chapterId}_${missionSeq}`);
+      const queryPhase = searchParams.get("phase");
+      if (queryPhase === "BOSS" || queryPhase === "QUIZ" || queryPhase === "SUMMARY") {
+        return queryPhase as StepPhase;
+      }
       return "INTRO";
+    }
+    if (hasSavedSession) {
+      return savedPhase as StepPhase;
     }
     const queryPhase = searchParams.get("phase");
     if (queryPhase === "BOSS" || queryPhase === "QUIZ" || queryPhase === "SUMMARY") {
       return queryPhase as StepPhase;
     }
-    const saved = sessionStorage.getItem(`mission_phase_${chapterId}_${missionSeq}`);
-    if (saved === "BOSS" || saved === "QUIZ" || saved === "MINI_REWARD" || saved === "SUMMARY") {
-      return saved as StepPhase;
-    }
     return "INTRO";
   });
 
   // Quiz state
-  const [currentQuizIndex, setCurrentQuizIndex] = useState(0);
+  const [currentQuizIndex, setCurrentQuizIndex] = useState(() => {
+    if (isReplay) return 0;
+    const savedAns = sessionStorage.getItem(`user_answers_${chapterId}_${missionSeq}`);
+    if (savedAns) {
+      try {
+        const arr = JSON.parse(savedAns);
+        if (Array.isArray(arr)) return arr.length;
+      } catch (e) {
+        // Ignored fallback
+      }
+    }
+    return 0;
+  });
   const [quizSelected, setQuizSelected] = useState<number | null>(null);
-  const [quizCorrectCount, setQuizCorrectCount] = useState(0);
+  const [quizCorrectCount, setQuizCorrectCount] = useState(() => {
+    if (isReplay) return 0;
+    const saved = sessionStorage.getItem(`quiz_correct_${chapterId}_${missionSeq}`);
+    if (saved !== null) return parseInt(saved, 10) || 0;
+    const savedAns = sessionStorage.getItem(`user_answers_${chapterId}_${missionSeq}`);
+    if (savedAns) {
+      try {
+        const arr = JSON.parse(savedAns);
+        if (Array.isArray(arr)) return arr.filter((a: any) => a?.isCorrect).length;
+      } catch (e) {
+        // Ignored fallback
+      }
+    }
+    return 0;
+  });
   const [basketCount, setBasketCount] = useState(0);
   const [selectedDragValue, setSelectedDragValue] = useState<string | null>(null);
   const [quizConfirmed, setQuizConfirmed] = useState(false);
@@ -240,8 +280,16 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   const [isTimeout, setIsTimeout] = useState(false);
 
   // Stats state
-  const [xpEarned, setXpEarned] = useState(0);
-  const [coinsEarned, setCoinsEarned] = useState(0);
+  const [xpEarned, setXpEarned] = useState(() => {
+    if (isReplay) return 0;
+    const saved = sessionStorage.getItem(`xp_earned_${chapterId}_${missionSeq}`);
+    return saved ? (parseInt(saved, 10) || 0) : 0;
+  });
+  const [coinsEarned, setCoinsEarned] = useState(() => {
+    if (isReplay) return 0;
+    const saved = sessionStorage.getItem(`coins_earned_${chapterId}_${missionSeq}`);
+    return saved ? (parseInt(saved, 10) || 0) : 0;
+  });
   const [streak, setStreak] = useState(1);
 
   const QUESTION_TIME_LIMIT = 30;
@@ -330,9 +378,22 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     sessionStorage.setItem(`boss_index_${chapterId}_${missionSeq}`, currentBossIndex.toString());
   }, [currentBossIndex, chapterId, missionSeq]);
 
+  useEffect(() => {
+    sessionStorage.setItem(`quiz_correct_${chapterId}_${missionSeq}`, quizCorrectCount.toString());
+  }, [quizCorrectCount, chapterId, missionSeq]);
+
+  useEffect(() => {
+    sessionStorage.setItem(`xp_earned_${chapterId}_${missionSeq}`, xpEarned.toString());
+  }, [xpEarned, chapterId, missionSeq]);
+
+  useEffect(() => {
+    sessionStorage.setItem(`coins_earned_${chapterId}_${missionSeq}`, coinsEarned.toString());
+  }, [coinsEarned, chapterId, missionSeq]);
+
   // Final Summary state
   const [completionResult, setCompletionResult] = useState<any>(null);
   const [userAnswers, setUserAnswers] = useState<any[]>(() => {
+    if (isReplay) return [];
     const saved = sessionStorage.getItem(`user_answers_${chapterId}_${missionSeq}`);
     return saved ? JSON.parse(saved) : [];
   });
@@ -343,6 +404,12 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   }, [userAnswers, chapterId, missionSeq]);
 
   useEffect(() => {
+    if (phase && phase !== "INTRO") {
+      sessionStorage.setItem(`mission_phase_${chapterId}_${missionSeq}`, phase);
+    }
+  }, [phase, chapterId, missionSeq]);
+
+  useEffect(() => {
     if (searchParams.get("replay") === "true") {
       const newParams = new URLSearchParams(searchParams);
       newParams.delete("replay");
@@ -350,21 +417,43 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     }
   }, [searchParams, navigate]);
 
+  const [isDraftRestored, setIsDraftRestored] = useState(false);
+
   // Fetch Mission Data Effect
   useEffect(() => {
     async function fetchMission() {
       try {
+        if (isReplay) {
+          apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, { method: "DELETE" }).catch(() => {});
+        }
         const res = await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}`);
         const json = await res.json();
         if (json.success && json.data) {
           setMissionData(json.data);
-          if (json.data.quizCompleted && !isReplay) {
+
+          // Restore draft from database if present (ignore when starting fresh replay)
+          const draft = isReplay ? null : json.data.activeDraft;
+          if (draft) {
+            if (typeof draft.currentQuizIndex === "number") setCurrentQuizIndex(draft.currentQuizIndex);
+            if (draft.phase && draft.phase !== "INTRO") setPhase(draft.phase);
+            if (typeof draft.quizCorrectCount === "number") setQuizCorrectCount(draft.quizCorrectCount);
+            if (Array.isArray(draft.userAnswers)) setUserAnswers(draft.userAnswers);
+            if (typeof draft.xpEarned === "number") setXpEarned(draft.xpEarned);
+            if (typeof draft.coinsEarned === "number") setCoinsEarned(draft.coinsEarned);
+            if (typeof draft.bossDamageCount === "number") setBossDamageCount(draft.bossDamageCount);
+            if (typeof draft.wrongAnswerCount === "number") setWrongAnswerCount(draft.wrongAnswerCount);
+            if (typeof draft.currentBossIndex === "number") setCurrentBossIndex(draft.currentBossIndex);
+            if (typeof draft.totalSessionSec === "number") setTotalSessionSec(draft.totalSessionSec);
+          } else if (json.data.quizCompleted && !isReplay && (!hasSavedSession || savedPhase === "BOSS")) {
             setPhase("BOSS");
           }
+
           if (json.data.doubleDamage !== undefined) {
             setHasDoubleDamage(json.data.doubleDamage);
           }
-          if (json.data.childHearts !== undefined) {
+          if (isReplay || !draft) {
+            setChildDamageCount(0);
+          } else if (json.data.childHearts !== undefined) {
             setChildDamageCount(3 - json.data.childHearts);
             if (json.data.childHearts === 0) {
               openReviveModal();
@@ -375,27 +464,90 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
         console.error("Failed to load mission:", e);
       } finally {
         setLoading(false);
+        setIsDraftRestored(true);
       }
     }
     fetchMission();
   }, [chapterId, missionSeq]);
 
-  const quizQuestions = missionData?.quizQuestions || [];
-  let bossQuestions = (missionData?.bossQuestions && missionData.bossQuestions.length > 0)
+  // Auto-sync active mission draft state to backend database (Solution 1)
+  useEffect(() => {
+    if (!isDraftRestored || isReplay || !phase || phase === "INTRO" || phase === "SUMMARY" || loading) return;
+
+    const timeoutId = setTimeout(() => {
+      apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentQuizIndex,
+          phase,
+          quizCorrectCount,
+          userAnswers,
+          xpEarned,
+          coinsEarned,
+          bossDamageCount,
+          wrongAnswerCount,
+          currentBossIndex,
+          totalSessionSec
+        })
+      }).catch((err) => console.error("Failed to sync draft to server:", err));
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [
+    isDraftRestored,
+    currentQuizIndex,
+    phase,
+    quizCorrectCount,
+    userAnswers,
+    xpEarned,
+    coinsEarned,
+    bossDamageCount,
+    wrongAnswerCount,
+    currentBossIndex,
+    totalSessionSec,
+    chapterId,
+    missionSeq,
+    isReplay,
+    loading
+  ]);
+
+  const defaultQuiz = [
+    { _id: "fq1", question: "Which of the following is a synonym for 'happy'?", options: ["Joyful", "Sad", "Angry", "Tired"], answer: "Joyful", type: "multiple_choice" },
+    { _id: "fq2", question: "Which of these is a primary color?", options: ["Red", "Green", "Purple", "Orange"], answer: "Red", type: "multiple_choice" },
+    { _id: "fq3", question: "What is the capital city of France?", options: ["Paris", "London", "Berlin", "Rome"], answer: "Paris", type: "multiple_choice" },
+    { _id: "fq4", question: "What comes after the letter B in the alphabet?", options: ["C", "A", "D", "E"], answer: "C", type: "multiple_choice" }
+  ];
+
+  const shuffleQuestionOptions = (questions: any[]) => {
+    return questions.map((q) => {
+      if (!q || !q.options || !Array.isArray(q.options) || q.options.length < 2) return q;
+      const opts = [...q.options];
+      for (let i = opts.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [opts[i], opts[j]] = [opts[j], opts[i]];
+      }
+      return { ...q, options: opts };
+    });
+  };
+
+  const rawQuiz = (missionData?.quizQuestions && missionData.quizQuestions.length > 0)
+    ? missionData.quizQuestions
+    : defaultQuiz;
+
+  const quizQuestions = useMemo(() => shuffleQuestionOptions(rawQuiz), [rawQuiz]);
+
+  const rawBoss = (missionData?.bossQuestions && missionData.bossQuestions.length > 0)
     ? missionData.bossQuestions
     : (() => {
-        if (quizQuestions.length === 0) return [];
         const half = Math.ceil(quizQuestions.length / 2);
         return [...quizQuestions.slice(half), ...quizQuestions.slice(0, half)];
       })();
 
-  if (bossQuestions.length === 0) {
-    bossQuestions = [
-      { _id: "b1", question: "Boss Challenge #1: What is 5 + 5?", options: ["10", "12", "8", "15"], answer: "10", type: "boss" },
-      { _id: "b2", question: "Boss Challenge #2: What is 10 + 10?", options: ["20", "25", "15", "30"], answer: "20", type: "boss" },
-      { _id: "b3", question: "Boss Challenge #3: What is 15 + 15?", options: ["30", "35", "25", "40"], answer: "30", type: "boss" }
-    ];
-  }
+  const bossQuestions = useMemo(() => {
+    const list = rawBoss.length > 0 ? rawBoss : (quizQuestions.length > 0 ? quizQuestions : defaultQuiz);
+    return shuffleQuestionOptions(list);
+  }, [rawBoss, quizQuestions]);
 
   const bossMaxHp = 3;
   const bossHearts = Math.max(0, bossMaxHp - bossDamageCount);
@@ -420,15 +572,44 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     setSelectedBossDragValue(null);
   }, [currentBossIndex, activeBossQ?._id]);
 
-  const activeBossOptions = (activeBossQ?.options && Array.isArray(activeBossQ.options) && activeBossQ.options.length > 0)
-    ? activeBossQ.options
-    : [activeBossQ?.answer || "Option 1", "Option 2", "Option 3", "Option 4"];
+  const activeBossOptions = useMemo(() => {
+    const rawOpts = (activeBossQ?.options && Array.isArray(activeBossQ.options) && activeBossQ.options.length > 0)
+      ? activeBossQ.options
+      : [activeBossQ?.answer || "Option 1", "Option 2", "Option 3", "Option 4"];
+
+    const opts = [...rawOpts];
+    // Seeded PRNG Fisher-Yates shuffle per question text/id
+    const seedStr = String(activeBossQ?._id || activeBossQ?.question || currentBossIndex);
+    let h = 2166136261;
+    for (let i = 0; i < seedStr.length; i++) {
+      h = Math.imul(h ^ seedStr.charCodeAt(i), 16777619);
+    }
+    const rng = () => {
+      h += h << 13;
+      h ^= h >> 7;
+      h += h << 3;
+      h ^= h >> 17;
+      return ((h += h << 5) >>> 0) / 4294967296;
+    };
+    for (let i = opts.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [opts[i], opts[j]] = [opts[j], opts[i]];
+    }
+    return opts;
+  }, [activeBossQ?._id, activeBossQ?.question, activeBossQ?.options, currentBossIndex]);
 
   const bossName = missionData?.bossName || "Boss Guardian";
   const missionTitle = missionData?.title || `Mission ${missionSeq}`;
   const missionIcon = missionData?.icon || "🎯";
 
-  const currentQ = quizQuestions[currentQuizIndex];
+  useEffect(() => {
+    if (phase === "QUIZ" && quizQuestions.length > 0 && currentQuizIndex >= quizQuestions.length) {
+      setPhase("MINI_REWARD");
+    }
+  }, [currentQuizIndex, quizQuestions.length, phase]);
+
+  const safeQuizIndex = Math.min(currentQuizIndex, Math.max(0, quizQuestions.length - 1));
+  const currentQ = quizQuestions[safeQuizIndex] || quizQuestions[0];
   const interactionType = currentQ?.interaction?.type || currentQ?.type || "multiple_choice";
   const isDragObjects = interactionType === "drag_objects";
 
@@ -446,7 +627,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     setQuizConfirmed(false);
     setQuizSelected(null);
     setSelectedDragValue(null);
-  }, [currentQuizIndex, currentQ?._id]);
+  }, [safeQuizIndex, currentQ?._id]);
 
   // Boss Expression based on health & attack status
   const getBossExpression = () => {
@@ -487,13 +668,16 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   const finalizeMission = async (finalBossDamage = bossDamageCount, finalChildDamage = childDamageCount, currentAnswers = userAnswers) => {
     setIsCompleting(true);
     try {
-      // Clear boss state
+      // Clear boss & quiz session state
       sessionStorage.removeItem(`boss_damage_${chapterId}_${missionSeq}`);
       sessionStorage.removeItem(`boss_wrong_${chapterId}_${missionSeq}`);
       sessionStorage.removeItem(`boss_index_${chapterId}_${missionSeq}`);
       sessionStorage.removeItem(`mission_phase_${chapterId}_${missionSeq}`);
       sessionStorage.removeItem(`mission_timer_${chapterId}_${missionSeq}`);
       sessionStorage.removeItem(`user_answers_${chapterId}_${missionSeq}`);
+      sessionStorage.removeItem(`quiz_correct_${chapterId}_${missionSeq}`);
+      sessionStorage.removeItem(`xp_earned_${chapterId}_${missionSeq}`);
+      sessionStorage.removeItem(`coins_earned_${chapterId}_${missionSeq}`);
 
       const bossCorrect = finalBossDamage;
       const res = await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/complete`, {
@@ -551,6 +735,9 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     sessionStorage.removeItem(`mission_phase_${chapterId}_${missionSeq}`);
     sessionStorage.removeItem(`mission_timer_${chapterId}_${missionSeq}`);
     sessionStorage.removeItem(`user_answers_${chapterId}_${missionSeq}`);
+    sessionStorage.removeItem(`quiz_correct_${chapterId}_${missionSeq}`);
+    sessionStorage.removeItem(`xp_earned_${chapterId}_${missionSeq}`);
+    sessionStorage.removeItem(`coins_earned_${chapterId}_${missionSeq}`);
 
     try {
       // Call backend retreat endpoint to apply XP deduction & reset hearts
@@ -604,6 +791,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       // Wrong Answer -> Dragon/Hero is Crying!
       setDragonCrying(true);
       setBossAngry(false);
+      setXpEarned((prev) => Math.max(0, prev - 25));
+      setCoinsEarned((prev) => Math.max(0, prev - 20));
       const newWrongCount = wrongAnswerCount + 1;
       setWrongAnswerCount(newWrongCount);
 
@@ -671,6 +860,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
         setCoinsEarned((prev) => prev + 10);
         setStreak((prev) => prev + 1);
       } else {
+        setXpEarned((prev) => Math.max(0, prev - 15));
+        setCoinsEarned((prev) => Math.max(0, prev - 10));
         setStreak(1);
       }
     } else {
@@ -764,6 +955,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
         setIsTimeout(true);
         setQuizConfirmed(true);
         setQuizIsCorrect(false);
+        setXpEarned((prev) => Math.max(0, prev - 15));
+        setCoinsEarned((prev) => Math.max(0, prev - 10));
         setStreak(1);
 
         const newAns = {
@@ -808,8 +1001,12 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f7f9fb] text-[#141779] flex flex-col items-center justify-center p-6 font-sans">
-        <div className="w-10 h-10 border-4 border-[#141779] border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="font-bold tracking-wide text-base animate-pulse">Preparing Mission {missionSeq}...</p>
+        <div className="relative flex items-center justify-center mb-6">
+          <div className="w-16 h-16 border-4 border-[#141779]/15 border-t-[#141779] rounded-full animate-spin shadow-sm" />
+          <span className="absolute text-2xl">🎯</span>
+        </div>
+        <h3 className="font-black text-lg text-[#141779] mb-1">Preparing Mission {missionSeq}</h3>
+        <p className="font-medium text-xs text-[#767683] animate-pulse">Loading questions and boss arena...</p>
       </div>
     );
   }
@@ -821,13 +1018,24 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           onClick={async () => {
             if (phase !== "INTRO" && phase !== "SUMMARY") {
               try {
-                await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/retreat`, {
+                await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ answers: userAnswers })
+                  body: JSON.stringify({
+                    currentQuizIndex,
+                    phase,
+                    quizCorrectCount,
+                    userAnswers,
+                    xpEarned,
+                    coinsEarned,
+                    bossDamageCount,
+                    wrongAnswerCount,
+                    currentBossIndex,
+                    totalSessionSec
+                  })
                 });
               } catch (e) {
-                console.error("Retreat on back button click failed:", e);
+                console.error("Save draft on back button click failed:", e);
               }
             }
             navigate(-1);
@@ -878,23 +1086,25 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           </motion.div>
 
           <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full font-bold text-xs uppercase tracking-widest border border-amber-300 mb-3">
-            Mission {missionSeq} Launch
+            {t('mission_launch', { seq: missionSeq, defaultValue: `Mission ${missionSeq} Launch` })}
           </span>
 
-          <h2 className="text-2xl font-black text-[#141779] mb-2">{missionTitle}</h2>
+          <h2 className="text-2xl font-black text-[#141779] mb-2">
+            {t(missionTitle.toLowerCase().replace(/ /g, '_'), { defaultValue: missionTitle })}
+          </h2>
           <p className="text-[#464652] text-sm mb-8 leading-relaxed font-medium">
-            Solve {quizQuestions.length} practice questions to charge your weapon, then defeat {bossName} in the Boss Arena!
+            {t('solve_practice_q_desc', { count: quizQuestions.length, boss: t(bossName.toLowerCase().replace(/ /g, '_'), { defaultValue: bossName }), defaultValue: `Solve ${quizQuestions.length} practice questions to charge your weapon, then defeat ${bossName} in the Boss Arena!` })}
           </p>
 
           <div className="w-full bg-white border border-gray-200 rounded-3xl p-5 mb-8 text-left flex flex-col gap-3 shadow-[0_4px_20px_rgba(0,0,0,0.05)]">
-            <h4 className="text-xs font-bold uppercase text-[#767683] tracking-wider">Mission Objectives</h4>
+            <h4 className="text-xs font-bold uppercase text-[#767683] tracking-wider">{t('mission_objectives', 'Mission Objectives')}</h4>
             <div className="flex items-center gap-3 text-sm font-semibold text-[#141779]">
               <CheckCircle2 size={18} className="text-emerald-500" />
-              <span>Complete {quizQuestions.length} Practice Questions</span>
+              <span>{t('complete_practice_questions', { count: quizQuestions.length, defaultValue: `Complete ${quizQuestions.length} Practice Questions` })}</span>
             </div>
             <div className="flex items-center gap-3 text-sm font-semibold text-[#141779]">
               <CheckCircle2 size={18} className="text-amber-500" />
-              <span>Defeat {bossName} (3 Boss Hearts)</span>
+              <span>{t('defeat_boss', { boss: t(bossName.toLowerCase().replace(/ /g, '_'), { defaultValue: bossName }), defaultValue: `Defeat ${bossName} (3 Boss Hearts)` })}</span>
             </div>
           </div>
 
@@ -902,21 +1112,21 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             onClick={() => setPhase("QUIZ")}
             className="w-full py-4 rounded-2xl bg-[#141779] text-white font-black text-base shadow-lg hover:bg-[#101362] flex items-center justify-center gap-3 active:scale-95 transition-all"
           >
-            <span>Start Mission</span>
+            <span>{t('start_mission', 'Start Mission')}</span>
             <Play size={18} className="fill-white" />
           </button>
         </main>
       )}
 
-      {phase === "QUIZ" && quizQuestions.length > 0 && (
+      {phase === "QUIZ" && (
         <main className="px-6 py-6 flex-1 flex flex-col justify-between max-w-md mx-auto w-full">
           <div>
             <div className="flex justify-between items-center text-xs font-bold text-[#767683] mb-2">
               <span className="flex items-center gap-1.5 font-extrabold text-[#141779]">
-                {isDragObjects ? "🧩 Drag & Drop Phase" : "🎯 Quiz Phase"}
+                {isDragObjects ? t('drag_drop_phase', '🧩 Drag & Drop Phase') : t('quiz_phase', '🎯 Quiz Phase')}
               </span>
               <span>
-                Question {currentQuizIndex + 1} of {quizQuestions.length}
+                {t('question_counter', { current: currentQuizIndex + 1, total: quizQuestions.length, defaultValue: `Question ${currentQuizIndex + 1} of ${quizQuestions.length}` })}
               </span>
             </div>
             <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
@@ -929,7 +1139,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
           <div className="my-4 bg-white border border-gray-200 rounded-3xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.06)] relative">
             <span className="text-xs font-bold text-[#006a62] uppercase tracking-wider block mb-2">
-              Question #{currentQuizIndex + 1} {isDragObjects ? "• Drag & Drop" : ""}
+              {t('question_number', { num: currentQuizIndex + 1, defaultValue: `Question #${currentQuizIndex + 1}` })} {isDragObjects ? t('drag_drop_tag', '• Drag & Drop') : ""}
             </span>
             <h3 className="text-lg font-bold text-[#141779] leading-snug">
               {currentQ?.question?.normalize("NFD").replace(/[\u0300-\u036f]/g, "")}
@@ -959,7 +1169,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                 {isLanguageDrag ? (
                   selectedDragValue === null ? (
                     <span className="text-gray-400 font-bold select-none text-center text-sm uppercase tracking-wider">
-                      Tap an option below to complete the spelling!
+                      {t('tap_option_spelling', 'Tap an option below to complete the spelling!')}
                     </span>
                   ) : (
                     <span className="text-5xl font-black text-indigo-700 bg-indigo-50 border-2 border-indigo-300 px-6 py-4 rounded-2xl shadow-inner animate-in zoom-in-50 duration-200">
@@ -970,7 +1180,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                   <>
                     {basketCount === 0 && (
                       <span className="text-gray-400 font-bold select-none text-center text-sm uppercase tracking-wider">
-                        Tap items below to add to Basket!
+                        {t('tap_items_basket', 'Tap items below to add to Basket!')}
                       </span>
                     )}
                     {Array.from({ length: basketCount }).map((_, i) => (
@@ -1080,7 +1290,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                       : "bg-red-600 text-white hover:bg-red-700"
                 }`}
             >
-              <span>{quizConfirmed ? "CONTINUE →" : "CHECK ANSWER"}</span>
+              <span>{quizConfirmed ? t('continue_btn', 'CONTINUE →') : t('check_answer', 'CHECK ANSWER')}</span>
             </button>
           </div>
         </main>
@@ -1098,21 +1308,21 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             </motion.div>
 
             <h2 className="text-2xl font-black text-[#141779] mb-2">
-              Quiz Phase Complete!
+              {t('quiz_phase_complete', 'Quiz Phase Complete!')}
             </h2>
             <p className="text-[#464652] text-sm mb-6 font-medium leading-relaxed">
-              Awesome job! You answered {quizCorrectCount} out of {quizQuestions.length} correctly. Your energy is charged for the Boss Battle!
+              {t('quiz_phase_complete_desc', { correct: quizCorrectCount, total: quizQuestions.length, defaultValue: `Awesome job! You answered ${quizCorrectCount} out of ${quizQuestions.length} correctly. Your energy is charged for the Boss Battle!` })}
             </p>
 
             <div className="bg-white border border-gray-200 p-5 rounded-3xl w-full mb-8 flex justify-around shadow-xs">
               <div>
-                <span className="text-xs text-[#767683] block font-semibold">Bonus XP</span>
-                <span className="text-xl font-black text-amber-600">+{quizCorrectCount * 15}</span>
+                <span className="text-xs text-[#767683] block font-semibold">{t('bonus_xp', 'Bonus XP')}</span>
+                <span className="text-xl font-black text-amber-600">+{xpEarned}</span>
               </div>
               <div className="w-px bg-gray-200" />
               <div>
-                <span className="text-xs text-[#767683] block font-semibold">Bonus Coins</span>
-                <span className="text-xl font-black text-teal-600">+{quizCorrectCount * 10}</span>
+                <span className="text-xs text-[#767683] block font-semibold">{t('bonus_coins', 'Bonus Coins')}</span>
+                <span className="text-xl font-black text-teal-600">+{coinsEarned}</span>
               </div>
             </div>
 
@@ -1120,7 +1330,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
               onClick={() => setPhase("BOSS")}
               className="w-full py-4 rounded-2xl bg-[#141779] text-white font-black text-base shadow-lg hover:bg-[#101362] flex items-center justify-center gap-3 active:scale-95 transition-all"
             >
-              <span>Enter Boss Arena 👹</span>
+              <span>{t('enter_boss_arena', 'Enter Boss Arena 👹')}</span>
             </button>
           </main>
         );
@@ -1128,18 +1338,18 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
       {phase === "BOSS" && (
         <main className="px-6 py-6 flex-1 flex flex-col justify-between max-w-md mx-auto w-full">
-          {/* Re-designed Boss Battle Header Card */}
-          <div className="bg-gradient-to-br from-[#0f172a] via-[#1e1b4b] to-[#312e81] text-white rounded-[28px] p-5 mb-4 shadow-[0_12px_40px_rgba(49,46,129,0.35)] border-2 border-indigo-400/30 relative overflow-hidden">
+          {/* Re-designed Light Theme Boss Battle Header Card */}
+          <div className="bg-gradient-to-br from-white via-[#F8FAFC] to-[#F1F5F9] rounded-[28px] p-5 mb-4 shadow-[0_10px_35px_rgba(20,23,121,0.07)] border-2 border-[#141779]/15 relative overflow-hidden">
             {/* Background Orbs & Sparkles */}
-            <div className="absolute -top-12 -left-12 w-36 h-36 rounded-full bg-amber-400/20 blur-2xl pointer-events-none" />
-            <div className="absolute -bottom-12 -right-12 w-36 h-36 rounded-full bg-indigo-500/25 blur-2xl pointer-events-none" />
+            <div className="absolute -top-12 -left-12 w-36 h-36 rounded-full bg-amber-200/40 blur-2xl pointer-events-none" />
+            <div className="absolute -bottom-12 -right-12 w-36 h-36 rounded-full bg-indigo-200/40 blur-2xl pointer-events-none" />
 
             {/* Top Bar: Hero vs Boss Header */}
             <div className="flex items-center justify-between mb-3.5 relative z-10 gap-1.5 sm:gap-2">
 
               {/* Left: Dragon Hero */}
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <div className="hidden xs:flex w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/10 border border-white/20 items-center justify-center text-xl relative shadow-inner shrink-0">
+                <div className="hidden xs:flex w-9 h-9 rounded-xl bg-teal-50 border border-teal-200 items-center justify-center text-xl relative shadow-xs shrink-0">
                   <span>🐲</span>
                   {dragonCrying && (
                     <motion.span
@@ -1153,7 +1363,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                   )}
                 </div>
                 <div>
-                  <span className="text-[10px] sm:text-[11px] font-black uppercase text-amber-300 tracking-wider block leading-tight">
+                  <span className="text-[10px] sm:text-[11px] font-black uppercase text-[#006a62] tracking-wider block leading-tight">
                     Dragon Hero
                   </span>
                   <div className="flex gap-0.5 mt-0.5">
@@ -1161,7 +1371,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                       <Heart
                         key={h}
                         size={12}
-                        className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${h <= childHearts ? (dragonCrying ? "text-cyan-300 fill-cyan-300 animate-ping" : "text-rose-400 fill-rose-400 animate-pulse") : "text-white/20"}`}
+                        className={`w-3.5 h-3.5 ${h <= childHearts ? (dragonCrying ? "text-cyan-500 fill-cyan-400 animate-ping" : "text-rose-500 fill-rose-500 animate-pulse") : "text-gray-300"}`}
                       />
                     ))}
                   </div>
@@ -1169,14 +1379,15 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
               </div>
 
               {/* Center: Boss Stage Badge */}
-              <div className="px-2 sm:px-3 py-1 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 text-slate-950 font-black text-[9px] sm:text-[10px] uppercase tracking-wider sm:tracking-widest rounded-full shadow-md border border-amber-200 shrink-0">
-                BOSS STAGE ⚔️
+              <div className="px-3 py-1 bg-gradient-to-r from-[#141779] to-[#25299e] text-white font-black text-[9px] sm:text-[10px] uppercase tracking-wider sm:tracking-widest rounded-full shadow-md border border-[#141779]/30 shrink-0 flex items-center gap-1">
+                <span>BOSS STAGE</span>
+                <span>⚔️</span>
               </div>
 
               {/* Right: Boss Guardian */}
               <div className="flex items-center gap-1.5 sm:gap-2 justify-end">
                 <div className="text-right">
-                  <span className="text-[10px] sm:text-[11px] font-black uppercase text-indigo-200 tracking-wider block leading-tight truncate max-w-[80px] xs:max-w-[100px] sm:max-w-[130px]">
+                  <span className="text-[10px] sm:text-[11px] font-black uppercase text-[#141779] tracking-wider block leading-tight truncate max-w-[80px] xs:max-w-[100px] sm:max-w-[130px]">
                     {bossName ? bossName.split(' ')[0] : 'BOSS'}
                   </span>
                   <div className="flex gap-0.5 mt-0.5 justify-end">
@@ -1184,12 +1395,12 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                       <Heart
                         key={h}
                         size={12}
-                        className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${h <= bossHearts ? "text-amber-400 fill-amber-400 animate-pulse" : "text-white/20"}`}
+                        className={`w-3.5 h-3.5 ${h <= bossHearts ? "text-amber-500 fill-amber-400 animate-pulse" : "text-gray-300"}`}
                       />
                     ))}
                   </div>
                 </div>
-                <div className="hidden xs:flex w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-amber-400/10 border border-amber-300/30 items-center justify-center text-xl shadow-inner shrink-0">
+                <div className="hidden xs:flex w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 items-center justify-center text-xl shadow-xs shrink-0">
                   <span>🐉</span>
                 </div>
               </div>
@@ -1197,7 +1408,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             </div>
 
             {/* Inner Boss Card */}
-            <div className="relative p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-between shadow-inner overflow-hidden">
+            <div className="relative p-4 rounded-2xl bg-white/90 backdrop-blur-md border border-gray-200 flex items-center justify-between shadow-xs overflow-hidden">
               <motion.div
                 animate={{
                   scale: bossAngry ? [1, 1.08, 1] : 1,
@@ -1206,45 +1417,45 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                 transition={{ duration: 0.5, repeat: bossAngry ? 2 : 0 }}
                 className="relative z-10 flex items-center gap-3"
               >
-                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-600/30 backdrop-blur-xs border border-white/30 flex items-center justify-center text-3xl shadow-inner relative ${bossAngry ? "ring-4 ring-rose-500/80 animate-pulse" : ""
+                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100 border-2 border-amber-200 flex items-center justify-center text-3xl shadow-sm relative ${bossAngry ? "ring-4 ring-rose-500/80 animate-pulse" : ""
                   }`}>
-                  <span>🐲</span>
+                  <span>🐉</span>
                   {bossAngry && (
                     <motion.span
                       initial={{ scale: 0.8 }}
                       animate={{ scale: [1, 1.2, 1] }}
                       transition={{ duration: 0.4, repeat: Infinity }}
-                      className="absolute -top-2.5 -right-2 text-[9px] font-black bg-rose-600 text-white px-1.5 py-0.5 rounded-full border border-white uppercase tracking-wider"
+                      className="absolute -top-2.5 -right-2 text-[9px] font-black bg-rose-600 text-white px-1.5 py-0.5 rounded-full border border-white uppercase tracking-wider shadow-sm"
                     >
                       ANGRY!
                     </motion.span>
                   )}
                 </div>
                 <div>
-                  <h4 className="text-base font-black text-white">{bossName}</h4>
-                  <span className={`text-xs font-extrabold ${bossAngry ? "text-rose-300 animate-pulse" : "text-amber-300"}`}>
+                  <h4 className="text-base font-black text-[#141779]">{bossName}</h4>
+                  <span className={`text-xs font-black ${bossAngry ? "text-rose-600 animate-pulse" : "text-amber-600"}`}>
                     {bossState.status}
                   </span>
                 </div>
               </motion.div>
 
               <div className="relative z-10 flex flex-col items-end gap-1.5 shrink-0">
-                <span className="text-xs font-black bg-white/20 backdrop-blur-md px-3.5 py-1 rounded-full border border-white/30 text-white shadow-xs whitespace-nowrap">
+                <span className="text-xs font-black bg-amber-50 border border-amber-300 px-3.5 py-1 rounded-full text-[#141779] shadow-xs whitespace-nowrap">
                   {bossHearts} / 3 HP
                 </span>
               </div>
 
-              <Sparkles className="absolute -right-4 -bottom-4 w-28 h-28 text-amber-300/15 pointer-events-none animate-spin" />
+              <Sparkles className="absolute -right-4 -bottom-4 w-28 h-28 text-amber-500/10 pointer-events-none animate-spin" />
             </div>
           </div>
 
-
-
-          <div className="my-2 bg-white border border-gray-200 rounded-3xl p-6 shadow-sm relative">
-            <span className="text-xs font-bold text-[#141779] uppercase tracking-wider block mb-2">
-              Boss Strike #{safeBossIndex + 1} {isBossDrag ? "• Drag & Drop Strike" : "• Direct Strike"}
+          <div className="my-2 bg-white border-2 border-[#141779]/15 rounded-3xl p-5 sm:p-6 shadow-[0_4px_20px_rgba(20,23,121,0.06)] relative">
+            <span className="text-xs font-black text-[#006a62] uppercase tracking-wider block mb-2 flex items-center gap-1.5">
+              <span>⚔️ Boss Strike #{safeBossIndex + 1}</span>
+              <span>•</span>
+              <span>{isBossDrag ? "Drag & Drop Strike" : "Direct Strike"}</span>
             </span>
-            <h3 className="text-lg font-bold text-[#141779] leading-snug">
+            <h3 className="text-base sm:text-lg font-black text-[#141779] leading-snug">
               {activeBossQ?.question?.replace(/^(Boss\s+)?(Challenge|Question)(\s*#\d+)?(\s*\([^)]+\))?:\s*/i, "").trim().replace(/^\w/, c => c.toUpperCase()).normalize("NFD").replace(/[\u0300-\u036f]/g, "")}
             </h3>
           </div>
@@ -1252,7 +1463,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           {isBossDrag ? (
             <div className="flex flex-col gap-4 mb-4">
               <div
-                className="w-full min-h-[120px] rounded-2xl border-2 border-dashed border-[#141779]/30 bg-[#f0f2ff] p-4 flex flex-wrap gap-2 items-center justify-center cursor-pointer shadow-inner"
+                className="w-full min-h-[120px] rounded-2xl border-2 border-dashed border-[#141779]/30 bg-indigo-50/60 p-4 flex flex-wrap gap-2 items-center justify-center cursor-pointer shadow-inner"
                 onClick={() => {
                   if (!bossConfirmed) {
                     if (isBossLanguageDrag) {
@@ -1267,10 +1478,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                 {isBossLanguageDrag ? (
                   selectedBossDragValue === null ? (
                     <span className="text-[#141779]/70 font-bold select-none text-center text-xs uppercase tracking-wider">
-                      Tap an option below to fill the boss weapon slot!
+                      {t('tap_boss_slot', 'Tap an option below to fill the boss weapon slot!')}
                     </span>
                   ) : (
-                    <span className="text-4xl font-black text-indigo-700 bg-indigo-50 border-2 border-indigo-300 px-5 py-3 rounded-xl shadow-inner animate-in zoom-in-50 duration-200">
+                    <span className="text-4xl font-black text-indigo-700 bg-white border-2 border-indigo-300 px-5 py-3 rounded-xl shadow-sm animate-in zoom-in-50 duration-200">
                       {selectedBossDragValue}
                     </span>
                   )
@@ -1278,7 +1489,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                   <>
                     {bossBasketCount === 0 && (
                       <span className="text-[#141779]/70 font-bold select-none text-center text-xs uppercase tracking-wider">
-                        Tap items below to load into Weapon Basket!
+                        {t('tap_items_basket', 'Tap items below to load into Weapon Basket!')}
                       </span>
                     )}
                     {Array.from({ length: bossBasketCount }).map((_, i) => (
@@ -1337,7 +1548,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
               <button
                 disabled={bossConfirmed || (isBossLanguageDrag && selectedBossDragValue === null)}
                 onClick={handleBossDragConfirm}
-                className="w-full py-4 rounded-2xl bg-[#141779] text-white font-black text-base shadow-lg hover:bg-[#101362] flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#141779] to-[#25299e] text-white font-black text-base shadow-lg shadow-[#141779]/20 hover:bg-[#101362] flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-40 uppercase tracking-wider"
               >
                 <span>STRIKE BOSS ⚡</span>
               </button>
@@ -1349,22 +1560,22 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                   const isSelected = bossSelected === idx;
                   const isCorrect = String(opt).trim().toLowerCase() === String(activeBossQ?.answer).trim().toLowerCase();
 
-                  let style = "bg-white border-gray-200 text-[#141779] hover:border-[#141779]";
+                  let style = "bg-white border-2 border-gray-200 text-[#141779] hover:border-[#141779] shadow-xs hover:shadow-md";
                   if (bossConfirmed) {
                     if (isTimeout) {
-                      style = "bg-white border-gray-200 text-[#141779] opacity-60";
+                      style = "bg-white border-2 border-gray-200 text-[#141779] opacity-60";
                     } else {
                       if (isCorrect) {
-                        style = "bg-emerald-600 border-emerald-600 text-white font-bold";
+                        style = "bg-emerald-500 border-2 border-emerald-600 text-white font-black shadow-md shadow-emerald-500/20";
                       } else if (isSelected) {
-                        style = "bg-red-600 border-red-600 text-white font-bold";
+                        style = "bg-rose-500 border-2 border-rose-600 text-white font-black shadow-md shadow-rose-500/20";
                       } else {
-                        style = "bg-white border-gray-200 text-[#141779] opacity-40";
+                        style = "bg-white border-2 border-gray-200 text-[#141779] opacity-40";
                       }
                     }
                   } else {
                     if (isSelected) {
-                      style = "bg-indigo-50 border-[#141779] text-[#141779] ring-2 ring-[#141779]/50 font-bold";
+                      style = "bg-indigo-50/90 border-2 border-[#141779] text-[#141779] ring-2 ring-[#141779]/20 font-black shadow-sm";
                     }
                   }
 
@@ -1373,11 +1584,20 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                       key={idx}
                       disabled={bossConfirmed}
                       onClick={() => handleBossAnswer(idx)}
-                      className={`w-full p-4 rounded-2xl border text-left font-semibold text-base transition-all flex items-center justify-between shadow-xs ${style}`}
+                      className={`w-full p-4 rounded-2xl border text-left font-bold text-sm sm:text-base transition-all flex items-center justify-between active:scale-98 ${style}`}
                     >
-                      <span>{opt}</span>
-                      {bossConfirmed && !isTimeout && isCorrect && <CheckCircle2 size={20} className="text-white" />}
-                      {bossConfirmed && !isTimeout && isSelected && !isCorrect && <XCircle size={20} className="text-white" />}
+                      <div className="flex items-center gap-3">
+                        <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0 transition-colors ${
+                          bossConfirmed && isCorrect ? "bg-white/20 text-white" :
+                          bossConfirmed && isSelected && !isCorrect ? "bg-white/20 text-white" :
+                          isSelected ? "bg-[#141779] text-white" : "bg-gray-100 text-[#141779]"
+                        }`}>
+                          {String.fromCharCode(65 + idx)}
+                        </span>
+                        <span>{opt}</span>
+                      </div>
+                      {bossConfirmed && !isTimeout && isCorrect && <CheckCircle2 size={20} className="text-white shrink-0" />}
+                      {bossConfirmed && !isTimeout && isSelected && !isCorrect && <XCircle size={20} className="text-white shrink-0" />}
                     </button>
                   );
                 })}
@@ -1386,7 +1606,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
               <button
                 disabled={bossSelected === null || bossConfirmed}
                 onClick={handleBossMCConfirm}
-                className="w-full py-4 mt-2 rounded-2xl bg-[#141779] text-white font-black text-base shadow-lg hover:bg-[#101362] flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
+                className="w-full py-4 mt-2 rounded-2xl bg-gradient-to-r from-[#141779] to-[#25299e] text-white font-black text-base shadow-lg shadow-[#141779]/20 hover:bg-[#101362] flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-40 uppercase tracking-wider"
               >
                 <span>STRIKE BOSS ⚡</span>
               </button>
@@ -1412,9 +1632,9 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
                 {/* Congratulations Header */}
                 <div className="space-y-1.5 max-w-xs">
-                  <h2 className="text-3xl font-black text-[#141779] leading-tight tracking-tight uppercase">Lesson Complete!</h2>
+                  <h2 className="text-3xl font-black text-[#141779] leading-tight tracking-tight uppercase">{t('lesson_complete', 'Lesson Complete!')}</h2>
                   <p className="text-xs font-bold text-[#767683] px-2 leading-relaxed">
-                    You've successfully completed the lesson. Excellent progress!
+                    {t('lesson_complete_desc', "You've successfully completed the lesson. Excellent progress!")}
                   </p>
                 </div>
 
@@ -1428,8 +1648,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                     className="flex flex-col items-center p-3 rounded-2xl bg-amber-50/70 border-2 border-amber-100/60 shadow-xs relative overflow-hidden"
                   >
                     <div className="text-2xl animate-pulse">⚡</div>
-                    <span className="text-[10px] font-black text-amber-700 uppercase tracking-wider mt-1.5">XP</span>
-                    <span className="text-base font-black text-amber-900 mt-0.5">+{completionResult?.xpEarned || 10}</span>
+                    <span className="text-[10px] font-black text-amber-700 uppercase tracking-wider mt-1.5">{t('xp', 'XP')}</span>
+                    <span className="text-base font-black text-amber-900 mt-0.5">+{completionResult?.xpEarned ?? 0}</span>
                   </motion.div>
 
                   {/* Accuracy Card */}
@@ -1440,7 +1660,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                     className="flex flex-col items-center p-3 rounded-2xl bg-emerald-50/70 border-2 border-emerald-100/60 shadow-xs relative overflow-hidden"
                   >
                     <div className="text-2xl">🎯</div>
-                    <span className="text-[10px] font-black text-emerald-700 uppercase tracking-wider mt-1.5">Accuracy</span>
+                    <span className="text-[10px] font-black text-emerald-700 uppercase tracking-wider mt-1.5">{t('accuracy', 'Accuracy')}</span>
                     <span className="text-base font-black text-emerald-900 mt-0.5">{completionResult?.accuracy ?? 100}%</span>
                   </motion.div>
 
@@ -1452,8 +1672,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                     className="flex flex-col items-center p-3 rounded-2xl bg-yellow-50/70 border-2 border-yellow-100/60 shadow-xs relative overflow-hidden"
                   >
                     <div className="text-2xl animate-spin" style={{ animationDuration: '6s' }}>🪙</div>
-                    <span className="text-[10px] font-black text-yellow-700 uppercase tracking-wider mt-1.5">Coins</span>
-                    <span className="text-base font-black text-yellow-900 mt-0.5">+{completionResult?.coinsEarned || 5}</span>
+                    <span className="text-[10px] font-black text-yellow-700 uppercase tracking-wider mt-1.5">{t('coins', 'Coins')}</span>
+                    <span className="text-base font-black text-yellow-900 mt-0.5">+{completionResult?.coinsEarned ?? 0}</span>
                   </motion.div>
                 </div>
 
@@ -1472,8 +1692,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                         />
                       </div>
                       <div className="flex justify-between items-center text-[10px] font-black text-amber-600 uppercase tracking-wider px-1">
-                        <span>Daily XP Goal</span>
-                        <span>{xpGoalPct >= 100 ? "100% Goal Mastered! 🎉" : `${xpGoalPct}% Reached`}</span>
+                        <span>{t('daily_xp_goal', 'Daily XP Goal')}</span>
+                        <span>{xpGoalPct >= 100 ? t('goal_mastered', '100% Goal Mastered! 🎉') : t('percent_reached', { percent: xpGoalPct, defaultValue: `${xpGoalPct}% Reached` })}</span>
                       </div>
                     </div>
                   );
@@ -1495,7 +1715,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                 }}
                 className="w-full py-4 rounded-2xl bg-[#141779] hover:bg-[#101362] text-white font-black text-base shadow-lg shadow-indigo-900/20 uppercase tracking-wider active:scale-95 transition-all mt-auto"
               >
-                Continue
+                {t('continue_btn', 'Continue')}
               </button>
             </main>
           )}
@@ -1585,10 +1805,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
                 <div className="space-y-2 max-w-xs mt-2">
                   <h2 className="text-2xl font-black text-slate-800 leading-tight tracking-tight uppercase">
-                    {displayedStreak} Day Streak!
+                    {t('day_streak', { streak: displayedStreak, days: displayedStreak, defaultValue: `${displayedStreak} Day Streak!` })}
                   </h2>
                   <p className="text-xs font-bold text-slate-500 leading-relaxed">
-                    Complete a lesson every day to build your streak!
+                    {t('complete_lesson_daily', 'Complete a lesson every day to build your streak!')}
                   </p>
                 </div>
               </div>
@@ -1598,57 +1818,68 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                 onClick={() => setSummaryStep("REPORT")}
                 className="w-full py-4 rounded-2xl bg-[#141779] hover:bg-[#101362] text-white font-black text-base shadow-lg shadow-indigo-900/20 uppercase tracking-wider active:scale-95 transition-all mt-auto"
               >
-                Continue
+                {t('continue_btn', 'Continue')}
               </button>
             </main>
           )}
 
           {summaryStep === "REPORT" && (
-            <main className="px-6 py-6 flex-1 flex flex-col items-center justify-center max-w-md mx-auto w-full text-center pb-8 animate-in fade-in duration-300">
+            <main className="px-6 py-6 flex-1 flex flex-col items-center max-w-md mx-auto w-full text-center overflow-y-auto">
               <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-amber-400 to-yellow-300 border-4 border-amber-200 flex items-center justify-center text-4xl mb-3 shadow-xl"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="w-20 h-20 rounded-3xl bg-[#141779] flex items-center justify-center text-4xl shadow-xl mb-3 border-4 border-amber-300 text-white shrink-0"
               >
-                🏆
+                {missionIcon}
               </motion.div>
 
               <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold text-xs uppercase tracking-widest border border-emerald-300 mb-2">
-                Mission {missionSeq} Accomplished!
+                {t('mission_accomplished', { seq: missionSeq, defaultValue: `Mission ${missionSeq} Accomplished!` })}
               </span>
 
-              <h2 className="text-2xl font-black text-[#141779] mb-1">{missionTitle} Victory!</h2>
-              <p className="text-xs text-[#464652] font-semibold mb-4">Chapter Progression & Performance Report</p>
+              <h2 className="text-2xl font-black text-[#141779] mb-1">
+                {t('victory_title', { title: t(String(missionTitle || "").toLowerCase().replace(/ /g, '_'), { defaultValue: missionTitle }), defaultValue: `${missionTitle} Victory!` })}
+              </h2>
+              <p className="text-xs text-[#464652] font-semibold mb-4">{t('progression_report', 'Chapter Progression & Performance Report')}</p>
 
-              <div className="flex gap-2 mb-6">
-                {[1, 2, 3].map((s) => (
-                  <Star
-                    key={s}
-                    size={28}
-                    className={
-                      s <= (completionResult?.stars || 3)
-                        ? "text-amber-500 fill-amber-400"
-                        : "text-gray-300"
-                    }
-                  />
-                ))}
+              <div className="flex flex-col items-center gap-1.5 mb-5">
+                <div className="flex gap-2">
+                  {[1, 2, 3].map((s) => (
+                    <Star
+                      key={s}
+                      size={28}
+                      className={
+                        s <= (completionResult?.runStars ?? (completionResult?.stars ?? 0))
+                          ? "text-amber-500 fill-amber-400"
+                          : "text-gray-300"
+                      }
+                    />
+                  ))}
+                </div>
+                {completionResult?.runStars !== undefined && completionResult?.bestStars !== undefined && completionResult.runStars < completionResult.bestStars && (
+                  <span className="text-[10px] font-extrabold text-amber-800 bg-amber-100/90 px-3 py-1 rounded-full border border-amber-300 mt-1 shadow-xs">
+                    🏆 {t('best_record_retained', { best: completionResult.bestStars, run: completionResult.runStars, defaultValue: `Best record of ${completionResult.bestStars} ⭐ preserved! (This run: ${completionResult.runStars} ⭐)` })}
+                  </span>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3 w-full mb-4">
                 <div className="bg-white border border-gray-200 rounded-3xl p-4 flex flex-col items-center shadow-xs">
-                  <span className="text-[10px] font-black text-[#767683] uppercase tracking-wider">Accuracy</span>
+                  <span className="text-[10px] font-black text-[#767683] uppercase tracking-wider">{t('accuracy', 'Accuracy')}</span>
                   <span className="text-3xl font-black text-emerald-600 mt-1">
                     {completionResult?.accuracy ?? Math.round((quizCorrectCount / Math.max(1, quizQuestions.length)) * 100)}%
                   </span>
                   <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full mt-1 border border-emerald-200">
-                    {completionResult?.targetStatus || ((completionResult?.accuracy ?? 100) >= 85 ? "Target Exceeded" : "Target Met")}
+                    {completionResult?.targetStatus 
+                      ? t(String(completionResult.targetStatus || "").toLowerCase().replace(/ /g, '_'), { defaultValue: completionResult.targetStatus })
+                      : ((completionResult?.accuracy ?? 100) >= 85 ? t('target_exceeded', 'Target Exceeded') : t('target_met', 'Target Met'))}
                   </span>
                 </div>
 
                 <div className="bg-white border border-gray-200 rounded-3xl p-4 flex flex-col items-center shadow-xs">
-                  <span className="text-[10px] font-black text-[#767683] uppercase tracking-wider">Confidence</span>
+                  <span className="text-[10px] font-black text-[#767683] uppercase tracking-wider">{t('confidence', 'Confidence')}</span>
                   <span className="text-xl font-black text-[#141779] mt-2">
-                    {completionResult?.confidenceLabel || "High Mastery 🚀"}
+                    {completionResult?.confidenceLabel ? t(String(completionResult.confidenceLabel || "").toLowerCase().replace(/ /g, '_'), { defaultValue: completionResult.confidenceLabel }) : t('high_mastery', 'High Mastery 🚀')}
                   </span>
                   <div className="w-full h-2 bg-gray-200 rounded-full mt-2 overflow-hidden">
                     <div
@@ -1665,9 +1896,9 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                     <div className="flex justify-between items-center mb-3">
                       <div>
                         <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1">
-                          <span>📈 3-Day Performance Average</span>
+                          <span>📈 {t('three_day_avg', '3-Day Performance Average')}</span>
                         </h4>
-                        <span className="text-[11px] text-gray-500 font-semibold">Short-term retention trend</span>
+                        <span className="text-[11px] text-gray-500 font-semibold">{t('short_term_retention', 'Short-term retention trend')}</span>
                       </div>
                       <span className="text-base font-black text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-xl border border-indigo-200">
                         {completionResult?.threeDayAvg ?? 0}%
@@ -1690,7 +1921,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                               className="w-full bg-gradient-to-t from-indigo-600 to-teal-400 rounded-lg"
                             />
                           </div>
-                          <span className="text-[10px] font-bold text-gray-500">{d.day}</span>
+                          <span className="text-[10px] font-bold text-gray-500">{t(String(d?.day || "").toLowerCase().replace(/ /g, '_'), { defaultValue: d?.day })}</span>
                         </div>
                       ))}
                     </div>
@@ -1701,10 +1932,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                       <Clock size={20} className="animate-pulse" />
                     </div>
                     <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1 mb-1.5">
-                      <span>📈 3-Day Performance Average</span>
+                      <span>📈 {t('three_day_avg', '3-Day Performance Average')}</span>
                     </h4>
                     <p className="text-xs text-gray-500 font-bold max-w-[280px] leading-relaxed">
-                      Required data not available. You'll see in next few learning Days.
+                      {t('data_not_available_days', "Required data not available. You'll see in next few learning Days.")}
                     </p>
                   </div>
                 )}
@@ -1716,9 +1947,9 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                     <div className="flex justify-between items-center mb-3">
                       <div>
                         <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1">
-                          <span>📊 7-Day Performance Trend</span>
+                          <span>📊 {t('seven_day_trend', '7-Day Performance Trend')}</span>
                         </h4>
-                        <span className="text-[11px] text-gray-500 font-semibold">Weekly consistency overview</span>
+                        <span className="text-[11px] text-gray-500 font-semibold">{t('weekly_consistency', 'Weekly consistency overview')}</span>
                       </div>
                       <span className="text-base font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200">
                         {completionResult?.sevenDayAvg ?? 0}%
@@ -1745,7 +1976,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                               className="w-full bg-gradient-to-t from-teal-600 to-emerald-400 rounded-md"
                             />
                           </div>
-                          <span className="text-[9px] font-extrabold text-gray-600">{d.day}</span>
+                          <span className="text-[9px] font-extrabold text-gray-600">{t(String(d?.day || "").toLowerCase(), { defaultValue: d?.day })}</span>
                         </div>
                       ))}
                     </div>
@@ -1756,10 +1987,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                       <Clock size={20} className="animate-pulse" />
                     </div>
                     <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1 mb-1.5">
-                      <span>📊 7-Day Performance Trend</span>
+                      <span>📊 {t('seven_day_trend', '7-Day Performance Trend')}</span>
                     </h4>
                     <p className="text-xs text-gray-500 font-bold max-w-[280px] leading-relaxed">
-                      Required data not available. You'll see in next few learning Days.
+                      {t('data_not_available_days', "Required data not available. You'll see in next few learning Days.")}
                     </p>
                   </div>
                 )}
@@ -1804,26 +2035,26 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                           onClick={() => navigate(`/mission-roadmap?chapterId=${chapterId}`)}
                           className="w-full py-4 rounded-2xl bg-[#141779] text-white font-black text-base shadow-lg hover:bg-[#101362] flex items-center justify-center gap-2 active:scale-95 transition-all"
                         >
-                          <span>Next Mission 🚀</span>
+                          <span>{t('next_mission_btn', 'Next Mission 🚀')}</span>
                           <Play size={18} className="fill-white" />
                         </button>
                         <button
                           onClick={handleReplayMission}
                           className="w-full py-3 rounded-2xl bg-white border-2 border-indigo-200 text-[#141779] font-black text-sm hover:bg-indigo-50 flex items-center justify-center gap-2 active:scale-95 transition-all"
                         >
-                          <span>Replay Mission 🔄</span>
+                          <span>{t('replay_mission_btn', 'Replay Mission 🔄')}</span>
                         </button>
                       </>
                     ) : (
                       <>
                         <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-2xl text-xs font-bold text-center">
-                          ⚠️ 75% accuracy is required to unlock the Next Mission. Replay to master unmastered questions!
+                          ⚠️ {t('pass_accuracy_warning', '75% accuracy is required to unlock the Next Mission. Replay to master unmastered questions!')}
                         </div>
                         <button
                           onClick={handleReplayMission}
                           className="w-full py-4 rounded-2xl bg-[#141779] text-white font-black text-base shadow-lg hover:bg-[#101362] flex items-center justify-center gap-2 active:scale-95 transition-all"
                         >
-                          <span>Replay Mission 🔄</span>
+                          <span>{t('replay_mission_btn', 'Replay Mission 🔄')}</span>
                         </button>
                         <button
                           onClick={() => navigate(`/mission-roadmap?chapterId=${chapterId}`)}
@@ -1842,39 +2073,39 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       )}
 
       {showReviveModal && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/80 backdrop-blur-md px-6 text-center">
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-900/40 backdrop-blur-md px-6 text-center">
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-gradient-to-br from-[#141779] to-[#07051a] border-2 border-[#57fae9]/30 rounded-3xl p-8 max-w-sm w-full shadow-[0_0_50px_rgba(87,250,233,0.25)] flex flex-col items-center gap-6"
+            className="bg-white border-2 border-[#141779]/20 rounded-3xl p-8 max-w-sm w-full shadow-[0_20px_60px_rgba(20,23,121,0.15)] flex flex-col items-center gap-6"
           >
-            <div className="w-20 h-20 rounded-full bg-[#57fae9]/10 border border-[#57fae9]/30 flex items-center justify-center animate-pulse">
-              <Swords className="text-[#57fae9] w-10 h-10 animate-bounce" />
+            <div className="w-20 h-20 rounded-full bg-teal-50 border-2 border-teal-200 flex items-center justify-center animate-pulse">
+              <Swords className="text-[#006a62] w-10 h-10 animate-bounce" />
             </div>
             <div>
-              <h2 className="text-3xl font-black text-white uppercase tracking-widest">Final Chance!</h2>
-              <p className="text-sm text-white/70 mt-2">
+              <h2 className="text-2xl font-black text-[#141779] uppercase tracking-widest">Final Chance!</h2>
+              <p className="text-xs font-semibold text-[#464652] mt-2 leading-relaxed">
                 You ran out of hearts! Revive using the Revival Wheel to keep your current progress and fight on!
               </p>
             </div>
 
-            <div className="w-full bg-white/5 rounded-2xl p-4 border border-white/10 flex justify-between items-center text-center">
+            <div className="w-full bg-[#f8fafc] rounded-2xl p-4 border border-gray-200 flex justify-between items-center text-center shadow-xs">
               <div className="flex-1">
-                <span className="text-[10px] text-white/50 uppercase font-black tracking-widest block mb-1">Revival Spins</span>
-                <span className="text-2xl font-black text-[#57fae9]">{revivalSpins}</span>
+                <span className="text-[10px] text-[#767683] uppercase font-black tracking-widest block mb-1">Revival Spins</span>
+                <span className="text-2xl font-black text-teal-700">{revivalSpins}</span>
               </div>
-              <div className="w-px h-8 bg-white/10" />
+              <div className="w-px h-8 bg-gray-200" />
               <div className="flex-1">
-                <span className="text-[10px] text-white/50 uppercase font-black tracking-widest block mb-1">Your Coins</span>
-                <span className="text-2xl font-black text-amber-400">🪙 {Math.max(0, userCoins)}</span>
+                <span className="text-[10px] text-[#767683] uppercase font-black tracking-widest block mb-1">Your Coins</span>
+                <span className="text-2xl font-black text-amber-600">🪙 {Math.max(0, userCoins)}</span>
               </div>
             </div>
 
-            <div className="flex flex-col gap-2 w-full">
+            <div className="flex flex-col gap-2.5 w-full">
               {revivalSpins > 0 ? (
                 <button
                   onClick={() => navigate(`/daily-rewards?type=boss_revival&chapter_id=${chapterId}`)}
-                  className="w-full py-4 bg-[#57fae9] text-[#007168] font-bold rounded-full hover:bg-[#45e0d0] active:scale-95 transition-all uppercase tracking-wide text-sm flex items-center justify-center gap-2"
+                  className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-black rounded-2xl hover:brightness-110 active:scale-95 transition-all uppercase tracking-wider text-sm flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20"
                 >
                   <span>🔥 Spin to Revive</span>
                 </button>
@@ -1902,7 +2133,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                       showToast("Purchase failed.");
                     }
                   }}
-                  className="w-full py-4 bg-amber-400 text-slate-950 font-bold rounded-full hover:bg-amber-300 active:scale-95 transition-all uppercase tracking-wide text-sm flex items-center justify-center gap-2"
+                  className="w-full py-4 bg-gradient-to-r from-amber-400 to-orange-500 text-white font-black rounded-2xl hover:brightness-110 active:scale-95 transition-all uppercase tracking-wider text-sm flex items-center justify-center gap-2 shadow-md shadow-amber-500/20"
                 >
                   <span>🛒 Buy Revival Spin (100 🪙)</span>
                 </button>
@@ -1910,7 +2141,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
               <button
                 onClick={handleGiveUp}
-                className="w-full py-3 bg-white/5 text-white/50 font-bold rounded-full hover:bg-white/10 active:scale-95 transition-all text-xs"
+                className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold rounded-2xl active:scale-95 transition-all text-xs border border-gray-200"
               >
                 Retreat & Lose XP
               </button>
@@ -1921,39 +2152,36 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
       {/* Defeat/Retreat Overlay Animation */}
       {lossOverlay.show && (
-        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-950/95 backdrop-blur-md px-6 text-center">
+        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-900/40 backdrop-blur-md px-6 text-center">
           <motion.div
             initial={{ scale: 0.9, opacity: 0, y: 30 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             transition={{ type: "spring", duration: 0.5 }}
-            className="bg-gradient-to-br from-[#141779] to-[#07051a] border-2 border-[#57fae9]/30 rounded-3xl p-8 max-w-sm w-full shadow-[0_0_60px_rgba(87,250,233,0.2)] flex flex-col items-center gap-6"
+            className="bg-white border-2 border-rose-200 rounded-3xl p-8 max-w-sm w-full shadow-[0_20px_60px_rgba(0,0,0,0.12)] flex flex-col items-center gap-6"
           >
             {/* Spotlight Icon */}
-            <div className="w-20 h-20 rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center shadow-inner relative">
-              <ShieldAlert className="text-rose-400 w-10 h-10 animate-pulse" />
-              <div className="absolute inset-0 rounded-full bg-rose-500/5 blur-md" />
+            <div className="w-20 h-20 rounded-full bg-rose-50 border-2 border-rose-200 flex items-center justify-center shadow-xs relative">
+              <ShieldAlert className="text-rose-600 w-10 h-10 animate-pulse" />
             </div>
 
             {/* Content */}
             <div className="space-y-2">
-              <h2 className="text-3xl font-black text-white uppercase tracking-wider">
+              <h2 className="text-2xl font-black text-[#141779] uppercase tracking-wider">
                 Fall Back!
               </h2>
-              <p className="text-sm text-white/70 leading-relaxed font-semibold">
+              <p className="text-xs text-[#464652] leading-relaxed font-bold">
                 You retreated from the mission. Rest up and try again!
               </p>
             </div>
 
             {/* Penalty Box */}
-            <div className="w-full bg-white/5 rounded-2xl p-4 border border-white/10 relative overflow-hidden">
-              <span className="text-xs text-white/40 uppercase font-black tracking-widest block mb-1">
+            <div className="w-full bg-rose-50/70 rounded-2xl p-4 border border-rose-200 relative overflow-hidden">
+              <span className="text-[10px] text-rose-700 uppercase font-black tracking-widest block mb-1">
                 XP Penalty
               </span>
-              <span className="text-3xl font-black text-rose-400 drop-shadow-md">
+              <span className="text-2xl font-black text-rose-600">
                 {lossOverlay.xpLoss} XP
               </span>
-              {/* Decorative accent */}
-              <div className="absolute right-0 top-0 bottom-0 w-1 bg-rose-500/40" />
             </div>
           </motion.div>
         </div>

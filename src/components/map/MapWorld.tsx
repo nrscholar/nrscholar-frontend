@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { WORLD_THEMES, MapWorldThemeConfig, MapStageConfig } from "./AdventureTheme";
 import LocationModalSheet from "./LocationModalSheet";
 import { Check, Lock, Star, Play, Sparkles, BookOpen } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface MapWorldProps {
   themeKey?: "dragon" | "science" | "reading" | "space" | "social";
@@ -71,6 +72,7 @@ export default function MapWorld({
   nodes,
   progressPercentage = 0
 }: MapWorldProps) {
+  const { t } = useTranslation();
   const theme: MapWorldThemeConfig = WORLD_THEMES[themeKey] || WORLD_THEMES.dragon;
   const tv = THEME_VISUALS[themeKey] || THEME_VISUALS.dragon;
   const isSpaceDark = themeKey === "space";
@@ -269,10 +271,10 @@ export default function MapWorld({
                     {/* Content column */}
                     <div className="flex-1 min-w-0">
                       <span className={`text-[9px] font-black uppercase tracking-widest ${cardStyle.labelColor}`}>
-                        {isCompleted ? "✓ Unlocked" : isCurrent ? "▶ In Progress" : "⏸ Locked"}
+                        {isCompleted ? `✓ ${t('unlocked_status', 'Unlocked')}` : isCurrent ? `▶ ${t('in_progress_status', 'In Progress')}` : `⏸ ${t('locked_status', 'Locked')}`}
                       </span>
                       <h3 className={`text-sm font-black leading-snug mt-0.5 ${cardStyle.titleColor}`}>
-                        {stage.name}
+                        {t(stage.name.toLowerCase().replace(/ /g, '_'), { defaultValue: stage.name })}
                       </h3>
 
                       {/* Progress bar */}
@@ -285,13 +287,13 @@ export default function MapWorld({
                         />
                       </div>
                       <p className={`text-[9px] font-bold mt-0.5 ${isSpaceDark ? "text-white/40" : "text-slate-400"}`}>
-                        {stageProgress}% Completed
+                        {stageProgress}% {t('completed', 'Completed')}
                       </p>
 
                       {/* Chapter pill */}
                       <div className={`inline-flex items-center gap-1 text-[10px] font-bold mt-2 px-2.5 py-1 rounded-full border ${cardStyle.pill}`}>
                         <BookOpen size={10} />
-                        <span>{stage.itemReward}</span>
+                        <span>{t('chapters_count_label', { count: stage.questsCount || (stage.itemReward ? parseInt(stage.itemReward) || 3 : 3) })}</span>
                       </div>
                     </div>
                   </div>

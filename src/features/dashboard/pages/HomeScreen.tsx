@@ -18,6 +18,8 @@ export default function HomeScreen() {
   const [userData, setUserData] = useState<any>(null);
   const [showSwitcher, setShowSwitcher] = useState(false);
   const [showDailyMissionModal, setShowDailyMissionModal] = useState(false);
+  const [questTab, setQuestTab] = useState<'all' | 'active' | 'completed'>('all');
+
 
   const [dailyLimitReached, setDailyLimitReached] = useState(false);
   const [todayCompletedCount, setTodayCompletedCount] = useState(0);
@@ -379,15 +381,15 @@ export default function HomeScreen() {
             <h1 className="text-sm font-black text-slate-900 leading-tight truncate">{childName}</h1>
             <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
               <span className="text-[10px] text-[#5B5CFF] bg-[#EEF1FF] font-black px-1.5 py-0.5 rounded-md border border-[#5B5CFF]/20 shrink-0">
-                {userData?.childClass || "Class 1"}
+                {userData?.childClass || t('class_1', { defaultValue: "Class 1" })}
               </span>
               {userData?.childAge && (
                 <span className="text-[10px] text-amber-700 bg-amber-50 font-black px-1.5 py-0.5 rounded-md border border-amber-200/60 shrink-0">
-                  {userData.childAge} yrs
+                  {userData.childAge} {t('yrs', { defaultValue: "yrs" })}
                 </span>
               )}
               <span className="text-[10px] text-slate-500 font-extrabold truncate">
-                {t('explorer_level')} {userLevel}
+                {t('explorer_level', { defaultValue: "Explorer Level" })} {userLevel}
               </span>
             </div>
           </div>
@@ -423,7 +425,7 @@ export default function HomeScreen() {
         </div>
       </header>
 
-      <main className="px-5 pt-[78px] flex flex-col gap-4 relative z-10">
+      <main className="px-5 pt-[96px] flex flex-col gap-4 relative z-10">
         {/* 1. ADVENTURE HERO CARD (LIGHT THEME WITH ANIMATED CHARACTER & PARTICLES) */}
         <AdventureHero
           themeKey={journeyData?.tierKey === "scientist" ? "science" : journeyData?.tierKey === "social_proof" ? "social" : "dragon"}
@@ -523,16 +525,20 @@ export default function HomeScreen() {
         <section>
           <button
             onClick={() => navigate("/parent")}
-            className="w-full bg-white rounded-[20px] p-3.5 flex justify-between items-center border-2 border-[#eef0f2] shadow-xs hover:bg-gray-50 transition-colors"
+            className="w-full bg-white rounded-[20px] p-3.5 flex justify-between items-center border-2 border-indigo-100 shadow-xs hover:bg-indigo-50/50 hover:border-indigo-200 transition-all group cursor-pointer"
           >
             <div className="flex items-center gap-3">
-              <Shield size={20} className="text-[#141779]" />
+              <div className="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center shrink-0 border border-indigo-100">
+                <Shield size={18} className="text-[#141779]" />
+              </div>
               <div className="text-left">
-                <h3 className="text-xs font-black text-[#141779]">{t('parent_space')}</h3>
-                <p className="text-[10px] text-[#767683] font-semibold">{t('view_stats_dna')}</p>
+                <h3 className="text-xs font-black text-[#141779] flex items-center gap-1.5">
+                  <span>{t('parent_space', 'Parent Space')}</span>
+                </h3>
+                <p className="text-[10px] text-slate-500 font-semibold">{t('view_stats_dna', 'View detailed stats and learning DNA')}</p>
               </div>
             </div>
-            <ChevronRight size={20} className="text-[#141779]" />
+            <ChevronRight size={20} className="text-[#141779] group-hover:translate-x-0.5 transition-transform" />
           </button>
         </section>
       </main>
@@ -540,154 +546,212 @@ export default function HomeScreen() {
       {/* DAILY MISSIONS MODAL */}
       <AnimatePresence>
         {showDailyMissionModal && (
-          <div className="fixed inset-0 z-[100] bg-slate-950/80 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+          <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-hidden">
             <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 40 }}
+              initial={{ scale: 0.9, opacity: 0, y: 30 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 40 }}
+              exit={{ scale: 0.9, opacity: 0, y: 30 }}
               transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              className="bg-white text-slate-950 w-full max-w-[430px] max-h-[90vh] p-5 sm:p-7 rounded-[32px] border-2 border-slate-200 shadow-2xl flex flex-col gap-4 sm:gap-6 relative overflow-hidden my-auto"
+              className="bg-white text-slate-950 w-full max-w-[440px] h-[82vh] max-h-[620px] p-4 sm:p-6 rounded-[32px] border-2 border-slate-200 shadow-2xl flex flex-col relative overflow-hidden"
             >
-              <div className="flex items-center justify-between pb-4 border-b-2 border-slate-100 relative z-10">
-                <div className="flex items-center gap-3.5 min-w-0">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-400 to-amber-500 text-slate-950 flex items-center justify-center shadow-lg shadow-amber-500/20 border-2 border-white shrink-0">
-                    <Clock className="w-6 h-6 animate-pulse" />
+              {/* Modal Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0 relative z-10">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-400 to-amber-500 text-slate-950 flex items-center justify-center shadow-lg shadow-amber-500/20 border-2 border-white shrink-0">
+                    <Clock className="w-5 h-5 animate-pulse" />
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-lg sm:text-xl font-black text-slate-950 tracking-tight truncate">Daily Quests</h3>
-                      <span className="text-[10px] sm:text-xs font-black bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full border border-amber-400 shrink-0">
+                      <h3 className="text-base sm:text-lg font-black text-slate-950 tracking-tight truncate">{t('daily_quests', 'Daily Quests')}</h3>
+                      <span className="text-[10px] sm:text-xs font-black bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full border border-amber-400 shrink-0">
                         ⚡ {todayCompletedCount}/25
                       </span>
                     </div>
-                    <p className="text-xs font-bold text-slate-500 mt-0.5 truncate">Continuous 5,000 Missions Journey</p>
+                    <p className="text-[11px] font-bold text-slate-500 mt-0.5 truncate">{t('continuous_missions_desc', 'Continuous 5,000 Missions Journey')}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowDailyMissionModal(false)}
-                  className="w-9 h-9 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-950 flex items-center justify-center font-extrabold text-sm transition-all active:scale-90 shrink-0 ml-1"
+                  className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-950 flex items-center justify-center font-extrabold text-sm transition-all active:scale-90 shrink-0 ml-1"
                 >
                   ✕
                 </button>
               </div>
 
+              {/* Filter Tabs: All, Active, Completed */}
+              <div className="flex items-center gap-2 py-2.5 border-b border-slate-100 shrink-0 relative z-10">
+                <button
+                  onClick={() => setQuestTab('all')}
+                  className={`px-3.5 py-1.5 rounded-xl font-black text-xs transition-all ${
+                    questTab === 'all'
+                      ? 'bg-[#141779] text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {t('all', 'All')}
+                </button>
+                <button
+                  onClick={() => setQuestTab('active')}
+                  className={`px-3.5 py-1.5 rounded-xl font-black text-xs transition-all ${
+                    questTab === 'active'
+                      ? 'bg-[#141779] text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  🎯 {t('active', 'Active')}
+                </button>
+                <button
+                  onClick={() => setQuestTab('completed')}
+                  className={`px-3.5 py-1.5 rounded-xl font-black text-xs transition-all ${
+                    questTab === 'completed'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  ✅ {t('completed', 'Completed')}
+                </button>
+              </div>
+
               {dailyLimitReached ? (
-                <div className="p-6 bg-gradient-to-b from-amber-50 to-amber-100/40 rounded-[24px] border-2 border-amber-200 text-center flex flex-col items-center gap-3 shadow-sm relative z-10">
+                <div className="p-6 my-auto bg-gradient-to-b from-amber-50 to-amber-100/40 rounded-[24px] border-2 border-amber-200 text-center flex flex-col items-center gap-3 shadow-sm relative z-10">
                   <div className="w-16 h-16 rounded-full bg-amber-500 text-white flex items-center justify-center font-black text-3xl shadow-lg shadow-amber-500/25 animate-bounce">
                     🏆
                   </div>
-                  <h4 className="text-base sm:text-lg font-black text-amber-950">25 / 25 Quests Mastered Today!</h4>
+                  <h4 className="text-base sm:text-lg font-black text-amber-950">{t('quests_mastered_today', '25 / 25 Quests Mastered Today!')}</h4>
                   <p className="text-xs font-semibold text-amber-800 leading-relaxed">
-                    Sensational effort! You have completed today's maximum 25 quests. Tomorrow starts your next continuous sequence!
+                    {t('quests_mastered_desc', "Sensational effort! You have completed today's maximum 25 quests. Tomorrow starts your next continuous sequence!")}
                   </p>
                 </div>
               ) : (
-                <div className="flex flex-col gap-3 max-h-[60vh] sm:max-h-[420px] overflow-y-auto pr-1 relative z-10 custom-scrollbar">
-                  {(missions && missions.length > 0 ? missions : [
-                    { seq: 1, id: "seq_1", title: "Answer 10 Questions", coin_reward: 10, xp_reward: 20, current_progress: 0, target_progress: 10, status: "pending", mission_type: "answer_questions" },
-                    { seq: 2, id: "seq_2", title: "Win 1 Boss Battle", coin_reward: 15, xp_reward: 20, current_progress: 0, target_progress: 1, status: "pending", mission_type: "boss_win" },
-                    { seq: 3, id: "seq_3", title: "Win 1 Shadow Arena Battle", coin_reward: 50, xp_reward: 50, current_progress: 0, target_progress: 1, status: "pending", mission_type: "shadow_arena_win" }
-                  ]).map((mission, index) => {
-                    const isDone = mission.status === "completed";
-                    const isReady = mission.status === "ready_to_claim" || (mission.current_progress >= (mission.target_progress || 1) && !isDone);
-                    const cur = mission.current_progress || 0;
-                    const target = mission.target_progress || 1;
-                    const pct = Math.min(100, Math.round((cur / target) * 100));
+                /* GUARANTEED TOUCH & MOUSE SCROLL CONTAINER */
+                <div
+                  className="my-2.5 flex-1 min-h-0 overflow-y-auto overscroll-contain py-1 pr-1 flex flex-col gap-2.5 relative z-10 select-none [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-amber-400 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-100"
+                  style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
+                >
+                  {(() => {
+                    const rawList = (missions && missions.length > 0 ? missions : [
+                      { seq: 1, id: "seq_1", title: t('answer_10_questions', 'Answer 10 Questions'), coin_reward: 10, xp_reward: 20, current_progress: 0, target_progress: 10, status: "pending", mission_type: "answer_questions" },
+                      { seq: 2, id: "seq_2", title: t('win_1_boss_battle', 'Win 1 Boss Battle'), coin_reward: 15, xp_reward: 20, current_progress: 0, target_progress: 1, status: "pending", mission_type: "boss_win" },
+                      { seq: 3, id: "seq_3", title: t('win_1_shadow_arena', 'Win 1 Shadow Arena Battle'), coin_reward: 50, xp_reward: 50, current_progress: 0, target_progress: 1, status: "pending", mission_type: "shadow_arena_win" }
+                    ]);
 
-                    const getIcon = () => {
-                      if (mission.mission_type === "boss_win") return "⚔️";
-                      if (mission.mission_type === "shadow_arena_win") return "👑";
-                      return "🎯";
-                    };
+                    const filteredList = rawList.filter((m) => {
+                      const isDone = m.status === "completed";
+                      if (questTab === 'completed') return isDone;
+                      if (questTab === 'active') return !isDone;
+                      return true;
+                    });
 
-                    return (
-                      <motion.div
-                        key={mission.id || `seq_${mission.seq}`}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.08, type: "spring", stiffness: 200, damping: 20 }}
-                        className={`p-4 rounded-2xl border-2 transition-all duration-300 relative overflow-hidden ${isDone
-                            ? "bg-emerald-50 border-emerald-200 text-emerald-950 shadow-sm"
-                            : isReady
-                              ? "bg-amber-50/70 border-amber-300 shadow-md ring-2 ring-amber-400/20"
-                              : "bg-slate-50 border-slate-200 text-slate-900 hover:border-indigo-200 hover:bg-white"
+                    const sortedList = [...filteredList].sort((a, b) => {
+                      const isDoneA = a.status === "completed";
+                      const isReadyA = a.status === "ready_to_claim" || (a.current_progress >= (a.target_progress || 1) && !isDoneA);
+                      const isDoneB = b.status === "completed";
+                      const isReadyB = b.status === "ready_to_claim" || (b.current_progress >= (b.target_progress || 1) && !isDoneB);
+
+                      const orderA = isReadyA ? 0 : isDoneA ? 2 : 1;
+                      const orderB = isReadyB ? 0 : isDoneB ? 2 : 1;
+                      if (orderA !== orderB) return orderA - orderB;
+                      return (a.seq || 0) - (b.seq || 0);
+                    });
+
+                    if (sortedList.length === 0) {
+                      return (
+                        <div className="py-12 text-center text-slate-500 font-bold text-sm">
+                          {questTab === 'completed'
+                            ? t('no_completed_quests', 'No completed quests yet!')
+                            : t('no_active_quests', 'No active quests remaining!')}
+                        </div>
+                      );
+                    }
+
+                    return sortedList.map((mission) => {
+                      const isDone = mission.status === "completed";
+                      const isReady = mission.status === "ready_to_claim" || (mission.current_progress >= (mission.target_progress || 1) && !isDone);
+                      const cur = mission.current_progress || 0;
+                      const target = mission.target_progress || 1;
+
+                      const getIcon = () => {
+                        if (mission.mission_type === "boss_win") return "⚔️";
+                        if (mission.mission_type === "shadow_arena_win") return "👑";
+                        return "🎯";
+                      };
+
+                      const translatedTitle = t(mission.title.toLowerCase().replace(/ /g, '_'), { defaultValue: mission.title });
+
+                      return (
+                        <div
+                          key={mission.id || `seq_${mission.seq}`}
+                          className={`p-3 sm:p-3.5 rounded-2xl border-2 transition-all flex items-center justify-between gap-3 shrink-0 ${
+                            isDone
+                              ? "bg-emerald-50/90 border-emerald-200 text-emerald-950"
+                              : isReady
+                                ? "bg-amber-50 border-amber-300 shadow-md ring-2 ring-amber-400/20"
+                                : "bg-slate-50 border-slate-200/90 text-slate-900"
                           }`}
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-3.5 min-w-0">
-                            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 text-xl font-bold border ${isDone
-                                ? "bg-emerald-500 border-emerald-400 text-white shadow-lg shadow-emerald-500/20"
+                        >
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 text-xl font-bold border shadow-sm ${
+                              isDone
+                                ? "bg-emerald-500 border-emerald-400 text-white"
                                 : isReady
-                                  ? "bg-amber-500 border-amber-400 text-slate-950 animate-bounce shadow-lg shadow-amber-500/25"
-                                  : "bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/20"
-                              }`}>
+                                  ? "bg-amber-500 border-amber-400 text-slate-950 animate-bounce"
+                                  : "bg-[#4338ca] border-indigo-500 text-white"
+                            }`}>
                               {isDone ? <CheckCircle className="w-6 h-6" /> : getIcon()}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                                <span className="text-[10px] font-black uppercase tracking-wider bg-[#141779] text-white px-2 py-0.5 rounded-md shrink-0">
-                                  #{mission.seq}
-                                </span>
-                                <h4 className="text-sm sm:text-base font-black text-slate-950 whitespace-normal break-words leading-snug tracking-tight">
-                                  {mission.title}
-                                </h4>
-                              </div>
-                              <div className="flex items-center gap-2 text-[11px] font-black flex-wrap">
-                                <span className="inline-flex items-center gap-0.5 bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-lg border border-amber-200">
+                              <span className="inline-block bg-[#1e1b4b] text-white text-[10px] font-black px-2 py-0.5 rounded-md mb-0.5 shrink-0">
+                                #{mission.seq}
+                              </span>
+                              <h4 className="text-xs sm:text-sm font-black text-slate-950 leading-tight mb-1 truncate">
+                                {translatedTitle}
+                              </h4>
+                              <div className="flex items-center gap-1.5 text-[10px] font-black flex-wrap">
+                                <span className="inline-flex items-center gap-0.5 bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full border border-amber-200">
                                   🪙 +{mission.coin_reward || mission.coinReward || 10}
                                 </span>
-                                <span className="inline-flex items-center gap-0.5 bg-indigo-50 text-indigo-800 px-2.5 py-0.5 rounded-lg border border-indigo-100">
+                                <span className="inline-flex items-center gap-0.5 bg-indigo-100 text-indigo-900 px-2 py-0.5 rounded-full border border-indigo-200">
                                   ⭐ +{mission.xp_reward || mission.xpReward || 20}
                                 </span>
                               </div>
                             </div>
                           </div>
 
-                          {isDone ? (
-                            <span className="text-xs font-black text-emerald-800 bg-emerald-100 px-3 py-1.5 rounded-xl shrink-0 border border-emerald-200 shadow-xs flex items-center gap-1">
-                              ✓ Claimed
-                            </span>
-                          ) : isReady ? (
-                            <button
-                              onClick={() => {
-                                completeMission(mission.id || `seq_${mission.seq}`);
-                              }}
-                              className="text-xs font-black text-slate-950 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-400 hover:from-amber-500 hover:to-amber-600 active:scale-95 px-4 py-2 rounded-xl shrink-0 shadow-lg shadow-amber-500/30 animate-pulse border border-amber-300"
-                            >
-                              🎁 CLAIM
-                            </button>
-                          ) : (
-                            <div className="flex flex-col items-end shrink-0">
-                              <span className="text-xs font-black text-slate-700 bg-slate-200/80 px-2.5 py-1 rounded-xl border border-slate-300/40">
+                          {/* Right Status / Action */}
+                          <div className="shrink-0 flex items-center">
+                            {isDone ? (
+                              <span className="text-xs font-black text-emerald-800 bg-emerald-100 px-3 py-1 rounded-xl border border-emerald-200 flex items-center gap-1">
+                                {t('claimed', '✓ Claimed')}
+                              </span>
+                            ) : isReady ? (
+                              <button
+                                onClick={() => {
+                                  completeMission(mission.id || `seq_${mission.seq}`);
+                                }}
+                                className="text-xs font-black text-slate-950 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-400 hover:from-amber-500 hover:to-amber-600 active:scale-95 px-3.5 py-1.5 rounded-xl shadow-md shadow-amber-500/30 animate-pulse border border-amber-300"
+                              >
+                                {t('claim', '🎁 CLAIM')}
+                              </button>
+                            ) : (
+                              <span className="text-xs font-black text-slate-700 bg-slate-200/90 px-3 py-1 rounded-xl border border-slate-300/60">
                                 {cur} / {target}
                               </span>
-                            </div>
-                          )}
-                        </div>
-
-                        {!isDone && (
-                          <div className="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden mt-3 border border-slate-300/30 p-0.5">
-                            <div
-                              className={`h-full rounded-full transition-all duration-700 ease-out ${isReady
-                                  ? "bg-gradient-to-r from-amber-400 to-amber-600 shadow-sm"
-                                  : "bg-gradient-to-r from-indigo-500 to-indigo-700"
-                                }`}
-                              style={{ width: `${pct}%` }}
-                            />
+                            )}
                           </div>
-                        )}
-                      </motion.div>
-                    );
-                  })}
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               )}
 
-              <div className="flex justify-end pt-2 border-t border-slate-100">
+              {/* Modal Footer */}
+              <div className="flex justify-end pt-2.5 border-t border-slate-100 shrink-0 relative z-10">
                 <button
                   onClick={() => setShowDailyMissionModal(false)}
-                  className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm transition-all active:scale-95"
+                  className="px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-all active:scale-95"
                 >
-                  Close
+                  {t('close', 'Close')}
                 </button>
               </div>
             </motion.div>

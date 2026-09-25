@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Coins, Zap, Shield, MapPin, Package, Star, Gift, PartyPopper, Lock, Sparkles, Trophy, ChevronRight, Compass } from "lucide-react";
+import { ArrowLeft, Coins, Zap, Shield, MapPin, Package, Star, Gift, PartyPopper, Lock, Sparkles, Trophy, ChevronRight, Compass, Flame } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "../../../api";
+import { useTranslation } from "react-i18next";
 
 // Stylized 3D Treasure Box Hero SVG
 const MysteryBoxHeroSVG = ({ type }: { type?: string }) => {
@@ -58,6 +59,7 @@ const MysteryBoxHeroSVG = ({ type }: { type?: string }) => {
 
 export default function InventoryScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<"Mystery Boxes" | "Dragon Academy" | "Cities" | "Badges">("Mystery Boxes");
 
   const [mysteryBoxes, setMysteryBoxes] = useState<any>({});
@@ -71,6 +73,8 @@ export default function InventoryScreen() {
   const [xp, setXp] = useState(0);
   const [coins, setCoins] = useState(0);
   const [userBadges, setUserBadges] = useState<any[]>([]);
+  const [streakDays, setStreakDays] = useState(0);
+  const [userLevel, setUserLevel] = useState(1);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -87,6 +91,8 @@ export default function InventoryScreen() {
         setXp(u.xp || 0);
         setCoins(u.coins || 0);
         setUserBadges(u.badges || []);
+        setStreakDays(u.streakDays || u.streak_days || u.streak || 0);
+        setUserLevel(u.level || Math.max(1, Math.floor((u.xp || 0) / 500) + 1));
         localStorage.setItem("userData", JSON.stringify(u));
       }
     } catch (e) {}
@@ -100,6 +106,8 @@ export default function InventoryScreen() {
         setXp(u.xp || 0);
         setCoins(u.coins || 0);
         setUserBadges(u.badges || []);
+        setStreakDays(u.streakDays || u.streak_days || u.streak || 0);
+        setUserLevel(u.level || Math.max(1, Math.floor((u.xp || 0) / 500) + 1));
       } catch(e) {}
     }
     
@@ -245,11 +253,11 @@ export default function InventoryScreen() {
     const isUnlocked = xp >= reqXp;
     const isCurrent = isUnlocked && (index === citiesData.length - 1 || xp < nextReqXp);
 
-    let status = "Locked 🔒";
+    let status = t('status_locked', "Locked 🔒");
     if (isCurrent) {
-      status = "Current Location 📍";
+      status = t('status_current_location', "Current Location 📍");
     } else if (isUnlocked) {
-      status = "Completed 🎉";
+      status = t('status_completed', "Completed 🎉");
     }
 
     return {
@@ -259,19 +267,111 @@ export default function InventoryScreen() {
     };
   });
 
-  const badges = userBadges.map((b, i) => ({
-    id: String(i),
-    name: b.name || `Badge ${i+1}`,
+  const translateBadgeText = (text: string, defaultVal: string) => {
+    if (!text) return defaultVal || "";
+    const trimmed = text.trim();
+
+    // Badge Title mappings
+    if (/First Steps/i.test(trimmed) || /first_steps/i.test(trimmed)) return t("badge_first_steps", "First Steps");
+    if (/Week On Fire/i.test(trimmed) || /week_on_fire/i.test(trimmed)) return t("badge_week_on_fire", "Week On Fire");
+    if (/Monthly Master/i.test(trimmed) || /monthly_master/i.test(trimmed)) return t("badge_monthly_master", "Monthly Master");
+    if (/Rising Scholar/i.test(trimmed) || /rising_scholar/i.test(trimmed)) return t("badge_rising_scholar", "Rising Scholar");
+    if (/Challenger/i.test(trimmed) || /challenger/i.test(trimmed)) return t("badge_challenger", "Challenger");
+    if (/Supporter/i.test(trimmed) || /supporter/i.test(trimmed)) return t("badge_supporter", "Supporter");
+    if (/Science Prodigy/i.test(trimmed) || /science_prodigy/i.test(trimmed) || /વિજ્ઞાન નિષ્ણાત/i.test(trimmed) || /विज्ञान विशेषज्ञ/i.test(trimmed)) return t("badge_science_prodigy", "Science Prodigy");
+    if (/Math Ace/i.test(trimmed) || /math_ace/i.test(trimmed) || /ગણિત એસ/i.test(trimmed) || /गणित ऐस/i.test(trimmed)) return t("badge_math_ace", "Math Ace");
+    if (/Arena Master/i.test(trimmed) || /arena_master/i.test(trimmed) || /એરેના માસ્ટર/i.test(trimmed) || /एरिना मास्टर/i.test(trimmed)) return t("badge_arena_master", "Arena Master");
+    if (/Streak Master/i.test(trimmed) || /streak_master/i.test(trimmed) || /સ્ટ્રીક માસ્ટર/i.test(trimmed) || /स्ट्राइक मास्टर/i.test(trimmed)) return t("badge_streak_master", "Streak Master");
+    if (/Rare Badge/i.test(trimmed) || /rare_badge/i.test(trimmed) || /દુર્લભ બેજ/i.test(trimmed) || /दुर्लभ बैज/i.test(trimmed)) return t("badge_rare_badge", "Rare Badge");
+    if (/Epic Badge/i.test(trimmed) || /epic_badge/i.test(trimmed) || /એપિક બેજ/i.test(trimmed) || /एपिक बैज/i.test(trimmed)) return t("badge_epic_badge", "Epic Badge");
+
+    // Badge Description mappings
+    if (/Found in an Epic/i.test(trimmed) || /Epic Mystery Box/i.test(trimmed) || /એપિક મિસ્ટ્રી બોક્સમાં/i.test(trimmed) || /एपिक मिस्ट्री बॉक्स/i.test(trimmed)) {
+      return t("desc_found_epic_box", "Found in an Epic Mystery Box!");
+    }
+    if (/3\+ Day Daily Streak/i.test(trimmed) || /Streak Champion/i.test(trimmed) || /3\+ દિવસ/i.test(trimmed) || /3\+ दिनों/i.test(trimmed)) {
+      return t("desc_streak_master", "3+ Day Daily Streak Champion");
+    }
+    if (/Level 5\+ Explorer/i.test(trimmed) || /Level 5\+/i.test(trimmed) || /લેવલ 5\+/i.test(trimmed) || /लेवल 5\+/i.test(trimmed)) {
+      return t("desc_arena_master", "Level 5+ Explorer Master");
+    }
+    if (/Master of Mathematics/i.test(trimmed) || /50 math/i.test(trimmed) || /ગણિતના માસ્ટર/i.test(trimmed) || /गणित के मास्टर/i.test(trimmed)) {
+      return t("desc_math_ace", "Master of Mathematics");
+    }
+    if (/Master of Science/i.test(trimmed) || /વિજ્ઞાન અને પ્રકૃતિ/i.test(trimmed) || /विज्ञान और प्रकृति/i.test(trimmed)) {
+      return t("desc_science_prodigy", "Master of Science & Nature");
+    }
+    if (/Earned achievement/i.test(trimmed) || /સિદ્ધિ મેળવેલ/i.test(trimmed) || /उपलब्धि हासिल की/i.test(trimmed)) {
+      return t("desc_earned_achievement", "Earned achievement");
+    }
+
+    const direct = t(trimmed, "");
+    if (direct && direct !== trimmed) return direct;
+
+    const key = trimmed.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+    return t(key, { defaultValue: t(trimmed.toLowerCase().replace(/ /g, '_'), { defaultValue: defaultVal || trimmed }) });
+  };
+
+  // Synthesize dynamic milestone badges matching ProgressScreen & ProfileScreen stats
+  const hasMathAce = userBadges.some((b: any) => typeof b === 'string' ? b.toLowerCase().includes("math") : b?.name?.toLowerCase().includes("math"));
+  const isStreakUnlocked = streakDays >= 3 || userBadges.some((b: any) => typeof b === 'string' ? b.toLowerCase().includes("streak") : b?.name?.toLowerCase().includes("streak"));
+  const hasScienceProdigy = userBadges.some((b: any) => typeof b === 'string' ? b.toLowerCase().includes("science") : b?.name?.toLowerCase().includes("science"));
+  const hasArenaMaster = userLevel >= 5 || userBadges.some((b: any) => typeof b === 'string' ? b.toLowerCase().includes("arena") : b?.name?.toLowerCase().includes("arena"));
+
+  const synthesizedMilestoneBadges: any[] = [];
+  
+  if (isStreakUnlocked && !userBadges.some((b: any) => (typeof b === 'string' ? b : b?.name || '').toLowerCase().includes('streak'))) {
+    synthesizedMilestoneBadges.push({
+      id: "streak_master",
+      name: "Streak Master",
+      icon: Flame,
+      desc: "3+ Day Daily Streak Champion",
+      color: "#F59E0B"
+    });
+  }
+  if (hasArenaMaster && !userBadges.some((b: any) => (typeof b === 'string' ? b : b?.name || '').toLowerCase().includes('arena'))) {
+    synthesizedMilestoneBadges.push({
+      id: "arena_master",
+      name: "Arena Master",
+      icon: Shield,
+      desc: "Level 5+ Explorer Master",
+      color: "#8B5CF6"
+    });
+  }
+  if (hasMathAce && !userBadges.some((b: any) => (typeof b === 'string' ? b : b?.name || '').toLowerCase().includes('math'))) {
+    synthesizedMilestoneBadges.push({
+      id: "math_ace",
+      name: "Math Ace",
+      icon: Trophy,
+      desc: "Master of Mathematics",
+      color: "#10B981"
+    });
+  }
+  if (hasScienceProdigy && !userBadges.some((b: any) => (typeof b === 'string' ? b : b?.name || '').toLowerCase().includes('science'))) {
+    synthesizedMilestoneBadges.push({
+      id: "science_prodigy",
+      name: "Science Prodigy",
+      icon: Star,
+      desc: "Master of Science & Nature",
+      color: "#06B6D4"
+    });
+  }
+
+  const customBadges = userBadges.map((b, i) => ({
+    id: b.id || `custom_${i}`,
+    name: typeof b === 'string' ? b : b.name || `Badge ${i+1}`,
     icon: i % 2 === 0 ? Star : Shield,
-    desc: b.description || "Earned achievement",
+    desc: typeof b === 'string' ? "Earned achievement" : b.description || "Earned achievement",
     color: i % 2 === 0 ? "#D97706" : "#0284C7"
   }));
+
+  const badges = [...customBadges, ...synthesizedMilestoneBadges];
 
   // Dynamic Collection Statistics
   const totalBoxesOwned = (mysteryBoxes.common || 0) + (mysteryBoxes.rare || 0) + (mysteryBoxes.epic || 0);
   const totalDragonsHatched = dragons.length;
   const totalCitiesUnlocked = cities.filter(c => !c.status.includes('Locked')).length;
-  const totalBadgesEarned = userBadges.length;
+  const totalBadgesEarned = badges.length;
 
   const collectionScore = Math.min(100, Math.round(((totalBoxesOwned + totalDragonsHatched + totalCitiesUnlocked + totalBadgesEarned) / 25) * 100));
 
@@ -298,7 +398,7 @@ export default function InventoryScreen() {
           <div className="flex items-center gap-1.5">
             <Sparkles size={16} className="text-[#6C4DFF] animate-pulse" />
             <h1 className="text-[16px] font-black tracking-widest uppercase text-[#141779]">
-              MY TREASURE VAULT
+              {t('my_treasure_vault', 'MY TREASURE VAULT')}
             </h1>
           </div>
 
@@ -323,7 +423,7 @@ export default function InventoryScreen() {
                 </div>
                 <div>
                   <p className="text-base font-black text-[#141779] leading-tight">{coins.toLocaleString()}</p>
-                  <p className="text-[9px] font-extrabold text-[#D97706] tracking-widest uppercase">COINS</p>
+                  <p className="text-[9px] font-extrabold text-[#D97706] tracking-widest uppercase">{t('coins_upper', 'COINS')}</p>
                 </div>
               </div>
 
@@ -334,7 +434,7 @@ export default function InventoryScreen() {
                 </div>
                 <div>
                   <p className="text-base font-black text-[#141779] leading-tight">{xp.toLocaleString()}</p>
-                  <p className="text-[9px] font-extrabold text-[#0284C7] tracking-widest uppercase">XP POWER</p>
+                  <p className="text-[9px] font-extrabold text-[#0284C7] tracking-widest uppercase">{t('xp_power', 'XP POWER')}</p>
                 </div>
               </div>
             </div>
@@ -344,10 +444,10 @@ export default function InventoryScreen() {
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[11px] font-black uppercase tracking-wider text-[#141779] flex items-center gap-1.5">
                   <Compass size={13} className="text-[#6C4DFF]" />
-                  COLLECTION PROGRESS
+                  {t('collection_progress', 'COLLECTION PROGRESS')}
                 </span>
                 <span className="text-[11px] font-black text-[#6C4DFF]">
-                  {collectionScore}% VAULT POWER
+                  {t('vault_power', { score: collectionScore, defaultValue: `${collectionScore}% VAULT POWER` })}
                 </span>
               </div>
 
@@ -367,10 +467,10 @@ export default function InventoryScreen() {
         <nav className="mb-4">
           <div className="grid grid-cols-4 gap-1.5 bg-[#EAE2FB] p-1.5 rounded-2xl border border-[#E5DBFB] shadow-sm">
             {[
-              { id: "Mystery Boxes", label: "BOXES", icon: Gift },
-              { id: "Dragon Academy", label: "DRAGONS", icon: Sparkles },
-              { id: "Cities", label: "CITIES", icon: MapPin },
-              { id: "Badges", label: "BADGES", icon: Trophy },
+              { id: "Mystery Boxes", label: t('boxes_tab', 'BOXES'), icon: Gift },
+              { id: "Dragon Academy", label: t('dragons_tab', 'DRAGONS'), icon: Sparkles },
+              { id: "Cities", label: t('cities_tab', 'CITIES'), icon: MapPin },
+              { id: "Badges", label: t('badges_tab', 'BADGES'), icon: Trophy },
             ].map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -398,7 +498,7 @@ export default function InventoryScreen() {
             {/* Featured Box Vault Hero Banner */}
             <div className="bg-gradient-to-b from-[#180C4F] to-[#2B1778] rounded-2xl p-4 border-2 border-[#6C4DFF]/40 text-center relative overflow-hidden shadow-lg">
               <div className="absolute top-2 left-3 bg-[#6C4DFF] border border-[#9C7CFF] px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider text-white shadow-sm">
-                ✨ FEATURED VAULT
+                {t('featured_vault', '✨ FEATURED VAULT')}
               </div>
 
               <div className="flex justify-center my-1">
@@ -411,24 +511,24 @@ export default function InventoryScreen() {
               </div>
 
               <h2 className="text-base font-black text-white uppercase tracking-wider">
-                MYSTERY REWARD VAULT
+                {t('mystery_reward_vault', 'MYSTERY REWARD VAULT')}
               </h2>
               <p className="text-xs text-[#EAE2FB] font-medium mt-0.5">
-                Open boxes to discover rare dragons, coins, and XP!
+                {t('open_boxes_desc', 'Open boxes to discover rare dragons, coins, and XP!')}
               </p>
 
               <div className="mt-2.5 pt-2 border-t border-white/15 flex items-center justify-between text-[11px] font-bold text-[#EAE2FB]">
-                <span>BOX COLLECTION</span>
-                <span className="text-[#FFD45A] font-black">{totalBoxesOwned} BOXES READY</span>
+                <span>{t('box_collection', 'BOX COLLECTION')}</span>
+                <span className="text-[#FFD45A] font-black">{t('boxes_ready', { count: totalBoxesOwned, defaultValue: `${totalBoxesOwned} BOXES READY` })}</span>
               </div>
             </div>
 
             {/* 2-Column Collectible Rarity Grid */}
             <div className="grid grid-cols-2 gap-3">
               {[
-                { type: "common", name: "COMMON BOX", rarity: "COMMON", color: "#64748B", border: "border-slate-300", glow: "shadow-sm", bg: "bg-white", text: "text-slate-700" },
-                { type: "rare", name: "RARE BOX", rarity: "RARE", color: "#0284C7", border: "border-sky-300", glow: "shadow-sm", bg: "bg-white", text: "text-sky-700" },
-                { type: "epic", name: "EPIC BOX", rarity: "EPIC", color: "#9333EA", border: "border-purple-300", glow: "shadow-sm", bg: "bg-white", text: "text-purple-700" },
+                { type: "common", name: t('common_box', 'COMMON BOX'), rarity: t('common', 'COMMON'), color: "#64748B", border: "border-slate-300", glow: "shadow-sm", bg: "bg-white", text: "text-slate-700" },
+                { type: "rare", name: t('rare_box', 'RARE BOX'), rarity: t('rare', 'RARE'), color: "#0284C7", border: "border-sky-300", glow: "shadow-sm", bg: "bg-white", text: "text-sky-700" },
+                { type: "epic", name: t('epic_box', 'EPIC BOX'), rarity: t('epic', 'EPIC'), color: "#9333EA", border: "border-purple-300", glow: "shadow-sm", bg: "bg-white", text: "text-purple-700" },
               ].map(item => {
                 const count = mysteryBoxes[item.type] || 0;
                 const isOpening = openingBox === item.type;
@@ -461,7 +561,7 @@ export default function InventoryScreen() {
                       {item.name}
                     </h3>
                     <p className="text-[11px] font-bold text-[#6D28D9] mb-3">
-                      x{count} OWNED
+                      {t('owned_count', { count, defaultValue: `x${count} OWNED` })}
                     </p>
 
                     {/* Action Button */}
@@ -474,7 +574,7 @@ export default function InventoryScreen() {
                           : "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
                       }`}
                     >
-                      {isOpening ? "OPENING..." : count > 0 ? "OPEN VAULT" : "LOCKED"}
+                      {isOpening ? t('opening', 'OPENING...') : count > 0 ? t('open_vault', 'OPEN VAULT') : t('locked_upper', 'LOCKED')}
                     </button>
                   </motion.div>
                 );
@@ -489,15 +589,15 @@ export default function InventoryScreen() {
             {/* Dragon Academy Hero Banner */}
             <div className="bg-gradient-to-b from-[#180C4F] to-[#2B1778] rounded-2xl p-4 border-2 border-[#FFD45A]/40 text-center relative overflow-hidden shadow-lg">
               <div className="absolute top-2 left-3 bg-[#F59E0B] border border-[#FFD45A] px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider text-white shadow-sm">
-                🐉 MYSTICAL DRAGONS
+                {t('mystical_dragons', '🐉 MYSTICAL DRAGONS')}
               </div>
 
               <span className="text-5xl block my-2 drop-shadow-[0_0_15px_rgba(255,212,90,0.6)]">🐉</span>
               <h2 className="text-base font-black text-white uppercase tracking-wider">
-                DRAGON ACADEMY
+                {t('dragon_academy', 'DRAGON ACADEMY')}
               </h2>
               <p className="text-xs text-[#EAE2FB] font-medium mt-0.5">
-                Hatch fragments and level up your companions!
+                {t('hatch_fragments_desc', 'Hatch fragments and level up your companions!')}
               </p>
             </div>
 
@@ -511,7 +611,7 @@ export default function InventoryScreen() {
                     : "text-[#6D28D9] hover:text-[#141779]"
                 }`}
               >
-                Dragon Journey 🗺️
+                {t('dragon_journey_tab', 'Dragon Journey 🗺️')}
               </button>
               <button
                 onClick={() => setSubTab("Lab")}
@@ -521,7 +621,7 @@ export default function InventoryScreen() {
                     : "text-[#6D28D9] hover:text-[#141779]"
                 }`}
               >
-                Fragment Lab 🧪
+                {t('fragment_lab_tab', 'Fragment Lab 🧪')}
               </button>
             </div>
 
@@ -530,16 +630,16 @@ export default function InventoryScreen() {
               <div>
                 <div className="flex items-center justify-between mb-2 px-1">
                   <span className="text-xs font-black text-[#141779] uppercase tracking-wider">
-                    MY DRAGON COMPANIONS
+                    {t('my_dragon_companions', 'MY DRAGON COMPANIONS')}
                   </span>
                   <span className="text-[11px] font-bold text-[#D97706]">
-                    {dragons.length} HATCHED
+                    {t('dragons_hatched_count', { count: dragons.length, defaultValue: `${dragons.length} HATCHED` })}
                   </span>
                 </div>
 
                 {dragons.length === 0 ? (
                   <div className="bg-white border-2 border-[#E5DBFB] rounded-2xl p-6 text-center shadow-sm">
-                    <p className="text-xs text-[#6D28D9]">No dragons hatched yet. Collect fragments in mystery boxes!</p>
+                    <p className="text-xs text-[#6D28D9]">{t('no_dragons_hatched', 'No dragons hatched yet. Collect fragments in mystery boxes!')}</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-3">
@@ -554,14 +654,14 @@ export default function InventoryScreen() {
                         >
                           {isNew && (
                             <span className="absolute top-2 right-2 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 text-[8px] font-black px-1.5 py-0.5 rounded-full border border-amber-300 shadow-xs animate-pulse uppercase tracking-wider">
-                              NEW
+                              {t('new_badge', 'NEW')}
                             </span>
                           )}
                           <div className="w-16 h-16 rounded-full bg-[#F4EFF7] border border-[#E5DBFB] flex items-center justify-center mb-2 shadow-inner">
                             <span className="text-3xl">🐉</span>
                           </div>
-                          <h3 className="text-xs font-black text-[#141779] text-center uppercase tracking-tight">{d.name}</h3>
-                          <p className="text-[10px] font-bold text-[#6C4DFF] mt-0.5">Level {d.level} • {d.rarity || "EPIC"}</p>
+                          <h3 className="text-xs font-black text-[#141779] text-center uppercase tracking-tight">{t(d.name.toLowerCase().replace(/ /g, '_'), { defaultValue: d.name })}</h3>
+                          <p className="text-[10px] font-bold text-[#6C4DFF] mt-0.5">{t('level_label', 'Level')} {d.level} • {t((d.rarity || 'EPIC').toLowerCase(), d.rarity || 'EPIC')}</p>
                         </motion.div>
                       );
                     })}
@@ -575,7 +675,7 @@ export default function InventoryScreen() {
               <div>
                 <div className="flex items-center justify-between mb-2 px-1">
                   <span className="text-xs font-black text-[#141779] uppercase tracking-wider">
-                    DRAGON FRAGMENTS
+                    {t('dragon_fragments', 'DRAGON FRAGMENTS')}
                   </span>
                 </div>
 
@@ -613,8 +713,8 @@ export default function InventoryScreen() {
                             <span className="text-xl">🧩</span>
                           </div>
                           <div>
-                            <h3 className="text-xs font-black text-[#141779] capitalize">{f.type} Fragments</h3>
-                            <p className="text-[10px] font-bold text-[#6D28D9]">{f.count} / {needed} Needed</p>
+                            <h3 className="text-xs font-black text-[#141779] capitalize">{t(f.type.toLowerCase() + '_fragments', { defaultValue: `${f.type} Fragments` })}</h3>
+                            <p className="text-[10px] font-bold text-[#6D28D9]">{t('fragments_needed', { count: f.count, needed, defaultValue: `${f.count} / ${needed} Needed` })}</p>
                           </div>
                         </div>
 
@@ -626,11 +726,11 @@ export default function InventoryScreen() {
                               isHatching ? "bg-gray-400 text-white" : "bg-[#22C55E] text-white shadow-md active:scale-95"
                             }`}
                           >
-                            {isHatching ? "HATCHING..." : (matchingDragon ? "UPGRADE" : "HATCH!")}
+                            {isHatching ? t('hatching', 'HATCHING...') : (matchingDragon ? t('upgrade', 'UPGRADE') : t('hatch', 'HATCH!'))}
                           </button>
                         ) : (
                           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-100 px-2 py-1 rounded-lg">
-                            NEED MORE
+                            {t('need_more', 'NEED MORE')}
                           </span>
                         )}
                       </motion.div>
@@ -648,10 +748,10 @@ export default function InventoryScreen() {
             <div className="flex items-center justify-between px-1 mb-1">
               <span className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1.5">
                 <MapPin size={14} className="text-[#6C4DFF]" />
-                WORLD DISCOVERY MAP
+                {t('world_discovery_map', 'WORLD DISCOVERY MAP')}
               </span>
               <span className="text-[11px] font-bold text-[#6C4DFF]">
-                {totalCitiesUnlocked} / {cities.length} UNLOCKED
+                {t('cities_unlocked_count', { count: totalCitiesUnlocked, total: cities.length, defaultValue: `${totalCitiesUnlocked} / ${cities.length} UNLOCKED` })}
               </span>
             </div>
 
@@ -683,7 +783,7 @@ export default function InventoryScreen() {
                         : 'bg-white border-[#E5DBFB]'
                     }`}>
                       <div className="flex items-center justify-between">
-                        <h3 className="text-xs font-black text-[#141779] uppercase tracking-wide">{item.name}</h3>
+                        <h3 className="text-xs font-black text-[#141779] uppercase tracking-wide">{t(item.name.toLowerCase().trim().replace(/\s+/g, '_'), { defaultValue: item.name })}</h3>
                         <ChevronRight size={16} className="text-[#6D28D9]" />
                       </div>
                       <p className={`text-[9px] font-black uppercase tracking-wider mt-1 ${isCurrent ? 'text-[#6C4DFF]' : isLocked ? 'text-gray-400' : 'text-[#D97706]'}`}>
@@ -703,19 +803,19 @@ export default function InventoryScreen() {
             <div className="flex items-center justify-between px-1 mb-1">
               <span className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1.5">
                 <Trophy size={14} className="text-[#D97706]" />
-                ACHIEVEMENT VAULT
+                {t('achievement_vault', 'ACHIEVEMENT VAULT')}
               </span>
               <span className="text-[11px] font-bold text-[#D97706]">
-                {totalBadgesEarned} EARNED
+                {t('badges_earned_count', { count: totalBadgesEarned, defaultValue: `${totalBadgesEarned} EARNED` })}
               </span>
             </div>
 
             {badges.length === 0 ? (
               <div className="bg-white border-2 border-[#E5DBFB] rounded-2xl p-8 flex flex-col items-center text-center shadow-sm">
                 <Shield size={44} className="text-gray-300 mb-3" />
-                <h3 className="text-sm font-bold text-[#141779] mb-1">No Badges Unlocked Yet</h3>
+                <h3 className="text-sm font-bold text-[#141779] mb-1">{t('no_badges_unlocked', 'No Badges Unlocked Yet')}</h3>
                 <p className="text-xs text-[#6D28D9] max-w-[220px]">
-                  Keep exploring and opening Epic Mystery Boxes to unlock rare badges!
+                  {t('keep_exploring_badges', 'Keep exploring and opening Epic Mystery Boxes to unlock rare badges!')}
                 </p>
               </div>
             ) : (
@@ -733,8 +833,8 @@ export default function InventoryScreen() {
                       >
                         <Icon size={28} style={{ color: item.color }} />
                       </div>
-                      <h3 className="text-xs font-black text-[#141779] text-center leading-tight uppercase tracking-tight">{item.name}</h3>
-                      <p className="text-[10px] font-medium text-[#6D28D9] text-center leading-snug">{item.desc}</p>
+                      <h3 className="text-xs font-black text-[#141779] text-center leading-tight uppercase tracking-tight">{translateBadgeText(item.name, item.name)}</h3>
+                      <p className="text-[10px] font-medium text-[#6D28D9] text-center leading-snug">{translateBadgeText(item.desc, item.desc)}</p>
                     </div>
                   );
                 })}
@@ -758,9 +858,9 @@ export default function InventoryScreen() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.6, opacity: 0 }}
               transition={{ type: "spring", damping: 15 }}
-              className="bg-white border-2 border-[#F59E0B] w-full max-w-xs rounded-3xl p-6 text-center relative shadow-2xl overflow-hidden"
+              className="bg-white border-2 border-[#F59E0B] w-full max-w-xs rounded-3xl p-6 pt-9 text-center relative shadow-2xl mt-6"
             >
-              <div className="absolute -top-10 left-1/2 -translate-x-1/2">
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 z-10">
                 <motion.div 
                   animate={{ rotate: [0, -10, 10, -10, 10, 0] }}
                   transition={{ delay: 0.2, duration: 0.5 }}
@@ -770,11 +870,11 @@ export default function InventoryScreen() {
                 </motion.div>
               </div>
               
-              <h2 className="text-xl font-black text-[#141779] mt-7 mb-1 uppercase tracking-wider">
-                TREASURE UNLOCKED!
+              <h2 className="text-xl font-black text-[#141779] mt-6 mb-1 uppercase tracking-wider">
+                {t('treasure_unlocked', 'TREASURE UNLOCKED!')}
               </h2>
               <p className="text-[#6D28D9] text-xs mb-5">
-                You discovered a new reward inside the vault!
+                {t('discovered_reward_desc', 'You discovered a new reward inside the vault!')}
               </p>
               
               <div className="bg-[#F4EFF7] rounded-2xl p-5 mb-5 border-2 border-[#E5DBFB] shadow-inner">
@@ -786,7 +886,7 @@ export default function InventoryScreen() {
                   {rewardData.type === 'coins' ? '🪙' : rewardData.type === 'xp' ? '⭐' : '🐉'}
                 </motion.span>
                 <h3 className="text-lg font-black text-[#141779]">
-                  {rewardData.amount > 0 ? `+${rewardData.amount} ` : ''}{rewardData.name}
+                  {rewardData.amount > 0 ? `+${rewardData.amount} ` : ''}{t(rewardData.name?.toLowerCase()?.replace(/ /g, '_') || 'reward', { defaultValue: rewardData.name })}
                 </h3>
               </div>
               
@@ -794,7 +894,7 @@ export default function InventoryScreen() {
                 onClick={() => setRewardData(null)}
                 className="w-full bg-gradient-to-r from-[#6C4DFF] to-[#3520A8] text-white font-black py-3 rounded-xl hover:brightness-110 active:scale-95 transition-all text-sm uppercase tracking-wider shadow-md border border-[#9C7CFF]/40"
               >
-                AWESOME!
+                {t('awesome', 'AWESOME!')}
               </button>
             </motion.div>
           </motion.div>

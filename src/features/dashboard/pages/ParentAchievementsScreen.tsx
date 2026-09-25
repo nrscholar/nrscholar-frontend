@@ -81,6 +81,58 @@ export default function ParentAchievementsScreen() {
       })
     : null;
 
+  const translateAchText = (text: string) => {
+    if (!text) return "";
+    const trimmed = text.trim();
+
+    // Direct i18n lookup first
+    const direct = t(trimmed, "");
+    if (direct && direct !== trimmed) return direct;
+
+    // Badge Titles mapping
+    if (trimmed === "First Steps") return t("badge_first_steps", "First Steps");
+    if (trimmed === "Week On Fire") return t("badge_week_on_fire", "Week On Fire");
+    if (trimmed === "Monthly Master") return t("badge_monthly_master", "Monthly Master");
+    if (trimmed === "Rising Scholar") return t("badge_rising_scholar", "Rising Scholar");
+    if (trimmed === "Challenger") return t("badge_challenger", "Challenger");
+    if (trimmed === "Supporter") return t("badge_supporter", "Supporter");
+    if (trimmed === "Science Prodigy") return t("badge_science_prodigy", "Science Prodigy");
+    if (trimmed === "Math Ace") return t("badge_math_ace", "Math Ace");
+    if (trimmed === "Arena Master") return t("badge_arena_master", "Arena Master");
+    if (trimmed === "Streak Master") return t("badge_streak_master", "Streak Master");
+
+    // Badge Descriptions mapping
+    if (/Successfully completed your/i.test(trimmed)) {
+      return t("desc_first_steps", "Successfully completed your first parenting module or test. The journey of a thousand miles begins here!");
+    }
+    if (/Maintained a (?:consistent learning|7-day learning streak)/i.test(trimmed)) {
+      return t("desc_week_on_fire", "Maintained a consistent learning rhythm for 7 consecutive days. You are building amazing habits!");
+    }
+    if (/Achieve a 30-day learning streak/i.test(trimmed)) {
+      return t("desc_monthly_master", "Achieve a 30-day learning streak to unlock this achievement.");
+    }
+    if (/You have completed 10 lessons or tests/i.test(trimmed)) {
+      return t("desc_rising_scholar", "You have completed 10 lessons or tests! Your dedication to growth is making a real difference at home.");
+    }
+    if (/Complete 5 growth challenges/i.test(trimmed)) {
+      return t("desc_challenger", "Complete 5 growth challenges to unlock this badge.");
+    }
+    if (/Participate in the community forum/i.test(trimmed)) {
+      return t("desc_supporter", "Participate in the community forum.");
+    }
+    if (/Master of Science/i.test(trimmed)) {
+      return t("desc_science_prodigy", "Master of Science & Nature");
+    }
+    if (/Solved over 50 math/i.test(trimmed)) {
+      return t("desc_math_ace", "Solved over 50 math challenges");
+    }
+    if (/Victor of live multiplayer/i.test(trimmed)) {
+      return t("desc_arena_master", "Victor of live multiplayer battles");
+    }
+
+    return t(trimmed, trimmed);
+  };
+
   const filteredAchievements = achievements.filter(ach => {
     const isUnlocked = ach.currentProgress >= ach.totalRequired;
     if (filter === "unlocked") return isUnlocked;
@@ -123,7 +175,7 @@ export default function ParentAchievementsScreen() {
               src={parentPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=141779&color=ffffff&bold=true`}
             />
           </div>
-          <span className="text-xl font-black text-[#141779] tracking-tight">{t("achievements") || "Achievements"}</span>
+          <span className="text-xl font-black text-[#141779] tracking-tight">{t("achievements", "Achievements")}</span>
         </div>
         <button 
           onClick={() => navigate('/parent/settings')}
@@ -142,11 +194,11 @@ export default function ParentAchievementsScreen() {
           {/* Bento Box 1: Welcome & Profile Info */}
           <div className="col-span-2 bento-card rounded-[24px] p-5 flex items-center justify-between relative overflow-hidden bg-white">
             <div className="flex flex-col gap-1 z-10">
-              <span className="text-[11px] font-black text-slate-500 tracking-wider uppercase">Parent Dashboard</span>
+              <span className="text-[11px] font-black text-slate-500 tracking-wider uppercase">{t("parent_dashboard_upper", "PARENT DASHBOARD")}</span>
               <h2 className="text-xl font-black text-[#141779] flex items-center gap-1.5">
-                Hi, {username} <Sparkles className="text-amber-500 animate-pulse" size={20} />
+                {t("hi_user", { name: username, defaultValue: `Hi, ${username}` })} <Sparkles className="text-amber-500 animate-pulse" size={20} />
               </h2>
-              <p className="text-xs text-slate-600 font-bold leading-snug mt-0.5">Nurturing curiosity & celebrating key learning milestones.</p>
+              <p className="text-xs text-slate-600 font-bold leading-snug mt-0.5">{t("nurturing_curiosity_sub", "Nurturing curiosity & celebrating key learning milestones.")}</p>
             </div>
             <div className="flex items-center justify-center bg-indigo-50 border border-indigo-100 w-12 h-12 rounded-2xl text-[#141779] shadow-xs shrink-0">
               <Trophy size={24} />
@@ -156,28 +208,28 @@ export default function ParentAchievementsScreen() {
           {/* Bento Box 2: Total Badges Box */}
           <div className="col-span-1 bento-card rounded-[24px] p-5 flex flex-col justify-between h-[125px] bg-white border border-teal-200/80">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-[#006a62] uppercase tracking-wider">Badges</span>
+              <span className="text-xs font-black text-[#006a62] uppercase tracking-wider">{t("badges", "Badges")}</span>
               <div className="p-2 bg-teal-50 rounded-xl text-[#006a62]">
                 <GraduationCap size={18} />
               </div>
             </div>
             <div>
               <div className="text-3xl font-black text-[#141779] tracking-tight">{badgesEarned}</div>
-              <span className="text-[11px] text-slate-600 font-extrabold">Unlocked Medals</span>
+              <span className="text-[11px] text-slate-600 font-extrabold">{t("unlocked_medals", "Unlocked Medals")}</span>
             </div>
           </div>
 
           {/* Bento Box 3: Global Rank Box */}
           <div className="col-span-1 bento-card rounded-[24px] p-5 flex flex-col justify-between h-[125px] bg-white border border-indigo-200/80">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-[#30007f] uppercase tracking-wider">Rank</span>
+              <span className="text-xs font-black text-[#30007f] uppercase tracking-wider">{t("rank", "Rank")}</span>
               <div className="p-2 bg-indigo-50 rounded-xl text-[#30007f]">
                 <Globe size={18} />
               </div>
             </div>
             <div>
               <div className="text-3xl font-black text-[#141779] tracking-tight">#{globalRank}</div>
-              <span className="text-[11px] text-slate-600 font-extrabold">Worldwide Position</span>
+              <span className="text-[11px] text-slate-600 font-extrabold">{t("worldwide_position", "Worldwide Position")}</span>
             </div>
           </div>
 
@@ -190,10 +242,10 @@ export default function ParentAchievementsScreen() {
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#006a62]"></span>
                   </span>
-                  <span className="text-xs font-black text-[#141779]">Next Milestone Target</span>
+                  <span className="text-xs font-black text-[#141779]">{t("next_milestone_target", "Next Milestone Target")}</span>
                 </div>
                 <span className="text-[11px] font-black text-[#006a62] bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full">
-                  {Math.round((nextMilestone.currentProgress / nextMilestone.totalRequired) * 100)}% Complete
+                  {Math.round((nextMilestone.currentProgress / nextMilestone.totalRequired) * 100)}% {t("complete_caps", "Complete")}
                 </span>
               </div>
               
@@ -202,14 +254,14 @@ export default function ParentAchievementsScreen() {
                   {React.createElement(ICON_MAP[nextMilestone.icon] || Lock, { size: 20 })}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-black text-[#141779] truncate">{nextMilestone.title}</h4>
-                  <p className="text-xs text-slate-600 font-bold truncate mt-0.5">{nextMilestone.desc}</p>
+                  <h4 className="text-sm font-black text-[#141779] truncate">{translateAchText(nextMilestone.title)}</h4>
+                  <p className="text-xs text-slate-600 font-bold truncate mt-0.5">{translateAchText(nextMilestone.desc)}</p>
                 </div>
               </div>
 
               <div className="w-full">
                 <div className="flex justify-between items-center text-xs text-slate-700 font-bold mb-1.5">
-                  <span>Current Progress</span>
+                  <span>{t("current_progress", "Current Progress")}</span>
                   <span className="font-black text-[#141779]">
                     {nextMilestone.currentProgress} / {nextMilestone.totalRequired} {nextMilestone.progressUnit || ""}
                   </span>
@@ -226,25 +278,25 @@ export default function ParentAchievementsScreen() {
 
           {/* Filters Bar */}
           <div className="col-span-2 flex items-center justify-between mt-2 mb-1 px-1">
-            <span className="text-base font-black text-[#141779]">Achievement Wall</span>
+            <span className="text-base font-black text-[#141779]">{t("achievement_wall", "Achievement Wall")}</span>
             <div className="flex bg-slate-200/80 p-1 rounded-2xl border border-slate-300/60">
               <button 
                 onClick={() => setFilter("all")} 
                 className={`text-xs font-black px-3.5 py-1.5 rounded-xl transition-all ${filter === "all" ? "bg-[#141779] text-white shadow-xs" : "text-slate-700 hover:text-[#141779]"}`}
               >
-                All
+                {t("all", "All")}
               </button>
               <button 
                 onClick={() => setFilter("unlocked")} 
                 className={`text-xs font-black px-3.5 py-1.5 rounded-xl transition-all ${filter === "unlocked" ? "bg-[#141779] text-white shadow-xs" : "text-slate-700 hover:text-[#141779]"}`}
               >
-                Unlocked
+                {t("unlocked", "Unlocked")}
               </button>
               <button 
                 onClick={() => setFilter("locked")} 
                 className={`text-xs font-black px-3.5 py-1.5 rounded-xl transition-all ${filter === "locked" ? "bg-[#141779] text-white shadow-xs" : "text-slate-700 hover:text-[#141779]"}`}
               >
-                Locked
+                {t("locked", "Locked")}
               </button>
             </div>
           </div>
@@ -285,17 +337,17 @@ export default function ParentAchievementsScreen() {
                 {/* Info Text */}
                 <div className="mt-3 flex flex-col gap-1">
                   <h5 className={`text-sm font-black leading-tight truncate ${isUnlocked ? "text-[#141779]" : "text-slate-700"}`}>
-                    {ach.title}
+                    {translateAchText(ach.title)}
                   </h5>
                   <p className="text-xs text-slate-600 font-bold line-clamp-2 leading-snug">
-                    {ach.desc}
+                    {translateAchText(ach.desc)}
                   </p>
                 </div>
 
                 {/* Progress Mini Bar */}
                 <div className="mt-3">
                   <div className="flex justify-between items-center text-[10px] text-slate-600 font-extrabold mb-1">
-                    <span>Progress</span>
+                    <span>{t("progress", "Progress")}</span>
                     <span className="font-black text-[#141779]">
                       {Math.min(ach.totalRequired, ach.currentProgress)}/{ach.totalRequired}
                     </span>
@@ -333,13 +385,13 @@ export default function ParentAchievementsScreen() {
                     {React.createElement(ICON_MAP[activeAchievement.icon] || Lock, { size: 24 })}
                   </div>
                   <div>
-                    <h3 className="text-base font-black text-[#141779]">{activeAchievement.title}</h3>
+                    <h3 className="text-base font-black text-[#141779]">{translateAchText(activeAchievement.title)}</h3>
                     <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-full ${
                       activeAchievement.currentProgress >= activeAchievement.totalRequired
                         ? "bg-teal-50 text-[#006a62] border border-teal-200"
                         : "bg-slate-100 text-slate-600 border border-slate-200"
                     }`}>
-                      {activeAchievement.currentProgress >= activeAchievement.totalRequired ? "Completed & Unlocked" : "In Progress"}
+                      {activeAchievement.currentProgress >= activeAchievement.totalRequired ? t("completed_unlocked", "Completed & Unlocked") : t("in_progress", "In Progress")}
                     </span>
                   </div>
                 </div>
@@ -352,14 +404,14 @@ export default function ParentAchievementsScreen() {
               </div>
 
               <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200">
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">Target Requirement</span>
-                <p className="text-xs text-slate-800 font-bold leading-relaxed">{activeAchievement.desc}</p>
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">{t("target_requirement", "Target Requirement")}</span>
+                <p className="text-xs text-slate-800 font-bold leading-relaxed">{translateAchText(activeAchievement.desc)}</p>
               </div>
 
               {/* Progress bar inside drawer */}
               <div className="space-y-2">
                 <div className="flex justify-between items-end text-xs">
-                  <span className="font-extrabold text-slate-700">Achievement Progress</span>
+                  <span className="font-extrabold text-slate-700">{t("achievement_progress", "Achievement Progress")}</span>
                   <span className="font-black text-[#141779]">
                     {Math.min(activeAchievement.totalRequired, activeAchievement.currentProgress)} / {activeAchievement.totalRequired} {activeAchievement.progressUnit || ""}
                   </span>
@@ -372,8 +424,8 @@ export default function ParentAchievementsScreen() {
                 </div>
                 <div className="text-xs text-slate-600 font-bold text-center mt-1">
                   {activeAchievement.currentProgress >= activeAchievement.totalRequired 
-                    ? "🎉 Congratulations! You have unlocked this milestone reward." 
-                    : `Keep going! Only ${activeAchievement.totalRequired - activeAchievement.currentProgress} more to unlock.`}
+                    ? t("congrats_unlocked", "🎉 Congratulations! You have unlocked this milestone reward.") 
+                    : t("keep_going_to_unlock", { count: activeAchievement.totalRequired - activeAchievement.currentProgress, defaultValue: `Keep going! Only ${activeAchievement.totalRequired - activeAchievement.currentProgress} more to unlock.` })}
                 </div>
               </div>
 
@@ -381,7 +433,7 @@ export default function ParentAchievementsScreen() {
                 onClick={hideDetails}
                 className="w-full bg-[#141779] text-white py-3 rounded-full font-black text-sm shadow-md hover:bg-[#1e23a0] active:scale-95 transition-all mt-2"
               >
-                Awesome
+                {t("awesome", "Awesome")}
               </button>
             </div>
           </div>

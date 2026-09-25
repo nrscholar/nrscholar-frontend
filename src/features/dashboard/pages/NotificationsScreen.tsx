@@ -1,13 +1,36 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Bell, Sparkles, AlertCircle, Gift, BookOpen, Disc } from "lucide-react";
-import { motion } from "framer-motion";
+import { ArrowLeft, Bell, Sparkles, AlertCircle, Gift, BookOpen, Disc, ArrowUp } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../../api";
+import { useTranslation } from "react-i18next";
+import { translateNotificationTitle, translateNotificationMessage } from "../../../utils/notificationTranslator";
 
 export default function NotificationsScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  const formatNotificationTitle = (title: string) => translateNotificationTitle(title, t);
+  const formatNotificationMessage = (msg: string) => translateNotificationMessage(msg, t);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 150) {
+        setShowScrollTop(true);
+      } else {
+        setShowScrollTop(false);
+      }
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   useEffect(() => {
     async function loadNotifications() {
@@ -52,13 +75,13 @@ export default function NotificationsScreen() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] font-sans pb-10 overflow-x-hidden">
+    <div className="min-h-screen bg-[#f7f9fb] font-sans pb-10 overflow-x-hidden relative">
       {/* Header */}
       <header className="flex items-center px-4 h-16 bg-[rgba(247,249,251,0.8)] border-b border-[rgba(255,255,255,0.2)] sticky top-0 z-40 backdrop-blur-md">
         <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-full transition-colors mr-3">
           <ArrowLeft size={24} color="#141779" />
         </button>
-        <h1 className="text-2xl font-bold text-[#141779]">Notifications</h1>
+        <h1 className="text-2xl font-bold text-[#141779]">{t('notifications', 'Notifications')}</h1>
       </header>
 
       <main className="px-6 pt-8 flex flex-col gap-6 max-w-[500px] mx-auto">
@@ -87,8 +110,8 @@ export default function NotificationsScreen() {
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
               <Bell size={28} className="text-gray-400" />
             </div>
-            <p className="text-lg font-bold text-gray-500">No notifications yet!</p>
-            <p className="text-sm text-gray-400 mt-1">Keep completing quests to see updates.</p>
+            <p className="text-lg font-bold text-gray-500">{t('no_notifications_yet', 'No notifications yet!')}</p>
+            <p className="text-sm text-gray-400 mt-1">{t('keep_completing_quests', 'Keep completing quests to see updates.')}</p>
           </div>
         ) : (
           <div className="relative pl-1 flex flex-col gap-6">
@@ -126,14 +149,16 @@ export default function NotificationsScreen() {
                       className={`w-full text-left bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.5)] shadow-[0_1px_5px_rgba(0,0,0,0.05)] hover:bg-white transition-colors relative z-10 ${notif.screen ? 'cursor-pointer hover:border-indigo-300' : ''}`}
                     >
                       <div className="flex justify-between items-start mb-1">
-                        <h3 className="text-sm font-semibold text-[#141779]">{notif.title}</h3>
+                        <h3 className="text-sm font-semibold text-[#141779]">
+                          {formatNotificationTitle(notif.title)}
+                        </h3>
                         {notif.createdAt && (
                           <span className="text-[10px] text-gray-400 font-semibold">
                             {new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         )}
                       </div>
-                      <p className="text-base font-medium text-[#191c1e]">{notif.message}</p>
+                      <p className="text-base font-medium text-[#191c1e]">{formatNotificationMessage(notif.message)}</p>
                     </div>
                   </div>
                 </div>
@@ -156,6 +181,23 @@ export default function NotificationsScreen() {
           />
         </div>
       </main>
+
+      {/* Floating Scroll To Top Button */}
+      <AnimatePresence>
+        {showScrollTop && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.7, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.7, y: 20 }}
+            transition={{ duration: 0.2 }}
+            onClick={scrollToTop}
+            className="fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full bg-[#141779] text-white shadow-[0_4px_20px_rgba(20,23,121,0.4)] border-2 border-white/30 flex items-center justify-center hover:bg-[#191C8B] active:scale-90 transition-all cursor-pointer"
+            aria-label={t('scroll_to_top', 'Scroll to top')}
+          >
+            <ArrowUp size={22} className="stroke-[2.5]" />
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

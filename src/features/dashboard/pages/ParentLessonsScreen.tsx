@@ -119,68 +119,6 @@ export default function ParentLessonsScreen() {
           </div>
           <h1 className="text-lg font-bold text-[#141779] truncate">{t("lessons") || "Daily Parenting Lessons"}</h1>
         </div>
-        <div className="relative">
-          <button 
-            onClick={() => setLangDropdownOpen(!langDropdownOpen)}
-            className="flex items-center gap-1.5 bg-white border border-[#141779]/15 text-[#141779] rounded-xl px-3 py-2 text-xs font-bold shadow-xs hover:border-[#141779]/30 active:scale-95 transition-all outline-none"
-          >
-            <span>
-              {contentLanguage === "en" ? "English" : contentLanguage === "hi" ? "हिंदी (Hindi)" : "ગુજરાતી (Gujarati)"}
-            </span>
-            <ChevronDown size={14} className={`text-[#141779]/60 transition-transform ${langDropdownOpen ? 'rotate-180' : ''}`} />
-          </button>
-          
-          {langDropdownOpen && (
-            <>
-              {/* Backdrop to close when clicking outside */}
-              <div className="fixed inset-0 z-40" onClick={() => setLangDropdownOpen(false)}></div>
-              
-              <div className="absolute right-0 mt-1.5 w-40 bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-xl shadow-lg py-1 z-50 animate-in fade-in slide-in-from-top-1 duration-100 origin-top-right">
-                {[
-                  { value: "en", label: "English" },
-                  { value: "hi", label: "हिंदी (Hindi)" },
-                  { value: "gu", label: "ગુજરાતી (Gujarati)" }
-                ].map(option => (
-                  <button
-                    key={option.value}
-                    onClick={async () => {
-                      setLangDropdownOpen(false);
-                      const newLang = option.value;
-                      setContentLanguage(newLang);
-                      
-                      if (i18n && typeof i18n.changeLanguage === 'function') {
-                        i18n.changeLanguage(newLang);
-                      }
-                      try {
-                        setLoading(true);
-                        await apiFetch('/api/parent/controls', {
-                          method: 'PUT',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ contentLanguage: newLang })
-                        });
-                        const res = await apiFetch('/api/parent/learning-library', {
-                          headers: { 'Accept-Language': newLang }
-                        });
-                        const data = await res.json();
-                        if (data.success) {
-                          setAllTopics(data.data.topics);
-                        }
-                      } catch (err) {
-                        console.error(err);
-                      } finally {
-                        setLoading(false);
-                      }
-                    }}
-                    className={`w-full text-left px-4 py-2 text-xs font-bold leading-normal transition-colors flex justify-between items-center ${contentLanguage === option.value ? 'bg-indigo-50 text-[#141779]' : 'text-slate-700 hover:bg-slate-50'}`}
-                  >
-                    <span>{option.label}</span>
-                    {contentLanguage === option.value && <div className="w-1.5 h-1.5 rounded-full bg-[#141779]"></div>}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
       </header>
 
       <main className="flex-1 flex flex-col">
@@ -264,15 +202,16 @@ export default function ParentLessonsScreen() {
             {(() => {
               if (loading) {
                 return Array.from({ length: 4 }).map((_, idx) => (
-                  <div key={idx} className="w-full h-full flex flex-col rounded-2xl overflow-hidden glass-card animate-pulse">
-                    <div className="relative h-28 md:h-36 bg-slate-200/80"></div>
-                    <div className="p-3 bg-white/50 backdrop-blur-md flex-1">
-                      <div className="h-2 w-16 bg-slate-200/80 rounded mb-2"></div>
-                      <div className="h-4 w-3/4 bg-slate-200/80 rounded"></div>
+                  <div key={idx} className="w-full h-full flex flex-col rounded-2xl overflow-hidden glass-card border border-white/40 shadow-xs">
+                    <div className="relative h-28 md:h-36 animate-skeleton"></div>
+                    <div className="p-3 bg-white/60 backdrop-blur-md flex-1 space-y-2">
+                      <div className="h-2.5 w-16 animate-skeleton rounded"></div>
+                      <div className="h-4 w-3/4 animate-skeleton rounded"></div>
                     </div>
                   </div>
                 ));
               }
+
 
               const filtered = allTopics.filter(t => {
                 if (activeFilter === "Completed") {

@@ -2,6 +2,7 @@ import { ArrowLeft, Book, ChevronDown, Globe, Microscope, Shapes, Swords, Trophy
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
+import { useTranslation } from "react-i18next";
 
 const getSubjectStyle = (name: string) => {
   const n = name.toLowerCase();
@@ -68,6 +69,7 @@ const FighterRightSVG = () => (
 
 export default function MultiplayerHubScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [joinCode, setJoinCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -85,13 +87,23 @@ export default function MultiplayerHubScreen() {
   const [activeSubject, setActiveSubject] = useState<any>(null);
   const [practiceChapters, setPracticeChapters] = useState<any[]>([]);
   const [completedChapterIds, setCompletedChapterIds] = useState<string[]>([]);
+  const [isSubscribed, setIsSubscribed] = useState(false);
 
   useEffect(() => {
+    try {
+      const cached = localStorage.getItem("user");
+      if (cached) {
+        const u = JSON.parse(cached);
+        setIsSubscribed(Boolean(u.is_subscribed || u.isSubscribed));
+      }
+    } catch (e) {}
+
     apiFetch("/api/users/me").then(r => r.json()).then(d => {
       if (d.success && d.data?.user) {
         if (d.data.user.childClass) setMyClass(d.data.user.childClass);
         setMyCoins(d.data.user.coins || 0);
         setMyStreak(d.data.user.multiplayerStreak || 0);
+        setIsSubscribed(Boolean(d.data.user.is_subscribed || d.data.user.isSubscribed));
       }
     });
 
@@ -139,14 +151,26 @@ export default function MultiplayerHubScreen() {
 
       if (pData.success && pData.data) {
         const completedIds = pData.data
-          .filter((p: any) => p.chapterCompleted || p.completed)
-          .map((p: any) => p.chapterId);
+          .filter((p: any) => p.chapterCompleted || p.completed || p.bossCompleted || (Array.isArray(p.completedMissions) && p.completedMissions.length > 0))
+          .map((p: any) => String(p.chapterId));
         setCompletedChapterIds(completedIds);
       } else {
         setCompletedChapterIds([]);
       }
 
-      const chapterNames = fetchedChapters.map(c => c.name);
+      const chapterNames = fetchedChapters
+        .map((c, idx) => {
+          const num = c.order || c.chapter_number || c.chapterNumber || (idx + 1);
+          let rawName = c.name || c.title || c.chapter_name || "";
+          if (!rawName || rawName.toLowerCase() === "chapter 1") {
+            return `Chapter ${num}`;
+          }
+          if (rawName.toLowerCase().startsWith("chapter ")) {
+            return `Chapter ${num}`;
+          }
+          return `Chapter ${num}: ${rawName}`;
+        })
+        .filter(Boolean);
       setChaptersList(chapterNames);
       
       if (!chapterNames.includes(chapter) && chapter !== "Mix Chapters") {
@@ -164,60 +188,63 @@ export default function MultiplayerHubScreen() {
     }
   }, [error]);
 
-  const isChapterUnlocked = (chName: string) => {
-    if (chName === "Mix Chapters" || chName === "Mix Chapters (All)") return true;
-    const pracCh = practiceChapters.find(p => p.name === chName);
-    if (!pracCh) return true;
-    return completedChapterIds.includes(pracCh._id) || completedChapterIds.includes(`${pracCh._id}_hard`);
+  const [selectedChaptersList, setSelectedChaptersList] = useState<string[]>([]);
+
+  const isChapterUnlocked = (chName: string, idx?: number) => {
+    if (chName === "Mix Chapters" || chName === "Mix Chapters (All)") {
+      return isSubscribed && completedChapterIds.length > 0;
+    }
+    const computedIdx = idx !== undefined ? idx : chaptersList.indexOf(chName);
+    const targetChap = practiceChapters[computedIdx];
+    const chapId = targetChap ? String(targetChap._id || targetChap.chapterId || "") : "";
+    const isCompleted = chapId ? completedChapterIds.includes(chapId) : (completedChapterIds.length > 0 || computedIdx === 0);
+
+    // Chapter 1 (index 0) requires completing Chapter 1 missions (free, no premium required)
+    if (computedIdx === 0) {
+      return isCompleted;
+    }
+    
+    // Chapter 2+ (index >= 1) requires Premium subscription AND completing all missions of that chapter
+    return isSubscribed && isCompleted;
   };
 
   const getMixChapterOrder = () => {
-    if (!practiceChapters.length || !completedChapterIds.length) return 1;
-    const completedOrders = practiceChapters
-      .filter(p => completedChapterIds.includes(p._id) || completedChapterIds.includes(`${p._id}_hard`))
-      .map(p => p.order || 1);
-    return completedOrders.length > 0 ? Math.max(...completedOrders) : 1;
+    return 1;
   };
 
   const getEntryFee = (order: number) => {
     return 100;
   };
 
-  const currentOrder = chapter === "Mix Chapters" ? getMixChapterOrder() : (practiceChapters.find(p => p.name === chapter)?.order || 1);
-  const entryFee = getEntryFee(currentOrder);
-
-  const hasCompletedAnyChapterInSubject = () => {
-    if (!practiceChapters.length) return true;
-    return practiceChapters.some(ch => 
-      completedChapterIds.includes(ch._id) || completedChapterIds.includes(`${ch._id}_hard`)
-    );
-  };
+  const entryFee = 100;
 
   const handleCreateRoom = async () => {
-    if (!hasCompletedAnyChapterInSubject()) {
-      setError(`You must complete at least one chapter in ${activeSubject?.name || "this subject"} to enter the Shadow Arena!`);
-      return;
-    }
     if (myCoins < entryFee) {
-      setError(`Not enough coins! You need at least ${entryFee} coins to play Shadow Arena in this city.`);
+      setError(t('not_enough_coins_arena', { entryFee, defaultValue: `Not enough coins! You need at least ${entryFee} coins to play Shadow Arena in this city.` }));
       return;
     }
     setLoading(true);
     setError("");
     try {
+      const finalChapter = selectedChaptersList.length > 0 ? selectedChaptersList.join(", ") : "Mix Chapters";
       const res = await apiFetch("/api/multiplayer/room/create", { 
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subject: activeSubject?.name || "Mathematics", chapter })
+        body: JSON.stringify({ subject: activeSubject?.name || "Mathematics", chapter: finalChapter })
       });
       const data = await res.json();
       if (data.success && data.data) {
         navigate(`/multiplayer-room/${data.data._id}`);
       } else {
-        setError(data.message || "Failed to create room");
+        const errMsg = data.message || "Failed to create room";
+        if (errMsg.includes("Not enough coins")) {
+          setError(t('not_enough_coins_arena', { entryFee, defaultValue: errMsg }));
+        } else {
+          setError(errMsg);
+        }
       }
     } catch (e) {
-      setError("Network error");
+      setError(t('network_error', 'Network error'));
     } finally {
       setLoading(false);
     }
@@ -275,7 +302,7 @@ export default function MultiplayerHubScreen() {
         <div className="flex items-center gap-1.5">
           <Sparkles size={16} className="text-[#6C4DFF] animate-pulse" />
           <h1 className="text-[16px] font-black tracking-widest uppercase text-[#141779]">
-            SHADOW ARENA
+            {t('shadow_arena_title', 'SHADOW ARENA')}
           </h1>
         </div>
 
@@ -300,7 +327,7 @@ export default function MultiplayerHubScreen() {
               {/* Player 1 Left */}
               <div className="flex flex-col items-center">
                 <span className="text-[9px] font-extrabold uppercase tracking-wider text-white bg-[#6C4DFF] px-2 py-0.5 rounded-full border border-[#9C7CFF] mb-0.5 shadow-sm">
-                  YOU
+                  {t('you', 'YOU')}
                 </span>
                 <FighterLeftSVG />
               </div>
@@ -313,14 +340,14 @@ export default function MultiplayerHubScreen() {
                   </div>
                 </div>
                 <span className="text-[11px] font-black text-white tracking-widest mt-1 uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                  ARENA 1v1
+                  {t('arena_1v1', 'ARENA 1v1')}
                 </span>
               </div>
 
               {/* Player 2 Right */}
               <div className="flex flex-col items-center">
                 <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#141779] bg-[#F4C95D] px-2 py-0.5 rounded-full border border-[#FFD700] mb-0.5 shadow-sm">
-                  CHALLENGER
+                  {t('challenger', 'CHALLENGER')}
                 </span>
                 <FighterRightSVG />
               </div>
@@ -328,7 +355,7 @@ export default function MultiplayerHubScreen() {
 
             {/* Subtitle tag */}
             <p className="text-center text-[10px] font-bold text-[#EAE2FB] mt-0.5 tracking-tight">
-              Challenge your friend • Answer faster • Win rewards
+              {t('shadow_arena_desc', 'Challenge your friend • Answer faster • Win rewards')}
             </p>
           </div>
         </section>
@@ -342,10 +369,10 @@ export default function MultiplayerHubScreen() {
               </div>
               <div className="text-left">
                 <p className="text-[10px] font-black text-[#141779] uppercase tracking-wider leading-none">
-                  25 WIN STREAK CHALLENGE
+                  {t('win_streak_challenge', '25 WIN STREAK CHALLENGE')}
                 </p>
                 <p className="text-[9px] font-bold text-[#6D28D9] mt-0.5 leading-none">
-                  {myStreak > 0 ? `Current Streak: ${myStreak} Wins 🏆` : "Win 25 matches for physical prize!"}
+                  {myStreak > 0 ? t('current_streak_wins', { streak: myStreak, defaultValue: `Current Streak: ${myStreak} Wins 🏆` }) : t('win_25_matches_prize', 'Win 25 matches for physical prize!')}
                 </p>
               </div>
             </div>
@@ -369,7 +396,7 @@ export default function MultiplayerHubScreen() {
             }`}
           >
             <Swords size={14} />
-            <span>CREATE BATTLE</span>
+            <span>{t('create_battle', 'CREATE BATTLE')}</span>
           </button>
 
           <button
@@ -381,7 +408,7 @@ export default function MultiplayerHubScreen() {
             }`}
           >
             <Key size={14} />
-            <span>JOIN WITH CODE</span>
+            <span>{t('join_with_code', 'JOIN WITH CODE')}</span>
           </button>
         </section>
 
@@ -405,10 +432,10 @@ export default function MultiplayerHubScreen() {
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between px-0.5">
                 <span className="text-xs font-black uppercase tracking-wider text-[#141779]">
-                  CHOOSE YOUR BATTLE
+                  {t('choose_your_battle', 'CHOOSE YOUR BATTLE')}
                 </span>
                 <span className="text-[10px] font-bold text-[#6D28D9]">
-                  Pick a subject
+                  {t('pick_a_subject', 'Pick a subject')}
                 </span>
               </div>
 
@@ -437,7 +464,7 @@ export default function MultiplayerHubScreen() {
                       
                       <div className="flex-1 min-w-0 pr-3">
                         <p className={`text-xs font-black uppercase tracking-tight truncate ${isSelected ? "text-[#141779]" : "text-[#464652]"}`}>
-                          {subj.name}
+                          {t(subj.name.toLowerCase(), { defaultValue: subj.name })}
                         </p>
                       </div>
 
@@ -456,7 +483,7 @@ export default function MultiplayerHubScreen() {
             {chaptersList.length > 0 && (
               <div className="flex flex-col gap-1 relative my-0.5">
                 <span className="text-[11px] font-black uppercase tracking-wider text-[#6D28D9] px-0.5">
-                  CHAPTER / BATTLEGROUND
+                  {t('chapter_battleground', 'CHAPTER / BATTLEGROUND')}
                 </span>
 
                 <button
@@ -465,54 +492,91 @@ export default function MultiplayerHubScreen() {
                 >
                   <div className="flex items-center gap-2 truncate pr-2">
                     <Swords size={14} className="text-[#6C4DFF] shrink-0" />
-                    <span className="truncate">{chapter === "Mix Chapters" ? "Mix Chapters (All)" : chapter}</span>
+                    <span className="truncate">
+                      {selectedChaptersList.length > 0 
+                        ? (selectedChaptersList.length === 1 
+                            ? selectedChaptersList[0] 
+                            : `${selectedChaptersList.length} ${t('chapters_selected', 'Chapters Selected')} (${selectedChaptersList.join(', ')})`) 
+                        : t('mix_chapters_all', 'Mix Chapters (All)')}
+                    </span>
                   </div>
                   <ChevronDown size={18} className={`text-[#6D28D9] transition-transform duration-300 ${isChapterDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {/* Chapter Dropdown Menu */}
                 {isChapterDropdownOpen && (
-                  <div className="absolute bottom-full left-0 right-0 mb-1 bg-white border-2 border-[#E5DBFB] rounded-xl shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150">
-                    <div className="max-h-44 overflow-y-auto scrollbar-thin">
+                  <div className="absolute bottom-full left-0 right-0 mb-1 bg-[#FFF] border-2 border-[#E5DBFB] rounded-xl shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="max-h-52 overflow-y-auto scrollbar-thin">
                       <div
-                        onClick={() => { setChapter("Mix Chapters"); setIsChapterDropdownOpen(false); }}
+                        onClick={() => { 
+                          setSelectedChaptersList([]); 
+                          setChapter("Mix Chapters"); 
+                          setIsChapterDropdownOpen(false); 
+                        }}
                         className={`px-3.5 py-2.5 text-xs font-bold cursor-pointer transition-colors border-b border-[#F0EBFB] flex items-center justify-between ${
-                          chapter === "Mix Chapters" ? 'bg-[#3520A8] text-white' : 'text-[#141779] hover:bg-[#F4EFF7]'
+                          selectedChaptersList.length === 0 ? 'bg-[#3520A8] text-white' : 'text-[#141779] hover:bg-[#F4EFF7]'
                         }`}
                       >
-                        <span>⚔ Mix Chapters (All)</span>
-                        {chapter === "Mix Chapters" && <Check size={14} />}
+                        <span>⚔ {t('mix_chapters_all', 'Mix Chapters (All)')}</span>
+                        {selectedChaptersList.length === 0 && <Check size={14} />}
                       </div>
 
-                      {chaptersList.map(c => {
-                        const unlocked = isChapterUnlocked(c);
+                      {chaptersList.map((c, idx) => {
+                        const unlocked = isChapterUnlocked(c, idx);
+                        const isSelected = selectedChaptersList.includes(c);
+                        const translatedChapter = t(c.toLowerCase().replace(/ /g, '_'), { defaultValue: c });
                         return (
                           <div
-                            key={c}
+                            key={`${c}_${idx}`}
                             onClick={() => { 
                               if (unlocked) {
-                                setChapter(c); 
-                                setIsChapterDropdownOpen(false); 
+                                if (isSelected) {
+                                  const updated = selectedChaptersList.filter(item => item !== c);
+                                  setSelectedChaptersList(updated);
+                                  setChapter(updated.length > 0 ? updated.join(", ") : "Mix Chapters");
+                                } else {
+                                  const updated = [...selectedChaptersList, c];
+                                  setSelectedChaptersList(updated);
+                                  setChapter(updated.join(", "));
+                                }
                               } else {
-                                setError("Please first complete this chapter in your learning path to unlock it in the Arena!");
+                                if (idx >= 1 && !isSubscribed) {
+                                  setError(t('premium_chapter_locked', 'Selecting Chapter 2+ or Multiple Chapters in Friendly Battle requires a Premium subscription!'));
+                                } else {
+                                  setError(t('chapter_missions_not_completed', 'You must complete all missions of this chapter first before playing it in Friendly Battle!'));
+                                }
                                 setTimeout(() => setError(""), 4000);
                               }
                             }}
                             className={`px-3.5 py-2.5 text-xs font-bold cursor-pointer transition-colors border-b border-[#F0EBFB] last:border-0 flex items-center justify-between ${
-                              !unlocked ? 'bg-gray-50 text-gray-400' :
-                              chapter === c ? 'bg-[#3520A8] text-white' : 'text-[#464652] hover:bg-[#F4EFF7]'
+                              !unlocked ? 'bg-gray-100/70 text-gray-400 opacity-75' :
+                              isSelected ? 'bg-[#6C4DFF]/15 text-[#3520A8]' : 'text-[#464652] hover:bg-[#F4EFF7]'
                             }`}
                           >
-                            <span className="truncate pr-2">{c}</span>
+                            <span className="truncate pr-2">{translatedChapter}</span>
                             {!unlocked ? (
-                              <Lock size={14} className="shrink-0 text-gray-400" />
+                              <div className="flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-md border border-amber-300 shrink-0">
+                                <Lock size={11} className="text-amber-700 shrink-0" />
+                                <span>Locked</span>
+                              </div>
                             ) : (
-                              chapter === c && <Check size={14} />
+                              isSelected && <Check size={14} className="text-[#6C4DFF]" />
                             )}
                           </div>
                         );
                       })}
                     </div>
+                    {selectedChaptersList.length > 0 && (
+                      <div className="bg-[#F4EFF7] px-3 py-2 flex items-center justify-between border-t border-[#E5DBFB]">
+                        <span className="text-[11px] font-bold text-[#3520A8]">{selectedChaptersList.length} Selected</span>
+                        <button 
+                          onClick={() => setIsChapterDropdownOpen(false)}
+                          className="bg-[#3520A8] text-white px-3 py-1 rounded-lg text-[11px] font-bold"
+                        >
+                          Done
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -529,11 +593,11 @@ export default function MultiplayerHubScreen() {
               <div className="flex items-center gap-2">
                 <Users size={18} />
                 <span className="text-sm font-black tracking-wider uppercase">
-                  {loading ? "CREATING BATTLE..." : "⚔ CREATE BATTLE"}
+                  {loading ? t('creating_battle', 'CREATING BATTLE...') : `⚔ ${t('create_battle', 'CREATE BATTLE')}`}
                 </span>
               </div>
               <span className="text-[10px] font-bold text-[#F4C95D] mt-0.5">
-                Cost: {entryFee} Coins | Win: {entryFee * 2} Coins
+                {t('battle_cost_win', { cost: entryFee, win: entryFee * 2, defaultValue: `Cost: ${entryFee} Coins | Win: ${entryFee * 2} Coins` })}
               </span>
             </button>
           </div>
@@ -545,16 +609,16 @@ export default function MultiplayerHubScreen() {
             <div className="bg-white border-2 border-[#E5DBFB] rounded-2xl p-4 flex flex-col gap-4 text-center shadow-sm">
               <div>
                 <h3 className="text-sm font-black text-[#141779] uppercase tracking-wider">
-                  ENTER ROOM CODE
+                  {t('enter_room_code', 'ENTER ROOM CODE')}
                 </h3>
                 <p className="text-[11px] text-[#6D28D9] mt-1">
-                  Ask your friend for their 6-digit Shadow Arena battle code.
+                  {t('ask_friend_code_desc', 'Ask your friend for their 6-digit Shadow Arena battle code.')}
                 </p>
               </div>
 
               <input
                 type="text"
-                placeholder="ENTER 6-DIGIT CODE"
+                placeholder={t('enter_6digit_code', 'ENTER 6-DIGIT CODE')}
                 value={joinCode}
                 onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                 maxLength={6}
@@ -571,9 +635,9 @@ export default function MultiplayerHubScreen() {
                 }`}
               >
                 <span className="text-sm font-black tracking-wider uppercase">
-                  {loading ? "JOINING BATTLE..." : "JOIN BATTLE MATCH"}
+                  {loading ? t('joining_battle', 'JOINING BATTLE...') : t('join_battle_match', 'JOIN BATTLE MATCH')}
                 </span>
-                <span className="text-[10px] font-bold text-white/80">Cost: 100 Coins</span>
+                <span className="text-[10px] font-bold text-white/80">{t('battle_cost_sub', { cost: 100, defaultValue: 'Cost: 100 Coins' })}</span>
               </button>
             </div>
           </div>
@@ -588,16 +652,16 @@ export default function MultiplayerHubScreen() {
             <div className="w-12 h-12 rounded-full bg-red-50 border border-red-200 flex items-center justify-center mb-3">
               <Swords size={24} className="text-red-600" />
             </div>
-            <h2 className="text-lg font-black text-[#141779] mb-1">Leave Shadow Arena?</h2>
+            <h2 className="text-lg font-black text-[#141779] mb-1">{t('leave_shadow_arena_q', 'Leave Shadow Arena?')}</h2>
             <p className="text-xs font-semibold text-[#6D28D9] mb-5">
-              Are you sure you want to exit the battle lobby?
+              {t('exit_lobby_confirm_desc', 'Are you sure you want to exit the battle lobby?')}
             </p>
             <div className="flex gap-2.5 w-full">
               <button 
                 onClick={() => setShowLeaveModal(false)}
                 className="flex-1 bg-[#F4EFF7] text-[#141779] py-2.5 rounded-xl font-bold text-xs hover:bg-[#EAE2FB] transition-all border border-[#E5DBFB]"
               >
-                Cancel
+                {t('cancel', 'Cancel')}
               </button>
               <button 
                 onClick={() => {
@@ -606,7 +670,7 @@ export default function MultiplayerHubScreen() {
                 }}
                 className="flex-1 bg-gradient-to-r from-red-600 to-red-700 text-white py-2.5 rounded-xl font-bold text-xs hover:brightness-110 transition-all shadow-[0_4px_12px_rgba(239,68,68,0.3)]"
               >
-                Leave Arena
+                {t('leave_arena', 'Leave Arena')}
               </button>
             </div>
           </div>

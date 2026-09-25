@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import MapWorld from "../../../components/map/MapWorld";
 import { ArrowLeft } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface City {
   _id?: string;
@@ -17,6 +18,7 @@ interface City {
 export default function JourneyMapScreen() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [fuel, setFuel] = useState(0);
   const [xp, setXp] = useState(0);
@@ -282,10 +284,10 @@ export default function JourneyMapScreen() {
             </div>
             <div>
               <h1 className="text-sm font-black text-[#141779] uppercase tracking-wider leading-none">
-                {journeyData?.tierTitle || "Growth Journey"}
+                {journeyData?.tierTitle ? t(journeyData.tierTitle.toLowerCase().replace(/ /g, '_'), { defaultValue: journeyData.tierTitle }) : t('growth_journey', 'Growth Journey')}
               </h1>
               <p className="text-[10px] font-bold text-[#006a62] mt-0.5">
-                {journeyData?.character || "Explorer"} {journeyData?.rank !== "None" ? `(${journeyData.rank})` : ""}
+                {journeyData?.character ? t(journeyData.character.toLowerCase().replace(/ /g, '_'), { defaultValue: journeyData.character }) : t('explorer', 'Explorer')} {journeyData?.rank && journeyData.rank !== "None" ? `(${journeyData.rank})` : ""}
               </p>
             </div>
           </div>

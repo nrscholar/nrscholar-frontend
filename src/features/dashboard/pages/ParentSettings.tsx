@@ -1,9 +1,10 @@
 import { AnimatePresence, motion, Variants } from "framer-motion";
-import { ArrowLeft, Bell, BookOpen, Camera, Save, ShieldCheck, Timer, Trash2, UserRound, GraduationCap, Cake, ChevronDown, Check, Plus, Globe, LogOut, Edit3, RefreshCw } from "lucide-react";
+import { ArrowLeft, Bell, BookOpen, Camera, Save, ShieldCheck, Timer, Trash2, UserRound, GraduationCap, Cake, ChevronDown, Check, Plus, Globe, LogOut, Edit3, RefreshCw, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch, clearAuthSession } from "../../../api";
 import { useTranslation } from "react-i18next";
+import { translateNotificationTitle, translateNotificationMessage } from "../../../utils/notificationTranslator";
 
 const CustomDropdown = ({ label, icon: Icon, iconColor, value, options = [], onSelect, placeholder }: any) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -168,6 +169,38 @@ export default function ParentSettings() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [contentLanguage, setContentLanguage] = useState("en");
 
+  // Notifications State & Formatters
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+
+  const formatNotifTitle = (title: string) => translateNotificationTitle(title, t);
+  const formatNotifMsg = (msg: string) => translateNotificationMessage(msg, t);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await apiFetch("/api/notifications");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          setNotifications(json.data);
+          const unread = json.data.filter((n: any) => !n.isRead).length;
+          setUnreadNotifCount(unread);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to fetch notifications", e);
+    }
+  };
+
+  const markAllNotifsRead = async () => {
+    try {
+      await apiFetch("/api/notifications/mark-all-read?role=parent", { method: "POST" });
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      setUnreadNotifCount(0);
+    } catch (e) {}
+  };
+
   // Parent Profile States
   const [parentName, setParentName] = useState("");
   const [parentPhoto, setParentPhoto] = useState<string>("");
@@ -290,6 +323,7 @@ export default function ParentSettings() {
         })();
 
         await Promise.allSettled([controlsPromise, profilePromise, subjectsPromise]);
+        fetchNotifications();
       } catch (err) {
         console.error("Failed to load parental controls", err);
       }
@@ -706,11 +740,20 @@ export default function ParentSettings() {
           />
         </div>
         <h1 className="text-xl font-black text-[#141779] tracking-tight">
-          {activeTab === "profile" ? "Profile Settings" : t("settings")}
+          {activeTab === "profile" ? t("profile_settings", "Profile Settings") : t("settings", "Settings")}
         </h1>
       </div>
-      <button className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 hover:bg-slate-100 text-[#141779] transition-all">
+      <button 
+        onClick={() => {
+          setShowNotifications(true);
+          markAllNotifsRead();
+        }}
+        className="relative w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 hover:bg-slate-100 text-[#141779] transition-all active:scale-95"
+      >
         <Bell size={20} />
+        {unreadNotifCount > 0 && (
+          <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-white" />
+        )}
       </button>
     </header>
 
@@ -733,8 +776,8 @@ export default function ParentSettings() {
                 <UserRound size={24} />
               </div>
               <div>
-                <h2 className="text-lg font-black text-[#141779]">Profile Settings</h2>
-                <p className="text-xs font-bold text-slate-600 mt-0.5">Manage parent and kids profiles</p>
+                <h2 className="text-lg font-black text-[#141779]">{t('profile_settings', 'Profile Settings')}</h2>
+                <p className="text-xs font-bold text-slate-600 mt-0.5">{t('manage_parent_kids_profiles', 'Manage parent and kids profiles')}</p>
               </div>
             </div>
             <div className="w-9 h-9 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 group-hover:translate-x-1 transition-transform relative z-10">
@@ -750,8 +793,8 @@ export default function ParentSettings() {
                   <Timer size={24} />
                 </div>
                 <div>
-                  <h2 className="text-lg font-black text-[#141779]">Screen Time Limit</h2>
-                  <p className="text-xs font-bold text-slate-600 mt-0.5">Manage app usage duration</p>
+                  <h2 className="text-lg font-black text-[#141779]">{t('screen_time_limit', 'Screen Time Limit')}</h2>
+                  <p className="text-xs font-bold text-slate-600 mt-0.5">{t('manage_app_usage_duration', 'Manage app usage duration')}</p>
                 </div>
               </div>
               <CustomSwitch checked={isScreenTimeOn} onChange={(v) => {
@@ -764,7 +807,7 @@ export default function ParentSettings() {
             {isScreenTimeOn ? (
               <div className="mt-2 flex flex-col gap-3">
                 <div className="flex justify-between items-end">
-                  <span className="text-3xl font-black text-[#006a62]">{screenTimeMinutes} <span className="text-xs font-extrabold text-slate-600">Minutes / Day</span></span>
+                  <span className="text-3xl font-black text-[#006a62]">{screenTimeMinutes} <span className="text-xs font-extrabold text-slate-600">{t('minutes_per_day', 'Minutes / Day')}</span></span>
                 </div>
                 <input 
                   type="range" 
@@ -787,8 +830,8 @@ export default function ParentSettings() {
               </div>
             ) : (
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-center">
-                <p className="font-black text-[#141779] text-sm">Screen Time is Unlimited</p>
-                <p className="text-xs font-bold text-slate-600 mt-1">Your child can use the app without any time restrictions.</p>
+                <p className="font-black text-[#141779] text-sm">{t('screen_time_unlimited', 'Screen Time is Unlimited')}</p>
+                <p className="text-xs font-bold text-slate-600 mt-1">{t('screen_time_unlimited_sub', 'Your child can use the app without any time restrictions.')}</p>
               </div>
             )}
           </motion.div>
@@ -800,8 +843,8 @@ export default function ParentSettings() {
                 <BookOpen size={24} />
               </div>
               <div>
-                <h2 className="text-lg font-black text-[#141779]">Subject Focus</h2>
-                <p className="text-xs font-bold text-slate-600 mt-0.5">Restrict access to certain subjects</p>
+                <h2 className="text-lg font-black text-[#141779]">{t('subject_focus', 'Subject Focus')}</h2>
+                <p className="text-xs font-bold text-slate-600 mt-0.5">{t('restrict_access_subjects', 'Restrict access to certain subjects')}</p>
               </div>
             </div>
             
@@ -814,7 +857,7 @@ export default function ParentSettings() {
                        subject.toLowerCase().includes("science") ? "🔬" : 
                        subject.toLowerCase().includes("english") || subject.toLowerCase().includes("language") ? "📚" : "📖"}
                     </span>
-                    <span className="text-sm font-black text-[#141779]">{subject}</span>
+                    <span className="text-sm font-black text-[#141779]">{t(subject.toLowerCase(), { defaultValue: subject })}</span>
                   </div>
                   <CustomSwitch 
                     checked={!restrictedSubjects[subject]} 
@@ -823,7 +866,7 @@ export default function ParentSettings() {
                 </div>
               )) : (
                 <div className="text-center py-4 text-slate-500 font-bold text-xs">
-                  No subjects found for current standard.
+                  {t('no_subjects_found', 'No subjects found for current standard.')}
                 </div>
               )}
             </div>
@@ -836,38 +879,25 @@ export default function ParentSettings() {
                 <Globe size={24} />
               </div>
               <div>
-                <h2 className="text-lg font-black text-[#141779]">{t("language_settings")}</h2>
-                <p className="text-xs font-bold text-slate-600 mt-0.5">{t("manage_language_pref")}</p>
+                <h2 className="text-lg font-black text-[#141779]">{t("language_settings", "Language Settings")}</h2>
+                <p className="text-xs font-bold text-slate-600 mt-0.5">{t("manage_language_pref", "Manage app & lesson language preferences")}</p>
               </div>
             </div>
             
             <div className="flex flex-col gap-3 mt-1">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200/80 gap-3">
                 <div className="flex flex-col">
-                  <span className="text-sm font-black text-[#141779]">{t("app_language")}</span>
-                  <span className="text-xs font-bold text-slate-600">{t("select_language")}</span>
+                  <span className="text-sm font-black text-[#141779]">{t("app_language", "App Display Language")}</span>
+                  <span className="text-xs font-bold text-slate-600">{t("select_language", "Select your preferred language")}</span>
                 </div>
                 <LanguageDropdown 
                   value={(i18n?.language || "en").split('-')[0]}
-                  onChange={(val: string) => i18n.changeLanguage(val)}
-                  options={[
-                    { value: "en", label: "English" },
-                    { value: "hi", label: "हिंदी (Hindi)" },
-                    { value: "gu", label: "ગુજરાતી (Gujarati)" }
-                  ]}
-                />
-              </div>
-
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200/80 gap-3">
-                <div className="flex flex-col">
-                  <span className="text-sm font-black text-[#141779]">{t("lessons_language")}</span>
-                  <span className="text-xs font-bold text-slate-600">{t("select_language")}</span>
-                </div>
-                <LanguageDropdown 
-                  value={contentLanguage}
                   onChange={(val: string) => {
-                    setContentLanguage(val);
-                    updateSetting("contentLanguage", val);
+                    localStorage.setItem('i18nextLng', val);
+                    localStorage.setItem('userLanguage', val);
+                    if (i18n && typeof i18n.changeLanguage === 'function') {
+                      i18n.changeLanguage(val);
+                    }
                   }}
                   options={[
                     { value: "en", label: "English" },
@@ -889,14 +919,14 @@ export default function ParentSettings() {
                 <ShieldCheck size={24} />
               </div>
               <div>
-                <h2 className="text-lg font-black text-[#141779]">Family Link & Devices</h2>
-                <p className="text-xs font-bold text-slate-600 mt-0.5">Connect co-parents (Father & Mother) or extra devices</p>
+                <h2 className="text-lg font-black text-[#141779]">{t('family_link_devices', 'Family Link & Devices')}</h2>
+                <p className="text-xs font-bold text-slate-600 mt-0.5">{t('connect_coparents', 'Connect co-parents (Father & Mother) or extra devices')}</p>
               </div>
             </div>
 
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex flex-col min-w-0">
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider truncate">Your Family Link Code</span>
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider truncate">{t('your_family_link_code', 'Your Family Link Code')}</span>
                 <span className="text-xl font-black text-[#141779] tracking-widest whitespace-nowrap">{user?.familyCode || "FAM-8492"}</span>
               </div>
               
@@ -911,7 +941,7 @@ export default function ParentSettings() {
                   }}
                   className="flex-1 sm:flex-none h-10 px-4 rounded-xl bg-[#141779] hover:bg-[#1e23a0] text-white text-xs font-black uppercase tracking-wider active:scale-95 transition-all shadow-xs flex items-center justify-center gap-1.5"
                 >
-                  <span>Copy Code</span>
+                  <span>{t('copy_code', 'Copy Code')}</span>
                 </button>
 
                 <button
@@ -920,7 +950,7 @@ export default function ParentSettings() {
                   className="h-10 px-3 rounded-xl bg-slate-200/80 hover:bg-slate-200 text-slate-700 hover:text-[#141779] text-xs font-black active:scale-95 flex items-center justify-center gap-1.5 transition-all"
                 >
                   <RefreshCw size={14} />
-                  <span>Regenerate</span>
+                  <span>{t('regenerate', 'Regenerate')}</span>
                 </button>
               </div>
             </div>
@@ -936,8 +966,8 @@ export default function ParentSettings() {
               <LogOut size={24} className="text-rose-600" />
             </div>
             <div className="flex-1">
-              <h2 className="text-lg font-black text-rose-700">Logout</h2>
-              <p className="text-xs font-bold text-rose-800/70 mt-0.5">Sign out of your account</p>
+              <h2 className="text-lg font-black text-rose-700">{t('logout', 'Logout')}</h2>
+              <p className="text-xs font-bold text-rose-800/70 mt-0.5">{t('sign_out_account', 'Sign out of your account')}</p>
             </div>
           </motion.button>
         </>
@@ -946,7 +976,7 @@ export default function ParentSettings() {
           {/* Parent Profile Card */}
           <motion.div variants={itemVariants} className="bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md flex flex-col gap-4">
             <h3 className="text-lg font-black text-[#141779] flex items-center gap-2">
-              <ShieldCheck size={20} className="text-[#006a62]" /> Parent Profile
+              <ShieldCheck size={20} className="text-[#006a62]" /> {t("parent_profile", "Parent Profile")}
             </h3>
             <div className="flex flex-col sm:flex-row items-center gap-5">
               <div className="relative w-20 h-20 rounded-full border-4 border-slate-100 shadow-md bg-slate-100 flex items-center justify-center text-3xl overflow-hidden cursor-pointer group/parentphoto shrink-0">
@@ -968,12 +998,12 @@ export default function ParentSettings() {
               </div>
               
               <div className="flex-1 w-full flex flex-col gap-2">
-                <label className="text-xs font-black text-slate-600 uppercase tracking-wider ml-1">Parent Name</label>
+                <label className="text-xs font-black text-slate-600 uppercase tracking-wider ml-1">{t("parent_name_label", "Parent Name")}</label>
                 <input
                   type="text"
                   value={parentName}
                   onChange={(e) => setParentName(e.target.value)}
-                  placeholder="Enter Parent Name"
+                  placeholder={t("enter_parent_name", "Enter Parent Name")}
                   className="w-full h-12 bg-slate-50 rounded-2xl px-5 text-sm font-extrabold text-slate-800 border border-slate-200 focus:border-[#141779] outline-none shadow-xs"
                 />
               </div>
@@ -984,7 +1014,7 @@ export default function ParentSettings() {
           <motion.div variants={itemVariants} className="bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md flex flex-col gap-4">
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-black text-[#141779] flex items-center gap-2">
-                <UserRound size={20} className="text-[#141779]" /> Child 1 Profile
+                <UserRound size={20} className="text-[#141779]" /> {t("child_1_profile", "Child 1 Profile")}
               </h3>
               {hasChild2 && (
                 <button 
@@ -1018,54 +1048,54 @@ export default function ParentSettings() {
                     className="hidden" 
                   />
                 </div>
-                <span className="text-[11px] font-black text-slate-500 mt-1.5">Tap photo to edit</span>
+                <span className="text-[11px] font-black text-slate-500 mt-1.5">{t("tap_photo_to_edit", "Tap photo to edit")}</span>
               </div>
 
               <div className="flex flex-col gap-2">
-                <label className="text-xs font-black text-slate-600 uppercase tracking-wider ml-1">Child Name</label>
+                <label className="text-xs font-black text-slate-600 uppercase tracking-wider ml-1">{t("child_name_label", "Child Name")}</label>
                 <input
                   type="text"
                   value={child1Name}
                   onChange={(e) => setChild1Name(e.target.value)}
-                  placeholder="Enter Child Name"
+                  placeholder={t("enter_child_name", "Enter Child Name")}
                   className="w-full h-12 bg-slate-50 rounded-2xl px-5 text-sm font-extrabold text-slate-800 border border-slate-200 focus:border-[#141779] outline-none shadow-xs"
                 />
               </div>
 
               <CustomDropdown
-                label="Education Board"
+                label={t("education_board", "Education Board")}
                 icon={BookOpen}
                 iconColor="#006a62"
                 value={child1Board}
                 options={boards}
                 onSelect={setChild1Board}
-                placeholder="Select Board"
+                placeholder={t("select_board", "Select Board")}
               />
 
               <div className="flex gap-3 w-full relative z-10">
                 <CustomDropdown
-                  label="Class / Grade"
+                  label={t("class_grade", "Class / Grade")}
                   icon={GraduationCap}
                   iconColor="#30007f"
                   value={child1Class}
                   options={classes}
                   onSelect={setChild1Class}
-                  placeholder="Select"
+                  placeholder={t("select", "Select")}
                 />
 
                 <CustomDropdown
-                  label="Age"
+                  label={t("age", "Age")}
                   icon={Cake}
                   iconColor="#141779"
                   value={child1Age}
                   options={ages}
                   onSelect={setChild1Age}
-                  placeholder="Select"
+                  placeholder={t("select", "Select")}
                 />
               </div>
 
               <div className="flex flex-col gap-2 mt-1">
-                <label className="text-xs font-black text-slate-600 uppercase tracking-wider ml-1">Child Device Code (Scholar Login)</label>
+                <label className="text-xs font-black text-slate-600 uppercase tracking-wider ml-1">{t("child_device_code_label", "Child Device Code (Scholar Login)")}</label>
                 <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center justify-between">
                   <span className="text-lg font-black tracking-widest text-[#141779]">
                     {child1Code || "N/A"}
@@ -1075,7 +1105,7 @@ export default function ParentSettings() {
                     onClick={() => requestRegenCode("child_1")}
                     className="px-3 py-1.5 rounded-full text-xs font-black bg-indigo-50 text-[#141779] border border-indigo-100 hover:bg-indigo-100 transition-colors"
                   >
-                    Regenerate
+                    {t("regenerate", "Regenerate")}
                   </button>
                 </div>
               </div>
@@ -1376,6 +1406,51 @@ export default function ParentSettings() {
             >
               Cancel
             </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Notifications Side Panel / Modal Drawer */}
+    {showNotifications && (
+      <div className="fixed inset-0 bg-black/40 z-[100] flex justify-end">
+        <div className="w-full sm:w-[400px] h-full bg-[#f7f9fb] shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+          <div className="flex justify-between items-center p-6 border-b border-gray-200 bg-white">
+            <h2 className="text-xl font-bold text-[#141779] flex items-center gap-2">
+              <Bell size={24} /> {t("notifications", "સૂચનાઓ")}
+            </h2>
+            <button onClick={() => setShowNotifications(false)} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
+              <X size={20} color="#464652" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {notifications.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center opacity-50">
+                <Bell size={48} className="mb-4 text-gray-400" />
+                <p className="text-gray-500 font-medium">{t("no_recent_activity", "હજુ સુધી કોઈ સૂચનાઓ નથી.")}</p>
+              </div>
+            ) : (
+              notifications.map((notif, idx) => {
+                let icon = "🔔";
+                let bg = "bg-white";
+                if (notif.type === "gamification") icon = "🎮";
+                if (notif.type === "habit") icon = "✨";
+                if (notif.type === "learning") icon = "📚";
+                
+                return (
+                  <div key={idx} className={`p-4 rounded-xl shadow-sm border border-gray-100 flex gap-4 ${bg} hover:shadow-md transition-shadow`}>
+                    <div className="text-2xl pt-1">{icon}</div>
+                    <div>
+                      <h4 className="text-[14px] font-bold text-[#141779] mb-1">{formatNotifTitle(notif.title)}</h4>
+                      <p className="text-[12px] text-[#464652] leading-tight">{formatNotifMsg(notif.message)}</p>
+                      <p className="text-[10px] text-gray-400 mt-2 font-medium">
+                        {new Date(notif.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       </div>

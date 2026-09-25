@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   ArrowLeft, Clock, TrendingUp, AlertTriangle, CheckCircle,
   Calculator, Atom, BookOpen, Star, Target, Lightbulb,
@@ -55,6 +56,7 @@ function SectionHeader({ icon, title, subtitle }: { icon: React.ReactNode; title
 }
 
 export default function ParentReportScreen() {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   
   const formatReadingTime = (seconds: number) => {
@@ -129,11 +131,11 @@ export default function ParentReportScreen() {
     
     switch (dateFilter) {
       case "today":
-        return { label: "📅 Today", range: formatDate(today) };
+        return { label: `📅 ${t('today', 'Today')}`, range: formatDate(today) };
       case "yesterday": {
         const yesterday = new Date(today);
         yesterday.setDate(today.getDate() - 1);
-        return { label: "📅 Yesterday", range: formatDate(yesterday) };
+        return { label: `📅 ${t('yesterday', 'Yesterday')}`, range: formatDate(yesterday) };
       }
       case "this_week": {
         const start = new Date(today);
@@ -142,21 +144,21 @@ export default function ParentReportScreen() {
         const monday = new Date(start.setDate(diff));
         const sunday = new Date(monday);
         sunday.setDate(monday.getDate() + 6);
-        return { label: "📅 This Week", range: `${formatDate(monday)} – ${formatDate(sunday)}` };
+        return { label: `📅 ${t('this_week', 'This Week')}`, range: `${formatDate(monday)} – ${formatDate(sunday)}` };
       }
       case "this_month": {
         const monthName = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-        return { label: "📅 This Month", range: monthName };
+        return { label: `📅 ${t('this_month', 'This Month')}`, range: monthName };
       }
       case "custom":
         if (customStartDate && customEndDate) {
           const s = new Date(customStartDate);
           const e = new Date(customEndDate);
-          return { label: "📅 Custom Range", range: `${formatDate(s)} – ${formatDate(e)}` };
+          return { label: `📅 ${t('custom_date_range', 'Custom Date Range')}`, range: `${formatDate(s)} – ${formatDate(e)}` };
         }
-        return { label: "📅 Custom Range", range: "Select Dates" };
+        return { label: `📅 ${t('custom_date_range', 'Custom Date Range')}`, range: t('select_dates', 'Select Dates') };
       default:
-        return { label: "📅 This Week", range: "Select Dates" };
+        return { label: `📅 ${t('this_week', 'This Week')}`, range: t('select_dates', 'Select Dates') };
     }
   };
 
@@ -290,10 +292,45 @@ export default function ParentReportScreen() {
     { val: dna.retention,   ang: 198,  label: "Retention" },
   ];
 
+  const translateRecommendation = (rec: string) => {
+    if (!rec) return "";
+    let translated = rec;
+    const subjectMap: Record<string, string> = {
+      "Mathematics": t("maths", "Maths"),
+      "Gujarati": t("gujarati", "Gujarati"),
+      "Maths": t("maths", "Maths"),
+      "Math": t("maths", "Maths"),
+      "Science": t("science", "Science"),
+      "English": t("english_subject", "English"),
+      "Social Studies": t("social_studies", "Social Studies"),
+      "Hindi": t("hindi_subject", "Hindi")
+    };
+    for (const [subjEng, subjTrans] of Object.entries(subjectMap)) {
+      translated = translated.replace(new RegExp(`\\b${subjEng}\\b`, "gi"), subjTrans);
+    }
+
+    translated = translated
+      .replace(/Focus on (.+?) practice sessions to reinforce core concepts\./g, (_, subj) =>
+        t("rec_focus_practice", { subject: subj, defaultValue: `મૂળભૂત ખ્યાલોને મજબૂત કરવા માટે ${subj} પ્રેક્ટિસ સત્રો પર ધ્યાન કેન્દ્રિત કરો.` })
+      )
+      .replace(/Review incorrect answers in (.+?) quizzes to identify knowledge gaps\./g, (_, subj) =>
+        t("rec_review_incorrect", { subject: subj, defaultValue: `જ્ઞાનની ખામીઓ ઓળખવા માટે ${subj} ક્વિઝમાં ખોટા જવાબોની સમીક્ષા કરો.` })
+      )
+      .replace(/Continue daily practice to maintain your learning streak\./g,
+        t("rec_continue_daily", "તમારી શીખવાની સ્ટ્રીક જાળવી રાખવા માટે રોજિંદી પ્રેક્ટિસ ચાલુ રાખો.")
+      )
+      .replace(/Try a Boss Battle to test your mastery in completed chapters!/g,
+        t("rec_try_boss_battle", "પૂર્ણ થયેલા પ્રકરણોમાં તમારી નિપુણતા ચકાસવા માટે બોસ બેટલ અજમાવો!")
+      );
+
+    return translated;
+  };
+
   const fetchReport = useCallback(async () => {
     try {
+      const lang = i18n.language || "en";
       const [reportRes, userRes] = await Promise.all([
-        apiFetch("/api/parent/report"),
+        apiFetch("/api/parent/report", { headers: { "Accept-Language": lang } }),
         apiFetch("/api/users/me").catch(() => null)
       ]);
       const json = await reportRes.json();
@@ -307,7 +344,7 @@ export default function ParentReportScreen() {
       }
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
-  }, [refreshKey]);
+  }, [refreshKey, i18n.language]);
 
   useEffect(() => {
     fetchReport();
@@ -390,13 +427,13 @@ export default function ParentReportScreen() {
   let displaySolved = 0;
   let displayAccuracy = 0;
   let displayTime = 0;
-  let displayLabel = "Activity";
+  let displayLabel = t("activity", "Activity");
 
-  if (dateFilter === "today") displayLabel = "Today's Activity";
-  else if (dateFilter === "yesterday") displayLabel = "Yesterday's Activity";
-  else if (dateFilter === "this_week") displayLabel = "This Week's Activity";
-  else if (dateFilter === "this_month") displayLabel = "This Month's Activity";
-  else if (dateFilter === "custom") displayLabel = "Custom Range Activity";
+  if (dateFilter === "today") displayLabel = t("todays_activity", "Today's Activity");
+  else if (dateFilter === "yesterday") displayLabel = t("yesterdays_activity", "Yesterday's Activity");
+  else if (dateFilter === "this_week") displayLabel = t("this_weeks_activity", "This Week's Activity");
+  else if (dateFilter === "this_month") displayLabel = t("this_months_activity", "This Month's Activity");
+  else if (dateFilter === "custom") displayLabel = t("custom_range_activity", "Custom Range Activity");
 
   // Compute filteredQA for the card
   let filteredQA = { ...qA };
@@ -518,11 +555,58 @@ export default function ParentReportScreen() {
     ? `${masteryPath} L ${getX(chartHistory.length - 1)} ${chartHeight - paddingBottom} L ${getX(0)} ${chartHeight - paddingBottom} Z` 
     : '';
 
-  const chaptersBySubject: Record<string, any[]> = {};
-  for (const ch of chapters) {
-    if (!chaptersBySubject[ch.subjectId]) chaptersBySubject[ch.subjectId] = [];
-    chaptersBySubject[ch.subjectId].push(ch);
-  }
+  const getTranslatedSubject = (subj: string) => {
+    const lower = (subj || "").toLowerCase().trim();
+    if (lower === "mathematics" || lower === "maths" || lower === "math") return t("maths", "ગણિત");
+    if (lower === "gujarati") return t("gujarati", "ગુજરાતી");
+    if (lower === "science") return t("science", "વિજ્ઞાન");
+    if (lower === "english") return t("english_subject", "અંગ્રેજી");
+    if (lower === "hindi") return t("hindi_subject", "હિન્દી");
+    if (lower === "social studies" || lower === "social_studies") return t("social_studies", "સામાજિક વિજ્ઞાન");
+    return t(lower, subj);
+  };
+
+  const formatInsightMessage = (msg: string) => {
+    if (!msg) return msg;
+    let translated = msg;
+    translated = translated
+      .replace(/(.*?) is currently high performing with (\d+)% accuracy\./g, (_, subj, acc) => {
+        const trSubj = getTranslatedSubject(subj);
+        return t("insight_high_performing", { subj: trSubj, acc, defaultValue: `${trSubj} ${acc}% ચોકસાઈ સાથે ઉચ્ચ પ્રદર્શન કરી રહ્યું છે.` });
+      })
+      .replace(/(.*?) is showing an increasing trend with (\d+)% accuracy\./g, (_, subj, acc) => {
+        const trSubj = getTranslatedSubject(subj);
+        return t("insight_increasing_trend", { subj: trSubj, acc, defaultValue: `${trSubj} ${acc}% ચોકસાઈ સાથે વધતી ક્ષમતા દર્શાવે છે.` });
+      })
+      .replace(/(.*?) accuracy is currently (\d+)%\. Requires targeted practice\./g, (_, subj, acc) => {
+        const trSubj = getTranslatedSubject(subj);
+        return t("insight_requires_practice", { subj: trSubj, acc, defaultValue: `${trSubj} ચોકસાઈ વર્તમાનમાં ${acc}% છે. લક્ષ્યાંકિત પ્રેક્ટિસની જરૂર છે.` });
+      })
+      .replace(/⚠️ Risk Alert: (.*?) score has stayed below 60% for 3 consecutive days \((.*?)\)\./g, (_, subj, trend) => {
+        const trSubj = getTranslatedSubject(subj);
+        return t("insight_risk_alert", { subj: trSubj, trend, defaultValue: `⚠️ જોખમ ચેતવણી: ${trSubj} સ્કોર સતત 3 દિવસથી 60% થી નીચે રહ્યો છે (${trend}).` });
+      })
+      .replace(/🎉 You are on the right track! (.*?) accuracy has recovered above 60% \((\d+)%\)\./g, (_, subj, acc) => {
+        const trSubj = getTranslatedSubject(subj);
+        return t("insight_recovery_track", { subj: trSubj, acc, defaultValue: `🎉 તમે યોગ્ય માર્ગ પર છો! ${trSubj} ચોકસાઈ 60% થી ઉપર સુધરી ગઈ છે (${acc}%).` });
+      })
+      .replace(/🎉 You are on the right track! (.*?) accuracy has improved to (\d+)% over the last 2 days\./g, (_, subj, acc) => {
+        const trSubj = getTranslatedSubject(subj);
+        return t("insight_improved_track", { subj: trSubj, acc, defaultValue: `🎉 તમે યોગ્ય માર્ગ પર છો! ${trSubj} ચોકસાઈ છેલ્લા 2 દિવસમાં ${acc}% સુધી સુધરી છે.` });
+      })
+      .replace(/needs attention with (\d+)% accuracy/g, (_, acc) =>
+        t("insight_needs_attention", { acc, defaultValue: `${acc}% ચોકસાઈ સાથે વધુ ધ્યાન આપવાની જરૂર છે.` })
+      )
+      .replace(/is maintaining good scores across all subjects/g,
+        t("insight_maintaining_good", "તમામ વિષયોમાં સારું પ્રદર્શન જાળવી રહ્યું છે.")
+      )
+      .replace(/No weakness for now\./gi, t("no_weakness_for_now", "હાલમાં કોઈ નબળાઈ નથી."))
+      .replace(/No strength for now\./gi, t("no_strength_for_now", "હાલમાં કોઈ તાકાત નથી."))
+      .replace(/No risk for now\./gi, t("no_risk_for_now", "હાલમાં કોઈ જોખમ નથી."))
+      .replace(/Not enough Data for now wait few Days/gi, t("not_enough_data_for_now", "હાલમાં પૂરતો ડેટા નથી, થોડા દિવસ રાહ જુઓ"));
+
+    return translated;
+  };
 
   return (
     <div className="min-h-screen bg-[#f7f9fb] font-sans pb-28">
@@ -532,8 +616,8 @@ export default function ParentReportScreen() {
           <ArrowLeft size={24} color="#141779" />
         </button>
         <div className="flex-1 min-w-0">
-          <h1 className="text-[20px] font-bold text-[#141779]">Learning Reports</h1>
-          <p className="text-xs text-[#767683]">Real-time analytics from activity data</p>
+          <h1 className="text-[20px] font-bold text-[#141779]">{t('learning_reports', 'Learning Reports')}</h1>
+          <p className="text-xs text-[#767683]">{t('learning_reports_sub', 'Real-time analytics from activity data')}</p>
         </div>
       </header>
 
@@ -585,7 +669,7 @@ export default function ParentReportScreen() {
               onClick={() => setShowSwitcher(true)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-full border-2 border-dashed border-indigo-200 text-[#141779] text-xs font-bold shrink-0 hover:bg-indigo-50 transition-all"
             >
-              + Add / Manage
+              {t("add_manage_child", "+ Add / Manage")}
             </button>
           </div>
         )}
@@ -595,18 +679,18 @@ export default function ParentReportScreen() {
           <div className="w-full bg-white border-2 border-indigo-200 p-4 rounded-[24px] shadow-xs space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-black text-[#141779] flex items-center gap-1.5">
-                📅 Custom Date Range
+                📅 {t("custom_date_range", "Custom Date Range")}
               </span>
               <button 
                 onClick={() => setShowDateSheet(true)}
                 className="text-xs font-black text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-0.5"
               >
-                Change Period <ChevronDown size={14} />
+                {t("change_period", "Change Period")} <ChevronDown size={14} />
               </button>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500">Start Date</label>
+                <label className="text-[10px] font-bold text-slate-500">{t("start_date", "Start Date")}</label>
                 <input
                   type="date"
                   value={customStartDate}
@@ -615,7 +699,7 @@ export default function ParentReportScreen() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500">End Date</label>
+                <label className="text-[10px] font-bold text-slate-500">{t("end_date", "End Date")}</label>
                 <input
                   type="date"
                   value={customEndDate}
@@ -654,7 +738,7 @@ export default function ParentReportScreen() {
             }`}
           >
             <span>📚</span>
-            <span>{subjectFilter === "all" ? "All Subjects" : subjectFilter}</span>
+            <span>{subjectFilter === "all" ? t('all_subjects', 'All Subjects') : getTranslatedSubject(subjectFilter)}</span>
             <ChevronDown size={14} className="text-slate-400" />
           </button>
 
@@ -664,7 +748,7 @@ export default function ParentReportScreen() {
             className="flex-1 flex items-center justify-center gap-2 bg-white border-2 border-slate-100 py-3 px-4 rounded-xl text-xs font-black text-slate-700 shadow-xs hover:border-slate-200 active:scale-[0.98] transition-all"
           >
             <span>⚙️</span>
-            <span>Customize</span>
+            <span>{t('customize', 'Customize')}</span>
             <ChevronDown size={14} className="text-slate-400" />
           </button>
         </div>
@@ -675,19 +759,19 @@ export default function ParentReportScreen() {
           className="w-full flex items-center justify-center gap-2 bg-white border-2 border-slate-100 py-3 px-4 rounded-xl text-xs font-black text-slate-700 shadow-xs hover:border-indigo-200 hover:bg-indigo-50 active:scale-[0.98] transition-all"
         >
           <span>↓</span>
-          <span>Export Report Data</span>
+          <span>{t('export_report_data', 'Export Report Data')}</span>
         </button>
 
         {/* Today's Activity Card */}
         <Card>
-          <SectionHeader icon={<Clock size={20} color="#006a62" />} title={displayLabel} subtitle="Session stats & engagement" />
+          <SectionHeader icon={<Clock size={20} color="#006a62" />} title={displayLabel} subtitle={t('session_stats_engagement', 'Session stats & engagement')} />
           <div className="grid grid-cols-3 gap-2 mb-4">
-            <StatBox label="Time (min)"  value={displayTime} />
-            <StatBox label="Questions"   value={displaySolved} color="text-[#006a62]" />
-            <StatBox label="Accuracy"    value={`${displayAccuracy}%`} color="text-[#30007f]" />
+            <StatBox label={t('time_min', 'TIME (MIN)')}  value={displayTime} />
+            <StatBox label={t('questions', 'QUESTIONS')}   value={displaySolved} color="text-[#006a62]" />
+            <StatBox label={t('accuracy', 'ACCURACY')}    value={`${displayAccuracy}%`} color="text-[#30007f]" />
           </div>
           <div className="flex justify-between items-center mb-1">
-            <span className="text-[10px] font-bold text-[#464652] uppercase">Confidence</span>
+            <span className="text-[10px] font-bold text-[#464652] uppercase">{t('confidence', 'CONFIDENCE')}</span>
             <span className="text-sm font-black text-[#141779]">{displayAccuracy}%</span>
           </div>
           <ProgressBar value={displayAccuracy} color="bg-gradient-to-r from-[#141779] via-[#30007f] to-[#57fae9]" />
@@ -702,7 +786,7 @@ export default function ParentReportScreen() {
               const color = delta >= 0 ? "text-emerald-600" : "text-red-600";
               return (
                 <div className={`mt-3 text-xs font-black ${color} flex items-center gap-1.5`}>
-                  <span>{deltaStr} vs previous period</span>
+                  <span>{deltaStr} {t("vs_previous_period", "vs previous period")}</span>
                 </div>
               );
             }
@@ -712,16 +796,16 @@ export default function ParentReportScreen() {
 
         {/* Question Analytics Card */}
         <Card>
-          <SectionHeader icon={<BarChart2 size={20} color="#30007f" />} title="Question Analytics" subtitle="Overall performance metrics" />
+          <SectionHeader icon={<BarChart2 size={20} color="#30007f" />} title={t("question_analytics", "Question Analytics")} subtitle={t("overall_performance_metrics", "Overall performance metrics")} />
           <div className="grid grid-cols-2 gap-2 mb-3">
-            <StatBox label="Total Attempted" value={filteredQA.totalAttempted ?? 0} />
-            <StatBox label="Accuracy"        value={`${filteredQA.accuracy ?? 0}%`} color="text-[#006a62]" />
-            <StatBox label="Correct"         value={filteredQA.correct ?? 0} color="text-[#006a62]" />
-            <StatBox label="Wrong"           value={filteredQA.wrong ?? 0} color="text-[#ba1a1a]" />
+            <StatBox label={t("total_attempted", "Total Attempted")} value={filteredQA.totalAttempted ?? 0} />
+            <StatBox label={t("accuracy", "Accuracy")}        value={`${filteredQA.accuracy ?? 0}%`} color="text-[#006a62]" />
+            <StatBox label={t("correct", "Correct")}         value={filteredQA.correct ?? 0} color="text-[#006a62]" />
+            <StatBox label={t("wrong", "Wrong")}           value={filteredQA.wrong ?? 0} color="text-[#ba1a1a]" />
           </div>
           {(filteredQA.avgTimePerQuestion ?? 0) > 0 && (
             <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 flex justify-between items-center">
-              <span className="text-xs font-bold text-indigo-700">Avg. Time per Question</span>
+              <span className="text-xs font-bold text-indigo-700">{t("avg_time_per_question", "Avg. Time per Question")}</span>
               <span className="text-sm font-black text-indigo-900">{filteredQA.avgTimePerQuestion}s</span>
             </div>
           )}
@@ -729,7 +813,7 @@ export default function ParentReportScreen() {
 
         {/* Subject Performance Section */}
         <Card>
-          <SectionHeader icon={<BookOpen size={20} color="#141779" />} title="Subject Performance" subtitle="Accuracy by subject" />
+          <SectionHeader icon={<BookOpen size={20} color="#141779" />} title={t("subject_performance", "Subject Performance")} subtitle={t("accuracy_by_subject", "Accuracy by subject")} />
           <div className="space-y-4 mt-2">
             {subjects.map((s: any, idx: number) => (
               <div key={idx} className="space-y-1.5">
@@ -741,53 +825,69 @@ export default function ParentReportScreen() {
               </div>
             ))}
             {subjects.length === 0 && (
-              <p className="text-xs text-[#767683] text-center py-2">No subject activity data available.</p>
+              <p className="text-xs text-[#767683] text-center py-2">{t("no_subject_activity_data", "No subject activity data available.")}</p>
             )}
           </div>
         </Card>
 
         {/* Reading Analytics Card */}
         <Card>
-          <SectionHeader icon={<BookMarked size={20} color="#006a62" />} title="Reading Analytics" subtitle="PDF chapter reading progress" />
+          <SectionHeader icon={<BookMarked size={20} color="#006a62" />} title={t("reading_analytics", "Reading Analytics")} subtitle={t("pdf_chapter_reading_progress", "PDF chapter reading progress")} />
           <div className="grid grid-cols-2 gap-2 mb-3">
-            <StatBox label="Chapters Read"   value={rA.chaptersRead ?? 0} color="text-[#006a62]" />
-            <StatBox label="Completion Rate" value={`${rA.completionRate ?? 0}%`} color="text-[#141779]" />
+            <StatBox label={t("chapters_read", "Chapters Read")}   value={rA.chaptersRead ?? 0} color="text-[#006a62]" />
+            <StatBox label={t("completion_rate", "Completion Rate")} value={`${rA.completionRate ?? 0}%`} color="text-[#141779]" />
           </div>
           <ProgressBar value={rA.completionRate ?? 0} color="bg-[#006a62]" />
           <div className="mt-3 bg-[#006a62]/5 border border-[#006a62]/10 rounded-xl p-3 flex justify-between items-center">
-            <span className="text-xs font-bold text-[#006a62]">Total Reading Time</span>
+            <span className="text-xs font-bold text-[#006a62]">{t("total_reading_time", "Total Reading Time")}</span>
             <span className="text-sm font-black text-[#006a62]">{formatReadingTime(rA.totalReadingTime ?? 0)}</span>
           </div>
         </Card>
 
         {/* Boss Round Analytics Card */}
         <Card>
-          <SectionHeader icon={<ShieldCheck size={20} color="#ba1a1a" />} title="Boss Round Analytics" subtitle="Battle performance history" />
+          <SectionHeader icon={<ShieldCheck size={20} color="#ba1a1a" />} title={t("boss_round_analytics", "Boss Round Analytics")} subtitle={t("battle_performance_history", "Battle performance history")} />
           <div className="grid grid-cols-2 gap-2 mb-3">
-            <StatBox label="Total Attempts" value={bA.totalAttempts ?? 0} />
-            <StatBox label="Pass Rate" value={`${bA.passRate ?? 0}%`} color={(bA.passRate ?? 0) >= 60 ? "text-[#006a62]" : "text-[#ba1a1a]"} />
-            <StatBox label="Wins"  value={bA.wins ?? 0}   color="text-[#006a62]" />
-            <StatBox label="Losses" value={bA.losses ?? 0} color="text-[#ba1a1a]" />
+            <StatBox label={t("total_attempts", "Total Attempts")} value={bA.totalAttempts ?? 0} />
+            <StatBox label={t("pass_rate", "Pass Rate")} value={`${bA.passRate ?? 0}%`} color={(bA.passRate ?? 0) >= 60 ? "text-[#006a62]" : "text-[#ba1a1a]"} />
+            <StatBox label={t("wins", "Wins")}  value={bA.wins ?? 0}   color="text-[#006a62]" />
+            <StatBox label={t("losses", "Losses")} value={bA.losses ?? 0} color="text-[#ba1a1a]" />
           </div>
           <ProgressBar value={bA.passRate ?? 0} color={(bA.passRate ?? 0) >= 60 ? "bg-[#006a62]" : "bg-[#ba1a1a]"} />
           
           {bossHistory.length > 0 && (
             <div className="mt-4 border-t border-slate-100 pt-4 space-y-2">
-              <h4 className="text-[10px] font-bold text-[#464652] uppercase tracking-wide">Recent Battles</h4>
+              <h4 className="text-[10px] font-bold text-[#464652] uppercase tracking-wide">{t("recent_battles", "Recent Battles")}</h4>
               <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                 {bossHistory.map((b: any, idx: number) => {
                   const statusUpper = (b.status || "").toUpperCase();
-                  const isWon = statusUpper === "WON";
-                  const isLost = statusUpper === "LOST";
-                  const statusText = statusUpper === "WON" ? "Victory" : (statusUpper === "LOST" ? "Defeat" : statusUpper);
+                  const isWon = statusUpper === "WON" || statusUpper === "VICTORY";
+                  const isLost = statusUpper === "LOST" || statusUpper === "DEFEAT";
+
+                  const statusText = isWon
+                    ? t("victory", "Victory")
+                    : (isLost ? t("defeat", "Defeat") : t("in_progress", "In Progress"));
+
                   const statusBg = isWon 
                     ? "bg-green-50 text-green-700 border-green-200" 
                     : (isLost ? "bg-red-50 text-red-700 border-red-200" : "bg-amber-50 text-amber-700 border-amber-200");
                   
+                  const diffLower = (b.difficulty || "").toLowerCase();
+                  const diffText = diffLower === "easy" ? t("easy", "Easy") : (diffLower === "medium" ? t("medium", "Medium") : (diffLower === "hard" ? t("hard", "Hard") : b.difficulty));
+
+                  let bossNameText = b.bossName || t("boss_round", "Boss Round");
+                  if (bossNameText.includes("Egg Thief")) {
+                    bossNameText = bossNameText.replace("Egg Thief", t("boss_egg_thief", "Egg Thief"));
+                  }
+                  bossNameText = bossNameText.replace(/\(Easy\)/gi, `(${t("easy", "Easy")})`)
+                    .replace(/\(Medium\)/gi, `(${t("medium", "Medium")})`)
+                    .replace(/\(Hard\)/gi, `(${t("hard", "Hard")})`);
+
                   let formattedDate = "";
                   try {
                     if (b.date) {
-                      formattedDate = new Date(b.date).toLocaleDateString("en-US", {
+                      const d = new Date(b.date);
+                      formattedDate = d.toLocaleDateString(i18n.language === "gu" ? "gu-IN" : "en-US", {
                         month: "short",
                         day: "numeric",
                         hour: "2-digit",
@@ -799,12 +899,12 @@ export default function ParentReportScreen() {
                   return (
                     <div key={idx} className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex justify-between items-center transition-all">
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-bold text-slate-800 truncate">{b.bossName || "Boss Round"}</p>
+                        <p className="text-xs font-bold text-slate-800 truncate">{bossNameText}</p>
                         <p className="text-[10px] font-bold text-[#767683] mt-0.5">{formattedDate}</p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="text-[9px] bg-slate-200/80 text-slate-700 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
-                          {b.difficulty}
+                          {diffText}
                         </span>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wide ${statusBg}`}>
                           {statusText}
@@ -820,15 +920,15 @@ export default function ParentReportScreen() {
 
         {/* Daily Mastery & Risk Trend Chart */}
         <Card>
-          <SectionHeader icon={<TrendingUp size={20} color="#141779" />} title="Daily Mastery & Risk Trend" subtitle="Last 7 days" />
+          <SectionHeader icon={<TrendingUp size={20} color="#141779" />} title={t("daily_mastery_risk_trend", "Daily Mastery & Risk Trend")} subtitle={t("last_7_days", "Last 7 days")} />
           {chartHistory.length === 0 ? (
-            <div className="py-10 text-center text-xs text-[#767683]">Solve questions to generate trend analytics.</div>
+            <div className="py-10 text-center text-xs text-[#767683]">{t("solve_questions_trend", "Solve questions to generate trend analytics.")}</div>
           ) : (
             <div className="relative">
               <div className="flex items-center justify-center gap-4 mb-4 text-[10px] font-bold text-[#464652]">
-                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#00bbf9]" /><span>Mastery</span></div>
-                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#f39c12]" /><span>Focus</span></div>
-                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#ba1a1a]" /><span>Risk</span></div>
+                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#00bbf9]" /><span>{t("mastery", "Mastery")}</span></div>
+                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#f39c12]" /><span>{t("focus", "Focus")}</span></div>
+                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#ba1a1a]" /><span>{t("risk", "Risk")}</span></div>
               </div>
               <svg ref={svgRef} viewBox="0 0 500 220" className="w-full overflow-visible select-none cursor-pointer"
                 onMouseMove={handleMouseMove} onMouseLeave={() => setHoveredIndex(null)}>
@@ -840,8 +940,8 @@ export default function ParentReportScreen() {
                 </defs>
                 {[0, 25, 50, 75, 100].map(v => (
                   <g key={v}>
-                    <line x1={pL} y1={getY(v)} x2={chartWidth - pR} y2={getY(v)} stroke="#f1f5f9" strokeWidth="1" />
-                    <text x={pL - 10} y={getY(v) + 4} textAnchor="end" className="text-[9px] fill-[#767683] font-bold">{v}%</text>
+                    <line x1={pL} y1={getY(v)} x2={chartWidth - pR} y2={getY(v)} stroke="#e2e8f0" strokeWidth="1" />
+                    <text x={pL - 10} y={getY(v) + 4} textAnchor="end" fontSize="12" fontWeight="bold" className="text-[12px] fill-[#334155] font-extrabold">{v}%</text>
                   </g>
                 ))}
                 {chartHistory.length > 0 && (
@@ -863,21 +963,21 @@ export default function ParentReportScreen() {
                   </>
                 )}
                 {chartHistory.map((pt: any, i: number) => (
-                  <text key={i} x={getX(i)} y={chartHeight - pB + 18} textAnchor="middle" className="text-[10px] fill-[#464652]">{pt.date}</text>
+                  <text key={i} x={getX(i)} y={chartHeight - pB + 22} textAnchor="middle" fontSize="13" fontWeight="bold" className="text-[13px] fill-[#141779] font-extrabold">{pt.date}</text>
                 ))}
               </svg>
               {hoveredIndex !== null && chartHistory[hoveredIndex] && (
                 <div className="mt-3 p-3 bg-white border border-gray-100 rounded-xl shadow-sm grid grid-cols-3 gap-2 text-center">
                   <div className="bg-blue-50 p-1.5 rounded-lg">
-                    <p className="text-[9px] font-bold text-blue-700 uppercase">Mastery</p>
+                    <p className="text-[9px] font-bold text-blue-700 uppercase">{t("mastery", "Mastery")}</p>
                     <p className="text-sm font-bold text-blue-900">{chartHistory[hoveredIndex].masteryScore}%</p>
                   </div>
                   <div className="bg-amber-50 p-1.5 rounded-lg">
-                    <p className="text-[9px] font-bold text-amber-700 uppercase">Focus</p>
+                    <p className="text-[9px] font-bold text-amber-700 uppercase">{t("focus", "Focus")}</p>
                     <p className="text-sm font-bold text-amber-900">{chartHistory[hoveredIndex].weaknessScore}%</p>
                   </div>
                   <div className="bg-red-50 p-1.5 rounded-lg">
-                    <p className="text-[9px] font-bold text-red-700 uppercase">Risk</p>
+                    <p className="text-[9px] font-bold text-red-700 uppercase">{t("risk", "Risk")}</p>
                     <p className={`text-sm font-bold ${chartHistory[hoveredIndex].riskIndex >= 50 ? "text-red-700" : "text-green-600"}`}>{chartHistory[hoveredIndex].riskIndex}%</p>
                   </div>
                 </div>
@@ -888,25 +988,25 @@ export default function ParentReportScreen() {
 
         {/* Cognitive Strengths & Weaknesses */}
         <Card>
-          <h3 className="text-sm font-bold text-[#191c1e] mb-3">💪 Conceptual Strengths</h3>
+          <h3 className="text-sm font-bold text-[#191c1e] mb-3">💪 {t("conceptual_strengths", "Conceptual Strengths")}</h3>
           {!hasStrengths
-            ? <p className="text-xs text-[#767683]">Complete more quests to identify strengths.</p>
+            ? <p className="text-xs text-[#767683]">{t("complete_more_quests_strengths", "Complete more quests to identify strengths.")}</p>
             : strengths.map((s: string, i: number) => (
               <div key={i} className="bg-green-50 border border-green-100 rounded-xl p-3 mb-2 flex gap-2 items-start">
                 <CheckCircle size={14} className="text-green-600 shrink-0 mt-0.5" />
-                <p className="text-xs text-green-800 font-semibold">{s}</p>
+                <p className="text-xs text-green-800 font-semibold">{formatInsightMessage(s)}</p>
               </div>
             ))}
         </Card>
 
         <Card>
-          <h3 className="text-sm font-bold text-[#191c1e] mb-3">⚠️ Focus Areas</h3>
+          <h3 className="text-sm font-bold text-[#191c1e] mb-3">⚠️ {t("focus_areas", "Focus Areas")}</h3>
           {!hasWeaknesses
-            ? <p className="text-xs text-[#767683]">No weaknesses detected yet.</p>
+            ? <p className="text-xs text-[#767683]">{t("no_weaknesses_detected", "No weaknesses detected yet.")}</p>
             : weaknesses.map((w: string, i: number) => (
               <div key={i} className="bg-orange-50 border border-orange-100 rounded-xl p-3 mb-2 flex gap-2 items-start">
                 <AlertTriangle size={14} className="text-orange-600 shrink-0 mt-0.5" />
-                <p className="text-xs text-orange-800 font-semibold">{w}</p>
+                <p className="text-xs text-orange-800 font-semibold">{formatInsightMessage(w)}</p>
               </div>
             ))}
         </Card>
@@ -918,15 +1018,15 @@ export default function ParentReportScreen() {
               <AlertTriangle size={20} className="text-[#ba1a1a]" />
             </div>
             <div>
-              <h2 className="text-[15px] font-bold text-[#191c1e]">Incorrect Questions (Mistakes)</h2>
-              <p className="text-xs text-[#767683]">Review recent questions answered incorrectly</p>
+              <h2 className="text-[15px] font-bold text-[#191c1e]">{t("incorrect_questions_mistakes", "Incorrect Questions (Mistakes)")}</h2>
+              <p className="text-xs text-[#767683]">{t("review_recent_incorrect", "Review recent questions answered incorrectly")}</p>
             </div>
           </div>
 
           {mistakes.length === 0 ? (
             <div className="bg-green-50 border border-green-100 rounded-xl p-4 text-center">
               <span className="text-2xl mb-1 block">🎉</span>
-              <p className="text-xs text-green-800 font-semibold">Excellent! No recent mistakes recorded. Keep up the great work!</p>
+              <p className="text-xs text-green-800 font-semibold">{t("no_recent_mistakes", "Excellent! No recent mistakes recorded. Keep up the great work!")}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -936,10 +1036,10 @@ export default function ParentReportScreen() {
                   
                   <div className="flex flex-wrap items-center gap-2 text-[10px] font-black">
                     <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md capitalize">
-                      📚 {m.subject}
+                      📚 {m.subject === "General" ? t("general", "General") : m.subject}
                     </span>
                     <span className="bg-slate-200/70 text-slate-700 px-2 py-0.5 rounded-md">
-                      📖 {m.chapter}
+                      📖 {m.chapter === "Practice Quiz" ? t("practice_quiz", "Practice Quiz") : m.chapter}
                     </span>
                     {m.timeSpent > 0 && (
                       <span className="bg-amber-50 text-amber-700 px-2 py-0.5 rounded-md flex items-center gap-1">
@@ -956,9 +1056,9 @@ export default function ParentReportScreen() {
                   className="w-full mt-2 py-2.5 border border-dashed border-[#141779] text-[#141779] hover:bg-[#141779]/5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1"
                 >
                   {showAllMistakes ? (
-                    <>Show Less <ChevronUp size={14} /></>
+                    <>{t("show_less", "Show Less")} <ChevronUp size={14} /></>
                   ) : (
-                    <>Show All Mistakes ({mistakes.length}) <ChevronDown size={14} /></>
+                    <>{t("show_all_mistakes", "Show All Mistakes ({{count}})", { count: mistakes.length })} <ChevronDown size={14} /></>
                   )}
                 </button>
               )}
@@ -969,7 +1069,7 @@ export default function ParentReportScreen() {
         {/* Risk Alerts */}
         {hasRisks && (
           <Card>
-            <SectionHeader icon={<AlertTriangle size={20} color="#ba1a1a" />} title="Risk Alerts" subtitle="Automatically detected warnings" />
+            <SectionHeader icon={<AlertTriangle size={20} color="#ba1a1a" />} title={t("risk_alerts", "Risk Alerts")} subtitle={t("automatically_detected_warnings", "Automatically detected warnings")} />
             <div className="flex flex-col gap-2">
               {risks.map((r: string, i: number) => (
                 <div key={i} className="bg-red-50 border border-red-100 rounded-xl p-3 flex gap-2 items-start">
@@ -983,12 +1083,12 @@ export default function ParentReportScreen() {
 
         {/* Recommendations */}
         <Card>
-          <SectionHeader icon={<Lightbulb size={20} color="#f39c12" />} title="Parent Recommendations" subtitle="Personalised action steps" />
+          <SectionHeader icon={<Lightbulb size={20} color="#f39c12" />} title={t("parent_recommendations", "Parent Recommendations")} subtitle={t("personalised_action_steps", "Personalised action steps")} />
           <div className="flex flex-col gap-2">
             {recommendations.map((rec: string, i: number) => (
               <div key={i} className="bg-amber-50 border border-amber-100 rounded-xl p-3 flex gap-2 items-start">
                 <CheckCircle size={15} className="text-amber-600 shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-800 font-semibold">{rec}</p>
+                <p className="text-xs text-amber-800 font-semibold">{translateRecommendation(rec)}</p>
               </div>
             ))}
           </div>
@@ -996,7 +1096,7 @@ export default function ParentReportScreen() {
       </main>
 
       {/* Date Sheet Modal */}
-      <BottomSheet isOpen={showDateSheet} onClose={() => setShowDateSheet(false)} title="Select Time Period">
+      <BottomSheet isOpen={showDateSheet} onClose={() => setShowDateSheet(false)} title={t("select_time_period", "Select Time Period")}>
         <div className="flex flex-col gap-2">
           {["today", "yesterday", "this_week", "this_month", "custom"].map((opt) => (
             <button
@@ -1013,16 +1113,16 @@ export default function ParentReportScreen() {
                   : "bg-slate-50 text-slate-800 border-2 border-slate-100 hover:bg-slate-100"
               }`}
             >
-              <span>{opt.replace("_", " ")}</span>
-              {dateFilter === opt && <span className="text-indigo-600 text-xs">✓ Active</span>}
+              <span>{t(opt, opt.replace("_", " "))}</span>
+              {dateFilter === opt && <span className="text-indigo-600 text-xs">✓ {t("active", "Active")}</span>}
             </button>
           ))}
           {dateFilter === "custom" && (
             <div className="mt-4 p-4 bg-slate-50 border-2 border-slate-100 rounded-3xl space-y-3">
-              <h4 className="text-xs font-black text-[#141779] uppercase">Custom Date Range</h4>
+              <h4 className="text-xs font-black text-[#141779] uppercase">{t("custom_date_range", "Custom Date Range")}</h4>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-500">Start Date</label>
+                  <label className="text-[10px] font-bold text-slate-500">{t("start_date", "Start Date")}</label>
                   <input
                     type="date"
                     value={customStartDate}
@@ -1031,7 +1131,7 @@ export default function ParentReportScreen() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-500">End Date</label>
+                  <label className="text-[10px] font-bold text-slate-500">{t("end_date", "End Date")}</label>
                   <input
                     type="date"
                     value={customEndDate}
@@ -1044,7 +1144,7 @@ export default function ParentReportScreen() {
                 onClick={() => setShowDateSheet(false)}
                 className="w-full mt-2 bg-[#141779] text-white py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-transform active:scale-[0.98]"
               >
-                Apply Custom Range
+                {t("apply_custom_range", "Apply Custom Range")}
               </button>
             </div>
           )}
@@ -1052,7 +1152,7 @@ export default function ParentReportScreen() {
       </BottomSheet>
 
       {/* Subject Sheet Modal */}
-      <BottomSheet isOpen={showSubjectSheet} onClose={() => setShowSubjectSheet(false)} title="Select Subject">
+      <BottomSheet isOpen={showSubjectSheet} onClose={() => setShowSubjectSheet(false)} title={t("select_subject", "Select Subject")}>
         <div className="flex flex-col gap-2">
           <button
             onClick={() => {
@@ -1065,8 +1165,8 @@ export default function ParentReportScreen() {
                 : "bg-slate-50 text-slate-800 border-2 border-slate-100 hover:bg-slate-100"
             }`}
           >
-            <span>All Subjects</span>
-            {subjectFilter === "all" && <span className="text-indigo-600 text-xs">✓ Active</span>}
+            <span>{t("all_subjects", "All Subjects")}</span>
+            {subjectFilter === "all" && <span className="text-indigo-600 text-xs">✓ {t("active", "Active")}</span>}
           </button>
           {subjects.map((s: any) => (
             <button
@@ -1081,19 +1181,19 @@ export default function ParentReportScreen() {
                   : "bg-slate-50 text-slate-800 border-2 border-slate-100 hover:bg-slate-100"
               }`}
             >
-              <span className="capitalize">{s.subject}</span>
-              {subjectFilter === s.subject && <span className="text-indigo-600 text-xs">✓ Active</span>}
+              <span className="capitalize">{getTranslatedSubject(s.subject)}</span>
+              {subjectFilter === s.subject && <span className="text-indigo-600 text-xs">✓ {t("active", "Active")}</span>}
             </button>
           ))}
         </div>
       </BottomSheet>
 
       {/* Customize Sheet Modal */}
-      <BottomSheet isOpen={showCustomizeSheet} onClose={() => setShowCustomizeSheet(false)} title="Customize Report">
+      <BottomSheet isOpen={showCustomizeSheet} onClose={() => setShowCustomizeSheet(false)} title={t("customize_report", "Customize Report")}>
         <div className="space-y-5">
           {/* Time Period */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Time Period</label>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t("time_period", "Time Period")}</label>
             <div className="grid grid-cols-3 gap-2">
               {(["today", "this_week", "this_month", "yesterday", "custom"] as const).map((opt) => (
                 <button
@@ -1105,7 +1205,7 @@ export default function ParentReportScreen() {
                       : "bg-slate-50 text-slate-800 border-slate-200"
                   }`}
                 >
-                  {opt.replace(/_/g, " ")}
+                  {t(opt, opt.replace(/_/g, " "))}
                 </button>
               ))}
             </div>
@@ -1113,7 +1213,7 @@ export default function ParentReportScreen() {
               <div className="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-0.5">
-                    <label className="text-[9px] font-bold text-slate-500">Start Date</label>
+                    <label className="text-[9px] font-bold text-slate-500">{t("start_date", "Start Date")}</label>
                     <input
                       type="date"
                       value={customStartDate}
@@ -1122,7 +1222,7 @@ export default function ParentReportScreen() {
                     />
                   </div>
                   <div className="space-y-0.5">
-                    <label className="text-[9px] font-bold text-slate-500">End Date</label>
+                    <label className="text-[9px] font-bold text-slate-500">{t("end_date", "End Date")}</label>
                     <input
                       type="date"
                       value={customEndDate}
@@ -1137,7 +1237,7 @@ export default function ParentReportScreen() {
 
           {/* Subject */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Subject</label>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t("subject", "Subject")}</label>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => setSubjectFilter("all")}
@@ -1147,7 +1247,7 @@ export default function ParentReportScreen() {
                     : "bg-slate-50 text-slate-800 border-slate-200"
                 }`}
               >
-                All Subjects
+                {t("all_subjects", "All Subjects")}
               </button>
               {subjects.map((s: any) => (
                 <button
@@ -1159,7 +1259,7 @@ export default function ParentReportScreen() {
                       : "bg-slate-50 text-slate-800 border-slate-200"
                   }`}
                 >
-                  {s.subject}
+                  {getTranslatedSubject(s.subject)}
                 </button>
               ))}
             </div>
@@ -1169,16 +1269,16 @@ export default function ParentReportScreen() {
             onClick={() => setShowCustomizeSheet(false)}
             className="w-full bg-[#141779] text-white py-3.5 rounded-2xl text-sm font-black uppercase tracking-wider transition-transform active:scale-[0.98]"
           >
-            ✓ Apply &amp; Close
+            ✓ {t("apply_and_close", "Apply & Close")}
           </button>
         </div>
       </BottomSheet>
 
       {/* Export Sheet Modal */}
-      <BottomSheet isOpen={showExportSheet} onClose={() => setShowExportSheet(false)} title="Export Report">
+      <BottomSheet isOpen={showExportSheet} onClose={() => setShowExportSheet(false)} title={t("export_report", "Export Report")}>
         <div className="space-y-4">
           <p className="text-xs text-[#767683] font-bold text-center">
-            Choose your preferred format to export or share this learning report.
+            {t("choose_export_format", "Choose your preferred format to export or share this learning report.")}
           </p>
           <div className="grid grid-cols-2 gap-3">
             <button
@@ -1190,7 +1290,7 @@ export default function ParentReportScreen() {
               className="py-3.5 px-4 bg-[#141779] hover:bg-[#1a1e9e] active:scale-95 text-white rounded-2xl font-black text-xs sm:text-sm transition-all flex flex-col items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
             >
               <span className="text-lg">📄</span>
-              <span>Download PDF</span>
+              <span>{t("download_pdf", "Download PDF")}</span>
               {isDownloading === "pdf" && <Loader2 size={14} className="animate-spin mt-1" />}
             </button>
             
@@ -1203,7 +1303,7 @@ export default function ParentReportScreen() {
               className="py-3.5 px-4 bg-[#006a62] hover:bg-[#008c81] active:scale-95 text-white rounded-2xl font-black text-xs sm:text-sm transition-all flex flex-col items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
             >
               <span className="text-lg">📝</span>
-              <span>Download Word</span>
+              <span>{t("download_word", "Download Word")}</span>
               {isDownloading === "word" && <Loader2 size={14} className="animate-spin mt-1" />}
             </button>
           </div>
@@ -1215,7 +1315,7 @@ export default function ParentReportScreen() {
             }}
             className="w-full py-3.5 px-4 border-2 border-[#141779] text-[#141779] hover:bg-[#141779]/5 active:scale-[0.98] rounded-2xl font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2"
           >
-            📤 Share Report Link
+            📤 {t("share_report_link", "Share Report Link")}
           </button>
         </div>
       </BottomSheet>
@@ -1237,6 +1337,7 @@ export default function ParentReportScreen() {
 }
 
 function BottomSheet({ isOpen, onClose, title, children }: { isOpen: boolean, onClose: () => void, title: string, children: React.ReactNode }) {
+  const { t } = useTranslation();
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 bg-slate-950/60 z-[200] flex items-end justify-center animate-in fade-in duration-200">
@@ -1246,7 +1347,7 @@ function BottomSheet({ isOpen, onClose, title, children }: { isOpen: boolean, on
         <div className="flex justify-between items-center mb-5">
           <h3 className="text-base font-black text-[#141779]">{title}</h3>
           <button onClick={onClose} className="text-xs font-bold text-slate-500 hover:text-slate-900 bg-slate-100 px-3 py-1.5 rounded-full transition-colors">
-            Close
+            {t("close", "Close")}
           </button>
         </div>
         {children}

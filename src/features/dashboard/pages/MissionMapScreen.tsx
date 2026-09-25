@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Lock, CheckCircle2, Play, Star, Trophy, Sparkles, Award, Zap, Bell } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
 import { motion } from "framer-motion";
 
 export default function MissionMapScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const chapterId = searchParams.get("chapterId") || "ch1";
   const chapterTitle = searchParams.get("title") || "Chapter Path";
@@ -55,8 +57,12 @@ export default function MissionMapScreen() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f7f9fb] text-[#141779] flex flex-col items-center justify-center p-6 font-sans">
-        <div className="w-10 h-10 border-4 border-[#141779] border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="font-bold tracking-wide text-base animate-pulse">Loading Mission Map...</p>
+        <div className="relative flex items-center justify-center mb-6">
+          <div className="w-16 h-16 border-4 border-[#141779]/15 border-t-[#141779] rounded-full animate-spin shadow-sm" />
+          <span className="absolute text-2xl">🐲</span>
+        </div>
+        <h3 className="font-black text-lg text-[#141779] mb-1">{t('mission_roadmap', 'Mission Roadmap')}</h3>
+        <p className="font-medium text-xs text-[#767683] animate-pulse">{t('loading_roadmap', 'Loading journey map...')}</p>
       </div>
     );
   }
@@ -67,23 +73,23 @@ export default function MissionMapScreen() {
   const getThemeHeader = () => {
     if (themeName === "lab") {
       return {
-        title: "🔬 Research Lab Missions",
-        subtitle: "Unlock quantum core breakthroughs!",
-        badge: "Scientific Expedition",
+        title: t('lab_missions_title', '🔬 Research Lab Missions'),
+        subtitle: t('unlock_quantum', 'Unlock quantum core breakthroughs!'),
+        badge: t('scientific_expedition', 'Scientific Expedition'),
         badgeBg: "bg-cyan-100 text-cyan-800 border-cyan-300"
       };
     } else if (themeName === "championship") {
       return {
-        title: "🏆 Scholar Championship",
-        subtitle: "Battle your way to the National Finale!",
-        badge: "Grand League",
+        title: t('scholar_championship_title', '🏆 Scholar Championship'),
+        subtitle: t('battle_to_finale', 'Battle your way to the National Finale!'),
+        badge: t('grand_league', 'Grand League'),
         badgeBg: "bg-amber-100 text-amber-800 border-amber-300"
       };
     }
     return {
-      title: "🐲 Dragon Journey Missions",
-      subtitle: "Conquer all realms to reach the Dragon King!",
-      badge: "Dragon Quest",
+      title: t('dragon_journey_title', '🐲 Dragon Journey Missions'),
+      subtitle: t('conquer_realms', 'Conquer all realms to reach the Dragon King!'),
+      badge: t('dragon_quest', 'Dragon Quest'),
       badgeBg: "bg-emerald-100 text-emerald-800 border-emerald-300"
     };
   };
@@ -103,7 +109,7 @@ export default function MissionMapScreen() {
           </button>
           <div>
             <span className="text-[10px] font-black uppercase tracking-wider text-[#006a62]">
-              {userClass} • Mission Roadmap
+              {userClass} • {t('mission_roadmap', 'Mission Roadmap')}
             </span>
             <h1 className="text-lg font-bold text-[#141779] leading-tight truncate max-w-[200px]">
               {chapterTitle}
@@ -142,12 +148,12 @@ export default function MissionMapScreen() {
                 }
                 className="px-3 py-1.5 bg-[#141779]/10 hover:bg-[#141779]/20 text-[#141779] border border-[#141779]/20 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95"
               >
-                <span>📖 Read PDF</span>
+                <span>{t('read_pdf', '📖 Read PDF')}</span>
               </button>
             </div>
             <h2 className="text-xl font-black mt-3 text-[#141779]">{themeMeta.subtitle}</h2>
             <p className="text-xs text-[#464652] mt-1 font-medium leading-relaxed">
-              Read the textbook summary first, then complete small achievements & battle bosses!
+              {t('read_summary_first', 'Read the textbook summary first, then complete small achievements & battle bosses!')}
             </p>
           </div>
           <Sparkles className="absolute right-2 bottom-2 w-24 h-24 text-teal-500/10 pointer-events-none" />
@@ -158,10 +164,10 @@ export default function MissionMapScreen() {
       <main className="px-6 pt-6 flex flex-col gap-6 max-w-md mx-auto">
         <div className="flex justify-between items-center px-1">
           <h3 className="text-xs font-bold tracking-widest text-[#767683] uppercase">
-            Chapter Missions Roadmap
+            {t('chapter_missions_roadmap', 'CHAPTER MISSIONS ROADMAP')}
           </h3>
           <span className="text-xs font-bold text-[#006a62] bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200">
-            {missions.filter((m: any) => m.status === "completed").length} / {missions.length} Completed
+            {t('missions_completed_count', { completed: missions.filter((m: any) => m.status === "completed").length, total: missions.length, defaultValue: `${missions.filter((m: any) => m.status === "completed").length} / ${missions.length} Completed` })}
           </span>
         </div>
 
@@ -174,6 +180,17 @@ export default function MissionMapScreen() {
             const isRetest = m.status === "retest";
             const isUnlocked = m.status === "unlocked" || isRetest;
             const isLocked = m.status === "locked";
+
+            const savedAns = sessionStorage.getItem(`user_answers_${chapterId}_${m.seq}`);
+            const savedPhase = sessionStorage.getItem(`mission_phase_${chapterId}_${m.seq}`);
+            let hasInProgressSession = Boolean(m.hasDraft);
+            if (savedAns) {
+              try {
+                const arr = JSON.parse(savedAns);
+                if (Array.isArray(arr) && arr.length > 0) hasInProgressSession = true;
+              } catch (e) {}
+            }
+            if (savedPhase && savedPhase !== "SUMMARY" && savedPhase !== "INTRO") hasInProgressSession = true;
 
             return (
               <motion.div
@@ -212,27 +229,34 @@ export default function MissionMapScreen() {
                   <div className="flex justify-between items-start">
                     <div>
                       <span className="text-[10px] font-black tracking-widest text-[#006a62] uppercase">
-                        Mission {m.seq}
+                        {t('mission', 'Mission')} {m.seq}
                       </span>
-                      <h4 className="text-base font-bold text-[#141779] leading-tight">{m.title}</h4>
+                      <h4 className="text-base font-bold text-[#141779] leading-tight">
+                        {t(m.title.toLowerCase().replace(/ /g, '_'), { defaultValue: m.title })}
+                      </h4>
                       <p className="text-xs text-[#464652] mt-1 font-medium flex items-center gap-2">
-                        <span>🎯 {m.quizCount} Quiz</span>
+                        <span>🎯 {m.quizCount} {t('quiz', 'Quiz')}</span>
                         <span>•</span>
-                        <span>👹 {m.bossName}</span>
+                        <span>👹 {t(m.bossName.toLowerCase().replace(/ /g, '_'), { defaultValue: m.bossName })}</span>
                       </p>
                     </div>
 
                     {isCompleted && (
                       <div className="flex items-center gap-1 bg-emerald-100 px-2.5 py-1 rounded-full border border-emerald-300">
                         <CheckCircle2 size={13} className="text-emerald-700" />
-                        <span className="text-[10px] font-black text-emerald-800 uppercase">Done</span>
+                        <span className="text-[10px] font-black text-emerald-800 uppercase">{t('done', 'Done')}</span>
                       </div>
                     )}
                   </div>
 
                   {/* Stars / Play Button */}
                   <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
-                    {isCompleted || isRetest ? (
+                    {hasInProgressSession ? (
+                      <span className="text-xs text-amber-600 font-bold flex items-center gap-1">
+                        <Zap size={13} className="fill-amber-500 text-amber-500 animate-pulse" />
+                        {t('in_progress_sub', '⚡ In progress...')}
+                      </span>
+                    ) : isCompleted || isRetest ? (
                       <div className="flex items-center gap-1">
                         {[1, 2, 3].map((starIndex) => (
                           <Star
@@ -244,17 +268,19 @@ export default function MissionMapScreen() {
                       </div>
                     ) : (
                       <span className="text-xs text-[#767683] font-medium">
-                        {isUnlocked ? "Ready to launch!" : "Complete previous mission"}
+                        {isUnlocked ? t('ready_to_launch', 'Ready to launch!') : t('complete_previous_mission', 'Complete previous mission')}
                       </span>
                     )}
 
                     <button
                       disabled={isLocked}
                       onClick={() =>
-                        navigate(`/mission-play?chapterId=${chapterId}&missionSeq=${m.seq}${(isCompleted || isRetest) ? "&replay=true" : ""}`)
+                        navigate(`/mission-play?chapterId=${chapterId}&missionSeq=${m.seq}${(!hasInProgressSession && (isCompleted || isRetest)) ? "&replay=true" : ""}`)
                       }
                       className={`px-4 py-2 rounded-2xl font-bold text-xs flex items-center gap-2 transition-all active:scale-95 ${
-                        isCompleted
+                        hasInProgressSession
+                          ? "bg-gradient-to-r from-amber-500 to-amber-600 text-white font-black shadow-md shadow-amber-500/20"
+                          : isCompleted
                           ? "bg-gray-100 text-[#141779] hover:bg-gray-200 border border-gray-300"
                           : isRetest
                           ? "bg-[#f59e0b] hover:bg-[#d97706] text-white font-black shadow-md shadow-[#f59e0b]/20"
@@ -263,22 +289,32 @@ export default function MissionMapScreen() {
                           : "bg-gray-200 text-gray-400 cursor-not-allowed"
                       }`}
                     >
-                      {isCompleted ? (
-                        "Replay"
+                      {hasInProgressSession ? (
+                        <>
+                          <span>{t('resume', 'Resume')}</span>
+                          <Play size={14} className="fill-white" />
+                        </>
+                      ) : isCompleted ? (
+                        t('replay', 'Replay')
                       ) : isRetest ? (
                         <>
-                          <span>Re-test</span>
+                          <span>{t('retest', 'Re-test')}</span>
+                          <Play size={14} className="fill-white" />
+                        </>
+                      ) : hasInProgressSession ? (
+                        <>
+                          <span>{t('continue', 'Continue')}</span>
                           <Play size={14} className="fill-white" />
                         </>
                       ) : isUnlocked ? (
                         <>
-                          <span>Start Mission</span>
+                          <span>{t('start_mission', 'Start Mission')}</span>
                           <Play size={14} className="fill-white" />
                         </>
                       ) : (
                         <>
                           <Lock size={14} />
-                          <span>Locked</span>
+                          <span>{t('locked', 'Locked')}</span>
                         </>
                       )}
                     </button>

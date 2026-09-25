@@ -2,6 +2,7 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronRight, Zap, Coins, Gift, Swords, Sparkles, BookOpen } from "lucide-react";
 import { MapStageConfig, NRSCHOLAR_TOKENS } from "./AdventureTheme";
+import { useTranslation } from "react-i18next";
 
 interface LocationModalSheetProps {
   stage: MapStageConfig | null;
@@ -16,6 +17,7 @@ export default function LocationModalSheet({
   onClose,
   onEnter,
 }: LocationModalSheetProps) {
+  const { t } = useTranslation();
   if (!stage) return null;
 
   const isCurrent = state === "current";
@@ -65,19 +67,19 @@ export default function LocationModalSheet({
                 }}
               >
                 {isCompleted
-                  ? "✓ STAGE COMPLETED"
+                  ? t('stage_completed', '✓ STAGE COMPLETED')
                   : isCurrent
-                  ? "CURRENT ADVENTURE"
-                  : "UPCOMING QUEST"}
+                  ? t('current_adventure', 'CURRENT ADVENTURE')
+                  : t('upcoming_quest', 'UPCOMING QUEST')}
               </span>
               <h2
                 className="text-lg font-black truncate leading-tight font-headline"
                 style={{ color: NRSCHOLAR_TOKENS.textDark }}
               >
-                {stage.name}
+                {t(stage.name.toLowerCase().replace(/ /g, '_'), { defaultValue: stage.name })}
               </h2>
               <p className="text-xs font-bold text-slate-500 truncate mt-0.5">
-                {stage.subtitle || (stage as any).description || `Milestone Quest Node`}
+                {stage.subtitle ? t(stage.subtitle.toLowerCase().replace(/ /g, '_'), { defaultValue: stage.subtitle }) : (stage as any).description || t('milestone_quest_node', 'Milestone Quest Node')}
               </p>
             </div>
           </div>
@@ -86,21 +88,21 @@ export default function LocationModalSheet({
           <div className="bg-white border border-indigo-100/90 rounded-2xl p-3.5 flex items-start gap-2.5 shadow-2xs">
             <span className="text-lg shrink-0">📜</span>
             <p className="text-xs font-bold leading-relaxed italic text-slate-700">
-              "{(stage as any).storyQuote || (stage as any).description || "Complete chapter learning quests to unlock this milestone!"}"
+              "{(stage as any).storyQuote || (stage as any).description || t('complete_quests_to_unlock', 'Complete chapter learning quests to unlock this milestone!')}"
             </p>
           </div>
 
           {/* MISSIONS BREAKDOWN LIST */}
           {(() => {
             const missionsList = (stage.missions && stage.missions.length > 0) ? stage.missions : [
-              { title: "Chapter Reading Quest", icon: "📖", xp: 25 },
-              { title: "Practice Challenge", icon: "✍️", xp: 25 }
+              { title: t('chapter_reading_quest', 'Chapter Reading Quest'), icon: "📖", xp: 25 },
+              { title: t('practice_challenge', 'Practice Challenge'), icon: "✍️", xp: 25 }
             ];
             return (
               <div className="flex flex-col gap-2">
                 <h4 className="text-[10.5px] font-black uppercase tracking-wider text-[#2D328F] px-1 flex items-center gap-1.5">
                   <Swords size={12} className="text-[#14C8C6]" />
-                  AVAILABLE MISSIONS ({missionsList.length})
+                  {t('available_missions', 'AVAILABLE MISSIONS')} ({missionsList.length})
                 </h4>
 
                 <div className="flex flex-col gap-1.5">
@@ -112,7 +114,7 @@ export default function LocationModalSheet({
                       <div className="flex items-center gap-2.5 min-w-0">
                         <span className="text-base shrink-0">{m.icon}</span>
                         <span className="text-xs font-bold text-slate-800 truncate">
-                          {m.title}
+                          {t(m.title.toLowerCase().replace(/ /g, '_'), { defaultValue: m.title })}
                         </span>
                       </div>
                       <span className="text-[10px] font-black bg-indigo-50 text-[#2D328F] px-2 py-0.5 rounded-full shrink-0">
@@ -137,14 +139,14 @@ export default function LocationModalSheet({
             <div className="flex flex-col items-center justify-center text-center border-x border-slate-100">
               <span className="text-[#2D328F] text-xs font-black flex items-center gap-1">
                 <Coins size={13} className="text-[#FFC857]" />
-                +{stage.coinReward || 25} Coins
+                +{stage.coinReward || 25} {t('coins', 'Coins')}
               </span>
             </div>
 
             <div className="flex flex-col items-center justify-center text-center">
               <span className="text-[#14C8C6] text-xs font-black flex items-center gap-1 truncate">
                 <Gift size={13} />
-                {stage.itemReward || "Badge"}
+                {t(stage.itemReward.toLowerCase().replace(/ /g, '_'), { defaultValue: stage.itemReward || "Badge" })}
               </span>
             </div>
           </div>
@@ -156,7 +158,7 @@ export default function LocationModalSheet({
             style={{ backgroundColor: NRSCHOLAR_TOKENS.reward }}
           >
             <Swords size={16} />
-            <span>START ADVENTURE</span>
+            <span>{t('start_adventure', 'START ADVENTURE')}</span>
             <ChevronRight size={16} />
           </button>
         </motion.div>

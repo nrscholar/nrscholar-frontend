@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Bell, Sparkles, X, ChevronRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { translateNotificationTitle, translateNotificationMessage } from "../utils/notificationTranslator";
 
 interface ToastData {
   title: string;
@@ -12,6 +14,7 @@ interface ToastData {
 
 export default function GlobalNotificationBanner() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [toast, setToast] = useState<ToastData | null>(null);
 
   useEffect(() => {
@@ -36,6 +39,9 @@ export default function GlobalNotificationBanner() {
 
   if (!toast) return null;
 
+  const displayTitle = translateNotificationTitle(toast.title, t);
+  const displayMessage = translateNotificationMessage(toast.message, t);
+
   return (
     <AnimatePresence>
       <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] max-w-md w-[92%] pointer-events-none">
@@ -57,10 +63,10 @@ export default function GlobalNotificationBanner() {
             }
           }}>
             <h4 className="text-xs font-black text-[#57fae9] uppercase tracking-wider truncate mb-0.5">
-              {toast.title}
+              {displayTitle}
             </h4>
             <p className="text-xs font-bold text-slate-100 line-clamp-2 leading-snug">
-              {toast.message}
+              {displayMessage}
             </p>
           </div>
 
@@ -72,7 +78,7 @@ export default function GlobalNotificationBanner() {
               }}
               className="px-3 py-1.5 rounded-xl bg-[#57fae9] text-[#141779] font-black text-[11px] uppercase tracking-wider flex items-center gap-0.5 shrink-0 shadow-md active:scale-95 transition-all"
             >
-              <span>View</span>
+              <span>{t('view', 'View')}</span>
               <ChevronRight size={13} />
             </button>
           )}
