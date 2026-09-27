@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Copy, Check, Users, ShieldAlert, RefreshCw } from "lucide-react";
 import { apiFetch } from "../api";
 import { useTranslation } from "react-i18next";
+import { copyToClipboard } from "../utils/clipboard";
 
 interface FamilyLinkModalProps {
   isOpen: boolean;
@@ -38,9 +39,9 @@ export default function FamilyLinkModal({ isOpen, onClose }: FamilyLinkModalProp
     }
   }, [isOpen]);
 
-  const copyToClipboard = () => {
+  const handleCopyCode = async () => {
     if (familyCode) {
-      navigator.clipboard.writeText(familyCode);
+      await copyToClipboard(familyCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     }

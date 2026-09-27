@@ -32,6 +32,7 @@ export default function MultiplayerBattleScreen() {
   const [currentQ, setCurrentQ] = useState(0);
   const [myScore, setMyScore] = useState(0);
   const [myProgress, setMyProgress] = useState(0);
+  const [myLives, setMyLives] = useState(3);
   
   const [isFinished, setIsFinished] = useState(false);
   const [winnerId, setWinnerId] = useState<string | null>(null);
@@ -63,12 +64,9 @@ export default function MultiplayerBattleScreen() {
     socket.onopen = () => {
       console.log("WebSocket connected to Shadow Arena room:", roomId);
     };
-
-    socket.onmessage = (event) => {
+    socket.onmessage = (event) => {
       console.log("WebSocket message received:", event.data);
-      if (event.data.includes("opponent_quit")) {
-        setOpponentQuit(true);
-      } else if (event.data.includes("progress_updated") || event.data.includes("Update:")) {
+      if (event.data.includes("opponent_quit") || event.data.includes("progress_updated") || event.data.includes("Update:")) {
         // Fetch the updated room status immediately to sync scores and progress
         fetchRoomStatus();
       }
@@ -156,7 +154,6 @@ export default function MultiplayerBattleScreen() {
   const [timeLeft, setTimeLeft] = useState(15);
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [waitTimer, setWaitTimer] = useState(0);
-  const [countdown, setCountdown] = useState<number | null>(null);
 
   const isHost = room?.hostId === myId;
   const myAvatar = isHost ? room?.hostAvatar : room?.guestAvatar;
@@ -171,39 +168,18 @@ export default function MultiplayerBattleScreen() {
   const isOppWinning = oppScore > myScore;
 
   useEffect(() => {
-    let attempts = 0;
     const loadQuestions = async () => {
       try {
         const res = await apiFetch(`/api/multiplayer/room/${roomId}/questions`);
         const data = await res.json();
         if (data.success && data.data && data.data.length > 0) {
-          let loadedQs = [...data.data];
-          if (loadedQs.length < 10) {
-            for (const bq of BATTLE_QUESTIONS) {
-              if (loadedQs.length >= 10) break;
-              if (!loadedQs.some(q => q.q === bq.q)) {
-                loadedQs.push(bq);
-              }
-            }
-          }
-          setQuestions(loadedQs);
-        } else if (attempts < 5) {
-          attempts++;
-          setTimeout(loadQuestions, 800);
-        } else {
-          setQuestions(BATTLE_QUESTIONS);
+          setQuestions(data.data);
         }
       } catch (e) {
         console.error("Failed to load questions:", e);
-        if (attempts < 5) {
-          attempts++;
-          setTimeout(loadQuestions, 800);
-        } else {
-          setQuestions(BATTLE_QUESTIONS);
-        }
       }
     };
-    loadQuestions();
+    if (roomId) loadQuestions();
   }, [roomId]);
 
   useEffect(() => {
@@ -228,21 +204,55 @@ export default function MultiplayerBattleScreen() {
       const res = await apiFetch(`/api/multiplayer/room/${roomId}`);
       const data = await res.json();
       if (data.success && data.data) {
-        setRoom(data.data);
-        if (data.data.status === "finished") {
+        const rData = data.data;
+        setRoom(rData);
+
+        if (rData.questions && rData.questions.length > 0) {
+          setQuestions(rData.questions);
+        }
+
+        const amHost = rData.hostId === myId;
+        const currentHostLives = rData.hostLives !== undefined ? rData.hostLives : 3;
+        const currentGuestLives = rData.guestLives !== undefined ? rData.guestLives : 3;
+        const currentHostScore = rData.hostScore !== undefined ? rData.hostScore : 0;
+        const currentGuestScore = rData.guestScore !== undefined ? rData.guestScore : 0;
+        const currentHostProg = rData.hostProgress !== undefined ? rData.hostProgress : 0;
+        const currentGuestProg = rData.guestProgress !== undefined ? rData.guestProgress : 0;
+
+        if (amHost) {
+          setMyLives(currentHostLives);
+          setMyScore(currentHostScore);
+          setMyProgress(currentHostProg);
+        } else {
+          setMyLives(currentGuestLives);
+          setMyScore(currentGuestScore);
+          setMyProgress(currentGuestProg);
+        }
+
+        if (rData.currentQuestionIndex !== undefined && rData.currentQuestionIndex !== currentQ) {
+          setCurrentQ(rData.currentQuestionIndex);
+          setSelectedOption(null);
+          setIsAdvancing(false);
+        }
+
+        if (rData.status === "finished") {
           setIsFinished(true);
-          setWinnerId(data.data.winnerId);
-        } else if (data.data.status === "opponent_quit") {
-          if (myId && data.data.winnerId === myId) {
-            setOpponentQuit(true);
-          } else {
-            if (roomId) sessionStorage.setItem(`left_battle_${roomId}`, "true");
+          setWinnerId(rData.winnerId);
+        } else if (rData.status === "opponent_quit") {
+          setIsFinished(true);
+          const iAmQuitter = (rData.quitterId && rData.quitterId === myId) || (sessionStorage.getItem(`left_battle_${roomId}`) === "true");
+          if (iAmQuitter) {
             navigate("/multiplayer-hub", { replace: true });
+          } else {
+            setOpponentQuit(true);
+            if (rData.winnerId) setWinnerId(rData.winnerId);
           }
         }
       } else {
-        if (roomId) sessionStorage.setItem(`left_battle_${roomId}`, "true");
-        navigate("/multiplayer-hub", { replace: true });
+        if (roomId && !opponentQuit) {
+          sessionStorage.setItem(`left_battle_${roomId}`, "true");
+          navigate("/multiplayer-hub", { replace: true });
+        }
       }
     } catch (e) {
       console.error(e);
@@ -251,69 +261,71 @@ export default function MultiplayerBattleScreen() {
 
   useEffect(() => {
     fetchRoomStatus();
-    const interval = setInterval(fetchRoomStatus, 2000);
+    const interval = setInterval(fetchRoomStatus, 500);
     return () => clearInterval(interval);
-  }, [roomId]);
+  }, [roomId, myId, currentQ]);
 
-  const [myLives, setMyLives] = useState(3);
   const oppLives = isHost 
     ? (room?.guestLives !== undefined && room?.guestLives !== null ? room.guestLives : 3) 
     : (room?.hostLives !== undefined && room?.hostLives !== null ? room.hostLives : 3);
 
-  const updateBackendProgress = async (prog: number, sc: number, fin: boolean, timeTaken: number = 0, isCorrect: boolean = false, currentLives: number = 3) => {
-    try {
-      const safeProg = typeof prog === 'number' && Number.isFinite(prog) ? Math.max(0, Math.min(100, Math.round(prog))) : 0;
-      const safeScore = typeof sc === 'number' && Number.isFinite(sc) ? Math.max(0, Math.round(sc)) : 0;
+  const myAnsObj = isHost ? room?.answers?.[`q${currentQ}_host`] : room?.answers?.[`q${currentQ}_guest`];
+  const oppAnsObj = isHost ? room?.answers?.[`q${currentQ}_guest`] : room?.answers?.[`q${currentQ}_host`];
 
-      await apiFetch(`/api/multiplayer/room/${roomId}/progress`, {
+  const effectiveSelectedOption = selectedOption !== null 
+    ? selectedOption 
+    : (myAnsObj?.option !== undefined && myAnsObj?.option !== null ? myAnsObj.option : null);
+
+  const hasMyAnswer = effectiveSelectedOption !== null || myAnsObj !== undefined;
+  const hasOppAnswer = oppAnsObj !== undefined;
+
+  const isRevealPhase = (hasMyAnswer && hasOppAnswer) || 
+    (Boolean(room?.questionFinishedAt) && room?.currentQuestionIndex === currentQ);
+
+  const canSubmitAnswer = !hasMyAnswer && !isAdvancing && !isRevealPhase && !isFinished && !opponentQuit;
+
+  const handleAnswer = async (selectedIndex: number) => {
+    if (!canSubmitAnswer) return;
+    
+    setSelectedOption(selectedIndex);
+    setIsAdvancing(true);
+
+    const timeTaken = Math.max(1, 15 - timeLeft);
+    const currentQObj = questions[currentQ];
+    const isCorrect = selectedIndex !== -1 && selectedIndex === currentQObj?.a;
+
+    const newAnswer = {
+      questionText: currentQObj?.q || `Question ${currentQ + 1}`,
+      isCorrect,
+      timeSpent: timeTaken
+    };
+    setUserAnswers(prev => [...prev, newAnswer]);
+
+    try {
+      const res = await apiFetch(`/api/multiplayer/room/${roomId}/submit-answer`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ progress: safeProg, score: safeScore, lives: currentLives, isFinished: fin, timeTaken, isCorrect })
+        body: JSON.stringify({ questionIndex: currentQ, selectedOption: selectedIndex, timeTaken })
       });
-      // Force an immediate fetch to sync state
-      fetchRoomStatus();
-
-      // Notify opponent via WebSocket
+      const data = await res.json();
+      if (data.success && data.data) {
+        const rData = data.data;
+        setRoom(rData);
+        if (rData.status === "finished") {
+          setIsFinished(true);
+          setWinnerId(rData.winnerId);
+        } else if (rData.status === "opponent_quit") {
+          setIsFinished(true);
+          setOpponentQuit(true);
+          if (rData.winnerId) setWinnerId(rData.winnerId);
+        }
+      }
       if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
         socketRef.current.send("progress_updated");
       }
-    } catch (e) {}
-  };
-
-  const handleAnswer = (selectedIndex: number) => {
-    if (isFinished || opponentQuit || selectedOption !== null) return;
-    
-    setSelectedOption(selectedIndex);
-    const timeTaken = 15 - timeLeft; // calculate time taken
-    
-    const isCorrect = selectedIndex !== -1 && selectedIndex === questions[currentQ]?.a;
-    let newScore = myScore;
-    if (isCorrect) {
-      newScore += 10;
+    } catch (e) {
+      console.error(e);
     }
-
-    let newLives = myLives;
-    if (!isCorrect) {
-      newLives = Math.max(0, myLives - 1);
-      setMyLives(newLives);
-    }
-    
-    setMyScore(newScore);
-    
-    const newAnswer = {
-        questionText: questions[currentQ]?.q || "Question",
-        isCorrect,
-        timeSpent: timeTaken
-    };
-    setUserAnswers(prev => [...prev, newAnswer]);
-    
-    const totalQ = Math.max(10, questions.length || 10);
-    const isLast = (currentQ >= totalQ - 1) || newLives <= 0;
-    const rawProg = Math.round(((currentQ + 1) / totalQ) * 100);
-    const newProgress = Math.max(0, Math.min(100, rawProg));
-    
-    setMyProgress(newProgress);
-    updateBackendProgress(newProgress, newScore, isLast, timeTaken, isCorrect, newLives);
   };
 
   useEffect(() => {
@@ -326,91 +338,34 @@ export default function MultiplayerBattleScreen() {
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [roomId]);
 
-  // Synchronized Wall-Clock Timer & Countdown (Resilient to tab switching & backgrounding)
+  // Server-Authoritative 15-Second Per-Question Timer Synchronization
   useEffect(() => {
-    if (!room || !room.startedAt || isFinished || opponentQuit || questions.length === 0) return;
+    if (!room || room.status !== "playing" || isFinished || opponentQuit || questions.length === 0) return;
 
-    const startedAtMs = new Date(room.startedAt).getTime();
+    const syncTimer = () => {
+      if (hasMyAnswer || isAdvancing || isRevealPhase) return;
 
-    const tick = () => {
-      const elapsedSec = (Date.now() - startedAtMs) / 1000;
+      const rawQStart = room.questionStartedAt || room.startedAt;
+      if (!rawQStart) return;
 
-      // 1. Initial 4s countdown
-      if (elapsedSec < 4) {
-        setCountdown(Math.ceil(4 - elapsedSec));
-        return;
-      } else {
-        setCountdown(null);
-      }
+      const isoQStart = rawQStart.endsWith("Z") ? rawQStart : rawQStart + "Z";
+      const qStartedAtMs = new Date(isoQStart).getTime();
+      const elapsedSec = (Date.now() - qStartedAtMs) / 1000;
+      const remaining = Math.max(0, Math.ceil(15 - elapsedSec));
+      setTimeLeft(remaining);
 
-      // 2. Wall-clock question time calculation (15s timer + 1s buffer)
-      const matchSec = elapsedSec - 4;
-      const wallQIndex = Math.min(questions.length - 1, Math.max(0, Math.floor(matchSec / 16)));
-      const qTimeSec = matchSec % 16;
-      const currentRemaining = Math.max(0, Math.ceil(15 - qTimeSec));
-
-      // Auto-sync current question index if tab was backgrounded or minimized
-      if (wallQIndex > currentQ && !isAdvancing) {
-        setCurrentQ(wallQIndex);
-        setSelectedOption(null);
-        setTimeLeft(15);
-        setIsAdvancing(false);
-        return;
-      }
-
-      if (selectedOption === null) {
-        setTimeLeft(currentRemaining);
-        if (currentRemaining <= 0) {
-          handleAnswer(-1); // Auto-fail on wall-clock timeout (deducts 1 life)
-        }
+      if (remaining === 0 && canSubmitAnswer) {
+        handleAnswer(-1);
       }
     };
 
-    tick();
-    const interval = setInterval(tick, 400);
+    syncTimer();
+    const interval = setInterval(syncTimer, 300);
+
     return () => clearInterval(interval);
-  }, [room?.startedAt, currentQ, selectedOption, isAdvancing, isFinished, opponentQuit, questions.length]);
+  }, [currentQ, room?.questionStartedAt, room?.startedAt, room?.status, hasMyAnswer, isAdvancing, isRevealPhase, isFinished, opponentQuit, questions.length, canSubmitAnswer]);
 
-  // Synchronous Wall-Clock Advancement logic
-  useEffect(() => {
-    if (room && selectedOption !== null && myProgress > 0 && !isAdvancing) {
-      const isHost = room.hostId === myId;
-      const oppProgress = isHost ? (room.guestProgress || 0) : (room.hostProgress || 0);
-      const currentOppLives = isHost 
-        ? (room?.guestLives !== undefined && room?.guestLives !== null ? room.guestLives : 3) 
-        : (room?.hostLives !== undefined && room?.hostLives !== null ? room.hostLives : 3);
-      
-      const oppEliminated = (isHost ? !!room.guestId : !!room.hostId) && currentOppLives <= 0;
-      const myEliminated = myLives <= 0;
 
-      const startedAtMs = room.startedAt ? new Date(room.startedAt).getTime() : 0;
-      const elapsedSec = startedAtMs ? (Date.now() - startedAtMs) / 1000 : 0;
-      const matchSec = Math.max(0, elapsedSec - 4);
-      const qTimeSec = matchSec % 16;
-
-      // Advance question smoothly after selection or 15s deadline
-      if ((selectedOption !== null) || oppEliminated || myEliminated || qTimeSec >= 15.2) {
-        setIsAdvancing(true);
-        const totalQ = Math.max(10, questions.length || 10);
-        const isLast = (currentQ >= totalQ - 1) || myEliminated || oppEliminated;
-
-        const timerId = setTimeout(() => {
-          if (isLast) {
-            setIsFinished(true);
-          } else {
-            setCurrentQ(q => q + 1);
-            setSelectedOption(null);
-            setTimeLeft(15);
-            setIsAdvancing(false);
-          }
-        }, 1000);
-
-        return () => clearTimeout(timerId);
-      }
-    }
-  }, [room, selectedOption, myProgress, isAdvancing, currentQ, questions.length, myLives]);
-
-  
   const submitActivityLog = async (answersToSubmit: any[]) => {
       try {
           if (!answersToSubmit.length) return;
@@ -469,24 +424,6 @@ export default function MultiplayerBattleScreen() {
       <div className="w-12 h-12 border-4 border-[#141779] border-t-transparent rounded-full animate-spin" />
     </div>
   );
-
-  if (countdown !== null) {
-    return (
-      <div className="min-h-screen bg-[#f4efff] flex flex-col items-center justify-center text-[#141779] relative">
-        {/* Background Decor */}
-        <div className="absolute top-[10%] left-[10%] w-64 h-64 bg-[#e8ddff] rounded-full blur-[80px] opacity-60"></div>
-        <div className="absolute bottom-[20%] right-[10%] w-64 h-64 bg-[#ffd700] rounded-full blur-[100px] opacity-10"></div>
-        
-        <div className="relative z-10 flex flex-col items-center gap-6">
-          <div className="text-[60px] animate-bounce">⚔️</div>
-          <h2 className="text-2xl font-black uppercase tracking-widest text-[#141779]">Battle Starts In</h2>
-          <div className="text-8xl font-black text-[#ff9f43] drop-shadow-md scale-110 transition-transform duration-200">
-            {countdown}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col relative overflow-hidden text-[#141779]">
@@ -602,15 +539,18 @@ export default function MultiplayerBattleScreen() {
             
             <div className="grid grid-cols-1 gap-4 mt-auto relative">
               {questions[currentQ]?.options?.map((opt: string, idx: number) => {
-                const isSelected = selectedOption === idx;
+                const isSelected = effectiveSelectedOption === idx;
                 const isCorrect = idx === questions[currentQ]?.a;
-                
+
                 let btnStyle = "bg-white hover:bg-[#f4efff] border-[#e0e0e0] text-[#141779]";
-                if (selectedOption !== null) {
+                if (hasMyAnswer || isRevealPhase) {
+                   // Instant feedback styling as soon as current player selects an option
                    if (isSelected) {
-                      btnStyle = isCorrect ? "bg-[#e0f2f1] border-[#006a62] text-[#006a62]" : "bg-[#ffebee] border-[#ba1a1a] text-[#ba1a1a]";
+                      btnStyle = isCorrect 
+                        ? "bg-[#e0f2f1] border-[#006a62] text-[#006a62] font-black shadow-md ring-2 ring-[#006a62]" 
+                        : "bg-[#ffebee] border-[#ba1a1a] text-[#ba1a1a] font-black shadow-md ring-2 ring-[#ba1a1a]";
                    } else if (isCorrect) {
-                      btnStyle = "bg-[#e0f2f1]/50 border-[#006a62]/50 text-[#006a62]/80"; 
+                      btnStyle = "bg-[#e0f2f1] border-[#006a62] text-[#006a62] font-black"; 
                    } else {
                       btnStyle = "bg-gray-50 border-gray-200 text-gray-400 opacity-50";
                    }
@@ -619,20 +559,40 @@ export default function MultiplayerBattleScreen() {
                 return (
                   <button
                     key={idx}
-                    disabled={selectedOption !== null}
+                    disabled={!canSubmitAnswer}
                     onClick={() => handleAnswer(idx)}
-                    className={`border font-bold text-lg py-5 px-6 rounded-2xl text-left transition-all shadow-sm ${btnStyle} ${selectedOption === null ? 'active:scale-[0.98]' : ''}`}
+                    className={`border font-bold text-lg py-5 px-6 rounded-2xl text-left transition-all shadow-sm ${btnStyle} ${canSubmitAnswer ? 'active:scale-[0.98]' : ''}`}
                   >
                     <span className="break-words w-full text-left">{opt}</span>
                   </button>
                 );
               })}
-              
-              {/* Unobtrusive "Waiting" text that doesn't block the screen */}
-              {selectedOption !== null && (
-                <div className="absolute -bottom-8 w-full text-center animate-pulse">
-                  <span className="text-[#767683] font-bold text-sm">{t('waiting_for_player', { name: oppName, defaultValue: `Waiting for ${oppName}...` })}</span>
-                </div>
+            </div>
+
+            {/* Instant Answer Feedback & Opponent Waiting Container */}
+            <div className="mt-4 min-h-[56px] flex flex-col items-center justify-center w-full shrink-0 gap-2">
+              {hasMyAnswer && (
+                <>
+                  <div className="w-full flex justify-center animate-bounce">
+                    {effectiveSelectedOption !== null && effectiveSelectedOption === questions[currentQ]?.a ? (
+                      <span className="text-[#006a62] font-black text-sm bg-[#e0f2f1] px-5 py-2.5 rounded-full border border-[#006a62] shadow-md text-center max-w-full truncate">
+                        🎉 {t('correct_answer', 'Correct! +10 Pts')}
+                      </span>
+                    ) : (
+                      <span className="text-[#ba1a1a] font-black text-sm bg-[#ffebee] px-5 py-2.5 rounded-full border border-[#ba1a1a] shadow-md text-center max-w-full truncate">
+                        ❌ {t('incorrect_answer', 'Incorrect! -1 Life')}
+                      </span>
+                    )}
+                  </div>
+
+                  {!hasOppAnswer && !isRevealPhase && (
+                    <div className="w-full flex justify-center animate-pulse">
+                      <span className="text-[#141779] font-bold text-xs bg-white/95 px-4 py-1.5 rounded-full border border-[#e0e0e0] shadow-sm text-center max-w-full truncate">
+                        ⏳ {t('waiting_for_player', { name: oppName, defaultValue: `Waiting for ${oppName || 'Opponent'} to answer...` })}
+                      </span>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -697,12 +657,21 @@ export default function MultiplayerBattleScreen() {
                  </div>
                  
                  {questions.map((_, i) => {
-                    const myT = isHost ? (room.hostTimes?.[i] || 0) : (room.guestTimes?.[i] || 0);
-                    const oppT = isHost ? (room.guestTimes?.[i] || 0) : (room.hostTimes?.[i] || 0);
-                    
-                    const myC = isHost ? (room.hostCorrects?.[i] || false) : (room.guestCorrects?.[i] || false);
-                    const oppC = isHost ? (room.guestCorrects?.[i] || false) : (room.hostCorrects?.[i] || false);
-                    
+                    const hostAns = room?.answers?.[`q${i}_host`];
+                    const guestAns = room?.answers?.[`q${i}_guest`];
+
+                    const hostC = hostAns ? !!hostAns.isCorrect : (room?.hostCorrects?.[i] || false);
+                    const hostT = hostAns ? (hostAns.timeTaken || 0) : (room?.hostTimes?.[i] || 0);
+
+                    const guestC = guestAns ? !!guestAns.isCorrect : (room?.guestCorrects?.[i] || false);
+                    const guestT = guestAns ? (guestAns.timeTaken || 0) : (room?.guestTimes?.[i] || 0);
+
+                    const myC = isHost ? hostC : guestC;
+                    const myT = isHost ? hostT : guestT;
+
+                    const oppC = isHost ? guestC : hostC;
+                    const oppT = isHost ? guestT : hostT;
+
                     // Winner logic for UI highlight: Correct answer wins. If both correct, lower time wins.
                     let iWonT = false;
                     let oppWonT = false;

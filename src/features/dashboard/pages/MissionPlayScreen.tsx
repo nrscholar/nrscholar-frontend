@@ -1337,129 +1337,96 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       })()}
 
       {phase === "BOSS" && (
-        <main className="px-6 py-6 flex-1 flex flex-col justify-between max-w-md mx-auto w-full">
-          {/* Re-designed Light Theme Boss Battle Header Card */}
-          <div className="bg-gradient-to-br from-white via-[#F8FAFC] to-[#F1F5F9] rounded-[28px] p-5 mb-4 shadow-[0_10px_35px_rgba(20,23,121,0.07)] border-2 border-[#141779]/15 relative overflow-hidden">
-            {/* Background Orbs & Sparkles */}
-            <div className="absolute -top-12 -left-12 w-36 h-36 rounded-full bg-amber-200/40 blur-2xl pointer-events-none" />
-            <div className="absolute -bottom-12 -right-12 w-36 h-36 rounded-full bg-indigo-200/40 blur-2xl pointer-events-none" />
-
+        <main className="px-5 sm:px-6 py-6 flex-1 flex flex-col justify-between max-w-md mx-auto w-full">
+          {/* Top Outer Light Yellow/Cream Boss Stage Header Card with Premium Visual Aesthetics */}
+          <div className="bg-gradient-to-b from-[#FFFDF2] via-[#FFFBEB] to-[#F4F4FC] rounded-[32px] p-4.5 pt-5 mb-4 shadow-[0_10px_30px_rgba(20,23,121,0.08)] border-2 border-[#E2E4FA] relative backdrop-blur-md">
+            
             {/* Top Bar: Hero vs Boss Header */}
-            <div className="flex items-center justify-between mb-3.5 relative z-10 gap-1.5 sm:gap-2">
+            <div className="flex items-center justify-between mb-3.5 relative z-10 px-1 gap-1">
 
               {/* Left: Dragon Hero */}
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <div className="hidden xs:flex w-9 h-9 rounded-xl bg-teal-50 border border-teal-200 items-center justify-center text-xl relative shadow-xs shrink-0">
-                  <span>🐲</span>
-                  {dragonCrying && (
-                    <motion.span
-                      initial={{ opacity: 0, y: -2 }}
-                      animate={{ opacity: [1, 0], y: [0, 8] }}
-                      transition={{ duration: 0.6, repeat: Infinity }}
-                      className="absolute -bottom-1 -right-1 text-[10px]"
-                    >
-                      💧
-                    </motion.span>
-                  )}
-                </div>
-                <div>
-                  <span className="text-[10px] sm:text-[11px] font-black uppercase text-[#006a62] tracking-wider block leading-tight">
-                    Dragon Hero
-                  </span>
-                  <div className="flex gap-0.5 mt-0.5">
-                    {[1, 2, 3].map((h) => (
-                      <Heart
-                        key={h}
-                        size={12}
-                        className={`w-3.5 h-3.5 ${h <= childHearts ? (dragonCrying ? "text-cyan-500 fill-cyan-400 animate-ping" : "text-rose-500 fill-rose-500 animate-pulse") : "text-gray-300"}`}
-                      />
-                    ))}
-                  </div>
+              <div className="flex flex-col items-start shrink-0">
+                <span className="text-[10px] sm:text-[11px] font-black uppercase text-[#006a62] tracking-wider block leading-tight whitespace-nowrap">
+                  DRAGON HERO
+                </span>
+                <div className="flex gap-1 mt-1">
+                  {[1, 2, 3].map((h) => (
+                    <Heart
+                      key={h}
+                      size={14}
+                      className={`w-3.5 h-3.5 ${h <= childHearts ? (dragonCrying ? "text-cyan-500 fill-cyan-400 animate-ping" : "text-rose-500 fill-rose-500 drop-shadow-xs") : "text-gray-300"}`}
+                    />
+                  ))}
                 </div>
               </div>
 
               {/* Center: Boss Stage Badge */}
-              <div className="px-3 py-1 bg-gradient-to-r from-[#141779] to-[#25299e] text-white font-black text-[9px] sm:text-[10px] uppercase tracking-wider sm:tracking-widest rounded-full shadow-md border border-[#141779]/30 shrink-0 flex items-center gap-1">
+              <div className="px-3.5 py-1.5 bg-gradient-to-r from-[#141779] to-[#25299e] text-white font-black text-[10px] sm:text-[11px] uppercase tracking-wider rounded-full shadow-md border border-white/20 flex items-center gap-1.5 shrink-0 whitespace-nowrap">
                 <span>BOSS STAGE</span>
-                <span>⚔️</span>
+                <span className="text-xs">⚔️</span>
               </div>
 
-              {/* Right: Boss Guardian */}
-              <div className="flex items-center gap-1.5 sm:gap-2 justify-end">
-                <div className="text-right">
-                  <span className="text-[10px] sm:text-[11px] font-black uppercase text-[#141779] tracking-wider block leading-tight truncate max-w-[80px] xs:max-w-[100px] sm:max-w-[130px]">
-                    {bossName ? bossName.split(' ')[0] : 'BOSS'}
-                  </span>
-                  <div className="flex gap-0.5 mt-0.5 justify-end">
-                    {[1, 2, 3].map((h) => (
-                      <Heart
-                        key={h}
-                        size={12}
-                        className={`w-3.5 h-3.5 ${h <= bossHearts ? "text-amber-500 fill-amber-400 animate-pulse" : "text-gray-300"}`}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <div className="hidden xs:flex w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 items-center justify-center text-xl shadow-xs shrink-0">
-                  <span>🐉</span>
+              {/* Right: Boss Name / Chapter Stage */}
+              <div className="flex flex-col items-end shrink-0">
+                <span className="text-[10px] sm:text-[11px] font-black uppercase text-[#141779] tracking-wider block leading-tight text-right whitespace-nowrap max-w-[110px] truncate">
+                  {bossName ? bossName.toUpperCase() : 'BOSS'}
+                </span>
+                <div className="flex gap-1 mt-1">
+                  {[1, 2, 3].map((h) => (
+                    <Heart
+                      key={h}
+                      size={14}
+                      className={`w-3.5 h-3.5 ${h <= bossHearts ? "text-amber-400 fill-amber-400 drop-shadow-xs" : "text-gray-300"}`}
+                    />
+                  ))}
                 </div>
               </div>
 
             </div>
 
-            {/* Inner Boss Card */}
-            <div className="relative p-4 rounded-2xl bg-white/90 backdrop-blur-md border border-gray-200 flex items-center justify-between shadow-xs overflow-hidden">
+            {/* Inner White Boss Card with Soft Depth & Breathing Animation */}
+            <div className="relative p-4 rounded-[24px] bg-white/95 border border-[#F0F0F0] flex items-center justify-between shadow-xs">
               <motion.div
                 animate={{
+                  y: bossAngry ? [0, -8, 0] : [0, -4, 0],
                   scale: bossAngry ? [1, 1.08, 1] : 1,
                   rotate: bossAngry ? [-3, 3, -3, 3, 0] : 0
                 }}
-                transition={{ duration: 0.5, repeat: bossAngry ? 2 : 0 }}
-                className="relative z-10 flex items-center gap-3"
+                transition={bossAngry ? { duration: 0.5, repeat: 2 } : { duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+                className="relative z-10 flex items-center gap-3.5"
               >
-                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100 border-2 border-amber-200 flex items-center justify-center text-3xl shadow-sm relative ${bossAngry ? "ring-4 ring-rose-500/80 animate-pulse" : ""
-                  }`}>
+                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FFF9C4] to-[#FFE082] border-2 border-[#FFE082] flex items-center justify-center text-3xl shrink-0 shadow-sm relative ${bossAngry ? "ring-4 ring-rose-500/80 animate-pulse" : ""}`}>
                   <span>🐉</span>
-                  {bossAngry && (
-                    <motion.span
-                      initial={{ scale: 0.8 }}
-                      animate={{ scale: [1, 1.2, 1] }}
-                      transition={{ duration: 0.4, repeat: Infinity }}
-                      className="absolute -top-2.5 -right-2 text-[9px] font-black bg-rose-600 text-white px-1.5 py-0.5 rounded-full border border-white uppercase tracking-wider shadow-sm"
-                    >
-                      ANGRY!
-                    </motion.span>
-                  )}
                 </div>
                 <div>
-                  <h4 className="text-base font-black text-[#141779]">{bossName}</h4>
-                  <span className={`text-xs font-black ${bossAngry ? "text-rose-600 animate-pulse" : "text-amber-600"}`}>
+                  <h4 className="text-lg font-black text-[#141779] leading-tight drop-shadow-2xs">{bossName}</h4>
+                  <span className={`text-xs font-bold ${bossAngry ? "text-rose-600 animate-pulse" : "text-[#D97706]"}`}>
                     {bossState.status}
                   </span>
                 </div>
               </motion.div>
 
               <div className="relative z-10 flex flex-col items-end gap-1.5 shrink-0">
-                <span className="text-xs font-black bg-amber-50 border border-amber-300 px-3.5 py-1 rounded-full text-[#141779] shadow-xs whitespace-nowrap">
-                  {bossHearts} / 3 HP
+                <span className="text-xs font-black bg-white border-2 border-[#FFE082] px-4 py-1.5 rounded-full text-[#141779] shadow-xs whitespace-nowrap">
+                  {bossHearts} / {bossMaxHp} HP
                 </span>
               </div>
-
-              <Sparkles className="absolute -right-4 -bottom-4 w-28 h-28 text-amber-500/10 pointer-events-none animate-spin" />
             </div>
           </div>
 
-          <div className="my-2 bg-white border-2 border-[#141779]/15 rounded-3xl p-5 sm:p-6 shadow-[0_4px_20px_rgba(20,23,121,0.06)] relative">
+          {/* Question Box Card with Soft Floating Elevation */}
+          <div className="my-3 bg-white border-2 border-[#E2E4FA] rounded-[28px] p-5 sm:p-6 shadow-[0_8px_25px_rgba(20,23,121,0.06)] relative">
             <span className="text-xs font-black text-[#006a62] uppercase tracking-wider block mb-2 flex items-center gap-1.5">
-              <span>⚔️ Boss Strike #{safeBossIndex + 1}</span>
+              <span>⚔️ BOSS STRIKE #{safeBossIndex + 1}</span>
               <span>•</span>
-              <span>{isBossDrag ? "Drag & Drop Strike" : "Direct Strike"}</span>
+              <span>{isBossDrag ? "DRAG & DROP STRIKE" : "DIRECT STRIKE"}</span>
             </span>
             <h3 className="text-base sm:text-lg font-black text-[#141779] leading-snug">
               {activeBossQ?.question?.replace(/^(Boss\s+)?(Challenge|Question)(\s*#\d+)?(\s*\([^)]+\))?:\s*/i, "").trim().replace(/^\w/, c => c.toUpperCase()).normalize("NFD").replace(/[\u0300-\u036f]/g, "")}
             </h3>
           </div>
 
+          {/* Answer options / drag section with Enhanced UI */}
           {isBossDrag ? (
             <div className="flex flex-col gap-4 mb-4">
               <div
@@ -1548,7 +1515,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
               <button
                 disabled={bossConfirmed || (isBossLanguageDrag && selectedBossDragValue === null)}
                 onClick={handleBossDragConfirm}
-                className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#141779] to-[#25299e] text-white font-black text-base shadow-lg shadow-[#141779]/20 hover:bg-[#101362] flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-40 uppercase tracking-wider"
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#141779] via-[#25299e] to-[#3a3ebd] text-white font-black text-base shadow-[0_10px_25px_rgba(20,23,121,0.25)] hover:bg-[#101362] flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-40 uppercase tracking-wider"
               >
                 <span>STRIKE BOSS ⚡</span>
               </button>
@@ -1560,28 +1527,35 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                   const isSelected = bossSelected === idx;
                   const isCorrect = String(opt).trim().toLowerCase() === String(activeBossQ?.answer).trim().toLowerCase();
 
-                  let style = "bg-white border-2 border-gray-200 text-[#141779] hover:border-[#141779] shadow-xs hover:shadow-md";
+                  let style = "bg-white border-2 border-gray-200 text-[#141779] hover:border-[#141779] shadow-2xs hover:shadow-xs";
                   if (bossConfirmed) {
                     if (isTimeout) {
-                      style = "bg-white border-2 border-gray-200 text-[#141779] opacity-60";
+                      if (isCorrect) {
+                        style = "bg-gradient-to-r from-emerald-500 to-green-600 border-2 border-emerald-600 text-white font-black shadow-md shadow-emerald-500/20";
+                      } else {
+                        style = "bg-white border-2 border-gray-200 text-[#141779] opacity-60";
+                      }
                     } else {
                       if (isCorrect) {
-                        style = "bg-emerald-500 border-2 border-emerald-600 text-white font-black shadow-md shadow-emerald-500/20";
+                        // Correct answer ALWAYS highlights green with ✓ icon
+                        style = "bg-gradient-to-r from-emerald-500 to-green-600 border-2 border-emerald-600 text-white font-black shadow-md shadow-emerald-500/20 animate-pulse";
                       } else if (isSelected) {
-                        style = "bg-rose-500 border-2 border-rose-600 text-white font-black shadow-md shadow-rose-500/20";
+                        // Selected wrong answer highlights red with ✗ icon
+                        style = "bg-gradient-to-r from-rose-500 to-red-600 border-2 border-rose-600 text-white font-black shadow-md shadow-rose-500/20";
                       } else {
                         style = "bg-white border-2 border-gray-200 text-[#141779] opacity-40";
                       }
                     }
                   } else {
                     if (isSelected) {
-                      style = "bg-indigo-50/90 border-2 border-[#141779] text-[#141779] ring-2 ring-[#141779]/20 font-black shadow-sm";
+                      style = "bg-indigo-50/90 border-2 border-[#141779] text-[#141779] ring-2 ring-[#141779]/20 font-black shadow-sm scale-[1.01]";
                     }
                   }
 
                   return (
-                    <button
+                    <motion.button
                       key={idx}
+                      whileTap={!bossConfirmed ? { scale: 0.98 } : undefined}
                       disabled={bossConfirmed}
                       onClick={() => handleBossAnswer(idx)}
                       className={`w-full p-4 rounded-2xl border text-left font-bold text-sm sm:text-base transition-all flex items-center justify-between active:scale-98 ${style}`}
@@ -1590,26 +1564,31 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                         <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0 transition-colors ${
                           bossConfirmed && isCorrect ? "bg-white/20 text-white" :
                           bossConfirmed && isSelected && !isCorrect ? "bg-white/20 text-white" :
-                          isSelected ? "bg-[#141779] text-white" : "bg-gray-100 text-[#141779]"
+                          isSelected ? "bg-[#141779] text-white" : "bg-[#F3F4F6] text-[#141779]"
                         }`}>
                           {String.fromCharCode(65 + idx)}
                         </span>
                         <span>{opt}</span>
                       </div>
-                      {bossConfirmed && !isTimeout && isCorrect && <CheckCircle2 size={20} className="text-white shrink-0" />}
-                      {bossConfirmed && !isTimeout && isSelected && !isCorrect && <XCircle size={20} className="text-white shrink-0" />}
-                    </button>
+                      {bossConfirmed && isCorrect && <CheckCircle2 size={20} className="text-white shrink-0 animate-bounce" />}
+                      {bossConfirmed && isSelected && !isCorrect && <XCircle size={20} className="text-white shrink-0 animate-pulse" />}
+                    </motion.button>
                   );
                 })}
               </div>
 
-              <button
+              <motion.button
+                whileTap={bossSelected !== null && !bossConfirmed ? { scale: 0.96 } : undefined}
                 disabled={bossSelected === null || bossConfirmed}
                 onClick={handleBossMCConfirm}
-                className="w-full py-4 mt-2 rounded-2xl bg-gradient-to-r from-[#141779] to-[#25299e] text-white font-black text-base shadow-lg shadow-[#141779]/20 hover:bg-[#101362] flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-40 uppercase tracking-wider"
+                className={`w-full py-4 mt-2 rounded-2xl text-white font-black text-base shadow-[0_10px_25px_rgba(20,23,121,0.2)] flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-40 uppercase tracking-wider ${
+                  bossSelected === null || bossConfirmed
+                    ? "bg-[#9FA0D7] cursor-not-allowed shadow-none"
+                    : "bg-gradient-to-r from-[#141779] via-[#25299e] to-[#3a3ebd] hover:opacity-95"
+                }`}
               >
                 <span>STRIKE BOSS ⚡</span>
-              </button>
+              </motion.button>
             </div>
           )}
         </main>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { X, Plus, Check, Sparkles, Copy, CheckCircle2, KeyRound, ChevronDown } from "lucide-react";
 import { apiFetch } from "../api";
 import { useTranslation } from "react-i18next";
+import { copyToClipboard } from "../utils/clipboard";
 
 interface ChildProfile {
   childId: string;
@@ -41,9 +42,9 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
 
   if (!isOpen) return null;
 
-  const handleCopyCode = (code: string, e: React.MouseEvent) => {
+  const handleCopyCode = async (code: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(code);
+    await copyToClipboard(code);
     setCopiedCode(code);
     setTimeout(() => setCopiedCode(null), 2000);
   };

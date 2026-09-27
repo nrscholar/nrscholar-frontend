@@ -9,6 +9,7 @@ import { Clock, Sparkles, ChevronRight, X } from "lucide-react";
 import ForgotPasswordScreen from "../features/auth/pages/ForgotPasswordScreen";
 import LoginScreen from "../features/auth/pages/LoginScreen";
 import NotFoundScreen from "./NotFoundScreen";
+import { UniversalErrorBoundary } from "../components/UniversalErrorScreen";
 import ParentalGateScreen from "../features/auth/pages/ParentalGateScreen";
 import SignupStep1Screen from "../features/auth/pages/SignupStep1";
 import SignupStep2Screen from "../features/auth/pages/SignupStep2";
@@ -75,6 +76,32 @@ import { apiFetch } from "../api";
 import { registerPushNotificationToken } from "../services/pushNotificationService";
 import GlobalNotificationBanner from "../components/GlobalNotificationBanner";
 
+const getDismissedMilestonesFromStorage = (userId: string, childId: string, todayStr: string): Record<string, boolean> => {
+  try {
+    const key = `dismissedMilestones_${userId}_${childId}_${todayStr}`;
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : {};
+  } catch (e) {
+    return {};
+  }
+};
+
+const saveDismissedMilestoneToStorage = (userId: string, childId: string, todayStr: string, milestoneKey: string) => {
+  try {
+    const key = `dismissedMilestones_${userId}_${childId}_${todayStr}`;
+    const current = getDismissedMilestonesFromStorage(userId, childId, todayStr);
+    current[milestoneKey] = true;
+    localStorage.setItem(key, JSON.stringify(current));
+  } catch (e) {}
+};
+
+const clearDismissedMilestonesStorage = (userId: string, childId: string, todayStr: string) => {
+  try {
+    const key = `dismissedMilestones_${userId}_${childId}_${todayStr}`;
+    localStorage.removeItem(key);
+  } catch (e) {}
+};
+
 const ScreenTimeTracker = () => {
   const [isLocked, setIsLocked] = useState(false);
   const [showSwitcherModal, setShowSwitcherModal] = useState(false);
@@ -126,6 +153,7 @@ const ScreenTimeTracker = () => {
             const uId = u.id || u._id || "user";
             const tStr = new Date().toISOString().split("T")[0];
             localStorage.setItem(`screenTime_${uId}_${cId}_${tStr}`, "0");
+            clearDismissedMilestonesStorage(uId, cId, tStr);
           } catch (err) {}
         }
         setDismissedMilestones({});
@@ -183,7 +211,7 @@ const ScreenTimeTracker = () => {
       } else if (!isParentOrAuthRoute) {
         setIsLocked(false);
         
-        // Milestone thresholds schedule: 15m, 10m, 5m, 2m, 30s
+        // Milestone thresholds schedule: 5m and 30s remaining
         let targetMilestone: { key: string; title: string; subtitle: string; timeBadge: string; icon: string } | null = null;
         
         if (remainingSeconds <= 30 && remainingSeconds > 0) {
@@ -194,15 +222,7 @@ const ScreenTimeTracker = () => {
             subtitle: "You have 30 seconds left today. Finish up your current task!",
             icon: "⚡"
           };
-        } else if (remainingSeconds <= 120 && remainingSeconds > 30) {
-          targetMilestone = {
-            key: "2m",
-            timeBadge: "2 MINUTES REMAINING",
-            title: "2 Minutes Left! ⏰",
-            subtitle: "You've done amazing work today! 2 minutes remaining in your session.",
-            icon: "🎯"
-          };
-        } else if (remainingSeconds <= 300 && remainingSeconds > 120) {
+        } else if (remainingSeconds <= 300 && remainingSeconds > 30) {
           targetMilestone = {
             key: "5m",
             timeBadge: "5 MINUTES REMAINING",
@@ -210,31 +230,17 @@ const ScreenTimeTracker = () => {
             subtitle: "5 minutes left for today's learning! Keep going to complete your goal.",
             icon: "🚀"
           };
-        } else if (remainingSeconds <= 600 && remainingSeconds > 300) {
-          targetMilestone = {
-            key: "10m",
-            timeBadge: "10 MINUTES REMAINING",
-            title: "10 Minutes Remaining! 🌟",
-            subtitle: "10 minutes left in your screen time today. Excellent progress!",
-            icon: "🏆"
-          };
-        } else if (remainingSeconds <= 900 && remainingSeconds > 600) {
-          targetMilestone = {
-            key: "15m",
-            timeBadge: "15 MINUTES REMAINING",
-            title: "15 Minutes Remaining! 📚",
-            subtitle: "15 minutes left for today's learning session. Keep up the momentum!",
-            icon: "✨"
-          };
         }
 
         if (targetMilestone) {
-          setDismissedMilestones((prev) => {
-            if (!prev[targetMilestone!.key]) {
-              setActiveMilestone(targetMilestone);
-            }
-            return prev;
-          });
+          const storedDismissed = getDismissedMilestonesFromStorage(userId, childId, todayStr);
+          if (!storedDismissed[targetMilestone.key]) {
+            setActiveMilestone(targetMilestone);
+          } else {
+            setActiveMilestone((curr) => (curr?.key === targetMilestone!.key ? null : curr));
+          }
+        } else {
+          setActiveMilestone(null);
         }
       }
       
@@ -247,6 +253,18 @@ const ScreenTimeTracker = () => {
   }, []);
 
   const dismissWarning = (key: string) => {
+    const uStr = localStorage.getItem("userData");
+    let childId = "child_1";
+    let userId = "user";
+    if (uStr) {
+      try {
+        const u = JSON.parse(uStr);
+        childId = u.activeChildId || u.childId || "child_1";
+        userId = u.id || u._id || "user";
+      } catch (e) {}
+    }
+    const todayStr = new Date().toISOString().split("T")[0];
+    saveDismissedMilestoneToStorage(userId, childId, todayStr, key);
     setDismissedMilestones((prev) => ({ ...prev, [key]: true }));
     setActiveMilestone(null);
   };
@@ -395,77 +413,79 @@ function PinGuard() {
       <AuthHandler />
       <ScreenTimeTracker />
       <GlobalNotificationBanner />
-      <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#141779]"></div></div>}>
-        <Routes>
-          <Route path="/" element={<Navigate to="/home" replace />} />
-          
-          {/* Public Routes */}
-          <Route path="/login" element={<LoginScreen />} />
-          <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
-          <Route path="/signup-step1" element={<SignupStep1Screen />} />
-          <Route path="/signup-step2" element={<SignupStep2Screen />} />
-          <Route path="/signup-step3" element={<SignupStep3Screen />} />
-          
-          {/* Protected Routes */}
-          <Route element={<ProtectedRoute />}>
-            <Route element={<Layout />}>
-              <Route path="/home" element={<HomeScreen />} />
-              <Route path="/progress" element={<ProgressScreen />} />
-              <Route path="/practice/chapters" element={<ChaptersScreen />} />
-              <Route path="/profile" element={<ProfileScreen />} />
-              <Route path="/help" element={<HelpCenterScreen />} />
-              <Route path="/chat" element={<ChatScreen />} />
+      <UniversalErrorBoundary>
+        <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#141779]"></div></div>}>
+          <Routes>
+            <Route path="/" element={<Navigate to="/home" replace />} />
+            
+            {/* Public Routes */}
+            <Route path="/login" element={<LoginScreen />} />
+            <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
+            <Route path="/signup-step1" element={<SignupStep1Screen />} />
+            <Route path="/signup-step2" element={<SignupStep2Screen />} />
+            <Route path="/signup-step3" element={<SignupStep3Screen />} />
+            
+            {/* Protected Routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route element={<Layout />}>
+                <Route path="/home" element={<HomeScreen />} />
+                <Route path="/progress" element={<ProgressScreen />} />
+                <Route path="/practice/chapters" element={<ChaptersScreen />} />
+                <Route path="/profile" element={<ProfileScreen />} />
+                <Route path="/help" element={<HelpCenterScreen />} />
+                <Route path="/chat" element={<ChatScreen />} />
+              </Route>
+              
+              <Route path="/edit-profile" element={<EditProfileScreen />} />
+              <Route path="/assessment-summary" element={<AssessmentSummary />} />
+              <Route path="/scan-and-learn" element={<ScanAndLearn />} />
+              <Route path="/chapter-reader" element={<ChapterReaderScreen />} />
+              <Route path="/chapter-questions" element={<ChapterQuestionsScreen />} />
+              <Route path="/practice/inventory" element={<InventoryScreen />} />
+              <Route path="/practice/journey-map" element={<JourneyMapScreen />} />
+              <Route path="/practice/collections" element={<InventoryScreen />} />
+              <Route path="/parent" element={<ParentalGateScreen />} />
+              <Route path="/parent/gate" element={<ParentalGateScreen />} />
+              <Route element={<ParentLayout />}>
+                <Route path="/parent/dashboard" element={<ParentDashboardScreen />} />
+                <Route path="/parent/reports" element={<ParentReportScreen />} />
+                <Route path="/parent/daily-tip" element={<ParentDailyTipScreen />} />
+                <Route path="/parent/challenges" element={<ParentChallengesScreen />} />
+                <Route path="/parent/achievements" element={<ParentAchievementsScreen />} />
+                <Route path="/parent/lessons" element={<ParentLessonsScreen />} />
+                <Route path="/parent/learning-library" element={<ParentLearningLibraryScreen />} />
+                <Route path="/parent/roadmap" element={<ParentRoadmapScreen />} />
+                <Route path="/parent/kids-activity" element={<KidsActivityScreen />} />
+                <Route path="/parent/settings" element={<ParentSettings />} />
+                <Route path="/parent/learning-dna" element={<ParentLearningDNAScreen />} />
+                <Route path="/parent/lessons/player" element={<ParentLessonPlayerScreen />} />
+                <Route path="/parent/subscription" element={<ParentSubscriptionScreen />} />
+              </Route>
+              <Route path="/practice/reward" element={<RewardScreen />} />
+              <Route path="/daily-rewards" element={<DailyRewardsScreen />} />
+              <Route path="/weekly-test" element={<WeeklyTestScreen />} />
+              <Route path="/weekly-test-questions" element={<WeeklyTestQuestionsScreen />} />
+              <Route path="/weekly-test-results" element={<WeeklyTestResultsScreen />} />
+              <Route path="/scan-history" element={<ScanHistory />} />
+              <Route path="/good-habits" element={<HabitsScreen />} />
+              <Route path="/recap" element={<RecapScreen />} />
+              <Route path="/notifications" element={<NotificationsScreen />} />
+              <Route path="/evolution" element={<EvolutionScreen />} />
+              <Route path="/boss-battle" element={<BossBattleScreen />} />
+              <Route path="/multiplayer-hub" element={<MultiplayerHubScreen />} />
+              <Route path="/multiplayer-room/:roomId" element={<MultiplayerRoomScreen />} />
+              <Route path="/multiplayer-battle/:roomId" element={<MultiplayerBattleScreen />} />
+              <Route path="/textbook/subjects" element={<TextbookSubjectsScreen />} />
+              <Route path="/textbook/chapters" element={<TextbookChaptersScreen />} />
+              <Route path="/textbook/reader" element={<ChapterReaderScreen />} />
+              <Route path="/mission-roadmap" element={<MissionMapScreen />} />
+              <Route path="/mission-play" element={<MissionPlayScreen />} />
             </Route>
             
-            <Route path="/edit-profile" element={<EditProfileScreen />} />
-            <Route path="/assessment-summary" element={<AssessmentSummary />} />
-            <Route path="/scan-and-learn" element={<ScanAndLearn />} />
-            <Route path="/chapter-reader" element={<ChapterReaderScreen />} />
-            <Route path="/chapter-questions" element={<ChapterQuestionsScreen />} />
-            <Route path="/practice/inventory" element={<InventoryScreen />} />
-            <Route path="/practice/journey-map" element={<JourneyMapScreen />} />
-            <Route path="/practice/collections" element={<InventoryScreen />} />
-            <Route path="/parent" element={<ParentalGateScreen />} />
-            <Route path="/parent/gate" element={<ParentalGateScreen />} />
-            <Route element={<ParentLayout />}>
-              <Route path="/parent/dashboard" element={<ParentDashboardScreen />} />
-              <Route path="/parent/reports" element={<ParentReportScreen />} />
-              <Route path="/parent/daily-tip" element={<ParentDailyTipScreen />} />
-              <Route path="/parent/challenges" element={<ParentChallengesScreen />} />
-              <Route path="/parent/achievements" element={<ParentAchievementsScreen />} />
-              <Route path="/parent/lessons" element={<ParentLessonsScreen />} />
-              <Route path="/parent/learning-library" element={<ParentLearningLibraryScreen />} />
-              <Route path="/parent/roadmap" element={<ParentRoadmapScreen />} />
-              <Route path="/parent/kids-activity" element={<KidsActivityScreen />} />
-              <Route path="/parent/settings" element={<ParentSettings />} />
-              <Route path="/parent/learning-dna" element={<ParentLearningDNAScreen />} />
-              <Route path="/parent/lessons/player" element={<ParentLessonPlayerScreen />} />
-              <Route path="/parent/subscription" element={<ParentSubscriptionScreen />} />
-            </Route>
-            <Route path="/practice/reward" element={<RewardScreen />} />
-            <Route path="/daily-rewards" element={<DailyRewardsScreen />} />
-            <Route path="/weekly-test" element={<WeeklyTestScreen />} />
-            <Route path="/weekly-test-questions" element={<WeeklyTestQuestionsScreen />} />
-            <Route path="/weekly-test-results" element={<WeeklyTestResultsScreen />} />
-            <Route path="/scan-history" element={<ScanHistory />} />
-            <Route path="/good-habits" element={<HabitsScreen />} />
-            <Route path="/recap" element={<RecapScreen />} />
-            <Route path="/notifications" element={<NotificationsScreen />} />
-            <Route path="/evolution" element={<EvolutionScreen />} />
-            <Route path="/boss-battle" element={<BossBattleScreen />} />
-            <Route path="/multiplayer-hub" element={<MultiplayerHubScreen />} />
-            <Route path="/multiplayer-room/:roomId" element={<MultiplayerRoomScreen />} />
-            <Route path="/multiplayer-battle/:roomId" element={<MultiplayerBattleScreen />} />
-            <Route path="/textbook/subjects" element={<TextbookSubjectsScreen />} />
-            <Route path="/textbook/chapters" element={<TextbookChaptersScreen />} />
-            <Route path="/textbook/reader" element={<ChapterReaderScreen />} />
-            <Route path="/mission-roadmap" element={<MissionMapScreen />} />
-            <Route path="/mission-play" element={<MissionPlayScreen />} />
-          </Route>
-          
-          <Route path="*" element={<NotFoundScreen />} />
-        </Routes>
-      </Suspense>
+            <Route path="*" element={<NotFoundScreen />} />
+          </Routes>
+        </Suspense>
+      </UniversalErrorBoundary>
     </BrowserRouter>
   );
 }

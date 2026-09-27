@@ -151,8 +151,12 @@ export default function MultiplayerHubScreen() {
 
       if (pData.success && pData.data) {
         const completedIds = pData.data
-          .filter((p: any) => p.chapterCompleted || p.completed || p.bossCompleted || (Array.isArray(p.completedMissions) && p.completedMissions.length > 0))
-          .map((p: any) => String(p.chapterId));
+          .filter((p: any) => {
+            const mCount = Array.isArray(p.completedMissions) ? p.completedMissions.length : 0;
+            if (mCount > 0 && mCount < 4) return false;
+            return mCount >= 4 || p.chapterCompleted || p.bossCompleted || (p.completed && mCount !== 0);
+          })
+          .map((p: any) => String(p.chapterId).replace(/_hard$/, ""));
         setCompletedChapterIds(completedIds);
       } else {
         setCompletedChapterIds([]);
@@ -173,7 +177,10 @@ export default function MultiplayerHubScreen() {
         .filter(Boolean);
       setChaptersList(chapterNames);
       
-      if (!chapterNames.includes(chapter) && chapter !== "Mix Chapters") {
+      if (!isSubscribed && chapterNames.length > 0) {
+        setSelectedChaptersList([chapterNames[0]]);
+        setChapter(chapterNames[0]);
+      } else if (!chapterNames.includes(chapter) && chapter !== "Mix Chapters") {
         setChapter("Mix Chapters");
       }
     }).catch(() => {});
@@ -190,22 +197,26 @@ export default function MultiplayerHubScreen() {
 
   const [selectedChaptersList, setSelectedChaptersList] = useState<string[]>([]);
 
-  const isChapterUnlocked = (chName: string, idx?: number) => {
+  const isChapterCompleted = (chName: string, idx?: number) => {
     if (chName === "Mix Chapters" || chName === "Mix Chapters (All)") {
-      return isSubscribed && completedChapterIds.length > 0;
+      return true;
     }
     const computedIdx = idx !== undefined ? idx : chaptersList.indexOf(chName);
     const targetChap = practiceChapters[computedIdx];
-    const chapId = targetChap ? String(targetChap._id || targetChap.chapterId || "") : "";
-    const isCompleted = chapId ? completedChapterIds.includes(chapId) : (completedChapterIds.length > 0 || computedIdx === 0);
+    const chapId = targetChap ? String(targetChap._id || targetChap.chapterId || "").replace(/_hard$/, "") : "";
+    if (!chapId) return false;
+    return completedChapterIds.includes(chapId) || completedChapterIds.includes(`${chapId}_hard`);
+  };
 
-    // Chapter 1 (index 0) requires completing Chapter 1 missions (free, no premium required)
-    if (computedIdx === 0) {
-      return isCompleted;
+  const isChapterUnlocked = (chName: string, idx?: number) => {
+    if (chName === "Mix Chapters" || chName === "Mix Chapters (All)") {
+      return true;
     }
-    
-    // Chapter 2+ (index >= 1) requires Premium subscription AND completing all missions of that chapter
-    return isSubscribed && isCompleted;
+    const computedIdx = idx !== undefined ? idx : chaptersList.indexOf(chName);
+    if (computedIdx === 0) {
+      return true;
+    }
+    return isSubscribed;
   };
 
   const getMixChapterOrder = () => {
@@ -219,6 +230,34 @@ export default function MultiplayerHubScreen() {
   const entryFee = 100;
 
   const handleCreateRoom = async () => {
+    const unlockedChapters = isSubscribed ? chaptersList : (chaptersList.length > 0 ? [chaptersList[0]] : ["Chapter 1"]);
+    const effectiveSelectedChapters = selectedChaptersList.length > 0 ? selectedChaptersList : unlockedChapters;
+    const isValid = effectiveSelectedChapters.every((ch) => {
+      const idx = chaptersList.indexOf(ch);
+      return isChapterCompleted(ch, idx);
+    });
+
+    try {
+      const storedUser = localStorage.getItem("user");
+      const uid = storedUser ? JSON.parse(storedUser)._id : "unknown";
+      console.log("[DEBUG Battle Validation]", {
+        userId: uid,
+        selectedChapters: effectiveSelectedChapters,
+        unlockedChapters,
+        userCompletedChapters: completedChapterIds,
+        isValid
+      });
+    } catch (e) {}
+
+    if (selectedChaptersList.length > 0) {
+      for (const ch of selectedChaptersList) {
+        const idx = chaptersList.indexOf(ch);
+        if (!isChapterCompleted(ch, idx)) {
+          setError(t('chapter_missions_not_completed', 'You must complete all missions of this chapter first before playing it in Friendly Battle!'));
+          return;
+        }
+      }
+    }
     if (myCoins < entryFee) {
       setError(t('not_enough_coins_arena', { entryFee, defaultValue: `Not enough coins! You need at least ${entryFee} coins to play Shadow Arena in this city.` }));
       return;
@@ -517,7 +556,7 @@ export default function MultiplayerHubScreen() {
                           selectedChaptersList.length === 0 ? 'bg-[#3520A8] text-white' : 'text-[#141779] hover:bg-[#F4EFF7]'
                         }`}
                       >
-                        <span>⚔ {t('mix_chapters_all', 'Mix Chapters (All)')}</span>
+                        <span className="truncate pr-2">⚔ {t('mix_chapters_all', 'Mix Chapters (All)')}</span>
                         {selectedChaptersList.length === 0 && <Check size={14} />}
                       </div>
 
@@ -541,7 +580,7 @@ export default function MultiplayerHubScreen() {
                                 }
                               } else {
                                 if (idx >= 1 && !isSubscribed) {
-                                  setError(t('premium_chapter_locked', 'Selecting Chapter 2+ or Multiple Chapters in Friendly Battle requires a Premium subscription!'));
+                                  setError(t('premium_chapter_locked', 'Selecting Chapter 2+ in Friendly Battle requires a Premium subscription!'));
                                 } else {
                                   setError(t('chapter_missions_not_completed', 'You must complete all missions of this chapter first before playing it in Friendly Battle!'));
                                 }

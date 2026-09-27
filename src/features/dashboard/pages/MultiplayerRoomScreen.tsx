@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Copy, CheckCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
+import { copyToClipboard } from "../../../utils/clipboard";
 
 export default function MultiplayerRoomScreen() {
   const navigate = useNavigate();
@@ -14,17 +15,22 @@ export default function MultiplayerRoomScreen() {
   const [showLeaveModal, setShowLeaveModal] = useState(false);
 
   const fetchRoomStatus = async () => {
+    if (roomId && sessionStorage.getItem(`left_battle_${roomId}`) === "true") return;
     try {
       const res = await apiFetch(`/api/multiplayer/room/${roomId}`);
       const data = await res.json();
+      if (sessionStorage.getItem(`left_battle_${roomId}`) === "true") return;
+
       if (data.success && data.data) {
         setRoom(data.data);
-        if (data.data.status === "playing") {
-          navigate(`/multiplayer-battle/${roomId}`);
-        } else if (data.data.status === "ready") {
-          // Both players are in, automatically start the battle!
-          apiFetch(`/api/multiplayer/room/${roomId}/start`, { method: "POST" })
-            .catch(err => console.error("Failed to auto-start room:", err));
+        if (data.data.status === "playing" || data.data.status === "ready") {
+          if (sessionStorage.getItem(`left_battle_${roomId}`) !== "true") {
+            if (data.data.status === "ready") {
+              apiFetch(`/api/multiplayer/room/${roomId}/start`, { method: "POST" })
+                .catch(err => console.error("Failed to auto-start room:", err));
+            }
+            navigate(`/multiplayer-battle/${roomId}`);
+          }
         }
       } else {
         setError(data.message || "Room not found");
@@ -35,27 +41,44 @@ export default function MultiplayerRoomScreen() {
   };
 
   useEffect(() => {
+    if (roomId && sessionStorage.getItem(`left_battle_${roomId}`) === "true") {
+      navigate("/multiplayer-hub", { replace: true });
+      return;
+    }
     fetchRoomStatus();
-    const interval = setInterval(fetchRoomStatus, 2000); // poll every 2 seconds for faster transition
+    const interval = setInterval(() => {
+      if (sessionStorage.getItem(`left_battle_${roomId}`) === "true") return;
+      fetchRoomStatus();
+    }, 2000);
     return () => clearInterval(interval);
   }, [roomId, navigate]);
 
-  const copyCode = () => {
+  useEffect(() => {
+    window.history.pushState(null, "", window.location.href);
+    const handlePopState = () => {
+      window.history.pushState(null, "", window.location.href);
+      setShowLeaveModal(true);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  const copyCode = async () => {
     if (room?.code) {
-      navigator.clipboard.writeText(room.code);
+      await copyToClipboard(room.code);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
   };
 
-  const handleLeaveRoom = async () => {
-    try {
-      await apiFetch(`/api/multiplayer/room/${roomId}/quit`, { method: "POST" });
-    } catch (e) {
-      console.error("Failed to quit room:", e);
+  const handleLeaveRoom = () => {
+    if (roomId) {
+      sessionStorage.setItem(`left_battle_${roomId}`, "true");
     }
     setShowLeaveModal(false);
-    navigate("/multiplayer-hub");
+    apiFetch(`/api/multiplayer/room/${roomId}/quit`, { method: "POST" }).catch(console.error);
+    navigate("/multiplayer-hub", { replace: true });
   };
 
   if (error) {

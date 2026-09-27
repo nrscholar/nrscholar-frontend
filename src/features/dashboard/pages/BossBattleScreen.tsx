@@ -1,7 +1,7 @@
 import Particles, { initParticlesEngine } from "@tsparticles/react";
 import { loadSlim } from "@tsparticles/slim";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Heart, Swords, Sparkles, CheckCircle2, XCircle, Zap, Shield, HelpCircle, Trophy } from "lucide-react";
+import { ArrowLeft, Heart, Swords, Sparkles, CheckCircle2, XCircle, Shield } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
@@ -144,8 +144,6 @@ export default function BossBattleScreen() {
     initParticlesEngine(async (engine) => { await loadSlim(engine); }).then(() => setParticlesInit(true));
   }, []);
 
-  const confettiInit = useCallback(async (engine: any) => { await loadSlim(engine); }, []);
-
   useEffect(() => {
     const startBattle = async () => {
       try {
@@ -183,16 +181,6 @@ export default function BossBattleScreen() {
           { _id: "b3", question: "Which of these is a primary color?", options: shuffleOpts(["Red", "Green", "Purple", "Orange"]), answer: "Red" },
           { _id: "b4", question: "What is the capital city of France?", options: shuffleOpts(["Paris", "London", "Berlin", "Rome"]), answer: "Paris" },
           { _id: "b5", question: "How many sides does a triangle have?", options: shuffleOpts(["3", "4", "5", "6"]), answer: "3" },
-          { _id: "b6", question: "Which planet is known as the Red Planet?", options: shuffleOpts(["Mars", "Earth", "Jupiter", "Venus"]), answer: "Mars" },
-          { _id: "b7", question: "What is 15 + 25?", options: shuffleOpts(["40", "35", "45", "50"]), answer: "40" },
-          { _id: "b8", question: "Which gas do plants absorb during photosynthesis?", options: shuffleOpts(["Carbon Dioxide", "Oxygen", "Nitrogen", "Hydrogen"]), answer: "Carbon Dioxide" },
-          { _id: "b9", question: "What is the opposite of 'expand'?", options: shuffleOpts(["Contract", "Grow", "Stretch", "Increase"]), answer: "Contract" },
-          { _id: "b10", question: "Which ocean is the largest on Earth?", options: shuffleOpts(["Pacific", "Atlantic", "Indian", "Arctic"]), answer: "Pacific" },
-          { _id: "b11", question: "What is 8 multiplied by 7?", options: shuffleOpts(["56", "48", "64", "54"]), answer: "56" },
-          { _id: "b12", question: "Which animal is known as the King of the Jungle?", options: shuffleOpts(["Lion", "Tiger", "Elephant", "Leopard"]), answer: "Lion" },
-          { _id: "b13", question: "What is the boiling point of water in Celsius?", options: shuffleOpts(["100°C", "90°C", "110°C", "80°C"]), answer: "100°C" },
-          { _id: "b14", question: "Which shape has 4 equal sides and 4 right angles?", options: shuffleOpts(["Square", "Rectangle", "Rhombus", "Trapezoid"]), answer: "Square" },
-          { _id: "b15", question: "What is the past tense of 'run'?", options: shuffleOpts(["Ran", "Running", "Runs", "Runned"]), answer: "Ran" }
         ];
 
         if (json.success && json.data && json.data.questions && json.data.questions.length > 0) {
@@ -204,41 +192,10 @@ export default function BossBattleScreen() {
             ...json.data,
             questions: processedQuestions
           });
-          
-          if (json.data.questions && json.data.questions.length === 0) {
-            // Auto complete if no boss questions
-            const rewardAmt = 1000;
-            if (chapterId) {
-              const existingAnswers = location.state?.userAnswers || [];
-              try {
-                await apiFetch("/api/practice/chapter-progress", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    chapterId: chapterId,
-                    currentQ: 10,
-                    score: existingAnswers.length,
-                    completed: true,
-                    readingCompleted: true,
-                    questionsCompleted: true,
-                    bossCompleted: true,
-                    chapterCompleted: true,
-                    answers: existingAnswers
-                  })
-                });
-              } catch (e) {}
-            }
-            if (returnTo) {
-               navigate(`/practice/reward?type=boss&amount=${rewardAmt}&returnTo=${encodeURIComponent(returnTo)}`, { state: location.state, replace: true });
-            } else {
-               navigate(`/practice/reward?type=coins&amount=${rewardAmt}&returnTo=/practice/journey-map`, { replace: true });
-            }
-            return;
-          }
         } else {
           setBattleData({
             battleId: "demo_b1",
-            bossName: "Boss Guardian",
+            bossName: searchParams.get("chapterName") || "Boss Guardian",
             bossHP: 50,
             maxHP: 50,
             playerHearts: 3,
@@ -272,7 +229,15 @@ export default function BossBattleScreen() {
 
   const handleAttack = async (optIndex?: number) => {
     const chosenIndex = optIndex !== undefined ? optIndex : selected;
-    if (chosenIndex === null || chosenIndex === undefined || !battleData || isAttackingRef.current) return;
+    // STRICT GUARD: Prevent duplicate calls for the same question
+    if (
+      chosenIndex === null || 
+      chosenIndex === undefined || 
+      !battleData || 
+      isAttackingRef.current || 
+      selected !== null || 
+      attacking
+    ) return;
     
     isAttackingRef.current = true;
     setSelected(chosenIndex);
@@ -314,7 +279,7 @@ export default function BossBattleScreen() {
 
     const delay = isCorrect ? 1400 : 2000;
 
-    // Optimistically update health for immediate animation
+    // Optimistically update health for immediate animation (STRICTLY 1 heart loss)
     setBattleData((prev: any) => ({
         ...prev,
         bossHP: isCorrect ? Math.max(prev.bossHP - 10, 0) : prev.bossHP,
@@ -448,176 +413,13 @@ export default function BossBattleScreen() {
         body: JSON.stringify({ battleId: battleData.battleId })
       }).catch(() => {});
     }
-    
-    setTimeout(() => {
-        const chapterId = searchParams.get("chapterId");
-        if (chapterId) {
-            const existingAnswers = location.state?.userAnswers || [];
-            const rewindAnswers = existingAnswers.slice(0, 9);
-            const rewindScore = rewindAnswers.filter((a: any) => a?.isCorrect).length;
-
-            apiFetch("/api/practice/chapter-progress", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                chapterId: chapterId,
-                currentQ: 9,
-                score: rewindScore,
-                completed: false,
-                readingCompleted: true,
-                questionsCompleted: false,
-                bossCompleted: false,
-                chapterCompleted: false,
-                answers: rewindAnswers
-              })
-            }).then(() => {
-                navigate(`/practice/chapters`, { replace: true });
-            }).catch(() => {
-                navigate("/practice/chapters", { replace: true });
-            });
-        } else if (returnTo) {
-           navigate(returnTo, { state: location.state, replace: true });
-        } else {
-           navigate("/practice/chapters", { replace: true });
-        }
-    }, 3000);
   };
 
-  // Loading Screen (Light Theme - Rating 9.5+)
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f4efff] text-[#141779] flex flex-col items-center justify-between p-6 relative overflow-hidden font-sans select-none">
-        {/* Ambient Light Glow Orbs */}
-        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[40%] rounded-full bg-[#e8ddff] blur-[90px] opacity-70 pointer-events-none" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[40%] rounded-full bg-[#ffd700] blur-[120px] opacity-25 pointer-events-none" />
-
-        {/* Background Particles */}
-        {particlesInit && (
-          <Particles
-            id="boss-loading-particles"
-            options={{
-              ...FIRE_PARTICLES_CONFIG,
-              particles: {
-                ...FIRE_PARTICLES_CONFIG.particles,
-                color: { value: ["#141779", "#6C4DFF", "#ff6600", "#ffaa00", "#00b4d8"] }
-              }
-            }}
-            className="absolute inset-0 z-[1] pointer-events-none"
-          />
-        )}
-
-        {/* Top Header Badge */}
-        <div className="relative z-10 pt-8 flex flex-col items-center text-center gap-1.5">
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border-2 border-[#e0e0e0] shadow-md backdrop-blur-md"
-          >
-            <Sparkles size={16} className="text-[#141779] animate-spin" />
-            <span className="text-[11px] font-black uppercase tracking-widest text-[#141779]">
-              {t('boss_arena_loading', 'DRAGON ACADEMY ARENA')}
-            </span>
-          </motion.div>
-          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-wider text-[#141779] drop-shadow-xs mt-1">
-            {t('preparing_boss_battle', 'PREPARE FOR BATTLE!')}
-          </h1>
-          <p className="text-xs font-bold text-[#767683]">
-            {searchParams.get("chapterName") || searchParams.get("subjectName") || `${(searchParams.get("difficulty") || "Easy").toUpperCase()} BOSS GUARDIAN`}
-          </p>
-        </div>
-
-        {/* VS Matchup Arena Showcase */}
-        <div className="w-full max-w-sm flex items-center justify-between my-auto relative z-10 px-2">
-          {/* Player Dragon Hero */}
-          <motion.div
-            initial={{ x: -40, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ type: "spring", bounce: 0.4 }}
-            className="flex flex-col items-center gap-2"
-          >
-            <div className="relative">
-              <div className="absolute -inset-3 rounded-full bg-[#141779]/10 blur-xl animate-pulse" />
-              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl bg-white border-2 border-[#141779] flex items-center justify-center p-2 shadow-lg shadow-[#141779]/10">
-                <DragonCharacter state="idle" flipped={false} className="w-full h-full object-contain" />
-              </div>
-            </div>
-            <span className="text-xs font-black uppercase tracking-wider text-[#141779] bg-[#f4efff] px-3 py-1 rounded-full border border-[#e0e0e0] shadow-xs">
-              {t('your_hero', 'YOU (DRAGON)')}
-            </span>
-          </motion.div>
-
-          {/* VS Center Badge */}
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: [0.8, 1.15, 1] }}
-            transition={{ duration: 0.6, ease: "backOut" }}
-            className="relative flex flex-col items-center justify-center"
-          >
-            <div className="absolute inset-[-12px] bg-gradient-to-r from-[#ff6600] to-[#ff0055] rounded-full blur-md opacity-40 animate-pulse" />
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-[#FFD700] via-[#FFA500] to-[#FF4400] border-4 border-white flex items-center justify-center shadow-[0_4px_20px_rgba(255,165,0,0.5)] z-20">
-              <Swords size={24} className="text-white animate-bounce" />
-            </div>
-            <span className="text-[10px] font-black text-[#ff9f43] uppercase tracking-widest mt-2 drop-shadow-xs">
-              VS
-            </span>
-          </motion.div>
-
-          {/* Boss Guardian */}
-          <motion.div
-            initial={{ x: 40, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ type: "spring", bounce: 0.4 }}
-            className="flex flex-col items-center gap-2"
-          >
-            <div className="relative">
-              <div className="absolute -inset-3 rounded-full bg-[#ff9f43]/15 blur-xl animate-pulse" />
-              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl bg-white border-2 border-[#ff9f43] flex items-center justify-center p-2 shadow-lg shadow-[#ff9f43]/10">
-                <MonsterCharacter state="idle" className="w-full h-full object-contain" />
-              </div>
-            </div>
-            <span className="text-xs font-black uppercase tracking-wider text-[#d97706] bg-[#fff3e0] px-3 py-1 rounded-full border border-[#ffe0b2] shadow-xs">
-              {t('boss_guardian', 'BOSS GUARDIAN')}
-            </span>
-          </motion.div>
-        </div>
-
-        {/* Dynamic Progress Telemetry & Energy Bar */}
-        <div className="w-full max-w-sm relative z-10 flex flex-col items-center gap-3 mb-4">
-          <div className="flex justify-between items-center w-full px-1">
-            <span className="text-[11px] font-bold text-[#464652] uppercase tracking-wider flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#141779] animate-ping" />
-              {t('summoning_boss', 'Summoning Boss Guardian...')}
-            </span>
-            <span className="text-[11px] font-black text-[#141779] tracking-wider">
-              98%
-            </span>
-          </div>
-
-          {/* Animated Shimmer Loading Progress Bar */}
-          <div className="w-full h-3.5 bg-white border-2 border-[#e0e0e0] rounded-full p-0.5 overflow-hidden shadow-inner relative">
-            <motion.div
-              initial={{ width: "15%" }}
-              animate={{ width: ["20%", "70%", "98%"] }}
-              transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-              className="h-full bg-gradient-to-r from-[#141779] via-[#6C4DFF] to-[#ff9f43] rounded-full relative overflow-hidden shadow-sm"
-            >
-              <motion.div
-                animate={{ x: ["-100%", "200%"] }}
-                transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
-                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent w-1/2 -skew-x-12"
-              />
-            </motion.div>
-          </div>
-
-          <div className="w-full bg-white border-2 border-[#e0e0e0] rounded-2xl p-3.5 mt-2 shadow-md flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-[#fff3e0] border border-[#ffe0b2] flex items-center justify-center shrink-0">
-              <span className="text-base">💡</span>
-            </div>
-            <p className="text-[11px] font-bold text-[#141779] text-left leading-snug">
-              {t('boss_tip_loading', 'Answer correctly to strike the Boss for 10 HP damage! Get 5 right to win!')}
-            </p>
-          </div>
-        </div>
+      <div className="min-h-screen bg-[#f4efff] flex flex-col items-center justify-center text-[#141779]">
+        <div className="w-12 h-12 border-4 border-[#141779] border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="font-bold text-sm uppercase tracking-wider">{t('loading_boss_battle', 'Preparing Boss Arena...')}</p>
       </div>
     );
   }
@@ -651,7 +453,7 @@ export default function BossBattleScreen() {
   const difficultyText = (searchParams.get("difficulty") || "Easy").toUpperCase();
 
   return (
-    <div className={`min-h-screen bg-[#f4efff] text-[#141779] flex flex-col items-center justify-between relative overflow-hidden font-sans select-none transition-colors duration-500 ${actionResult === 'wrong' ? 'animate-hard-shake' : ''}`}>
+    <div className={`min-h-screen bg-[#f4efff] text-[#141779] flex flex-col items-center justify-between relative overflow-hidden font-sans select-none transition-colors duration-500 pb-6 ${actionResult === 'wrong' ? 'animate-hard-shake' : ''}`}>
       <style>{`
         @keyframes hard-shake {
             0%, 100% { transform: translateX(0); }
@@ -661,43 +463,12 @@ export default function BossBattleScreen() {
         .animate-hard-shake {
             animation: hard-shake 0.8s cubic-bezier(.36,.07,.19,.97) both;
         }
-        @keyframes float-hero {
-            0%, 100% { transform: translateY(0px) scale(1); }
-            50% { transform: translateY(-8px) scale(1.02); }
-        }
-        .animate-float-hero {
-            animation: float-hero 3.5s ease-in-out infinite;
-        }
-        @keyframes cloud-drift {
-            0% { transform: translateX(-10%); }
-            50% { transform: translateX(10%); }
-            100% { transform: translateX(-10%); }
-        }
-        .animate-cloud-drift {
-            animation: cloud-drift 25s ease-in-out infinite;
-        }
       `}</style>
 
-      {/* Layer 1: Light Theme Fantasy Sky Background */}
+      {/* Layer 1: Sky Background */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#f4efff] via-[#ffffff] to-[#f4efff] z-0" />
       
-      {/* Light Beams from Top */}
-      <div className="absolute top-0 left-1/4 w-96 h-[500px] bg-gradient-to-b from-[#6C4DFF]/10 via-transparent to-transparent -rotate-12 blur-2xl pointer-events-none z-0" />
-      <div className="absolute top-0 right-1/4 w-96 h-[500px] bg-gradient-to-b from-[#ff9f43]/10 via-transparent to-transparent rotate-12 blur-2xl pointer-events-none z-0" />
-      
-      {/* Layer 2: Distant Mountains Silhouette (Light Theme Tones) */}
-      <div className="absolute bottom-0 inset-x-0 h-48 bg-gradient-to-t from-[#e8ddff]/80 via-[#f4efff]/50 to-transparent pointer-events-none z-0">
-        <svg className="absolute bottom-0 w-full h-32 opacity-40" viewBox="0 0 1200 120" preserveAspectRatio="none">
-          <path d="M0,0 L150,90 L300,20 L450,80 L600,10 L750,85 L900,30 L1050,75 L1200,0 L1200,120 L0,120 Z" fill="#dcd4f7" />
-          <path d="M0,30 L200,100 L400,40 L600,90 L800,25 L1000,95 L1200,20 L1200,120 L0,120 Z" fill="#cbbcf6" />
-        </svg>
-      </div>
-
-      {/* Layer 3: Soft Low Opacity Floating Light Clouds */}
-      <div className="absolute top-[18%] -left-12 w-72 h-20 bg-white/60 blur-2xl rounded-full z-0 animate-cloud-drift pointer-events-none" />
-      <div className="absolute top-[35%] -right-16 w-96 h-28 bg-[#e8ddff]/60 blur-3xl rounded-full z-0 animate-cloud-drift pointer-events-none" />
-
-      {/* Layer 4: Background Particles */}
+      {/* Background Particles */}
       {particlesInit && (
         <Particles
           id="boss-fire-particles"
@@ -734,9 +505,9 @@ export default function BossBattleScreen() {
         />
       )}
 
-      {/* TOP APP BAR & PROGRESSION HEADER (Light Theme HUD) */}
+      {/* TOP APP BAR (EXACT ORIGINAL DESIGN) */}
       <header className="fixed top-0 inset-x-0 z-50 flex items-center justify-between px-4 sm:px-6 h-16 bg-white/95 backdrop-blur-md border-b border-[#e0e0e0] shadow-sm">
-        {/* Left: Back button & Stage Title */}
+        {/* Left: Back button & Boss Name */}
         <div className="flex items-center gap-3">
           <button 
             onClick={async () => { await submitActivityLog(userAnswers); navigate(-1); }} 
@@ -744,28 +515,18 @@ export default function BossBattleScreen() {
           >
             <ArrowLeft className="text-[#141779]" size={20} />
           </button>
-          <div className="flex flex-col">
+          <div className="flex flex-col text-left">
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#141779]">
-                {searchParams.get("chapterName") || searchParams.get("subjectName") || "Dragon Academy"}
+              <span className="text-[11px] font-black uppercase tracking-wide text-[#141779]">
+                {bossName || "Boss Guardian"}
               </span>
               <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-[#ffeed1] border border-[#ff9f43] text-[#d97706]">
                 {difficultyText}
               </span>
             </div>
-            <span className="text-xs font-black text-[#141779] uppercase tracking-wide">
-              {bossName || "Boss Guardian"}
+            <span className="text-[10px] font-black text-[#767683] uppercase tracking-wider">
+              {t('boss_guardian', 'BOSS GUARDIAN')}
             </span>
-          </div>
-        </div>
-
-        {/* Center: Question Progress Pill */}
-        <div className="hidden sm:flex flex-col items-center bg-[#f4efff] border border-[#e0e0e0] px-4 py-1 rounded-full shadow-inner">
-          <span className="text-[10px] font-black uppercase tracking-widest text-[#141779]">
-            Question {displayQNum} / {totalQCount}
-          </span>
-          <div className="w-20 h-1 bg-[#e0e0e0] rounded-full mt-0.5 overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-[#141779] to-[#6C4DFF] transition-all duration-300" style={{ width: `${(displayQNum / totalQCount) * 100}%` }} />
           </div>
         </div>
 
@@ -786,15 +547,15 @@ export default function BossBattleScreen() {
         </div>
       </header>
 
-      {/* MAIN BATTLE ARENA */}
-      <main className="w-full max-w-[460px] flex-1 flex flex-col items-center justify-between px-4 sm:px-6 relative z-20 pt-20 pb-6 overflow-y-auto">
+      {/* MAIN BATTLE ARENA (EXACT ORIGINAL DESIGN) */}
+      <main className="w-full max-w-[460px] flex-1 flex flex-col items-center justify-between px-4 sm:px-6 relative z-20 pt-20 pb-4 overflow-y-auto">
         
-        {/* Mobile Question Progress Badge (Visible on small screens) */}
-        <div className="sm:hidden flex items-center justify-between w-full bg-white border border-[#e0e0e0] px-4 py-1.5 rounded-full mb-3 shadow-xs">
+        {/* SUB-HEADER: QUESTION PROGRESS PILL CARD */}
+        <div className="flex items-center justify-between w-full bg-white border border-[#e0e0e0] px-4 py-2 rounded-full mb-3 shadow-xs">
           <span className="text-[11px] font-black uppercase tracking-wider text-[#141779]">
-            Question {displayQNum} of {totalQCount}
+            QUESTION {displayQNum} OF {totalQCount}
           </span>
-          <div className="w-24 h-1.5 bg-[#e0e0e0] rounded-full overflow-hidden">
+          <div className="w-28 sm:w-36 h-2 bg-[#e0e0e0] rounded-full overflow-hidden">
             <div className="h-full bg-gradient-to-r from-[#141779] to-[#6C4DFF] transition-all duration-300" style={{ width: `${(displayQNum / totalQCount) * 100}%` }} />
           </div>
         </div>
@@ -841,13 +602,12 @@ export default function BossBattleScreen() {
                 </span>
                 <div className="flex items-center gap-1 mt-0.5">
                    {[...Array(playerHearts)].map((_, i) => <Heart key={i} size={12} className="fill-[#ff2e63] text-[#ff2e63]" />)}
-                   {[...Array(3 - playerHearts)].map((_, i) => <Heart key={i+3} size={12} className="fill-transparent text-slate-300" />)}
+                   {[...Array(Math.max(0, 3 - playerHearts))].map((_, i) => <Heart key={i+3} size={12} className="fill-transparent text-slate-300" />)}
                 </div>
               </div>
 
               {/* Dragon Character with Rune Platform */}
               <div className="relative flex flex-col items-center">
-                {/* Glowing Rune Platform under Dragon */}
                 <div className="absolute bottom-0 w-24 h-6 bg-[#141779]/15 rounded-full blur-xs border border-[#141779]/30 transform rotate-X-60 animate-pulse" />
                 
                 <motion.div
@@ -862,7 +622,7 @@ export default function BossBattleScreen() {
                   />
                 </motion.div>
 
-                {/* Floating Damage / Healing Popup */}
+                {/* Damage Popup */}
                 <AnimatePresence>
                   {damagePopup.show && damagePopup.target === "dragon" && (
                     <motion.div
@@ -891,49 +651,39 @@ export default function BossBattleScreen() {
               <div className="flex flex-col items-center mb-2 bg-white px-3 py-1 rounded-xl border-2 border-[#ff9f43] shadow-md w-32 sm:w-36">
                 <div className="flex justify-between items-center w-full px-0.5">
                   <span className="text-[10px] font-black uppercase tracking-wider text-[#d97706] truncate max-w-[70px]">
-                    {bossName || "BOSS"}
+                    BOSS GUARDIAN
                   </span>
                   <span className="text-[9px] font-black text-[#141779]">
                     {Math.max(0, bossHP)} / {maxHP} HP
                   </span>
                 </div>
                 
-                {/* Rounded Gradient HP Bar */}
-                <div className="w-full h-2.5 rounded-full mt-1 overflow-hidden border border-[#e0e0e0] bg-[#f4efff] shadow-inner relative">
-                  <motion.div 
-                    initial={{ width: "100%" }}
-                    animate={{ width: `${Math.max((bossHP / maxHP) * 100, 0)}%` }}
-                    transition={{ duration: 0.6, ease: "easeOut" }}
-                    className="h-full bg-gradient-to-r from-rose-500 via-red-500 to-amber-500 rounded-full relative overflow-hidden shadow-xs"
-                  >
-                    {/* Top Shine Bar */}
-                    <div className="absolute top-0 inset-x-0 h-1/2 bg-white/40" />
-                  </motion.div>
+                <div className="w-full h-2 bg-[#e0e0e0] rounded-full mt-1 overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-red-500 via-orange-400 to-amber-400 transition-all duration-300" style={{ width: `${(bossHP / maxHP) * 100}%` }} />
                 </div>
               </div>
 
-              {/* Boss Character with Rune Platform */}
+              {/* Boss Character */}
               <div className="relative flex flex-col items-center">
-                {/* Glowing Rune Platform under Boss */}
-                <div className="absolute bottom-0 w-24 h-6 bg-[#ff9f43]/20 rounded-full blur-xs border border-[#ff9f43]/40 transform rotate-X-60 animate-pulse" />
+                <div className="absolute bottom-0 w-24 h-6 bg-[#ff9f43]/15 rounded-full blur-xs border border-[#ff9f43]/30 transform rotate-X-60 animate-pulse" />
                 
                 <motion.div
                   animate={actionResult === 'wrong' ? { x: [0, -40, 0] } : actionResult === 'correct' ? { x: [0, 10, -10, 5, 0] } : { y: [0, -6, 0] }}
-                  transition={actionResult === 'idle' ? { duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 } : { duration: 0.5 }}
+                  transition={actionResult === 'idle' ? { duration: 3.5, repeat: Infinity, ease: "easeInOut" } : { duration: 0.5 }}
                   className="relative z-10"
                 >
                   <MonsterCharacter
                     state={actionResult === 'wrong' ? 'attack' : actionResult === 'correct' ? 'hurt' : 'idle'}
-                    className={`w-28 h-28 sm:w-32 sm:h-32 object-contain ${actionResult === 'correct' ? 'brightness-125 saturate-150' : ''}`}
+                    className={`w-28 h-28 sm:w-32 sm:h-32 object-contain ${actionResult === 'correct' ? 'brightness-125 saturate-150 text-emerald-500' : ''}`}
                   />
                 </motion.div>
 
-                {/* Floating Damage Popup for Boss */}
+                {/* Damage Popup */}
                 <AnimatePresence>
                   {damagePopup.show && damagePopup.target === "boss" && (
                     <motion.div
                       initial={{ opacity: 0, y: 10, scale: 0.5 }}
-                      animate={{ opacity: 1, y: -30, scale: 1.4 }}
+                      animate={{ opacity: 1, y: -30, scale: 1.3 }}
                       exit={{ opacity: 0, y: -50 }}
                       className="absolute top-0 z-50 text-[#141779] font-black text-2xl drop-shadow-md pointer-events-none"
                     >
@@ -943,24 +693,23 @@ export default function BossBattleScreen() {
                 </AnimatePresence>
               </div>
             </div>
-
         </div>
 
-        {/* BOSS SPEECH BUBBLE QUESTION CARD (Light Theme) */}
+        {/* QUESTION SPEECH BUBBLE CARD (EXACT ORIGINAL DESIGN) */}
         <motion.div 
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.4 }}
           className="w-full bg-white p-5 rounded-[28px] border-2 border-[#141779] relative shadow-[0_10px_30px_rgba(20,23,121,0.12)] mb-4 text-center backdrop-blur-md"
         >
-            {/* Speech Bubble Arrow pointing towards the Boss */}
+            {/* Speech Bubble Arrow pointing right towards the Boss */}
             <div className="absolute -right-2 -top-2 w-5 h-5 bg-white border-t-2 border-r-2 border-[#141779] transform rotate-45" />
             
             {/* Header Badge */}
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ffeed1] border border-[#ff9f43] mb-2.5">
               <Swords size={14} className="text-[#d97706] animate-pulse" />
               <span className="text-[10px] text-[#d97706] font-black uppercase tracking-widest">
-                {t('boss_is_attacking', 'BOSS IS ATTACKING!')}
+                {t('boss_is_attacking', 'બોસ હુમલો કરી રહ્યા છે!')}
               </span>
             </div>
 
@@ -970,7 +719,7 @@ export default function BossBattleScreen() {
             </h2>
         </motion.div>
 
-        {/* ANSWER OPTIONS BENTO GRID (Light Theme - Rating 9.5+) */}
+        {/* ANSWER OPTIONS 2x2 BENTO GRID (EXACT ORIGINAL DESIGN) */}
         <div className="grid grid-cols-2 gap-3 w-full relative z-20 mb-2">
           {currentQ?.options?.map((opt: string, idx: number) => {
             const isSelected = selected === idx;
@@ -992,7 +741,6 @@ export default function BossBattleScreen() {
                   icon = <XCircle size={20} className="text-white animate-pulse shrink-0" />;
                 }
               } else if (actionResult === 'wrong' && isAnswerOption) {
-                // Highlight the correct answer in green when the user chooses incorrectly!
                 buttonStyle = "bg-gradient-to-r from-emerald-500 to-green-600 border-2 border-emerald-300 text-white shadow-[0_4px_20px_rgba(16,185,129,0.5)] animate-pulse ring-2 ring-emerald-300";
                 badgeStyle = "bg-white text-emerald-700 font-black";
                 icon = <CheckCircle2 size={20} className="text-white animate-bounce shrink-0" />;
@@ -1007,7 +755,7 @@ export default function BossBattleScreen() {
             return (
               <motion.button
                 key={idx}
-                disabled={attacking}
+                disabled={selected !== null || attacking}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => handleAttack(idx)}
                 className={`h-[60px] rounded-2xl p-3 flex items-center justify-between relative transition-all duration-200 border ${buttonStyle}`}
@@ -1026,26 +774,9 @@ export default function BossBattleScreen() {
           })}
         </div>
 
-        {/* Short Explanation Banner when User gets Question Wrong */}
-        <AnimatePresence>
-          {actionResult === 'wrong' && currentQ && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              className="w-full bg-[#e6f4ea] border-2 border-[#34a853] text-[#137333] rounded-2xl p-3 text-center flex items-center justify-center gap-2 shadow-md"
-            >
-              <CheckCircle2 size={18} className="text-[#34a853] shrink-0" />
-              <p className="text-xs font-bold text-[#137333] truncate">
-                Correct Answer: <span className="text-[#141779] font-black">{currentQ.answer}</span>
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
       </main>
       
-      {/* BOSS REVIVAL MODAL (Light Theme) */}
+      {/* BOSS REVIVAL MODAL */}
       <AnimatePresence>
         {showReviveModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm px-6 text-center">
@@ -1119,7 +850,7 @@ export default function BossBattleScreen() {
                   onClick={handleGiveUp}
                   className="w-full py-3 bg-[#f4efff] text-[#767683] font-bold rounded-full hover:bg-[#e8ddff] active:scale-95 transition-all text-xs border border-[#e0e0e0]"
                 >
-                  {t('retreat_lose_xp', 'Retreat & Lose XP')}
+                  {t('give_up', 'Give Up')}
                 </button>
               </div>
             </motion.div>
@@ -1127,49 +858,28 @@ export default function BossBattleScreen() {
         )}
       </AnimatePresence>
 
-      {/* DEFEAT OVERLAY ANIMATION */}
-      <AnimatePresence>
-        {lossOverlay.show && (
-          <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm px-6 text-center"
+      {/* LOSS OVERLAY SCREEN */}
+      {lossOverlay.show && (
+        <div className="fixed inset-0 z-[120] bg-[#f4efff] flex flex-col items-center justify-center p-6 text-center animate-in zoom-in duration-300">
+          <div className="w-20 h-20 rounded-full bg-[#ffebee] border-2 border-[#ba1a1a] flex items-center justify-center mb-4">
+            <span className="text-4xl">💔</span>
+          </div>
+          <h2 className="text-3xl font-black text-[#ba1a1a] uppercase tracking-wider mb-2">{t('defeat', 'DEFEAT')}</h2>
+          <p className="text-sm font-bold text-[#464652] mb-6 max-w-xs">{t('boss_defeat_desc', 'You ran out of hearts! Keep practicing to come back stronger!')}</p>
+          <button
+            onClick={() => {
+              if (returnTo) {
+                navigate(decodeURIComponent(returnTo), { replace: true });
+              } else {
+                navigate("/practice/journey-map", { replace: true });
+              }
+            }}
+            className="w-full max-w-xs py-4 bg-[#141779] text-white font-black uppercase tracking-widest rounded-full shadow-md"
           >
-              <motion.div
-                 initial={{ scale: 0.5, y: 50 }}
-                 animate={{ scale: 1, y: 0 }}
-                 transition={{ type: "spring", bounce: 0.5 }}
-                 className="bg-[#ffdad6] border-[4px] border-[#ba1a1a] rounded-3xl p-8 max-w-sm w-full shadow-[0_10px_40px_rgba(186,26,26,0.3)]"
-              >
-                  <div className="text-[60px] mb-2 animate-bounce">☠️</div>
-                  <h2 className="text-3xl font-black text-[#ba1a1a] uppercase tracking-widest mb-2">{t('defeated', 'Defeated!')}</h2>
-                  <p className="text-lg font-bold text-[#4b4b4b] mb-6">{t('defeated_desc', 'The Boss was too strong this time. Fall back and try again!')}</p>
-                  <div className="bg-white rounded-xl p-4 border-2 border-[#ba1a1a]/30">
-                      <span className="text-sm font-bold text-[#afafaf] uppercase tracking-widest block mb-1">{t('penalty', 'Penalty')}</span>
-                      <span className="text-3xl font-black text-[#ba1a1a]">{lossOverlay.xpLoss} XP</span>
-                  </div>
-              </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* TOAST NOTIFICATION */}
-      <AnimatePresence>
-        {toastMessage && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="fixed top-24 z-[250] bg-[#141779] text-white px-6 py-3 rounded-full shadow-2xl border border-indigo-300 font-bold text-xs sm:text-sm tracking-wide flex items-center justify-center gap-2 text-center max-w-[90vw] w-auto"
-            style={{ left: "50%", transform: "translateX(-50%)" }}
-          >
-            <span>✨</span>
-            <span>{toastMessage}</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
+            {t('return_to_map', 'Return to Map')}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

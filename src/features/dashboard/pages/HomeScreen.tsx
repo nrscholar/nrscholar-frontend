@@ -46,9 +46,7 @@ export default function HomeScreen() {
     } catch (e) { }
   };
 
-  // Unscripted Game Elements
-  const [surpriseData, setSurpriseData] = useState<any>(null);
-  const [chestTaps, setChestTaps] = useState(0);
+
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasFreeSpin, setHasFreeSpin] = useState(false);
   const [showSpinPopup, setShowSpinPopup] = useState(false);
@@ -111,12 +109,12 @@ export default function HomeScreen() {
   const [journeyData, setJourneyData] = useState<any>(null);
 
   useEffect(() => {
-    if (pendingSpinPopup && !surpriseData) {
+    if (pendingSpinPopup) {
       setShowSpinPopup(true);
       sessionStorage.setItem("dailySpinPopupShown", "true");
       setPendingSpinPopup(false);
     }
-  }, [pendingSpinPopup, surpriseData]);
+  }, [pendingSpinPopup]);
 
   const fetchNotifications = async () => {
     try {
@@ -216,19 +214,6 @@ export default function HomeScreen() {
         }
       })();
 
-      const surprisePromise = (async () => {
-        try {
-          const surRes = await apiFetch("/api/retention/surprise");
-          if (surRes.ok) {
-            const surData = await surRes.json();
-            if (surData && surData.reward_type) {
-              setSurpriseData(surData);
-              setChestTaps(0);
-            }
-          }
-        } catch (e) { }
-      })();
-
       const spinWheelPromise = (async () => {
         try {
           const spinRes = await apiFetch("/api/retention/spin-wheel/status");
@@ -279,7 +264,6 @@ export default function HomeScreen() {
         missionsPromise,
         notificationsPromise,
         citiesPromise,
-        surprisePromise,
         spinWheelPromise,
         streakSequencePromise,
         journeyPromise
@@ -759,114 +743,7 @@ export default function HomeScreen() {
         )}
       </AnimatePresence>
 
-      {/* SURPRISE CHEST MINIGAME MODAL */}
-      {surpriseData && chestTaps < 2 && (
-        <div className="fixed inset-0 z-[100] bg-[#f7f9fb]/95 backdrop-blur-md flex flex-col items-center justify-center p-6">
-          <motion.div
-            initial={{ y: -500, scale: 0 }}
-            animate={{ y: 0, scale: 1 }}
-            transition={{ type: "spring", bounce: 0.6 }}
-            className="text-center flex flex-col items-center"
-          >
-            <h2 className="text-3xl font-bold text-[#141779] mb-8 animate-pulse text-center">{t('wild_surprise')}</h2>
-            <motion.button
-              onClick={() => {
-                if (chestTaps === 0) {
-                  setChestTaps(1);
-                  setTimeout(() => setChestTaps(2), 1200);
-                }
-              }}
-              animate={chestTaps === 1 ? {
-                scale: [1, 1.2, 1.1, 1.3, 1.5],
-                rotate: [0, -10, 10, -15, 15, -20, 20, 0]
-              } : {}}
-              transition={chestTaps === 1 ? { duration: 1.2, ease: "easeInOut" } : {}}
-              whileHover={chestTaps === 0 ? { scale: 1.1, rotate: 5 } : {}}
-              whileTap={chestTaps === 0 ? { scale: 0.8, rotate: -15 } : {}}
-              className="text-[140px] cursor-pointer relative filter drop-shadow-md"
-            >
-              <span className="relative z-10">🎁</span>
-              {chestTaps === 1 && (
-                <motion.div
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: [0, 5, 15], opacity: [0, 1, 1] }}
-                  transition={{ duration: 1, delay: 0.2, ease: "easeIn" }}
-                  className="absolute inset-0 bg-white rounded-full blur-2xl z-20 pointer-events-none"
-                />
-              )}
-            </motion.button>
-            <p className="text-[#006a62] mt-12 font-bold text-xl bg-white border border-teal-200 px-6 py-3 rounded-full shadow-md animate-pulse">
-              {chestTaps === 1 ? t('opening') : t('tap_to_open')}
-            </p>
-          </motion.div>
-        </div>
-      )}
 
-      {/* REWARD REVEAL */}
-      {surpriseData && chestTaps >= 2 && (
-        <div className="fixed inset-0 z-[100] bg-[#f7f9fb]/95 backdrop-blur-md flex flex-col items-center justify-center p-6">
-          <motion.div
-            initial={{ scale: 0, rotate: -180 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{ type: "spring", damping: 15, stiffness: 200 }}
-            className="bg-white w-full max-w-sm rounded-[32px] p-8 text-center relative shadow-2xl border border-slate-200"
-          >
-            <motion.span
-              initial={{ scale: 0 }}
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ delay: 0.3, duration: 0.5 }}
-              className="text-6xl block mb-4"
-            >
-              🎉
-            </motion.span>
-            <h2 className="text-3xl font-bold text-[#141779] mb-2">{t('surprise_reward')}</h2>
-            <p className="text-[#767683] font-semibold mb-6">{t('magic_chest_gave_you')}</p>
-
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="bg-amber-50 rounded-2xl p-6 mb-8 border border-amber-200 relative overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-white/40 blur-xl animate-pulse" />
-              <span className="text-5xl block mb-2 relative z-10">{surpriseData.reward_type === 'coins' ? '🪙' : surpriseData.reward_type === 'xp' ? '⭐' : '🔮'}</span>
-              <h3 className="text-2xl font-bold text-[#ff9f43] relative z-10">+{surpriseData.amount} {surpriseData.reward_type.toUpperCase()}</h3>
-            </motion.div>
-
-            <button
-              onClick={() => {
-                if (surpriseData.reward_type === 'coins') {
-                  setCoins(c => {
-                    const newCoins = c + surpriseData.amount;
-                    const cached = localStorage.getItem("userData");
-                    if (cached) {
-                      const u = JSON.parse(cached);
-                      u.coins = newCoins;
-                      localStorage.setItem("userData", JSON.stringify(u));
-                    }
-                    return newCoins;
-                  });
-                } else if (surpriseData.reward_type === 'xp') {
-                  setXp(x => {
-                    const newXp = x + surpriseData.amount;
-                    const cached = localStorage.getItem("userData");
-                    if (cached) {
-                      const u = JSON.parse(cached);
-                      u.xp = newXp;
-                      localStorage.setItem("userData", JSON.stringify(u));
-                    }
-                    return newXp;
-                  });
-                }
-                setSurpriseData(null);
-              }}
-              className="w-full bg-[#141779] text-white font-bold py-4 rounded-[16px] hover:opacity-90 active:scale-95 transition-all text-xl shadow-[0_4px_12px_rgba(20,23,121,0.2)]"
-            >
-              Claim!
-            </button>
-          </motion.div>
-        </div>
-      )}
 
       {/* FLOATING ACTION BUTTONS (GIFT & CLOCK) - Properly Positioned */}
       <div className="fixed bottom-20 right-4 z-40 flex flex-col gap-3 items-center">

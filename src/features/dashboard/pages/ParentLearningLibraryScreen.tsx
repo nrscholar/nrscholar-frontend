@@ -213,10 +213,10 @@ export default function ParentLearningLibraryScreen() {
               
               {showMore && (
                 <div className="mt-3 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                  {Object.entries(categoryStats).map(([category, stats]) => (
+                  {Object.entries(categoryStats).map(([category, stats]: [string, any]) => (
                     <div key={category} className="flex justify-between items-center text-sm">
-                      <span className="text-[#464652] font-medium">{t(filterKeys[category] || String(category || "other").toLowerCase().replace(/\s+/g, "_"), category || "Other")}</span>
-                      <span className="text-[#006a62] font-bold">{stats.completed}/{stats.total} {t("lessons_lower", "lessons")}</span>
+                      <span className="text-[#464652] font-medium">{String(t(filterKeys[category] || String(category || "other").toLowerCase().replace(/\s+/g, "_"), category || "Other"))}</span>
+                      <span className="text-[#006a62] font-bold">{stats.completed}/{stats.total} {String(t("lessons_lower", "lessons"))}</span>
                     </div>
                   ))}
                   {Object.keys(categoryStats).length === 0 && (
@@ -251,7 +251,7 @@ export default function ParentLearningLibraryScreen() {
                     : 'bg-white text-[#464652] border border-[#c7c5d4] hover:bg-[#f2f4f6]'
                 }`}
               >
-                {t(filterKeys[filter] || String(filter || "").toLowerCase().replace(/\s+/g, "_"), filter)}
+                {String(t(filterKeys[filter] || String(filter || "").toLowerCase().replace(/\s+/g, "_"), filter))}
               </button>
             ))}
           </div>
@@ -277,7 +277,7 @@ export default function ParentLearningLibraryScreen() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-[#006a62] mb-1">{t(catKey, catDisplay)}</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-[#006a62] mb-1">{String(t(catKey, catDisplay))}</span>
                       <span className="text-[10px] font-bold text-[#767683]">+{topic.xp || 20} XP</span>
                     </div>
                     <h3 className="font-bold text-[#191c1e] leading-tight truncate">{String(topic.title || "")}</h3>
@@ -299,7 +299,7 @@ export default function ParentLearningLibraryScreen() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-[#141779] mb-1">{t(catKey, catDisplay)}</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-[#141779] mb-1">{String(t(catKey, catDisplay))}</span>
                       <span className="text-[10px] font-bold text-[#767683]">+{topic.xp || 30} XP</span>
                     </div>
                     <h3 className="font-bold text-[#191c1e] leading-tight">{String(topic.title || "")}</h3>
@@ -322,7 +322,7 @@ export default function ParentLearningLibraryScreen() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#767683] mb-1">{t(catKey, catDisplay)}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#767683] mb-1">{String(t(catKey, catDisplay))}</span>
                     <span className="text-[10px] font-bold text-[#767683]">+{topic.xp || 20} XP</span>
                   </div>
                   <h3 className="font-bold text-[#464652] leading-tight truncate">{String(topic.title || "")}</h3>
