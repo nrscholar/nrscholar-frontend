@@ -138,7 +138,7 @@ export default function KidsActivityScreen() {
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs flex items-center px-6 h-16 gap-3">
         <button 
-          onClick={() => navigate("/parent/dashboard")} 
+          onClick={() => navigate(-1)} 
           className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 hover:bg-slate-100 active:scale-95 transition-all"
         >
           <ArrowLeft size={20} className="text-[#141779]" />
@@ -334,11 +334,11 @@ export default function KidsActivityScreen() {
                                 )}
                                 
                                 <div className="flex flex-wrap items-center gap-2 mt-2">
-                                  {activity.correctQuestions !== undefined && activity.totalQuestions !== undefined && (
+                                  {Boolean(activity.totalQuestions && activity.totalQuestions > 0) && (
                                     <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-teal-50 border border-teal-200 text-[#006a62]">
                                       <CheckCircle2 size={12} />
                                       <span className="text-xs font-black tracking-wide">
-                                        {activity.correctQuestions}/{activity.totalQuestions}
+                                        {activity.correctQuestions || 0}/{activity.totalQuestions}
                                       </span>
                                     </div>
                                   )}

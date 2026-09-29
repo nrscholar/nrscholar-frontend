@@ -126,7 +126,7 @@ export default function ParentChallengesScreen() {
         setClaimState(prev => ({ ...prev, [id]: "claimed" }));
         setTotalXP(prev => prev + xp);
         
-        setToastMessage(`${xp} XP increased!`);
+        setToastMessage(t("xp_increased_count", { count: xp, defaultValue: `${xp} XP increased!` }));
       } else {
         setClaimState(prev => ({ ...prev, [id]: "idle" }));
       }
@@ -259,9 +259,9 @@ export default function ParentChallengesScreen() {
       )}
 
       {/* Top App Bar */}
-      <header className="w-full sticky top-0 z-50 bg-[rgba(247,249,251,0.8)] backdrop-blur-lg flex justify-between items-center px-6 py-4 shadow-sm">
+      <header className="w-full sticky top-0 z-50 bg-white/90 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex justify-between items-center px-6 py-3.5">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/parent/dashboard')} className="p-1 -ml-1 hover:bg-[#e0e3e5] rounded-full transition-colors">
+          <button onClick={() => navigate(-1)} className="p-1 -ml-1 hover:bg-[#e0e3e5] rounded-full transition-colors">
             <ArrowLeft className="text-[#141779] font-bold" size={24} />
           </button>
           <div className="w-10 h-10 rounded-full border-2 border-[#e0e0ff] overflow-hidden flex items-center justify-center bg-[#141779]/10">
@@ -316,11 +316,26 @@ export default function ParentChallengesScreen() {
           <span className="text-[#006a62] font-bold text-sm">{t("active_count_of", { activeCount: activeChallenges.length, totalActive, defaultValue: `${activeChallenges.length} of ${totalActive} Active` })}</span>
         </div>
 
-        {/* Loading Spinner */}
+        {/* Skeleton Loading State */}
         {loading && (
-          <div className="flex flex-col items-center justify-center py-12 gap-3">
-            <div className="w-8 h-8 border-4 border-[#141779] border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-slate-500 font-bold text-sm">{t("loading_challenges", "Loading challenges...")}</p>
+          <div className="space-y-4 py-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="glass-card rounded-2xl p-5 border border-white/40 shadow-xs space-y-4">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl animate-skeleton shrink-0"></div>
+                    <div className="space-y-2">
+                      <div className="h-4 w-36 rounded-md animate-skeleton"></div>
+                      <div className="h-3 w-24 rounded-md animate-skeleton"></div>
+                    </div>
+                  </div>
+                  <div className="h-6 w-16 rounded-full animate-skeleton"></div>
+                </div>
+                <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full w-1/2 rounded-full animate-skeleton"></div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 

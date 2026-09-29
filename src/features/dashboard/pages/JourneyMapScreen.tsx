@@ -33,6 +33,7 @@ export default function JourneyMapScreen() {
   // Mapped UI cities for visual representation
   const uiCities = [
     { name: "Egg Village", emoji: "🥚", fallbackXp: 0, reward: "Dragon Egg", rewardColor: "text-secondary-fixed" },
+    { name: "Hatchling Haven", emoji: "🐣", fallbackXp: 500, reward: "Hatchling Dragon", rewardColor: "text-amber-500" },
     { name: "Forest Kingdom", emoji: "🐉", fallbackXp: 1000, reward: "Baby Dragon", rewardColor: "text-primary" },
     { name: "Magic Desert", emoji: "🔥", fallbackXp: 2500, reward: "Fire Dragon", rewardColor: "text-orange-500" },
     { name: "Ice Kingdom", emoji: "❄️", fallbackXp: 5000, reward: "Ice Dragon", rewardColor: "text-blue-500" },
@@ -40,8 +41,10 @@ export default function JourneyMapScreen() {
     { name: "Cloud City", emoji: "☁️", fallbackXp: 15000, reward: "Sky Dragon", rewardColor: "text-sky-500" },
     { name: "Crystal Caves", emoji: "💎", fallbackXp: 20000, reward: "Crystal Dragon", rewardColor: "text-teal-400" },
     { name: "Underworld", emoji: "🌋", fallbackXp: 30000, reward: "Shadow Dragon", rewardColor: "text-red-600" },
-    { name: "Starry Sky", emoji: "⭐", fallbackXp: 40000, reward: "Star Dragon", rewardColor: "text-yellow-400" },
     { name: "Galactic Core", emoji: "🌌", fallbackXp: 50000, reward: "Cosmic Dragon", rewardColor: "text-indigo-500" },
+    { name: "Stone Age Hunter", emoji: "🏹", fallbackXp: 65000, reward: "Hunter Dragon", rewardColor: "text-amber-700" },
+    { name: "Bronze Craftsman", emoji: "🔨", fallbackXp: 80000, reward: "Bronze Dragon", rewardColor: "text-amber-600" },
+    { name: "Civilization Leader", emoji: "👑", fallbackXp: 100000, reward: "Apex Dragon", rewardColor: "text-yellow-500" },
   ];
 
   const [journeyData, setJourneyData] = useState<any>(null);
@@ -136,27 +139,74 @@ export default function JourneyMapScreen() {
 
   if (loading) {
     return (
-      <div className="bg-background text-on-surface flex items-center justify-center min-h-screen">
-        <div className="relative w-full max-w-[430px] h-screen bg-surface-bright flex flex-col overflow-hidden shadow-2xl animate-pulse">
-          <header className="fixed top-0 w-full max-w-[430px] z-50 flex justify-between items-center px-4 py-4 bg-surface/80 border-b-[1.5px] border-outline-variant/30 gap-2">
-            <div className="flex items-center gap-2 flex-1">
-              <div className="w-8 h-8 rounded-full bg-surface-container-highest shrink-0" />
-              <div className="w-10 h-10 rounded-full bg-surface-container-highest shrink-0" />
-              <div className="flex-1">
-                <div className="h-4 bg-surface-container-highest rounded w-2/3 mb-1" />
-                <div className="h-3 bg-surface-container-highest rounded w-1/3" />
+      <div className="bg-[#F7F9FB] text-slate-900 font-sans flex items-center justify-center min-h-screen">
+        <div className="relative w-full max-w-[430px] h-screen bg-gradient-to-b from-[#EEF2FF] via-[#F5F3FF] to-[#FFFFFF] flex flex-col overflow-hidden shadow-2xl animate-pulse">
+          
+          {/* Header Skeleton */}
+          <header className="shrink-0 w-full z-50 flex justify-between items-center px-4 py-3.5 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-xs">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8.5 h-8.5 rounded-full bg-slate-200 shrink-0" />
+              <div className="w-9 h-9 rounded-full bg-indigo-200 shrink-0" />
+              <div className="flex flex-col gap-1.5">
+                <div className="w-28 h-3.5 rounded-md bg-slate-200" />
+                <div className="w-16 h-2.5 rounded-md bg-slate-200" />
               </div>
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <div className="w-9 h-9 rounded-full bg-surface-container-highest" />
-              <div className="w-14 h-8 rounded-full bg-surface-container-highest" />
-              <div className="w-14 h-8 rounded-full bg-surface-container-highest" />
+            <div className="flex items-center gap-1.5">
+              <div className="w-20 h-7 rounded-full bg-teal-100/70 shrink-0" />
+              <div className="w-16 h-7 rounded-full bg-indigo-100/70 shrink-0" />
             </div>
           </header>
-          <main className="flex-1 mt-20 px-6 py-4 flex flex-col items-center gap-10">
-            <div className="w-full h-[300px] bg-surface-container rounded-3xl" />
-            <div className="w-64 h-32 bg-surface-container rounded-2xl" />
-            <div className="w-64 h-32 bg-surface-container rounded-2xl" />
+
+          {/* Map Body Skeleton */}
+          <main className="flex-1 w-full p-4 overflow-hidden relative flex flex-col items-center pt-8">
+            {/* Vertical dashed line skeleton */}
+            <div className="absolute top-12 bottom-20 w-1 bg-indigo-200/50 rounded-full" />
+
+            {/* Node Cards Skeleton */}
+            <div className="w-full flex flex-col gap-8 relative z-10">
+              {/* Card 1 (Left aligned) */}
+              <div className="flex justify-start w-full">
+                <div className="w-[78%] bg-white/90 border border-slate-200 rounded-3xl p-4 shadow-sm flex gap-3 items-start">
+                  <div className="w-11 h-11 rounded-2xl bg-teal-200/80 shrink-0" />
+                  <div className="flex-1 flex flex-col gap-2">
+                    <div className="w-16 h-3 rounded bg-teal-200/60" />
+                    <div className="w-28 h-4 rounded bg-slate-200" />
+                    <div className="w-full h-2 rounded-full bg-slate-200 mt-1" />
+                    <div className="w-20 h-5 rounded-full bg-slate-100" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2 (Right aligned) */}
+              <div className="flex justify-end w-full">
+                <div className="w-[78%] bg-white/90 border border-slate-200 rounded-3xl p-4 shadow-sm flex gap-3 items-start">
+                  <div className="w-11 h-11 rounded-2xl bg-indigo-200/80 shrink-0" />
+                  <div className="flex-1 flex flex-col gap-2">
+                    <div className="w-16 h-3 rounded bg-indigo-200/60" />
+                    <div className="w-32 h-4 rounded bg-slate-200" />
+                    <div className="w-full h-2 rounded-full bg-slate-200 mt-1" />
+                    <div className="w-20 h-5 rounded-full bg-slate-100" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3 (Left aligned) */}
+              <div className="flex justify-start w-full">
+                <div className="w-[78%] bg-white/90 border border-slate-200 rounded-3xl p-4 shadow-sm flex gap-3 items-start">
+                  <div className="w-11 h-11 rounded-2xl bg-slate-200 shrink-0" />
+                  <div className="flex-1 flex flex-col gap-2">
+                    <div className="w-16 h-3 rounded bg-slate-200" />
+                    <div className="w-28 h-4 rounded bg-slate-200" />
+                    <div className="w-full h-2 rounded-full bg-slate-200 mt-1" />
+                    <div className="w-20 h-5 rounded-full bg-slate-100" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Floating Action Button Skeleton */}
+            <div className="absolute bottom-6 right-6 w-14 h-14 rounded-full bg-indigo-400/80 shadow-lg" />
           </main>
         </div>
       </div>

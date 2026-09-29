@@ -27,7 +27,7 @@ export default function ParentRoadmapScreen() {
   })();
 
   const [roadmapData, setRoadmapData] = useState<any>(cachedRoadmap);
-  const [loading, setLoading] = useState(!cachedRoadmap);
+  const [loading, setLoading] = useState(true);
   const [profilePic, setProfilePic] = useState("");
   const [username, setUsername] = useState("Parent");
 
@@ -57,7 +57,7 @@ export default function ParentRoadmapScreen() {
       } catch (err) {
         console.error("Failed to load roadmap", err);
       } finally {
-        setLoading(false);
+        setTimeout(() => setLoading(false), 350);
       }
     }
     fetchRoadmap();
@@ -119,19 +119,47 @@ export default function ParentRoadmapScreen() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans overflow-hidden">
-        <header className="fixed top-0 w-full z-50 bg-[rgba(247,249,251,0.8)] backdrop-blur-xl border-b border-[rgba(199,197,212,0.3)] shadow-sm flex justify-between items-center px-6 h-16">
-          <div className="flex items-center gap-3 w-full">
-            <div className="w-10 h-10 bg-gray-200 animate-pulse rounded-full"></div>
-            <div className="w-10 h-10 bg-gray-200 animate-pulse rounded-full"></div>
-            <div className="h-6 w-32 bg-gray-200 animate-pulse rounded"></div>
+        {/* Top Header Skeleton */}
+        <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl border-b border-white/40 shadow-xs flex justify-between items-center px-6 h-16">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full animate-skeleton shrink-0"></div>
+            <div className="h-6 w-36 rounded-lg animate-skeleton"></div>
           </div>
+          <div className="h-7 w-24 rounded-full animate-skeleton"></div>
         </header>
-        <main className="relative h-screen w-full flex flex-col items-center pt-24 pb-20">
-           <div className="flex flex-col gap-16">
-              <div className="bg-gray-200 animate-pulse rounded-[24px] h-32 w-48 -translate-x-6"></div>
-              <div className="bg-gray-200 animate-pulse rounded-[24px] h-40 w-56 translate-x-6"></div>
-              <div className="bg-gray-200 animate-pulse rounded-[24px] h-32 w-48 -translate-x-6"></div>
-           </div>
+
+        {/* Roadmap Path Stages Skeleton */}
+        <main className="relative min-h-screen w-full flex flex-col items-center pt-24 pb-28 px-6">
+          <div className="w-full max-w-md flex flex-col gap-12 items-center">
+            {/* Hero Stage Skeleton */}
+            <div className="w-full bg-white/70 backdrop-blur-xl rounded-[28px] p-6 border-2 border-white/50 shadow-sm space-y-4">
+              <div className="flex justify-between items-center">
+                <div className="space-y-2">
+                  <div className="h-3 w-24 rounded-md animate-skeleton"></div>
+                  <div className="h-6 w-40 rounded-xl animate-skeleton"></div>
+                </div>
+                <div className="w-12 h-12 rounded-full animate-skeleton"></div>
+              </div>
+              <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full w-2/3 rounded-full animate-skeleton"></div>
+              </div>
+            </div>
+
+            {/* ZigZag Stage Cards Skeleton */}
+            <div className="w-full space-y-8">
+              {[0, 1, 2, 3, 4].map((idx) => (
+                <div
+                  key={idx}
+                  className={`bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/60 shadow-xs w-4/5 space-y-3 ${
+                    idx % 2 === 0 ? "-translate-x-2" : "translate-x-12"
+                  }`}
+                >
+                  <div className="h-4 w-32 rounded-md animate-skeleton"></div>
+                  <div className="h-3 w-48 rounded-md animate-skeleton"></div>
+                </div>
+              ))}
+            </div>
+          </div>
         </main>
       </div>
     );
@@ -167,7 +195,7 @@ export default function ParentRoadmapScreen() {
       `}</style>
 
       {/* TopAppBar Navigation */}
-      <header className="fixed top-0 w-full z-50 bg-[rgba(247,249,251,0.8)] backdrop-blur-xl border-b border-[rgba(199,197,212,0.3)] shadow-sm flex justify-between items-center px-6 h-16">
+      <header className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex justify-between items-center px-6 h-16">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-1 hover:bg-[rgba(20,23,121,0.05)] rounded-full transition-colors active:scale-95">
             <ArrowLeft size={24} color="#141779" />

@@ -95,7 +95,7 @@ export default function ParentReportScreen() {
   })();
 
   const [reportData, setReportData] = useState<any>(cachedReport);
-  const [loading, setLoading] = useState(!cachedReport);
+  const [loading, setLoading] = useState(true);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState<string | null>(null);
@@ -343,7 +343,7 @@ export default function ParentReportScreen() {
         if (ujson.success && ujson.data?.user) setUserData(ujson.data.user);
       }
     } catch (err) { console.error(err); }
-    finally { setLoading(false); }
+    finally { setTimeout(() => setLoading(false), 350); }
   }, [refreshKey, i18n.language]);
 
   useEffect(() => {
@@ -359,22 +359,59 @@ export default function ParentReportScreen() {
   // Note: activeTab and tabs are retained for future tab-based navigation
 
   if (loading) return (
-    <div className="min-h-screen bg-[#f7f9fb] px-5 pt-[104px] flex flex-col gap-5">
-      <header className="fixed top-0 left-0 right-0 flex items-center justify-between px-6 h-16 bg-white/60 backdrop-blur-xl border-b border-white/40 z-50">
-        <div className="flex items-center gap-3 w-full">
-          <div className="w-8 h-8 bg-gray-200 animate-pulse rounded-full"></div>
-          <div className="h-6 w-32 bg-gray-200 animate-pulse rounded"></div>
+    <div className="min-h-screen bg-[#f7f9fb] px-5 pt-20 pb-24 flex flex-col gap-6 font-sans relative overflow-hidden">
+      {/* Top Header Skeleton */}
+      <header className="fixed top-0 left-0 right-0 flex items-center justify-between px-6 h-16 bg-white/80 backdrop-blur-xl border-b border-white/40 z-50 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full animate-skeleton"></div>
+          <div className="h-6 w-36 rounded-lg animate-skeleton"></div>
         </div>
+        <div className="w-8 h-8 rounded-full animate-skeleton"></div>
       </header>
-      <div className="flex gap-2">
-        <div className="bg-gray-200 animate-pulse rounded-lg h-8 flex-1"></div>
-        <div className="bg-gray-200 animate-pulse rounded-lg h-8 flex-1"></div>
-        <div className="bg-gray-200 animate-pulse rounded-lg h-8 flex-1"></div>
-        <div className="bg-gray-200 animate-pulse rounded-lg h-8 flex-1"></div>
+
+      {/* Range Chips Skeleton */}
+      <div className="flex gap-2 pt-2 overflow-x-auto no-scrollbar">
+        {[70, 90, 85, 95, 75].map((w, idx) => (
+          <div key={idx} className="h-9 rounded-full shrink-0 animate-skeleton" style={{ width: `${w}px` }}></div>
+        ))}
       </div>
-      <div className="bg-gray-200 animate-pulse rounded-[24px] h-48 w-full"></div>
-      <div className="bg-gray-200 animate-pulse rounded-[24px] h-48 w-full"></div>
-      <div className="bg-gray-200 animate-pulse rounded-[24px] h-48 w-full"></div>
+
+      {/* Hero Stats Card Skeleton */}
+      <div className="bg-white/70 backdrop-blur-xl rounded-[24px] p-6 border-2 border-white/50 shadow-sm space-y-4">
+        <div className="flex justify-between items-center">
+          <div className="space-y-2">
+            <div className="h-3 w-32 rounded-md animate-skeleton"></div>
+            <div className="h-8 w-24 rounded-xl animate-skeleton"></div>
+          </div>
+          <div className="w-14 h-14 rounded-full animate-skeleton"></div>
+        </div>
+        <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+          <div className="h-full w-4/5 rounded-full animate-skeleton"></div>
+        </div>
+        <div className="pt-2 flex justify-between">
+          <div className="h-3 w-28 rounded-md animate-skeleton"></div>
+          <div className="h-3 w-20 rounded-md animate-skeleton"></div>
+        </div>
+      </div>
+
+      {/* Subject Performance Cards Skeleton */}
+      <div className="space-y-3">
+        <div className="h-5 w-48 rounded-md animate-skeleton"></div>
+        <div className="space-y-3">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-white/80 backdrop-blur-md rounded-2xl p-4 border border-slate-200/60 shadow-xs flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl animate-skeleton"></div>
+                <div className="space-y-2">
+                  <div className="h-4 w-32 rounded-md animate-skeleton"></div>
+                  <div className="h-3 w-24 rounded-md animate-skeleton"></div>
+                </div>
+              </div>
+              <div className="h-6 w-14 rounded-full animate-skeleton"></div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 
@@ -611,7 +648,7 @@ export default function ParentReportScreen() {
   return (
     <div className="min-h-screen bg-[#f7f9fb] font-sans pb-28">
       {/* Header */}
-      <header className="flex items-center gap-4 px-5 py-4 bg-[rgba(247,249,251,0.9)] border-b border-[rgba(255,255,255,0.3)] sticky top-0 z-50 backdrop-blur-md">
+      <header className="flex items-center gap-4 px-6 py-3.5 bg-white/90 border-b-2 border-slate-200/90 rounded-b-[28px] sticky top-0 z-50 backdrop-blur-2xl shadow-[0_12px_40px_rgba(20,23,121,0.14)]">
         <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80">
           <ArrowLeft size={24} color="#141779" />
         </button>

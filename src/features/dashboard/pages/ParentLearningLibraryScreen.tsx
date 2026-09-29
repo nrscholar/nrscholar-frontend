@@ -101,7 +101,7 @@ export default function ParentLearningLibraryScreen() {
       </div>
 
       {/* Top App Bar */}
-      <header className="fixed top-0 w-full z-50 bg-[rgba(247,249,251,0.8)] backdrop-blur-md border-b border-white/20 shadow-sm flex justify-between items-center px-6 h-16">
+      <header className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex justify-between items-center px-6 h-16">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-1 -ml-2 hover:bg-black/5 rounded-full transition-colors">
             <ArrowLeft size={24} color="#141779" />

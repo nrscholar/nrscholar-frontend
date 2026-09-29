@@ -88,7 +88,7 @@ export default function MapWorld({
         const nodeCh = n.nodeChapters || 4;
         return {
           id: `node-${idx}`,
-          stageNumber: idx + 1,
+          stageNumber: n.displayLevel || (idx + 1),
           name: n.name,
           subtitle: `Region: ${nodeCh} Chapters (${n.requiredChapters} Cumulative)`,
           emoji: n.emoji || "⭐",
@@ -125,8 +125,10 @@ export default function MapWorld({
 
   const getStageState = (index: number) => {
     if (nodes && nodes.length > 0) {
-      if (nodes[index]?.unlocked) return "completed";
-      if (index === currentStageIndex + 1 || (currentStageIndex === 0 && index === 0 && !nodes[0]?.unlocked)) return "current";
+      const node = nodes[index];
+      if (!node) return "upcoming";
+      if (node.completed) return "completed";
+      if (node.unlocked) return "current";
       return "upcoming";
     }
     if (index < currentStageIndex) return "completed";
@@ -160,7 +162,9 @@ export default function MapWorld({
           const stageProgress = isCompleted
             ? 100
             : isCurrent
-            ? Math.min(95, Math.round(((xp % 1000) / 1000) * 100))
+            ? (nodes && nodes[index] && nodes[index].nodeProgressPercentage !== undefined
+                ? Math.round(nodes[index].nodeProgressPercentage)
+                : Math.min(95, Math.round(((xp % 1000) / 1000) * 100)))
             : 0;
 
           // ── Card visual variants ──

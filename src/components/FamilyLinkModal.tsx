@@ -121,7 +121,7 @@ export default function FamilyLinkModal({ isOpen, onClose }: FamilyLinkModalProp
                 </span>
 
                 <button
-                  onClick={copyToClipboard}
+                  onClick={handleCopyCode}
                   className="px-3.5 py-2 rounded-xl bg-[#141779] text-white text-xs font-black flex items-center gap-1.5 active:scale-95 transition-all shadow-sm"
                 >
                   {copied ? <Check size={16} /> : <Copy size={16} />}

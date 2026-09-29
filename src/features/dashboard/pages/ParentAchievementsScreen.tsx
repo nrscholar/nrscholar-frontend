@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 export default function ParentAchievementsScreen() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
   const [activeAchievement, setActiveAchievement] = useState<any | null>(null);
   const [badgesEarned, setBadgesEarned] = useState(0);
   const [globalRank, setGlobalRank] = useState(0);
@@ -21,6 +22,7 @@ export default function ParentAchievementsScreen() {
   useEffect(() => {
     async function fetchStats() {
       try {
+        setLoading(true);
         const uPromise = (async () => {
           try {
             const uRes = await apiFetch("/api/users/me");
@@ -54,7 +56,10 @@ export default function ParentAchievementsScreen() {
         })();
 
         await Promise.allSettled([uPromise, rankPromise, achPromise]);
-      } catch (e) {}
+      } catch (e) {
+      } finally {
+        setTimeout(() => setLoading(false), 350);
+      }
     }
     fetchStats();
   }, []);
@@ -133,6 +138,63 @@ export default function ParentAchievementsScreen() {
     return t(trimmed, trimmed);
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#f7f9fb] font-sans relative pb-24 overflow-x-hidden">
+        {/* Top Header Skeleton */}
+        <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-white/40 shadow-xs flex items-center justify-between px-6 h-16">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full animate-skeleton shrink-0"></div>
+            <div className="h-6 w-36 rounded-lg animate-skeleton"></div>
+          </div>
+          <div className="w-9 h-9 rounded-full animate-skeleton"></div>
+        </header>
+
+        {/* Bento Grid Skeleton */}
+        <main className="w-full max-w-lg mx-auto pt-20 pb-32 px-5 flex flex-col items-center relative gap-4">
+          <div className="w-full bg-white/70 backdrop-blur-xl rounded-[28px] p-6 border-2 border-white/50 shadow-sm space-y-4">
+            <div className="flex justify-between items-center">
+              <div className="space-y-2">
+                <div className="h-4 w-40 rounded-md animate-skeleton"></div>
+                <div className="h-3 w-56 rounded-md animate-skeleton"></div>
+              </div>
+              <div className="w-12 h-12 rounded-2xl animate-skeleton"></div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 w-full">
+            <div className="bg-white/80 backdrop-blur-md rounded-[24px] p-5 border border-slate-200/60 shadow-xs space-y-3 h-32 flex flex-col justify-between">
+              <div className="flex justify-between">
+                <div className="h-3 w-16 rounded-md animate-skeleton"></div>
+                <div className="w-8 h-8 rounded-xl animate-skeleton"></div>
+              </div>
+              <div className="h-8 w-12 rounded-lg animate-skeleton"></div>
+            </div>
+            <div className="bg-white/80 backdrop-blur-md rounded-[24px] p-5 border border-slate-200/60 shadow-xs space-y-3 h-32 flex flex-col justify-between">
+              <div className="flex justify-between">
+                <div className="h-3 w-16 rounded-md animate-skeleton"></div>
+                <div className="w-8 h-8 rounded-xl animate-skeleton"></div>
+              </div>
+              <div className="h-8 w-16 rounded-lg animate-skeleton"></div>
+            </div>
+          </div>
+
+          <div className="w-full space-y-3 pt-2">
+            <div className="h-5 w-48 rounded-md animate-skeleton"></div>
+            <div className="grid grid-cols-3 gap-3">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="bg-white/80 backdrop-blur-md rounded-2xl p-4 border border-slate-200/60 shadow-xs h-32 flex flex-col items-center justify-between">
+                  <div className="w-12 h-12 rounded-full animate-skeleton"></div>
+                  <div className="h-3 w-16 rounded-md animate-skeleton"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   const filteredAchievements = achievements.filter(ach => {
     const isUnlocked = ach.currentProgress >= ach.totalRequired;
     if (filter === "unlocked") return isUnlocked;
@@ -163,7 +225,7 @@ export default function ParentAchievementsScreen() {
       `}</style>
 
       {/* Top Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs flex items-center justify-between px-6 h-16">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex items-center justify-between px-6 h-16">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 hover:bg-slate-100 active:scale-95 transition-all">
             <ArrowLeft size={20} className="text-[#141779]" />
@@ -261,7 +323,7 @@ export default function ParentAchievementsScreen() {
 
               <div className="w-full">
                 <div className="flex justify-between items-center text-xs text-slate-700 font-bold mb-1.5">
-                  <span>{t("current_progress", "Current Progress")}</span>
+                  <span>{t("current_progress_label", "Current Progress")}</span>
                   <span className="font-black text-[#141779]">
                     {nextMilestone.currentProgress} / {nextMilestone.totalRequired} {nextMilestone.progressUnit || ""}
                   </span>

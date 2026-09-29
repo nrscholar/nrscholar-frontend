@@ -38,7 +38,7 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
   const [newAge, setNewAge] = useState(6);
   const [newBoard, setNewBoard] = useState("CBSE");
   const [isClassOpen, setIsClassOpen] = useState(false);
-  const classes = ["Nursery", "KG", "Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"];
+  const classes = ["Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"];
 
   if (!isOpen) return null;
 

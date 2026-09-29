@@ -146,6 +146,9 @@ export default function HomeScreen() {
         const json = await res.json();
         if (json.success && json.data) {
           setJourneyData(json.data);
+          try {
+            localStorage.setItem("cachedJourneyData", JSON.stringify(json.data));
+          } catch (e) { }
         }
       }
     } catch (e) {
@@ -177,6 +180,13 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
+    const cachedJ = localStorage.getItem("cachedJourneyData");
+    if (cachedJ) {
+      try {
+        setJourneyData(JSON.parse(cachedJ));
+      } catch (e) { }
+    }
+
     const cached = localStorage.getItem("userData");
     if (cached) {
       try {
@@ -337,11 +347,10 @@ export default function HomeScreen() {
   return (
     <div className="min-h-screen bg-[#f7f9fb] text-[#141779] font-sans relative overflow-x-hidden pb-28 max-w-md mx-auto">
       {/* Dynamic Background Glows */}
-      <div className="absolute top-[10%] -right-[20%] w-[280px] h-[280px] rounded-full bg-[rgba(87,250,233,0.12)] pointer-events-none" />
       <div className="absolute bottom-[20%] -left-[25%] w-[320px] h-[320px] rounded-full bg-[rgba(20,23,121,0.05)] pointer-events-none" />
 
       {/* TOP HEADER */}
-      <header className="fixed top-0 left-0 right-0 max-w-md mx-auto flex items-center justify-between px-5 py-3.5 bg-[#f7f9fb]/90 border-b border-slate-100 z-50 backdrop-blur-md gap-2">
+      <header className="fixed top-0 left-0 right-0 max-w-md mx-auto flex items-center justify-between px-5 py-3 bg-white/90 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] z-50 gap-2">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <button
             onClick={() => navigate("/profile")}
@@ -411,19 +420,36 @@ export default function HomeScreen() {
 
       <main className="px-5 pt-[96px] flex flex-col gap-4 relative z-10">
         {/* 1. ADVENTURE HERO CARD (LIGHT THEME WITH ANIMATED CHARACTER & PARTICLES) */}
-        <AdventureHero
-          themeKey={journeyData?.tierKey === "scientist" ? "science" : journeyData?.tierKey === "social_proof" ? "social" : "dragon"}
-          xp={xp}
-          targetXp={1000}
-          currentLocationName={journeyData?.currentLocation || "Egg Village"}
-          destinationName={journeyData?.nextNodeName || "Forest Kingdom"}
-          journeyData={journeyData}
-          onCtaClick={() => navigate("/practice/journey-map")}
-          onMissionClick={() => navigate("/practice/chapters")}
-          missionTitle={activeMission?.title}
-          missionProgress={activeMission ? { current: activeMission.current_progress || 0, total: activeMission.target_progress || 10 } : undefined}
-          missionRewardText={activeMission ? `+${activeMission.xp_reward || 20} XP & ${activeMission.coin_reward || 10} Coins` : undefined}
-        />
+        {(() => {
+          const effectiveTheme = (() => {
+            if (journeyData?.tierKey === "scientist") return "science";
+            if (journeyData?.tierKey === "social_proof") return "social";
+            if (journeyData?.tierKey === "dragon") return "dragon";
+
+            const childClassStr = userData?.childClass || "";
+            const match = childClassStr.match(/\d+/);
+            const classNum = match ? parseInt(match[0], 10) : 1;
+            if (classNum >= 8) return "social";
+            if (classNum >= 5) return "science";
+            return "dragon";
+          })();
+
+          return (
+            <AdventureHero
+              themeKey={effectiveTheme}
+              xp={xp}
+              targetXp={1000}
+              currentLocationName={journeyData?.currentLocation || "Egg Village"}
+              destinationName={journeyData?.nextNodeName || "Forest Kingdom"}
+              journeyData={journeyData}
+              onCtaClick={() => navigate("/practice/journey-map")}
+              onMissionClick={() => navigate("/practice/chapters")}
+              missionTitle={activeMission?.title}
+              missionProgress={activeMission ? { current: activeMission.current_progress || 0, total: activeMission.target_progress || 10 } : undefined}
+              missionRewardText={activeMission ? `+${activeMission.xp_reward || 20} XP & ${activeMission.coin_reward || 10} Coins` : undefined}
+            />
+          );
+        })()}
 
         {/* 2. FOUR QUICK ACTION BENTO GRID (2x2 Pastel Cards) */}
         <section className="grid grid-cols-2 gap-3">

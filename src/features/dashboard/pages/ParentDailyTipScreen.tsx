@@ -163,22 +163,22 @@ export default function ParentDailyTipScreen() {
               const u = uJson.data.user;
               const childObj = (u.children && u.children[0]) || {};
 
-              const effectiveXp = Math.max(u.xp || 0, u.parentXp || 0, childObj.xp || 0);
-              const effectiveLevel = Math.max(u.level || 1, u.parentLevel || 1, childObj.level || 1, 1);
-              const effectiveStars = Math.max((u.parentStars || 0) + (u.totalStars || 0) + (u.stars || 0), childObj.coins || 0);
-              const effectiveStreak = Math.max(u.streakDays || 0, u.parentStreak || 0, childObj.streakDays || 0);
+              const parentXpVal = u.parentXp !== undefined ? u.parentXp : 0;
+              const parentLevelVal = u.parentLevel !== undefined ? u.parentLevel : 1;
+              const effectiveStars = (u.parentStars || 0) + (u.totalStars || 0) + (u.stars || 0);
+              const effectiveStreak = Math.max(u.streakDays || 0, u.parentStreak || 0);
 
               setChildName(u.childName || childObj.childName || "Explorer");
-              setParentLevel(effectiveLevel);
+              setParentLevel(parentLevelVal);
               setChildLevel(childObj.level || u.level || 1);
-              setXp(effectiveXp);
+              setXp(parentXpVal);
               setTotalStars(effectiveStars);
               setStreak(effectiveStreak);
 
               nextCache.childName = u.childName || childObj.childName || "Explorer";
-              nextCache.parentLevel = effectiveLevel;
+              nextCache.parentLevel = parentLevelVal;
               nextCache.childLevel = childObj.level || u.level || 1;
-              nextCache.xp = effectiveXp;
+              nextCache.xp = parentXpVal;
               nextCache.totalStars = effectiveStars;
               nextCache.streak = effectiveStreak;
             }
@@ -222,6 +222,15 @@ export default function ParentDailyTipScreen() {
     }
 
     fetchAll();
+
+    const handleUserDataUpdate = () => {
+      sessionStorage.removeItem("parent_daily_tip_cache");
+      fetchAll();
+    };
+    window.addEventListener("userDataUpdated", handleUserDataUpdate);
+    return () => {
+      window.removeEventListener("userDataUpdated", handleUserDataUpdate);
+    };
   }, []);
 
   const translateTipField = (text?: string) => {
@@ -230,24 +239,35 @@ export default function ParentDailyTipScreen() {
 
     // 1. Screen-Free Dinner Table
     if (/Screen-Free Dinner Table/i.test(trimmed)) {
-      return t("tip_screen_free_table", "સ્ક્રીન મુક્ત ડિનર ટેબલ");
+      return t("tip_screen_free_table", "Screen-Free Dinner Table");
     }
     if (/Designate the dinner table as a screen-free zone/i.test(trimmed)) {
-      return t("tip_screen_free_table_desc", "દરેક માટે ડિનર ટેબલને સ્ક્રીન-મુક્ત ઝોન તરીકે નક્કી કરો. આ સમયનો ઉપયોગ કૌટુંબિક વાતચીત માટે કરો.");
+      return t("tip_screen_free_table_desc", "Designate the dinner table as a screen-free zone for everyone. Use this time for family conversation.");
     }
     if (/Strengthens family connections and social habits/i.test(trimmed)) {
-      return t("tip_screen_free_table_benefit", "કૌટુંબિક સંબંધો અને સામાજિક આદતોને મજબૂત બનાવે છે.");
+      return t("tip_screen_free_table_benefit", "Strengthens family connections and social habits.");
     }
 
     // 2. Model Self-Regulation
     if (/Model Self-Regulation/i.test(trimmed)) {
-      return t("model_self_regulation", "સ્વ-નિયમનનું મોડેલ બનાવો");
+      return t("model_self_regulation", "Model Self-Regulation");
     }
     if (/When you feel frustrated, speak your coping strategy/i.test(trimmed)) {
-      return t("model_self_regulation_desc", "જ્યારે તમને નિરાશા અનુભવાય, ત્યારે તમારી સામનો કરવાની વ્યૂહરચના મોટેથી બોલો: 'હું થોડો અતિશય અનુભવ કરી રહ્યો છું, તેથી હું ત્રણ ઊંડા શ્વાસ લઈશ.'");
+      return t("model_self_regulation_desc", "When you feel frustrated, speak your coping strategy aloud: 'I'm feeling a bit overwhelmed, so I'm going to take three deep breaths.'");
     }
     if (/Teaches emotional control by example/i.test(trimmed)) {
-      return t("model_self_regulation_benefit", "ઉદાહરણ દ્વારા ભાવનાત્મક નિયંત્રણ શીખવે છે.");
+      return t("model_self_regulation_benefit", "Teaches emotional control by example.");
+    }
+
+    // 3. Establish Bedtime Routines
+    if (/Establish Bedtime Routines/i.test(trimmed)) {
+      return t("tip_bedtime_routines", "Establish Bedtime Routines");
+    }
+    if (/Create a consistent bedtime routine/i.test(trimmed)) {
+      return t("tip_bedtime_routines_desc", "Create a consistent bedtime routine. Clear structures help children feel safe and reduce transition anxiety.");
+    }
+    if (/Improves sleep quality/i.test(trimmed)) {
+      return t("tip_bedtime_routines_benefit", "Improves sleep quality and emotional stability.");
     }
 
     const direct = t(trimmed, "");
@@ -260,7 +280,7 @@ export default function ParentDailyTipScreen() {
     <div className="bg-gradient-to-b from-[#f0f4f8] to-[#e6eef5] text-[#141779] flex flex-col min-h-screen w-full relative overflow-x-hidden font-sans">
 
       {/* ── Top Header ── */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs flex items-center px-6 h-16 gap-3">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex items-center px-6 h-16 gap-3">
         <button onClick={() => navigate(-1)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 hover:bg-slate-100 active:scale-95 transition-all">
           <ArrowLeft size={20} className="text-[#141779]" />
         </button>
@@ -285,10 +305,10 @@ export default function ParentDailyTipScreen() {
           </div>
 
           {tipLoading ? (
-            <div className="animate-pulse flex flex-col gap-3">
-              <div className="h-4 bg-slate-200 rounded w-3/4"></div>
-              <div className="h-4 bg-slate-200 rounded w-full"></div>
-              <div className="h-4 bg-slate-200 rounded w-5/6"></div>
+            <div className="space-y-3 py-2">
+              <div className="h-5 bg-slate-200/60 animate-skeleton rounded-lg w-3/4"></div>
+              <div className="h-4 bg-slate-200/60 animate-skeleton rounded-lg w-full"></div>
+              <div className="h-4 bg-slate-200/60 animate-skeleton rounded-lg w-5/6"></div>
             </div>
           ) : tip ? (
             <>

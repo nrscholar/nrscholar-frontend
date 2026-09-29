@@ -224,9 +224,20 @@ export default function InventoryScreen() {
   };
 
   const [citiesData, setCitiesData] = useState<any[]>([]);
+  const [journeyNodes, setJourneyNodes] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchCities = async () => {
+    const fetchCitiesAndJourney = async () => {
+      try {
+        const jRes = await apiFetch("/api/journey/progress");
+        if (jRes.ok) {
+          const jData = await jRes.json();
+          if (jData.success && jData.data?.nodes?.length > 0) {
+            setJourneyNodes(jData.data.nodes);
+          }
+        }
+      } catch (e) {}
+
       try {
         const response = await apiFetch("/api/practice/cities");
         const data = await response.json();
@@ -235,37 +246,60 @@ export default function InventoryScreen() {
         } else {
           setCitiesData([
             { name: "Egg Village", requiredFuel: 0 },
-            { name: "Forest Kingdom", requiredFuel: 50 },
-            { name: "Magic Desert", requiredFuel: 250 },
-            { name: "Ice Kingdom", requiredFuel: 1000 },
-            { name: "Dragon Mountain", requiredFuel: 2500 },
+            { name: "Hatchling Haven", requiredFuel: 500 },
+            { name: "Forest Kingdom", requiredFuel: 1000 },
+            { name: "Magic Desert", requiredFuel: 2500 },
+            { name: "Ice Kingdom", requiredFuel: 5000 },
+            { name: "Dragon Mountain", requiredFuel: 10000 },
+            { name: "Cloud City", requiredFuel: 15000 },
+            { name: "Crystal Caves", requiredFuel: 20000 },
+            { name: "Underworld", requiredFuel: 30000 },
+            { name: "Galactic Core", requiredFuel: 50000 },
+            { name: "Stone Age Hunter", requiredFuel: 65000 },
+            { name: "Bronze Craftsman", requiredFuel: 80000 },
+            { name: "Civilization Leader", requiredFuel: 100000 },
           ]);
         }
       } catch (e) {}
     };
-    fetchCities();
+    fetchCitiesAndJourney();
   }, []);
 
-  const xpThresholds = [0, 1000, 2500, 5000, 10000, 15000, 20000, 30000, 40000, 50000];
-  const cities = citiesData.map((cityData, index) => {
-    const reqXp = xpThresholds[index] || 0;
-    const nextReqXp = xpThresholds[index + 1] || 99999;
-    const isUnlocked = xp >= reqXp;
-    const isCurrent = isUnlocked && (index === citiesData.length - 1 || xp < nextReqXp);
+  const xpThresholds = [0, 500, 1000, 2500, 5000, 10000, 15000, 20000, 30000, 50000, 65000, 80000, 100000];
+  const cities = journeyNodes.length > 0
+    ? journeyNodes.map((node, index) => {
+        let status = t('status_locked', "Locked 🔒");
+        if (node.completed) {
+          status = t('status_completed', "Completed 🎉");
+        } else if (node.unlocked) {
+          status = t('status_current_location', "Current Location 📍");
+        }
 
-    let status = t('status_locked', "Locked 🔒");
-    if (isCurrent) {
-      status = t('status_current_location', "Current Location 📍");
-    } else if (isUnlocked) {
-      status = t('status_completed', "Completed 🎉");
-    }
+        return {
+          id: String(index),
+          name: node.name || node.title,
+          status
+        };
+      })
+    : citiesData.map((cityData, index) => {
+        const reqXp = xpThresholds[index] || 0;
+        const nextReqXp = xpThresholds[index + 1] || 99999;
+        const isUnlocked = xp >= reqXp;
+        const isCurrent = isUnlocked && (index === citiesData.length - 1 || xp < nextReqXp);
 
-    return {
-      id: String(index),
-      name: cityData.name,
-      status
-    };
-  });
+        let status = t('status_locked', "Locked 🔒");
+        if (isCurrent) {
+          status = t('status_current_location', "Current Location 📍");
+        } else if (isUnlocked) {
+          status = t('status_completed', "Completed 🎉");
+        }
+
+        return {
+          id: String(index),
+          name: cityData.name,
+          status
+        };
+      });
 
   const translateBadgeText = (text: string, defaultVal: string) => {
     if (!text) return defaultVal || "";

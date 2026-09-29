@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Lock, CheckCircle2, Play, Star, Trophy, Sparkles, Award, Zap, Bell } from "lucide-react";
+import { ArrowLeft, Lock, CheckCircle2, Play, Star, Trophy, Sparkles, Award, Zap, Bell, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
 import { motion } from "framer-motion";
@@ -21,13 +21,15 @@ export default function MissionMapScreen() {
 
   useEffect(() => {
     async function loadRoadmap() {
+      let activeClass = "Class 3";
       try {
         const meRes = await apiFetch("/api/users/me");
         const meJson = await meRes.json();
         if (meJson.success && meJson.data?.user) {
           setChildName(meJson.data.user.childName || "Explorer");
           setChildPhoto(meJson.data.user.childPhoto || meJson.data.user.photo || "");
-          setUserClass(meJson.data.user.childClass || "Class 3");
+          activeClass = meJson.data.user.childClass || "Class 3";
+          setUserClass(activeClass);
         }
       } catch (e) {}
 
@@ -40,7 +42,7 @@ export default function MissionMapScreen() {
       } catch (e) {}
 
       try {
-        const res = await apiFetch(`/api/practice/chapters/${chapterId}/missions`);
+        const res = await apiFetch(`/api/practice/chapters/${chapterId}/missions?classLevel=${encodeURIComponent(activeClass)}`);
         const json = await res.json();
         if (json.success && json.data) {
           setChapterData(json.data);
@@ -56,13 +58,78 @@ export default function MissionMapScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f9fb] text-[#141779] flex flex-col items-center justify-center p-6 font-sans">
-        <div className="relative flex items-center justify-center mb-6">
-          <div className="w-16 h-16 border-4 border-[#141779]/15 border-t-[#141779] rounded-full animate-spin shadow-sm" />
-          <span className="absolute text-2xl">🐲</span>
+      <div className="min-h-screen bg-[#f7f9fb] text-[#141779] font-sans pb-24">
+        {/* Top Header Bar Skeleton */}
+        <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] px-6 py-3.5 flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-slate-200 animate-pulse shrink-0" />
+            <div className="space-y-1.5">
+              <div className="w-24 h-3 bg-slate-200 animate-pulse rounded-md" />
+              <div className="w-36 h-4 bg-slate-300 animate-pulse rounded-md" />
+            </div>
+          </div>
+          <div className="w-10 h-10 rounded-full bg-slate-200 animate-pulse shrink-0" />
+        </header>
+
+        {/* Hero Banner Card Skeleton */}
+        <div className="px-6 pt-6 pb-2 max-w-md mx-auto">
+          <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-3">
+            <div className="flex justify-between items-center">
+              <div className="w-28 h-6 bg-slate-200 animate-pulse rounded-full" />
+              <div className="w-24 h-7 bg-slate-200 animate-pulse rounded-2xl" />
+            </div>
+            <div className="w-3/4 h-6 bg-slate-300 animate-pulse rounded-xl mt-2" />
+            <div className="w-full h-3.5 bg-slate-200 animate-pulse rounded-lg mt-1" />
+            <div className="w-2/3 h-3.5 bg-slate-200 animate-pulse rounded-lg" />
+          </div>
         </div>
-        <h3 className="font-black text-lg text-[#141779] mb-1">{t('mission_roadmap', 'Mission Roadmap')}</h3>
-        <p className="font-medium text-xs text-[#767683] animate-pulse">{t('loading_roadmap', 'Loading journey map...')}</p>
+
+        {/* Mission Path Timeline Skeleton */}
+        <main className="px-6 pt-6 flex flex-col gap-6 max-w-md mx-auto">
+          <div className="flex justify-between items-center px-1">
+            <div className="w-40 h-3.5 bg-slate-200 animate-pulse rounded-md" />
+            <div className="w-24 h-6 bg-slate-200 animate-pulse rounded-full" />
+          </div>
+
+          <div className="relative flex flex-col gap-6">
+            {/* Connecting Vertical Path Line */}
+            <div className="absolute left-[39px] top-6 bottom-6 w-1 bg-slate-200 rounded-full opacity-60" />
+
+            {/* 5 Skeleton Mission Nodes */}
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="relative z-10 flex items-center gap-4">
+                {/* Node Icon Circle Skeleton */}
+                <div className="w-20 h-20 rounded-3xl bg-slate-200 animate-pulse shrink-0 border-2 border-slate-100 flex flex-col items-center justify-center gap-1 shadow-xs">
+                  <div className="w-8 h-8 rounded-full bg-slate-300 animate-pulse" />
+                  <div className="w-6 h-2 bg-slate-300 animate-pulse rounded-xs" />
+                </div>
+
+                {/* Details Card Skeleton */}
+                <div className="flex-1 bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1.5 flex-1">
+                      <div className="w-16 h-2.5 bg-slate-200 animate-pulse rounded-md" />
+                      <div className="w-32 h-4 bg-slate-300 animate-pulse rounded-md" />
+                      <div className="flex items-center gap-2 pt-0.5">
+                        <div className="w-16 h-3 bg-slate-200 animate-pulse rounded-md" />
+                        <div className="w-20 h-3 bg-slate-200 animate-pulse rounded-md" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <div className="w-4 h-4 bg-slate-200 animate-pulse rounded-full" />
+                      <div className="w-4 h-4 bg-slate-200 animate-pulse rounded-full" />
+                      <div className="w-4 h-4 bg-slate-200 animate-pulse rounded-full" />
+                    </div>
+                    <div className="w-24 h-8 bg-slate-200 animate-pulse rounded-2xl" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </main>
       </div>
     );
   }
@@ -99,7 +166,7 @@ export default function MissionMapScreen() {
   return (
     <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans pb-24">
       {/* Top Header Bar */}
-      <header className="sticky top-0 z-40 bg-[rgba(247,249,251,0.85)] backdrop-blur-md border-b border-[rgba(255,255,255,0.4)] px-6 py-4 flex items-center justify-between shadow-xs">
+      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] px-6 py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate("/practice/chapters")}
@@ -178,19 +245,21 @@ export default function MissionMapScreen() {
           {missions.map((m: any, index: number) => {
             const isCompleted = m.status === "completed";
             const isRetest = m.status === "retest";
-            const isUnlocked = m.status === "unlocked" || isRetest;
-            const isLocked = m.status === "locked";
+            const isUnlocked = m.status === "unlocked" || isCompleted || isRetest || Boolean(m.hasDraft);
+            const isLocked = !isUnlocked;
 
             const savedAns = sessionStorage.getItem(`user_answers_${chapterId}_${m.seq}`);
             const savedPhase = sessionStorage.getItem(`mission_phase_${chapterId}_${m.seq}`);
-            let hasInProgressSession = Boolean(m.hasDraft);
-            if (savedAns) {
+            let hasInProgressSession = isUnlocked && Boolean(m.hasDraft);
+            if (isUnlocked && savedAns) {
               try {
                 const arr = JSON.parse(savedAns);
                 if (Array.isArray(arr) && arr.length > 0) hasInProgressSession = true;
               } catch (e) {}
             }
-            if (savedPhase && savedPhase !== "SUMMARY" && savedPhase !== "INTRO") hasInProgressSession = true;
+            if (isUnlocked && savedPhase && savedPhase !== "SUMMARY" && savedPhase !== "INTRO") {
+              hasInProgressSession = true;
+            }
 
             return (
               <motion.div
@@ -274,18 +343,36 @@ export default function MissionMapScreen() {
 
                     <button
                       disabled={isLocked}
-                      onClick={() =>
-                        navigate(`/mission-play?chapterId=${chapterId}&missionSeq=${m.seq}${(!hasInProgressSession && (isCompleted || isRetest)) ? "&replay=true" : ""}`)
-                      }
-                      className={`px-4 py-2 rounded-2xl font-bold text-xs flex items-center gap-2 transition-all active:scale-95 ${
+                      onClick={() => {
+                        if (hasInProgressSession) {
+                          // Resume in-progress session directly
+                          navigate(`/mission-play?chapterId=${chapterId}&missionSeq=${m.seq}`);
+                        } else {
+                          const isReplaying = isCompleted || isRetest;
+                          if (isReplaying) {
+                            sessionStorage.removeItem(`user_answers_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`mission_phase_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`mission_timer_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`boss_damage_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`boss_wrong_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`boss_index_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`quiz_correct_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`xp_earned_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`coins_earned_${chapterId}_${m.seq}`);
+                            apiFetch(`/api/practice/chapters/${chapterId}/missions/${m.seq}/draft`, { method: "DELETE" }).catch(() => {});
+                          }
+                          navigate(`/mission-play?chapterId=${chapterId}&missionSeq=${m.seq}${isReplaying ? "&replay=true" : ""}`);
+                        }
+                      }}
+                      className={`px-4 py-2 rounded-2xl font-black text-xs flex items-center gap-2 transition-all active:scale-95 cursor-pointer ${
                         hasInProgressSession
-                          ? "bg-gradient-to-r from-amber-500 to-amber-600 text-white font-black shadow-md shadow-amber-500/20"
+                          ? "bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md shadow-amber-500/20"
                           : isCompleted
-                          ? "bg-gray-100 text-[#141779] hover:bg-gray-200 border border-gray-300"
+                          ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 border border-emerald-500"
                           : isRetest
-                          ? "bg-[#f59e0b] hover:bg-[#d97706] text-white font-black shadow-md shadow-[#f59e0b]/20"
+                          ? "bg-[#f59e0b] hover:bg-[#d97706] text-white shadow-md shadow-[#f59e0b]/20"
                           : isUnlocked
-                          ? "bg-[#141779] text-white font-black shadow-md shadow-[#141779]/20 hover:bg-[#101362]"
+                          ? "bg-[#141779] text-white shadow-md shadow-[#141779]/20 hover:bg-[#101362]"
                           : "bg-gray-200 text-gray-400 cursor-not-allowed"
                       }`}
                     >
@@ -295,15 +382,13 @@ export default function MissionMapScreen() {
                           <Play size={14} className="fill-white" />
                         </>
                       ) : isCompleted ? (
-                        t('replay', 'Replay')
+                        <>
+                          <RotateCcw size={14} />
+                          <span>{t('replay', 'Replay')}</span>
+                        </>
                       ) : isRetest ? (
                         <>
                           <span>{t('retest', 'Re-test')}</span>
-                          <Play size={14} className="fill-white" />
-                        </>
-                      ) : hasInProgressSession ? (
-                        <>
-                          <span>{t('continue', 'Continue')}</span>
                           <Play size={14} className="fill-white" />
                         </>
                       ) : isUnlocked ? (

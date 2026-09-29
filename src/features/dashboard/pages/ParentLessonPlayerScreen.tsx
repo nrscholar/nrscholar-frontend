@@ -69,7 +69,7 @@ export default function ParentLessonPlayerScreen() {
     if (completing) return;
     setCompleting(true);
     try {
-      await apiFetch('/api/parent/learning-library/complete', {
+      const res = await apiFetch('/api/parent/learning-library/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -77,10 +77,17 @@ export default function ParentLessonPlayerScreen() {
           acceptMission: missionAccepted
         })
       });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data?.user) {
+          localStorage.setItem("userData", JSON.stringify(json.data.user));
+          window.dispatchEvent(new Event("userDataUpdated"));
+        }
+      }
     } catch (e) {
       console.error(e);
     }
-    navigate('/parent/lessons');
+    navigate(-1);
   };
 
   const handleOptionSelect = (option: string, isCorrect: boolean) => {

@@ -204,15 +204,18 @@ export default function AdventureHero({
   const displayMissionProgress = missionProgress || theme.missionProgress;
   const displayMissionRewardText = missionRewardText || theme.missionRewardText;
 
-  const legProgress = journeyData?.progressPercentage !== undefined 
-    ? journeyData.progressPercentage 
-    : (progressPercentage !== undefined ? progressPercentage : Math.min(100, Math.max(0, Math.round((xp / targetXp) * 100))));
+  const activeNode = journeyData?.nodes?.find((n: any) => n.unlocked && !n.completed) || journeyData?.nodes?.[0];
+  const legProgress = activeNode?.nodeProgressPercentage !== undefined
+    ? Math.round(activeNode.nodeProgressPercentage)
+    : (journeyData?.progressPercentage !== undefined
+        ? Math.round(journeyData.progressPercentage)
+        : (progressPercentage !== undefined ? progressPercentage : Math.min(100, Math.max(0, Math.round((xp / targetXp) * 100)))));
   const chaptersRemaining = journeyData?.chaptersNeededForNext !== undefined ? journeyData.chaptersNeededForNext : chaptersNeededForNext;
   const xpRemaining = Math.max(0, targetXp - xp);
 
   const pathD = "M 62 46 C 110 5, 215 65, 278 32";
   const pathLength = 250;
-  const mascotLeftPercent = 20 + (legProgress / 100) * 59;
+  const mascotLeftPercent = 25 + (legProgress / 100) * 54;
 
   return (
     <div className="w-full max-w-[430px] mx-auto flex flex-col gap-3 font-sans">
@@ -266,10 +269,10 @@ export default function AdventureHero({
 
         {/* LIVING ADVENTURE WORLD SCENE (Flying Mascot over path to destination) */}
         <div className="relative w-full h-[76px] z-10 flex flex-col justify-between my-1">
-          <div className="absolute inset-0 flex justify-between items-end px-2 opacity-40 pointer-events-none">
-            <span className="text-4xl">{theme.bgDecorations[1] || "🏔️"}</span>
-            <span className="text-3xl mb-4">{theme.bgDecorations[0] || "☁️"}</span>
-            <span className="text-4xl">{theme.bgDecorations[2] || "🏰"}</span>
+          <div className="absolute inset-0 flex justify-between items-end px-2 opacity-20 pointer-events-none">
+            <span className="text-3xl">{theme.bgDecorations[1] || "🏔️"}</span>
+            <span className="text-2xl mb-4">{theme.bgDecorations[0] || "☁️"}</span>
+            <span className="text-2xl opacity-15">{theme.bgDecorations[2] || "🏰"}</span>
           </div>
 
           <div className="absolute inset-0 flex items-center justify-center">
@@ -295,11 +298,11 @@ export default function AdventureHero({
             </svg>
 
             {/* START NODE */}
-            <div className="absolute left-2 bottom-3 flex flex-col items-center z-10">
+            <div className="absolute left-2 bottom-2 flex flex-col items-center z-10">
               <div className="w-7 h-7 rounded-full bg-white border-2 border-slate-700 flex items-center justify-center text-xs shadow-md">
                 📍
               </div>
-              <span className="text-[9px] font-black text-slate-200 uppercase mt-0.5 tracking-tighter bg-black/40 px-1.5 py-0.5 rounded backdrop-blur-xs">
+              <span className="text-[9px] font-black text-slate-200 uppercase mt-0.5 tracking-tighter bg-black/60 px-1.5 py-0.5 rounded backdrop-blur-xs whitespace-nowrap">
                 {startName}
               </span>
             </div>
@@ -328,15 +331,15 @@ export default function AdventureHero({
             {/* DESTINATION NODE */}
             <div className="absolute right-2 top-2 flex flex-col items-center z-10">
               <motion.div
-                animate={{ scale: [1, 1.15, 1] }}
+                animate={{ scale: [1, 1.12, 1] }}
                 transition={{ repeat: Infinity, duration: 2 }}
                 className="w-10 h-10 rounded-2xl bg-amber-400/20 border-2 border-amber-300 flex items-center justify-center text-xl shadow-lg backdrop-blur-md relative"
               >
-                <span className="select-none">{theme.rewardIcon}</span>
+                <span className="select-none">{journeyData?.nextNodeEmoji || theme.rewardIcon}</span>
                 <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full animate-ping" />
               </motion.div>
-              <span className="text-[9px] font-black text-amber-300 uppercase mt-0.5 tracking-tighter bg-black/40 px-1.5 py-0.5 rounded backdrop-blur-xs">
-                {t(theme.rewardName.toLowerCase().replace(/ /g, '_'), { defaultValue: theme.rewardName })}
+              <span className="text-[9px] font-black text-amber-300 uppercase mt-0.5 tracking-tighter bg-black/70 px-1.5 py-0.5 rounded backdrop-blur-xs whitespace-nowrap shadow-sm">
+                {t(rawEnd.toLowerCase().replace(/ /g, '_'), { defaultValue: rawEnd })}
               </span>
             </div>
           </div>

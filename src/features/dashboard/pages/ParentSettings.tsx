@@ -226,7 +226,7 @@ export default function ParentSettings() {
   const [regenConfirmOpen, setRegenConfirmOpen] = useState(false);
   const [childIdToRegen, setChildIdToRegen] = useState<string | null>(null);
 
-  const classes = ["Nursery", "KG", "Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"];
+  const classes = ["Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"];
   const ages = ["4 Years", "5 Years", "6 Years", "7 Years", "8 Years", "9 Years", "10 Years", "11 Years", "12 Years", "13 Years", "14 Years", "15 Years"];
   const boards = ["CBSE (NCERT)", "GSEB", "ICSE", "State Board", "IB", "IGCSE"];
 
@@ -718,7 +718,7 @@ export default function ParentSettings() {
   return (
   <div className="bg-gradient-to-b from-[#f0f4f8] to-[#e6eef5] text-[#141779] flex flex-col min-h-screen w-full relative overflow-x-hidden font-sans">
     {/* Header */}
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs flex items-center justify-between px-6 h-16">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex items-center justify-between px-6 h-16">
       <div className="flex items-center gap-3">
         <button 
           onClick={() => {
@@ -1296,7 +1296,7 @@ export default function ParentSettings() {
           initial={{ opacity: 0, y: 50, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 20, scale: 0.9 }}
-          className="fixed bottom-10 left-4 right-4 mx-auto w-fit max-w-[400px] bg-slate-900/90 backdrop-blur-md text-white px-6 py-4 rounded-full flex items-center justify-center gap-3 z-50 shadow-2xl border border-slate-700/50"
+          className="fixed bottom-24 left-4 right-4 mx-auto w-fit max-w-[400px] bg-slate-900/95 backdrop-blur-md text-white px-6 py-4 rounded-full flex items-center justify-center gap-3 z-[100] shadow-[0_10px_35px_rgba(0,0,0,0.4)] border border-slate-700/60"
         >
           <Save size={18} className="text-teal-400 shrink-0" />
           <span className="text-xs font-black tracking-wide text-center leading-tight">{toastMessage}</span>

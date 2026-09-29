@@ -125,7 +125,7 @@ export default function ParentDashboardScreen() {
     } catch (err) {
       console.error("Failed to load user info", err);
     } finally {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 350);
     }
   }, [refreshKey]);
 
@@ -325,20 +325,84 @@ export default function ParentDashboardScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f9fb] px-5 pt-[104px] flex flex-col gap-6 relative">
-        <header className="fixed top-0 left-0 right-0 flex items-center justify-between px-6 h-20 bg-white/60 backdrop-blur-xl border-b border-white/40 z-50">
-          <div className="flex items-center gap-3 w-full">
-            <div className="w-11 h-11 bg-gray-200 animate-pulse rounded-full"></div>
-            <div className="w-10 h-10 bg-gray-200 animate-pulse rounded-full"></div>
-            <div className="h-6 w-32 bg-gray-200 animate-pulse rounded"></div>
+      <div className="min-h-screen bg-[#f7f9fb] px-5 pt-24 pb-24 flex flex-col gap-6 relative font-sans overflow-hidden">
+        {/* Top App Bar Skeleton */}
+        <header className="fixed top-0 left-0 right-0 flex items-center justify-between px-6 h-20 bg-white/80 backdrop-blur-xl border-b border-white/40 z-50 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-full animate-skeleton shrink-0"></div>
+            <div className="w-10 h-10 rounded-full animate-skeleton shrink-0"></div>
+            <div className="h-6 w-32 rounded-lg animate-skeleton"></div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-full animate-skeleton"></div>
+            <div className="w-10 h-10 rounded-full animate-skeleton"></div>
           </div>
         </header>
-        <div className="bg-gray-200 animate-pulse rounded-[24px] h-64 w-full"></div>
-        <div className="flex flex-col gap-3">
-          <div className="h-5 w-40 bg-gray-200 animate-pulse rounded"></div>
-          <div className="bg-gray-200 animate-pulse rounded-[20px] h-20 w-full"></div>
-          <div className="bg-gray-200 animate-pulse rounded-[20px] h-20 w-full"></div>
-          <div className="bg-gray-200 animate-pulse rounded-[20px] h-20 w-full"></div>
+
+        {/* Student Summary Hero Card Skeleton */}
+        <div className="bg-white/70 backdrop-blur-xl rounded-[24px] p-6 border-2 border-white/50 shadow-sm space-y-5">
+          <div className="flex justify-between items-start">
+            <div className="space-y-2 flex-1">
+              <div className="h-3 w-28 rounded-md animate-skeleton"></div>
+              <div className="h-7 w-48 rounded-xl animate-skeleton"></div>
+            </div>
+            <div className="h-7 w-28 rounded-full animate-skeleton"></div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-slate-50/80 rounded-[18px] p-4 h-24 flex flex-col justify-between border border-slate-200/60 shadow-xs">
+              <div className="h-8 w-16 rounded-lg animate-skeleton mx-auto"></div>
+              <div className="h-3 w-20 rounded-md animate-skeleton mx-auto"></div>
+            </div>
+            <div className="bg-slate-50/80 rounded-[18px] p-4 h-24 flex flex-col justify-between border border-slate-200/60 shadow-xs">
+              <div className="h-8 w-12 rounded-lg animate-skeleton mx-auto"></div>
+              <div className="h-3 w-20 rounded-md animate-skeleton mx-auto"></div>
+            </div>
+          </div>
+
+          <div className="space-y-2 pt-1">
+            <div className="flex justify-between">
+              <div className="h-4 w-44 rounded-md animate-skeleton"></div>
+              <div className="h-4 w-12 rounded-md animate-skeleton"></div>
+            </div>
+            <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-full w-3/4 rounded-full animate-skeleton"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Cognitive Strengths & Weaknesses Grid Skeleton */}
+        <div className="space-y-3">
+          <div className="h-5 w-56 rounded-md animate-skeleton"></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-white/80 backdrop-blur-md rounded-[20px] p-4 border border-slate-200/80 shadow-xs space-y-3 h-28 flex flex-col justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full animate-skeleton"></div>
+                <div className="h-4 w-20 rounded-md animate-skeleton"></div>
+              </div>
+              <div className="h-3 w-28 rounded-md animate-skeleton"></div>
+            </div>
+            <div className="bg-white/80 backdrop-blur-md rounded-[20px] p-4 border border-slate-200/80 shadow-xs space-y-3 h-28 flex flex-col justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full animate-skeleton"></div>
+                <div className="h-4 w-20 rounded-md animate-skeleton"></div>
+              </div>
+              <div className="h-3 w-28 rounded-md animate-skeleton"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Action Grid Skeleton */}
+        <div className="grid grid-cols-3 gap-3 pt-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-white/80 backdrop-blur-md rounded-[20px] p-4 h-36 flex flex-col justify-between border border-slate-200/80 shadow-xs">
+              <div className="w-10 h-10 rounded-full animate-skeleton"></div>
+              <div className="space-y-2">
+                <div className="h-4 w-16 rounded-md animate-skeleton"></div>
+                <div className="h-3 w-20 rounded-md animate-skeleton"></div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -352,9 +416,9 @@ export default function ParentDashboardScreen() {
       <div className="absolute bottom-[20%] -left-[20%] w-[400px] h-[400px] rounded-full bg-[rgba(20,23,121,0.08)] blur-[80px] pointer-events-none" />
 
       {/* Top App Bar */}
-      <header className="fixed top-0 left-0 right-0 flex items-center justify-between px-6 h-20 bg-white/95 backdrop-blur-md border-b border-slate-200 z-50 shadow-xs">
+      <header className="fixed top-0 left-0 right-0 flex items-center justify-between px-6 h-20 bg-white/90 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] z-50 shadow-[0_12px_40px_rgba(20,23,121,0.14)]">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/home")} className="w-11 h-11 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 shadow-xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all">
+          <button onClick={() => navigate(-1)} className="w-11 h-11 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 shadow-xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all">
             <ArrowLeft size={22} className="text-[#141779]" />
           </button>
           <button
@@ -476,8 +540,8 @@ export default function ParentDashboardScreen() {
                 </button>
               </div>
             </div>
-            <div className="bg-[#57fae9] px-3 py-1 rounded-full whitespace-nowrap shrink-0 border border-[#007168]/20 shadow-2xs">
-              <span className="text-xs font-black text-[#007168]">{t('lvl_explorer', { level: userLevel, defaultValue: `Lvl ${userLevel} Explorer` })}</span>
+            <div className="bg-[#141779] px-3 py-1 rounded-full whitespace-nowrap shrink-0 border border-[#141779]/20 shadow-2xs">
+              <span className="text-xs font-black text-white">{t('lvl_explorer', { level: userLevel, defaultValue: `Lvl ${userLevel} Explorer` })}</span>
             </div>
           </div>
 
@@ -511,7 +575,7 @@ export default function ParentDashboardScreen() {
             </div>
             <div className="h-3 bg-slate-100 rounded-full overflow-hidden mb-2 shadow-inner relative border border-slate-200/60">
               <div
-                className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#141779] via-[#30007f] to-[#57fae9] transition-all duration-1000 ease-out"
+                className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#141779] to-[#2d328f] transition-all duration-1000 ease-out"
                 style={{ width: `${todayConfidenceScore}%` }}
               >
                 <div className="absolute top-0 right-0 bottom-0 w-12 bg-gradient-to-l from-white/30 to-transparent" />
