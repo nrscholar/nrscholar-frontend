@@ -20,6 +20,9 @@ export default function ChaptersScreen() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [childName, setChildName] = useState("Kid");
   const [childPhoto, setChildPhoto] = useState("");
+  const [childClass, setChildClass] = useState("");
+  const [streakDays, setStreakDays] = useState(0);
+  const [coins, setCoins] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
   const [expandedChapter, setExpandedChapter] = useState<string | null>(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -39,15 +42,22 @@ export default function ChaptersScreen() {
             const u = JSON.parse(cached);
             setChildName(u.childName || u.name || "Kid");
             setChildPhoto(u.childPhoto || u.photo || "");
+            setChildClass(u.childClass || u.class_name || u.className || "");
+            setStreakDays(u.streakDays || u.streak_days || u.streak || 0);
+            setCoins(u.coins || u.xp || 0);
             setIsSubscribed(Boolean(u.is_subscribed || u.isSubscribed));
           } catch (e) { }
         }
         const meRes = await apiFetch("/api/users/me");
         const meJson = await meRes.json();
         if (meJson.success && meJson.data?.user) {
-          setChildName(meJson.data.user.childName || meJson.data.user.name || "Kid");
-          setChildPhoto(meJson.data.user.childPhoto || meJson.data.user.photo || "");
-          setIsSubscribed(Boolean(meJson.data.user.is_subscribed || meJson.data.user.isSubscribed));
+          const u = meJson.data.user;
+          setChildName(u.childName || u.name || "Kid");
+          setChildPhoto(u.childPhoto || u.photo || "");
+          setChildClass(u.childClass || u.class_name || u.className || "");
+          setStreakDays(u.streakDays || u.streak_days || u.streak || 0);
+          setCoins(u.coins || u.xp || 0);
+          setIsSubscribed(Boolean(u.is_subscribed || u.isSubscribed));
         }
       } catch (e) { }
 
@@ -246,7 +256,7 @@ export default function ChaptersScreen() {
               <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                 <h1 className="text-sm font-black text-slate-900 leading-tight truncate">{childName || "Explorer"}</h1>
                 <span className="text-[10px] text-[#4f46e5] bg-[#eef2ff] font-black px-2 py-0.5 rounded-full border border-indigo-100 shrink-0">
-                  {userData?.childClass || t('class_10', { defaultValue: "Class 10" })}
+                  {childClass || t('class_10', { defaultValue: "Class 10" })}
                 </span>
               </div>
               <div className="flex items-center gap-1.5 mt-1">

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Zap, Coins, Flame, Users, HelpCircle, LogOut, Award, Sparkles, Rocket, Gift, ChevronRight, Trophy, ShieldCheck, Atom, GraduationCap, Cake, BookOpen } from "lucide-react";
+import { ArrowLeft, Zap, Coins, Flame, Users, HelpCircle, LogOut, Award, Sparkles, Rocket, Gift, ChevronRight, Trophy, ShieldCheck, Atom, GraduationCap, Cake, BookOpen, Bell } from "lucide-react";
 import { motion } from "framer-motion";
 import { apiFetch, clearAuthSession } from "../../../api";
 import { useTranslation } from "react-i18next";
