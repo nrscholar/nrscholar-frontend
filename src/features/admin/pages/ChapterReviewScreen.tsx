@@ -4,7 +4,7 @@ import {
   AlertTriangle, ArrowLeft, Check, ChevronDown, ExternalLink, FileText, Pencil, ShieldCheck, Sparkles, X,
 } from "lucide-react";
 import {
-  adminApi, type ChapterDetail, type Difficulty, type Draft, type DraftEdits, type DraftStatus, type Job,
+  adminApi, type ChapterDetail, type Difficulty, type Draft, type DraftEdits, type DraftStatus, type Job, type RoundName,
 } from "../adminApi";
 import {
   Badge, Button, Card, ErrorNote, Spinner, VerificationBadge,
@@ -28,6 +28,8 @@ export default function ChapterReviewScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [generator, setGenerator] = useState<"claude" | "gemini">("claude");
+  // Round the admin clicked in step 2; null follows the automatic Quiz → Boss → Shadow order.
+  const [pickedRound, setPickedRound] = useState<RoundName | null>(null);
 
   const loadDetail = useCallback(async () => {
     try {
@@ -89,7 +91,8 @@ export default function ChapterReviewScreen() {
 
   const verification = detail.verification;
   const verified = verification?.status === "verified";
-  const remainingTotal = DIFFICULTIES.reduce((n, d) => n + detail.remaining[d], 0);
+  const activeRound = pickedRound ?? detail.pool.currentRound;
+  const remainingTotal = activeRound ? DIFFICULTIES.reduce((n, d) => n + detail.pool.rounds[activeRound].toGenerate[d], 0) : 0;
   const shown = difficulty ? drafts.filter((d) => d.difficulty === difficulty) : drafts;
   const pdfSrc = detail.pdfViewUrl ? `${detail.pdfViewUrl}#page=${pdfPage}` : null;
 
@@ -137,10 +140,14 @@ export default function ChapterReviewScreen() {
           {/* Step 2 — AI generation */}
           <Card className="space-y-4">
             <StepTitle n={2} title="Generate questions from the PDF" done={remainingTotal === 0} />
-            <RoundCards pool={detail.pool} setNumber={detail.sets.length + 1} />
+            <RoundCards pool={detail.pool} setNumber={detail.sets.length + 1} selected={activeRound}
+              onSelect={(r) => setPickedRound(r === detail.pool.currentRound ? null : r)} />
             <p className="text-sm text-slate-600">
-              {detail.pool.currentRound
-                ? <>Now generating the <b>{ROUND_LABELS[detail.pool.currentRound]}</b> round ({detail.tiers[detail.pool.tier].label}). The next round starts once this one is filled.</>
+              {activeRound
+                ? <>Now generating the <b>{ROUND_LABELS[activeRound]}</b> round ({detail.tiers[detail.pool.tier].label}).{" "}
+                    {pickedRound
+                      ? <button onClick={() => setPickedRound(null)} className="text-blue-700 hover:underline">Back to automatic order</button>
+                      : "Click another round above to generate for it instead."}</>
                 : "All three rounds have their questions. Finish the review, then build the set in step 4."}
             </p>
             <p className="text-xs text-slate-500">
@@ -156,17 +163,21 @@ export default function ChapterReviewScreen() {
               ))}
             </div>
             {!verified && <p className="text-xs text-amber-700">Verify the PDF first (step 1).</p>}
-            {remainingTotal === 0 && <p className="text-xs text-emerald-700">The pool has (or is reviewing) enough questions for the next set.</p>}
+            {remainingTotal === 0 && (
+              <p className="text-xs text-emerald-700">
+                {activeRound ? `The ${ROUND_LABELS[activeRound]} round has (or is reviewing) all its questions. Pick another round above.` : "The pool has (or is reviewing) enough questions for the next set."}
+              </p>
+            )}
             {generator === "claude" ? (
               <ClaudeImportPanel chapterId={chapterId} pdfUrl={detail.pdfViewUrl} disabled={!verified || remainingTotal === 0}
-                currentRound={detail.pool.currentRound}
+                currentRound={activeRound}
                 onImported={() => { setTab("pending"); loadDetail(); loadDrafts(); }} />
             ) : (
               <>
                 <Button disabled={!verified || jobRunning || remainingTotal === 0} busy={busy === "generate"}
-                  onClick={() => run("generate", async () => { setJob(await adminApi.generate(chapterId)); setTab("pending"); })}>
+                  onClick={() => run("generate", async () => { setJob(await adminApi.generate(chapterId, pickedRound)); setTab("pending"); })}>
                   <Sparkles className="h-4 w-4" />
-                  {remainingTotal === 0 ? "Pool is full for the next set" : `Generate ${remainingTotal} question${remainingTotal > 1 ? "s" : ""}`}
+                  {remainingTotal === 0 ? "This round is full" : `Generate ${remainingTotal} ${activeRound ? ROUND_LABELS[activeRound] : ""} question${remainingTotal > 1 ? "s" : ""}`}
                 </Button>
                 {job && <JobPanel job={job} />}
               </>

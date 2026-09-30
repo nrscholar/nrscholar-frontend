@@ -56,7 +56,7 @@ export default function ClaudeImportPanel({ chapterId, pdfUrl, disabled, current
     setBusy("prompt");
     setError(null);
     try {
-      const ctx = await adminApi.claudeContext(chapterId);
+      const ctx = await adminApi.claudeContext(chapterId, currentRound);
       setPromptRound(ctx.currentRound);
       await navigator.clipboard.writeText(buildPrompt(ctx));
       setCopied(true);
