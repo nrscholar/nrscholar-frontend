@@ -7,10 +7,12 @@ import {
   adminApi, type ChapterDetail, type Difficulty, type Draft, type DraftEdits, type DraftStatus, type Job,
 } from "../adminApi";
 import {
-  Badge, Button, Card, ErrorNote, PlanProgress, Spinner, VerificationBadge,
+  Badge, Button, Card, ErrorNote, Spinner, VerificationBadge,
 } from "../components/AdminUI";
-import { DIFFICULTIES, DIFFICULTY_TONE } from "../constants";
+import { DIFFICULTIES, DIFFICULTY_TONE, ROUND_LABELS } from "../constants";
+import RoundCards from "../components/RoundCards";
 import ClaudeImportPanel from "../components/ClaudeImportPanel";
+import SetsPanel from "../components/SetsPanel";
 
 const ACTIVE = ["queued", "running"];
 
@@ -135,9 +137,14 @@ export default function ChapterReviewScreen() {
           {/* Step 2 — AI generation */}
           <Card className="space-y-4">
             <StepTitle n={2} title="Generate questions from the PDF" done={remainingTotal === 0} />
-            <PlanProgress counts={detail.draftCounts} plan={detail.plan} />
+            <RoundCards pool={detail.pool} setNumber={detail.sets.length + 1} />
+            <p className="text-sm text-slate-600">
+              {detail.pool.currentRound
+                ? <>Now generating the <b>{ROUND_LABELS[detail.pool.currentRound]}</b> round ({detail.tiers[detail.pool.tier].label}). The next round starts once this one is filled.</>
+                : "All three rounds have their questions. Finish the review, then build the set in step 4."}
+            </p>
             <p className="text-xs text-slate-500">
-              <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" /> approved &nbsp;
+              <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" /> approved in pool &nbsp;
               <span className="inline-block h-2 w-2 rounded-full bg-amber-300" /> waiting for review. Rejected questions free up their slot for regeneration.
             </p>
             <div className="flex w-fit rounded-xl bg-slate-100 p-1 text-sm">
@@ -149,16 +156,17 @@ export default function ChapterReviewScreen() {
               ))}
             </div>
             {!verified && <p className="text-xs text-amber-700">Verify the PDF first (step 1).</p>}
-            {remainingTotal === 0 && <p className="text-xs text-emerald-700">All 25 slots are filled.</p>}
+            {remainingTotal === 0 && <p className="text-xs text-emerald-700">The pool has (or is reviewing) enough questions for the next set.</p>}
             {generator === "claude" ? (
               <ClaudeImportPanel chapterId={chapterId} pdfUrl={detail.pdfViewUrl} disabled={!verified || remainingTotal === 0}
+                currentRound={detail.pool.currentRound}
                 onImported={() => { setTab("pending"); loadDetail(); loadDrafts(); }} />
             ) : (
               <>
                 <Button disabled={!verified || jobRunning || remainingTotal === 0} busy={busy === "generate"}
                   onClick={() => run("generate", async () => { setJob(await adminApi.generate(chapterId)); setTab("pending"); })}>
                   <Sparkles className="h-4 w-4" />
-                  {remainingTotal === 0 ? "All 25 slots filled" : `Generate ${remainingTotal} question${remainingTotal > 1 ? "s" : ""}`}
+                  {remainingTotal === 0 ? "Pool is full for the next set" : `Generate ${remainingTotal} question${remainingTotal > 1 ? "s" : ""}`}
                 </Button>
                 {job && <JobPanel job={job} />}
               </>
@@ -167,7 +175,7 @@ export default function ChapterReviewScreen() {
 
           {/* Step 3 — human review */}
           <Card className="space-y-4">
-            <StepTitle n={3} title="Review — only approved questions go to students" />
+            <StepTitle n={3} title="Review — only approved questions enter the pool" />
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex rounded-xl bg-slate-100 p-1 text-sm">
                 {(["pending", "approved", "rejected"] as DraftStatus[]).map((s) => {
@@ -200,6 +208,12 @@ export default function ChapterReviewScreen() {
                 <DraftCard key={d.id} draft={d} onChanged={onDraftChanged} onShowPage={setPdfPage} />
               ))}
             </div>
+          </Card>
+
+          {/* Step 4 — build test sets */}
+          <Card className="space-y-3">
+            <StepTitle n={4} title="Build test sets (Quiz · Boss · Shadow)" done={detail.sets.length > 0 && !detail.pool.canBuild} />
+            <SetsPanel detail={detail} onChanged={() => { loadDetail(); loadDrafts(); }} />
           </Card>
         </div>
 
@@ -349,6 +363,7 @@ function DraftCard({ draft, onChanged, onShowPage }: { draft: Draft; onChanged: 
     <div className="rounded-2xl border border-slate-200 p-4">
       <div className="mb-2 flex flex-wrap items-center gap-1.5">
         <Badge tone={DIFFICULTY_TONE[draft.difficulty]}>{draft.difficulty}</Badge>
+        {draft.targetRound && <Badge tone="slate">{ROUND_LABELS[draft.targetRound]} round</Badge>}
         {v && v.correct_option_count === 1 && v.answerable_from_chapter && (
           <Badge tone="green"><Check className="h-3 w-3" /> Verifier agreed</Badge>
         )}
@@ -400,7 +415,11 @@ function DraftCard({ draft, onChanged, onShowPage }: { draft: Draft; onChanged: 
       </blockquote>
       {v?.issues && <p className="mt-2 text-xs text-amber-700">Verifier note: {v.issues}</p>}
       {draft.status === "rejected" && <p className="mt-2 text-xs text-red-700">Rejected: {draft.rejectReason} ({draft.reviewedBy})</p>}
-      {draft.status === "approved" && <p className="mt-2 text-xs text-emerald-700">Approved by {draft.reviewedBy}</p>}
+      {draft.status === "approved" && (
+        <p className="mt-2 text-xs text-emerald-700">
+          Approved by {draft.reviewedBy} · {draft.setNumber ? `Set ${draft.setNumber}, ${draft.round} round` : "waiting for the set to be built"}
+        </p>
+      )}
 
       {error && <div className="mt-2"><ErrorNote message={error} /></div>}
 

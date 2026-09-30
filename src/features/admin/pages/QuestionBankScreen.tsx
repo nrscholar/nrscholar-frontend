@@ -2,9 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ChevronRight, FileSearch, Link2, ShieldCheck } from "lucide-react";
 import { adminApi, type ChapterRow } from "../adminApi";
-import { Badge, Button, Card, ErrorNote, PlanProgress, Spinner, VerificationBadge } from "../components/AdminUI";
-
-const PLAN = { Easy: 10, Medium: 5, Hard: 10 };
+import { Badge, Button, Card, ErrorNote, PoolProgress, Spinner, VerificationBadge } from "../components/AdminUI";
 
 function Select({ label, value, options, onChange, disabled }: {
   label: string;
@@ -133,7 +131,7 @@ export default function QuestionBankScreen() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Textbook Question Bank</h1>
         <p className="text-sm text-slate-500">
-          Verify each chapter PDF against the official board website, generate 25 questions (10 Easy · 5 Medium · 10 Hard) and approve them one by one.
+          Verify each chapter PDF against the official board website, build a question pool, approve each question, then build test sets (Quiz · Boss · Shadow).
         </p>
       </div>
 
@@ -213,7 +211,11 @@ export default function QuestionBankScreen() {
                   )}
                 </div>
                 <div>
-                  <PlanProgress counts={c.draftCounts} plan={PLAN} compact />
+                  <PoolProgress available={c.pool.available} required={c.pool.required} compact />
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    <Badge tone={c.setsReady ? "green" : "slate"}>{c.setsReady} set{c.setsReady === 1 ? "" : "s"} ready</Badge>
+                    {c.pool.canBuild && <Badge tone="blue">Next set can be built</Badge>}
+                  </div>
                   {c.latestJob && (c.latestJob.status === "running" || c.latestJob.status === "queued") && (
                     <div className="mt-1"><Badge tone="blue"><Spinner className="h-3 w-3" /> Generating</Badge></div>
                   )}

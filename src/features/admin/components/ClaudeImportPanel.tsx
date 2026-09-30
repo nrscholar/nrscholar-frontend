@@ -1,17 +1,22 @@
 import { useState } from "react";
 import { ClipboardCopy, Download, Upload } from "lucide-react";
-import { adminApi, type ClaudeContext, type ImportResult } from "../adminApi";
-import { DIFFICULTIES } from "../constants";
+import { adminApi, type ClaudeContext, type ImportResult, type RoundName } from "../adminApi";
+import { DIFFICULTIES, ROUND_LABELS } from "../constants";
 import { Badge, Button, ErrorNote } from "./AdminUI";
 
 function buildPrompt(ctx: ClaudeContext) {
+  const batchIsAll = DIFFICULTIES.every((d) => ctx.askNow[d] === ctx.remaining[d]);
+  const more = batchIsAll
+    ? ""
+    : `\n(This is one batch. In total the next set still needs Easy ${ctx.remaining.Easy}, Medium ${ctx.remaining.Medium}, Hard ${ctx.remaining.Hard}; the next Copy prompt will ask for the rest.)`;
   const avoid = ctx.avoidQuestions.length ? ctx.avoidQuestions.map((q) => `- ${q}`).join("\n") : "(none yet)";
   return `Use the nrscholar-question-generator skill.
 
 Chapter: ${ctx.chapter}
 Board / Class / Subject: ${ctx.board} / ${ctx.classLevel} / ${ctx.subject}
 Chapter ID: ${ctx.chapterId}
-Open slots: Easy ${ctx.remaining.Easy}, Medium ${ctx.remaining.Medium}, Hard ${ctx.remaining.Hard}
+Set ${ctx.setNumber} · ${ctx.currentRound ? ROUND_LABELS[ctx.currentRound] : ""} round${ctx.currentRound === "boss" ? " (Boss round: every question must be Hard)" : ""}
+Generate now: Easy ${ctx.askNow.Easy}, Medium ${ctx.askNow.Medium}, Hard ${ctx.askNow.Hard}${more}
 
 Questions already in the bank (do not repeat or rephrase):
 ${avoid}
@@ -32,12 +37,15 @@ function parseClaudeJson(text: string): unknown[] {
   throw new Error("JSON must have a `questions` list");
 }
 
-export default function ClaudeImportPanel({ chapterId, pdfUrl, disabled, onImported }: {
+export default function ClaudeImportPanel({ chapterId, pdfUrl, disabled, currentRound, onImported }: {
   chapterId: string;
   pdfUrl: string | null;
   disabled: boolean;
+  currentRound: RoundName | null;
   onImported: () => void;
 }) {
+  // The round the copied prompt asked for; the import is tagged with it.
+  const [promptRound, setPromptRound] = useState<RoundName | null>(null);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +56,9 @@ export default function ClaudeImportPanel({ chapterId, pdfUrl, disabled, onImpor
     setBusy("prompt");
     setError(null);
     try {
-      await navigator.clipboard.writeText(buildPrompt(await adminApi.claudeContext(chapterId)));
+      const ctx = await adminApi.claudeContext(chapterId);
+      setPromptRound(ctx.currentRound);
+      await navigator.clipboard.writeText(buildPrompt(ctx));
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch (e) {
@@ -69,7 +79,7 @@ export default function ClaudeImportPanel({ chapterId, pdfUrl, disabled, onImpor
     }
     setBusy("import");
     try {
-      const r = await adminApi.importQuestions(chapterId, questions);
+      const r = await adminApi.importQuestions(chapterId, questions, promptRound || currentRound);
       setResult(r);
       if (r.acceptedCount) setText("");
       onImported();
@@ -95,7 +105,7 @@ export default function ClaudeImportPanel({ chapterId, pdfUrl, disabled, onImpor
           </a>
         )}
         <Button variant="secondary" busy={busy === "prompt"} disabled={disabled} onClick={copyPrompt}>
-          <ClipboardCopy className="h-4 w-4" /> {copied ? "Copied!" : "Copy prompt"}
+          <ClipboardCopy className="h-4 w-4" /> {copied ? "Copied!" : `Copy prompt${currentRound ? ` · ${ROUND_LABELS[currentRound]} round` : ""}`}
         </Button>
       </div>
       <textarea value={text} onChange={(e) => setText(e.target.value)} rows={6} disabled={disabled}
@@ -108,7 +118,7 @@ export default function ClaudeImportPanel({ chapterId, pdfUrl, disabled, onImpor
       {result && (
         <div className="space-y-2 rounded-xl bg-white p-3 text-sm">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="green">{result.acceptedCount} added to Pending</Badge>
+            <Badge tone="green">{result.acceptedCount} added to Pending · {ROUND_LABELS[result.round]} round</Badge>
             {result.rejected.length > 0 && <Badge tone="red">{result.rejected.length} rejected</Badge>}
             <span className="text-xs text-slate-500">
               Still open: {DIFFICULTIES.map((d) => `${d} ${result.remaining[d]}`).join(" · ")}
