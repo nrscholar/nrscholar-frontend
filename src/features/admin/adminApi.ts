@@ -288,10 +288,11 @@ export const adminApi = {
   setOfficialSource: (subjectId: string, url: string) =>
     request(`${BASE}/subjects/${subjectId}/official-source`, { method: "PUT", body: JSON.stringify({ url }) }),
 
-  generate: (chapterId: string) => post<{ data: Job }>(`${BASE}/chapters/${chapterId}/generate`).then((r) => r.data),
+  generate: (chapterId: string, round?: RoundName | null) =>
+    post<{ data: Job }>(`${BASE}/chapters/${chapterId}/generate${round ? `?round=${round}` : ""}`).then((r) => r.data),
 
-  claudeContext: (chapterId: string) =>
-    request<{ data: ClaudeContext }>(`${BASE}/chapters/${chapterId}/claude-context`).then((r) => r.data),
+  claudeContext: (chapterId: string, round?: RoundName | null) =>
+    request<{ data: ClaudeContext }>(`${BASE}/chapters/${chapterId}/claude-context${round ? `?round=${round}` : ""}`).then((r) => r.data),
 
   allQuestions: (params: Record<string, string>) => {
     const q = new URLSearchParams(Object.entries(params).filter(([, v]) => v));
