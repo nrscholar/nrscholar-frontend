@@ -23,8 +23,8 @@ export default function Layout() {
         <Outlet />
       </div>
 
-      {/* Floating Bottom Glassmorphic Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center px-4 py-2.5 bg-white/90 backdrop-blur-2xl border-t-2 border-slate-200/90 rounded-t-[28px] shadow-[0_-12px_40px_rgba(20,23,121,0.14)]">
+      {/* Floating Bottom Navigation Bar (Matching Screenshot Theme) */}
+      <nav className="fixed bottom-2 left-4 right-4 max-w-md mx-auto z-50 flex justify-around items-center px-3 py-2 bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-full shadow-[0_10px_35px_rgba(0,0,0,0.08)]">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentPath === item.path || (item.path !== "/home" && currentPath.startsWith(item.path));
@@ -34,14 +34,14 @@ export default function Layout() {
               key={item.path}
               type="button"
               onClick={() => navigate(item.path)}
-              className={`flex flex-col items-center justify-center gap-1 h-[56px] min-w-[64px] px-2.5 rounded-2xl transition-all duration-300 ${
+              className={`flex flex-col items-center justify-center gap-0.5 transition-all duration-300 ${
                 isActive
-                  ? "bg-gradient-to-b from-[#141779] to-[#2d328f] text-white shadow-lg shadow-[#141779]/30 border border-white/20 scale-105"
-                  : "text-[#5c5f73] hover:text-[#141779] hover:bg-slate-100/70 active:scale-95"
+                  ? "bg-[#1c1970] text-white px-4 py-2 rounded-2xl shadow-md shadow-[#1c1970]/25 scale-105"
+                  : "text-[#787a91] hover:text-[#1c1970] px-3 py-1.5 rounded-2xl active:scale-95"
               }`}
             >
-              <Icon size={20} strokeWidth={isActive ? 2.5 : 2} className="shrink-0" />
-              <span className="text-[10px] font-extrabold tracking-wide whitespace-nowrap">{item.label}</span>
+              <Icon size={19} strokeWidth={isActive ? 2.5 : 2} className="shrink-0" />
+              <span className="text-[10px] font-black tracking-tight whitespace-nowrap">{item.label}</span>
             </button>
           );
         })}

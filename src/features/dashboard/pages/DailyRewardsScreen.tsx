@@ -39,6 +39,7 @@ export default function DailyRewardsScreen() {
   const [isBuying, setIsBuying] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [showModal, setShowModal] = useState(false);
+  const [showBuyConfirmModal, setShowBuyConfirmModal] = useState(false);
   const [wonReward, setWonReward] = useState<Reward | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -68,7 +69,7 @@ export default function DailyRewardsScreen() {
     fetchSpinStatus();
   }, []);
 
-  const buySpin = async () => {
+  const handleOpenBuyConfirm = () => {
     if (isSpinning || isBuying) return;
     setErrorMessage("");
 
@@ -87,7 +88,13 @@ export default function DailyRewardsScreen() {
       return;
     }
 
+    setShowBuyConfirmModal(true);
+  };
+
+  const confirmAndBuySpin = async () => {
+    if (isSpinning || isBuying) return;
     setIsBuying(true);
+    setErrorMessage("");
     try {
       const response = await apiFetch("/api/retention/spin-wheel/buy-spin", {
         method: "POST",
@@ -97,6 +104,7 @@ export default function DailyRewardsScreen() {
       const data = await response.json();
       if (data.success) {
         setBalances(data.balances);
+        const cachedData = localStorage.getItem("userData");
         if (cachedData) {
           try {
             const u = JSON.parse(cachedData);
@@ -104,12 +112,16 @@ export default function DailyRewardsScreen() {
             localStorage.setItem("userData", JSON.stringify(u));
           } catch (e) {}
         }
+        window.dispatchEvent(new Event("userDataUpdated"));
         setErrorMessage("");
+        setShowBuyConfirmModal(false);
       } else {
         setErrorMessage(data.message || "You don't have enough coins to buy a spin!");
+        setShowBuyConfirmModal(false);
       }
     } catch (e: any) {
       setErrorMessage("You don't have enough coins to buy a spin!");
+      setShowBuyConfirmModal(false);
     } finally {
       setIsBuying(false);
     }
@@ -546,7 +558,7 @@ export default function DailyRewardsScreen() {
             </button>
           ) : (
             <button
-              onClick={buySpin}
+              onClick={handleOpenBuyConfirm}
               disabled={isSpinning || isBuying}
               className="w-full py-4 rounded-full font-black text-base sm:text-lg tracking-wider uppercase transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/25 border border-amber-300"
             >
@@ -562,6 +574,72 @@ export default function DailyRewardsScreen() {
           </div>
         </div>
       </main>
+
+      {/* Buy Spin Confirmation Modal */}
+      <AnimatePresence>
+        {showBuyConfirmModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center px-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-950/80 backdrop-blur-xs"
+              onClick={() => !isBuying && setShowBuyConfirmModal(false)}
+            />
+
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="relative bg-white w-full max-w-[360px] p-6 rounded-[32px] flex flex-col items-center text-center gap-5 border-2 border-amber-200 shadow-2xl overflow-hidden z-10 text-slate-950"
+            >
+              <div className="w-16 h-16 rounded-full bg-amber-100 border-2 border-amber-400 flex items-center justify-center shadow-inner">
+                <Gift className="w-8 h-8 text-amber-600" />
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-xl font-black text-slate-950">
+                  {t('confirm_spin_purchase', 'Buy Extra Spin?')}
+                </h3>
+                <p className="text-xs sm:text-sm font-semibold text-slate-600 leading-relaxed">
+                  {t('confirm_spin_purchase_desc', {
+                    cost: (spinType === "daily" || spinType === "boss_revival") ? 100 : 150,
+                    type: spinType.toUpperCase(),
+                    defaultValue: `Are you sure you want to spend ${(spinType === "daily" || spinType === "boss_revival") ? 100 : 150} coins to purchase 1 ${spinType.toUpperCase()} spin?`
+                  })}
+                </p>
+              </div>
+
+              <div className="w-full bg-amber-50 border border-amber-200 rounded-2xl p-3 flex justify-between items-center text-xs font-bold text-amber-900">
+                <span className="flex items-center gap-1.5">
+                  <span>🪙</span> {t('cost', 'Cost')}:
+                </span>
+                <span className="text-amber-700 font-extrabold text-sm">
+                  {(spinType === "daily" || spinType === "boss_revival") ? 100 : 150} Coins
+                </span>
+              </div>
+
+              <div className="w-full flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowBuyConfirmModal(false)}
+                  disabled={isBuying}
+                  className="flex-1 py-3.5 rounded-full font-black text-sm uppercase tracking-wider text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all border border-slate-300"
+                >
+                  {t('cancel', 'Cancel')}
+                </button>
+                <button
+                  onClick={confirmAndBuySpin}
+                  disabled={isBuying}
+                  className="flex-1 py-3.5 rounded-full font-black text-sm uppercase tracking-wider text-white bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 transition-all shadow-md shadow-amber-500/20 border border-amber-300 flex items-center justify-center gap-1.5"
+                >
+                  {isBuying ? t('purchasing', 'Buying...') : t('confirm', 'Confirm')}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Winner Modal */}
       <AnimatePresence>

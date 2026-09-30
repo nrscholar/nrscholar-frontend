@@ -157,7 +157,7 @@ export default function UniversalErrorScreen({
     if (onHome) {
       onHome();
     } else {
-      navigate("/home");
+      window.location.href = "/home";
     }
   };
 
@@ -289,6 +289,10 @@ export class UniversalErrorBoundary extends React.Component<
           onRetry={() => {
             this.setState({ hasError: false, error: undefined });
             window.location.reload();
+          }}
+          onHome={() => {
+            this.setState({ hasError: false, error: undefined });
+            window.location.href = "/home";
           }}
         />
       );

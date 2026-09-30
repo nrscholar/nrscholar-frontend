@@ -40,6 +40,8 @@ export default function ProgressScreen() {
 
   const [streakDays, setStreakDays] = useState(0);
   const [xp, setXp] = useState(0);
+  const [coins, setCoins] = useState(0);
+  const [userData, setUserData] = useState<any>(null);
   const [username, setUsername] = useState("Explorer");
   const [userPhoto, setUserPhoto] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
@@ -102,6 +104,8 @@ export default function ProgressScreen() {
         try {
           const u = JSON.parse(cached);
           setXp(u.xp || 0);
+          setCoins(u.coins || 0);
+          setUserData(u);
           setStreakDays(u.streakDays || 0);
           setUsername(u.childName || u.name || "Explorer");
           setUserPhoto(u.childPhoto || u.photo || "");
@@ -117,6 +121,8 @@ export default function ProgressScreen() {
           if (data.success && data.data.user) {
              const u = data.data.user;
              setXp(u.xp || 0);
+             setCoins(u.coins || 0);
+             setUserData(u);
              setStreakDays(u.streakDays || 0);
              setUsername(u.childName || u.name || "Explorer");
              setUserPhoto(u.childPhoto || u.photo || "");
@@ -278,57 +284,60 @@ export default function ProgressScreen() {
         <div className="absolute top-[40%] right-[-10%] w-[55%] h-[40%] rounded-full bg-[#4D4BFF]/8 blur-[100px]" />
       </div>
 
-      {/* TOP APP BAR / GAME HUD */}
-      <header className="flex flex-col bg-white/90 backdrop-blur-xl border-b border-[#E0E3E5]/70 sticky top-0 z-50 shadow-[0_4px_20px_rgba(0,0,0,0.02)] pb-3">
-        <div className="flex items-center justify-between px-5 py-4">
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => navigate(-1)} 
-              className="w-10 h-10 rounded-full bg-[#F7F9FB] border border-[#E0E3E5] hover:bg-[#EEF1FF] flex items-center justify-center transition-all active:scale-95 shrink-0 shadow-2xs"
-              aria-label="Back"
-            >
-              <ArrowLeft size={20} className="text-[#17177F]" />
-            </button>
-            <button 
-              onClick={() => navigate("/profile")}
-              className="w-10 h-10 rounded-full border-2 border-[#17177F]/40 overflow-hidden bg-white shrink-0 active:scale-95 transition-all shadow-sm"
-            >
-              {userPhoto ? (
-                <img src={userPhoto} alt="Avatar" className="w-full h-full object-cover" />
-              ) : (
-                <img 
-                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=17177F&color=fff`} 
-                  alt="Avatar"
-                  className="w-full h-full object-cover"
-                />
-              )}
-            </button>
-            <div className="text-left">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
-                <span className="text-[12px] font-medium text-[#767683]">
-                  {t('updated_just_now', 'Updated just now')}
-                </span>
+      {/* TOP APP BAR / GAME HUD (Curved Sticky Design) */}
+      <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex items-center justify-between px-4 py-3 bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-[28px] shadow-xs gap-2">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          <button
+            onClick={() => navigate("/profile")}
+            className="w-10 h-10 rounded-full border-2 border-[#38bdf8] overflow-hidden hover:opacity-90 transition-opacity shrink-0 bg-slate-900 shadow-xs"
+          >
+            {userPhoto ? (
+              <img src={userPhoto} alt="Avatar" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-[#0d1527] text-white font-black text-xs flex items-center justify-center">
+                {username ? username.slice(0, 2).toUpperCase() : "NR"}
               </div>
-              <h1 className="text-[22px] font-bold text-[#17177F] tracking-tight leading-tight">
-                {t('my_journey', 'My Journey')}
-              </h1>
+            )}
+          </button>
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+              <h1 className="text-sm font-black text-slate-900 leading-tight truncate">{username || "Explorer"}</h1>
+              <span className="text-[10px] text-[#4f46e5] bg-[#eef2ff] font-black px-2 py-0.5 rounded-full border border-indigo-100 shrink-0">
+                {userData?.childClass || t('class_10', { defaultValue: "Class 10" })}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="text-[11px] text-slate-400 font-extrabold whitespace-nowrap">
+                {t('explorer_level', { defaultValue: "Explorer Level" })} {level}
+              </span>
             </div>
           </div>
-          
-          {/* Right Bell Notification */}
-          <button 
-            onClick={() => navigate("/notifications")}
-            className="w-10 h-10 rounded-full bg-white border border-[#E0E3E5] shadow-xs flex items-center justify-center hover:bg-[#F7F9FB] active:scale-95 transition-all shrink-0"
+        </div>
+
+        {/* Currency & Streak Stats */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={() => navigate("/home")}
+            className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
           >
-            <div className="relative">
-              <Bell size={20} className="text-[#17177F]" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#EF4444] rounded-full text-[9px] text-white flex items-center justify-center font-bold border-2 border-white pointer-events-none z-10 shadow-xs">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </div>
+            <span className="text-[11px] font-black text-[#ea580c] leading-none">🔥 {streakDays || 0}</span>
+          </button>
+          <button
+            onClick={() => navigate("/practice/inventory")}
+            className="bg-[#fffbeb] border border-amber-100/80 rounded-2xl px-2 py-1 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
+          >
+            <span className="text-[11px] font-black text-[#b45309] leading-none">🪙 {coins || 0}</span>
+          </button>
+          <button
+            onClick={() => navigate("/notifications")}
+            className="w-9 h-9 rounded-2xl bg-slate-50 shadow-2xs flex items-center justify-center hover:bg-slate-100 transition-all shrink-0 border border-slate-100 relative"
+          >
+            <Bell size={16} className="text-[#1c1970]" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border border-white pointer-events-none z-10">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
           </button>
         </div>
       </header>

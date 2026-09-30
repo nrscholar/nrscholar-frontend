@@ -226,55 +226,63 @@ export default function ChaptersScreen() {
         <div className="absolute top-[40%] right-[-10%] w-[50%] h-[40%] rounded-full bg-[#FFC83D]/15 blur-[90px]" />
       </div>
 
-      {/* TOP APP BAR / GAME HUD */}
-      <header className="flex flex-col bg-white/85 backdrop-blur-md border-b border-[#E0E3E5] sticky top-0 z-50 shadow-sm">
-        <div className="flex items-center justify-between px-4 h-16 max-w-[430px] mx-auto w-full">
-          <div className="flex items-center gap-2.5">
-            <button 
-              onClick={() => navigate("/home")} 
-              className="w-9 h-9 rounded-full bg-[#F5F3FF] border border-[#E0E3E5] hover:bg-[#EEF1FF] flex items-center justify-center transition-all active:scale-95 shrink-0"
-              aria-label="Back"
-            >
-              <ArrowLeft size={18} className="text-[#17157F]" />
-            </button>
+      {/* TOP APP BAR / GAME HUD (Curved Sticky Design) */}
+      <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex flex-col bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-[28px] shadow-xs gap-2 pb-2">
+        <div className="flex items-center justify-between px-4 py-3 gap-2">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <button
               onClick={() => navigate("/profile")}
-              className="w-9 h-9 rounded-full border-2 border-white bg-[#17157F] overflow-hidden hover:opacity-90 transition-opacity shrink-0 shadow-sm"
+              className="w-10 h-10 rounded-full border-2 border-[#38bdf8] overflow-hidden hover:opacity-90 transition-opacity shrink-0 bg-slate-900 shadow-xs"
             >
               {childPhoto ? (
                 <img src={childPhoto} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
-                <img
-                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(childName || "Kid")}&background=random`}
-                  alt="Avatar"
-                  className="w-full h-full object-cover"
-                />
+                <div className="w-full h-full bg-[#0d1527] text-white font-black text-xs flex items-center justify-center">
+                  {childName ? childName.slice(0, 2).toUpperCase() : "NR"}
+                </div>
               )}
             </button>
-            <div>
-              <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#5B5CFF] block leading-none">
-                {t('level_adventurer', { level: Math.min(99, completedChaptersCount + 1), defaultValue: `LEVEL ${Math.min(99, completedChaptersCount + 1)} ADVENTURER` })}
-              </span>
-              <h1 className="text-sm font-black text-[#17157F] tracking-wide uppercase leading-tight">
-                {t('learning_journey', 'LEARNING JOURNEY')}
-              </h1>
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                <h1 className="text-sm font-black text-slate-900 leading-tight truncate">{childName || "Explorer"}</h1>
+                <span className="text-[10px] text-[#4f46e5] bg-[#eef2ff] font-black px-2 py-0.5 rounded-full border border-indigo-100 shrink-0">
+                  {userData?.childClass || t('class_10', { defaultValue: "Class 10" })}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="text-[11px] text-slate-400 font-extrabold whitespace-nowrap">
+                  {t('explorer_level', { defaultValue: "Explorer Level" })} {Math.min(99, completedChaptersCount + 1)}
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Right Notification Bell */}
-          <button
-            onClick={() => navigate("/notifications")}
-            className="w-9 h-9 rounded-full bg-white border border-[#E0E3E5] shadow-sm flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all shrink-0"
-          >
-            <div className="relative">
-              <Bell size={18} className="text-[#17157F]" />
+          {/* Currency & Streak Stats */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => navigate("/home")}
+              className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
+            >
+              <span className="text-[11px] font-black text-[#ea580c] leading-none">🔥 {streakDays || 0}</span>
+            </button>
+            <button
+              onClick={() => navigate("/practice/inventory")}
+              className="bg-[#fffbeb] border border-amber-100/80 rounded-2xl px-2 py-1 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
+            >
+              <span className="text-[11px] font-black text-[#b45309] leading-none">🪙 {coins || 0}</span>
+            </button>
+            <button
+              onClick={() => navigate("/notifications")}
+              className="w-9 h-9 rounded-2xl bg-slate-50 shadow-2xs flex items-center justify-center hover:bg-slate-100 transition-all shrink-0 border border-slate-100 relative"
+            >
+              <Bell size={16} className="text-[#1c1970]" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full text-[8px] text-white flex items-center justify-center font-black border border-white pointer-events-none z-10">
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border border-white pointer-events-none z-10">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
-            </div>
-          </button>
+            </button>
+          </div>
         </div>
 
         {/* SUBJECT SELECTION TABS */}

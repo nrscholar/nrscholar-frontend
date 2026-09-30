@@ -54,8 +54,21 @@ export default function HomeScreen() {
   const [showStreakModal, setShowStreakModal] = useState(false);
   const [streakRevivalData, setStreakRevivalData] = useState<any>(null);
   const [showRevivalModal, setShowRevivalModal] = useState(false);
+  const [showRevivalConfirmModal, setShowRevivalConfirmModal] = useState(false);
   const [revivalError, setRevivalError] = useState("");
   const [revivalLoading, setRevivalLoading] = useState(false);
+
+  const handleOpenRevivalConfirm = () => {
+    if (!streakRevivalData) return;
+    setRevivalError("");
+
+    if ((coins || 0) < streakRevivalData.reviveCost) {
+      setRevivalError("You don't have enough coins to revive your streak!");
+      return;
+    }
+
+    setShowRevivalConfirmModal(true);
+  };
 
   const handleReviveStreak = async () => {
     setRevivalError("");
@@ -64,25 +77,40 @@ export default function HomeScreen() {
       const res = await apiFetch("/api/retention/streak/revive", { method: "POST" });
       const json = await res.json();
       if (json.success) {
+        setShowRevivalConfirmModal(false);
         setShowRevivalModal(false);
         setCoins(json.coins);
         setStreakDays(json.current_streak);
+
+        const cachedData = localStorage.getItem("userData");
+        if (cachedData) {
+          try {
+            const u = JSON.parse(cachedData);
+            u.coins = json.coins;
+            u.streakDays = json.current_streak;
+            localStorage.setItem("userData", JSON.stringify(u));
+          } catch (e) { }
+        }
+        window.dispatchEvent(new Event("userDataUpdated"));
+
         fetchProfile();
-        
+
         try {
           const stRes = await apiFetch("/api/retention/streak");
           if (stRes.ok) {
             const stData = await stRes.json();
             setRetentionStreak(stData);
           }
-        } catch (e) {}
+        } catch (e) { }
 
         setShowStreakModal(true);
       } else {
         setRevivalError(json.message || "You don't have enough coins to revive your streak!");
+        setShowRevivalConfirmModal(false);
       }
     } catch (e) {
       setRevivalError("Failed to revive streak. Please try again.");
+      setShowRevivalConfirmModal(false);
     } finally {
       setRevivalLoading(false);
     }
@@ -91,7 +119,8 @@ export default function HomeScreen() {
   const handleDeclineRevival = async () => {
     try {
       await apiFetch("/api/retention/streak/decline", { method: "POST" });
-    } catch (e) {}
+    } catch (e) { }
+    setShowRevivalConfirmModal(false);
     setShowRevivalModal(false);
     setStreakDays(0);
     fetchProfile();
@@ -102,11 +131,12 @@ export default function HomeScreen() {
         const stData = await stRes.json();
         setRetentionStreak(stData);
       }
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const [citiesData, setCitiesData] = useState<any[]>([]);
   const [journeyData, setJourneyData] = useState<any>(null);
+  const [dailyHabitData, setDailyHabitData] = useState<any>(null);
 
   useEffect(() => {
     if (pendingSpinPopup) {
@@ -135,7 +165,7 @@ export default function HomeScreen() {
         if (u.childClass) params.append("classLevel", u.childClass);
         if (u.childBoard) params.append("board", u.childBoard);
         if (u.activeChildId) params.append("child_id", u.activeChildId);
-        
+
         const q = params.toString();
         if (q) {
           url += `?${q}`;
@@ -268,6 +298,19 @@ export default function HomeScreen() {
       })();
 
       const journeyPromise = fetchJourneyData();
+      const dailyHabitPromise = (async () => {
+        try {
+          const res = await apiFetch("/api/practice/habits/daily");
+          if (res.ok) {
+            const json = await res.json();
+            if (json.success && json.data) {
+              setDailyHabitData(json.data);
+            }
+          }
+        } catch (e) {
+          console.error("Failed to fetch daily habit info", e);
+        }
+      })();
 
       await Promise.allSettled([
         profilePromise,
@@ -276,7 +319,8 @@ export default function HomeScreen() {
         citiesPromise,
         spinWheelPromise,
         streakSequencePromise,
-        journeyPromise
+        journeyPromise,
+        dailyHabitPromise
       ]);
     };
 
@@ -350,11 +394,11 @@ export default function HomeScreen() {
       <div className="absolute bottom-[20%] -left-[25%] w-[320px] h-[320px] rounded-full bg-[rgba(20,23,121,0.05)] pointer-events-none" />
 
       {/* TOP HEADER */}
-      <header className="fixed top-0 left-0 right-0 max-w-md mx-auto flex items-center justify-between px-5 py-3 bg-white/90 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] z-50 gap-2">
+      <header className="fixed top-0 left-0 right-0 max-w-md mx-auto flex items-center justify-between px-4 py-3 bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-[28px] shadow-xs z-50 gap-2">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <button
             onClick={() => navigate("/profile")}
-            className="w-10 h-10 rounded-full border-2 border-[#57fae9] overflow-hidden hover:opacity-80 transition-opacity shrink-0 bg-white shadow-xs"
+            className="w-11 h-11 rounded-full border-2 border-[#38bdf8] overflow-hidden hover:opacity-90 transition-opacity shrink-0 bg-slate-900 shadow-xs"
           >
             {childPhoto ? (
               <img
@@ -363,25 +407,21 @@ export default function HomeScreen() {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <img
-                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(childName || "Kid")}&background=random`}
-                alt="Avatar"
-                className="w-full h-full object-cover"
-              />
+              <div className="w-full h-full bg-[#0d1527] text-white font-black text-sm flex items-center justify-center">
+                {childName ? childName.slice(0, 2).toUpperCase() : "NR"}
+              </div>
             )}
           </button>
           <div className="flex flex-col min-w-0">
-            <h1 className="text-sm font-black text-slate-900 leading-tight truncate">{childName}</h1>
             <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-              <span className="text-[10px] text-[#5B5CFF] bg-[#EEF1FF] font-black px-1.5 py-0.5 rounded-md border border-[#5B5CFF]/20 shrink-0">
-                {userData?.childClass || t('class_1', { defaultValue: "Class 1" })}
+              <h1 className="text-sm font-black text-slate-900 leading-tight truncate">{childName}</h1>
+              <span className="text-[10px] text-[#4f46e5] bg-[#eef2ff] font-black px-2 py-0.5 rounded-full border border-indigo-100 shrink-0">
+                {userData?.childClass || t('class_10', { defaultValue: "Class 10" })}
               </span>
-              {userData?.childAge && (
-                <span className="text-[10px] text-amber-700 bg-amber-50 font-black px-1.5 py-0.5 rounded-md border border-amber-200/60 shrink-0">
-                  {userData.childAge} {t('yrs', { defaultValue: "yrs" })}
-                </span>
-              )}
-              <span className="text-[10px] text-slate-500 font-extrabold truncate">
+
+            </div>
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="text-[12px] text-slate-400 font-extrabold whitespace-nowrap">
                 {t('explorer_level', { defaultValue: "Explorer Level" })} {userLevel}
               </span>
             </div>
@@ -389,37 +429,36 @@ export default function HomeScreen() {
         </div>
 
         {/* Currency & Streak Stats */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
             onClick={() => setShowStreakModal(true)}
-            className="h-8.5 bg-orange-50 px-2.5 rounded-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-transform border border-orange-100 whitespace-nowrap"
+            className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1 flex flex-col items-center justify-center min-w-[48px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
           >
-            <span className="text-[11px] font-black text-orange-600">🔥 {retentionStreak?.currentStreak ?? streakDays}</span>
+            <span className="text-[11px] font-black text-[#ea580c] leading-none">🔥 {retentionStreak?.currentStreak ?? streakDays ?? 9}</span>
           </button>
-          
           <button
-            onClick={() => navigate("/notifications")}
-            className="w-8.5 h-8.5 rounded-xl bg-white shadow-xs flex items-center justify-center hover:bg-slate-50 transition-all shrink-0 border border-slate-200/60 relative"
+            onClick={() => navigate("/practice/inventory")}
+            className="bg-[#fffbeb] border border-amber-100/80 rounded-2xl px-2 py-1 flex flex-col items-center justify-center min-w-[48px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
           >
-            <Bell size={16} className="text-[#141779]" />
+            <span className="text-[11px] font-black text-[#b45309] leading-none">🪙 {coins || 1742}</span>
+          </button>
+            <button
+            onClick={() => navigate("/notifications")}
+            className="w-9 h-9 rounded-2xl bg-slate-50 shadow-2xs flex items-center justify-center hover:bg-slate-100 transition-all shrink-0 border border-slate-100 relative"
+          >
+            <Bell size={16} className="text-[#1c1970]" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full text-[8px] text-white flex items-center justify-center font-bold border border-white pointer-events-none z-10">
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border border-white pointer-events-none z-10">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
           </button>
-          
-          <button
-            onClick={() => navigate("/practice/inventory")}
-            className="h-8.5 bg-amber-50 px-2.5 rounded-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-transform border border-amber-100 whitespace-nowrap shrink-0"
-          >
-            <span className="text-[11px] font-black text-amber-700">🪙 {coins}</span>
-          </button>
+
         </div>
       </header>
 
-      <main className="px-5 pt-[96px] flex flex-col gap-4 relative z-10">
-        {/* 1. ADVENTURE HERO CARD (LIGHT THEME WITH ANIMATED CHARACTER & PARTICLES) */}
+      <main className="px-5 pt-[78px] flex flex-col gap-4 relative z-10">
+        {/* 1. ADVENTURE HERO CARD */}
         {(() => {
           const effectiveTheme = (() => {
             if (journeyData?.tierKey === "scientist") return "science";
@@ -443,69 +482,169 @@ export default function HomeScreen() {
               destinationName={journeyData?.nextNodeName || "Forest Kingdom"}
               journeyData={journeyData}
               onCtaClick={() => navigate("/practice/journey-map")}
-              onMissionClick={() => navigate("/practice/chapters")}
+              onMissionClick={() => setShowDailyMissionModal(true)}
               missionTitle={activeMission?.title}
-              missionProgress={activeMission ? { current: activeMission.current_progress || 0, total: activeMission.target_progress || 10 } : undefined}
-              missionRewardText={activeMission ? `+${activeMission.xp_reward || 20} XP & ${activeMission.coin_reward || 10} Coins` : undefined}
+              missionProgress={activeMission ? { current: activeMission.current_progress ?? activeMission.currentProgress ?? 0, total: activeMission.target_progress ?? activeMission.targetProgress ?? 10 } : undefined}
+              missionRewardText={activeMission ? `+${activeMission.xp_reward ?? activeMission.xpReward ?? 20} XP & ${activeMission.coin_reward ?? activeMission.coinReward ?? 10} Coins` : undefined}
+              missionXpReward={activeMission ? (activeMission.xp_reward ?? activeMission.xpReward ?? activeMission.xp) : undefined}
+              missionCoinReward={activeMission ? (activeMission.coin_reward ?? activeMission.coinReward ?? activeMission.coins) : undefined}
             />
           );
         })()}
 
-        {/* 2. FOUR QUICK ACTION BENTO GRID (2x2 Pastel Cards) */}
+        {/* 2. FOUR QUICK ACTION BENTO GRID (2x2 Cards with Continue Learning in position) */}
         <section className="grid grid-cols-2 gap-3">
-          {/* Continue Learning */}
+          {/* Continue Learning (Position & Style Preserved) */}
           <button
             onClick={() => navigate("/practice/chapters")}
-            className="bg-[#e0e0ff] rounded-[20px] p-4 flex flex-col justify-between h-32 border-[1.5px] border-white/60 shadow-xs text-left hover:scale-[1.02] transition-transform"
+            className="bg-[#e0e0ff] rounded-[24px] p-3.5 flex flex-col justify-between h-32 border border-[#c7c7ff]/70 shadow-2xs text-left hover:scale-[1.02] transition-transform"
           >
-            <div className="w-10 h-10 rounded-full bg-[rgba(20,23,121,0.12)] flex items-center justify-center">
-              <BookOpen size={20} className="text-[#141779]" />
+            <div className="flex justify-between items-start">
+              <div className="w-9 h-9 rounded-full bg-[rgba(20,23,121,0.12)] flex items-center justify-center">
+              <BookOpen size={18} className="text-[#141779]" />
+            </div>
+              <div className="w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs">
+                <ChevronRight size={14} />
+              </div>
             </div>
             <div>
-              <h3 className="text-xs font-black text-[#141779] mb-0.5">📚 {t('continue_learning')}</h3>
-              <p className="text-[10px] text-[#767683] font-semibold">{t('math_science_quests')}</p>
+              <h3 className="text-sm font-black text-[#141779] mb-0.5">📚 {t('continue_learning')}</h3>
+              <p className="text-[11px] text-[#767683] font-semibold">{t('math_science_quests')}</p>
             </div>
           </button>
 
-          {/* Good Habits */}
-          <button
-            onClick={() => navigate("/good-habits")}
-            className="bg-[#fff0da] rounded-[20px] p-4 flex flex-col justify-between h-32 border-[1.5px] border-white/60 shadow-xs text-left hover:scale-[1.02] transition-transform"
-          >
-            <div className="w-10 h-10 rounded-full bg-[rgba(255,159,67,0.2)] flex items-center justify-center">
-              <Star size={20} className="text-[#ff9f43]" />
-            </div>
-            <div>
-              <h3 className="text-xs font-black text-[#141779] mb-0.5">⭐ {t('good_habits')}</h3>
-              <p className="text-[10px] text-[#767683] font-semibold">{t('daily_lessons_rewards')}</p>
-            </div>
-          </button>
+          {/* Good Habits (Fully Dynamic synced with HabitsScreen) */}
+          {(() => {
+            const currentHabitDay = dailyHabitData?.currentDay ?? 8;
+            const isCompletedToday = dailyHabitData?.isCompletedToday ?? false;
+            const doneQuests = missions ? missions.filter((m: any) => m.status === 'completed' || m.status === 'claimed').length : (todayCompletedCount || 0);
+            const totalQuests = missions?.length || 6;
 
-          {/* My Journey */}
-          <button
-            onClick={() => navigate("/practice/journey-map")}
-            className="bg-[#d7fdf5] rounded-[20px] p-4 flex flex-col justify-between h-32 border-[1.5px] border-white/60 shadow-xs text-left hover:scale-[1.02] transition-transform"
-          >
-            <div className="w-10 h-10 rounded-full bg-[rgba(0,106,98,0.15)] flex items-center justify-center">
-              <Map size={20} className="text-[#006a62]" />
-            </div>
-            <div>
-              <h3 className="text-xs font-black text-[#141779] mb-0.5">🗺 {t('journey')}</h3>
-              <p className="text-[10px] text-[#767683] font-semibold">{t('explorer_map')}</p>
-            </div>
-          </button>
+            const habitsDoneText = isCompletedToday
+              ? `Day ${currentHabitDay} habit done today!`
+              : `Day ${currentHabitDay} habit (${doneQuests}/${totalQuests} quests)`;
 
-          {/* My Collections */}
+            const habitsPct = isCompletedToday ? 100 : Math.min(95, Math.max(15, Math.round((doneQuests / (totalQuests || 1)) * 100)));
+
+            return (
+              <button
+                onClick={() => navigate("/good-habits")}
+                className="bg-[#fff8ee] rounded-[24px] p-3.5 flex flex-col justify-between h-32 border border-[#fed7aa]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="w-9 h-9 rounded-full bg-[#ffedd5] flex items-center justify-center">
+                    <Star size={18} className="text-[#f97316] fill-[#f97316]" />
+                  </div>
+                  <div className="w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs">
+                    <ChevronRight size={14} />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-xs font-black text-slate-900 mb-0.5">{t('good_habits', 'Good Habits')}</h3>
+                  <p className="text-[11px] text-slate-400 font-bold mb-1.5">{t('daily_lessons_rewards', 'Daily lessons & rewards')}</p>
+                  <div className="space-y-1">
+                    <div className="text-[9.5px] font-extrabold text-slate-700 truncate">
+                      {habitsDoneText}
+                    </div>
+                    <div className="w-full h-1.5 bg-orange-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-orange-400 rounded-full transition-all duration-500" style={{ width: `${habitsPct}%` }} />
+                    </div>
+                  </div>
+                </div>
+              </button>
+            );
+          })()}
+
+          {/* Journey (Fully Dynamic with Connected Line Track) */}
+          {(() => {
+            const nodesList = journeyData?.nodes || [];
+            const completedCount = nodesList.filter((n: any) => n.completed).length;
+            const totalStages = journeyData?.totalStages || (nodesList.length > 0 ? nodesList.length : 3);
+            const activeStageIndex = journeyData?.activeNodeIndex !== undefined
+              ? (journeyData.activeNodeIndex + 1)
+              : Math.min(completedCount + 1, totalStages);
+
+            // Dynamic number of stage nodes based on class/journey (e.g. Std 1 = 3 levels)
+            const numDots = Math.min(Math.max(totalStages, 3), 6);
+            const dots = Array.from({ length: numDots }).map((_, idx) => {
+              if (nodesList.length > 0) {
+                return nodesList[idx]?.completed ?? (idx < completedCount);
+              }
+              return idx < completedCount;
+            });
+
+            // Calculate progress percentage along the line track
+            const completedDots = dots.filter(Boolean).length;
+            const lineProgressPct = numDots > 1 ? (Math.min(completedDots, numDots - 1) / (numDots - 1)) * 100 : 0;
+
+            return (
+              <button
+                onClick={() => navigate("/practice/journey-map")}
+                className="bg-[#e6fbf7] rounded-[24px] p-3.5 flex flex-col justify-between h-32 border border-[#b2f5ea]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="w-9 h-9 rounded-full bg-[#ccfbf1] flex items-center justify-center">
+                    <BookOpen size={18} className="text-[#0d9488]" />
+                  </div>
+                  <div className="w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs">
+                    <ChevronRight size={14} />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-xs font-black text-slate-900 mb-0.5">{t('journey', 'Journey')}</h3>
+                  <p className="text-[11px] text-slate-400 font-bold mb-1">{t('explorer_map', 'Explorer Map & Stages')}</p>
+
+                  {/* Connected Track & Stage Dots */}
+                  <div className="relative flex items-center justify-between my-1 px-1">
+                    {/* Background Track Line */}
+                    <div className="absolute left-2 right-2 top-1/2 -translate-y-1/2 h-1 bg-slate-200/90 rounded-full z-0" />
+                    {/* Green Active Progress Line */}
+                    <div
+                      className="absolute left-2 top-1/2 -translate-y-1/2 h-1 bg-[#10b981] rounded-full z-0 transition-all duration-500"
+                      style={{ width: `calc(${lineProgressPct}% * (100% - 16px) / 100)` }}
+                    />
+                    {dots.map((isDone, i) => (
+                      <span
+                        key={i}
+                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black z-10 transition-colors shadow-2xs ${
+                          isDone ? "bg-[#10b981] text-white" : "bg-slate-300 text-white"
+                        }`}
+                      >
+                        {isDone ? "✓" : "?"}
+                      </span>
+                    ))}
+                  </div>
+
+                  <span className="text-[9.5px] font-black text-slate-500 block mt-0.5">
+                    {t('stage_progress', { stage: activeStageIndex, total: totalStages, defaultValue: `Stage ${activeStageIndex} of ${totalStages}` })}
+                  </span>
+                </div>
+              </button>
+            );
+          })()}
+
+          {/* My Collections (Updated to match photo) */}
           <button
             onClick={() => navigate("/practice/collections")}
-            className="bg-[#ffe8ed] rounded-[20px] p-4 flex flex-col justify-between h-32 border-[1.5px] border-white/60 shadow-xs text-left hover:scale-[1.02] transition-transform"
+            className="bg-[#fff1f3] rounded-[24px] p-3.5 flex flex-col justify-between h-32 border border-[#fecdd3]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden"
           >
-            <div className="w-10 h-10 rounded-full bg-[rgba(255,107,107,0.15)] flex items-center justify-center">
-              <Bookmark size={20} className="text-[#ff6b6b]" />
+            <div className="flex justify-between items-start">
+              <div className="w-9 h-9 rounded-full bg-[#ffe4e6] flex items-center justify-center">
+                <span className="text-base">🏆</span>
+              </div>
+              <div className="w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs">
+                <ChevronRight size={14} />
+              </div>
             </div>
             <div>
-              <h3 className="text-xs font-black text-[#141779] mb-0.5">🏆 {t('my_collections')}</h3>
-              <p className="text-[10px] text-[#767683] font-semibold">{t('unlocked_cards_badges')}</p>
+              <h3 className="text-xs font-black text-slate-900 mb-0.5">{t('my_collections', 'My Collections')}</h3>
+              <p className="text-[11px] text-slate-400 font-bold mb-1.5">{t('unlocked_cards_badges', 'Unlocked cards & badges')}</p>
+              <div className="flex items-center gap-1.5 text-sm">
+                <span className="w-5 h-5 rounded-lg bg-indigo-600 text-amber-300 flex items-center justify-center text-[10px] shadow-2xs">⭐</span>
+                <span className="w-5 h-5 rounded-lg bg-amber-500 text-white flex items-center justify-center text-[10px] shadow-2xs">👑</span>
+                <span className="w-5 h-5 rounded-lg bg-purple-600 text-white flex items-center justify-center text-[10px] shadow-2xs">📖</span>
+                <span className="w-5 h-5 rounded-lg bg-cyan-500 text-white flex items-center justify-center text-[10px] shadow-2xs">💎</span>
+              </div>
             </div>
           </button>
         </section>
@@ -514,19 +653,19 @@ export default function HomeScreen() {
         <section>
           <button
             onClick={() => navigate("/multiplayer-hub")}
-            className="w-full bg-gradient-to-r from-[#141779] via-[#1E239E] to-[#30007f] rounded-[20px] p-4 flex items-center justify-between shadow-md hover:scale-[1.01] transition-transform border border-white/20"
+            className="w-full bg-[#1c1970] rounded-[24px] p-4 flex items-center justify-between shadow-md hover:scale-[1.01] transition-transform border border-[#2d28a3]/40 relative overflow-hidden"
           >
-            <div className="flex items-center gap-3.5">
-              <div className="w-11 h-11 rounded-full bg-white/10 flex items-center justify-center border border-white/20 shrink-0">
+            <div className="flex items-center gap-3.5 z-10">
+              <div className="w-11 h-11 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center text-white shrink-0 shadow-inner">
                 <span className="text-2xl">⚔️</span>
               </div>
               <div className="text-left">
-                <h3 className="text-sm font-black text-white uppercase tracking-wider mb-0.5">{t('shadow_arena')}</h3>
-                <p className="text-[10px] text-[#57fae9] font-bold">{t('challenge_friends')}</p>
+                <h3 className="text-sm font-black text-white tracking-wide mb-0.5">{t('shadow_arena', 'Shadow Arena')}</h3>
+                <p className="text-[11px] text-indigo-200/90 font-bold">{t('challenge_friends', 'Challenge friends in realtime battles')}</p>
               </div>
             </div>
-            <div className="bg-white/20 p-1.5 rounded-full">
-              <ChevronRight size={18} color="white" />
+            <div className="w-8 h-8 rounded-full bg-white/15 text-white flex items-center justify-center backdrop-blur-md border border-white/20 z-10">
+              <ChevronRight size={16} />
             </div>
           </button>
         </section>
@@ -535,20 +674,22 @@ export default function HomeScreen() {
         <section>
           <button
             onClick={() => navigate("/parent")}
-            className="w-full bg-white rounded-[20px] p-3.5 flex justify-between items-center border-2 border-indigo-100 shadow-xs hover:bg-indigo-50/50 hover:border-indigo-200 transition-all group cursor-pointer"
+            className="w-full bg-white rounded-[24px] p-3.5 flex justify-between items-center border border-slate-200/80 shadow-2xs hover:bg-slate-50/80 transition-all group cursor-pointer"
           >
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center shrink-0 border border-indigo-100">
-                <Shield size={18} className="text-[#141779]" />
+              <div className="w-10 h-10 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
+                <Shield size={18} className="text-[#1c1970]" />
               </div>
               <div className="text-left">
-                <h3 className="text-xs font-black text-[#141779] flex items-center gap-1.5">
+                <h3 className="text-sm font-black text-slate-900">
                   <span>{t('parent_space', 'Parent Space')}</span>
                 </h3>
-                <p className="text-[10px] text-slate-500 font-semibold">{t('view_stats_dna', 'View detailed stats and learning DNA')}</p>
+                <p className="text-[11px] text-slate-400 font-semibold">{t('view_stats_dna', 'View detailed stats & learning DNA')}</p>
               </div>
             </div>
-            <ChevronRight size={20} className="text-[#141779] group-hover:translate-x-0.5 transition-transform" />
+            <div className="w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
+              <ChevronRight size={14} />
+            </div>
           </button>
         </section>
       </main>
@@ -592,31 +733,28 @@ export default function HomeScreen() {
               <div className="flex items-center gap-2 py-2.5 border-b border-slate-100 shrink-0 relative z-10">
                 <button
                   onClick={() => setQuestTab('all')}
-                  className={`px-3.5 py-1.5 rounded-xl font-black text-xs transition-all ${
-                    questTab === 'all'
+                  className={`px-3.5 py-1.5 rounded-xl font-black text-xs transition-all ${questTab === 'all'
                       ? 'bg-[#141779] text-white shadow-sm'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
+                    }`}
                 >
                   {t('all', 'All')}
                 </button>
                 <button
                   onClick={() => setQuestTab('active')}
-                  className={`px-3.5 py-1.5 rounded-xl font-black text-xs transition-all ${
-                    questTab === 'active'
+                  className={`px-3.5 py-1.5 rounded-xl font-black text-xs transition-all ${questTab === 'active'
                       ? 'bg-[#141779] text-white shadow-sm'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
+                    }`}
                 >
                   🎯 {t('active', 'Active')}
                 </button>
                 <button
                   onClick={() => setQuestTab('completed')}
-                  className={`px-3.5 py-1.5 rounded-xl font-black text-xs transition-all ${
-                    questTab === 'completed'
+                  className={`px-3.5 py-1.5 rounded-xl font-black text-xs transition-all ${questTab === 'completed'
                       ? 'bg-emerald-600 text-white shadow-sm'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
+                    }`}
                 >
                   ✅ {t('completed', 'Completed')}
                 </button>
@@ -691,22 +829,20 @@ export default function HomeScreen() {
                       return (
                         <div
                           key={mission.id || `seq_${mission.seq}`}
-                          className={`p-3 sm:p-3.5 rounded-2xl border-2 transition-all flex items-center justify-between gap-3 shrink-0 ${
-                            isDone
+                          className={`p-3 sm:p-3.5 rounded-2xl border-2 transition-all flex items-center justify-between gap-3 shrink-0 ${isDone
                               ? "bg-emerald-50/90 border-emerald-200 text-emerald-950"
                               : isReady
                                 ? "bg-amber-50 border-amber-300 shadow-md ring-2 ring-amber-400/20"
                                 : "bg-slate-50 border-slate-200/90 text-slate-900"
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 text-xl font-bold border shadow-sm ${
-                              isDone
+                            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 text-xl font-bold border shadow-sm ${isDone
                                 ? "bg-emerald-500 border-emerald-400 text-white"
                                 : isReady
                                   ? "bg-amber-500 border-amber-400 text-slate-950 animate-bounce"
                                   : "bg-[#4338ca] border-indigo-500 text-white"
-                            }`}>
+                              }`}>
                               {isDone ? <CheckCircle className="w-6 h-6" /> : getIcon()}
                             </div>
                             <div className="min-w-0 flex-1">
@@ -781,8 +917,8 @@ export default function HomeScreen() {
           <button
             onClick={() => navigate("/daily-rewards")}
             className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center border-2 transition-transform hover:scale-110 active:scale-95 ${hasFreeSpin
-                ? "bg-[#57fae9] border-[#007168] text-[#007168] animate-pulse"
-                : "bg-white border-[#141779] text-[#141779]"
+              ? "bg-[#57fae9] border-[#007168] text-[#007168] animate-pulse"
+              : "bg-white border-[#141779] text-[#141779]"
               }`}
           >
             <Gift className="w-6 h-6" />
@@ -823,7 +959,7 @@ export default function HomeScreen() {
               <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-indigo-500/20 blur-2xl pointer-events-none" />
 
               <div className="relative w-20 h-20 rounded-full bg-[rgba(87,250,233,0.08)] flex items-center justify-center border border-[#57fae9]/40 shadow-[0_0_30px_rgba(87,250,233,0.25)] z-10">
-                <div 
+                <div
                   className="absolute inset-[-6px] border-2 border-dashed border-[#57fae9]/40 rounded-full pointer-events-none"
                   style={{ animation: 'spin 20s linear infinite' }}
                 />
@@ -903,15 +1039,14 @@ export default function HomeScreen() {
                 <div className="flex justify-between w-full px-1 gap-1">
                   {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day, idx) => {
                     const isActive = Boolean(retentionStreak?.streakDaysOfWeek?.[idx]);
-                    
+
                     return (
                       <div key={idx} className="flex flex-col items-center gap-1 flex-1">
                         <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black shadow-inner border ${
-                            isActive
+                          className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black shadow-inner border ${isActive
                               ? "bg-gradient-to-br from-amber-400 to-orange-500 border-amber-300 text-white"
                               : "bg-white/5 border-white/10 text-slate-400"
-                          }`}
+                            }`}
                         >
                           {day}
                         </div>
@@ -946,7 +1081,7 @@ export default function HomeScreen() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in select-none">
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border-2 border-red-500/30 flex flex-col items-center text-center relative overflow-hidden animate-scale-up">
             <div className="absolute -top-12 -right-12 w-40 h-40 bg-red-500/10 rounded-full blur-2xl pointer-events-none" />
-            
+
             <div className="w-20 h-20 rounded-3xl bg-red-50 text-red-500 flex items-center justify-center text-4xl mb-4 border border-red-200 shadow-inner">
               💔
             </div>
@@ -967,7 +1102,7 @@ export default function HomeScreen() {
 
             <div className="w-full flex flex-col gap-2.5 mt-1">
               <button
-                onClick={handleReviveStreak}
+                onClick={handleOpenRevivalConfirm}
                 disabled={revivalLoading}
                 className="w-full py-3.5 px-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 active:scale-95 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg border border-amber-300/40 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
               >
@@ -985,6 +1120,64 @@ export default function HomeScreen() {
           </div>
         </div>
       )}
+
+      {/* STREAK REVIVAL CONFIRMATION MODAL */}
+      <AnimatePresence>
+        {showRevivalConfirmModal && streakRevivalData && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center px-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-950/80 backdrop-blur-xs"
+              onClick={() => !revivalLoading && setShowRevivalConfirmModal(false)}
+            />
+
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="relative bg-white w-full max-w-[360px] p-6 rounded-[32px] flex flex-col items-center text-center gap-5 border-2 border-amber-300 shadow-2xl overflow-hidden z-10 text-slate-950"
+            >
+              <div className="w-16 h-16 rounded-full bg-amber-100 border-2 border-amber-400 flex items-center justify-center text-3xl shadow-inner">
+                🔥
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-xl font-black text-slate-950">
+                  Confirm Streak Revival
+                </h3>
+                <p className="text-xs sm:text-sm font-semibold text-slate-600 leading-relaxed">
+                  Spend <span className="font-extrabold text-amber-600">{streakRevivalData.reviveCost} Coins</span> to restore your <span className="font-extrabold text-slate-900">{streakRevivalData.previousStreak}-day streak</span>?
+                </p>
+              </div>
+
+              <div className="w-full bg-amber-50 border border-amber-200 rounded-2xl p-3 flex justify-between items-center text-xs font-bold text-amber-900">
+                <span>🪙 Cost:</span>
+                <span className="text-amber-700 font-extrabold text-sm">{streakRevivalData.reviveCost} Coins</span>
+              </div>
+
+              <div className="w-full flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowRevivalConfirmModal(false)}
+                  disabled={revivalLoading}
+                  className="flex-1 py-3.5 rounded-full font-black text-xs uppercase tracking-wider text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all border border-slate-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleReviveStreak}
+                  disabled={revivalLoading}
+                  className="flex-1 py-3.5 rounded-full font-black text-xs uppercase tracking-wider text-white bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 transition-all shadow-md border border-amber-300 flex items-center justify-center gap-1.5"
+                >
+                  {revivalLoading ? "Reviving..." : "Confirm & Pay"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

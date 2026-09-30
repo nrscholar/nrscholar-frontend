@@ -174,6 +174,8 @@ interface AdventureHeroProps {
   missionTitle?: string;
   missionProgress?: { current: number; total: number };
   missionRewardText?: string;
+  missionXpReward?: number;
+  missionCoinReward?: number;
   journeyData?: any;
 }
 
@@ -190,10 +192,15 @@ export default function AdventureHero({
   missionTitle,
   missionProgress,
   missionRewardText,
+  missionXpReward,
+  missionCoinReward,
   journeyData,
 }: AdventureHeroProps) {
   const { t } = useTranslation();
   const theme = ADVENTURE_THEMES[themeKey] || ADVENTURE_THEMES.dragon;
+
+  const displayXpReward = missionXpReward !== undefined ? missionXpReward : 140;
+  const displayCoinReward = missionCoinReward !== undefined ? missionCoinReward : 105;
 
   const rawStart = journeyData?.currentLocation || currentLocationName || "Egg Village";
   const rawEnd = journeyData?.nextNodeName || destinationName || "Hatchling Haven";
@@ -202,8 +209,6 @@ export default function AdventureHero({
 
   const displayMissionTitle = missionTitle || theme.missionTitle;
   const displayMissionProgress = missionProgress || theme.missionProgress;
-  const displayMissionRewardText = missionRewardText || theme.missionRewardText;
-
   const activeNode = journeyData?.nodes?.find((n: any) => n.unlocked && !n.completed) || journeyData?.nodes?.[0];
   const legProgress = activeNode?.nodeProgressPercentage !== undefined
     ? Math.round(activeNode.nodeProgressPercentage)
@@ -212,14 +217,13 @@ export default function AdventureHero({
         : (progressPercentage !== undefined ? progressPercentage : Math.min(100, Math.max(0, Math.round((xp / targetXp) * 100)))));
   const chaptersRemaining = journeyData?.chaptersNeededForNext !== undefined ? journeyData.chaptersNeededForNext : chaptersNeededForNext;
   const xpRemaining = Math.max(0, targetXp - xp);
-
   const pathD = "M 62 46 C 110 5, 215 65, 278 32";
   const pathLength = 250;
   const mascotLeftPercent = 25 + (legProgress / 100) * 54;
 
   return (
     <div className="w-full max-w-[430px] mx-auto flex flex-col gap-3 font-sans">
-      {/* 1. IMMERSIVE ENVIRONMENT HERO CARD (DARK GRADIENT) */}
+      {/* 1. IMMERSIVE ENVIRONMENT HERO CARD (DYNAMIC THEME & ANIMATED MASCOT) */}
       <div
         className={`w-full rounded-[32px] bg-gradient-to-b ${theme.bgGradient} p-3.5 border-4 ${theme.accentBorderColor} shadow-[0_12px_32px_rgba(0,0,0,0.3)] relative overflow-hidden text-white flex flex-col gap-3 select-none`}
       >
@@ -263,12 +267,12 @@ export default function AdventureHero({
 
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/30 border border-white/10 backdrop-blur-md text-[10.5px] font-black text-amber-300">
             <Zap size={13} className="text-amber-400 fill-amber-400" />
-            <span>🔥 {xp.toLocaleString()} XP</span>
+            <span> {xp.toLocaleString()} XP</span>
           </div>
         </div>
 
         {/* LIVING ADVENTURE WORLD SCENE (Flying Mascot over path to destination) */}
-        <div className="relative w-full h-[76px] z-10 flex flex-col justify-between my-1">
+        <div className="relative w-full h-[60px] z-10 flex flex-col justify-between my-1">
           <div className="absolute inset-0 flex justify-between items-end px-2 opacity-20 pointer-events-none">
             <span className="text-3xl">{theme.bgDecorations[1] || "🏔️"}</span>
             <span className="text-2xl mb-4">{theme.bgDecorations[0] || "☁️"}</span>
@@ -298,7 +302,7 @@ export default function AdventureHero({
             </svg>
 
             {/* START NODE */}
-            <div className="absolute left-2 bottom-2 flex flex-col items-center z-10">
+            <div className="absolute left-2 bottom-0 flex flex-col items-center z-10">
               <div className="w-7 h-7 rounded-full bg-white border-2 border-slate-700 flex items-center justify-center text-xs shadow-md">
                 📍
               </div>
@@ -329,7 +333,7 @@ export default function AdventureHero({
             </div>
 
             {/* DESTINATION NODE */}
-            <div className="absolute right-2 top-2 flex flex-col items-center z-10">
+            <div className="absolute right-0 top-1 flex flex-col items-center z-10">
               <motion.div
                 animate={{ scale: [1, 1.12, 1] }}
                 transition={{ repeat: Infinity, duration: 2 }}
@@ -376,51 +380,56 @@ export default function AdventureHero({
         </button>
       </div>
 
-      {/* TODAY'S QUEST CARD */}
-      <div className="w-full bg-white rounded-3xl p-4 border-2 border-slate-100 shadow-sm flex flex-col gap-3">
-        <div className="flex justify-between items-center border-b border-slate-100 pb-2.5">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-200 shadow-xs">
-              <Target size={18} />
+      {/* 2. TODAY'S QUEST CARD (100% MATCHING SCREENSHOT) */}
+      <div className="w-full bg-white rounded-[28px] p-4 border border-slate-100 shadow-xs flex flex-col gap-3">
+        {/* Top Header Row */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="w-11 h-11 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center text-2xl shrink-0 shadow-2xs">
+              🎯
             </div>
-            <div>
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block leading-none">
+            <div className="min-w-0 flex-1">
+              <span className="text-[10px] font-black text-[#4f46e5] uppercase tracking-wider block">
                 {t('todays_quest', { defaultValue: "TODAY'S QUEST" })}
               </span>
-              <h4 className="text-xs font-black text-slate-900 mt-0.5 leading-snug">
-                {t(displayMissionTitle.toLowerCase().replace(/ /g, '_'), { defaultValue: displayMissionTitle })}
+              <h4 className="text-sm font-black text-[#1c1970] leading-tight truncate mt-0.5">
+                {t(displayMissionTitle.toLowerCase().replace(/ /g, '_'), { defaultValue: displayMissionTitle || "Win 7 Boss Battles" })}
               </h4>
+              <p className="text-[11px] font-semibold text-slate-400 truncate mt-0.5">
+                {t('defeat_boss_desc', { defaultValue: "Defeat 7 boss battles and earn rewards!" })}
+              </p>
             </div>
           </div>
-        </div>
 
-        <div className="flex items-center justify-between gap-2.5 sm:gap-3">
-          <div className="flex-1 flex flex-col gap-1 min-w-0">
-            <div className="flex justify-between text-[10px] font-black text-slate-600 uppercase gap-1">
-              <span className="whitespace-nowrap truncate">{t('mission_progress', { defaultValue: "Mission Progress" })}</span>
-              <span className="text-indigo-600 font-extrabold whitespace-nowrap">
-                {displayMissionProgress.current} / {displayMissionProgress.total}
-              </span>
-            </div>
-            <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200">
+          {/* Progress Meter on Right */}
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <span className="text-xs font-black text-[#4f46e5]">
+              {displayMissionProgress.current} / {displayMissionProgress.total}
+            </span>
+            <div className="w-20 h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/60 p-0.5">
               <div
-                className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full transition-all duration-500"
-                style={{ width: `${(displayMissionProgress.current / displayMissionProgress.total) * 100}%` }}
+                className="h-full bg-[#4f46e5] rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(100, (displayMissionProgress.current / displayMissionProgress.total) * 100)}%` }}
               />
             </div>
           </div>
-
-          <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-800 text-[9.5px] sm:text-[10.5px] font-black px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-xl shrink-0 whitespace-nowrap">
-            <span>🎁 {displayMissionRewardText}</span>
-          </div>
         </div>
 
-        <button
-          onClick={onMissionClick || onCtaClick}
-          className="w-full py-2.5 bg-gradient-to-r from-[#141779] to-[#30007f] hover:brightness-110 active:scale-95 text-white font-black text-[11px] uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5"
-        >
-          <span>{t('continue_quest', { defaultValue: "CONTINUE QUEST →" })}</span>
-        </button>
+        {/* Bottom Rewards & CTA Button Row */}
+        <div className="flex items-center justify-between gap-1.5 pt-1">
+          <span className="bg-[#fff0f3] text-[#f43f5e] font-black border border-rose-100 px-2.5 py-2 rounded-2xl text-[10.5px] sm:text-[11px] flex items-center justify-center gap-1 shadow-2xs whitespace-nowrap">
+            🎁 +{displayXpReward} XP
+          </span>
+          <span className="bg-[#fffbeb] text-[#d97706] font-black border border-amber-100 px-2.5 py-2 rounded-2xl text-[10.5px] sm:text-[11px] flex items-center justify-center gap-1 shadow-2xs whitespace-nowrap">
+            🪙 +{displayCoinReward} Coins
+          </span>
+          <button
+            onClick={onMissionClick || onCtaClick}
+            className="bg-[#1c1970] hover:bg-[#25218c] text-white font-black text-[11px] sm:text-xs uppercase tracking-wider px-3 py-2 rounded-2xl shadow-md transition-transform active:scale-95 flex items-center justify-center gap-1 shrink-0 whitespace-nowrap"
+          >
+            <span>{t('continue_quest', { defaultValue: "CONTINUE QUEST ->" })}</span>
+          </button>
+        </div>
       </div>
     </div>
   );
