@@ -13,6 +13,39 @@ export interface AdminUser {
   role: string;
 }
 
+export type Tier = "large" | "medium" | "small";
+export type RoundName = "quiz" | "boss" | "shadow";
+type ByDifficulty = Record<Difficulty, number>;
+
+export interface RoundStatus {
+  required: ByDifficulty;
+  available: ByDifficulty;
+  pending: ByDifficulty;
+  toGenerate: ByDifficulty;
+  ready: boolean;
+}
+
+export interface PoolStatus {
+  tier: Tier;
+  rounds: Record<RoundName, RoundStatus>;
+  currentRound: RoundName | null;
+  required: ByDifficulty;
+  available: ByDifficulty;
+  pending: ByDifficulty;
+  toGenerate: ByDifficulty;
+  canBuild: boolean;
+}
+
+export interface QuestionSet {
+  id: string;
+  setNumber: number;
+  tier: Tier;
+  status: "building" | "ready";
+  counts?: Record<RoundName, number>;
+  createdBy: string;
+  readyAt?: string;
+}
+
 export interface ChapterRow {
   id: string;
   name: string;
@@ -23,6 +56,9 @@ export interface ChapterRow {
   verificationScore: number | null;
   draftCounts: CountsByStatus;
   latestJob: Job | null;
+  tier: Tier;
+  setsReady: number;
+  pool: { available: ByDifficulty; required: ByDifficulty; canBuild: boolean };
 }
 
 export interface Verification {
@@ -69,6 +105,10 @@ export interface ChapterDetail {
   verification: Verification | null;
   plan: Record<Difficulty, number>;
   remaining: Record<Difficulty, number>;
+  tierInfo: { tier: Tier; source: "auto" | "override"; autoTier: Tier; pageCount: number | null };
+  tiers: Record<Tier, { label: string; rounds: Record<RoundName, Partial<ByDifficulty>>; required: ByDifficulty }>;
+  pool: PoolStatus;
+  sets: QuestionSet[];
   draftCounts: CountsByStatus;
   latestJob: Job | null;
 }
@@ -87,6 +127,9 @@ export interface Draft {
   sourceTextMethod: string;
   verification: { chosen_option: string; correct_option_count: number; answerable_from_chapter: boolean; difficulty: Difficulty; issues: string } | null;
   generator?: string;
+  setNumber?: number;
+  round?: RoundName;
+  targetRound?: RoundName;
   editedByHuman?: boolean;
   rejectReason?: string;
   reviewedBy?: string;
@@ -108,6 +151,9 @@ export interface ClaudeContext {
   subject: string;
   pdfUrl: string | null;
   remaining: Record<Difficulty, number>;
+  askNow: Record<Difficulty, number>;
+  currentRound: RoundName | null;
+  setNumber: number;
   avoidQuestions: string[];
 }
 
@@ -115,8 +161,46 @@ export interface ImportResult {
   acceptedCount: number;
   accepted: Record<Difficulty, number>;
   rejected: { index: number; question: string; difficulty?: string; reasons: string[] }[];
+  round: RoundName;
   quoteCheckable: boolean;
   remaining: Record<Difficulty, number>;
+}
+
+export type CatalogStatus = "pending" | "pool" | "in_set" | "rejected";
+
+export interface CatalogItem {
+  id: string;
+  question: string;
+  options: string[];
+  answer: string;
+  difficulty: Difficulty;
+  statusLabel: CatalogStatus;
+  setNumber?: number;
+  round?: RoundName;
+  targetRound?: RoundName;
+  chapterId: string;
+  chapterName: string;
+  board: string;
+  classLevel: string;
+  subject: string;
+  createdAt?: string;
+}
+
+export interface DuplicatePair {
+  chapterId: string;
+  chapterName: string;
+  similarity: number;
+  a: { id: string; question: string; status: CatalogStatus };
+  b: { id: string; question: string; status: CatalogStatus };
+}
+
+export interface Catalog {
+  total: number;
+  shown: number;
+  items: CatalogItem[];
+  checkedQuestions: number;
+  duplicates: DuplicatePair[];
+  duplicateIds: string[];
 }
 
 export class ApiError extends Error {
@@ -209,8 +293,18 @@ export const adminApi = {
   claudeContext: (chapterId: string) =>
     request<{ data: ClaudeContext }>(`${BASE}/chapters/${chapterId}/claude-context`).then((r) => r.data),
 
-  importQuestions: (chapterId: string, questions: unknown[]) =>
-    post<{ data: ImportResult }>(`${BASE}/chapters/${chapterId}/import`, { questions, generator: "claude-app" }).then((r) => r.data),
+  allQuestions: (params: Record<string, string>) => {
+    const q = new URLSearchParams(Object.entries(params).filter(([, v]) => v));
+    return request<{ data: Catalog }>(`${BASE}/all-questions?${q}`).then((r) => r.data);
+  },
+
+  buildSet: (chapterId: string) => post<{ data: QuestionSet }>(`${BASE}/chapters/${chapterId}/sets`).then((r) => r.data),
+
+  setTier: (chapterId: string, tier: Tier | null) =>
+    request(`${BASE}/chapters/${chapterId}/tier`, { method: "PUT", body: JSON.stringify({ tier }) }),
+
+  importQuestions: (chapterId: string, questions: unknown[], round: RoundName | null) =>
+    post<{ data: ImportResult }>(`${BASE}/chapters/${chapterId}/import`, { questions, generator: "claude-app", round }).then((r) => r.data),
 
   job: (jobId: string) => request<{ data: Job }>(`${BASE}/jobs/${jobId}`).then((r) => r.data),
 

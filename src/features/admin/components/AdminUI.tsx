@@ -1,7 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { Link, Navigate, Outlet, useNavigate } from "react-router-dom";
-import { BookCheck, Loader2, LogOut } from "lucide-react";
-import { adminSession, type CountsByStatus, type Difficulty } from "../adminApi";
+import { BookCheck, ListChecks, Loader2, LogOut } from "lucide-react";
+import { adminSession, type Difficulty } from "../adminApi";
 import { DIFFICULTIES } from "../constants";
 
 export function AdminProtectedRoute() {
@@ -34,6 +34,9 @@ function AdminHeader() {
           NR Scholar · Question Bank
         </Link>
         <div className="flex items-center gap-3 text-sm">
+          <Link to="/admin/all-questions" className="flex items-center gap-1 rounded-lg px-2 py-1 font-semibold text-slate-700 hover:bg-slate-100">
+            <ListChecks className="h-4 w-4" /> All Questions
+          </Link>
           <span className="hidden text-slate-500 sm:inline">{user?.email}</span>
           <button
             onClick={() => {
@@ -84,26 +87,31 @@ export function VerificationBadge({ status }: { status: string }) {
   return <Badge tone={tone}>{label}</Badge>;
 }
 
-/** approved / pending progress against the 10-5-10 plan, one bar per difficulty. */
-export function PlanProgress({ counts, plan, compact = false }: { counts: CountsByStatus; plan: Record<Difficulty, number>; compact?: boolean }) {
+/** Pool progress toward the next set: approved (green) + in review (amber) against what one set needs. */
+export function PoolProgress({ available, pending, required, compact = false }: {
+  available: Record<Difficulty, number>;
+  pending?: Record<Difficulty, number>;
+  required: Record<Difficulty, number>;
+  compact?: boolean;
+}) {
   return (
     <div className={`grid grid-cols-3 ${compact ? "gap-2" : "gap-4"}`}>
       {DIFFICULTIES.map((d) => {
-        const approved = counts.approved?.[d] || 0;
-        const pending = (counts.pending?.[d] || 0) + (counts.approving?.[d] || 0);
-        const total = plan[d];
+        const total = Math.max(1, required[d]);
+        const have = Math.min(available[d], total);
+        const wait = Math.min(pending?.[d] || 0, total - have);
         return (
           <div key={d}>
             <div className={`mb-1 flex justify-between ${compact ? "text-[11px]" : "text-xs"} font-semibold text-slate-600`}>
               <span>{d}</span>
               <span>
-                {approved}/{total}
-                {pending > 0 && <span className="text-amber-600"> +{pending}</span>}
+                {available[d]}/{required[d]}
+                {wait > 0 && <span className="text-amber-600"> +{pending?.[d]}</span>}
               </span>
             </div>
             <div className="flex h-1.5 overflow-hidden rounded-full bg-slate-100">
-              <div className="bg-emerald-500" style={{ width: `${Math.min(100, (approved / total) * 100)}%` }} />
-              <div className="bg-amber-300" style={{ width: `${Math.min(100 - (approved / total) * 100, (pending / total) * 100)}%` }} />
+              <div className="bg-emerald-500" style={{ width: `${(have / total) * 100}%` }} />
+              <div className="bg-amber-300" style={{ width: `${(wait / total) * 100}%` }} />
             </div>
           </div>
         );
