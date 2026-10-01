@@ -242,12 +242,12 @@ export default function ChaptersScreen() {
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <button
               onClick={() => navigate("/profile")}
-              className="w-10 h-10 rounded-full border-2 border-[#38bdf8] overflow-hidden hover:opacity-90 transition-opacity shrink-0 bg-slate-900 shadow-xs"
+              className="w-10 h-10 rounded-full border-2 border-indigo-100 overflow-hidden hover:opacity-90 transition-opacity shrink-0 bg-[#141779] shadow-xs"
             >
               {childPhoto ? (
                 <img src={childPhoto} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full bg-[#0d1527] text-white font-black text-xs flex items-center justify-center">
+                <div className="w-full h-full bg-[#141779] text-white font-bold text-xs flex items-center justify-center">
                   {childName ? childName.slice(0, 2).toUpperCase() : "NR"}
                 </div>
               )}
@@ -294,6 +294,9 @@ export default function ChaptersScreen() {
             </button>
           </div>
         </div>
+
+        {/* DIVIDER LINE SEPARATING HEADER PROFILE & SUBJECTS */}
+        <div className="border-b border-slate-200/70 mx-4 mb-2" />
 
         {/* SUBJECT SELECTION TABS */}
         <div className="flex overflow-x-auto hide-scrollbar px-4 pb-2.5 gap-2 max-w-[430px] mx-auto w-full pr-6">
@@ -377,7 +380,6 @@ export default function ChaptersScreen() {
             <section className="bg-white border-2 border-[#E0E3E5] rounded-2xl p-4 shadow-sm relative overflow-hidden">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
-                  <Rocket size={16} className="text-[#5B5CFF]" />
                   <span className="text-xs font-black uppercase tracking-wider text-[#17157F]">
                     {t('your_journey', '🚀 YOUR JOURNEY')}
                   </span>
@@ -418,7 +420,7 @@ export default function ChaptersScreen() {
             {/* VERTICAL LEARNING ADVENTURE MAP WITH FIXED TIMELINE AXIS */}
             <section className="relative py-2 flex flex-col gap-5">
               {/* Continuous Vertical Timeline Axis Line (Centered on 28px inside 56px Timeline Column) */}
-              <div className="absolute left-[28px] top-6 bottom-6 w-1 -translate-x-1/2 bg-gradient-to-b from-[#45D483] via-[#5B5CFF] to-[#B9BBC8]/40 -z-10 rounded-full" />
+              <div className="absolute left-[28px] top-6 bottom-14 w-1 -translate-x-1/2 bg-gradient-to-b from-[#45D483] via-[#5B5CFF] to-[#B9BBC8]/40 -z-10 rounded-full" />
 
               {chapters.length === 0 ? (
                 <div className="flex flex-col items-center justify-center bg-white rounded-2xl p-8 border-2 border-[#E0E3E5] border-dashed text-center my-4">
@@ -481,17 +483,19 @@ export default function ChaptersScreen() {
                   );
 
                   return (
-                    <div key={chap._id} className="flex items-start gap-3 w-full">
+                    <div key={chap._id} className="relative flex items-start gap-3 w-full">
                       {/* FIXED TIMELINE COLUMN (56px Wide - Exact Center Alignment across all nodes) */}
-                      <div className="w-14 shrink-0 flex items-center justify-center pt-1">
+                      <div className="w-14 shrink-0 flex items-center justify-center pt-1 relative">
                         {status === "completed" && (
                           <div className="w-11 h-11 rounded-full bg-[#45D483] border-4 border-white text-white flex items-center justify-center shadow-md">
                             <CheckCircle size={22} strokeWidth={2.5} />
                           </div>
                         )}
                         {status === "current" && (
-                          <div className="w-11 h-11 rounded-full bg-[#5B5CFF] border-4 border-white text-white flex items-center justify-center shadow-[0_0_16px_rgba(91,92,255,0.6)] animate-pulse">
-                            <Rocket size={20} className="text-[#FFC83D]" />
+                          <div className="w-11 h-11 rounded-full bg-white relative flex items-center justify-center shrink-0">
+                            <div className="w-full h-full rounded-full bg-[#5B5CFF] border-4 border-white text-white flex items-center justify-center shadow-[0_0_16px_rgba(91,92,255,0.6)] animate-pulse">
+                              <Rocket size={20} className="text-[#FFC83D]" />
+                            </div>
                           </div>
                         )}
                         {status === "locked" && (
@@ -508,44 +512,47 @@ export default function ChaptersScreen() {
                       {/* CHAPTER CARD (RIGHT OF TIMELINE) */}
                       <div className="flex-1 min-w-0">
                         {status === "completed" && (
-                          <div className="bg-white border-2 border-[#45D483]/60 rounded-2xl p-3.5 shadow-sm transition-all">
+                          <div className="bg-white border-2 border-[#45D483]/60 rounded-2xl p-3.5 shadow-sm transition-all text-left">
                             <button 
                               onClick={() => {
                                 if (expandedChapter === chap._id) setExpandedChapter(null);
                                 else setExpandedChapter(chap._id);
                               }} 
-                              className="flex items-center justify-between text-left w-full"
+                              className="flex flex-col text-left w-full gap-1"
                             >
-                              <div className="flex-1 pr-2">
-                                <span className="text-[9px] font-black uppercase tracking-wider text-[#45D483] bg-[#45D483]/15 px-2 py-0.5 rounded-full border border-[#45D483]/40 inline-block mb-1">
-                                  {t('mission_completed_badge', '✓ MISSION COMPLETED')}
-                                </span>
+                              <div className="flex items-center justify-between w-full">
                                 <p className="text-[10px] font-bold text-[#767683]">
                                   {t('chapter', 'Chapter')} {index + 1}
                                 </p>
-                                <h3 className="text-sm font-black text-[#17157F] leading-tight">
+                                <span className="text-[9px] font-black uppercase tracking-wider text-[#45D483] bg-[#45D483]/15 px-2 py-0.5 rounded-full border border-[#45D483]/40 shrink-0">
+                                  {t('mission_completed_badge', '✓ MISSION COMPLETED')}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center justify-between w-full gap-2 mt-0.5">
+                                <h3 className="text-sm font-black text-[#17157F] leading-tight truncate">
                                   {displayTitle}
                                 </h3>
+                                <span className="text-xs text-[#5B5CFF] font-bold underline shrink-0">
+                                  {isExpanded ? t('close', 'Close') : t('review', 'Review')}
+                                </span>
                               </div>
-                              <span className="text-xs text-[#5B5CFF] font-bold underline shrink-0">
-                                {isExpanded ? t('close', 'Close') : t('review', 'Review')}
-                              </span>
                             </button>
                             {renderQuestions()}
                           </div>
                         )}
 
                         {status === "current" && (
-                          <div className={`flex-1 ${isSubLocked ? 'bg-amber-50 border-amber-300' : 'bg-gradient-to-br from-white to-[#EEF1FF] border-2 border-[#5B5CFF] shadow-[0_4px_16px_rgba(91,92,255,0.2)]'} rounded-2xl p-4 relative overflow-hidden transition-all`}>
+                          <div className={`flex-1 ${isSubLocked ? 'bg-amber-50 border-amber-300' : 'bg-gradient-to-br from-white to-[#EEF1FF] border-2 border-[#5B5CFF] shadow-[0_4px_16px_rgba(91,92,255,0.2)]'} rounded-2xl p-4 relative overflow-hidden transition-all text-left`}>
                             <div className="flex items-center justify-between mb-1">
-                              <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${isSubLocked ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-[#5B5CFF] text-white border-[#5B5CFF]'}`}>
+                              <p className="text-[11px] font-bold text-[#5B5CFF]">
+                                {t('chapter', 'Chapter')} {index + 1}
+                              </p>
+                              <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border shrink-0 ${isSubLocked ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-[#5B5CFF] text-white border-[#5B5CFF]'}`}>
                                 {isSubLocked ? t('premium_mission_badge', '👑 PREMIUM MISSION 🔒') : t('current_mission_badge', '🚀 CURRENT MISSION')}
                               </span>
                             </div>
 
-                            <p className="text-[11px] font-bold text-[#5B5CFF] mb-0.5">
-                              {t('chapter', 'Chapter')} {index + 1}
-                            </p>
                             <h3 className="text-base font-black text-[#17157F] leading-tight mb-2.5">
                               {displayTitle}
                             </h3>
@@ -586,20 +593,20 @@ export default function ChaptersScreen() {
                               if (isSubLocked) setShowSubModal(true);
                               else showToast(t('complete_chapter_to_unlock', { chapter: currentChapterIndex + 1 }));
                             }}
-                            className={`rounded-2xl p-3.5 border-2 transition-all cursor-pointer ${
+                            className={`rounded-2xl p-3.5 border-2 transition-all cursor-pointer text-left ${
                               isSubLocked 
                                 ? 'bg-amber-50/60 border-amber-200' 
                                 : 'bg-white/80 border-[#E0E3E5]'
                             }`}
                           >
                             <div className="flex items-center justify-between mb-1">
-                              <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${isSubLocked ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                              <p className="text-[10px] font-bold text-[#767683]">
+                                {t('chapter', 'Chapter')} {index + 1}
+                              </p>
+                              <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border shrink-0 ${isSubLocked ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
                                 {isSubLocked ? t('premium_badge', '👑 PREMIUM 🔒') : t('locked_badge', '🔒 LOCKED')}
                               </span>
                             </div>
-                            <p className="text-[10px] font-bold text-[#767683]">
-                              {t('chapter', 'Chapter')} {index + 1}
-                            </p>
                             <h3 className="text-sm font-bold text-[#767683] leading-tight">
                               {displayTitle}
                             </h3>

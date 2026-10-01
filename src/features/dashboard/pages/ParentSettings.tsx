@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, Variants } from "framer-motion";
-import { ArrowLeft, Bell, BookOpen, Camera, Save, ShieldCheck, Timer, Trash2, UserRound, GraduationCap, Cake, ChevronDown, Check, Plus, Globe, LogOut, Edit3, RefreshCw, X } from "lucide-react";
+import { ArrowLeft, Bell, BookOpen, Camera, Save, ShieldCheck, Timer, Trash2, UserRound, GraduationCap, Cake, ChevronDown, Check, Plus, Globe, LogOut, Edit3, RefreshCw, X, Lock } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch, clearAuthSession } from "../../../api";
@@ -9,6 +9,8 @@ import { translateNotificationTitle, translateNotificationMessage } from "../../
 const CustomDropdown = ({ label, icon: Icon, iconColor, value, options = [], onSelect, placeholder }: any) => {
   const [isOpen, setIsOpen] = useState(false);
   const safeOptions = Array.isArray(options) ? options : [];
+  const isBoard = label ? label.toLowerCase().includes("board") : false;
+  const supportedBoards = ["CBSE (NCERT)", "GSEB", "CBSE"];
 
   return (
     <div className="flex flex-col gap-1 md:gap-2 flex-1 relative min-w-0">
@@ -41,23 +43,37 @@ const CustomDropdown = ({ label, icon: Icon, iconColor, value, options = [], onS
               className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-gray-100 z-50 flex flex-col max-h-[250px] overflow-hidden"
             >
               <div className="overflow-y-auto w-full scrollbar-hide">
-                {safeOptions.map((opt: string) => (
-                  <button
-                    key={opt}
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelect(opt);
-                      setIsOpen(false);
-                    }}
-                    className="w-full flex items-center justify-between px-5 py-4 border-b border-[#f2f4f6] last:border-0 hover:bg-gray-50 transition-colors"
-                  >
-                    <span className={`text-base ${value === opt ? 'font-bold text-[#141779]' : 'font-medium text-[#464652]'}`}>
-                      {opt}
-                    </span>
-                    {value === opt && <Check size={18} color="#141779" />}
-                  </button>
-                ))}
+                {safeOptions.map((opt: string) => {
+                  const isLocked = isBoard && !supportedBoards.includes(opt);
+                  return (
+                    <button
+                      key={opt}
+                      type="button"
+                      disabled={isLocked}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isLocked) return;
+                        onSelect(opt);
+                        setIsOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-5 py-3.5 border-b border-[#f2f4f6] last:border-0 transition-colors ${
+                        isLocked ? 'opacity-40 cursor-not-allowed bg-slate-50/50' : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={`text-base ${isLocked ? 'text-slate-400 font-medium' : value === opt ? 'font-bold text-[#141779]' : 'font-medium text-[#464652]'}`}>
+                          {opt}
+                        </span>
+                        {isLocked && (
+                          <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-200 text-slate-500 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <Lock size={10} /> Locked
+                          </span>
+                        )}
+                      </div>
+                      {value === opt && !isLocked && <Check size={18} color="#141779" />}
+                    </button>
+                  );
+                })}
               </div>
             </motion.div>
           </>

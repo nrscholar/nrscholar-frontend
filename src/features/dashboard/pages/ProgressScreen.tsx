@@ -264,17 +264,21 @@ export default function ProgressScreen() {
   const unlockedMilestonesCount = [hasMathAce, isStreakUnlocked, hasScienceProdigy, hasArenaMaster].filter(Boolean).length;
   const totalBadgesCount = Math.max(badges.length, unlockedMilestonesCount);
 
-  // Filter growth list based on active subject selection
-  const filteredGrowth = activeSubject
+  // Filter growth list based on active subject selection & ensure single graph display per selected subject
+  let filteredGrowth = activeSubject
     ? weeklyGrowth.filter((item: any) => 
         item.subjectId === activeSubject._id || 
         item.name.toLowerCase().replace(/ /g, '_') === activeSubject.name.toLowerCase().replace(/ /g, '_') ||
         item.name.toLowerCase().includes(activeSubject.name.toLowerCase()) || 
-        activeSubject.name.toLowerCase().includes(item.name.toLowerCase())
+        activeSubject.name.toLowerCase().includes(item.name.toLowerCase()) ||
+        (item.name.toLowerCase().startsWith('math') && activeSubject.name.toLowerCase().startsWith('math'))
       )
     : weeklyGrowth;
 
-  const displayedGrowth = filteredGrowth.length > 0 ? filteredGrowth : weeklyGrowth;
+  // Restrict to exactly 1 primary graph for the active subject
+  const displayedGrowth = activeSubject
+    ? (filteredGrowth.length > 0 ? [filteredGrowth[0]] : [])
+    : (weeklyGrowth.length > 0 ? [weeklyGrowth[0]] : []);
 
   return (
     <div className="min-h-screen bg-[#F7F9FB] text-[#17177F] font-sans pb-28 max-w-lg mx-auto relative selection:bg-[#4D4BFF] selection:text-white overflow-x-hidden">
@@ -289,12 +293,12 @@ export default function ProgressScreen() {
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <button
             onClick={() => navigate("/profile")}
-            className="w-10 h-10 rounded-full border-2 border-[#38bdf8] overflow-hidden hover:opacity-90 transition-opacity shrink-0 bg-slate-900 shadow-xs"
+            className="w-10 h-10 rounded-full border-2 border-indigo-100 overflow-hidden hover:opacity-90 transition-opacity shrink-0 bg-[#141779] shadow-xs"
           >
             {userPhoto ? (
               <img src={userPhoto} alt="Avatar" className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full bg-[#0d1527] text-white font-black text-xs flex items-center justify-center">
+              <div className="w-full h-full bg-[#141779] text-white font-bold text-xs flex items-center justify-center">
                 {username ? username.slice(0, 2).toUpperCase() : "NR"}
               </div>
             )}
@@ -344,38 +348,37 @@ export default function ProgressScreen() {
 
       <main className="px-5 pt-3.5 sm:pt-5 flex flex-col gap-4 relative z-10">
         {/* 1. TOP XP HERO CARD */}
-        <section className="bg-gradient-to-br from-[#17177F] via-[#141779] to-[#0D0E4C] rounded-[24px] p-5 sm:p-6 text-white shadow-[0_10px_35px_-8px_rgba(23,23,127,0.35)] relative overflow-hidden">
+        <section className="bg-gradient-to-br from-[#17177F] via-[#141779] to-[#0D0E4C] rounded-[24px] p-4 sm:p-5 text-white shadow-[0_10px_35px_-8px_rgba(23,23,127,0.35)] relative overflow-hidden">
           <div className="w-48 h-48 rounded-full bg-white/5 blur-2xl absolute -right-6 -bottom-6 pointer-events-none" />
           <div className="w-32 h-32 rounded-full bg-white/5 blur-xl absolute -left-6 -top-6 pointer-events-none" />
 
-          <div className="relative z-10 flex flex-col gap-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/25 shadow-xs text-[11px] sm:text-[13px] font-bold text-white uppercase shrink-0">
-                <Zap size={14} className="text-[#FFC83D] fill-[#FFC83D]" />
+          <div className="relative z-10 flex flex-col gap-2.5 sm:gap-3">
+            <div className="flex items-center justify-between gap-2 overflow-x-auto hide-scrollbar">
+              <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-md px-2.5 sm:px-3 py-1 sm:py-1 rounded-full border border-white/25 shadow-xs text-[10px] sm:text-[11.5px] font-bold text-white uppercase shrink-0 whitespace-nowrap">
                 <span>
                   {t('level_adventurer', { level, defaultValue: `LEVEL ${level} • ADVENTURER` })}
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/25 shadow-xs text-[11px] sm:text-[13px] font-bold text-white tracking-wide shrink-0">
+              <div className="flex items-center gap-1 sm:gap-1.5 bg-white/15 backdrop-blur-md px-2.5 sm:px-3 py-1 sm:py-1 rounded-full border border-white/25 shadow-xs text-[10px] sm:text-[11.5px] font-bold text-white tracking-wide shrink-0 whitespace-nowrap">
                 <span className="text-[#FFC83D]">⚡</span>
-                <span>{t('xp_earned', 'XP Earned Today')}:</span>
+                <span>{t('xp_earned', 'XP Earned ')}:</span>
                 <span className="text-[#FFC83D]">{xp.toLocaleString()} XP</span>
               </div>
             </div>
 
-            <div className="flex flex-col text-left mt-1">
+            <div className="flex flex-col text-left mt-0.5">
               <div className="flex items-baseline gap-2">
-                <span className="text-[32px] sm:text-[36px] font-black tracking-tight leading-none text-white">
+                <span className="text-[30px] sm:text-[34px] font-black tracking-tight leading-none text-white">
                   {xp.toLocaleString()}
                 </span>
-                <span className="text-[16px] sm:text-[18px] font-bold text-[#EEF1FF]">XP</span>
+                <span className="text-[15px] sm:text-[17px] font-bold text-[#EEF1FF]">XP</span>
               </div>
-              <span className="text-[12px] sm:text-[13px] font-medium text-[#E0E7FF] mt-1">
+              <span className="text-[11.5px] sm:text-[12.5px] font-medium text-[#E0E7FF] mt-0.5">
                 {t('total_xp_accumulated', 'Total Experience Points Accumulated')}
               </span>
             </div>
 
-            <div className="w-full h-3.5 sm:h-4 bg-black/30 rounded-full overflow-hidden p-0.5 border border-white/20 shadow-inner">
+            <div className="w-full h-3 sm:h-3.5 bg-black/30 rounded-full overflow-hidden p-0.5 border border-white/20 shadow-inner">
               <motion.div 
                 initial={{ width: 0 }}
                 animate={{ width: `${progressPercent}%` }}
@@ -384,7 +387,7 @@ export default function ProgressScreen() {
               />
             </div>
 
-            <div className="flex items-center justify-between text-[11px] sm:text-[13px] font-medium text-[#EEF1FF]">
+            <div className="flex items-center justify-between text-[10.5px] sm:text-[12px] font-medium text-[#EEF1FF]">
               <span>{progressPercent}% {t('complete', 'Complete')}</span>
               <span className="text-white font-bold flex items-center gap-1">
                 {xpNeededForNext > 0 ? t('xp_until_level', { xp: xpNeededForNext, level: level + 1, defaultValue: `${xpNeededForNext} XP until Level ${level + 1}` }) : t('max_level_reached', 'Max Level Reached!')} →
@@ -463,7 +466,7 @@ export default function ProgressScreen() {
             })}
           </div>
 
-          <div className="bg-white rounded-[24px] p-5 sm:p-6 shadow-[0_10px_35px_-8px_rgba(0,0,0,0.06)] border border-[#E0E3E5]/60 flex flex-col gap-4">
+          <div className="bg-white rounded-[24px] p-5 sm:p-6 shadow-[0_10px_35px_-8px_rgba(0,0,0,0.06)] border border-[#E0E3E5]/60 flex flex-col gap-5">
             <div className="flex flex-col gap-1 text-left">
               <h2 className="text-[20px] font-bold text-[#17177F] tracking-tight leading-snug">
                 {t('weekly_subject_growth_title', 'Subject Analytics & Growth')}
@@ -494,7 +497,7 @@ export default function ProgressScreen() {
                 {t('no_growth_data', 'Complete quizzes across subjects to see weekly growth breakdown!')}
               </div>
             ) : (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-6">
                 {displayedGrowth.map((item: any, idx: number) => {
                   const delta = item.growthDelta !== undefined ? item.growthDelta : (item.thisWeekAccuracy - item.lastWeekAccuracy);
                   const isPositive = delta >= 0;
@@ -528,10 +531,10 @@ export default function ProgressScreen() {
                   return (
                     <motion.div
                       key={item.subjectId || idx}
-                      initial={{ opacity: 0, y: 15, scale: 0.97 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      transition={{ duration: 0.5, delay: idx * 0.08 }}
-                      className="bg-white rounded-[20px] p-[18px] shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-[#E0E3E5]/60 flex flex-col gap-5 hover:shadow-[0_8px_25px_rgba(0,0,0,0.06)] transition-all duration-300"
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4, delay: idx * 0.08 }}
+                      className="flex flex-col gap-5 text-left"
                     >
                       {/* 1. SUBJECT HEADER & ACCURACY SCORE */}
                       <div className="flex items-start justify-between">
@@ -569,9 +572,9 @@ export default function ProgressScreen() {
                       </div>
 
                       {/* 2. FIRST: PREMIUM REDESIGNED WEEKLY COMPARISON BAR CHART */}
-                      <div className="bg-[#FAFBFD] rounded-[24px] p-6 shadow-[0_10px_30px_rgba(0,0,0,0.04)] border border-[#F1F5F9] flex flex-col">
+                      <div className="flex flex-col gap-2">
                         {/* Chart Header */}
-                        <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center justify-between">
                           <div className="flex flex-col text-left">
                             <span className="text-[13px] font-bold text-[#17177F] tracking-wide">
                               {t('weekly_comparison', 'Weekly Comparison')}
@@ -637,7 +640,7 @@ export default function ProgressScreen() {
                         </div>
 
                         {/* Compact Summary Row (Insight) */}
-                        <div className="mt-3 pt-3 border-t border-[#F1F5F9] flex items-center gap-2 text-left">
+                        <div className="mt-1 pt-3 border-t border-[#F1F5F9] flex items-center gap-2 text-left">
                           <span className={`px-3 py-1 rounded-full text-[13px] font-semibold flex items-center gap-1 shadow-2xs ${
                             isPositive ? "bg-[#DCFCE7] text-[#16A34A]" : "bg-[#FEE2E2] text-[#DC2626]"
                           }`}>
@@ -652,9 +655,9 @@ export default function ProgressScreen() {
                           </span>
                         </div>
                       </div>
-
+            
                       {/* 3. AFTER THAT: CIRCLE PROGRESS GRAPH (Chapter / Syllabus Completion for Active Subject) */}
-                      <div className="bg-[#F8FAFC] rounded-[18px] p-4 border border-[#E0E3E5]/70 flex flex-col items-center justify-center gap-2">
+                      <div className="flex flex-col items-center justify-center gap-2 pt-2">
                         <span className="text-[11px] font-extrabold tracking-wider text-[#767683] uppercase">
                           {t('chapter_completion', 'CHAPTER COMPLETION')}
                         </span>

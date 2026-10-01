@@ -7,6 +7,7 @@ import { apiFetch } from "../../../api";
 export default function LoginScreen() {
   const navigate = useNavigate();
   const [loginRole, setLoginRole] = useState<"parent" | "child" | "family_code">("child");
+  const [scholarMethod, setScholarMethod] = useState<"mobile" | "child_code">("mobile");
   const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
   const [childCode, setChildCode] = useState("");
@@ -54,7 +55,12 @@ export default function LoginScreen() {
       return;
     }
 
-    if (loginRole === "child" && childCode.trim()) {
+    if (loginRole === "child" && scholarMethod === "child_code") {
+      if (!childCode.trim()) {
+        setErrorMsg("Please enter your Child Code (e.g. ARY3821).");
+        setLoading(false);
+        return;
+      }
       try {
         const response = await apiFetch("/api/users/login-child-code", {
           method: "POST",
@@ -82,7 +88,7 @@ export default function LoginScreen() {
       return;
     }
 
-    // Standard Mobile + Password Login
+    // Standard Mobile + Password Login (For Parent or Scholar with Mobile method)
     if (!mobile.trim() || !password.trim()) {
       setErrorMsg("Please enter your mobile number and password.");
       setLoading(false);
@@ -154,8 +160,8 @@ export default function LoginScreen() {
           <p className="text-xs text-[#767683] font-semibold">Select your role & log in to start</p>
         </div>
 
-        {/* ROLE SELECTION TABS */}
-        <div className="w-full max-w-[350px] bg-slate-100 p-1.5 rounded-full flex gap-1 mb-5 border border-slate-200/80">
+        {/* MAIN ROLE SELECTION TABS */}
+        <div className="w-full max-w-[350px] bg-slate-100 p-1.5 rounded-full flex gap-1 mb-4 border border-slate-200/80">
           <button
             type="button"
             onClick={() => { setLoginRole("child"); setErrorMsg(""); }}
@@ -186,6 +192,36 @@ export default function LoginScreen() {
             <span>Family 🔑</span>
           </button>
         </div>
+
+        {/* SCHOLAR METHOD SUB-TABS (Only when Scholar role is selected) */}
+        {loginRole === "child" && (
+          <div className="w-full max-w-[350px] bg-slate-100/90 p-1.5 rounded-2xl flex gap-1 mb-4 border border-slate-200/60 shadow-inner">
+            <button
+              type="button"
+              onClick={() => { setScholarMethod("mobile"); setErrorMsg(""); }}
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                scholarMethod === "mobile"
+                  ? "bg-white text-[#141779] shadow-sm font-extrabold"
+                  : "text-slate-500 hover:text-slate-800 font-semibold"
+              }`}
+            >
+              <Phone size={16} className={scholarMethod === "mobile" ? "text-[#141779]" : "text-slate-400"} />
+              <span>Mobile No.</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setScholarMethod("child_code"); setErrorMsg(""); }}
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                scholarMethod === "child_code"
+                  ? "bg-white text-[#141779] shadow-sm font-extrabold"
+                  : "text-slate-500 hover:text-slate-800 font-semibold"
+              }`}
+            >
+              <KeyRound size={16} className={scholarMethod === "child_code" ? "text-[#141779]" : "text-slate-400"} />
+              <span>Child Code</span>
+            </button>
+          </div>
+        )}
 
         {errorMsg && (
           <div className="w-full max-w-[350px] bg-red-50 border border-red-200 text-red-600 text-xs font-bold p-3 rounded-xl mb-4 text-center">
@@ -231,8 +267,30 @@ export default function LoginScreen() {
                 Enter the 6-character Family Link Code & PIN generated from Parent Settings on your primary device.
               </p>
             </>
+          ) : loginRole === "child" && scholarMethod === "child_code" ? (
+            <>
+              {/* SCHOLAR CHILD CODE LOGIN */}
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-bold text-slate-600 px-1 uppercase tracking-wider">Unique Child Code</label>
+                <div className="relative flex items-center">
+                  <KeyRound size={20} className="text-slate-400 absolute left-4 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="e.g. ARY3821"
+                    value={childCode}
+                    onChange={(e) => setChildCode(e.target.value.toUpperCase())}
+                    className="w-full h-14 bg-slate-50 rounded-2xl pl-12 pr-4 text-sm font-black tracking-wider uppercase text-[#141779] border border-slate-200/90 focus:outline-none focus:ring-2 focus:ring-[#141779]/20 focus:border-[#141779] focus:bg-white transition-all placeholder:font-medium placeholder:tracking-normal placeholder:text-slate-400"
+                    required
+                  />
+                </div>
+                <p className="text-[11px] text-slate-500 font-semibold px-1 mt-0.5">
+                  Enter your unique student code provided by your parent or teacher.
+                </p>
+              </div>
+            </>
           ) : (
             <>
+              {/* MOBILE NO. & PASSWORD LOGIN (Scholar Mobile mode OR Parent) */}
               <div className="flex flex-col gap-1">
                 <label className="text-[11px] font-bold text-slate-600 px-1 uppercase tracking-wider">
                   {loginRole === "parent" ? "Parent Mobile Number" : "Mobile Number"}
@@ -245,6 +303,7 @@ export default function LoginScreen() {
                     value={mobile}
                     onChange={(e) => setMobile(e.target.value)}
                     className="w-full h-14 bg-slate-50 rounded-2xl pl-12 pr-4 text-sm font-bold text-[#141779] border border-slate-200/90 focus:outline-none focus:ring-2 focus:ring-[#141779]/20 focus:border-[#141779] focus:bg-white transition-all placeholder:text-slate-400 placeholder:font-medium"
+                    required
                   />
                 </div>
               </div>
@@ -261,6 +320,7 @@ export default function LoginScreen() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full h-14 bg-slate-50 rounded-2xl pl-12 pr-12 text-sm font-bold text-[#141779] border border-slate-200/90 focus:outline-none focus:ring-2 focus:ring-[#141779]/20 focus:border-[#141779] focus:bg-white transition-all placeholder:text-slate-400 placeholder:font-medium"
+                    required
                   />
                   <button
                     type="button"
@@ -276,22 +336,6 @@ export default function LoginScreen() {
                   </button>
                 </div>
               </div>
-
-              {loginRole === "child" && (
-                <div className="mt-1 pt-3.5 border-t border-slate-200/80 flex flex-col gap-1.5">
-                  <p className="text-[11px] font-bold text-slate-500 px-1">Or log in with Unique Child Code:</p>
-                  <div className="relative flex items-center">
-                    <KeyRound size={20} className="text-slate-400 absolute left-4 pointer-events-none" />
-                    <input
-                      type="text"
-                      placeholder="e.g. ARY3821"
-                      value={childCode}
-                      onChange={(e) => setChildCode(e.target.value.toUpperCase())}
-                      className="w-full h-14 bg-slate-50 rounded-2xl pl-12 pr-4 text-sm font-black tracking-wider uppercase text-[#141779] border border-slate-200/90 focus:outline-none focus:ring-2 focus:ring-[#141779]/20 focus:border-[#141779] focus:bg-white transition-all placeholder:font-medium placeholder:tracking-normal placeholder:text-slate-400"
-                    />
-                  </div>
-                </div>
-              )}
             </>
           )}
 

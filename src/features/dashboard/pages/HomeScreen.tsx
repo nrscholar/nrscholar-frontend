@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Bookmark, BookOpen, CheckCircle, ChevronRight, Clock, Gift, Map, Shield, Star, Bell } from "lucide-react";
+import { Bookmark, BookOpen, CheckCircle, ChevronRight, Clock, Gift, Map, Shield, Star, Bell, Crown, Gem, Trophy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -394,11 +394,11 @@ export default function HomeScreen() {
       <div className="absolute bottom-[20%] -left-[25%] w-[320px] h-[320px] rounded-full bg-[rgba(20,23,121,0.05)] pointer-events-none" />
 
       {/* TOP HEADER */}
-      <header className="fixed top-0 left-0 right-0 max-w-md mx-auto flex items-center justify-between px-4 py-3 bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-[28px] shadow-xs z-50 gap-2">
+      <header className="fixed top-0 left-0 right-0 max-w-md mx-auto flex items-center justify-between px-4 py-2.5 bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-[28px] shadow-xs z-50 gap-2">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <button
             onClick={() => navigate("/profile")}
-            className="w-11 h-11 rounded-full border-2 border-[#38bdf8] overflow-hidden hover:opacity-90 transition-opacity shrink-0 bg-slate-900 shadow-xs"
+            className="w-10 h-10 rounded-full border-2 border-indigo-100 overflow-hidden hover:opacity-90 transition-opacity shrink-0 bg-[#141779] shadow-xs"
           >
             {childPhoto ? (
               <img
@@ -407,7 +407,7 @@ export default function HomeScreen() {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full bg-[#0d1527] text-white font-black text-sm flex items-center justify-center">
+              <div className="w-full h-full bg-[#141779] text-white font-bold text-xs flex items-center justify-center">
                 {childName ? childName.slice(0, 2).toUpperCase() : "NR"}
               </div>
             )}
@@ -434,13 +434,13 @@ export default function HomeScreen() {
             onClick={() => setShowStreakModal(true)}
             className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1 flex flex-col items-center justify-center min-w-[48px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
           >
-            <span className="text-[11px] font-black text-[#ea580c] leading-none">🔥 {retentionStreak?.currentStreak ?? streakDays ?? 9}</span>
+            <span className="text-[11px] font-black text-[#ea580c] leading-none">🔥 {retentionStreak?.currentStreak ?? streakDays ?? 0}</span>
           </button>
           <button
             onClick={() => navigate("/practice/inventory")}
             className="bg-[#fffbeb] border border-amber-100/80 rounded-2xl px-2 py-1 flex flex-col items-center justify-center min-w-[48px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
           >
-            <span className="text-[11px] font-black text-[#b45309] leading-none">🪙 {coins || 1742}</span>
+            <span className="text-[11px] font-black text-[#b45309] leading-none">🪙 {coins || 0}</span>
           </button>
             <button
             onClick={() => navigate("/notifications")}
@@ -497,19 +497,27 @@ export default function HomeScreen() {
           {/* Continue Learning (Position & Style Preserved) */}
           <button
             onClick={() => navigate("/practice/chapters")}
-            className="bg-[#e0e0ff] rounded-[24px] p-3.5 flex flex-col justify-between h-32 border border-[#c7c7ff]/70 shadow-2xs text-left hover:scale-[1.02] transition-transform"
+            className="bg-[#e0e0ff] rounded-[24px] p-3.5 flex flex-col justify-between h-32 border border-[#c7c7ff]/70 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden"
           >
             <div className="flex justify-between items-start">
               <div className="w-9 h-9 rounded-full bg-[rgba(20,23,121,0.12)] flex items-center justify-center">
-              <BookOpen size={18} className="text-[#141779]" />
-            </div>
+                <BookOpen size={18} className="text-[#141779]" />
+              </div>
               <div className="w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs">
                 <ChevronRight size={14} />
               </div>
             </div>
             <div>
-              <h3 className="text-sm font-black text-[#141779] mb-0.5">📚 {t('continue_learning')}</h3>
-              <p className="text-[11px] text-[#767683] font-semibold">{t('math_science_quests')}</p>
+              <h3 className="text-xs font-black text-slate-900 mb-0.5">{t('continue_learning')}</h3>
+              <p className="text-[11px] text-[#767683] font-semibold mb-1.5">{t('math_science_quests')}</p>
+              <div className="space-y-1">
+                <div className="text-[9.5px] font-extrabold text-[#141779] truncate">
+                  {t('resume_chapters', 'Resume chapters & practice')}
+                </div>
+                <div className="w-full h-1.5 bg-[#c7c7ff]/70 rounded-full overflow-hidden">
+                  <div className="h-full bg-[#141779] rounded-full transition-all duration-500" style={{ width: '65%' }} />
+                </div>
+              </div>
             </div>
           </button>
 
@@ -522,7 +530,7 @@ export default function HomeScreen() {
 
             const habitsDoneText = isCompletedToday
               ? `Day ${currentHabitDay} habit done today!`
-              : `Day ${currentHabitDay} habit (${doneQuests}/${totalQuests} quests)`;
+              : `Day ${currentHabitDay} habit`;
 
             const habitsPct = isCompletedToday ? 100 : Math.min(95, Math.max(15, Math.round((doneQuests / (totalQuests || 1)) * 100)));
 
@@ -623,14 +631,14 @@ export default function HomeScreen() {
             );
           })()}
 
-          {/* My Collections (Updated to match photo) */}
+          {/* My Collections (Updated with premium vector badge icons) */}
           <button
             onClick={() => navigate("/practice/collections")}
             className="bg-[#fff1f3] rounded-[24px] p-3.5 flex flex-col justify-between h-32 border border-[#fecdd3]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden"
           >
             <div className="flex justify-between items-start">
               <div className="w-9 h-9 rounded-full bg-[#ffe4e6] flex items-center justify-center">
-                <span className="text-base">🏆</span>
+                <Trophy size={18} className="text-[#e11d48]" />
               </div>
               <div className="w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs">
                 <ChevronRight size={14} />
@@ -639,11 +647,19 @@ export default function HomeScreen() {
             <div>
               <h3 className="text-xs font-black text-slate-900 mb-0.5">{t('my_collections', 'My Collections')}</h3>
               <p className="text-[11px] text-slate-400 font-bold mb-1.5">{t('unlocked_cards_badges', 'Unlocked cards & badges')}</p>
-              <div className="flex items-center gap-1.5 text-sm">
-                <span className="w-5 h-5 rounded-lg bg-indigo-600 text-amber-300 flex items-center justify-center text-[10px] shadow-2xs">⭐</span>
-                <span className="w-5 h-5 rounded-lg bg-amber-500 text-white flex items-center justify-center text-[10px] shadow-2xs">👑</span>
-                <span className="w-5 h-5 rounded-lg bg-purple-600 text-white flex items-center justify-center text-[10px] shadow-2xs">📖</span>
-                <span className="w-5 h-5 rounded-lg bg-cyan-500 text-white flex items-center justify-center text-[10px] shadow-2xs">💎</span>
+              <div className="flex items-center gap-1.5 pt-0.5">
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-amber-500 to-yellow-400 text-white flex items-center justify-center shadow-2xs border border-amber-200/50">
+                  <Star size={12} className="fill-white" />
+                </div>
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-500 text-white flex items-center justify-center shadow-2xs border border-purple-200/50">
+                  <Crown size={12} className="fill-white" />
+                </div>
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-rose-500 to-pink-400 text-white flex items-center justify-center shadow-2xs border border-pink-200/50">
+                  <BookOpen size={12} />
+                </div>
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-cyan-500 to-blue-500 text-white flex items-center justify-center shadow-2xs border border-cyan-200/50">
+                  <Gem size={12} />
+                </div>
               </div>
             </div>
           </button>
@@ -1078,7 +1094,7 @@ export default function HomeScreen() {
 
       {/* STREAK REVIVAL MODAL */}
       {showRevivalModal && streakRevivalData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in select-none">
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in select-none pointer-events-auto">
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border-2 border-red-500/30 flex flex-col items-center text-center relative overflow-hidden animate-scale-up">
             <div className="absolute -top-12 -right-12 w-40 h-40 bg-red-500/10 rounded-full blur-2xl pointer-events-none" />
 
@@ -1124,7 +1140,7 @@ export default function HomeScreen() {
       {/* STREAK REVIVAL CONFIRMATION MODAL */}
       <AnimatePresence>
         {showRevivalConfirmModal && streakRevivalData && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center px-6">
+          <div className="fixed inset-0 z-[1001] flex items-center justify-center px-6">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}

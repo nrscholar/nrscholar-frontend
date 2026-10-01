@@ -429,7 +429,7 @@ export default function InventoryScreen() {
             <ArrowLeft size={18} className="text-[#141779]" />
           </button>
           
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center  gap-1.5">
             <Sparkles size={16} className="text-[#6C4DFF] animate-pulse" />
             <h1 className="text-[16px] font-black tracking-widest uppercase text-[#141779]">
               {t('my_treasure_vault', 'MY TREASURE VAULT')}
@@ -437,9 +437,6 @@ export default function InventoryScreen() {
           </div>
 
           <div className="w-9 flex justify-end">
-            <div className="w-8 h-8 rounded-full bg-[#FEF3C7] border border-[#F59E0B]/40 flex items-center justify-center">
-              <Trophy size={16} className="text-[#D97706]" />
-            </div>
           </div>
         </div>
       </header>
@@ -451,24 +448,24 @@ export default function InventoryScreen() {
             {/* Currency Badges Row */}
             <div className="flex items-center justify-between gap-3 mb-3">
               {/* Coins HUD */}
-              <div className="flex-1 bg-[#FFFBEB] border border-[#F59E0B]/40 rounded-xl px-3 py-2 flex items-center gap-2.5 shadow-sm">
+              <div className="flex-1 bg-[#FFFBEB] border border-[#F59E0B]/40 rounded-xl px-3 py-2.5 flex items-center gap-2.5 shadow-sm">
                 <div className="w-8 h-8 rounded-lg bg-[#F59E0B]/20 border border-[#F59E0B]/50 flex items-center justify-center shrink-0">
                   <Coins size={18} className="text-[#D97706]" />
                 </div>
-                <div>
-                  <p className="text-base font-black text-[#141779] leading-tight">{coins.toLocaleString()}</p>
-                  <p className="text-[9px] font-extrabold text-[#D97706] tracking-widest uppercase">{t('coins_upper', 'COINS')}</p>
+                <div className="flex items-baseline gap-1.5 min-w-0">
+                  <span className="text-base font-black text-[#141779] leading-none">{coins.toLocaleString()}</span>
+                  <span className="text-[12px] font-extrabold text-[#D97706] tracking-wider uppercase leading-none">{t('coins_upper', 'COINS')}</span>
                 </div>
               </div>
 
               {/* XP HUD */}
-              <div className="flex-1 bg-[#F0F9FF] border border-[#0EA5E9]/40 rounded-xl px-3 py-2 flex items-center gap-2.5 shadow-sm">
+              <div className="flex-1 bg-[#F0F9FF] border border-[#0EA5E9]/40 rounded-xl px-3 py-2.5 flex items-center gap-2.5 shadow-sm">
                 <div className="w-8 h-8 rounded-lg bg-[#0EA5E9]/20 border border-[#0EA5E9]/50 flex items-center justify-center shrink-0">
                   <Zap size={18} className="text-[#0284C7]" />
                 </div>
-                <div>
-                  <p className="text-base font-black text-[#141779] leading-tight">{xp.toLocaleString()}</p>
-                  <p className="text-[9px] font-extrabold text-[#0284C7] tracking-widest uppercase">{t('xp_power', 'XP POWER')}</p>
+                <div className="flex items-baseline gap-1.5 min-w-0">
+                  <span className="text-base font-black text-[#141779] leading-none">{xp.toLocaleString()}</span>
+                  <span className="text-[12px] font-extrabold text-[#0284C7] tracking-wider uppercase leading-none">{t('xp_upper', 'XP')}</span>
                 </div>
               </div>
             </div>
@@ -707,70 +704,85 @@ export default function InventoryScreen() {
             {/* Sub-Tab 2: Fragment Lab */}
             {subTab === "Lab" && (
               <div>
-                <div className="flex items-center justify-between mb-2 px-1">
-                  <span className="text-xs font-black text-[#141779] uppercase tracking-wider">
+                <div className="flex items-center justify-between mb-2.5 px-1">
+                  <span className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles size={14} className="text-[#6C4DFF]" />
                     {t('dragon_fragments', 'DRAGON FRAGMENTS')}
                   </span>
                 </div>
 
-                <div className="flex flex-col gap-2.5">
-                  {fragments.map((f: any) => {
-                    const getDragonType = (d: any) => {
-                      const dragId = String(d.id || "").toLowerCase();
-                      const skin = String(d.skin || "").toLowerCase();
-                      for (const t of ["fire", "water", "wind"]) {
-                        if (dragId.startsWith(t) || skin.startsWith(t)) return t;
-                      }
-                      return "fire";
-                    };
-                    const matchingDragon = dragons.find((d: any) => getDragonType(d) === f.type);
-                    const getUpgradeRequirement = (lvl: number) => {
-                      const costs: Record<number, number> = { 1: 5, 2: 10, 3: 15, 4: 25, 5: 50, 6: 75, 7: 100 };
-                      return costs[lvl] || 100;
-                    };
-                    const needed = matchingDragon ? getUpgradeRequirement(matchingDragon.level) : 10;
-                    const canCombine = f.count >= needed;
-                    const isHatching = hatchingType === f.type;
+                {(!fragments || fragments.length === 0) ? (
+                  <div className="bg-white border-2 border-dashed border-[#E5DBFB] rounded-2xl p-6 flex flex-col items-center justify-center text-center shadow-sm">
+                    <div className="w-14 h-14 rounded-2xl bg-[#F4EFF7] border border-[#E5DBFB] flex items-center justify-center mb-3 shadow-inner">
+                      <span className="text-2xl">🧪</span>
+                    </div>
+                    <h4 className="text-xs font-black text-[#141779] mb-1 uppercase tracking-wide">
+                      {t('no_fragments_yet', 'No Fragments Collected Yet')}
+                    </h4>
+                    <p className="text-[11px] font-semibold text-[#767683] max-w-[260px] leading-relaxed">
+                      {t('no_fragments_desc', 'Open Mystery Boxes & complete daily learning missions to collect rare dragon fragments!')}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2.5">
+                    {fragments.map((f: any) => {
+                      const getDragonType = (d: any) => {
+                        const dragId = String(d.id || "").toLowerCase();
+                        const skin = String(d.skin || "").toLowerCase();
+                        for (const t of ["fire", "water", "wind"]) {
+                          if (dragId.startsWith(t) || skin.startsWith(t)) return t;
+                        }
+                        return "fire";
+                      };
+                      const matchingDragon = dragons.find((d: any) => getDragonType(d) === f.type);
+                      const getUpgradeRequirement = (lvl: number) => {
+                        const costs: Record<number, number> = { 1: 5, 2: 10, 3: 15, 4: 25, 5: 50, 6: 75, 7: 100 };
+                        return costs[lvl] || 100;
+                      };
+                      const needed = matchingDragon ? getUpgradeRequirement(matchingDragon.level) : 10;
+                      const canCombine = f.count >= needed;
+                      const isHatching = hatchingType === f.type;
 
-                    return (
-                      <motion.div 
-                        key={f.type} 
-                        animate={isHatching ? {
-                          x: [-5, 5, -5, 5, 0],
-                          scale: [1, 1.03, 1]
-                        } : {}}
-                        transition={{ duration: 0.5, repeat: isHatching ? Infinity : 0 }}
-                        className="bg-white border-2 border-[#E5DBFB] rounded-2xl p-3 flex items-center justify-between shadow-sm"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-11 h-11 rounded-xl bg-[#F4EFF7] border border-[#E5DBFB] flex items-center justify-center">
-                            <span className="text-xl">🧩</span>
+                      return (
+                        <motion.div 
+                          key={f.type} 
+                          animate={isHatching ? {
+                            x: [-5, 5, -5, 5, 0],
+                            scale: [1, 1.03, 1]
+                          } : {}}
+                          transition={{ duration: 0.5, repeat: isHatching ? Infinity : 0 }}
+                          className="bg-white border-2 border-[#E5DBFB] rounded-2xl p-3 flex items-center justify-between shadow-sm"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-11 h-11 rounded-xl bg-[#F4EFF7] border border-[#E5DBFB] flex items-center justify-center">
+                              <span className="text-xl">🧩</span>
+                            </div>
+                            <div>
+                              <h3 className="text-xs font-black text-[#141779] capitalize">{t(f.type.toLowerCase() + '_fragments', { defaultValue: `${f.type} Fragments` })}</h3>
+                              <p className="text-[10px] font-bold text-[#6D28D9]">{t('fragments_needed', { count: f.count, needed, defaultValue: `${f.count} / ${needed} Needed` })}</p>
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="text-xs font-black text-[#141779] capitalize">{t(f.type.toLowerCase() + '_fragments', { defaultValue: `${f.type} Fragments` })}</h3>
-                            <p className="text-[10px] font-bold text-[#6D28D9]">{t('fragments_needed', { count: f.count, needed, defaultValue: `${f.count} / ${needed} Needed` })}</p>
-                          </div>
-                        </div>
 
-                        {canCombine ? (
-                          <button 
-                            onClick={() => combineFragments(f.type)}
-                            disabled={hatchingType !== null}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
-                              isHatching ? "bg-gray-400 text-white" : "bg-[#22C55E] text-white shadow-md active:scale-95"
-                            }`}
-                          >
-                            {isHatching ? t('hatching', 'HATCHING...') : (matchingDragon ? t('upgrade', 'UPGRADE') : t('hatch', 'HATCH!'))}
-                          </button>
-                        ) : (
-                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-100 px-2 py-1 rounded-lg">
-                            {t('need_more', 'NEED MORE')}
-                          </span>
-                        )}
-                      </motion.div>
-                    );
-                  })}
-                </div>
+                          {canCombine ? (
+                            <button 
+                              onClick={() => combineFragments(f.type)}
+                              disabled={hatchingType !== null}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                                isHatching ? "bg-gray-400 text-white" : "bg-[#22C55E] text-white shadow-md active:scale-95"
+                              }`}
+                            >
+                              {isHatching ? t('hatching', 'HATCHING...') : (matchingDragon ? t('upgrade', 'UPGRADE') : t('hatch', 'HATCH!'))}
+                            </button>
+                          ) : (
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-100 px-2 py-1 rounded-lg">
+                              {t('need_more', 'NEED MORE')}
+                            </span>
+                          )}
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </section>

@@ -130,18 +130,18 @@ export default function ChatScreen() {
   return (
     <div className="min-h-screen bg-[#f7f9fb] font-sans flex flex-col relative pb-32 max-w-md mx-auto">
       
-      {/* Curved Sticky Header */}
-      <div className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 bg-[#f7f9fb] pt-2 pb-1 px-2">
-        <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-slate-100 rounded-b-[28px] shadow-xs gap-2">
+      {/* Sticky Header */}
+      <header className="sticky top-0 left-0 right-0 w-full max-w-md mx-auto z-50 bg-white border-b border-slate-100 rounded-b-[28px] shadow-xs pb-1">
+        <div className="flex items-center justify-between px-4 py-3 gap-2">
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <button
               onClick={() => navigate("/profile")}
-              className="w-10 h-10 rounded-full border-2 border-[#38bdf8] overflow-hidden hover:opacity-90 transition-opacity shrink-0 bg-slate-900 shadow-xs"
+              className="w-10 h-10 rounded-full border-2 border-indigo-100 overflow-hidden hover:opacity-90 transition-opacity shrink-0 bg-[#141779] shadow-xs"
             >
               {userData?.childPhoto ? (
                 <img src={userData.childPhoto} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full bg-[#0d1527] text-white font-black text-xs flex items-center justify-center">
+                <div className="w-full h-full bg-[#141779] text-white font-bold text-xs flex items-center justify-center">
                   {userData?.childName ? userData.childName.slice(0, 2).toUpperCase() : "NR"}
                 </div>
               )}
@@ -187,8 +187,8 @@ export default function ChatScreen() {
               )}
             </button>
           </div>
-        </header>
-      </div>
+        </div>
+      </header>
 
       {/* Chat Messages */}
       <main className="flex-1 overflow-y-auto px-6 pt-6 pb-4 flex flex-col gap-6">

@@ -24,7 +24,7 @@ export default function Layout() {
       </div>
 
       {/* Floating Bottom Navigation Bar (Matching Screenshot Theme) */}
-      <nav className="fixed bottom-2 left-4 right-4 max-w-md mx-auto z-50 flex justify-around items-center px-3 py-2 bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-full shadow-[0_10px_35px_rgba(0,0,0,0.08)]">
+      <nav className="fixed bottom-2 left-4 right-4 max-w-md mx-auto z-50 flex items-center justify-between px-2 py-1.5 bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-3xl shadow-[0_10px_35px_rgba(0,0,0,0.08)]">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentPath === item.path || (item.path !== "/home" && currentPath.startsWith(item.path));
@@ -34,14 +34,14 @@ export default function Layout() {
               key={item.path}
               type="button"
               onClick={() => navigate(item.path)}
-              className={`flex flex-col items-center justify-center gap-0.5 transition-all duration-300 ${
+              className={`flex-1 flex flex-col items-center justify-center py-2 px-1 gap-1 rounded-2xl transition-all duration-300 ${
                 isActive
-                  ? "bg-[#1c1970] text-white px-4 py-2 rounded-2xl shadow-md shadow-[#1c1970]/25 scale-105"
-                  : "text-[#787a91] hover:text-[#1c1970] px-3 py-1.5 rounded-2xl active:scale-95"
+                  ? "bg-[#1c1970] text-white shadow-md shadow-[#1c1970]/25 font-bold"
+                  : "text-[#787a91] hover:text-[#1c1970] hover:bg-slate-50 active:scale-95 font-medium"
               }`}
             >
               <Icon size={19} strokeWidth={isActive ? 2.5 : 2} className="shrink-0" />
-              <span className="text-[10px] font-black tracking-tight whitespace-nowrap">{item.label}</span>
+              <span className="text-[10px] tracking-tight whitespace-nowrap leading-none">{item.label}</span>
             </button>
           );
         })}
