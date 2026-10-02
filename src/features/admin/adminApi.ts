@@ -203,6 +203,22 @@ export interface Catalog {
   duplicateIds: string[];
 }
 
+export interface DriveFile {
+  name: string;
+  url: string;
+  isFolder: boolean;
+}
+
+export interface FolderMatch {
+  subjectId: string;
+  subjectName: string;
+  description: string;
+  suggested: DriveFile | null;
+  confidence: "high" | "low" | "none";
+  candidates: DriveFile[];
+  currentUrl: string | null;
+}
+
 export class ApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
@@ -293,6 +309,17 @@ export const adminApi = {
 
   claudeContext: (chapterId: string, round?: RoundName | null) =>
     request<{ data: ClaudeContext }>(`${BASE}/chapters/${chapterId}/claude-context${round ? `?round=${round}` : ""}`).then((r) => r.data),
+
+  officialFolder: (board: string, classLevel: string) =>
+    request<{ data: { url: string | null } }>(
+      `${BASE}/official-sources/folder?board=${encodeURIComponent(board)}&classLevel=${encodeURIComponent(classLevel)}`
+    ).then((r) => r.data.url),
+
+  matchFolder: (folderUrl: string, board: string, classLevel: string) =>
+    post<{ data: { files: DriveFile[]; matches: FolderMatch[] } }>(`${BASE}/official-sources/folder-match`, { folderUrl, board, classLevel }).then((r) => r.data),
+
+  saveOfficialSources: (items: { subjectId: string; url: string }[], folderUrl: string, board: string, classLevel: string) =>
+    post(`${BASE}/official-sources/bulk`, { items, folderUrl, board, classLevel }),
 
   allQuestions: (params: Record<string, string>) => {
     const q = new URLSearchParams(Object.entries(params).filter(([, v]) => v));
