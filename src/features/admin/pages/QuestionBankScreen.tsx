@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { ChevronRight, FileSearch, Link2, ShieldCheck } from "lucide-react";
 import { adminApi, type ChapterRow } from "../adminApi";
 import { Badge, Button, Card, ErrorNote, PoolProgress, Spinner, VerificationBadge } from "../components/AdminUI";
+import DriveFolderPanel from "../components/DriveFolderPanel";
 
 function Select({ label, value, options, onChange, disabled }: {
   label: string;
@@ -147,6 +148,7 @@ export default function QuestionBankScreen() {
       </Card>
 
       <ErrorNote message={error} />
+      {isGseb && classLevel && <DriveFolderPanel board={board} classLevel={classLevel} onSaved={loadChapters} />}
       {notice && (
         <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
           {notice}
