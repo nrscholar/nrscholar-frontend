@@ -43,11 +43,11 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     characterName: "Flame Dragon",
     ctaTextKey: "continue_adventure",
     ctaText: "CONTINUE ADVENTURE →",
-    bgGradient: "from-emerald-700 via-teal-800 to-slate-900",
-    accentBorderColor: "border-amber-400",
-    accentTextColor: "text-amber-300",
+    bgGradient: "from-[#111453] via-[#141779] to-[#2e1065]",
+    accentBorderColor: "border-indigo-300/60",
+    accentTextColor: "text-[#57fae9]",
     bgDecorations: ["☁️", "🏔️", "🏰", "🔥"],
-    pathColor: "#fbbf24",
+    pathColor: "#35E5D4",
   },
   science: {
     type: "science",
@@ -65,9 +65,9 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     characterName: "Scientist Owl",
     ctaTextKey: "enter_lab",
     ctaText: "ENTER LAB →",
-    bgGradient: "from-indigo-800 via-purple-900 to-slate-950",
-    accentBorderColor: "border-cyan-400",
-    accentTextColor: "text-cyan-300",
+    bgGradient: "from-[#0b0c3f] via-[#141779] to-[#0284c7]",
+    accentBorderColor: "border-cyan-400/60",
+    accentTextColor: "text-cyan-200",
     bgDecorations: ["⚡", "⚛️", "🧪", "✨"],
     pathColor: "#38bdf8",
   },
@@ -87,11 +87,11 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     characterName: "Champion Lion",
     ctaTextKey: "take_challenge",
     ctaText: "TAKE CHALLENGE →",
-    bgGradient: "from-amber-700 via-orange-800 to-slate-950",
-    accentBorderColor: "border-yellow-300",
-    accentTextColor: "text-yellow-200",
+    bgGradient: "from-[#1c1970] via-[#311075] to-[#4338ca]",
+    accentBorderColor: "border-indigo-300/60",
+    accentTextColor: "text-indigo-200",
     bgDecorations: ["⭐", "🏆", "🚩", "✨"],
-    pathColor: "#facc15",
+    pathColor: "#818cf8",
   },
   space: {
     type: "space",
@@ -265,8 +265,8 @@ export default function AdventureHero({
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/30 border border-white/10 backdrop-blur-md text-[10.5px] font-black text-amber-300">
-            <Zap size={13} className="text-amber-400 fill-amber-400" />
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/30 border border-white/10 backdrop-blur-md text-[10.5px] font-black text-[#57fae9]">
+            <Zap size={13} className="text-[#57fae9] fill-[#57fae9]" />
             <span> {xp.toLocaleString()} XP</span>
           </div>
         </div>
@@ -325,7 +325,7 @@ export default function AdventureHero({
                   <div className="text-4xl filter drop-shadow-[0_6px_12px_rgba(0,0,0,0.4)] select-none">
                     {theme.characterIcon}
                   </div>
-                  <span className="text-[9px] font-black bg-amber-400 text-slate-950 px-1.5 py-0.5 rounded-full uppercase shadow-md -mt-1 tracking-wider border border-amber-300">
+                  <span className="text-[9px] font-black bg-[#141779] text-white px-2 py-0.5 rounded-full uppercase shadow-md -mt-1 tracking-wider border border-indigo-300/50">
                     {t('you', { defaultValue: "YOU" })}
                   </span>
                 </motion.div>
@@ -337,12 +337,12 @@ export default function AdventureHero({
               <motion.div
                 animate={{ scale: [1, 1.12, 1] }}
                 transition={{ repeat: Infinity, duration: 2 }}
-                className="w-10 h-10 rounded-2xl bg-amber-400/20 border-2 border-amber-300 flex items-center justify-center text-xl shadow-lg backdrop-blur-md relative"
+                className="w-10 h-10 rounded-2xl bg-white/15 border-2 border-indigo-200 flex items-center justify-center text-xl shadow-lg backdrop-blur-md relative"
               >
                 <span className="select-none">{journeyData?.nextNodeEmoji || theme.rewardIcon}</span>
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full animate-ping" />
+                <span className="absolute -top-1 -right-1 w-3 h-3 bg-teal-400 rounded-full animate-ping" />
               </motion.div>
-              <span className="text-[9px] font-black text-amber-300 uppercase mt-0.5 tracking-tighter bg-black/70 px-1.5 py-0.5 rounded backdrop-blur-xs whitespace-nowrap shadow-sm">
+              <span className="text-[9px] font-black text-indigo-200 uppercase mt-0.5 tracking-tighter bg-black/70 px-1.5 py-0.5 rounded backdrop-blur-xs whitespace-nowrap shadow-sm">
                 {t(rawEnd.toLowerCase().replace(/ /g, '_'), { defaultValue: rawEnd })}
               </span>
             </div>
@@ -357,13 +357,13 @@ export default function AdventureHero({
           </div>
           <div className="w-full h-2 bg-white/15 rounded-full overflow-hidden p-0.5">
             <div
-              className="h-full bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 rounded-full transition-all duration-700 shadow-xs"
+              className="h-full bg-gradient-to-r from-[#5B5CFF] via-[#35E5D4] to-[#45D483] rounded-full transition-all duration-700 shadow-xs"
               style={{ width: `${legProgress}%` }}
             />
           </div>
           <div className="flex justify-between items-center text-[9.5px] font-extrabold text-slate-300 mt-0.5">
             <span>{t('unlock_label', { destination: endName, defaultValue: `${endName} Unlock` })}</span>
-            <span className="text-amber-300">
+            <span className="text-[#57fae9]">
               {chaptersRemaining !== undefined 
                 ? (chaptersRemaining > 0 ? t('chapters_remaining_count', { count: chaptersRemaining, defaultValue: `${chaptersRemaining} chapter(s) remaining` }) : t('stage_complete', { defaultValue: "Stage Complete!" }))
                 : (xpRemaining > 0 ? t('xp_remaining_count', { count: xpRemaining, defaultValue: `${xpRemaining} XP Remaining` }) : t('ready_to_unlock', { defaultValue: "Ready to Unlock!" }))}
@@ -374,7 +374,7 @@ export default function AdventureHero({
         {/* PRIMARY ACTION CTA BUTTON */}
         <button
           onClick={onCtaClick}
-          className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-[0_6px_20px_rgba(245,158,11,0.4)] active:scale-95 transition-all border-2 border-amber-300 flex items-center justify-center gap-2 z-10"
+          className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] hover:from-[#1c1970] hover:to-[#2e2aab] text-white font-black text-xs uppercase tracking-wider shadow-[0_6px_20px_rgba(20,23,121,0.35)] active:scale-95 transition-all border-2 border-indigo-300/40 flex items-center justify-center gap-2 z-10"
         >
           <span>{t(theme.ctaTextKey, { defaultValue: theme.ctaText })}</span>
         </button>

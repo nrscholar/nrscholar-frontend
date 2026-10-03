@@ -505,33 +505,33 @@ export default function BossBattleScreen() {
         />
       )}
 
-      {/* TOP APP BAR (EXACT ORIGINAL DESIGN) */}
-      <header className="fixed top-0 inset-x-0 z-50 flex items-center justify-between px-4 sm:px-6 h-16 bg-white/95 backdrop-blur-md border-b border-[#e0e0e0] shadow-sm">
+      {/* TOP APP BAR (CURVED STICKY HUD DESIGN) */}
+      <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex items-center justify-between bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-[28px] shadow-xs px-4 py-3 gap-2">
         {/* Left: Back button & Boss Name */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <button 
             onClick={async () => { await submitActivityLog(userAnswers); navigate(-1); }} 
-            className="w-10 h-10 rounded-full bg-[#f4efff] hover:bg-[#e8ddff] border border-[#e0e0e0] flex items-center justify-center active:scale-95 transition-all shadow-xs"
+            className="w-10 h-10 rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-200 flex items-center justify-center active:scale-95 transition-all shadow-xs shrink-0"
           >
             <ArrowLeft className="text-[#141779]" size={20} />
           </button>
-          <div className="flex flex-col text-left">
+          <div className="flex flex-col min-w-0 text-left">
             <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-black uppercase tracking-wide text-[#141779]">
+              <h1 className="text-sm font-black text-slate-900 leading-tight truncate max-w-[160px]">
                 {bossName || "Boss Guardian"}
-              </span>
-              <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-[#ffeed1] border border-[#ff9f43] text-[#d97706]">
+              </h1>
+              <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-[#141779] shrink-0">
                 {difficultyText}
               </span>
             </div>
-            <span className="text-[10px] font-black text-[#767683] uppercase tracking-wider">
+            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
               {t('boss_guardian', 'BOSS GUARDIAN')}
             </span>
           </div>
         </div>
 
         {/* Right: Player Hearts / Lives */}
-        <div className="flex items-center gap-1.5 bg-[#f4efff] px-3 py-1.5 rounded-full border border-[#e0e0e0] shadow-xs">
+        <div className="flex items-center gap-1.5 bg-indigo-50/80 px-3 py-1.5 rounded-full border border-indigo-100 shadow-xs shrink-0">
           {[...Array(3)].map((_, i) => (
             <motion.div
               key={i}
@@ -547,16 +547,16 @@ export default function BossBattleScreen() {
         </div>
       </header>
 
-      {/* MAIN BATTLE ARENA (EXACT ORIGINAL DESIGN) */}
-      <main className="w-full max-w-[460px] flex-1 flex flex-col items-center justify-between px-4 sm:px-6 relative z-20 pt-20 pb-4 overflow-y-auto">
+      {/* MAIN BATTLE ARENA */}
+      <main className="w-full max-w-[460px] flex-1 flex flex-col items-center justify-between px-4 sm:px-6 relative z-20 pt-4 pb-4 overflow-y-auto">
         
         {/* SUB-HEADER: QUESTION PROGRESS PILL CARD */}
-        <div className="flex items-center justify-between w-full bg-white border border-[#e0e0e0] px-4 py-2 rounded-full mb-3 shadow-xs">
+        <div className="flex items-center justify-between w-full bg-white/95 backdrop-blur-md border border-slate-200/80 px-4 py-2.5 rounded-2xl mb-3 shadow-xs">
           <span className="text-[11px] font-black uppercase tracking-wider text-[#141779]">
             QUESTION {displayQNum} OF {totalQCount}
           </span>
-          <div className="w-28 sm:w-36 h-2 bg-[#e0e0e0] rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-[#141779] to-[#6C4DFF] transition-all duration-300" style={{ width: `${(displayQNum / totalQCount) * 100}%` }} />
+          <div className="w-28 sm:w-36 h-2 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200/60">
+            <div className="h-full bg-gradient-to-r from-[#5B5CFF] via-[#35E5D4] to-[#45D483] rounded-full transition-all duration-500" style={{ width: `${(displayQNum / totalQCount) * 100}%` }} />
           </div>
         </div>
 
@@ -596,13 +596,13 @@ export default function BossBattleScreen() {
             {/* PLAYER DRAGON HERO (LEFT SIDE) */}
             <div className="flex flex-col items-center relative">
               {/* Player HP Header Card */}
-              <div className="flex flex-col items-center mb-2 bg-white px-3 py-1 rounded-xl border-2 border-[#141779] shadow-md">
-                <span className="text-[10px] font-black uppercase tracking-wider text-[#141779] flex items-center gap-1">
-                  <Shield size={12} /> YOU (HERO)
+              <div className="flex flex-col items-center mb-2 bg-white px-3.5 py-1.5 rounded-2xl border-2 border-indigo-100 shadow-md min-w-[125px] sm:min-w-[140px]">
+                <span className="text-[10.5px] font-black uppercase tracking-wider text-[#141779] flex items-center gap-1">
+                  <Shield size={12} className="text-[#141779]" /> YOU (HERO)
                 </span>
-                <div className="flex items-center gap-1 mt-0.5">
-                   {[...Array(playerHearts)].map((_, i) => <Heart key={i} size={12} className="fill-[#ff2e63] text-[#ff2e63]" />)}
-                   {[...Array(Math.max(0, 3 - playerHearts))].map((_, i) => <Heart key={i+3} size={12} className="fill-transparent text-slate-300" />)}
+                <div className="flex items-center gap-1.5 mt-1">
+                   {[...Array(playerHearts)].map((_, i) => <Heart key={i} size={14} className="fill-[#ff2e63] text-[#ff2e63] drop-shadow-xs" />)}
+                   {[...Array(Math.max(0, 3 - playerHearts))].map((_, i) => <Heart key={i+3} size={14} className="fill-transparent text-slate-300" />)}
                 </div>
               </div>
 
@@ -640,7 +640,7 @@ export default function BossBattleScreen() {
 
             {/* VS CENTER ARENA BADGE */}
             <div className="relative flex flex-col items-center justify-center self-center mb-6 z-30">
-              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-amber-400 via-orange-500 to-red-600 border-2 border-white flex items-center justify-center font-black text-white text-xs shadow-md z-10">
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-indigo-600 via-[#141779] to-[#0f172a] border-2 border-white flex items-center justify-center font-black text-white text-xs shadow-md z-10">
                 VS
               </div>
             </div>
@@ -648,18 +648,18 @@ export default function BossBattleScreen() {
             {/* BOSS GUARDIAN (RIGHT SIDE) */}
             <div className="flex flex-col items-center relative">
               {/* Boss HP Bar Card */}
-              <div className="flex flex-col items-center mb-2 bg-white px-3 py-1 rounded-xl border-2 border-[#ff9f43] shadow-md w-32 sm:w-36">
-                <div className="flex justify-between items-center w-full px-0.5">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-[#d97706] truncate max-w-[70px]">
-                    BOSS GUARDIAN
+              <div className="flex flex-col items-center mb-2 bg-white px-3 py-1.5 rounded-2xl border-2 border-indigo-100 shadow-md w-36 sm:w-40">
+                <div className="flex justify-between items-center w-full px-0.5 gap-1">
+                  <span className="text-[10.5px] font-black uppercase tracking-wider text-[#141779] truncate">
+                    {bossName || "BOSS GUARDIAN"}
                   </span>
-                  <span className="text-[9px] font-black text-[#141779]">
+                  <span className="text-[9.5px] font-black text-[#141779] bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded-full shrink-0">
                     {Math.max(0, bossHP)} / {maxHP} HP
                   </span>
                 </div>
                 
-                <div className="w-full h-2 bg-[#e0e0e0] rounded-full mt-1 overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-red-500 via-orange-400 to-amber-400 transition-all duration-300" style={{ width: `${(bossHP / maxHP) * 100}%` }} />
+                <div className="w-full h-2.5 bg-slate-100 rounded-full mt-1.5 overflow-hidden p-0.5 border border-slate-200/80">
+                  <div className="h-full bg-gradient-to-r from-rose-500 via-rose-600 to-red-600 rounded-full transition-all duration-500 shadow-xs" style={{ width: `${(bossHP / maxHP) * 100}%` }} />
                 </div>
               </div>
 
@@ -840,7 +840,7 @@ export default function BossBattleScreen() {
                         showToast(t('purchase_failed', "Purchase failed."));
                       }
                     }}
-                    className="w-full py-4 bg-amber-400 text-slate-950 font-bold rounded-full hover:bg-amber-300 active:scale-95 transition-all uppercase tracking-wide text-sm flex items-center justify-center gap-2 shadow-md"
+                    className="w-full py-4 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white font-bold rounded-full hover:brightness-110 active:scale-95 transition-all uppercase tracking-wide text-sm flex items-center justify-center gap-2 shadow-md border border-indigo-300/40"
                   >
                     <span>🛒 {t('buy_revival_spin', 'Buy Revival Spin (100 🪙)')}</span>
                   </button>
@@ -878,6 +878,16 @@ export default function BossBattleScreen() {
           >
             {t('return_to_map', 'Return to Map')}
           </button>
+        </div>
+      )}
+
+      {/* Toast Notification Banner */}
+      {toastMessage && (
+        <div
+          className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white px-4.5 py-2.5 rounded-full shadow-[0_12px_30px_rgba(20,23,121,0.4)] border border-[#57fae9]/40 font-bold text-xs flex items-center justify-center gap-2.5 text-center max-w-[90vw] w-auto animate-in fade-in slide-in-from-top-4 duration-300"
+        >
+          <Sparkles size={16} className="text-[#57fae9] shrink-0" />
+          <span className="truncate max-w-[280px] sm:max-w-[340px] line-clamp-1">{toastMessage}</span>
         </div>
       )}
     </div>

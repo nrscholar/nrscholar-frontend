@@ -25,7 +25,16 @@ const pdfOptions = {
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 3.0;
-const BASE_WIDTH = () => Math.min(window.innerWidth - 32, 560);
+
+const calculateOptimalDimensions = () => {
+  const headerH = 64;
+  const controlsH = 120;
+  const availH = Math.max(300, window.innerHeight - headerH - controlsH);
+  const widthFromH = availH / 1.414;
+  const w = Math.round(Math.min(window.innerWidth - 32, widthFromH, 560));
+  const h = Math.round(w * 1.414);
+  return { w, h };
+};
 
 // ─── BookPage ─────────────────────────────────────────────────────────────────
 // react-pageflip REQUIRES forwardRef so it can measure the underlying DOM node
@@ -272,15 +281,14 @@ export default function ChapterReaderScreen() {
     );
   }
 
-  const pageWidth  = Math.round(BASE_WIDTH());
-  const pageHeight = Math.round(pageWidth * 1.414); // A4 portrait ratio
+  const { w: pageWidth, h: pageHeight } = calculateOptimalDimensions();
 
   return (
     <div className={`flex flex-col bg-white ${isFullscreen ? 'fixed inset-0 z-50' : 'h-screen overflow-hidden'}`}>
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       {!isFullscreen && (
-        <header className="flex items-center justify-between px-5 py-4 bg-white shrink-0 shadow-sm z-20 relative">
+        <header className="flex items-center justify-between px-5 py-3.5 bg-white shrink-0 shadow-sm z-20 relative border-b border-slate-100">
           <button
             onClick={async () => { await logReadingTime(); navigate(-1); }}
             className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-all"
@@ -307,11 +315,11 @@ export default function ChapterReaderScreen() {
 
       {/* ── Reader ──────────────────────────────────────────────────────────── */}
       <main
-        className="flex-1 relative w-full bg-gradient-to-br from-[#e0c3fc] via-[#f4efff] to-[#8ec5fc] overflow-hidden"
+        className="flex-1 relative w-full bg-gradient-to-br from-[#e0c3fc] via-[#f4efff] to-[#8ec5fc] overflow-hidden flex items-center justify-center"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        style={{ touchAction: 'none' }}
+        style={{ touchAction: committedScale > 1 ? 'pan-x pan-y' : 'auto' }}
       >
         {/* Background decorations */}
         <div className="absolute top-10 left-10 w-20 h-20 bg-white/20 rounded-full blur-xl pointer-events-none" />
@@ -345,8 +353,8 @@ export default function ChapterReaderScreen() {
            * overflow-auto: allows vertical scroll when zoomed
            * We center the flipbook with flex
            */
-          <div className="absolute inset-0 overflow-auto" style={{ paddingBottom: '9rem' }}>
-            <div className="w-max mx-auto flex flex-col items-center p-4">
+          <div className="absolute inset-0 overflow-auto flex items-center justify-center p-2 pb-24">
+            <div className="w-max mx-auto flex flex-col items-center justify-center">
               <Document
                 file={pdfUrl}
                 options={pdfOptions}
@@ -359,24 +367,18 @@ export default function ChapterReaderScreen() {
                   setPdfError(err?.message || "Failed to parse PDF file content");
                 }}
                 loading={
-                  <div className="flex flex-col items-center justify-center p-12 gap-3 mt-16">
+                  <div className="flex flex-col items-center justify-center p-12 gap-3">
                     <div className="w-12 h-12 border-4 border-white border-t-[#141779] rounded-full animate-spin shadow-md" />
                     <p className="text-[#141779] font-extrabold text-sm tracking-wide">Opening Magic Book...</p>
                   </div>
                 }
               >
                 {numPages && (
-                  /*
-                   * id="pdf-flipbook-wrapper" — pinch-zoom and zoom buttons
-                   * mutate this element's style.zoom directly for 60fps feedback.
-                   * The flipbook itself is sized to pageWidth × pageHeight.
-                   */
                   <div
                     id="pdf-flipbook-wrapper"
                     style={{
                       zoom: committedScale,
                       display: 'inline-block',
-                      // Book-like drop shadow
                       filter: 'drop-shadow(0 24px 48px rgba(20,23,121,0.28)) drop-shadow(0 4px 8px rgba(20,23,121,0.12))',
                       borderRadius: 4,
                     }}
@@ -414,11 +416,6 @@ export default function ChapterReaderScreen() {
                           pageNum={i + 1}
                           pageWidth={pageWidth}
                           pageHeight={pageHeight}
-                          /*
-                           * Windowed rendering: only allocate canvas for ±3 pages
-                           * around current page. Everything else is a lightweight
-                           * placeholder div. This prevents memory crashes on large PDFs.
-                           */
                           shouldRender={Math.abs(i + 1 - renderWindow) <= 3}
                         />
                       ))}
@@ -439,61 +436,59 @@ export default function ChapterReaderScreen() {
 
         {/* ── Floating controls ─────────────────────────────────────────────── */}
         {pdfUrl && numPages && (
-          <div className="absolute bottom-4 left-0 right-0 flex flex-col items-center gap-2 pointer-events-none z-20 px-4">
+          <div className="absolute bottom-3 left-0 right-0 flex flex-col items-center gap-2 pointer-events-none z-30 px-4">
+
+            {/* Mark complete overlay button on final page */}
+            {!loading && pageNumber === numPages && (
+              <button
+                onClick={handleReadingComplete}
+                disabled={markingComplete}
+                className="pointer-events-auto bg-[#141779] hover:bg-[#0f1159] active:scale-95 transition-all text-white font-black py-3 px-6 rounded-2xl shadow-xl border-2 border-indigo-300/40 text-sm uppercase tracking-wider mb-1 flex items-center gap-2 animate-bounce"
+              >
+                {markingComplete ? "Saving..." : "✓ Mark Reading Complete"}
+              </button>
+            )}
 
             {/* Zoom pill */}
-            <div className="bg-white/90 backdrop-blur-xl shadow-[0_4px_20px_rgb(0,0,0,0.10)] border border-white/80 px-4 py-2 rounded-full flex items-center gap-3 pointer-events-auto">
+            <div className="bg-white/95 backdrop-blur-xl shadow-[0_4px_20px_rgb(0,0,0,0.12)] border border-white/80 px-4 py-1.5 rounded-full flex items-center gap-3 pointer-events-auto">
               <button onClick={zoomOut} disabled={committedScale <= MIN_SCALE}
                 className="p-1.5 text-[#141779] hover:bg-[#141779]/10 active:scale-95 rounded-full disabled:opacity-30 transition-all">
-                <ZoomOut size={20} />
+                <ZoomOut size={18} />
               </button>
               <button onClick={resetZoom}
-                className="text-xs font-bold text-[#141779] px-2 hover:bg-[#141779]/10 rounded-full py-1 transition-all min-w-[44px] text-center">
+                className="text-xs font-black text-[#141779] px-2 hover:bg-[#141779]/10 rounded-full py-1 transition-all min-w-[44px] text-center">
                 {Math.round(committedScale * 100)}%
               </button>
               <button onClick={zoomIn} disabled={committedScale >= MAX_SCALE}
                 className="p-1.5 text-[#141779] hover:bg-[#141779]/10 active:scale-95 rounded-full disabled:opacity-30 transition-all">
-                <ZoomIn size={20} />
+                <ZoomIn size={18} />
               </button>
             </div>
 
             {/* Page navigation pill */}
-            <div className="bg-white/90 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white px-6 py-3 rounded-full flex items-center justify-between gap-6 pointer-events-auto min-w-[200px]">
+            <div className="bg-white/95 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white px-5 py-2 rounded-full flex items-center justify-between gap-5 pointer-events-auto min-w-[180px]">
               <button
                 disabled={pageNumber <= 1}
                 onClick={() => flipBookRef.current?.pageFlip().flipPrev()}
-                className="p-2 text-[#141779] hover:bg-[#141779]/10 active:scale-95 rounded-full disabled:opacity-30 transition-all"
+                className="p-1.5 text-[#141779] hover:bg-[#141779]/10 active:scale-95 rounded-full disabled:opacity-30 transition-all"
               >
-                <ChevronLeft size={28} />
+                <ChevronLeft size={24} />
               </button>
-              <span className="font-extrabold text-[#141779] text-lg tracking-wide">
+              <span className="font-extrabold text-[#141779] text-base tracking-wide">
                 {pageNumber} <span className="opacity-40 mx-1 font-normal">/</span> {numPages}
               </span>
               <button
                 disabled={pageNumber >= numPages}
                 onClick={() => flipBookRef.current?.pageFlip().flipNext()}
-                className="p-2 text-[#141779] hover:bg-[#141779]/10 active:scale-95 rounded-full disabled:opacity-30 transition-all"
+                className="p-1.5 text-[#141779] hover:bg-[#141779]/10 active:scale-95 rounded-full disabled:opacity-30 transition-all"
               >
-                <ChevronRight size={28} />
+                <ChevronRight size={24} />
               </button>
             </div>
 
           </div>
         )}
       </main>
-
-      {/* ── Footer: mark complete ─────────────────────────────────────────────── */}
-      {!loading && pdfUrl && !isFullscreen && pageNumber === numPages && (
-        <div className="bg-white border-t border-gray-100 p-5 shrink-0 flex justify-center shadow-[0_-10px_30px_rgba(0,0,0,0.05)] z-20 relative">
-          <button
-            onClick={handleReadingComplete}
-            disabled={markingComplete}
-            className="bg-[#141779] hover:bg-[#0f1159] active:scale-95 transition-all text-white font-extrabold py-4 px-8 rounded-2xl shadow-[0_8px_20px_rgba(20,23,121,0.25)] w-full max-w-md flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed text-lg"
-          >
-            {markingComplete ? "Saving..." : "Mark as Reading Complete"}
-          </button>
-        </div>
-      )}
     </div>
   );
 }

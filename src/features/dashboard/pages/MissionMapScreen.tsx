@@ -164,21 +164,27 @@ export default function MissionMapScreen() {
   const themeMeta = getThemeHeader();
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans pb-24">
+    <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#17157F] font-sans pb-28 relative selection:bg-[#5B5CFF] selection:text-white overflow-x-hidden">
+      {/* Background World Glow Accents */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[35%] rounded-full bg-[#5B5CFF]/10 blur-[90px]" />
+        <div className="absolute top-[40%] right-[-10%] w-[50%] h-[40%] rounded-full bg-[#35E5D4]/15 blur-[90px]" />
+      </div>
+
       {/* Top Header Bar */}
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] px-6 py-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex items-center justify-between bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-[28px] shadow-xs px-4 py-3 gap-2">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <button
             onClick={() => navigate("/practice/chapters")}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-gray-200 hover:bg-gray-50 active:scale-95 transition-all shadow-xs"
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-200 hover:bg-slate-50 active:scale-95 transition-all shadow-xs shrink-0"
           >
-            <ArrowLeft size={22} className="text-[#141779]" />
+            <ArrowLeft size={20} className="text-[#141779]" />
           </button>
-          <div>
-            <span className="text-[10px] font-black uppercase tracking-wider text-[#006a62]">
+          <div className="flex flex-col min-w-0">
+            <span className="text-[10px] text-[#4f46e5] bg-[#eef2ff] font-black px-2 py-0.5 rounded-full border border-indigo-100 shrink-0 inline-block w-fit mb-0.5">
               {userClass} • {t('mission_roadmap', 'Mission Roadmap')}
             </span>
-            <h1 className="text-lg font-bold text-[#141779] leading-tight truncate max-w-[200px]">
+            <h1 className="text-sm font-black text-slate-900 leading-tight truncate">
               {chapterTitle}
             </h1>
           </div>
@@ -186,25 +192,23 @@ export default function MissionMapScreen() {
 
         <button
           onClick={() => navigate("/notifications")}
-          className="w-10 h-10 rounded-full bg-white border border-gray-200 shadow-xs flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all shrink-0"
+          className="w-9 h-9 rounded-2xl bg-slate-50 shadow-2xs flex items-center justify-center hover:bg-slate-100 transition-all shrink-0 border border-slate-100 relative"
         >
-          <div className="relative">
-            <Bell size={20} className="text-[#141779]" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border border-white">
-                {unreadCount > 9 ? "9+" : unreadCount}
-              </span>
-            )}
-          </div>
+          <Bell size={16} className="text-[#1c1970]" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border border-white pointer-events-none z-10">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
         </button>
       </header>
 
       {/* Hero Banner Card */}
-      <div className="px-6 pt-6 pb-2 max-w-md mx-auto">
-        <div className="bg-white rounded-3xl p-6 border border-gray-200/80 shadow-[0_4px_20px_rgba(0,0,0,0.05)] relative overflow-hidden">
+      <div className="px-4 pt-4 pb-1 max-w-[430px] mx-auto w-full relative z-10">
+        <div className="bg-white border-2 border-[#E0E3E5] rounded-2xl p-4 shadow-sm relative overflow-hidden">
           <div className="relative z-10">
             <div className="flex justify-between items-start">
-              <span className={`px-3 py-1 rounded-full text-xs font-extrabold border ${themeMeta.badgeBg}`}>
+              <span className="text-[10px] font-black uppercase tracking-wider text-[#006a62] bg-[#35E5D4]/20 px-2 py-0.5 rounded-full border border-[#35E5D4]/50">
                 {themeMeta.badge}
               </span>
               <button
@@ -213,34 +217,34 @@ export default function MissionMapScreen() {
                     `/chapter-reader?chapterId=${chapterId}&title=${encodeURIComponent(chapterTitle)}`
                   )
                 }
-                className="px-3 py-1.5 bg-[#141779]/10 hover:bg-[#141779]/20 text-[#141779] border border-[#141779]/20 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95"
+                className="px-3.5 py-1.5 bg-[#EEF1FF] hover:bg-[#5B5CFF] hover:text-white text-[#17157F] border border-[#5B5CFF]/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95"
               >
                 <span>{t('read_pdf', '📖 Read PDF')}</span>
               </button>
             </div>
-            <h2 className="text-xl font-black mt-3 text-[#141779]">{themeMeta.subtitle}</h2>
-            <p className="text-xs text-[#464652] mt-1 font-medium leading-relaxed">
+            <h2 className="text-base font-black mt-2 text-[#17157F] leading-tight">{themeMeta.subtitle}</h2>
+            <p className="text-xs text-[#767683] mt-1 font-medium leading-relaxed">
               {t('read_summary_first', 'Read the textbook summary first, then complete small achievements & battle bosses!')}
             </p>
           </div>
-          <Sparkles className="absolute right-2 bottom-2 w-24 h-24 text-teal-500/10 pointer-events-none" />
+          <Sparkles className="absolute right-2 bottom-2 w-20 h-20 text-indigo-500/10 pointer-events-none" />
         </div>
       </div>
 
       {/* Mission Path Timeline */}
-      <main className="px-6 pt-6 flex flex-col gap-6 max-w-md mx-auto">
+      <main className="px-4 pt-4 max-w-[430px] mx-auto w-full relative z-10 flex flex-col gap-4">
         <div className="flex justify-between items-center px-1">
-          <h3 className="text-xs font-bold tracking-widest text-[#767683] uppercase">
+          <h3 className="text-xs font-black tracking-wider text-[#17157F] uppercase">
             {t('chapter_missions_roadmap', 'CHAPTER MISSIONS ROADMAP')}
           </h3>
-          <span className="text-xs font-bold text-[#006a62] bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200">
+          <span className="text-[10px] font-black text-[#006a62] bg-[#35E5D4]/20 px-2.5 py-0.5 rounded-full border border-[#35E5D4]/50">
             {t('missions_completed_count', { completed: missions.filter((m: any) => m.status === "completed").length, total: missions.length, defaultValue: `${missions.filter((m: any) => m.status === "completed").length} / ${missions.length} Completed` })}
           </span>
         </div>
 
-        <div className="relative flex flex-col gap-6">
-          {/* Vertical Path Line */}
-          <div className="absolute left-[39px] top-6 bottom-6 w-1 bg-gradient-to-b from-[#006a62] via-[#141779] to-gray-300 rounded-full opacity-30" />
+        <section className="relative py-2 flex flex-col gap-5">
+          {/* Continuous Vertical Timeline Axis Line (Centered on 28px inside 56px Column) */}
+          <div className="absolute left-[28px] top-6 bottom-14 w-1 -translate-x-1/2 bg-gradient-to-b from-[#45D483] via-[#5B5CFF] to-[#B9BBC8]/40 -z-10 rounded-full" />
 
           {missions.map((m: any, index: number) => {
             const isCompleted = m.status === "completed";
@@ -267,148 +271,152 @@ export default function MissionMapScreen() {
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.08 }}
-                className="relative z-10 flex items-center gap-4"
+                className="relative flex items-start gap-3 w-full"
               >
-                {/* Mission Node Icon */}
-                <div
-                  className={`w-20 h-20 rounded-3xl flex flex-col items-center justify-center shrink-0 border-2 shadow-md transition-all ${
-                    isCompleted
-                      ? "bg-emerald-500 border-emerald-300 text-white shadow-emerald-200"
-                      : isUnlocked
-                      ? "bg-[#141779] border-amber-300 text-white shadow-[#141779]/30 ring-4 ring-[#141779]/15 animate-bounce"
-                      : "bg-gray-100 border-gray-300 text-gray-400"
-                  }`}
-                >
-                  <span className="text-2xl">{m.icon}</span>
-                  <span className="text-[10px] font-black uppercase tracking-wider mt-0.5">
-                    M{m.seq}
-                  </span>
+                {/* FIXED TIMELINE COLUMN (56px Wide - Exact Center Alignment) */}
+                <div className="w-14 shrink-0 flex items-center justify-center pt-1 relative">
+                  {isCompleted ? (
+                    <div className="w-11 h-11 rounded-full bg-[#45D483] border-4 border-white text-white flex items-center justify-center shadow-md">
+                      <CheckCircle2 size={22} strokeWidth={2.5} />
+                    </div>
+                  ) : isUnlocked ? (
+                    <div className="w-11 h-11 rounded-full bg-white relative flex items-center justify-center shrink-0">
+                      <div className="w-full h-full rounded-full bg-[#5B5CFF] border-4 border-white text-white flex items-center justify-center shadow-[0_0_16px_rgba(91,92,255,0.6)] animate-pulse">
+                        <span className="text-lg">{m.icon || "⚡"}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-11 h-11 rounded-full border-4 bg-[#F1F3F5] border-white text-[#B9BBC8] flex items-center justify-center">
+                      <Lock size={18} className="text-[#B9BBC8]" />
+                    </div>
+                  )}
                 </div>
 
-                {/* Mission Details Card */}
-                <div
-                  className={`flex-1 rounded-3xl p-5 border transition-all ${
-                    isCompleted
-                      ? "bg-emerald-50/80 border-emerald-200 shadow-xs"
-                      : isUnlocked
-                      ? "bg-white border-2 border-[#141779] shadow-md shadow-[#141779]/5"
-                      : "bg-gray-100/60 border-gray-200 opacity-70"
-                  }`}
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <span className="text-[10px] font-black tracking-widest text-[#006a62] uppercase">
-                        {t('mission', 'Mission')} {m.seq}
-                      </span>
-                      <h4 className="text-base font-bold text-[#141779] leading-tight">
-                        {t(m.title.toLowerCase().replace(/ /g, '_'), { defaultValue: m.title })}
-                      </h4>
-                      <p className="text-xs text-[#464652] mt-1 font-medium flex items-center gap-2">
-                        <span>🎯 {m.quizCount} {t('quiz', 'Quiz')}</span>
-                        <span>•</span>
-                        <span>👹 {t(m.bossName.toLowerCase().replace(/ /g, '_'), { defaultValue: m.bossName })}</span>
-                      </p>
+                {/* Mission Details Card (Matching ChaptersScreen card designs) */}
+                <div className="flex-1 min-w-0">
+                  <div
+                    className={`rounded-2xl p-4 transition-all text-left ${
+                      isCompleted
+                        ? "bg-white border-2 border-[#45D483]/60 shadow-sm"
+                        : isUnlocked
+                        ? "bg-gradient-to-br from-white to-[#EEF1FF] border-2 border-[#5B5CFF] shadow-[0_4px_16px_rgba(91,92,255,0.2)]"
+                        : "bg-white/80 border-2 border-[#E0E3E5]"
+                    }`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <p className="text-[10px] font-bold text-[#767683] uppercase">
+                            {t('mission', 'Mission')} {m.seq}
+                          </p>
+                          {isCompleted && (
+                            <span className="text-[9px] font-black uppercase tracking-wider text-[#45D483] bg-[#45D483]/15 px-2 py-0.5 rounded-full border border-[#45D483]/40 shrink-0">
+                              {t('done', '✓ COMPLETED')}
+                            </span>
+                          )}
+                        </div>
+                        <h4 className="text-sm font-black text-[#17157F] leading-tight truncate">
+                          {t(m.title.toLowerCase().replace(/ /g, '_'), { defaultValue: m.title })}
+                        </h4>
+                        <p className="text-xs text-[#767683] mt-1 font-medium flex items-center gap-2">
+                          <span>🎯 {m.quizCount} {t('quiz', 'Quiz')}</span>
+                          <span>•</span>
+                          <span>👹 {t(m.bossName.toLowerCase().replace(/ /g, '_'), { defaultValue: m.bossName })}</span>
+                        </p>
+                      </div>
                     </div>
 
-                    {isCompleted && (
-                      <div className="flex items-center gap-1 bg-emerald-100 px-2.5 py-1 rounded-full border border-emerald-300">
-                        <CheckCircle2 size={13} className="text-emerald-700" />
-                        <span className="text-[10px] font-black text-emerald-800 uppercase">{t('done', 'Done')}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Stars / Play Button */}
-                  <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
-                    {hasInProgressSession ? (
-                      <span className="text-xs text-amber-600 font-bold flex items-center gap-1">
-                        <Zap size={13} className="fill-amber-500 text-amber-500 animate-pulse" />
-                        {t('in_progress_sub', '⚡ In progress...')}
-                      </span>
-                    ) : isCompleted || isRetest ? (
-                      <div className="flex items-center gap-1">
-                        {[1, 2, 3].map((starIndex) => (
-                          <Star
-                            key={starIndex}
-                            size={16}
-                            className={starIndex <= m.stars ? "text-amber-500 fill-amber-400" : "text-gray-300"}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-[#767683] font-medium">
-                        {isUnlocked ? t('ready_to_launch', 'Ready to launch!') : t('complete_previous_mission', 'Complete previous mission')}
-                      </span>
-                    )}
-
-                    <button
-                      disabled={isLocked}
-                      onClick={() => {
-                        if (hasInProgressSession) {
-                          // Resume in-progress session directly
-                          navigate(`/mission-play?chapterId=${chapterId}&missionSeq=${m.seq}`);
-                        } else {
-                          const isReplaying = isCompleted || isRetest;
-                          if (isReplaying) {
-                            sessionStorage.removeItem(`user_answers_${chapterId}_${m.seq}`);
-                            sessionStorage.removeItem(`mission_phase_${chapterId}_${m.seq}`);
-                            sessionStorage.removeItem(`mission_timer_${chapterId}_${m.seq}`);
-                            sessionStorage.removeItem(`boss_damage_${chapterId}_${m.seq}`);
-                            sessionStorage.removeItem(`boss_wrong_${chapterId}_${m.seq}`);
-                            sessionStorage.removeItem(`boss_index_${chapterId}_${m.seq}`);
-                            sessionStorage.removeItem(`quiz_correct_${chapterId}_${m.seq}`);
-                            sessionStorage.removeItem(`xp_earned_${chapterId}_${m.seq}`);
-                            sessionStorage.removeItem(`coins_earned_${chapterId}_${m.seq}`);
-                            apiFetch(`/api/practice/chapters/${chapterId}/missions/${m.seq}/draft`, { method: "DELETE" }).catch(() => {});
-                          }
-                          navigate(`/mission-play?chapterId=${chapterId}&missionSeq=${m.seq}${isReplaying ? "&replay=true" : ""}`);
-                        }
-                      }}
-                      className={`px-4 py-2 rounded-2xl font-black text-xs flex items-center gap-2 transition-all active:scale-95 cursor-pointer ${
-                        hasInProgressSession
-                          ? "bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md shadow-amber-500/20"
-                          : isCompleted
-                          ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 border border-emerald-500"
-                          : isRetest
-                          ? "bg-[#f59e0b] hover:bg-[#d97706] text-white shadow-md shadow-[#f59e0b]/20"
-                          : isUnlocked
-                          ? "bg-[#141779] text-white shadow-md shadow-[#141779]/20 hover:bg-[#101362]"
-                          : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                      }`}
-                    >
+                    {/* Stars / Play Button Footer */}
+                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
                       {hasInProgressSession ? (
-                        <>
-                          <span>{t('resume', 'Resume')}</span>
-                          <Play size={14} className="fill-white" />
-                        </>
-                      ) : isCompleted ? (
-                        <>
-                          <RotateCcw size={14} />
-                          <span>{t('replay', 'Replay')}</span>
-                        </>
-                      ) : isRetest ? (
-                        <>
-                          <span>{t('retest', 'Re-test')}</span>
-                          <Play size={14} className="fill-white" />
-                        </>
-                      ) : isUnlocked ? (
-                        <>
-                          <span>{t('start_mission', 'Start Mission')}</span>
-                          <Play size={14} className="fill-white" />
-                        </>
+                        <span className="text-xs text-indigo-600 font-bold flex items-center gap-1">
+                          <Zap size={13} className="fill-indigo-500 text-indigo-500 animate-pulse" />
+                          {t('in_progress_sub', '⚡ In progress...')}
+                        </span>
+                      ) : isCompleted || isRetest ? (
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3].map((starIndex) => (
+                            <Star
+                              key={starIndex}
+                              size={15}
+                              className={starIndex <= m.stars ? "text-[#FFC83D] fill-[#FFC83D]" : "text-gray-300"}
+                            />
+                          ))}
+                        </div>
                       ) : (
-                        <>
-                          <Lock size={14} />
-                          <span>{t('locked', 'Locked')}</span>
-                        </>
+                        <span className="text-xs text-[#767683] font-medium">
+                          {isUnlocked ? t('ready_to_launch', 'Ready to launch!') : t('complete_previous_mission', 'Complete previous mission')}
+                        </span>
                       )}
-                    </button>
+
+                      <button
+                        disabled={isLocked}
+                        onClick={() => {
+                          if (hasInProgressSession) {
+                            navigate(`/mission-play?chapterId=${chapterId}&missionSeq=${m.seq}`);
+                          } else {
+                            const isReplaying = isCompleted || isRetest;
+                            if (isReplaying) {
+                              sessionStorage.removeItem(`user_answers_${chapterId}_${m.seq}`);
+                              sessionStorage.removeItem(`mission_phase_${chapterId}_${m.seq}`);
+                              sessionStorage.removeItem(`mission_timer_${chapterId}_${m.seq}`);
+                              sessionStorage.removeItem(`boss_damage_${chapterId}_${m.seq}`);
+                              sessionStorage.removeItem(`boss_wrong_${chapterId}_${m.seq}`);
+                              sessionStorage.removeItem(`boss_index_${chapterId}_${m.seq}`);
+                              sessionStorage.removeItem(`quiz_correct_${chapterId}_${m.seq}`);
+                              sessionStorage.removeItem(`xp_earned_${chapterId}_${m.seq}`);
+                              sessionStorage.removeItem(`coins_earned_${chapterId}_${m.seq}`);
+                              apiFetch(`/api/practice/chapters/${chapterId}/missions/${m.seq}/draft`, { method: "DELETE" }).catch(() => {});
+                            }
+                            navigate(`/mission-play?chapterId=${chapterId}&missionSeq=${m.seq}${isReplaying ? "&replay=true" : ""}`);
+                          }
+                        }}
+                        className={`px-3.5 py-2 rounded-xl font-black text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
+                          hasInProgressSession
+                            ? "bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white shadow-md border border-[#5B5CFF]"
+                            : isCompleted
+                            ? "bg-[#45D483] hover:bg-[#34c774] text-white shadow-xs border border-[#45D483]"
+                            : isRetest
+                            ? "bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white shadow-md border border-[#5B5CFF]"
+                            : isUnlocked
+                            ? "bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white shadow-[0_4px_14px_rgba(91,92,255,0.4)] hover:brightness-110 border border-[#5B5CFF]"
+                            : "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
+                        }`}
+                      >
+                        {hasInProgressSession ? (
+                          <>
+                            <span>{t('resume', 'Resume')}</span>
+                            <Play size={13} className="fill-white" />
+                          </>
+                        ) : isCompleted ? (
+                          <>
+                            <RotateCcw size={13} />
+                            <span>{t('replay', 'Replay')}</span>
+                          </>
+                        ) : isRetest ? (
+                          <>
+                            <span>{t('retest', 'Re-test')}</span>
+                            <Play size={13} className="fill-white" />
+                          </>
+                        ) : isUnlocked ? (
+                          <>
+                            <span>{t('start_mission', 'Start Mission')}</span>
+                            <Play size={13} className="fill-white" />
+                          </>
+                        ) : (
+                          <>
+                            <Lock size={13} />
+                            <span>{t('locked', 'Locked')}</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </motion.div>
             );
           })}
-        </div>
+        </section>
       </main>
     </div>
   );

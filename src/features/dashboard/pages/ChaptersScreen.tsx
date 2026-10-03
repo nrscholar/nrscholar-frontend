@@ -575,7 +575,7 @@ export default function ChaptersScreen() {
                                     onClick={() => handleToggleChapter(index, chap._id, displayTitle)}
                                     className={`w-full py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
                                       isSubLocked
-                                        ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-amber-950 shadow-md active:scale-95'
+                                        ? 'bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white shadow-md active:scale-95 border border-indigo-300/40'
                                         : 'bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white shadow-[0_4px_14px_rgba(91,92,255,0.4)] hover:brightness-110 active:scale-95 border border-[#5B5CFF]'
                                     }`}
                                   >
@@ -595,7 +595,7 @@ export default function ChaptersScreen() {
                             }}
                             className={`rounded-2xl p-3.5 border-2 transition-all cursor-pointer text-left ${
                               isSubLocked 
-                                ? 'bg-amber-50/60 border-amber-200' 
+                                ? 'bg-indigo-50/60 border-indigo-200' 
                                 : 'bg-white/80 border-[#E0E3E5]'
                             }`}
                           >
@@ -603,7 +603,7 @@ export default function ChaptersScreen() {
                               <p className="text-[10px] font-bold text-[#767683]">
                                 {t('chapter', 'Chapter')} {index + 1}
                               </p>
-                              <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border shrink-0 ${isSubLocked ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                              <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border shrink-0 ${isSubLocked ? 'bg-indigo-100 text-indigo-900 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
                                 {isSubLocked ? t('premium_badge', '👑 PREMIUM 🔒') : t('locked_badge', '🔒 LOCKED')}
                               </span>
                             </div>
@@ -628,9 +628,9 @@ export default function ChaptersScreen() {
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-white rounded-[32px] p-6 max-w-sm w-full border-2 border-amber-300 shadow-2xl flex flex-col items-center gap-4"
+            className="bg-white rounded-[32px] p-6 max-w-sm w-full border-2 border-indigo-200 shadow-2xl flex flex-col items-center gap-4"
           >
-            <div className="w-16 h-16 rounded-full bg-amber-100 border border-amber-300 flex items-center justify-center text-3xl shadow-inner animate-bounce">
+            <div className="w-16 h-16 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center text-3xl shadow-inner animate-bounce">
               👑
             </div>
             <div>
@@ -644,7 +644,7 @@ export default function ChaptersScreen() {
                 setShowSubModal(false);
                 navigate("/parent/subscription");
               }}
-              className="w-full py-3.5 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-400 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-black rounded-2xl shadow-lg shadow-amber-500/20 active:scale-95 transition-all uppercase tracking-wider text-xs"
+              className="w-full py-3.5 bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white font-black rounded-2xl shadow-lg active:scale-95 transition-all uppercase tracking-wider text-xs border border-[#5B5CFF]"
             >
               {t('upgrade_subscription', 'Upgrade Subscription →')}
             </button>
@@ -660,9 +660,9 @@ export default function ChaptersScreen() {
 
       {/* TOAST NOTIFICATION */}
       {toastMessage && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-[#17157F] text-white px-5 py-2.5 rounded-full shadow-xl z-[9999] font-bold text-xs flex items-center gap-2 whitespace-nowrap max-w-[90vw]">
-          <Lock size={15} className="text-[#FFC83D] shrink-0" />
-          <span className="truncate">{toastMessage}</span>
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white px-4.5 py-2.5 rounded-full shadow-[0_12px_30px_rgba(20,23,121,0.4)] border border-[#57fae9]/40 z-[9999] font-bold text-xs flex items-center justify-center gap-2.5 max-w-[90vw] w-auto animate-in fade-in slide-in-from-top-4 duration-300">
+          <Lock size={15} className="text-[#57fae9] shrink-0" />
+          <span className="truncate max-w-[280px] sm:max-w-[340px] line-clamp-1">{toastMessage}</span>
         </div>
       )}
     </div>

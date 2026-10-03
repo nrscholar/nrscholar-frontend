@@ -94,14 +94,17 @@ export default function LocationModalSheet({
 
           {/* MISSIONS BREAKDOWN LIST */}
           {(() => {
+            const nodeCh = stage.questsCount || 4;
+            const xpVal = stage.xpReward || (nodeCh * 50);
+            const halfXp = Math.round(xpVal / 2);
             const missionsList = (stage.missions && stage.missions.length > 0) ? stage.missions : [
-              { title: t('chapter_reading_quest', 'Chapter Reading Quest'), icon: "📖", xp: 25 },
-              { title: t('practice_challenge', 'Practice Challenge'), icon: "✍️", xp: 25 }
+              { title: `${stage.name} Textbook Reading & Concept Quests`, icon: "📖", xp: halfXp },
+              { title: `${stage.name} Boss Battle & Practice Challenge`, icon: "⚔️", xp: halfXp }
             ];
             return (
               <div className="flex flex-col gap-2">
-                <h4 className="text-[10.5px] font-black uppercase tracking-wider text-[#2D328F] px-1 flex items-center gap-1.5">
-                  <Swords size={12} className="text-[#14C8C6]" />
+                <h4 className="text-[10.5px] font-black uppercase tracking-wider text-[#141779] px-1 flex items-center gap-1.5">
+                  <Swords size={12} className="text-[#006a62]" />
                   {t('available_missions', 'AVAILABLE MISSIONS')} ({missionsList.length})
                 </h4>
 
@@ -114,10 +117,10 @@ export default function LocationModalSheet({
                       <div className="flex items-center gap-2.5 min-w-0">
                         <span className="text-base shrink-0">{m.icon}</span>
                         <span className="text-xs font-bold text-slate-800 truncate">
-                          {t(m.title.toLowerCase().replace(/ /g, '_'), { defaultValue: m.title })}
+                          {m.title}
                         </span>
                       </div>
-                      <span className="text-[10px] font-black bg-indigo-50 text-[#2D328F] px-2 py-0.5 rounded-full shrink-0">
+                      <span className="text-[10px] font-black bg-indigo-50 text-[#141779] px-2 py-0.5 rounded-full shrink-0">
                         +{m.xp} XP
                       </span>
                     </div>
@@ -128,34 +131,41 @@ export default function LocationModalSheet({
           })()}
 
           {/* AREA REWARDS SUMMARY BADGE */}
-          <div className="grid grid-cols-3 gap-2 bg-white border border-slate-200 rounded-2xl p-2.5 shadow-2xs">
-            <div className="flex flex-col items-center justify-center text-center">
-              <span className="text-amber-600 text-xs font-black flex items-center gap-1">
-                <Zap size={13} className="fill-amber-500 text-amber-500" />
-                +{stage.xpReward || 50} XP
-              </span>
-            </div>
+          {(() => {
+            const nodeCh = stage.questsCount || 4;
+            const xpVal = stage.xpReward || (nodeCh * 50);
+            const coinVal = stage.coinReward || (nodeCh * 25);
+            const rewardLabel = stage.itemReward || `${nodeCh} Chapters`;
+            return (
+              <div className="grid grid-cols-3 gap-2 bg-white border border-slate-200 rounded-2xl p-2.5 shadow-2xs">
+                <div className="flex flex-col items-center justify-center text-center">
+                  <span className="text-amber-600 text-xs font-black flex items-center gap-1">
+                    <Zap size={13} className="fill-amber-500 text-amber-500" />
+                    +{xpVal} XP
+                  </span>
+                </div>
 
-            <div className="flex flex-col items-center justify-center text-center border-x border-slate-100">
-              <span className="text-[#2D328F] text-xs font-black flex items-center gap-1">
-                <Coins size={13} className="text-[#FFC857]" />
-                +{stage.coinReward || 25} {t('coins', 'Coins')}
-              </span>
-            </div>
+                <div className="flex flex-col items-center justify-center text-center border-x border-slate-100">
+                  <span className="text-[#141779] text-xs font-black flex items-center gap-1">
+                    <Coins size={13} className="text-[#FFC857]" />
+                    +{coinVal} {t('coins', 'Coins')}
+                  </span>
+                </div>
 
-            <div className="flex flex-col items-center justify-center text-center">
-              <span className="text-[#14C8C6] text-xs font-black flex items-center gap-1 truncate">
-                <Gift size={13} />
-                {t(stage.itemReward.toLowerCase().replace(/ /g, '_'), { defaultValue: stage.itemReward || "Badge" })}
-              </span>
-            </div>
-          </div>
+                <div className="flex flex-col items-center justify-center text-center">
+                  <span className="text-[#006a62] text-xs font-black flex items-center gap-1 truncate">
+                    <Gift size={13} />
+                    {rewardLabel}
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* PRIMARY ENTER ACTION CTA BUTTON */}
           <button
             onClick={() => onEnter(stage)}
-            className="w-full py-4 rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg transition-all border-2 flex items-center justify-center gap-2 mt-1 active:scale-95 text-slate-950 border-amber-300"
-            style={{ backgroundColor: NRSCHOLAR_TOKENS.reward }}
+            className="w-full py-4 rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg transition-all border-2 flex items-center justify-center gap-2 mt-1 active:scale-95 text-white bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] hover:brightness-110 border-indigo-300/40"
           >
             <Swords size={16} />
             <span>{t('start_adventure', 'START ADVENTURE')}</span>

@@ -354,7 +354,7 @@ export default function JourneyMapScreen() {
 
         {/* Evolving Character Alert Banner */}
         {journeyData?.isEvolved && (
-          <div className="shrink-0 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950 px-4 py-2 text-center text-xs font-black uppercase tracking-wider shadow-md animate-pulse">
+          <div className="shrink-0 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white px-4 py-2 text-center text-xs font-black uppercase tracking-wider shadow-md animate-pulse border-b border-indigo-300/40">
             ✨ DRAGON EVOLVED INTO SCIENTIST! 🔬
           </div>
         )}

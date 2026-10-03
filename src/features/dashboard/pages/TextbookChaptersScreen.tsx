@@ -72,51 +72,48 @@ export default function TextbookChaptersScreen() {
   let totalIndexCounter = 0;
 
   return (
-    <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col pb-24">
+    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans flex flex-col pb-24">
       {/* Header */}
-      <header className="flex items-center justify-between px-5 py-4 bg-[#f4efff] sticky top-0 z-40">
-        <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity">
-          <ArrowLeft size={24} color="#141779" />
+      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-2xl border-b-2 border-slate-200/90 shadow-[0_12px_40px_rgba(20,23,121,0.14)] px-6 py-3.5 flex items-center justify-between">
+        <button onClick={() => navigate(-1)} className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-gray-200 hover:bg-gray-50 active:scale-95 transition-all shadow-xs">
+          <ArrowLeft size={22} className="text-[#141779]" />
         </button>
-        <h1 className="text-[20px] font-extrabold text-[#141779]">{subjectQuery} Chapters</h1>
-        <div className="w-8" />
+        <h1 className="text-lg font-bold text-[#141779]">{subjectQuery} Chapters</h1>
+        <div className="w-10" />
       </header>
 
-      <main className="px-6 pt-2 flex-1 flex flex-col gap-6">
-        <div className="text-center mb-2">
-          <h2 className="text-2xl font-black text-[#141779] mb-2">{subjectQuery}</h2>
-          <p className="text-[#464652] font-medium">Read your {subjectQuery} textbook here!</p>
+      <main className="px-6 pt-6 flex-1 flex flex-col gap-6 max-w-md mx-auto w-full">
+        <div className="bg-white rounded-3xl p-6 border border-gray-200/80 shadow-[0_4px_20px_rgba(0,0,0,0.05)] text-center">
+          <span className="text-[10px] font-black uppercase tracking-wider text-[#006a62] bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200 inline-block mb-1">
+            Official Textbook Curriculum
+          </span>
+          <h2 className="text-xl font-black text-[#141779] mb-1">{subjectQuery}</h2>
+          <p className="text-xs text-[#464652] font-medium leading-relaxed">Read your official {subjectQuery} textbook chapters and practice!</p>
         </div>
 
         {loading ? (
-          <div className="flex flex-col gap-8">
-            <div className="flex flex-col gap-4">
-              <div className="h-5 rounded w-1/4 mb-2 ml-2 animate-skeleton" />
-              <div className="flex flex-col gap-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="bg-[#f0edff]/90 rounded-[24px] p-4 border-2 border-indigo-100 shadow-sm flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-[16px] shrink-0 animate-skeleton" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-3.5 rounded w-1/4 animate-skeleton" />
-                      <div className="h-5 rounded w-3/4 animate-skeleton" />
-                      <div className="h-3 rounded w-1/5 animate-skeleton" />
-                    </div>
-                  </div>
-                ))}
+          <div className="flex flex-col gap-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4 animate-pulse">
+                <div className="w-12 h-12 rounded-2xl bg-slate-200 shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 rounded w-1/4 bg-slate-200" />
+                  <div className="h-4 rounded w-3/4 bg-slate-300" />
+                  <div className="h-3 rounded w-1/5 bg-slate-200" />
+                </div>
               </div>
-            </div>
+            ))}
           </div>
         ) : (
-          <div className="flex flex-col gap-8">
-            {Object.keys(groupedChapters).map((unit, index) => {
-              const color = unitColors[index % unitColors.length];
+          <div className="flex flex-col gap-6">
+            {Object.keys(groupedChapters).map((unit) => {
               return (
-                <div key={unit} className="flex flex-col gap-4">
-                  <h3 className={`text-lg font-bold ${color.text} uppercase tracking-wide px-2`}>
+                <div key={unit} className="flex flex-col gap-3">
+                  <h3 className="text-xs font-bold tracking-widest text-[#006a62] uppercase px-1">
                     {unit}
                   </h3>
                   
-                  <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-3">
                     {groupedChapters[unit].map((chapter: any) => {
                       const chIdx = totalIndexCounter++;
                       const isLocked = chIdx >= 1 && !isSubscribed;
@@ -133,15 +130,14 @@ export default function TextbookChaptersScreen() {
                               navigate(`/textbook/reader?chapterId=${chapter._id}&title=${encodeURIComponent(chapter.chapterName)}`);
                             }
                           }}
-                          className={`bg-white rounded-[24px] p-4 border-2 ${isLocked ? 'border-amber-300 bg-amber-50/40' : color.border} shadow-[0_4px_0_var(--tw-shadow-color)] hover:shadow-[0_6px_0_var(--tw-shadow-color)] active:shadow-none transition-all cursor-pointer flex items-center gap-4`}
-                          style={{ '--tw-shadow-color': isLocked ? '#f59e0b' : color.border.replace('border-', '') } as React.CSSProperties}
+                          className={`bg-white rounded-3xl p-4 border ${isLocked ? 'border-amber-300 bg-amber-50/30' : 'border-slate-200/80'} shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:shadow-md transition-all cursor-pointer flex items-center gap-4`}
                         >
-                          <div className={`w-14 h-14 ${isLocked ? 'bg-amber-100' : color.bg} rounded-[16px] flex items-center justify-center shrink-0 border-2 ${isLocked ? 'border-amber-300 text-amber-800' : color.border}`}>
-                            <BookOpen size={24} className={isLocked ? 'text-amber-700' : color.text} />
+                          <div className={`w-12 h-12 ${isLocked ? 'bg-amber-100 border-amber-300 text-amber-800' : 'bg-indigo-50 border-indigo-100 text-[#141779]'} rounded-2xl flex items-center justify-center shrink-0 border`}>
+                            <BookOpen size={22} />
                           </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className={`text-xs font-bold ${isLocked ? 'text-amber-800' : color.text} uppercase`}>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <p className={`text-[10px] font-black ${isLocked ? 'text-amber-800' : 'text-[#006a62]'} uppercase`}>
                                 Chapter {chapter.chapterNumber}
                               </p>
                               {isLocked && (
@@ -150,11 +146,11 @@ export default function TextbookChaptersScreen() {
                                 </span>
                               )}
                             </div>
-                            <h4 className="text-[18px] font-black text-[#4b4b4b] leading-tight">
+                            <h4 className="text-base font-bold text-[#141779] leading-tight truncate">
                               {chapter.chapterName}
                             </h4>
-                            <p className="text-xs text-[#afafaf] font-bold mt-1">
-                              {chapter.pageCount} Pages
+                            <p className="text-xs text-[#767683] font-semibold mt-1">
+                              {chapter.pageCount || 12} Pages
                             </p>
                           </div>
                         </motion.div>
@@ -190,7 +186,7 @@ export default function TextbookChaptersScreen() {
                 setShowSubModal(false);
                 navigate("/parent/subscription");
               }}
-              className="w-full py-3.5 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-400 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-black rounded-2xl shadow-lg shadow-amber-500/20 active:scale-95 transition-all uppercase tracking-wider text-xs"
+              className="w-full py-3.5 bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] hover:brightness-110 text-white font-black rounded-2xl shadow-lg active:scale-95 transition-all uppercase tracking-wider text-xs border border-[#5B5CFF]"
             >
               Upgrade Subscription →
             </button>

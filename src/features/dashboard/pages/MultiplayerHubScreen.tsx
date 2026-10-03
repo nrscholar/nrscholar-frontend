@@ -453,13 +453,13 @@ export default function MultiplayerHubScreen() {
 
         {/* DYNAMIC ERROR TOAST */}
         {error && (
-          <div className="fixed top-14 left-1/2 -translate-x-1/2 w-[90%] max-w-[400px] bg-white border-l-4 border-red-600 border-y border-r border-red-200 rounded-xl p-3 shadow-2xl backdrop-blur-md z-50 flex items-center justify-between gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
-            <div className="flex items-center gap-2">
-              <span className="text-base">⚠️</span>
-              <p className="text-xs font-bold text-[#141779] leading-tight">{error}</p>
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 w-[90%] max-w-[400px] bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white border border-[#57fae9]/40 rounded-full px-4.5 py-2.5 shadow-xl backdrop-blur-md z-[9999] flex items-center justify-between gap-2.5 animate-in fade-in slide-in-from-top-4 duration-300">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-sm shrink-0">⚠️</span>
+              <p className="text-xs font-bold text-slate-100 leading-tight truncate max-w-[260px] sm:max-w-[320px] line-clamp-1">{error}</p>
             </div>
-            <button onClick={() => setError("")} className="p-1 text-red-600 hover:bg-red-50 rounded-full">
-              <X size={16} />
+            <button onClick={() => setError("")} className="p-1 text-slate-300 hover:text-white hover:bg-white/10 rounded-full shrink-0">
+              <X size={15} />
             </button>
           </div>
         )}

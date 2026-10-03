@@ -1309,13 +1309,13 @@ export default function ParentSettings() {
     <AnimatePresence>
       {toastMessage && (
         <motion.div 
-          initial={{ opacity: 0, y: 50, scale: 0.9 }}
+          initial={{ opacity: 0, y: -40, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 20, scale: 0.9 }}
-          className="fixed bottom-24 left-4 right-4 mx-auto w-fit max-w-[400px] bg-slate-900/95 backdrop-blur-md text-white px-6 py-4 rounded-full flex items-center justify-center gap-3 z-[100] shadow-[0_10px_35px_rgba(0,0,0,0.4)] border border-slate-700/60"
+          exit={{ opacity: 0, y: -20, scale: 0.9 }}
+          className="fixed top-4 left-1/2 -translate-x-1/2 w-auto max-w-[90vw] bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white px-4.5 py-2.5 rounded-full flex items-center justify-center gap-2.5 z-[9999] shadow-[0_12px_30px_rgba(20,23,121,0.4)] border border-[#57fae9]/40"
         >
-          <Save size={18} className="text-teal-400 shrink-0" />
-          <span className="text-xs font-black tracking-wide text-center leading-tight">{toastMessage}</span>
+          <Save size={16} className="text-[#57fae9] shrink-0" />
+          <span className="text-xs font-bold tracking-wide text-center truncate max-w-[280px] sm:max-w-[340px] line-clamp-1">{toastMessage}</span>
         </motion.div>
       )}
     </AnimatePresence>

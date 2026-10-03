@@ -141,7 +141,7 @@ export default function LocationPreview({ landmark, onClose, onEnter }: Location
             className={`w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all mt-1 ${
               isLocked
                 ? "bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed"
-                : "bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 text-slate-950 hover:from-amber-500 hover:to-orange-600 active:scale-95 border-2 border-amber-300 shadow-amber-500/30"
+                : "bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white hover:brightness-110 active:scale-95 border-2 border-indigo-300/40 shadow-lg shadow-indigo-950/40"
             }`}
           >
             <span>{isLocked ? "LOCATION LOCKED" : `ENTER ${landmark.name.toUpperCase()} ⚔️`}</span>

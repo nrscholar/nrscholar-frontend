@@ -322,7 +322,7 @@ const ScreenTimeTracker = () => {
             🏆
           </div>
 
-          <span className="px-3.5 py-1 bg-amber-400 text-[#141779] font-black text-[10px] rounded-full uppercase tracking-wider mb-2.5 shadow-xs z-10">
+          <span className="px-3.5 py-1 bg-[#57fae9] text-[#141779] font-black text-[10px] rounded-full uppercase tracking-wider mb-2.5 shadow-xs z-10">
             Daily Screen Time Reached 🌟
           </span>
 
@@ -337,7 +337,7 @@ const ScreenTimeTracker = () => {
           <div className="w-full flex flex-col gap-3 z-10">
             <button 
               onClick={() => window.location.href = '/parent/gate'} 
-              className="w-full bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 text-slate-950 py-3.5 rounded-2xl font-black shadow-lg hover:brightness-110 active:scale-95 transition-all text-xs uppercase tracking-wider border border-amber-300 flex items-center justify-center gap-2"
+              className="w-full bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white py-3.5 rounded-2xl font-black shadow-lg hover:brightness-110 active:scale-95 transition-all text-xs uppercase tracking-wider border border-[#5B5CFF] flex items-center justify-center gap-2"
             >
               <span>👨‍👩‍👦 Enter Parent PIN</span>
             </button>

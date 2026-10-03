@@ -254,11 +254,17 @@ export default function MapWorld({
 
                   <div className="relative z-10 flex items-start gap-3">
                     {/* Icon column */}
-                    <div className="flex flex-col items-center gap-1.5 shrink-0">
-                      <div className={`w-11 h-11 ${cardStyle.iconBgClass} rounded-2xl flex items-center justify-center shadow-md relative`}>
-                        {isCompleted && <Check size={20} color="white" strokeWidth={3} />}
-                        {isCurrent && <Sparkles size={18} className="text-[#57fae9] animate-pulse" />}
-                        {isUpcoming && <Lock size={16} color="white" />}
+                    <div className="flex flex-col items-center shrink-0">
+                      <div className={`w-12 h-12 ${cardStyle.iconBgClass} rounded-2xl flex items-center justify-center shadow-md relative text-white`}>
+                        {stage.emoji ? (
+                          <span className="text-xl leading-none select-none">{stage.emoji}</span>
+                        ) : (
+                          <>
+                            {isCompleted && <Check size={20} color="white" strokeWidth={3} />}
+                            {isCurrent && <Sparkles size={18} className="text-[#57fae9] animate-pulse" />}
+                            {isUpcoming && <Lock size={16} color="white" />}
+                          </>
+                        )}
                         {/* Node number badge */}
                         <div
                           className="absolute -top-1.5 -right-1.5 w-[18px] h-[18px] rounded-full text-[9px] font-black flex items-center justify-center text-white border-2 border-white"
@@ -267,9 +273,6 @@ export default function MapWorld({
                           {index + 1}
                         </div>
                       </div>
-                      {stage.emoji && (
-                        <span className="text-base leading-none">{stage.emoji}</span>
-                      )}
                     </div>
 
                     {/* Content column */}

@@ -560,7 +560,7 @@ export default function DailyRewardsScreen() {
             <button
               onClick={handleOpenBuyConfirm}
               disabled={isSpinning || isBuying}
-              className="w-full py-4 rounded-full font-black text-base sm:text-lg tracking-wider uppercase transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/25 border border-amber-300"
+              className="w-full py-4 rounded-full font-black text-base sm:text-lg tracking-wider uppercase transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] hover:brightness-110 text-white shadow-lg border border-indigo-300/40"
             >
               <span>{isBuying ? t('purchasing', 'Purchasing...') : t('buy_spin', { cost: (spinType === "daily" || spinType === "boss_revival") ? 100 : 150, defaultValue: `🛒 Buy 1 Spin (${(spinType === "daily" || spinType === "boss_revival") ? "100 🪙" : "150 🪙"})` })}</span>
             </button>
@@ -631,7 +631,7 @@ export default function DailyRewardsScreen() {
                 <button
                   onClick={confirmAndBuySpin}
                   disabled={isBuying}
-                  className="flex-1 py-3.5 rounded-full font-black text-sm uppercase tracking-wider text-white bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 transition-all shadow-md shadow-amber-500/20 border border-amber-300 flex items-center justify-center gap-1.5"
+                  className="flex-1 py-3.5 rounded-full font-black text-sm uppercase tracking-wider text-white bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] hover:brightness-110 transition-all shadow-md border border-indigo-300/40 flex items-center justify-center gap-1.5"
                 >
                   {isBuying ? t('purchasing', 'Buying...') : t('confirm', 'Confirm')}
                 </button>

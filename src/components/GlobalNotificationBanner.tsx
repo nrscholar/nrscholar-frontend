@@ -65,7 +65,7 @@ export default function GlobalNotificationBanner() {
             <h4 className="text-xs font-black text-[#57fae9] uppercase tracking-wider truncate mb-0.5">
               {displayTitle}
             </h4>
-            <p className="text-xs font-bold text-slate-100 line-clamp-2 leading-snug">
+            <p className="text-xs font-bold text-slate-100 line-clamp-1 truncate leading-snug">
               {displayMessage}
             </p>
           </div>

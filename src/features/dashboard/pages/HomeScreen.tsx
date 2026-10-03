@@ -2,13 +2,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Bookmark, BookOpen, CheckCircle, ChevronRight, Clock, Gift, Map, Shield, Star, Bell, Crown, Gem, Trophy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import ChildSwitcherModal from "../../../components/ChildSwitcherModal";
 import AdventureHero from "../../../components/AdventureHero";
 
 export default function HomeScreen() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { t } = useTranslation();
 
   const [xp, setXp] = useState(0);
@@ -117,12 +118,26 @@ export default function HomeScreen() {
   };
 
   const handleDeclineRevival = async () => {
-    try {
-      await apiFetch("/api/retention/streak/decline", { method: "POST" });
-    } catch (e) { }
     setShowRevivalConfirmModal(false);
     setShowRevivalModal(false);
     setStreakDays(0);
+    setRetentionStreak((prev: any) => ({
+      ...(prev || {}),
+      currentStreak: 0,
+      streakDaysOfWeek: [false, false, false, false, false, false, false]
+    }));
+    try {
+      const stored = localStorage.getItem("userData");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        parsed.streakDays = 0;
+        localStorage.setItem("userData", JSON.stringify(parsed));
+      }
+    } catch (e) {}
+
+    try {
+      await apiFetch("/api/retention/streak/decline", { method: "POST" });
+    } catch (e) { }
     fetchProfile();
 
     try {
@@ -461,6 +476,8 @@ export default function HomeScreen() {
         {/* 1. ADVENTURE HERO CARD */}
         {(() => {
           const effectiveTheme = (() => {
+            const themeParam = searchParams.get("theme");
+            if (themeParam && ["dragon", "science", "social"].includes(themeParam)) return themeParam;
             if (journeyData?.tierKey === "scientist") return "science";
             if (journeyData?.tierKey === "social_proof") return "social";
             if (journeyData?.tierKey === "dragon") return "dragon";
@@ -494,22 +511,20 @@ export default function HomeScreen() {
 
         {/* 2. FOUR QUICK ACTION BENTO GRID (2x2 Cards with Continue Learning in position) */}
         <section className="grid grid-cols-2 gap-3">
-          {/* Continue Learning (Position & Style Preserved) */}
+          {/* Continue Learning */}
           <button
             onClick={() => navigate("/practice/chapters")}
-            className="bg-[#e0e0ff] rounded-[24px] p-3.5 flex flex-col justify-between h-32 border border-[#c7c7ff]/70 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden"
+            className="bg-[#e0e0ff] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#c7c7ff]/70 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group"
           >
-            <div className="flex justify-between items-start">
-              <div className="w-9 h-9 rounded-full bg-[rgba(20,23,121,0.12)] flex items-center justify-center">
-                <BookOpen size={18} className="text-[#141779]" />
-              </div>
-              <div className="w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs">
-                <ChevronRight size={14} />
-              </div>
+            <div className="w-9 h-9 rounded-full bg-[rgba(20,23,121,0.12)] flex items-center justify-center">
+              <BookOpen size={18} className="text-[#141779]" />
             </div>
-            <div>
-              <h3 className="text-xs font-black text-slate-900 mb-0.5">{t('continue_learning')}</h3>
-              <p className="text-[11px] text-[#767683] font-semibold mb-1.5">{t('math_science_quests')}</p>
+            <div className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
+              <ChevronRight size={14} />
+            </div>
+            <div className="mt-2">
+              <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('continue_learning')}</h3>
+              <p className="text-[11px] text-[#525266] font-bold leading-relaxed mb-2 truncate">{t('math_science_quests')}</p>
               <div className="space-y-1">
                 <div className="text-[9.5px] font-extrabold text-[#141779] truncate">
                   {t('resume_chapters', 'Resume chapters & practice')}
@@ -521,7 +536,7 @@ export default function HomeScreen() {
             </div>
           </button>
 
-          {/* Good Habits (Fully Dynamic synced with HabitsScreen) */}
+          {/* Good Habits */}
           {(() => {
             const currentHabitDay = dailyHabitData?.currentDay ?? 8;
             const isCompletedToday = dailyHabitData?.isCompletedToday ?? false;
@@ -537,19 +552,17 @@ export default function HomeScreen() {
             return (
               <button
                 onClick={() => navigate("/good-habits")}
-                className="bg-[#fff8ee] rounded-[24px] p-3.5 flex flex-col justify-between h-32 border border-[#fed7aa]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden"
+                className="bg-[#fff8ee] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#fed7aa]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group"
               >
-                <div className="flex justify-between items-start">
-                  <div className="w-9 h-9 rounded-full bg-[#ffedd5] flex items-center justify-center">
-                    <Star size={18} className="text-[#f97316] fill-[#f97316]" />
-                  </div>
-                  <div className="w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs">
-                    <ChevronRight size={14} />
-                  </div>
+                <div className="w-9 h-9 rounded-full bg-[#ffedd5] flex items-center justify-center">
+                  <Star size={18} className="text-[#f97316] fill-[#f97316]" />
                 </div>
-                <div>
-                  <h3 className="text-xs font-black text-slate-900 mb-0.5">{t('good_habits', 'Good Habits')}</h3>
-                  <p className="text-[11px] text-slate-400 font-bold mb-1.5">{t('daily_lessons_rewards', 'Daily lessons & rewards')}</p>
+                <div className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
+                  <ChevronRight size={14} />
+                </div>
+                <div className="mt-2">
+                  <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('good_habits', 'Good Habits')}</h3>
+                  <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-2 truncate">{t('daily_lessons_rewards', 'Daily lessons & rewards')}</p>
                   <div className="space-y-1">
                     <div className="text-[9.5px] font-extrabold text-slate-700 truncate">
                       {habitsDoneText}
@@ -563,7 +576,7 @@ export default function HomeScreen() {
             );
           })()}
 
-          {/* Journey (Fully Dynamic with Connected Line Track) */}
+          {/* Journey */}
           {(() => {
             const nodesList = journeyData?.nodes || [];
             const completedCount = nodesList.filter((n: any) => n.completed).length;
@@ -572,7 +585,6 @@ export default function HomeScreen() {
               ? (journeyData.activeNodeIndex + 1)
               : Math.min(completedCount + 1, totalStages);
 
-            // Dynamic number of stage nodes based on class/journey (e.g. Std 1 = 3 levels)
             const numDots = Math.min(Math.max(totalStages, 3), 6);
             const dots = Array.from({ length: numDots }).map((_, idx) => {
               if (nodesList.length > 0) {
@@ -581,32 +593,26 @@ export default function HomeScreen() {
               return idx < completedCount;
             });
 
-            // Calculate progress percentage along the line track
             const completedDots = dots.filter(Boolean).length;
             const lineProgressPct = numDots > 1 ? (Math.min(completedDots, numDots - 1) / (numDots - 1)) * 100 : 0;
 
             return (
               <button
                 onClick={() => navigate("/practice/journey-map")}
-                className="bg-[#e6fbf7] rounded-[24px] p-3.5 flex flex-col justify-between h-32 border border-[#b2f5ea]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden"
+                className="bg-[#e6fbf7] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#b2f5ea]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group"
               >
-                <div className="flex justify-between items-start">
-                  <div className="w-9 h-9 rounded-full bg-[#ccfbf1] flex items-center justify-center">
-                    <BookOpen size={18} className="text-[#0d9488]" />
-                  </div>
-                  <div className="w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs">
-                    <ChevronRight size={14} />
-                  </div>
+                <div className="w-9 h-9 rounded-full bg-[#ccfbf1] flex items-center justify-center">
+                  <BookOpen size={18} className="text-[#0d9488]" />
                 </div>
-                <div>
-                  <h3 className="text-xs font-black text-slate-900 mb-0.5">{t('journey', 'Journey')}</h3>
-                  <p className="text-[11px] text-slate-400 font-bold mb-1">{t('explorer_map', 'Explorer Map & Stages')}</p>
+                <div className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
+                  <ChevronRight size={14} />
+                </div>
+                <div className="mt-2">
+                  <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('journey', 'Journey')}</h3>
+                  <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-1 truncate">{t('explorer_map', 'Explorer Map & Stages')}</p>
 
-                  {/* Connected Track & Stage Dots */}
                   <div className="relative flex items-center justify-between my-1 px-1">
-                    {/* Background Track Line */}
                     <div className="absolute left-2 right-2 top-1/2 -translate-y-1/2 h-1 bg-slate-200/90 rounded-full z-0" />
-                    {/* Green Active Progress Line */}
                     <div
                       className="absolute left-2 top-1/2 -translate-y-1/2 h-1 bg-[#10b981] rounded-full z-0 transition-all duration-500"
                       style={{ width: `calc(${lineProgressPct}% * (100% - 16px) / 100)` }}
@@ -614,7 +620,7 @@ export default function HomeScreen() {
                     {dots.map((isDone, i) => (
                       <span
                         key={i}
-                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black z-10 transition-colors shadow-2xs ${
+                        className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8.5px] font-black z-10 transition-colors shadow-2xs ${
                           isDone ? "bg-[#10b981] text-white" : "bg-slate-300 text-white"
                         }`}
                       >
@@ -623,7 +629,7 @@ export default function HomeScreen() {
                     ))}
                   </div>
 
-                  <span className="text-[9.5px] font-black text-slate-500 block mt-0.5">
+                  <span className="text-[9.5px] font-black text-slate-500 block mt-0.5 truncate">
                     {t('stage_progress', { stage: activeStageIndex, total: totalStages, defaultValue: `Stage ${activeStageIndex} of ${totalStages}` })}
                   </span>
                 </div>
@@ -631,22 +637,20 @@ export default function HomeScreen() {
             );
           })()}
 
-          {/* My Collections (Updated with premium vector badge icons) */}
+          {/* My Collections */}
           <button
             onClick={() => navigate("/practice/collections")}
-            className="bg-[#fff1f3] rounded-[24px] p-3.5 flex flex-col justify-between h-32 border border-[#fecdd3]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden"
+            className="bg-[#fff1f3] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#fecdd3]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group"
           >
-            <div className="flex justify-between items-start">
-              <div className="w-9 h-9 rounded-full bg-[#ffe4e6] flex items-center justify-center">
-                <Trophy size={18} className="text-[#e11d48]" />
-              </div>
-              <div className="w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs">
-                <ChevronRight size={14} />
-              </div>
+            <div className="w-9 h-9 rounded-full bg-[#ffe4e6] flex items-center justify-center">
+              <Trophy size={18} className="text-[#e11d48]" />
             </div>
-            <div>
-              <h3 className="text-xs font-black text-slate-900 mb-0.5">{t('my_collections', 'My Collections')}</h3>
-              <p className="text-[11px] text-slate-400 font-bold mb-1.5">{t('unlocked_cards_badges', 'Unlocked cards & badges')}</p>
+            <div className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
+              <ChevronRight size={14} />
+            </div>
+            <div className="mt-2">
+              <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('my_collections', 'My Collections')}</h3>
+              <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-2 truncate">{t('unlocked_cards_badges', 'Unlocked cards & badges')}</p>
               <div className="flex items-center gap-1.5 pt-0.5">
                 <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-amber-500 to-yellow-400 text-white flex items-center justify-center shadow-2xs border border-amber-200/50">
                   <Star size={12} className="fill-white" />
@@ -719,7 +723,7 @@ export default function HomeScreen() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 30 }}
               transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              className="bg-white text-slate-950 w-full max-w-[440px] h-[82vh] max-h-[620px] p-4 sm:p-6 rounded-[32px] border-2 border-slate-200 shadow-2xl flex flex-col relative overflow-hidden"
+              className="bg-white text-slate-950 w-full max-w-[440px] h-auto max-h-[85vh] p-4 sm:p-6 rounded-[32px] border-2 border-slate-200 shadow-2xl flex flex-col relative overflow-hidden my-auto"
             >
               {/* Modal Header */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0 relative z-10">
@@ -789,7 +793,7 @@ export default function HomeScreen() {
               ) : (
                 /* GUARANTEED TOUCH & MOUSE SCROLL CONTAINER */
                 <div
-                  className="my-2.5 flex-1 min-h-0 overflow-y-auto overscroll-contain py-1 pr-1 flex flex-col gap-2.5 relative z-10 select-none [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-amber-400 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-100"
+                  className="my-2 flex-1 min-h-0 overflow-y-auto overscroll-contain py-1 pr-1 flex flex-col gap-2.5 relative z-10 select-none [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-amber-400 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-100"
                   style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
                 >
                   {(() => {
@@ -818,9 +822,11 @@ export default function HomeScreen() {
                       return (a.seq || 0) - (b.seq || 0);
                     });
 
-                    if (sortedList.length === 0) {
+                    const displayList = sortedList.slice(0, 3);
+
+                    if (displayList.length === 0) {
                       return (
-                        <div className="py-12 text-center text-slate-500 font-bold text-sm">
+                        <div className="py-8 text-center text-slate-500 font-bold text-sm">
                           {questTab === 'completed'
                             ? t('no_completed_quests', 'No completed quests yet!')
                             : t('no_active_quests', 'No active quests remaining!')}
@@ -828,7 +834,7 @@ export default function HomeScreen() {
                       );
                     }
 
-                    return sortedList.map((mission) => {
+                    return displayList.map((mission) => {
                       const isDone = mission.status === "completed";
                       const isReady = mission.status === "ready_to_claim" || (mission.current_progress >= (mission.target_progress || 1) && !isDone);
                       const cur = mission.current_progress || 0;
@@ -890,7 +896,7 @@ export default function HomeScreen() {
                                 onClick={() => {
                                   completeMission(mission.id || `seq_${mission.seq}`);
                                 }}
-                                className="text-xs font-black text-slate-950 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-400 hover:from-amber-500 hover:to-amber-600 active:scale-95 px-3.5 py-1.5 rounded-xl shadow-md shadow-amber-500/30 animate-pulse border border-amber-300"
+                                className="text-xs font-black text-white bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] hover:from-[#1c1970] hover:to-[#2e2aab] active:scale-95 px-3.5 py-1.5 rounded-xl shadow-md shadow-indigo-900/30 animate-pulse border border-indigo-300/40"
                               >
                                 {t('claim', '🎁 CLAIM')}
                               </button>

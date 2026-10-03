@@ -1377,15 +1377,15 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
       {phase === "BOSS" && (
         <main className="px-5 sm:px-6 py-6 flex-1 flex flex-col justify-between max-w-md mx-auto w-full">
-          {/* Top Outer Light Yellow/Cream Boss Stage Header Card with Premium Visual Aesthetics */}
-          <div className="bg-gradient-to-b from-[#FFFDF2] via-[#FFFBEB] to-[#F4F4FC] rounded-[32px] p-4.5 pt-5 mb-4 shadow-[0_10px_30px_rgba(20,23,121,0.08)] border-2 border-[#E2E4FA] relative backdrop-blur-md">
+          {/* Top Outer Indigo/Lavender Boss Stage Header Card with Premium Visual Aesthetics */}
+          <div className="bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] rounded-[32px] p-4.5 sm:p-5 pt-5 pb-4.5 mb-4 shadow-[0_10px_30px_rgba(20,23,121,0.08)] border-2 border-indigo-200/80 relative backdrop-blur-md overflow-hidden">
             
             {/* Top Bar: Hero vs Boss Header */}
-            <div className="flex items-center justify-between mb-3.5 relative z-10 px-1 gap-1">
+            <div className="flex items-center justify-between mb-3.5 relative z-10 px-0.5 gap-1.5">
 
-              {/* Left: Dragon Hero */}
-              <div className="flex flex-col items-start shrink-0">
-                <span className="text-[10px] sm:text-[11px] font-black uppercase text-[#006a62] tracking-wider block leading-tight whitespace-nowrap">
+              {/* Left: Dragon Hero in Pill Container */}
+              <div className="flex flex-col items-start shrink-0 bg-white/90 backdrop-blur-xs px-3 py-1.5 rounded-2xl border border-indigo-100/80 shadow-2xs">
+                <span className="text-[10px] sm:text-[11px] font-black uppercase text-[#141779] tracking-wider block leading-tight whitespace-nowrap">
                   DRAGON HERO
                 </span>
                 <div className="flex gap-1 mt-1">
@@ -1393,21 +1393,21 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                     <Heart
                       key={h}
                       size={14}
-                      className={`w-3.5 h-3.5 ${h <= childHearts ? (dragonCrying ? "text-cyan-500 fill-cyan-400 animate-ping" : "text-rose-500 fill-rose-500 drop-shadow-xs") : "text-gray-300"}`}
+                      className={`w-3.5 h-3.5 ${h <= childHearts ? (dragonCrying ? "text-cyan-500 fill-cyan-400 animate-ping" : "text-rose-500 fill-rose-500 drop-shadow-xs") : "text-slate-300 fill-slate-200"}`}
                     />
                   ))}
                 </div>
               </div>
 
               {/* Center: Boss Stage Badge */}
-              <div className="px-3.5 py-1.5 bg-gradient-to-r from-[#141779] to-[#25299e] text-white font-black text-[10px] sm:text-[11px] uppercase tracking-wider rounded-full shadow-md border border-white/20 flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+              <div className="px-3 sm:px-3.5 py-1.5 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white font-black text-[10px] sm:text-[11px] uppercase tracking-wider rounded-full shadow-md border border-white/20 flex items-center gap-1.5 shrink-0 whitespace-nowrap">
                 <span>BOSS STAGE</span>
                 <span className="text-xs">⚔️</span>
               </div>
 
-              {/* Right: Boss Name / Chapter Stage */}
-              <div className="flex flex-col items-end shrink-0">
-                <span className="text-[10px] sm:text-[11px] font-black uppercase text-[#141779] tracking-wider block leading-tight text-right whitespace-nowrap max-w-[110px] truncate">
+              {/* Right: Boss Name / Chapter Stage in Pill Container */}
+              <div className="flex flex-col items-end shrink-0 bg-white/90 backdrop-blur-xs px-3 py-1.5 rounded-2xl border border-indigo-100/80 shadow-2xs">
+                <span className="text-[10px] sm:text-[11px] font-black uppercase text-[#141779] tracking-wider block leading-tight text-right whitespace-nowrap max-w-[100px] truncate">
                   {bossName ? bossName.toUpperCase() : 'BOSS'}
                 </span>
                 <div className="flex gap-1 mt-1">
@@ -1415,7 +1415,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                     <Heart
                       key={h}
                       size={14}
-                      className={`w-3.5 h-3.5 ${h <= bossHearts ? "text-amber-400 fill-amber-400 drop-shadow-xs" : "text-gray-300"}`}
+                      className={`w-3.5 h-3.5 ${h <= bossHearts ? "text-rose-500 fill-rose-500 drop-shadow-xs" : "text-slate-300 fill-slate-200"}`}
                     />
                   ))}
                 </div>
@@ -1424,7 +1424,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             </div>
 
             {/* Inner White Boss Card with Soft Depth & Breathing Animation */}
-            <div className="relative p-4 rounded-[24px] bg-white/95 border border-[#F0F0F0] flex items-center justify-between shadow-xs">
+            <div className="relative p-3.5 sm:p-4 rounded-[24px] bg-white border-2 border-indigo-100/80 flex items-center justify-between shadow-xs">
               <motion.div
                 animate={{
                   y: bossAngry ? [0, -8, 0] : [0, -4, 0],
@@ -1432,21 +1432,21 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                   rotate: bossAngry ? [-3, 3, -3, 3, 0] : 0
                 }}
                 transition={bossAngry ? { duration: 0.5, repeat: 2 } : { duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
-                className="relative z-10 flex items-center gap-3.5"
+                className="relative z-10 flex items-center gap-3"
               >
-                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FFF9C4] to-[#FFE082] border-2 border-[#FFE082] flex items-center justify-center text-3xl shrink-0 shadow-sm relative ${bossAngry ? "ring-4 ring-rose-500/80 animate-pulse" : ""}`}>
+                <div className={`w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-indigo-50/80 border-2 border-indigo-200 flex items-center justify-center text-2xl sm:text-3xl shrink-0 shadow-xs relative ${bossAngry ? "ring-4 ring-rose-500/80 animate-pulse" : ""}`}>
                   <span>🐉</span>
                 </div>
                 <div>
-                  <h4 className="text-lg font-black text-[#141779] leading-tight drop-shadow-2xs">{bossName}</h4>
-                  <span className={`text-xs font-bold ${bossAngry ? "text-rose-600 animate-pulse" : "text-[#D97706]"}`}>
+                  <h4 className="text-base sm:text-lg font-black text-[#141779] leading-tight drop-shadow-2xs">{bossName}</h4>
+                  <span className={`text-xs font-bold ${bossAngry ? "text-rose-600 animate-pulse" : "text-indigo-600"}`}>
                     {bossState.status}
                   </span>
                 </div>
               </motion.div>
 
               <div className="relative z-10 flex flex-col items-end gap-1.5 shrink-0">
-                <span className="text-xs font-black bg-white border-2 border-[#FFE082] px-4 py-1.5 rounded-full text-[#141779] shadow-xs whitespace-nowrap">
+                <span className="text-xs font-black bg-indigo-50/80 border border-indigo-100 px-3.5 py-1.5 rounded-full text-[#141779] shadow-2xs whitespace-nowrap">
                   {bossHearts} / {bossMaxHp} HP
                 </span>
               </div>
@@ -2142,7 +2142,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                       showToast("Purchase failed.");
                     }
                   }}
-                  className="w-full py-4 bg-gradient-to-r from-amber-400 to-orange-500 text-white font-black rounded-2xl hover:brightness-110 active:scale-95 transition-all uppercase tracking-wider text-sm flex items-center justify-center gap-2 shadow-md shadow-amber-500/20"
+                  className="w-full py-4 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white font-black rounded-2xl hover:brightness-110 active:scale-95 transition-all uppercase tracking-wider text-sm flex items-center justify-center gap-2 shadow-md border border-indigo-300/40"
                 >
                   <span>🛒 Buy Revival Spin (100 🪙)</span>
                 </button>
@@ -2198,11 +2198,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       {/* Toast Notification */}
       {toastMessage && (
         <div
-          className="fixed top-24 z-[250] bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl border border-slate-800/80 font-bold text-xs sm:text-sm tracking-wide flex items-center justify-center gap-2 text-center animate-bounce max-w-[90vw] w-auto"
-          style={{ left: "50%", transform: "translateX(-50%)" }}
+          className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white px-4.5 py-2.5 rounded-full shadow-[0_12px_30px_rgba(20,23,121,0.4)] border border-[#57fae9]/40 font-bold text-xs flex items-center justify-center gap-2.5 text-center max-w-[90vw] w-auto animate-in fade-in slide-in-from-top-4 duration-300"
         >
-          <span>✨</span>
-          <span>{toastMessage}</span>
+          <span className="text-sm shrink-0">✨</span>
+          <span className="truncate max-w-[280px] sm:max-w-[340px] line-clamp-1">{toastMessage}</span>
         </div>
       )}
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, UserRound, GraduationCap, Cake, BookOpen, Save, Camera, ChevronDown, Check, Lock } from "lucide-react";
+import { ArrowLeft, UserRound, GraduationCap, Cake, BookOpen, Save, Camera, ChevronDown, Check, Lock, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "../../../api";
@@ -196,8 +196,9 @@ export default function EditProfileScreen() {
         <div className="bg-[rgba(255,255,255,0.7)] rounded-3xl p-6 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_2px_10px_rgba(0,0,0,0.05)]">
           <form onSubmit={handleSave} className="flex flex-col gap-5">
             {msg && (
-              <div className={`fixed bottom-10 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-lg text-center font-bold text-sm ${msg.includes("success") ? "bg-[#006a62] text-white" : "bg-[#ba1a1a] text-white"} animate-in fade-in slide-in-from-bottom-5`}>
-                {msg}
+              <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] px-4.5 py-2.5 rounded-full shadow-xl text-center font-bold text-xs bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white border border-[#57fae9]/40 animate-in fade-in slide-in-from-top-4 flex items-center justify-center gap-2.5 max-w-[90vw] w-auto">
+                <Sparkles size={16} className="text-[#57fae9] shrink-0" />
+                <span className="truncate max-w-[280px] sm:max-w-[340px] line-clamp-1">{msg}</span>
               </div>
             )}
             {/* Photo Upload Section */}
