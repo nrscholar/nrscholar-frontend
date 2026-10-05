@@ -89,8 +89,24 @@ export default function LoginScreen() {
     }
 
     // Standard Mobile + Password Login (For Parent or Scholar with Mobile method)
-    if (!mobile.trim() || !password.trim()) {
-      setErrorMsg("Please enter your mobile number and password.");
+    const cleanMobile = mobile.replace(/\D/g, "");
+    if (!cleanMobile) {
+      setErrorMsg("Please enter your mobile number.");
+      setLoading(false);
+      return;
+    }
+    if (cleanMobile.length !== 10) {
+      setErrorMsg("Mobile number must be exactly 10 digits.");
+      setLoading(false);
+      return;
+    }
+    if (!/^[6-9]/.test(cleanMobile)) {
+      setErrorMsg("Mobile number must start with 6, 7, 8, or 9.");
+      setLoading(false);
+      return;
+    }
+    if (!password.trim()) {
+      setErrorMsg("Please enter your password.");
       setLoading(false);
       return;
     }
@@ -301,7 +317,11 @@ export default function LoginScreen() {
                     type="tel"
                     placeholder="Enter 10-digit mobile number"
                     value={mobile}
-                    onChange={(e) => setMobile(e.target.value)}
+                    maxLength={10}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                      setMobile(val);
+                    }}
                     className="w-full h-14 bg-slate-50 rounded-2xl pl-12 pr-4 text-sm font-bold text-[#141779] border border-slate-200/90 focus:outline-none focus:ring-2 focus:ring-[#141779]/20 focus:border-[#141779] focus:bg-white transition-all placeholder:text-slate-400 placeholder:font-medium"
                     required
                   />

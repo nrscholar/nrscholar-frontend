@@ -43,8 +43,8 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     characterName: "Flame Dragon",
     ctaTextKey: "continue_adventure",
     ctaText: "CONTINUE ADVENTURE →",
-    bgGradient: "from-[#111453] via-[#141779] to-[#2e1065]",
-    accentBorderColor: "border-indigo-300/60",
+    bgGradient: "from-[#141779] via-[#1c1970] to-[#25218c]",
+    accentBorderColor: "border-[#FFC83D] shadow-none",
     accentTextColor: "text-[#57fae9]",
     bgDecorations: ["☁️", "🏔️", "🏰", "🔥"],
     pathColor: "#35E5D4",
@@ -225,7 +225,7 @@ export default function AdventureHero({
     <div className="w-full max-w-[430px] mx-auto flex flex-col gap-3 font-sans">
       {/* 1. IMMERSIVE ENVIRONMENT HERO CARD (DYNAMIC THEME & ANIMATED MASCOT) */}
       <div
-        className={`w-full rounded-[32px] bg-gradient-to-b ${theme.bgGradient} p-3.5 border-4 ${theme.accentBorderColor} shadow-[0_12px_32px_rgba(0,0,0,0.3)] relative overflow-hidden text-white flex flex-col gap-3 select-none`}
+        className={`w-full rounded-[28px] bg-gradient-to-r ${theme.bgGradient} p-4 border-4 ${theme.accentBorderColor} relative overflow-hidden text-white flex flex-col gap-3 select-none`}
       >
         {/* Ambient environmental particles / animations */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -265,8 +265,8 @@ export default function AdventureHero({
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/30 border border-white/10 backdrop-blur-md text-[10.5px] font-black text-[#57fae9]">
-            <Zap size={13} className="text-[#57fae9] fill-[#57fae9]" />
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/30 border border-amber-400/30 backdrop-blur-md text-[10.5px] font-black text-[#FFC83D]">
+            <Zap size={13} className="text-[#FFC83D] fill-[#FFC83D]" />
             <span> {xp.toLocaleString()} XP</span>
           </div>
         </div>
@@ -353,17 +353,17 @@ export default function AdventureHero({
         <div className="z-10 bg-black/30 border border-white/10 rounded-2xl p-2.5 flex flex-col gap-1 backdrop-blur-md">
           <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-200">
             <span>{t('progress_to', { destination: endName, defaultValue: `Progress to ${endName}` })}</span>
-            <span className={theme.accentTextColor}>{t('completed_label', { percent: legProgress, defaultValue: `${legProgress}% COMPLETED` })}</span>
+            <span className="text-[#FFC83D] font-black">{t('completed_label', { percent: legProgress, defaultValue: `${legProgress}% COMPLETED` })}</span>
           </div>
           <div className="w-full h-2 bg-white/15 rounded-full overflow-hidden p-0.5">
             <div
-              className="h-full bg-gradient-to-r from-[#5B5CFF] via-[#35E5D4] to-[#45D483] rounded-full transition-all duration-700 shadow-xs"
+              className="h-full bg-gradient-to-r from-[#35E5D4] via-[#14C8C6] to-[#006a62] rounded-full transition-all duration-700 shadow-xs"
               style={{ width: `${legProgress}%` }}
             />
           </div>
           <div className="flex justify-between items-center text-[9.5px] font-extrabold text-slate-300 mt-0.5">
             <span>{t('unlock_label', { destination: endName, defaultValue: `${endName} Unlock` })}</span>
-            <span className="text-[#57fae9]">
+            <span className="text-[#FFC83D] font-extrabold">
               {chaptersRemaining !== undefined 
                 ? (chaptersRemaining > 0 ? t('chapters_remaining_count', { count: chaptersRemaining, defaultValue: `${chaptersRemaining} chapter(s) remaining` }) : t('stage_complete', { defaultValue: "Stage Complete!" }))
                 : (xpRemaining > 0 ? t('xp_remaining_count', { count: xpRemaining, defaultValue: `${xpRemaining} XP Remaining` }) : t('ready_to_unlock', { defaultValue: "Ready to Unlock!" }))}

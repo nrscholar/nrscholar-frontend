@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Lock, CheckCircle2, Play, Star, Trophy, Sparkles, Award, Zap, Bell, RotateCcw } from "lucide-react";
+import { ArrowLeft, Lock, CheckCircle2, Check, Play, Star, Trophy, Sparkles, Award, Zap, Bell, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
 import { motion } from "framer-motion";
@@ -58,72 +58,75 @@ export default function MissionMapScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f9fb] text-[#141779] font-sans pb-24">
+      <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#17157F] font-sans pb-28 relative overflow-x-hidden">
+        {/* Background Glow Accents */}
+        <div className="fixed inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[35%] rounded-full bg-[#5B5CFF]/10 blur-[90px]" />
+          <div className="absolute top-[40%] right-[-10%] w-[50%] h-[40%] rounded-full bg-[#35E5D4]/15 blur-[90px]" />
+        </div>
+
         {/* Top Header Bar Skeleton */}
-        <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] px-6 py-3.5 flex items-center justify-between shadow-xs">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-slate-200 animate-pulse shrink-0" />
-            <div className="space-y-1.5">
-              <div className="w-24 h-3 bg-slate-200 animate-pulse rounded-md" />
-              <div className="w-36 h-4 bg-slate-300 animate-pulse rounded-md" />
+        <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex items-center justify-between bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-[28px] shadow-xs px-4 py-3 gap-2">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className="w-10 h-10 rounded-full bg-indigo-100/80 animate-pulse shrink-0 border border-indigo-200/50" />
+            <div className="space-y-1.5 flex-1">
+              <div className="w-24 h-3.5 bg-indigo-100/80 animate-pulse rounded-full border border-indigo-200/40" />
+              <div className="w-36 h-4 bg-indigo-200/70 animate-pulse rounded-md" />
             </div>
           </div>
-          <div className="w-10 h-10 rounded-full bg-slate-200 animate-pulse shrink-0" />
+          <div className="w-9 h-9 rounded-2xl bg-indigo-100/80 animate-pulse shrink-0 border border-indigo-200/40" />
         </header>
 
         {/* Hero Banner Card Skeleton */}
-        <div className="px-6 pt-6 pb-2 max-w-md mx-auto">
-          <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-3">
+        <div className="px-4 pt-4 pb-1 max-w-[430px] mx-auto w-full relative z-10">
+          <div className="bg-white/90 border-2 border-indigo-100 rounded-2xl p-4 shadow-sm space-y-3">
             <div className="flex justify-between items-center">
-              <div className="w-28 h-6 bg-slate-200 animate-pulse rounded-full" />
-              <div className="w-24 h-7 bg-slate-200 animate-pulse rounded-2xl" />
+              <div className="w-24 h-5 bg-[#35E5D4]/20 border border-[#35E5D4]/40 animate-pulse rounded-full" />
+              <div className="w-24 h-7 bg-indigo-100/80 border border-indigo-200/50 animate-pulse rounded-xl" />
             </div>
-            <div className="w-3/4 h-6 bg-slate-300 animate-pulse rounded-xl mt-2" />
-            <div className="w-full h-3.5 bg-slate-200 animate-pulse rounded-lg mt-1" />
-            <div className="w-2/3 h-3.5 bg-slate-200 animate-pulse rounded-lg" />
+            <div className="w-3/4 h-5 bg-indigo-200/60 animate-pulse rounded-lg mt-2" />
+            <div className="w-full h-3.5 bg-indigo-100/70 animate-pulse rounded-md mt-1" />
+            <div className="w-2/3 h-3.5 bg-indigo-100/70 animate-pulse rounded-md" />
           </div>
         </div>
 
         {/* Mission Path Timeline Skeleton */}
-        <main className="px-6 pt-6 flex flex-col gap-6 max-w-md mx-auto">
+        <main className="px-4 pt-4 max-w-[430px] mx-auto w-full relative z-10 flex flex-col gap-4">
           <div className="flex justify-between items-center px-1">
-            <div className="w-40 h-3.5 bg-slate-200 animate-pulse rounded-md" />
-            <div className="w-24 h-6 bg-slate-200 animate-pulse rounded-full" />
+            <div className="w-36 h-3.5 bg-indigo-100/80 animate-pulse rounded-md" />
+            <div className="w-24 h-5 bg-[#35E5D4]/20 border border-[#35E5D4]/40 animate-pulse rounded-full" />
           </div>
 
-          <div className="relative flex flex-col gap-6">
-            {/* Connecting Vertical Path Line */}
-            <div className="absolute left-[39px] top-6 bottom-6 w-1 bg-slate-200 rounded-full opacity-60" />
+          <div className="relative py-2 flex flex-col gap-5">
+            {/* Connecting Vertical Timeline Line */}
+            <div className="absolute left-[28px] top-6 bottom-14 w-1 -translate-x-1/2 bg-gradient-to-b from-[#5B5CFF]/30 to-[#B9BBC8]/20 -z-10 rounded-full" />
 
-            {/* 5 Skeleton Mission Nodes */}
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="relative z-10 flex items-center gap-4">
-                {/* Node Icon Circle Skeleton */}
-                <div className="w-20 h-20 rounded-3xl bg-slate-200 animate-pulse shrink-0 border-2 border-slate-100 flex flex-col items-center justify-center gap-1 shadow-xs">
-                  <div className="w-8 h-8 rounded-full bg-slate-300 animate-pulse" />
-                  <div className="w-6 h-2 bg-slate-300 animate-pulse rounded-xs" />
+            {/* 4 Skeleton Mission Nodes matching theme */}
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="relative flex items-start gap-3 w-full">
+                {/* Timeline Column Skeleton */}
+                <div className="w-14 shrink-0 flex items-center justify-center pt-1">
+                  <div className="w-11 h-11 rounded-full bg-indigo-100/90 border-4 border-white animate-pulse shadow-xs" />
                 </div>
 
                 {/* Details Card Skeleton */}
-                <div className="flex-1 bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-3">
+                <div className="flex-1 min-w-0 bg-white/90 rounded-2xl p-4 border-2 border-indigo-100 shadow-xs space-y-3">
                   <div className="flex justify-between items-start">
-                    <div className="space-y-1.5 flex-1">
-                      <div className="w-16 h-2.5 bg-slate-200 animate-pulse rounded-md" />
-                      <div className="w-32 h-4 bg-slate-300 animate-pulse rounded-md" />
-                      <div className="flex items-center gap-2 pt-0.5">
-                        <div className="w-16 h-3 bg-slate-200 animate-pulse rounded-md" />
-                        <div className="w-20 h-3 bg-slate-200 animate-pulse rounded-md" />
-                      </div>
+                    <div className="space-y-2 flex-1">
+                      <div className="w-16 h-3 bg-indigo-100/80 animate-pulse rounded-md" />
+                      <div className="w-32 h-4 bg-indigo-200/60 animate-pulse rounded-md" />
+                      <div className="w-28 h-3 bg-indigo-100/70 animate-pulse rounded-md" />
                     </div>
+                    <div className="w-12 h-6 bg-indigo-100/80 animate-pulse rounded-xl" />
                   </div>
 
                   <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                     <div className="flex items-center gap-1">
-                      <div className="w-4 h-4 bg-slate-200 animate-pulse rounded-full" />
-                      <div className="w-4 h-4 bg-slate-200 animate-pulse rounded-full" />
-                      <div className="w-4 h-4 bg-slate-200 animate-pulse rounded-full" />
+                      <div className="w-4 h-4 bg-indigo-100 animate-pulse rounded-full" />
+                      <div className="w-4 h-4 bg-indigo-100 animate-pulse rounded-full" />
+                      <div className="w-4 h-4 bg-indigo-100 animate-pulse rounded-full" />
                     </div>
-                    <div className="w-24 h-8 bg-slate-200 animate-pulse rounded-2xl" />
+                    <div className="w-20 h-7 bg-indigo-100/80 animate-pulse rounded-xl" />
                   </div>
                 </div>
               </div>
@@ -207,8 +210,8 @@ export default function MissionMapScreen() {
       <div className="px-4 pt-4 pb-1 max-w-[430px] mx-auto w-full relative z-10">
         <div className="bg-white border-2 border-[#E0E3E5] rounded-2xl p-4 shadow-sm relative overflow-hidden">
           <div className="relative z-10">
-            <div className="flex justify-between items-start">
-              <span className="text-[10px] font-black uppercase tracking-wider text-[#006a62] bg-[#35E5D4]/20 px-2 py-0.5 rounded-full border border-[#35E5D4]/50">
+            <div className="flex justify-between items-start gap-2">
+              <span className="text-[10px] font-black uppercase tracking-wider text-[#006a62] bg-[#35E5D4]/20 px-2 py-0.5 rounded-full border border-[#35E5D4]/50 shrink-0">
                 {themeMeta.badge}
               </span>
               <button
@@ -217,35 +220,74 @@ export default function MissionMapScreen() {
                     `/chapter-reader?chapterId=${chapterId}&title=${encodeURIComponent(chapterTitle)}`
                   )
                 }
-                className="px-3.5 py-1.5 bg-[#EEF1FF] hover:bg-[#5B5CFF] hover:text-white text-[#17157F] border border-[#5B5CFF]/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95"
+                className="px-3 py-1.5 bg-[#EEF1FF] hover:bg-[#5B5CFF] hover:text-white text-[#17157F] border border-[#5B5CFF]/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shrink-0"
               >
                 <span>{t('read_pdf', '📖 Read PDF')}</span>
               </button>
             </div>
-            <h2 className="text-base font-black mt-2 text-[#17157F] leading-tight">{themeMeta.subtitle}</h2>
-            <p className="text-xs text-[#767683] mt-1 font-medium leading-relaxed">
+            <h2 className="text-base font-black mt-2 text-[#17157F] leading-tight pr-6">{themeMeta.subtitle}</h2>
+            <p className="text-xs text-[#767683] mt-1 font-medium leading-relaxed pr-6">
               {t('read_summary_first', 'Read the textbook summary first, then complete small achievements & battle bosses!')}
             </p>
           </div>
-          <Sparkles className="absolute right-2 bottom-2 w-20 h-20 text-indigo-500/10 pointer-events-none" />
+          <Sparkles className="absolute right-2 bottom-2 w-16 h-16 text-indigo-500/10 pointer-events-none" />
+        </div>
+      </div>
+
+      {/* 65% Unlock Requirement Tip Banner */}
+      <div className="px-4 pt-2 pb-0 max-w-[430px] mx-auto w-full relative z-10">
+        <div className="bg-gradient-to-r from-[#EEF1FF] via-[#F0F3FF] to-[#E0E7FF] border border-[#5B5CFF]/30 rounded-2xl px-3.5 py-2.5 shadow-2xs flex items-center gap-2.5">
+          <span className="text-base shrink-0">🎯</span>
+          <p className="text-xs font-bold text-[#17157F] leading-snug">
+            {t('unlock_requirement_banner', 'Achieve at least 65% accuracy on a mission to unlock the next mission!')}
+          </p>
         </div>
       </div>
 
       {/* Mission Path Timeline */}
       <main className="px-4 pt-4 max-w-[430px] mx-auto w-full relative z-10 flex flex-col gap-4">
-        <div className="flex justify-between items-center px-1">
-          <h3 className="text-xs font-black tracking-wider text-[#17157F] uppercase">
-            {t('chapter_missions_roadmap', 'CHAPTER MISSIONS ROADMAP')}
-          </h3>
-          <span className="text-[10px] font-black text-[#006a62] bg-[#35E5D4]/20 px-2.5 py-0.5 rounded-full border border-[#35E5D4]/50">
-            {t('missions_completed_count', { completed: missions.filter((m: any) => m.status === "completed").length, total: missions.length, defaultValue: `${missions.filter((m: any) => m.status === "completed").length} / ${missions.length} Completed` })}
-          </span>
-        </div>
+        {(() => {
+          const completedMissionsCount = missions.filter((m: any) => m.status === "completed").length;
+          const totalMissionsCount = missions.length || 1;
+          const overallProgressPct = Math.round((completedMissionsCount / totalMissionsCount) * 100);
 
-        <section className="relative py-2 flex flex-col gap-5">
-          {/* Continuous Vertical Timeline Axis Line (Centered on 28px inside 56px Column) */}
-          <div className="absolute left-[28px] top-6 bottom-14 w-1 -translate-x-1/2 bg-gradient-to-b from-[#45D483] via-[#5B5CFF] to-[#B9BBC8]/40 -z-10 rounded-full" />
+          return (
+            <div className="flex flex-col gap-2.5 px-1">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xs font-black tracking-wider text-[#17157F] uppercase">
+                  {t('chapter_missions_roadmap', 'CHAPTER MISSIONS ROADMAP')}
+                </h3>
+                <span className="text-[10px] font-black text-[#006a62] bg-[#35E5D4]/20 px-2.5 py-0.5 rounded-full border border-[#35E5D4]/50">
+                  {t('missions_completed_count', { completed: completedMissionsCount, total: totalMissionsCount, defaultValue: `${completedMissionsCount} / ${totalMissionsCount} Completed` })}
+                </span>
+              </div>
 
+              {/* Segmented Horizontal Progress Bar (Borderless) */}
+              <div className="flex items-center gap-3 w-full py-1">
+                <div className="flex-1 flex items-center gap-1.5 h-2.5">
+                  {Array.from({ length: totalMissionsCount }).map((_, idx) => {
+                    const isSegCompleted = idx < completedMissionsCount;
+                    return (
+                      <div
+                        key={idx}
+                        className={`h-full flex-1 rounded-full transition-all duration-500 ${
+                          isSegCompleted
+                            ? "bg-gradient-to-r from-[#34d399] via-[#10b981] to-[#059669]"
+                            : "bg-slate-200/90"
+                        }`}
+                      />
+                    );
+                  })}
+                </div>
+                <span className="text-xs font-black text-[#17157F] shrink-0 min-w-[32px] text-right">
+                  {overallProgressPct}%
+                </span>
+              </div>
+            </div>
+          );
+        })()}
+
+        <section className="relative py-2 flex flex-col gap-4">
           {missions.map((m: any, index: number) => {
             const isCompleted = m.status === "completed";
             const isRetest = m.status === "retest";
@@ -254,15 +296,26 @@ export default function MissionMapScreen() {
 
             const savedAns = sessionStorage.getItem(`user_answers_${chapterId}_${m.seq}`);
             const savedPhase = sessionStorage.getItem(`mission_phase_${chapterId}_${m.seq}`);
-            let hasInProgressSession = isUnlocked && Boolean(m.hasDraft);
-            if (isUnlocked && savedAns) {
-              try {
-                const arr = JSON.parse(savedAns);
-                if (Array.isArray(arr) && arr.length > 0) hasInProgressSession = true;
-              } catch (e) {}
+            
+            let hasInProgressSession = false;
+            if (isUnlocked && !isCompleted) {
+              if (Boolean(m.hasDraft)) hasInProgressSession = true;
+              if (savedAns) {
+                try {
+                  const arr = JSON.parse(savedAns);
+                  if (Array.isArray(arr) && arr.length > 0) hasInProgressSession = true;
+                } catch (e) {}
+              }
+              if (savedPhase && savedPhase !== "SUMMARY" && savedPhase !== "INTRO") {
+                hasInProgressSession = true;
+              }
+            } else if (isUnlocked && isCompleted) {
+              if (savedPhase === "QUIZ" || savedPhase === "BOSS") {
+                hasInProgressSession = true;
+              }
             }
-            if (isUnlocked && savedPhase && savedPhase !== "SUMMARY" && savedPhase !== "INTRO") {
-              hasInProgressSession = true;
+            if (savedPhase === "SUMMARY") {
+              hasInProgressSession = false;
             }
 
             return (
@@ -273,64 +326,77 @@ export default function MissionMapScreen() {
                 transition={{ delay: index * 0.08 }}
                 className="relative flex items-start gap-3 w-full"
               >
-                {/* FIXED TIMELINE COLUMN (56px Wide - Exact Center Alignment) */}
-                <div className="w-14 shrink-0 flex items-center justify-center pt-1 relative">
+                {/* Connecting Line Segment to Next Node (100% continuous, stops cleanly at last mission) */}
+                {index < missions.length - 1 && (
+                  <div
+                    className={`absolute left-[28px] top-4 bottom-[-28px] w-[2.5px] -translate-x-1/2 -z-10 transition-colors duration-300 ${
+                      isCompleted ? "bg-[#10b981]" : "bg-slate-300/80"
+                    }`}
+                  />
+                )}
+
+                {/* FIXED TIMELINE COLUMN - Solid Colored Nodes with Crisp Outer White Border Ring */}
+                <div className="w-14 shrink-0 flex items-center justify-center pt-2 relative z-10">
                   {isCompleted ? (
-                    <div className="w-11 h-11 rounded-full bg-[#45D483] border-4 border-white text-white flex items-center justify-center shadow-md">
-                      <CheckCircle2 size={22} strokeWidth={2.5} />
+                    <div className="w-9 h-9 rounded-full bg-[#10b981] border-[3.5px] border-white text-white flex items-center justify-center shadow-md">
+                      <Check size={18} strokeWidth={3.5} className="text-white" />
                     </div>
                   ) : isUnlocked ? (
-                    <div className="w-11 h-11 rounded-full bg-white relative flex items-center justify-center shrink-0">
-                      <div className="w-full h-full rounded-full bg-[#5B5CFF] border-4 border-white text-white flex items-center justify-center shadow-[0_0_16px_rgba(91,92,255,0.6)] animate-pulse">
-                        <span className="text-lg">{m.icon || "⚡"}</span>
-                      </div>
+                    <div className="w-9 h-9 rounded-full bg-[#5B5CFF] border-[3.5px] border-white text-white flex items-center justify-center shadow-md animate-pulse">
+                      <span className="text-xs">{m.icon || "⚡"}</span>
                     </div>
                   ) : (
-                    <div className="w-11 h-11 rounded-full border-4 bg-[#F1F3F5] border-white text-[#B9BBC8] flex items-center justify-center">
-                      <Lock size={18} className="text-[#B9BBC8]" />
+                    <div className="w-9 h-9 rounded-full bg-[#CBD5E1] border-[3.5px] border-white text-[#64748B] flex items-center justify-center shadow-sm">
+                      <Lock size={14} />
                     </div>
                   )}
                 </div>
 
-                {/* Mission Details Card (Matching ChaptersScreen card designs) */}
+                {/* Mission Details Card (Borderless, Clean Floating White Card) */}
                 <div className="flex-1 min-w-0">
                   <div
-                    className={`rounded-2xl p-4 transition-all text-left ${
+                    className={`rounded-2xl p-3 sm:p-3.5 transition-all text-left bg-white border-0 ${
                       isCompleted
-                        ? "bg-white border-2 border-[#45D483]/60 shadow-sm"
+                        ? "shadow-sm"
                         : isUnlocked
-                        ? "bg-gradient-to-br from-white to-[#EEF1FF] border-2 border-[#5B5CFF] shadow-[0_4px_16px_rgba(91,92,255,0.2)]"
-                        : "bg-white/80 border-2 border-[#E0E3E5]"
+                        ? "shadow-[0_4px_16px_rgba(91,92,255,0.12)]"
+                        : "opacity-75 shadow-2xs"
                     }`}
                   >
                     <div className="flex justify-between items-start">
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <p className="text-[10px] font-bold text-[#767683] uppercase">
-                            {t('mission', 'Mission')} {m.seq}
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <p className="text-[10px] font-bold text-[#767683] uppercase tracking-wider">
+                            {t('mission', 'MISSION')} {m.seq}
                           </p>
                           {isCompleted && (
-                            <span className="text-[9px] font-black uppercase tracking-wider text-[#45D483] bg-[#45D483]/15 px-2 py-0.5 rounded-full border border-[#45D483]/40 shrink-0">
-                              {t('done', '✓ COMPLETED')}
+                            <span className="text-[9px] font-black uppercase tracking-wider text-[#006a62] bg-[#35E5D4]/20 px-2 py-0.5 rounded-full border border-[#35E5D4]/50 shrink-0">
+                              {t('done', 'COMPLETED')}
                             </span>
                           )}
                         </div>
-                        <h4 className="text-sm font-black text-[#17157F] leading-tight truncate">
+                        <h4 className="text-sm sm:text-base font-black text-[#17157F] leading-snug truncate">
                           {t(m.title.toLowerCase().replace(/ /g, '_'), { defaultValue: m.title })}
                         </h4>
-                        <p className="text-xs text-[#767683] mt-1 font-medium flex items-center gap-2">
-                          <span>🎯 {m.quizCount} {t('quiz', 'Quiz')}</span>
-                          <span>•</span>
-                          <span>👹 {t(m.bossName.toLowerCase().replace(/ /g, '_'), { defaultValue: m.bossName })}</span>
+                        <p className="text-xs text-[#767683] mt-0.5 font-medium flex items-center gap-2">
+                          <span className="flex items-center gap-1">🎯 {m.quizCount} {t('quiz', 'Quiz')}</span>
+                          <span className="text-slate-300">|</span>
+                          <span className="flex items-center gap-1">👹 {t(m.bossName.toLowerCase().replace(/ /g, '_'), { defaultValue: m.bossName })}</span>
                         </p>
                       </div>
+
+                      {(isCompleted || isRetest || (m.accuracy !== undefined && m.accuracy > 0)) && (
+                        <div className="shrink-0 flex items-center gap-1 bg-[#EEF1FF] text-[#17157F] px-2.5 py-1 rounded-xl border border-[#5B5CFF]/30 shadow-2xs ml-2">
+                          <span className="text-xs">🎯</span>
+                          <span className="text-xs font-black">{m.accuracy ?? 0}%</span>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Stars / Play Button Footer */}
-                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+                    {/* Stars / Action Button Footer */}
+                    <div className="mt-2.5 flex items-center justify-between border-t border-slate-100 pt-2.5">
                       {hasInProgressSession ? (
                         <span className="text-xs text-indigo-600 font-bold flex items-center gap-1">
-                          <Zap size={13} className="fill-indigo-500 text-indigo-500 animate-pulse" />
                           {t('in_progress_sub', '⚡ In progress...')}
                         </span>
                       ) : isCompleted || isRetest ? (
@@ -344,8 +410,10 @@ export default function MissionMapScreen() {
                           ))}
                         </div>
                       ) : (
-                        <span className="text-xs text-[#767683] font-medium">
-                          {isUnlocked ? t('ready_to_launch', 'Ready to launch!') : t('complete_previous_mission', 'Complete previous mission')}
+                        <span className="text-xs text-[#767683] font-medium truncate max-w-[180px]">
+                          {isUnlocked
+                            ? t('ready_to_launch', 'Ready to launch!')
+                            : t('complete_previous_mission_with_acc', 'Achieve 65%+ accuracy in Mission {{prev}} to unlock', { prev: m.seq - 1, defaultValue: `Achieve 65%+ accuracy in Mission ${m.seq - 1} to unlock` })}
                         </span>
                       )}
 
@@ -371,13 +439,13 @@ export default function MissionMapScreen() {
                             navigate(`/mission-play?chapterId=${chapterId}&missionSeq=${m.seq}${isReplaying ? "&replay=true" : ""}`);
                           }
                         }}
-                        className={`px-3.5 py-2 rounded-xl font-black text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
+                        className={`px-3.5 py-1.5 rounded-xl font-black text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm ${
                           hasInProgressSession
-                            ? "bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white shadow-md border border-[#5B5CFF]"
+                            ? "bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white border border-[#5B5CFF]"
                             : isCompleted
-                            ? "bg-[#45D483] hover:bg-[#34c774] text-white shadow-xs border border-[#45D483]"
+                            ? "bg-[#45D483] hover:bg-[#34c774] text-white border border-[#45D483]"
                             : isRetest
-                            ? "bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white shadow-md border border-[#5B5CFF]"
+                            ? "bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white border border-[#5B5CFF]"
                             : isUnlocked
                             ? "bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white shadow-[0_4px_14px_rgba(91,92,255,0.4)] hover:brightness-110 border border-[#5B5CFF]"
                             : "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
@@ -390,7 +458,7 @@ export default function MissionMapScreen() {
                           </>
                         ) : isCompleted ? (
                           <>
-                            <RotateCcw size={13} />
+                            <RotateCcw size={13} strokeWidth={2.5} />
                             <span>{t('replay', 'Replay')}</span>
                           </>
                         ) : isRetest ? (
@@ -400,7 +468,7 @@ export default function MissionMapScreen() {
                           </>
                         ) : isUnlocked ? (
                           <>
-                            <span>{t('start_mission', 'Start Mission')}</span>
+                            <span>{t('start_mission', 'Start')}</span>
                             <Play size={13} className="fill-white" />
                           </>
                         ) : (

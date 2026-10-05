@@ -365,6 +365,7 @@ export default function JourneyMapScreen() {
             themeKey={journeyData?.tierKey === "scientist" ? "science" : journeyData?.tierKey === "social_proof" ? "social" : "dragon"}
             xp={xp}
             userLevel={userLevel}
+            activeClassLevel={journeyData?.classLevel || userLevel || 1}
             nodes={journeyData?.nodes}
             progressPercentage={journeyData?.progressPercentage}
             onEnterStage={(stage) => {

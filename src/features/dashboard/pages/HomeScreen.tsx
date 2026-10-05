@@ -404,7 +404,7 @@ export default function HomeScreen() {
   const activeMission = missions.find(m => m.status !== 'claimed') || missions[0];
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-[#141779] font-sans relative overflow-x-hidden pb-28 max-w-md mx-auto">
+    <div className="min-h-screen bg-[#f7f9fb] text-[#141779] font-sans relative overflow-x-hidden pb-3 max-w-md mx-auto">
       {/* Dynamic Background Glows */}
       <div className="absolute bottom-[20%] -left-[25%] w-[320px] h-[320px] rounded-full bg-[rgba(20,23,121,0.05)] pointer-events-none" />
 
@@ -728,13 +728,13 @@ export default function HomeScreen() {
               {/* Modal Header */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0 relative z-10">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-400 to-amber-500 text-slate-950 flex items-center justify-center shadow-lg shadow-amber-500/20 border-2 border-white shrink-0">
-                    <Clock className="w-5 h-5 animate-pulse" />
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#141779] to-[#25218c] text-white flex items-center justify-center shadow-lg shadow-indigo-900/20 border-2 border-indigo-200/40 shrink-0">
+                    <Clock className="w-5 h-5 animate-pulse text-[#57fae9]" />
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <h3 className="text-base sm:text-lg font-black text-slate-950 tracking-tight truncate">{t('daily_quests', 'Daily Quests')}</h3>
-                      <span className="text-[10px] sm:text-xs font-black bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full border border-amber-400 shrink-0">
+                      <span className="text-[10px] sm:text-xs font-black bg-[#141779] text-white px-2 py-0.5 rounded-full border border-indigo-900/40 shrink-0">
                         ⚡ {todayCompletedCount}/25
                       </span>
                     </div>
@@ -781,19 +781,19 @@ export default function HomeScreen() {
               </div>
 
               {dailyLimitReached ? (
-                <div className="p-6 my-auto bg-gradient-to-b from-amber-50 to-amber-100/40 rounded-[24px] border-2 border-amber-200 text-center flex flex-col items-center gap-3 shadow-sm relative z-10">
-                  <div className="w-16 h-16 rounded-full bg-amber-500 text-white flex items-center justify-center font-black text-3xl shadow-lg shadow-amber-500/25 animate-bounce">
+                <div className="p-6 my-auto bg-gradient-to-b from-indigo-50 to-indigo-100/50 rounded-[24px] border-2 border-indigo-200 text-center flex flex-col items-center gap-3 shadow-sm relative z-10">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#141779] to-[#25218c] text-white flex items-center justify-center font-black text-3xl shadow-lg shadow-indigo-900/25 animate-bounce">
                     🏆
                   </div>
-                  <h4 className="text-base sm:text-lg font-black text-amber-950">{t('quests_mastered_today', '25 / 25 Quests Mastered Today!')}</h4>
-                  <p className="text-xs font-semibold text-amber-800 leading-relaxed">
+                  <h4 className="text-base sm:text-lg font-black text-[#141779]">{t('quests_mastered_today', '25 / 25 Quests Mastered Today!')}</h4>
+                  <p className="text-xs font-semibold text-indigo-950 leading-relaxed">
                     {t('quests_mastered_desc', "Sensational effort! You have completed today's maximum 25 quests. Tomorrow starts your next continuous sequence!")}
                   </p>
                 </div>
               ) : (
                 /* GUARANTEED TOUCH & MOUSE SCROLL CONTAINER */
                 <div
-                  className="my-2 flex-1 min-h-0 overflow-y-auto overscroll-contain py-1 pr-1 flex flex-col gap-2.5 relative z-10 select-none [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-amber-400 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-100"
+                  className="my-2 flex-1 min-h-0 overflow-y-auto overscroll-contain py-1 pr-1 flex flex-col gap-2.5 relative z-10 select-none [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-[#141779]/30 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-100"
                   style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
                 >
                   {(() => {
@@ -854,7 +854,7 @@ export default function HomeScreen() {
                           className={`p-3 sm:p-3.5 rounded-2xl border-2 transition-all flex items-center justify-between gap-3 shrink-0 ${isDone
                               ? "bg-emerald-50/90 border-emerald-200 text-emerald-950"
                               : isReady
-                                ? "bg-amber-50 border-amber-300 shadow-md ring-2 ring-amber-400/20"
+                                ? "bg-indigo-50/80 border-indigo-300 shadow-md ring-2 ring-indigo-500/20"
                                 : "bg-slate-50 border-slate-200/90 text-slate-900"
                             }`}
                         >
@@ -862,7 +862,7 @@ export default function HomeScreen() {
                             <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 text-xl font-bold border shadow-sm ${isDone
                                 ? "bg-emerald-500 border-emerald-400 text-white"
                                 : isReady
-                                  ? "bg-amber-500 border-amber-400 text-slate-950 animate-bounce"
+                                  ? "bg-[#141779] border-indigo-500 text-white animate-bounce"
                                   : "bg-[#4338ca] border-indigo-500 text-white"
                               }`}>
                               {isDone ? <CheckCircle className="w-6 h-6" /> : getIcon()}
@@ -875,7 +875,7 @@ export default function HomeScreen() {
                                 {translatedTitle}
                               </h4>
                               <div className="flex items-center gap-1.5 text-[10px] font-black flex-wrap">
-                                <span className="inline-flex items-center gap-0.5 bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full border border-amber-200">
+                                <span className="inline-flex items-center gap-0.5 bg-indigo-50 text-[#141779] px-2 py-0.5 rounded-full border border-indigo-200/80">
                                   🪙 +{mission.coin_reward || mission.coinReward || 10}
                                 </span>
                                 <span className="inline-flex items-center gap-0.5 bg-indigo-100 text-indigo-900 px-2 py-0.5 rounded-full border border-indigo-200">
@@ -938,12 +938,9 @@ export default function HomeScreen() {
         >
           <button
             onClick={() => navigate("/daily-rewards")}
-            className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center border-2 transition-transform hover:scale-110 active:scale-95 ${hasFreeSpin
-              ? "bg-[#57fae9] border-[#007168] text-[#007168] animate-pulse"
-              : "bg-white border-[#141779] text-[#141779]"
-              }`}
+            className="w-12 h-12 rounded-full bg-gradient-to-br from-[#141779] to-[#25218c] border-2 border-[#FFC83D] text-[#FFC83D] shadow-[0_4px_16px_rgba(20,23,121,0.4)] flex items-center justify-center transition-transform hover:scale-110 active:scale-95"
           >
-            <Gift className="w-6 h-6" />
+            <Gift className="w-6 h-6 text-[#FFC83D]" />
           </button>
         </motion.div>
 
@@ -954,11 +951,11 @@ export default function HomeScreen() {
               fetchMissions();
               setShowDailyMissionModal(true);
             }}
-            className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#141779] to-[#30007f] text-amber-300 shadow-lg flex items-center justify-center border-2 border-amber-300/40 relative hover:scale-105 transition-transform"
+            className="w-12 h-12 rounded-full bg-gradient-to-br from-[#141779] to-[#25218c] border-2 border-[#FFC83D] text-[#FFC83D] shadow-[0_4px_16px_rgba(20,23,121,0.4)] flex items-center justify-center relative hover:scale-105 transition-transform"
           >
-            <Clock className="w-6 h-6 animate-pulse" />
+            <Clock className="w-6 h-6 animate-pulse text-[#FFC83D]" />
             {missions.some(m => m.status === 'ready_to_claim') && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-slate-900 rounded-full text-[9px] font-black flex items-center justify-center border border-white animate-bounce">
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#FFC83D] text-[#141779] rounded-full text-[9px] font-black flex items-center justify-center border border-[#141779] animate-bounce">
                 !
               </span>
             )}
@@ -1030,72 +1027,103 @@ export default function HomeScreen() {
       />
 
       <AnimatePresence>
-        {showStreakModal && (
-          <div className="fixed inset-0 z-[110] bg-[#f7f9fb]/90 backdrop-blur-md flex flex-col items-center justify-center p-6">
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              className="bg-gradient-to-br from-[#111453]/95 via-[#141779]/95 to-[#0b0c3f]/95 text-white border border-white/10 w-full max-w-sm rounded-[32px] p-8 text-center relative shadow-[0_20px_50px_rgba(20,23,121,0.5)] flex flex-col items-center justify-between gap-6 overflow-hidden"
-            >
-              <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-teal-400/20 blur-2xl pointer-events-none" />
-              <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-orange-500/20 blur-2xl pointer-events-none" />
+        {showStreakModal && (() => {
+          const currentStreakVal = Number(retentionStreak?.currentStreak ?? streakDays ?? 0);
+          const rawLongestStreakVal = Number(retentionStreak?.longestStreak ?? streakDays ?? 0);
+          const longestStreakVal = Math.max(currentStreakVal, rawLongestStreakVal);
 
-              <div className="flex-1 flex flex-col items-center justify-center w-full gap-6 z-10">
-                <div className="relative w-40 h-40 flex items-center justify-center">
-                  <motion.div
-                    animate={{
-                      scale: [1, 1.05, 1],
-                      filter: ["brightness(1)", "brightness(1.1)", "brightness(1)"]
-                    }}
-                    transition={{ repeat: Infinity, duration: 2 }}
-                    className="w-full h-full text-[140px] flex items-center justify-center filter drop-shadow-[0_8px_25px_rgba(255,159,67,0.4)] select-none animate-pulse"
-                  >
-                    🔥
-                  </motion.div>
-                  <span className="absolute text-4xl font-black text-white mt-10 select-none">
-                    {retentionStreak?.currentStreak ?? streakDays}
-                  </span>
-                </div>
+          let titleText = `${currentStreakVal} Day Streak!`;
+          let subtitleText = `Your longest streak is ${longestStreakVal} days. Keep up the consistency!`;
+          let btnText = "AWESOME!";
 
-                <div className="flex justify-between w-full px-1 gap-1">
-                  {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day, idx) => {
-                    const isActive = Boolean(retentionStreak?.streakDaysOfWeek?.[idx]);
+          if (currentStreakVal === 0) {
+            titleText = "Start Your Streak Today! 🚀";
+            subtitleText = "“Every expert was once a beginner! Complete 1 lesson today to ignite your flame!” 🔥";
+            btnText = "LET'S DO THIS! 🚀";
+          } else if (currentStreakVal === 1) {
+            titleText = "1 Day Streak! 🔥";
+            subtitleText = "Awesome start! Complete a lesson tomorrow to build your streak momentum! 💪";
+            btnText = "AWESOME!";
+          } else if (currentStreakVal >= longestStreakVal && currentStreakVal > 1) {
+            titleText = `${currentStreakVal} Day Streak! 🎉`;
+            subtitleText = `🏆 New Personal Record! You've achieved your longest streak ever. Keep it burning!`;
+            btnText = "AWESOME!";
+          }
 
-                    return (
-                      <div key={idx} className="flex flex-col items-center gap-1 flex-1">
-                        <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black shadow-inner border ${isActive
-                              ? "bg-gradient-to-br from-amber-400 to-orange-500 border-amber-300 text-white"
-                              : "bg-white/5 border-white/10 text-slate-400"
-                            }`}
-                        >
-                          {day}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="space-y-1 mt-2">
-                  <h2 className="text-2xl font-black text-white leading-tight">
-                    {retentionStreak?.currentStreak ?? streakDays} Day Streak!
-                  </h2>
-                  <p className="text-xs font-bold text-slate-300 leading-relaxed px-4">
-                    Your longest streak is {retentionStreak?.longestStreak ?? streakDays} days. Keep up the consistency!
-                  </p>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setShowStreakModal(false)}
-                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#57fae9] to-[#00c9b7] text-[#141779] font-black text-xs shadow-[0_4px_15px_rgba(87,250,233,0.3)] uppercase tracking-wider active:scale-95 transition-all mt-4 z-10 border-0"
+          return (
+            <div className="fixed inset-0 z-[110] bg-[#0b0c3f]/80 backdrop-blur-md flex flex-col items-center justify-center p-6">
+              <motion.div
+                initial={{ scale: 0.85, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.85, opacity: 0 }}
+                transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                className="bg-gradient-to-br from-[#111453] via-[#141779] to-[#0b0c3f] text-white border border-white/15 w-full max-w-sm rounded-[32px] p-7 text-center relative shadow-[0_20px_50px_rgba(20,23,121,0.6)] flex flex-col items-center justify-between gap-6 overflow-hidden"
               >
-                Awesome!
-              </button>
-            </motion.div>
-          </div>
-        )}
+                <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-teal-400/20 blur-2xl pointer-events-none" />
+                <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-orange-500/20 blur-2xl pointer-events-none" />
+
+                <div className="flex-1 flex flex-col items-center justify-center w-full gap-5 z-10">
+                  <div className="relative w-36 h-36 flex items-center justify-center">
+                    <motion.div
+                      animate={{
+                        scale: [1, 1.06, 1],
+                        filter: ["brightness(1)", "brightness(1.2)", "brightness(1)"]
+                      }}
+                      transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+                      className="w-full h-full text-[120px] flex items-center justify-center filter drop-shadow-[0_8px_25px_rgba(255,159,67,0.5)] select-none"
+                    >
+                      🔥
+                    </motion.div>
+                    <span className="absolute text-4xl font-black text-white mt-8 select-none drop-shadow-md">
+                      {currentStreakVal}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between w-full px-1 gap-1.5">
+                    {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day, idx) => {
+                      const isActive = Boolean(retentionStreak?.streakDaysOfWeek?.[idx]);
+
+                      return (
+                        <div key={idx} className="flex flex-col items-center gap-1 flex-1">
+                          <div
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black transition-all duration-300 ${
+                              isActive
+                                ? "bg-gradient-to-br from-amber-400 to-orange-500 border-2 border-amber-300 text-white shadow-[0_0_12px_rgba(251,191,36,0.6)] scale-110"
+                                : "bg-white/10 border border-white/15 text-slate-300 opacity-60"
+                            }`}
+                          >
+                            {day}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="space-y-1.5 mt-1">
+                    <h2 className="text-2xl font-black text-white leading-tight">
+                      {titleText}
+                    </h2>
+                    <p className="text-xs font-bold text-slate-200 leading-relaxed px-2">
+                      {subtitleText}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setShowStreakModal(false);
+                    if (currentStreakVal === 0) {
+                      navigate("/practice/chapters");
+                    }
+                  }}
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#57fae9] to-[#00c9b7] text-[#141779] font-black text-xs shadow-[0_4px_15px_rgba(87,250,233,0.3)] uppercase tracking-wider active:scale-95 transition-all mt-2 z-10 border-0 cursor-pointer"
+                >
+                  {btnText}
+                </button>
+              </motion.div>
+            </div>
+          );
+        })()}
       </AnimatePresence>
 
       {/* STREAK REVIVAL MODAL */}
