@@ -1,13 +1,15 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useNavigate, useLocation } from "react-router-dom";
 import Layout from "./components/Layout";
+import ParentLayout from "./components/ParentLayout";
 import ChildSwitcherModal from "../components/ChildSwitcherModal";
-import { Clock, Sparkles } from "lucide-react";
+import { Clock, Sparkles, ChevronRight, X } from "lucide-react";
 
 // Auth feature pages
 import ForgotPasswordScreen from "../features/auth/pages/ForgotPasswordScreen";
 import LoginScreen from "../features/auth/pages/LoginScreen";
 import NotFoundScreen from "./NotFoundScreen";
+import { UniversalErrorBoundary } from "../components/UniversalErrorScreen";
 import ParentalGateScreen from "../features/auth/pages/ParentalGateScreen";
 import SignupStep1Screen from "../features/auth/pages/SignupStep1";
 import SignupStep2Screen from "../features/auth/pages/SignupStep2";
@@ -71,13 +73,43 @@ const AuthHandler = () => {
 };
 
 import { apiFetch } from "../api";
+import { registerPushNotificationToken } from "../services/pushNotificationService";
+import GlobalNotificationBanner from "../components/GlobalNotificationBanner";
+
+const getDismissedMilestonesFromStorage = (userId: string, childId: string, todayStr: string): Record<string, boolean> => {
+  try {
+    const key = `dismissedMilestones_${userId}_${childId}_${todayStr}`;
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : {};
+  } catch (e) {
+    return {};
+  }
+};
+
+const saveDismissedMilestoneToStorage = (userId: string, childId: string, todayStr: string, milestoneKey: string) => {
+  try {
+    const key = `dismissedMilestones_${userId}_${childId}_${todayStr}`;
+    const current = getDismissedMilestonesFromStorage(userId, childId, todayStr);
+    current[milestoneKey] = true;
+    localStorage.setItem(key, JSON.stringify(current));
+  } catch (e) {}
+};
+
+const clearDismissedMilestonesStorage = (userId: string, childId: string, todayStr: string) => {
+  try {
+    const key = `dismissedMilestones_${userId}_${childId}_${todayStr}`;
+    localStorage.removeItem(key);
+  } catch (e) {}
+};
 
 const ScreenTimeTracker = () => {
-  const [showWarning, setShowWarning] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
-  const [minutesLeft, setMinutesLeft] = useState<number | null>(null);
   const [showSwitcherModal, setShowSwitcherModal] = useState(false);
   const [userData, setUserData] = useState<any>(null);
+
+  // Milestone warnings tracking state
+  const [dismissedMilestones, setDismissedMilestones] = useState<Record<string, boolean>>({});
+  const [activeMilestone, setActiveMilestone] = useState<{ key: string; title: string; subtitle: string; timeBadge: string; icon: string } | null>(null);
 
   const location = useLocation();
   const locationRef = useRef(location.pathname);
@@ -89,6 +121,8 @@ const ScreenTimeTracker = () => {
   useEffect(() => {
     const token = localStorage.getItem("userToken");
     if (!token) return;
+
+    registerPushNotificationToken();
 
     let limitMinutes = 9999;
     
@@ -119,8 +153,12 @@ const ScreenTimeTracker = () => {
             const uId = u.id || u._id || "user";
             const tStr = new Date().toISOString().split("T")[0];
             localStorage.setItem(`screenTime_${uId}_${cId}_${tStr}`, "0");
+            clearDismissedMilestonesStorage(uId, cId, tStr);
           } catch (err) {}
         }
+        setDismissedMilestones({});
+        setActiveMilestone(null);
+        setIsLocked(false);
       }
     };
 
@@ -129,14 +167,13 @@ const ScreenTimeTracker = () => {
     const interval = setInterval(() => {
       if (limitMinutes >= 9999) {
         setIsLocked(false);
-        setShowWarning(false);
+        setActiveMilestone(null);
         return;
       }
       
       const currentPath = window.location.pathname;
       const isParentOrAuthRoute = currentPath.startsWith("/parent") || currentPath.startsWith("/login") || currentPath.startsWith("/signup");
 
-      // Child-scoped and User-scoped daily screen time key
       const uStr = localStorage.getItem("userData");
       let childId = "child_1";
       let userId = "user";
@@ -157,7 +194,6 @@ const ScreenTimeTracker = () => {
         usedSeconds += 1;
         localStorage.setItem(storageKey, usedSeconds.toString());
 
-        // Periodically sync screen time to MongoDB backend for accurate parent space reporting
         if (usedSeconds % 10 === 0 || usedSeconds === 1) {
           apiFetch("/api/users/sync-screen-time", {
             method: "POST",
@@ -167,19 +203,45 @@ const ScreenTimeTracker = () => {
         }
       }
       
-      const usedMinutes = usedSeconds / 60;
-      const remaining = limitMinutes - usedMinutes;
-      
-      if (remaining <= 0 && !isParentOrAuthRoute) {
+      const remainingSeconds = (limitMinutes * 60) - usedSeconds;
+
+      if (remainingSeconds <= 0 && !isParentOrAuthRoute) {
         setIsLocked(true);
-        setShowWarning(false);
-      } else if (remaining <= 5 && remaining > 0 && !isParentOrAuthRoute) {
+        setActiveMilestone(null);
+      } else if (!isParentOrAuthRoute) {
         setIsLocked(false);
-        setMinutesLeft(Math.ceil(remaining));
-        setShowWarning(true);
-      } else {
-        setIsLocked(false);
-        setShowWarning(false);
+        
+        // Milestone thresholds schedule: 5m and 30s remaining
+        let targetMilestone: { key: string; title: string; subtitle: string; timeBadge: string; icon: string } | null = null;
+        
+        if (remainingSeconds <= 30 && remainingSeconds > 0) {
+          targetMilestone = {
+            key: "30s",
+            timeBadge: "30 SECONDS LEFT",
+            title: "Almost Time to Wrap Up! ⏳",
+            subtitle: "You have 30 seconds left today. Finish up your current task!",
+            icon: "⚡"
+          };
+        } else if (remainingSeconds <= 300 && remainingSeconds > 30) {
+          targetMilestone = {
+            key: "5m",
+            timeBadge: "5 MINUTES REMAINING",
+            title: "5 Minutes Remaining! ⏱️",
+            subtitle: "5 minutes left for today's learning! Keep going to complete your goal.",
+            icon: "🚀"
+          };
+        }
+
+        if (targetMilestone) {
+          const storedDismissed = getDismissedMilestonesFromStorage(userId, childId, todayStr);
+          if (!storedDismissed[targetMilestone.key]) {
+            setActiveMilestone(targetMilestone);
+          } else {
+            setActiveMilestone((curr) => (curr?.key === targetMilestone!.key ? null : curr));
+          }
+        } else {
+          setActiveMilestone(null);
+        }
       }
       
     }, 1000);
@@ -190,50 +252,99 @@ const ScreenTimeTracker = () => {
     };
   }, []);
 
+  const dismissWarning = (key: string) => {
+    const uStr = localStorage.getItem("userData");
+    let childId = "child_1";
+    let userId = "user";
+    if (uStr) {
+      try {
+        const u = JSON.parse(uStr);
+        childId = u.activeChildId || u.childId || "child_1";
+        userId = u.id || u._id || "user";
+      } catch (e) {}
+    }
+    const todayStr = new Date().toISOString().split("T")[0];
+    saveDismissedMilestoneToStorage(userId, childId, todayStr, key);
+    setDismissedMilestones((prev) => ({ ...prev, [key]: true }));
+    setActiveMilestone(null);
+  };
+
   const isParentRoute = location.pathname.startsWith('/parent');
 
-  if (isLocked && !isParentRoute) {
+  // Render Warning Milestone Popup (Top-Side Global Notification Banner Style matching Photo 2)
+  if (activeMilestone && !isLocked && !isParentRoute) {
     return (
-      <div className="fixed inset-0 bg-[#f7f9fb]/95 backdrop-blur-md z-[9999] flex flex-col items-center justify-center p-6 text-center font-sans">
-        <div className="bg-[#141779] border border-[#1f239c] rounded-[32px] p-6 sm:p-8 max-w-sm w-full shadow-[0_20px_50px_rgba(20,23,121,0.3)] flex flex-col items-center relative overflow-hidden">
-          {/* Decorative ambient background glows */}
-          <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-amber-400/10 blur-2xl pointer-events-none" />
-          <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full bg-teal-400/10 blur-2xl pointer-events-none" />
-
-          {/* Clock Icon Header */}
-          <div className="relative mb-4 z-10">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/10 border border-white/20 flex items-center justify-center shadow-lg backdrop-blur-xs">
-              <Clock className="w-8 h-8 sm:w-10 sm:h-10 text-amber-400 animate-pulse" />
-            </div>
-            <span className="absolute -bottom-1 -right-1 text-lg sm:text-xl">⏳</span>
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] max-w-md w-[92%] pointer-events-none font-sans">
+        <div className="pointer-events-auto bg-gradient-to-r from-[#141779] via-[#1E2266] to-[#2D328F] text-white p-3.5 sm:p-4 rounded-2xl shadow-[0_12px_30px_rgba(20,23,121,0.5)] border-2 border-[#57fae9] flex items-center gap-3 select-none w-full animate-in slide-in-from-top-4 duration-300">
+          <div className="w-10 h-10 rounded-full bg-[#57fae9] text-[#141779] flex items-center justify-center font-black text-xl shrink-0 shadow-md">
+            <Clock size={20} />
           </div>
 
-          {/* Badge */}
-          <span className="px-3.5 py-1 bg-amber-400 text-[#141779] font-black text-[11px] rounded-full uppercase tracking-wider mb-3 shadow-sm z-10">
-            Daily Screen Time Limit 🏆
+          <div className="flex-1 min-w-0">
+            <h4 className="text-xs font-black text-[#57fae9] uppercase tracking-wider truncate mb-0.5">
+              ⏰ {activeMilestone.timeBadge}
+            </h4>
+            <p className="text-xs font-bold text-slate-100 line-clamp-2 leading-snug">
+              {activeMilestone.subtitle}
+            </p>
+          </div>
+
+          <button
+            onClick={() => dismissWarning(activeMilestone.key)}
+            className="px-3 py-1.5 rounded-xl bg-[#57fae9] text-[#141779] font-black text-[11px] uppercase tracking-wider flex items-center gap-0.5 shrink-0 shadow-md active:scale-95 transition-all"
+          >
+            <span>Got it</span>
+            <ChevronRight size={13} />
+          </button>
+
+          <button
+            onClick={() => dismissWarning(activeMilestone.key)}
+            className="p-1 rounded-full text-slate-300 hover:text-white hover:bg-white/10 shrink-0"
+            title="Dismiss notification"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Render Final Screen Time Lock Screen
+  if (isLocked && !isParentRoute) {
+    return (
+      <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-lg z-[9999] flex items-center justify-center p-5 text-center font-sans animate-in fade-in duration-300">
+        <div className="bg-[#141779] border-4 border-amber-400 rounded-[32px] p-6 sm:p-8 max-w-sm w-full shadow-[0_25px_60px_rgba(20,23,121,0.5)] flex flex-col items-center relative overflow-hidden text-white">
+          <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-amber-400/15 blur-2xl pointer-events-none" />
+          <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full bg-teal-400/15 blur-2xl pointer-events-none" />
+
+          {/* Trophy Header */}
+          <div className="w-20 h-20 rounded-3xl bg-white/10 border-2 border-white/20 flex items-center justify-center text-4xl shadow-xl backdrop-blur-md mb-3 z-10">
+            🏆
+          </div>
+
+          <span className="px-3.5 py-1 bg-[#57fae9] text-[#141779] font-black text-[10px] rounded-full uppercase tracking-wider mb-2.5 shadow-xs z-10">
+            Daily Screen Time Reached 🌟
           </span>
 
-          {/* Title */}
-          <h1 className="text-white text-xl sm:text-2xl font-black mb-2 tracking-tight z-10">
+          <h1 className="text-2xl sm:text-3xl font-black mb-2 tracking-tight uppercase z-10">
             Time's Up for Today!
           </h1>
 
-          {/* Description */}
-          <p className="text-blue-100/90 text-xs sm:text-sm leading-relaxed mb-5 font-medium z-10">
-            You've completed your daily learning goal. Great job practicing today! Login as parent to unlock or switch child.
+          <p className="text-blue-100/90 text-xs leading-relaxed mb-6 font-medium px-1 z-10">
+            You've completed your daily learning session. Great effort today! Parents can unlock or switch child profile below.
           </p>
 
-          <div className="w-full flex flex-col gap-2.5 z-10">
+          <div className="w-full flex flex-col gap-3 z-10">
             <button 
               onClick={() => window.location.href = '/parent/gate'} 
-              className="w-full bg-gradient-to-r from-[#007168] to-[#004e48] text-white py-3 rounded-2xl font-extrabold shadow-lg hover:scale-[1.02] active:scale-95 transition-all text-xs sm:text-sm flex items-center justify-center gap-2 border border-white/15"
+              className="w-full bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white py-3.5 rounded-2xl font-black shadow-lg hover:brightness-110 active:scale-95 transition-all text-xs uppercase tracking-wider border border-[#5B5CFF] flex items-center justify-center gap-2"
             >
               <span>👨‍👩‍👦 Enter Parent PIN</span>
             </button>
 
             <button 
               onClick={() => setShowSwitcherModal(true)} 
-              className="w-full bg-white/10 hover:bg-white/20 text-white py-2.5 rounded-2xl font-extrabold transition-all text-xs flex items-center justify-center gap-2 border border-white/15"
+              className="w-full bg-white/15 hover:bg-white/25 text-white py-3 rounded-2xl font-black transition-all text-xs uppercase tracking-wider border border-white/20 flex items-center justify-center gap-2"
             >
               <span>🔄 Switch Child Profile</span>
             </button>
@@ -252,25 +363,6 @@ const ScreenTimeTracker = () => {
     );
   }
 
-  if (showWarning && !isParentRoute) {
-    return (
-      <div className="fixed top-6 left-1/2 -translate-x-1/2 bg-[#141779]/95 backdrop-blur-md text-white px-5 py-3.5 rounded-[24px] shadow-[0_15px_35px_rgba(20,23,121,0.35)] z-[9999] flex items-center gap-3.5 border border-amber-400/30 transition-all duration-300 hover:scale-[1.02] max-w-sm w-[90%] sm:w-auto">
-        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-400/20 shrink-0">
-          <Clock className="w-5 h-5 text-amber-400 animate-pulse" />
-        </div>
-        <div className="flex flex-col flex-1 min-w-0">
-          <span className="text-[10px] font-extrabold text-amber-400 uppercase tracking-widest leading-none mb-1">
-            Screen Time Alert
-          </span>
-          <span className="font-black text-xs sm:text-sm tracking-wide text-white leading-tight">
-            Only <span className="text-amber-300 font-black">{minutesLeft} {minutesLeft === 1 ? 'minute' : 'minutes'}</span> left for today!
-          </span>
-        </div>
-        <span className="text-xl shrink-0">⏳</span>
-      </div>
-    );
-  }
-
   return null;
 };
 
@@ -278,6 +370,18 @@ const ProtectedRoute = () => {
   const token = localStorage.getItem("userToken");
   if (!token) return <Navigate to="/login" replace />;
   return <Outlet />;
+};
+
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [pathname]);
+
+  return null;
 };
 
 function App() {
@@ -292,79 +396,96 @@ function App() {
     window.history.replaceState({}, "", newUrl);
   }
 
+function PinGuard() {
+  const location = useLocation();
+  useEffect(() => {
+    if (!location.pathname.startsWith("/parent")) {
+      sessionStorage.removeItem("parentPinVerified");
+    }
+  }, [location.pathname]);
+  return null;
+}
+
   return (
     <BrowserRouter>
+      <PinGuard />
+      <ScrollToTop />
       <AuthHandler />
       <ScreenTimeTracker />
-      <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#141779]"></div></div>}>
-        <Routes>
-          <Route path="/" element={<Navigate to="/home" replace />} />
-          
-          {/* Public Routes */}
-          <Route path="/login" element={<LoginScreen />} />
-          <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
-          <Route path="/signup-step1" element={<SignupStep1Screen />} />
-          <Route path="/signup-step2" element={<SignupStep2Screen />} />
-          <Route path="/signup-step3" element={<SignupStep3Screen />} />
-          
-          {/* Protected Routes */}
-          <Route element={<ProtectedRoute />}>
-            <Route element={<Layout />}>
-              <Route path="/home" element={<HomeScreen />} />
-              <Route path="/progress" element={<ProgressScreen />} />
-              <Route path="/practice/chapters" element={<ChaptersScreen />} />
-              <Route path="/profile" element={<ProfileScreen />} />
-              <Route path="/help" element={<HelpCenterScreen />} />
-              <Route path="/chat" element={<ChatScreen />} />
+      <GlobalNotificationBanner />
+      <UniversalErrorBoundary>
+        <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#141779]"></div></div>}>
+          <Routes>
+            <Route path="/" element={<Navigate to="/home" replace />} />
+            
+            {/* Public Routes */}
+            <Route path="/login" element={<LoginScreen />} />
+            <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
+            <Route path="/signup-step1" element={<SignupStep1Screen />} />
+            <Route path="/signup-step2" element={<SignupStep2Screen />} />
+            <Route path="/signup-step3" element={<SignupStep3Screen />} />
+            
+            {/* Protected Routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route element={<Layout />}>
+                <Route path="/home" element={<HomeScreen />} />
+                <Route path="/progress" element={<ProgressScreen />} />
+                <Route path="/practice/chapters" element={<ChaptersScreen />} />
+                <Route path="/profile" element={<ProfileScreen />} />
+                <Route path="/help" element={<HelpCenterScreen />} />
+                <Route path="/chat" element={<ChatScreen />} />
+              </Route>
+              
+              <Route path="/edit-profile" element={<EditProfileScreen />} />
+              <Route path="/assessment-summary" element={<AssessmentSummary />} />
+              <Route path="/scan-and-learn" element={<ScanAndLearn />} />
+              <Route path="/chapter-reader" element={<ChapterReaderScreen />} />
+              <Route path="/chapter-questions" element={<ChapterQuestionsScreen />} />
+              <Route path="/practice/inventory" element={<InventoryScreen />} />
+              <Route path="/practice/journey-map" element={<JourneyMapScreen />} />
+              <Route path="/practice/collections" element={<InventoryScreen />} />
+              <Route path="/parent" element={<ParentalGateScreen />} />
+              <Route path="/parent/gate" element={<ParentalGateScreen />} />
+              <Route element={<ParentLayout />}>
+                <Route path="/parent/dashboard" element={<ParentDashboardScreen />} />
+                <Route path="/parent/reports" element={<ParentReportScreen />} />
+                <Route path="/parent/daily-tip" element={<ParentDailyTipScreen />} />
+                <Route path="/parent/challenges" element={<ParentChallengesScreen />} />
+                <Route path="/parent/achievements" element={<ParentAchievementsScreen />} />
+                <Route path="/parent/lessons" element={<ParentLessonsScreen />} />
+                <Route path="/parent/learning-library" element={<ParentLearningLibraryScreen />} />
+                <Route path="/parent/roadmap" element={<ParentRoadmapScreen />} />
+                <Route path="/parent/kids-activity" element={<KidsActivityScreen />} />
+                <Route path="/parent/settings" element={<ParentSettings />} />
+                <Route path="/parent/learning-dna" element={<ParentLearningDNAScreen />} />
+                <Route path="/parent/lessons/player" element={<ParentLessonPlayerScreen />} />
+                <Route path="/parent/subscription" element={<ParentSubscriptionScreen />} />
+              </Route>
+              <Route path="/practice/reward" element={<RewardScreen />} />
+              <Route path="/daily-rewards" element={<DailyRewardsScreen />} />
+              <Route path="/weekly-test" element={<WeeklyTestScreen />} />
+              <Route path="/weekly-test-questions" element={<WeeklyTestQuestionsScreen />} />
+              <Route path="/weekly-test-results" element={<WeeklyTestResultsScreen />} />
+              <Route path="/scan-history" element={<ScanHistory />} />
+              <Route path="/good-habits" element={<HabitsScreen />} />
+              <Route path="/recap" element={<RecapScreen />} />
+              <Route path="/notifications" element={<NotificationsScreen />} />
+              <Route path="/evolution" element={<EvolutionScreen />} />
+              <Route path="/boss-battle" element={<BossBattleScreen />} />
+              <Route path="/multiplayer-hub" element={<MultiplayerHubScreen />} />
+              <Route path="/multiplayer-room/:roomId" element={<MultiplayerRoomScreen />} />
+              <Route path="/multiplayer-battle/:roomId" element={<MultiplayerBattleScreen />} />
+              <Route path="/textbook/subjects" element={<TextbookSubjectsScreen />} />
+              <Route path="/textbook/chapters" element={<TextbookChaptersScreen />} />
+              <Route path="/textbook/reader" element={<ChapterReaderScreen />} />
+              <Route path="/mission-roadmap" element={<MissionMapScreen />} />
+              <Route path="/mission-play" element={<MissionPlayScreen />} />
             </Route>
             
-            <Route path="/edit-profile" element={<EditProfileScreen />} />
-            <Route path="/assessment-summary" element={<AssessmentSummary />} />
-            <Route path="/scan-and-learn" element={<ScanAndLearn />} />
-            <Route path="/chapter-reader" element={<ChapterReaderScreen />} />
-            <Route path="/chapter-questions" element={<ChapterQuestionsScreen />} />
-            <Route path="/practice/inventory" element={<InventoryScreen />} />
-            <Route path="/practice/journey-map" element={<JourneyMapScreen />} />
-            <Route path="/practice/collections" element={<InventoryScreen />} />
-            <Route path="/parent" element={<ParentalGateScreen />} />
-            <Route path="/parent/gate" element={<ParentalGateScreen />} />
-            <Route path="/parent/dashboard" element={<ParentDashboardScreen />} />
-            <Route path="/parent/reports" element={<ParentReportScreen />} />
-            <Route path="/parent/daily-tip" element={<ParentDailyTipScreen />} />
-            <Route path="/parent/challenges" element={<ParentChallengesScreen />} />
-            <Route path="/parent/achievements" element={<ParentAchievementsScreen />} />
-            <Route path="/parent/lessons" element={<ParentLessonsScreen />} />
-            <Route path="/parent/learning-library" element={<ParentLearningLibraryScreen />} />
-            <Route path="/parent/lessons/player" element={<ParentLessonPlayerScreen />} />
-            <Route path="/parent/roadmap" element={<ParentRoadmapScreen />} />
-            <Route path="/parent/kids-activity" element={<KidsActivityScreen />} />
-            <Route path="/parent/settings" element={<ParentSettings />} />
-            <Route path="/parent/subscription" element={<ParentSubscriptionScreen />} />
-            <Route path="/parent/learning-dna" element={<ParentLearningDNAScreen />} />
-            <Route path="/practice/reward" element={<RewardScreen />} />
-            <Route path="/daily-rewards" element={<DailyRewardsScreen />} />
-            <Route path="/weekly-test" element={<WeeklyTestScreen />} />
-            <Route path="/weekly-test-questions" element={<WeeklyTestQuestionsScreen />} />
-            <Route path="/weekly-test-results" element={<WeeklyTestResultsScreen />} />
-            <Route path="/scan-history" element={<ScanHistory />} />
-            <Route path="/good-habits" element={<HabitsScreen />} />
-            <Route path="/recap" element={<RecapScreen />} />
-            <Route path="/notifications" element={<NotificationsScreen />} />
-            <Route path="/evolution" element={<EvolutionScreen />} />
-            <Route path="/boss-battle" element={<BossBattleScreen />} />
-            <Route path="/multiplayer-hub" element={<MultiplayerHubScreen />} />
-            <Route path="/multiplayer-room/:roomId" element={<MultiplayerRoomScreen />} />
-            <Route path="/multiplayer-battle/:roomId" element={<MultiplayerBattleScreen />} />
-            <Route path="/textbook/subjects" element={<TextbookSubjectsScreen />} />
-            <Route path="/textbook/chapters" element={<TextbookChaptersScreen />} />
-            <Route path="/textbook/reader" element={<ChapterReaderScreen />} />
-            <Route path="/mission-roadmap" element={<MissionMapScreen />} />
-            <Route path="/mission-play" element={<MissionPlayScreen />} />
-          </Route>
-          
-          <Route path="*" element={<NotFoundScreen />} />
-        </Routes>
-      </Suspense>
+            <Route path="*" element={<NotFoundScreen />} />
+          </Routes>
+        </Suspense>
+      </UniversalErrorBoundary>
     </BrowserRouter>
   );
 }

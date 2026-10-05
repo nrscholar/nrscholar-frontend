@@ -52,7 +52,7 @@ export default function TextbookSubjectsScreen() {
     <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col pb-24">
       {/* Header */}
       <header className="flex items-center justify-between px-5 py-4 bg-[#f4efff] sticky top-0 z-40">
-        <button onClick={() => navigate("/")} className="p-1 hover:opacity-80 transition-opacity">
+        <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity">
           <ArrowLeft size={24} color="#141779" />
         </button>
         <h1 className="text-[20px] font-extrabold text-[#141779]">Textbooks</h1>
@@ -68,11 +68,11 @@ export default function TextbookSubjectsScreen() {
         {loading ? (
           <div className="grid grid-cols-1 gap-5">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-[24px] p-5 border-2 border-gray-100 shadow-sm flex items-center gap-5 animate-pulse">
-                <div className="w-16 h-16 bg-gray-200 rounded-[18px] shrink-0" />
-                <div className="flex-1">
-                  <div className="h-6 bg-gray-200 rounded w-1/2 mb-2" />
-                  <div className="h-4 bg-gray-200 rounded w-1/3" />
+              <div key={i} className="bg-[#f0edff]/90 rounded-[24px] p-5 border-2 border-indigo-100 shadow-sm flex items-center gap-5">
+                <div className="w-16 h-16 rounded-[18px] shrink-0 animate-skeleton" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-6 rounded w-1/2 animate-skeleton" />
+                  <div className="h-4 rounded w-1/3 animate-skeleton" />
                 </div>
               </div>
             ))}

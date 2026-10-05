@@ -172,7 +172,8 @@ export const useBossBattleStore = create<BossBattleState>((set, get) => ({
       : 0;
 
     const newTotalAnswered = isNewLesson ? 1 : currentProgress.totalQuestionsAnswered + 1;
-    const triggered = newCorrectCount >= 1 && !currentProgress.bossTriggered;
+    const runningAccuracy = newTotalAnswered > 0 ? (newCorrectCount / newTotalAnswered) : 0;
+    const triggered = newCorrectCount >= 1 && runningAccuracy >= 0.70 && !currentProgress.bossTriggered;
 
     set((state) => ({
       progress: {

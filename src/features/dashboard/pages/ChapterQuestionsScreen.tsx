@@ -80,9 +80,31 @@ export default function ChapterQuestionsScreen() {
         
         let filtered: any[] = [];
         if (qJson.success && qJson.data) {
-          // Take first 15 questions for the linear flow
-          filtered = qJson.data.slice(0, 15);
-          setQuestionsData(filtered);
+          const rawQs = qJson.data.slice(0, 15);
+          const shuffledQs = rawQs.map((item: any) => {
+            if (!item) return item;
+            const opts = item.options || item.interaction?.details?.options;
+            if (!opts || !Array.isArray(opts) || opts.length < 2) return item;
+            
+            const shuffledOpts = [...opts];
+            for (let i = shuffledOpts.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [shuffledOpts[i], shuffledOpts[j]] = [shuffledOpts[j], shuffledOpts[i]];
+            }
+            
+            const newItem = { ...item, options: shuffledOpts };
+            if (newItem.interaction?.details?.options) {
+              newItem.interaction = {
+                ...newItem.interaction,
+                details: {
+                  ...newItem.interaction.details,
+                  options: shuffledOpts
+                }
+              };
+            }
+            return newItem;
+          });
+          setQuestionsData(shuffledQs);
         }
         
         if (filtered.length === 0) {

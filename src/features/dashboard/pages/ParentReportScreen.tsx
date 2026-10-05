@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   ArrowLeft, Clock, TrendingUp, AlertTriangle, CheckCircle,
   Calculator, Atom, BookOpen, Star, Target, Lightbulb,
@@ -7,6 +8,7 @@ import {
   ChevronDown, ChevronUp, BarChart2
 } from "lucide-react";
 import { apiFetch } from "../../../api";
+import ChildSwitcherModal from "../../../components/ChildSwitcherModal";
 
 const SUBJECT_COLORS = [
   { bg: "bg-blue-50",   text: "text-blue-600",   bar: "bg-blue-500"   },
@@ -54,6 +56,7 @@ function SectionHeader({ icon, title, subtitle }: { icon: React.ReactNode; title
 }
 
 export default function ParentReportScreen() {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   
   const formatReadingTime = (seconds: number) => {
@@ -80,6 +83,9 @@ export default function ParentReportScreen() {
   };
 
   const [activeTab, setActiveTab] = useState("daily");
+  const [userData, setUserData] = useState<any>(null);
+  const [showSwitcher, setShowSwitcher] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   
   const cachedReport = (() => {
     try {
@@ -89,10 +95,144 @@ export default function ParentReportScreen() {
   })();
 
   const [reportData, setReportData] = useState<any>(cachedReport);
-  const [loading, setLoading] = useState(!cachedReport);
+  const [loading, setLoading] = useState(true);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState<string | null>(null);
+  const [showAllMistakes, setShowAllMistakes] = useState(false);
+  const [dateFilter, setDateFilter] = useState("this_week");
+  const [subjectFilter, setSubjectFilter] = useState("all");
+  const [compareFilter, setCompareFilter] = useState("none");
+  const [showDateSheet, setShowDateSheet] = useState(false);
+  const [showSubjectSheet, setShowSubjectSheet] = useState(false);
+  const [showCustomizeSheet, setShowCustomizeSheet] = useState(false);
+  const [showExportSheet, setShowExportSheet] = useState(false);
+  const getTodayString = () => {
+    const d = new Date();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${d.getFullYear()}-${month}-${day}`;
+  };
+  const getPastDateString = (daysAgo: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() - daysAgo);
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${d.getFullYear()}-${month}-${day}`;
+  };
+
+  const [customStartDate, setCustomStartDate] = useState(getPastDateString(7));
+  const [customEndDate, setCustomEndDate] = useState(getTodayString());
   const svgRef = useRef<SVGSVGElement | null>(null);
+
+  const getDateLabel = () => {
+    const today = new Date();
+    const formatDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    
+    switch (dateFilter) {
+      case "today":
+        return { label: `📅 ${t('today', 'Today')}`, range: formatDate(today) };
+      case "yesterday": {
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        return { label: `📅 ${t('yesterday', 'Yesterday')}`, range: formatDate(yesterday) };
+      }
+      case "this_week": {
+        const start = new Date(today);
+        const day = start.getDay();
+        const diff = start.getDate() - day + (day === 0 ? -6 : 1); // start on Monday
+        const monday = new Date(start.setDate(diff));
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        return { label: `📅 ${t('this_week', 'This Week')}`, range: `${formatDate(monday)} – ${formatDate(sunday)}` };
+      }
+      case "this_month": {
+        const monthName = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        return { label: `📅 ${t('this_month', 'This Month')}`, range: monthName };
+      }
+      case "custom":
+        if (customStartDate && customEndDate) {
+          const s = new Date(customStartDate);
+          const e = new Date(customEndDate);
+          return { label: `📅 ${t('custom_date_range', 'Custom Date Range')}`, range: `${formatDate(s)} – ${formatDate(e)}` };
+        }
+        return { label: `📅 ${t('custom_date_range', 'Custom Date Range')}`, range: t('select_dates', 'Select Dates') };
+      default:
+        return { label: `📅 ${t('this_week', 'This Week')}`, range: t('select_dates', 'Select Dates') };
+    }
+  };
+
+  const handleDownload = async (format: string) => {
+    setIsDownloading(format);
+    try {
+      const tzOffset = new Date().getTimezoneOffset();
+      const offsetMinutes = -tzOffset;
+
+      let downloadFilter = "daily";
+      if (dateFilter === "this_week") downloadFilter = "weekly";
+      else if (dateFilter === "this_month") downloadFilter = "monthly";
+      else if (dateFilter === "yesterday") downloadFilter = "daily";
+      else if (dateFilter === "custom") downloadFilter = "weekly";
+      // "today" stays as "daily"
+
+      const url = `/api/parent/report/download?filter=${downloadFilter}&subject=${subjectFilter}&format=${format}&tz_offset_minutes=${offsetMinutes}`;
+      const response = await apiFetch(url);
+      
+      if (!response.ok) {
+        alert("Failed to download report. Please try again.");
+        return;
+      }
+      
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      
+      const contentDisposition = response.headers.get('content-disposition');
+      let filename = `report_${activeTab}.${format === "pdf" ? "pdf" : "docx"}`;
+      if (contentDisposition) {
+        const matches = /filename="?([^";]+)"?/g.exec(contentDisposition);
+        if (matches && matches[1]) {
+          filename = matches[1];
+        }
+      }
+      
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+      console.error("Download error:", e);
+      alert("Something went wrong during report download.");
+    } finally {
+      setIsDownloading(null);
+    }
+  };
+
+  const handleShare = async () => {
+    const shareUrl = window.location.href;
+    const shareText = `Check out the latest learning report for my child on NRscholar!`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'NRscholar Learning Report',
+          text: shareText,
+          url: shareUrl,
+        });
+      } catch (err) {
+        console.error("Error sharing:", err);
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        alert("Report link copied to clipboard! You can share it now.");
+      } catch (err) {
+        console.error("Failed to copy link:", err);
+      }
+    }
+  };
 
   // Timeline history helpers
   const dailyHistory = reportData?.dailyTimelineHistory || [];
@@ -100,11 +240,6 @@ export default function ParentReportScreen() {
   const sixMonthHistory = reportData?.sixMonthTimelineHistory || [];
   const yearlyHistory = reportData?.yearlyTimelineHistory || [];
   
-  let chartHistory = dailyHistory;
-  if (activeTab === "monthly") chartHistory = monthlyHistory;
-  if (activeTab === "6month") chartHistory = sixMonthHistory;
-  if (activeTab === "yearly") chartHistory = yearlyHistory;
-
   // Chart dimensions & calculations
   const chartWidth = 500;
   const chartHeight = 220;
@@ -127,13 +262,7 @@ export default function ParentReportScreen() {
     return paddingTop + (100 - score) * (chartHeight - paddingTop - paddingBottom) / 100;
   };
 
-  const masteryPath = chartHistory.map((pt: any, i: number) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(pt.masteryScore)}`).join(' ');
-  const weaknessPath = chartHistory.map((pt: any, i: number) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(pt.weaknessScore)}`).join(' ');
-  const riskPath = chartHistory.map((pt: any, i: number) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(pt.riskIndex)}`).join(' ');
 
-  const masteryAreaPath = chartHistory.length > 0 
-    ? `${masteryPath} L ${getX(chartHistory.length - 1)} ${chartHeight - paddingBottom} L ${getX(0)} ${chartHeight - paddingBottom} Z` 
-    : '';
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
     if (!svgRef.current || chartHistory.length === 0) return;
@@ -163,19 +292,63 @@ export default function ParentReportScreen() {
     { val: dna.retention,   ang: 198,  label: "Retention" },
   ];
 
+  const translateRecommendation = (rec: string) => {
+    if (!rec) return "";
+    let translated = rec;
+    const subjectMap: Record<string, string> = {
+      "Mathematics": t("maths", "Maths"),
+      "Gujarati": t("gujarati", "Gujarati"),
+      "Maths": t("maths", "Maths"),
+      "Math": t("maths", "Maths"),
+      "Science": t("science", "Science"),
+      "English": t("english_subject", "English"),
+      "Social Studies": t("social_studies", "Social Studies"),
+      "Hindi": t("hindi_subject", "Hindi")
+    };
+    for (const [subjEng, subjTrans] of Object.entries(subjectMap)) {
+      translated = translated.replace(new RegExp(`\\b${subjEng}\\b`, "gi"), subjTrans);
+    }
+
+    translated = translated
+      .replace(/Focus on (.+?) practice sessions to reinforce core concepts\./g, (_, subj) =>
+        t("rec_focus_practice", { subject: subj, defaultValue: `મૂળભૂત ખ્યાલોને મજબૂત કરવા માટે ${subj} પ્રેક્ટિસ સત્રો પર ધ્યાન કેન્દ્રિત કરો.` })
+      )
+      .replace(/Review incorrect answers in (.+?) quizzes to identify knowledge gaps\./g, (_, subj) =>
+        t("rec_review_incorrect", { subject: subj, defaultValue: `જ્ઞાનની ખામીઓ ઓળખવા માટે ${subj} ક્વિઝમાં ખોટા જવાબોની સમીક્ષા કરો.` })
+      )
+      .replace(/Continue daily practice to maintain your learning streak\./g,
+        t("rec_continue_daily", "તમારી શીખવાની સ્ટ્રીક જાળવી રાખવા માટે રોજિંદી પ્રેક્ટિસ ચાલુ રાખો.")
+      )
+      .replace(/Try a Boss Battle to test your mastery in completed chapters!/g,
+        t("rec_try_boss_battle", "પૂર્ણ થયેલા પ્રકરણોમાં તમારી નિપુણતા ચકાસવા માટે બોસ બેટલ અજમાવો!")
+      );
+
+    return translated;
+  };
+
+  const fetchReport = useCallback(async () => {
+    try {
+      const lang = i18n.language || "en";
+      const [reportRes, userRes] = await Promise.all([
+        apiFetch("/api/parent/report", { headers: { "Accept-Language": lang } }),
+        apiFetch("/api/users/me").catch(() => null)
+      ]);
+      const json = await reportRes.json();
+      if (json.success) {
+        setReportData(json.data);
+        sessionStorage.setItem("parent_report_cache", JSON.stringify(json.data));
+      }
+      if (userRes && userRes.ok) {
+        const ujson = await userRes.json();
+        if (ujson.success && ujson.data?.user) setUserData(ujson.data.user);
+      }
+    } catch (err) { console.error(err); }
+    finally { setTimeout(() => setLoading(false), 350); }
+  }, [refreshKey, i18n.language]);
+
   useEffect(() => {
-    (async () => {
-      try {
-        const res  = await apiFetch("/api/parent/report");
-        const json = await res.json();
-        if (json.success) {
-          setReportData(json.data);
-          sessionStorage.setItem("parent_report_cache", JSON.stringify(json.data));
-        }
-      } catch (err) { console.error(err); }
-      finally { setLoading(false); }
-    })();
-  }, []);
+    fetchReport();
+  }, [fetchReport]);
 
   const tabs = [
     { id: "daily",    label: "Daily"    },
@@ -183,30 +356,69 @@ export default function ParentReportScreen() {
     { id: "monthly",  label: "Monthly"  },
     { id: "yearly",   label: "Yearly"   },
   ];
+  // Note: activeTab and tabs are retained for future tab-based navigation
 
   if (loading) return (
-    <div className="min-h-screen bg-[#f7f9fb] px-5 pt-[104px] flex flex-col gap-5">
-      <header className="fixed top-0 left-0 right-0 flex items-center justify-between px-6 h-16 bg-white/60 backdrop-blur-xl border-b border-white/40 z-50">
-        <div className="flex items-center gap-3 w-full">
-          <div className="w-8 h-8 bg-gray-200 animate-pulse rounded-full"></div>
-          <div className="h-6 w-32 bg-gray-200 animate-pulse rounded"></div>
+    <div className="min-h-screen bg-[#f7f9fb] px-5 pt-20 pb-24 flex flex-col gap-6 font-sans relative overflow-hidden">
+      {/* Top Header Skeleton */}
+      <header className="fixed top-0 left-0 right-0 flex items-center justify-between px-6 h-16 bg-white/80 backdrop-blur-xl border-b border-white/40 z-50 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full animate-skeleton"></div>
+          <div className="h-6 w-36 rounded-lg animate-skeleton"></div>
         </div>
+        <div className="w-8 h-8 rounded-full animate-skeleton"></div>
       </header>
-      <div className="flex gap-2">
-        <div className="bg-gray-200 animate-pulse rounded-lg h-8 flex-1"></div>
-        <div className="bg-gray-200 animate-pulse rounded-lg h-8 flex-1"></div>
-        <div className="bg-gray-200 animate-pulse rounded-lg h-8 flex-1"></div>
-        <div className="bg-gray-200 animate-pulse rounded-lg h-8 flex-1"></div>
+
+      {/* Range Chips Skeleton */}
+      <div className="flex gap-2 pt-2 overflow-x-auto no-scrollbar">
+        {[70, 90, 85, 95, 75].map((w, idx) => (
+          <div key={idx} className="h-9 rounded-full shrink-0 animate-skeleton" style={{ width: `${w}px` }}></div>
+        ))}
       </div>
-      <div className="bg-gray-200 animate-pulse rounded-[24px] h-48 w-full"></div>
-      <div className="bg-gray-200 animate-pulse rounded-[24px] h-48 w-full"></div>
-      <div className="bg-gray-200 animate-pulse rounded-[24px] h-48 w-full"></div>
+
+      {/* Hero Stats Card Skeleton */}
+      <div className="bg-white/70 backdrop-blur-xl rounded-[24px] p-6 border-2 border-white/50 shadow-sm space-y-4">
+        <div className="flex justify-between items-center">
+          <div className="space-y-2">
+            <div className="h-3 w-32 rounded-md animate-skeleton"></div>
+            <div className="h-8 w-24 rounded-xl animate-skeleton"></div>
+          </div>
+          <div className="w-14 h-14 rounded-full animate-skeleton"></div>
+        </div>
+        <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+          <div className="h-full w-4/5 rounded-full animate-skeleton"></div>
+        </div>
+        <div className="pt-2 flex justify-between">
+          <div className="h-3 w-28 rounded-md animate-skeleton"></div>
+          <div className="h-3 w-20 rounded-md animate-skeleton"></div>
+        </div>
+      </div>
+
+      {/* Subject Performance Cards Skeleton */}
+      <div className="space-y-3">
+        <div className="h-5 w-48 rounded-md animate-skeleton"></div>
+        <div className="space-y-3">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-white/80 backdrop-blur-md rounded-2xl p-4 border border-slate-200/60 shadow-xs flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl animate-skeleton"></div>
+                <div className="space-y-2">
+                  <div className="h-4 w-32 rounded-md animate-skeleton"></div>
+                  <div className="h-3 w-24 rounded-md animate-skeleton"></div>
+                </div>
+              </div>
+              <div className="h-6 w-14 rounded-full animate-skeleton"></div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 
   const qA: any          = reportData?.questionAnalytics    || {};
   const rA: any          = reportData?.readingAnalytics     || {};
   const bA: any          = reportData?.bossAnalytics        || {};
+  const bossHistory: any[] = reportData?.bossHistory        || [];
   const subjects: any[]  = reportData?.subjectBreakdown     || [];
   const chapters: any[]  = reportData?.chapterBreakdown     || [];
   const improvements: any[] = reportData?.improvementTracking || [];
@@ -214,566 +426,969 @@ export default function ParentReportScreen() {
   const strengths: string[]  = reportData?.strengths  || [];
   const weaknesses: string[] = reportData?.weaknesses || [];
   const risks: string[]      = reportData?.risks      || [];
+  const mistakes: any[]      = reportData?.mistakes   || [];
 
-  const chaptersBySubject: Record<string, any[]> = {};
-  for (const ch of chapters) {
-    if (!chaptersBySubject[ch.subjectId]) chaptersBySubject[ch.subjectId] = [];
-    chaptersBySubject[ch.subjectId].push(ch);
+  const hasStrengths = strengths.length > 0 && !strengths.some(s => s.toLowerCase().includes("not enough data") || s.toLowerCase().includes("no strength"));
+  const hasWeaknesses = weaknesses.length > 0 && !weaknesses.some(w => w.toLowerCase().includes("not enough data") || w.toLowerCase().includes("no weakness"));
+  const hasRisks = risks.length > 0 && !risks.some(r => r.toLowerCase().includes("not enough data") || r.toLowerCase().includes("no risk"));
+
+  // 1. Identify overall timeline points based on dateFilter
+  let activePts: any[] = [];
+  if (dateFilter === "today") {
+    activePts = monthlyHistory.length > 0 ? monthlyHistory.slice(-1) : (dailyHistory.length > 0 ? dailyHistory.slice(-1) : []);
+  } else if (dateFilter === "yesterday") {
+    activePts = monthlyHistory.length >= 2 ? monthlyHistory.slice(-2, -1) : (dailyHistory.length >= 2 ? dailyHistory.slice(-2, -1) : []);
+  } else if (dateFilter === "this_week") {
+    activePts = monthlyHistory.slice(-7);
+  } else if (dateFilter === "this_month") {
+    activePts = monthlyHistory.slice(-30);
+  } else if (dateFilter === "custom") {
+    if (customStartDate && customEndDate) {
+      const s = new Date(customStartDate);
+      const e = new Date(customEndDate);
+      activePts = monthlyHistory.filter((pt: any) => {
+        const [d, m] = pt.date?.split("/") || pt.day?.split("/") || [];
+        if (d && m) {
+          const ptYear = new Date().getFullYear();
+          const ptDate = new Date(ptYear, parseInt(m) - 1, parseInt(d));
+          return ptDate >= s && ptDate <= e;
+        }
+        return true;
+      });
+    } else {
+      activePts = monthlyHistory;
+    }
   }
+
+  // 2. Compute displaySolved, displayAccuracy, displayTime based on subjectFilter and dateFilter
+  let displaySolved = 0;
+  let displayAccuracy = 0;
+  let displayTime = 0;
+  let displayLabel = t("activity", "Activity");
+
+  if (dateFilter === "today") displayLabel = t("todays_activity", "Today's Activity");
+  else if (dateFilter === "yesterday") displayLabel = t("yesterdays_activity", "Yesterday's Activity");
+  else if (dateFilter === "this_week") displayLabel = t("this_weeks_activity", "This Week's Activity");
+  else if (dateFilter === "this_month") displayLabel = t("this_months_activity", "This Month's Activity");
+  else if (dateFilter === "custom") displayLabel = t("custom_range_activity", "Custom Range Activity");
+
+  // Compute filteredQA for the card
+  let filteredQA = { ...qA };
+  if (subjectFilter !== "all") {
+    const sObj = subjects.find(s => s?.subject && s.subject.toLowerCase() === subjectFilter.toLowerCase());
+    if (sObj) {
+      filteredQA = {
+        totalAttempted: (sObj.correctAnswers ?? 0) + (sObj.wrongAnswers ?? 0),
+        accuracy: sObj.accuracy ?? 0,
+        correct: sObj.correctAnswers ?? 0,
+        wrong: sObj.wrongAnswers ?? 0,
+        avgTimePerQuestion: qA.avgTimePerQuestion
+      };
+    }
+  }
+
+  if (subjectFilter === "all") {
+    // Overall metrics
+    if (dateFilter === "today") {
+      displaySolved = reportData?.todaySolved ?? 0;
+      displayTime = reportData?.todayTimeMinutes ?? 0;
+      displayAccuracy = reportData?.todayConfidenceScore ?? 0;
+    } else {
+      const activeDays = activePts.filter(pt => (pt.total ?? 0) > 0);
+      displaySolved = activePts.reduce((acc, pt) => acc + (pt.total ?? 0), 0);
+      if (displaySolved > 0 && activeDays.length > 0) {
+        const sumAcc = activeDays.reduce((acc, pt) => acc + (pt.masteryScore ?? pt.score ?? 0), 0);
+        displayAccuracy = Math.round(sumAcc / activeDays.length);
+        displayTime = Math.max(1, Math.round(displaySolved * 1.5));
+      }
+    }
+  } else {
+    // Subject-specific metrics
+    const sObj = subjects.find(s => s?.subject && s.subject.toLowerCase() === subjectFilter.toLowerCase());
+    if (sObj) {
+      const sTimeline = sObj.timeline || [];
+      const targetDates = new Set(activePts.map(pt => pt.date || pt.day).filter(Boolean));
+      
+      // If targetDates is empty (e.g. today's point isn't in monthlyHistory yet), fallback to today's date string
+      if (targetDates.size === 0 && dateFilter === "today") {
+        const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' }).replace(/\//g, '/');
+        targetDates.add(todayStr);
+      }
+      
+      const matchedPts = sTimeline.filter((pt: any) => targetDates.has(pt.day || pt.date));
+      
+      if (matchedPts.length > 0) {
+        displaySolved = matchedPts.reduce((acc, pt) => acc + (pt.total ?? 0), 0);
+        const activeDays = matchedPts.filter(pt => (pt.total ?? 0) > 0);
+        if (displaySolved > 0 && activeDays.length > 0) {
+          const sumAcc = activeDays.reduce((acc, pt) => acc + (pt.score ?? pt.masteryScore ?? 0), 0);
+          displayAccuracy = Math.round(sumAcc / activeDays.length);
+          displayTime = Math.max(1, Math.round(displaySolved * 1.5));
+        }
+      } else {
+        // No practice inside targeted date range
+        displaySolved = 0;
+        displayAccuracy = 0;
+        displayTime = 0;
+      }
+    }
+  }
+  displayTime = Math.max(0, Math.round(displayTime));
+
+  // Dynamic chart selection based on dateFilter and subjectFilter
+  let chartHistory = dailyHistory;
+  if (dateFilter === "this_month") {
+    chartHistory = reportData?.monthlyTimelineHistory || [];
+  } else if (dateFilter === "custom") {
+    const monthly = reportData?.monthlyTimelineHistory || [];
+    if (customStartDate && customEndDate) {
+      const s = new Date(customStartDate);
+      const e = new Date(customEndDate);
+      chartHistory = monthly.filter((pt: any) => {
+        const [d, m] = pt.date?.split("/") || pt.day?.split("/") || [];
+        if (d && m) {
+          const ptYear = new Date().getFullYear();
+          const ptDate = new Date(ptYear, parseInt(m) - 1, parseInt(d));
+          return ptDate >= s && ptDate <= e;
+        }
+        return true;
+      });
+    } else {
+      chartHistory = monthly;
+    }
+  } else if (dateFilter === "today") {
+    chartHistory = dailyHistory.slice(-1);
+  } else if (dateFilter === "yesterday") {
+    chartHistory = dailyHistory.slice(-2, -1);
+  }
+
+  if (subjectFilter !== "all" && chartHistory.length > 0) {
+    const activeSubj = subjects.find(s => s?.subject && s.subject.toLowerCase() === subjectFilter.toLowerCase());
+    if (activeSubj && activeSubj.timeline && activeSubj.timeline.length > 0) {
+      chartHistory = activeSubj.timeline.map((pt: any) => {
+        const score = pt.score ?? pt.masteryScore ?? 75;
+        return {
+          day: pt.day || pt.date,
+          masteryScore: score,
+          weaknessScore: Math.max(10, 100 - score - 15),
+          riskIndex: Math.max(5, Math.round((100 - score) * 0.6))
+        };
+      });
+    } else {
+      const acc = activeSubj?.accuracy ?? 75;
+      chartHistory = chartHistory.map(pt => ({
+        ...pt,
+        masteryScore: Math.round((pt.masteryScore || 70) * (acc / 75)),
+        weaknessScore: Math.round((pt.weaknessScore || 30) * ((100 - acc) / 25))
+      }));
+    }
+  }
+
+  const masteryPath = chartHistory.map((pt: any, i: number) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(pt.masteryScore)}`).join(' ');
+  const weaknessPath = chartHistory.map((pt: any, i: number) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(pt.weaknessScore)}`).join(' ');
+  const riskPath = chartHistory.map((pt: any, i: number) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(pt.riskIndex)}`).join(' ');
+
+  const masteryAreaPath = chartHistory.length > 0 
+    ? `${masteryPath} L ${getX(chartHistory.length - 1)} ${chartHeight - paddingBottom} L ${getX(0)} ${chartHeight - paddingBottom} Z` 
+    : '';
+
+  const getTranslatedSubject = (subj: string) => {
+    const lower = (subj || "").toLowerCase().trim();
+    if (lower === "mathematics" || lower === "maths" || lower === "math") return t("maths", "ગણિત");
+    if (lower === "gujarati") return t("gujarati", "ગુજરાતી");
+    if (lower === "science") return t("science", "વિજ્ઞાન");
+    if (lower === "english") return t("english_subject", "અંગ્રેજી");
+    if (lower === "hindi") return t("hindi_subject", "હિન્દી");
+    if (lower === "social studies" || lower === "social_studies") return t("social_studies", "સામાજિક વિજ્ઞાન");
+    return t(lower, subj);
+  };
+
+  const formatInsightMessage = (msg: string) => {
+    if (!msg) return msg;
+    let translated = msg;
+    translated = translated
+      .replace(/(.*?) is currently high performing with (\d+)% accuracy\./g, (_, subj, acc) => {
+        const trSubj = getTranslatedSubject(subj);
+        return t("insight_high_performing", { subj: trSubj, acc, defaultValue: `${trSubj} ${acc}% ચોકસાઈ સાથે ઉચ્ચ પ્રદર્શન કરી રહ્યું છે.` });
+      })
+      .replace(/(.*?) is showing an increasing trend with (\d+)% accuracy\./g, (_, subj, acc) => {
+        const trSubj = getTranslatedSubject(subj);
+        return t("insight_increasing_trend", { subj: trSubj, acc, defaultValue: `${trSubj} ${acc}% ચોકસાઈ સાથે વધતી ક્ષમતા દર્શાવે છે.` });
+      })
+      .replace(/(.*?) accuracy is currently (\d+)%\. Requires targeted practice\./g, (_, subj, acc) => {
+        const trSubj = getTranslatedSubject(subj);
+        return t("insight_requires_practice", { subj: trSubj, acc, defaultValue: `${trSubj} ચોકસાઈ વર્તમાનમાં ${acc}% છે. લક્ષ્યાંકિત પ્રેક્ટિસની જરૂર છે.` });
+      })
+      .replace(/⚠️ Risk Alert: (.*?) score has stayed below 60% for 3 consecutive days \((.*?)\)\./g, (_, subj, trend) => {
+        const trSubj = getTranslatedSubject(subj);
+        return t("insight_risk_alert", { subj: trSubj, trend, defaultValue: `⚠️ જોખમ ચેતવણી: ${trSubj} સ્કોર સતત 3 દિવસથી 60% થી નીચે રહ્યો છે (${trend}).` });
+      })
+      .replace(/🎉 You are on the right track! (.*?) accuracy has recovered above 60% \((\d+)%\)\./g, (_, subj, acc) => {
+        const trSubj = getTranslatedSubject(subj);
+        return t("insight_recovery_track", { subj: trSubj, acc, defaultValue: `🎉 તમે યોગ્ય માર્ગ પર છો! ${trSubj} ચોકસાઈ 60% થી ઉપર સુધરી ગઈ છે (${acc}%).` });
+      })
+      .replace(/🎉 You are on the right track! (.*?) accuracy has improved to (\d+)% over the last 2 days\./g, (_, subj, acc) => {
+        const trSubj = getTranslatedSubject(subj);
+        return t("insight_improved_track", { subj: trSubj, acc, defaultValue: `🎉 તમે યોગ્ય માર્ગ પર છો! ${trSubj} ચોકસાઈ છેલ્લા 2 દિવસમાં ${acc}% સુધી સુધરી છે.` });
+      })
+      .replace(/needs attention with (\d+)% accuracy/g, (_, acc) =>
+        t("insight_needs_attention", { acc, defaultValue: `${acc}% ચોકસાઈ સાથે વધુ ધ્યાન આપવાની જરૂર છે.` })
+      )
+      .replace(/is maintaining good scores across all subjects/g,
+        t("insight_maintaining_good", "તમામ વિષયોમાં સારું પ્રદર્શન જાળવી રહ્યું છે.")
+      )
+      .replace(/No weakness for now\./gi, t("no_weakness_for_now", "હાલમાં કોઈ નબળાઈ નથી."))
+      .replace(/No strength for now\./gi, t("no_strength_for_now", "હાલમાં કોઈ તાકાત નથી."))
+      .replace(/No risk for now\./gi, t("no_risk_for_now", "હાલમાં કોઈ જોખમ નથી."))
+      .replace(/Not enough Data for now wait few Days/gi, t("not_enough_data_for_now", "હાલમાં પૂરતો ડેટા નથી, થોડા દિવસ રાહ જુઓ"));
+
+    return translated;
+  };
 
   return (
     <div className="min-h-screen bg-[#f7f9fb] font-sans pb-28">
       {/* Header */}
-      <header className="flex items-center gap-4 px-5 py-4 bg-[rgba(247,249,251,0.9)] border-b border-[rgba(255,255,255,0.3)] sticky top-0 z-50 backdrop-blur-md">
+      <header className="flex items-center gap-4 px-6 py-3.5 bg-white/90 border-b-2 border-slate-200/90 rounded-b-[28px] sticky top-0 z-50 backdrop-blur-2xl shadow-[0_12px_40px_rgba(20,23,121,0.14)]">
         <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80">
           <ArrowLeft size={24} color="#141779" />
         </button>
-        <div className="flex-1">
-          <h1 className="text-[20px] font-bold text-[#141779]">Learning Reports</h1>
-          <p className="text-xs text-[#767683]">Real-time analytics from activity data</p>
-        </div>
-        <div className="flex flex-col items-end">
-          <span className="text-xs font-bold text-[#141779]">{reportData?.overallAccuracy ?? 0}%</span>
-          <span className="text-[9px] text-[#767683]">Overall Accuracy</span>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-[20px] font-bold text-[#141779]">{t('learning_reports', 'Learning Reports')}</h1>
+          <p className="text-xs text-[#767683]">{t('learning_reports_sub', 'Real-time analytics from activity data')}</p>
         </div>
       </header>
 
-      <main className="px-5 pt-5 flex flex-col gap-5">
-        {/* Tabs */}
-        <div className="flex bg-white/60 p-1 rounded-xl shadow-sm overflow-x-auto no-scrollbar">
-          {tabs.map(t => (
-            <button key={t.id} onClick={() => setActiveTab(t.id)}
-              className={`flex-1 min-w-[75px] py-2 px-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${activeTab === t.id ? "bg-white text-[#141779] shadow-sm" : "text-[#767683]"}`}>
-              {t.label}
-            </button>
-          ))}
-        </div>
+      <main className="px-5 pt-5 flex flex-col gap-5 max-w-lg mx-auto">
 
-        {/* ══ DAILY TAB ══ */}
-        {activeTab === "daily" && (
-          <div className="flex flex-col gap-5 animate-in fade-in duration-300">
-
-            {/* Today summary */}
-            <Card>
-              <SectionHeader icon={<Clock size={20} color="#006a62" />} title="Today's Activity" subtitle="Live session stats" />
-              <div className="grid grid-cols-3 gap-2 mb-4">
-                <StatBox label="Time (min)"  value={reportData?.todayTimeMinutes ?? 0} />
-                <StatBox label="Questions"   value={reportData?.todaySolved ?? 0} color="text-[#006a62]" />
-                <StatBox label="Accuracy"    value={`${reportData?.todayConfidenceScore ?? 0}%`} color="text-[#30007f]" />
-              </div>
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-[10px] font-bold text-[#464652] uppercase">Daily Confidence</span>
-                <span className="text-sm font-black text-[#141779]">{reportData?.todayConfidenceScore ?? 0}%</span>
-              </div>
-              <ProgressBar value={reportData?.todayConfidenceScore ?? 0} color="bg-gradient-to-r from-[#141779] via-[#30007f] to-[#57fae9]" />
-            </Card>
-
-            {/* Question Analytics */}
-            <Card>
-              <SectionHeader icon={<BarChart2 size={20} color="#30007f" />} title="Question Analytics" subtitle="Lifetime performance stats" />
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                <StatBox label="Total Attempted" value={qA.totalAttempted ?? 0} />
-                <StatBox label="Accuracy"        value={`${qA.accuracy ?? 0}%`} color="text-[#006a62]" />
-                <StatBox label="Correct"         value={qA.correct ?? 0} color="text-[#006a62]" />
-                <StatBox label="Wrong"           value={qA.wrong ?? 0} color="text-[#ba1a1a]" />
-              </div>
-              {(qA.avgTimePerQuestion ?? 0) > 0 && (
-                <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 flex justify-between items-center">
-                  <span className="text-xs font-bold text-indigo-700">Avg. Time per Question</span>
-                  <span className="text-sm font-black text-indigo-900">{qA.avgTimePerQuestion}s</span>
-                </div>
-              )}
-            </Card>
-
-            {/* Reading Analytics */}
-            <Card>
-              <SectionHeader icon={<BookMarked size={20} color="#006a62" />} title="Reading Analytics" subtitle="PDF chapter reading progress" />
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                <StatBox label="Chapters Read"   value={rA.chaptersRead ?? 0} color="text-[#006a62]" />
-                <StatBox label="Completion Rate" value={`${rA.completionRate ?? 0}%`} color="text-[#141779]" />
-              </div>
-              <ProgressBar value={rA.completionRate ?? 0} color="bg-[#006a62]" />
-              <div className="mt-3 bg-[#006a62]/5 border border-[#006a62]/10 rounded-xl p-3 flex justify-between items-center">
-                <span className="text-xs font-bold text-[#006a62]">Total Reading Time</span>
-                <span className="text-sm font-black text-[#006a62]">{formatReadingTime(rA.totalReadingTime ?? 0)}</span>
-              </div>
-              {rA.readChaptersList && rA.readChaptersList.length > 0 && (
-                <div className="mt-3">
-                  <h4 className="text-[10px] font-bold text-[#464652] mb-1.5 uppercase tracking-wider">Chapters Read:</h4>
-                  <div className="flex flex-col gap-1.5">
-                    {rA.readChaptersList.map((chName: string, idx: number) => (
-                      <div key={idx} className="bg-slate-50 border border-slate-200/60 rounded-xl px-3 py-2 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#006a62]" />
-                        <span className="text-xs font-semibold text-[#191c1e]">{chName}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {rA.qualityWarning && (
-                <div className="mt-3 bg-orange-50 border border-orange-200 rounded-xl p-3 flex gap-2 items-start">
-                  <AlertTriangle size={18} className="text-orange-600 shrink-0 mt-0.5" />
-                  <p className="text-xs font-semibold text-orange-700">{rA.warningMessage}</p>
-                </div>
-              )}
-            </Card>
-
-            {/* Boss Round Analytics */}
-            <Card>
-              <SectionHeader icon={<ShieldCheck size={20} color="#ba1a1a" />} title="Boss Round Analytics" subtitle="Battle performance & history" />
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                <StatBox label="Total Attempts" value={bA.totalAttempts ?? 0} />
-                <StatBox label="Pass Rate" value={`${bA.passRate ?? 0}%`} color={(bA.passRate ?? 0) >= 60 ? "text-[#006a62]" : "text-[#ba1a1a]"} />
-                <StatBox label="Wins"  value={bA.wins ?? 0}   color="text-[#006a62]" />
-                <StatBox label="Losses" value={bA.losses ?? 0} color="text-[#ba1a1a]" />
-              </div>
-              <ProgressBar value={bA.passRate ?? 0} color={(bA.passRate ?? 0) >= 60 ? "bg-[#006a62]" : "bg-[#ba1a1a]"} />
-              {(bA.consecutiveFailures ?? 0) >= 2 && (
-                <div className="mt-3 bg-red-50 border border-red-200 rounded-xl p-3 flex gap-2 items-start">
-                  <AlertTriangle size={18} className="text-red-600 shrink-0 mt-0.5" />
-                  <p className="text-xs font-semibold text-red-700">Boss Round failed {bA.consecutiveFailures} times in a row. Recommend revision before next attempt.</p>
-                </div>
-              )}
-            </Card>
-
-            {/* Daily Mastery & Risk Trend Chart */}
-            <Card>
-              <SectionHeader icon={<TrendingUp size={20} color="#141779" />} title="Daily Mastery & Risk Trend" subtitle="Last 7 days" />
-              {dailyHistory.length === 0 ? (
-                <div className="py-10 text-center text-xs text-[#767683]">Solve questions to generate trend analytics.</div>
-              ) : (
-                <div className="relative">
-                  <div className="flex items-center justify-center gap-4 mb-4 text-[10px] font-bold text-[#464652]">
-                    <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#00bbf9]" /><span>Mastery</span></div>
-                    <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#f39c12]" /><span>Focus</span></div>
-                    <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#ba1a1a]" /><span>Risk</span></div>
-                  </div>
-                  <svg ref={svgRef} viewBox="0 0 500 220" className="w-full overflow-visible select-none cursor-pointer"
-                    onMouseMove={handleMouseMove} onMouseLeave={() => setHoveredIndex(null)}>
-                    <defs>
-                      <linearGradient id="mGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#00bbf9" stopOpacity="0.2"/>
-                        <stop offset="100%" stopColor="#00bbf9" stopOpacity="0"/>
-                      </linearGradient>
-                    </defs>
-                    {[0, 25, 50, 75, 100].map(v => (
-                      <g key={v}>
-                        <line x1={pL} y1={getY(v)} x2={chartWidth - pR} y2={getY(v)} stroke="#eef0f2" strokeWidth="1.5" />
-                        <text x={pL - 6} y={getY(v) + 4} textAnchor="end" className="text-[10px] fill-[#767683]">{v}%</text>
-                      </g>
-                    ))}
-                    {masteryAreaPath && <path d={masteryAreaPath} fill="url(#mGrad)" />}
-                    <path d={masteryPath}  fill="none" stroke="#00bbf9" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d={weaknessPath} fill="none" stroke="#f39c12" strokeWidth="2.5" strokeDasharray="4,4" strokeLinecap="round" />
-                    <path d={riskPath}     fill="none" stroke="#ba1a1a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                    {hoveredIndex !== null && dailyHistory[hoveredIndex] && (
-                      <g>
-                        <line x1={getX(hoveredIndex)} y1={pT} x2={getX(hoveredIndex)} y2={chartHeight - pB} stroke="#141779" strokeWidth="1.5" strokeDasharray="3,3" opacity="0.5" />
-                        <circle cx={getX(hoveredIndex)} cy={getY(dailyHistory[hoveredIndex].masteryScore)}  r="6" fill="#00bbf9" stroke="#fff" strokeWidth="2" />
-                        <circle cx={getX(hoveredIndex)} cy={getY(dailyHistory[hoveredIndex].weaknessScore)} r="5" fill="#f39c12" stroke="#fff" strokeWidth="1.5" />
-                        <circle cx={getX(hoveredIndex)} cy={getY(dailyHistory[hoveredIndex].riskIndex)}     r="6" fill="#ba1a1a" stroke="#fff" strokeWidth="2" />
-                      </g>
-                    )}
-                    {hoveredIndex === null && dailyHistory.map((pt: any, i: number) => (
-                      <g key={i}>
-                        <circle cx={getX(i)} cy={getY(pt.masteryScore)} r="4" fill="#00bbf9" />
-                        <circle cx={getX(i)} cy={getY(pt.riskIndex)} r="4" fill="#ba1a1a" />
-                      </g>
-                    ))}
-                    {dailyHistory.map((pt: any, i: number) => (
-                      <text key={i} x={getX(i)} y={chartHeight - pB + 18} textAnchor="middle" className="text-[10px] fill-[#464652]">{pt.date}</text>
-                    ))}
-                  </svg>
-                  {hoveredIndex !== null && dailyHistory[hoveredIndex] && (
-                    <div className="mt-3 p-3 bg-white border border-gray-100 rounded-xl shadow-sm grid grid-cols-3 gap-2 text-center">
-                      <div className="bg-blue-50 p-1.5 rounded-lg">
-                        <p className="text-[9px] font-bold text-blue-700 uppercase">Mastery</p>
-                        <p className="text-sm font-bold text-blue-900">{dailyHistory[hoveredIndex].masteryScore}%</p>
-                      </div>
-                      <div className="bg-amber-50 p-1.5 rounded-lg">
-                        <p className="text-[9px] font-bold text-amber-700 uppercase">Focus</p>
-                        <p className="text-sm font-bold text-amber-900">{dailyHistory[hoveredIndex].weaknessScore}%</p>
-                      </div>
-                      <div className="bg-red-50 p-1.5 rounded-lg">
-                        <p className="text-[9px] font-bold text-red-700 uppercase">Risk</p>
-                        <p className={`text-sm font-bold ${dailyHistory[hoveredIndex].riskIndex >= 50 ? "text-red-700" : "text-green-600"}`}>{dailyHistory[hoveredIndex].riskIndex}%</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </Card>
-
-            {/* Learning DNA Radar */}
-            <Card>
-              <SectionHeader icon={<Award size={20} color="#141779" />} title="Learning DNA Profile" subtitle="Cognitive skill mapping" />
-              <div className="flex justify-center">
-                <div className="relative w-full max-w-[280px]">
-                  <svg viewBox="0 0 300 240" className="w-full overflow-visible">
-                    {[20, 40, 60, 80].map((r, idx) => (
-                      <polygon key={idx}
-                        points={[-90, -18, 54, 126, 198].map(ang => { const p = getRadarPt(150, 110, r, ang); return `${p.x},${p.y}`; }).join(" ")}
-                        fill="none" stroke="#eef0f2" strokeWidth="1.5" />
-                    ))}
-                    {[-90, -18, 54, 126, 198].map((ang, idx) => {
-                      const p = getRadarPt(150, 110, 80, ang);
-                      return <line key={idx} x1="150" y1="110" x2={p.x} y2={p.y} stroke="#eef0f2" strokeWidth="1.5" />;
-                    })}
-                    <polygon
-                      points={dnaAxes.map(item => { const p = getRadarPt(150, 110, (item.val / 100) * 80, item.ang); return `${p.x},${p.y}`; }).join(" ")}
-                      fill="rgba(0,187,249,0.25)" stroke="#00bbf9" strokeWidth="2.5" />
-                    {dnaAxes.map((item, idx) => {
-                      const p  = getRadarPt(150, 110, (item.val / 100) * 80, item.ang);
-                      const lp = getRadarPt(150, 110, 104, item.ang);
-                      return (
-                        <g key={idx}>
-                          <circle cx={p.x} cy={p.y} r="4" fill="#141779" stroke="#fff" strokeWidth="1.5" />
-                          <text x={lp.x} y={lp.y + 4}
-                            textAnchor={item.ang === -90 ? "middle" : (item.ang === -18 || item.ang === 54) ? "start" : "end"}
-                            className="text-[10px] fill-[#141779] font-bold">{item.label} ({item.val}%)</text>
-                        </g>
-                      );
-                    })}
-                  </svg>
-                </div>
-              </div>
-            </Card>
-
-            {/* Improvement Tracking */}
-            {improvements.length > 0 && (
-              <Card>
-                <SectionHeader icon={<TrendingUp size={20} color="#006a62" />} title="Improvement Tracking" subtitle="First attempt vs latest attempt" />
-                <div className="flex flex-col gap-3">
-                  {improvements.map((item: any, idx: number) => (
-                    <div key={idx} className="bg-[#f2f4f6] rounded-xl p-3 border border-gray-100">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <p className="text-xs font-bold text-[#141779]">{item.chapterName}</p>
-                          <p className="text-[10px] text-[#767683]">{item.subject}</p>
-                        </div>
-                        <span className={`text-xs font-black px-2 py-1 rounded-full ${item.trend === "up" ? "bg-green-100 text-green-700" : item.trend === "down" ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-600"}`}>
-                          {item.trend === "up" ? "📈" : item.trend === "down" ? "📉" : "➡️"} {item.improvement > 0 ? "+" : ""}{item.improvement}%
-                        </span>
-                      </div>
-                      <div className="flex gap-2">
-                        <div className="flex-1 bg-white rounded-lg p-2 text-center border border-gray-100">
-                          <p className="text-[9px] font-bold text-[#767683] uppercase">First</p>
-                          <p className="text-sm font-bold text-[#464652]">{item.firstAttemptAccuracy}%</p>
-                        </div>
-                        <div className="flex items-center text-[#767683]">→</div>
-                        <div className="flex-1 bg-white rounded-lg p-2 text-center border border-gray-100">
-                          <p className="text-[9px] font-bold text-[#767683] uppercase">Latest</p>
-                          <p className={`text-sm font-bold ${item.trend === "up" ? "text-[#006a62]" : "text-[#ba1a1a]"}`}>{item.latestAccuracy}%</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            )}
-
-            {/* Risk Alerts */}
-            {risks.length > 0 && (
-              <Card>
-                <SectionHeader icon={<AlertTriangle size={20} color="#ba1a1a" />} title="Risk Alerts" subtitle="Automatically detected warnings" />
-                <div className="flex flex-col gap-2">
-                  {risks.map((r: string, i: number) => (
-                    <div key={i} className="bg-red-50 border border-red-100 rounded-xl p-3 flex gap-2 items-start">
-                      <AlertTriangle size={15} className="text-red-600 shrink-0 mt-0.5" />
-                      <p className="text-xs text-red-700 font-semibold">{r}</p>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            )}
-
-            {/* Recommendations */}
-            <Card>
-              <SectionHeader icon={<Lightbulb size={20} color="#f39c12" />} title="Parent Recommendations" subtitle="Personalised action steps" />
-              <div className="flex flex-col gap-2">
-                {recommendations.map((rec: string, i: number) => (
-                  <div key={i} className="bg-amber-50 border border-amber-100 rounded-xl p-3 flex gap-2 items-start">
-                    <CheckCircle size={15} className="text-amber-600 shrink-0 mt-0.5" />
-                    <p className="text-xs text-amber-800 font-semibold">{rec}</p>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {/* ══ SUBJECTS TAB ══ */}
-        {activeTab === "subjects" && (
-          <div className="flex flex-col gap-5 animate-in fade-in duration-300">
-
-            {/* Strengths */}
-            <Card>
-              <h3 className="text-sm font-bold text-[#191c1e] mb-3">💪 Strengths</h3>
-              {strengths.length === 0
-                ? <p className="text-xs text-[#767683]">Complete more quests to identify strengths.</p>
-                : strengths.map((s: string, i: number) => (
-                  <div key={i} className="bg-green-50 border border-green-100 rounded-xl p-3 mb-2 flex gap-2 items-start">
-                    <CheckCircle size={14} className="text-green-600 shrink-0 mt-0.5" />
-                    <p className="text-xs text-green-800 font-semibold">{s}</p>
-                  </div>
-                ))}
-            </Card>
-
-            {/* Weaknesses */}
-            <Card>
-              <h3 className="text-sm font-bold text-[#191c1e] mb-3">⚠️ Weaknesses</h3>
-              {weaknesses.length === 0
-                ? <p className="text-xs text-[#767683]">No weaknesses detected.</p>
-                : weaknesses.map((w: string, i: number) => (
-                  <div key={i} className="bg-orange-50 border border-orange-100 rounded-xl p-3 mb-2 flex gap-2 items-start">
-                    <AlertTriangle size={14} className="text-orange-600 shrink-0 mt-0.5" />
-                    <p className="text-xs text-orange-800 font-semibold">{w}</p>
-                  </div>
-                ))}
-            </Card>
-
-            {/* Per-Subject Analytics */}
-            {subjects.length === 0 && (
-              <Card><p className="text-xs text-center text-[#767683]">Start practicing to see subject analytics.</p></Card>
-            )}
-            {subjects.map((s: any, idx: number) => {
-              const col = SUBJECT_COLORS[idx % SUBJECT_COLORS.length];
-              const isExpanded = expandedSubject === s.subject;
-              const subjChapters = chaptersBySubject[s.subject] || [];
-              const accuracy = s.accuracy ?? 0;
-              const progress = s.progress ?? accuracy;
-              const correctAnswers = s.correctAnswers ?? "—";
-              const wrongAnswers = s.wrongAnswers ?? "—";
-              const bossSuccessRate = s.bossSuccessRate != null ? `${s.bossSuccessRate}%` : "—";
+        {/* Child Selector Pills — instant switch without reload */}
+        {userData?.children && userData.children.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+            {userData.children.map((c: any) => {
+              const isActive = (userData.activeChildId || "child_1") === c.childId;
               return (
-                <Card key={s.subject || idx}>
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="text-sm font-bold text-[#141779]">{s.subject}</h3>
-                      <p className="text-[10px] text-[#767683]">{s.chaptersCompleted ?? 0}/{s.totalChapters ?? "?"} chapters completed</p>
-                    </div>
-                    <span className={`text-xs font-black px-2.5 py-1 rounded-full ${accuracy >= 80 ? "bg-green-100 text-green-700" : accuracy >= 60 ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"}`}>
-                      {accuracy}% acc
-                    </span>
-                  </div>
-
-                  <div className="mb-1 flex justify-between">
-                    <span className="text-[10px] font-bold text-[#464652]">Progress</span>
-                    <span className="text-[10px] font-bold text-[#141779]">{progress}%</span>
-                  </div>
-                  <ProgressBar value={progress} color={col.bar} />
-
-                  <div className="grid grid-cols-3 gap-2 mt-3">
-                    <StatBox label="Correct" value={correctAnswers} color="text-[#006a62]" />
-                    <StatBox label="Wrong"   value={wrongAnswers}   color="text-[#ba1a1a]" />
-                    <StatBox label="Boss"    value={bossSuccessRate} color="text-[#30007f]" />
-                  </div>
-
-                  {s.monthImprovement != null && (
-                    <div className={`mt-3 rounded-xl p-2.5 flex justify-between items-center ${s.monthImprovement >= 0 ? "bg-green-50 border border-green-100" : "bg-red-50 border border-red-100"}`}>
-                      <span className="text-[10px] font-bold text-[#464652]">Month vs Last Month</span>
-                      <span className={`text-xs font-black ${s.monthImprovement >= 0 ? "text-green-700" : "text-red-700"}`}>
-                        {s.monthImprovement >= 0 ? "+" : ""}{s.monthImprovement}%
-                      </span>
-                    </div>
-                  )}
-
-                  {subjChapters.length > 0 && (
-                    <button onClick={() => setExpandedSubject(isExpanded ? null : s.subject)}
-                      className="mt-3 w-full flex items-center justify-center gap-1 text-[11px] font-bold text-[#141779] py-2 bg-[#f2f4f6] rounded-xl hover:bg-gray-100 transition-colors">
-                      {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                      {isExpanded ? "Hide" : "Show"} Chapters ({subjChapters.length})
-                    </button>
-                  )}
-
-                  {isExpanded && (
-                    <div className="mt-3 flex flex-col gap-2">
-                      {subjChapters.map((ch: any, ci: number) => (
-                        <div key={ch.id || ci} className="flex items-center justify-between bg-[#f2f4f6] rounded-xl p-3">
-                          <div className="flex items-center gap-2">
-                            {ch.status === "Completed"
-                              ? <CheckCircle size={16} className="text-green-600 shrink-0" />
-                              : ch.status === "In Progress"
-                              ? <div className="w-4 h-4 rounded-full border-2 border-[#f39c12] flex items-center justify-center shrink-0"><div className="w-1.5 h-1.5 bg-[#f39c12] rounded-full" /></div>
-                              : <div className="w-4 h-4 rounded-full border-2 border-gray-300 shrink-0" />}
-                            <div>
-                              <p className="text-xs font-bold text-[#141779]">{ch.name}</p>
-                              <div className="flex gap-1 mt-0.5 flex-wrap">
-                                {ch.readingCompleted   && (
-                                  <span className="text-[8px] bg-blue-100   text-blue-700   rounded px-1 font-bold">
-                                    📖 Read{ch.readingTimeSpent > 0 ? ` (${formatChapterReadingTime(ch.readingTimeSpent)})` : ""}
-                                  </span>
-                                )}
-                                {ch.questionsCompleted && <span className="text-[8px] bg-green-100  text-green-700  rounded px-1 font-bold">✅ Q&A</span>}
-                                {ch.bossCompleted      && <span className="text-[8px] bg-purple-100 text-purple-700 rounded px-1 font-bold">🏆 Boss</span>}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <span className={`text-xs font-black ${ch.status === "Completed" ? "text-green-600" : ch.status === "In Progress" ? "text-[#f39c12]" : "text-gray-400"}`}>
-                              {ch.status === "Completed" ? "✔ Done" : ch.status === "In Progress" ? "In Progress" : "Locked"}
-                            </span>
-                            {ch.accuracy > 0 && <p className="text-[9px] text-[#767683]">{ch.accuracy}% acc</p>}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </Card>
+                <button
+                  key={c.childId}
+                  onClick={async () => {
+                    if (isActive) return;
+                    try {
+                      const res = await apiFetch("/api/users/active-child", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ childId: c.childId })
+                      });
+                      const json = await res.json();
+                      if (json.success && json.data?.user) {
+                        localStorage.setItem("userData", JSON.stringify(json.data.user));
+                        sessionStorage.removeItem("parent_report_cache");
+                        setUserData(json.data.user);
+                        setLoading(true);
+                        setRefreshKey(k => k + 1);
+                      }
+                    } catch (e) { console.error("Switch failed", e); }
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 font-bold text-sm shrink-0 transition-all ${
+                    isActive
+                      ? "border-[#141779] bg-[#141779] text-white shadow-md"
+                      : "border-slate-200 bg-white text-[#141779] hover:border-[#141779] hover:bg-indigo-50"
+                  }`}
+                >
+                  <span className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-black overflow-hidden shrink-0">
+                    {c.childPhoto
+                      ? <img src={c.childPhoto} alt={c.childName} className="w-full h-full object-cover rounded-full" />
+                      : c.childName?.charAt(0).toUpperCase()}
+                  </span>
+                  {c.childName}
+                  {isActive && <span className="text-[10px] opacity-70">✓</span>}
+                </button>
               );
             })}
+            <button
+              onClick={() => setShowSwitcher(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-full border-2 border-dashed border-indigo-200 text-[#141779] text-xs font-bold shrink-0 hover:bg-indigo-50 transition-all"
+            >
+              {t("add_manage_child", "+ Add / Manage")}
+            </button>
           </div>
         )}
 
-        {/* ══ MONTHLY TAB ══ */}
-        {activeTab === "monthly" && (
-          <div className="flex flex-col gap-5 animate-in fade-in duration-300">
-            <Card>
-              <SectionHeader icon={<BarChart2 size={20} color="#141779" />}
-                title={`${new Date().toLocaleString("default", { month: "long", year: "numeric" })}`}
-                subtitle="This month's learning overview" />
-              <div className="flex justify-between items-center bg-[#f2f4f6] p-4 rounded-xl mb-4">
-                <div className="text-center">
-                  <p className="text-[9px] font-bold text-[#767683] uppercase">Active Days</p>
-                  <p className="text-2xl font-bold text-[#141779]">{reportData?.monthlyStats?.activeDays ?? 0}<span className="text-base text-gray-400">/{reportData?.monthlyStats?.totalDaysInMonth ?? 30}</span></p>
-                </div>
-                <div className="w-[1px] h-10 bg-gray-200" />
-                <div className="text-center">
-                  <p className="text-[9px] font-bold text-[#767683] uppercase">Hours</p>
-                  <p className="text-2xl font-bold text-[#006a62]">{reportData?.monthlyStats?.timeHours ?? 0}</p>
-                </div>
-                <div className="w-[1px] h-10 bg-gray-200" />
-                <div className="text-center">
-                  <p className="text-[9px] font-bold text-[#767683] uppercase">Bosses Won</p>
-                  <p className="text-2xl font-bold text-[#ba1a1a]">{reportData?.monthlyStats?.bossesDefeated ?? 0}</p>
-                </div>
+        {/* 1. Large compact date/time selector */}
+        {dateFilter === "custom" ? (
+          <div className="w-full bg-white border-2 border-indigo-200 p-4 rounded-[24px] shadow-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-black text-[#141779] flex items-center gap-1.5">
+                📅 {t("custom_date_range", "Custom Date Range")}
+              </span>
+              <button 
+                onClick={() => setShowDateSheet(true)}
+                className="text-xs font-black text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-0.5"
+              >
+                {t("change_period", "Change Period")} <ChevronDown size={14} />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500">{t("start_date", "Start Date")}</label>
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  className="w-full bg-white border-2 border-slate-200 rounded-xl p-2 text-xs font-bold text-slate-800 focus:border-[#141779] outline-none transition-colors"
+                />
               </div>
-
-              <h3 className="text-xs font-bold text-[#464652] mb-3">6-Month Accuracy Trend</h3>
-              <div className="h-36 flex items-end justify-between gap-2 border-b border-gray-200 pb-2 mb-4">
-                {(reportData?.sixMonthTrend ?? []).map((m: any, i: number) => (
-                  <div key={i} className="flex flex-col items-center flex-1 gap-1">
-                    <span className="text-[8px] font-bold text-[#141779]">{m.score > 0 ? `${m.score}%` : ""}</span>
-                    <div className="w-full bg-[#141779] rounded-t-md opacity-80" style={{ height: `${Math.max(4, m.score * 1.3)}px` }} />
-                    <span className="text-[9px] font-bold text-[#767683]">{m.month}</span>
-                  </div>
-                ))}
-              </div>
-
-              <h3 className="text-xs font-bold text-[#464652] mb-3">Subject: Month vs Last Month</h3>
-              <div className="flex flex-col gap-2">
-                {subjects.filter((s: any) => s.monthImprovement !== null && s.monthImprovement !== undefined).map((s: any, i: number) => (
-                  <div key={i} className="flex items-center justify-between bg-[#f2f4f6] rounded-xl p-3">
-                    <div>
-                      <p className="text-xs font-bold text-[#141779]">{s.subject}</p>
-                      <p className="text-[9px] text-[#767683]">Last: {s.prevMonthAccuracy ?? "–"}% → Now: {s.currentMonthAccuracy ?? "–"}%</p>
-                    </div>
-                    <span className={`text-xs font-black ${s.monthImprovement >= 0 ? "text-green-600" : "text-red-600"}`}>
-                      {s.monthImprovement >= 0 ? "+" : ""}{s.monthImprovement}%
-                    </span>
-                  </div>
-                ))}
-                {subjects.every((s: any) => s.monthImprovement === null || s.monthImprovement === undefined) && (
-                  <p className="text-xs text-center text-[#767683]">Complete more quests to see month-over-month data.</p>
-                )}
-              </div>
-            </Card>
-
-            {weaknesses.length > 0 && (
-              <Card>
-                <div className="bg-orange-50 border border-orange-100 rounded-xl p-3 flex gap-3 items-start">
-                  <AlertTriangle size={20} className="text-orange-600 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-xs font-bold text-orange-800 mb-1">Areas Needing Attention</p>
-                    {weaknesses.slice(0, 3).map((w: string, i: number) => (
-                      <p key={i} className="text-[11px] text-orange-700">{w}</p>
-                    ))}
-                  </div>
-                </div>
-              </Card>
-            )}
-          </div>
-        )}
-
-        {/* ══ YEARLY TAB ══ */}
-        {activeTab === "yearly" && (
-          <div className="flex flex-col gap-5 animate-in fade-in duration-300">
-            <Card className="text-center">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#141779] to-[#006a62] flex items-center justify-center mx-auto mb-3 shadow-lg">
-                <Award size={32} color="white" />
-              </div>
-              <h2 className="text-xl font-bold text-[#191c1e]">{new Date().getFullYear()} Annual Review</h2>
-              <p className="text-xs text-[#767683] mb-5">Complete learning journey summary</p>
-              <div className="grid grid-cols-2 gap-4 text-left">
-                <StatBox label="Total Hours"      value={reportData?.yearlyStats?.timeHours ?? 0} />
-                <StatBox label="Chapters Done"    value={reportData?.totalChaptersCompleted ?? 0} color="text-emerald-700" />
-                <StatBox label="Overall Accuracy" value={`${reportData?.overallAccuracy ?? 0}%`} color="text-[#141779]" />
-                <StatBox label="Bosses Won"       value={reportData?.bossesWon ?? 0} color="text-[#ba1a1a]" />
-                <div className="col-span-2 bg-purple-50 p-4 rounded-xl border border-purple-100 flex items-center justify-between">
-                  <div>
-                    <p className="text-[9px] font-bold text-purple-700 uppercase mb-1">Questions Solved</p>
-                    <p className="text-2xl font-bold text-purple-900">{(reportData?.yearlyStats?.questionsSolved ?? 0).toLocaleString()}</p>
-                  </div>
-                  <BookOpenCheck size={36} className="text-purple-200" />
-                </div>
-              </div>
-            </Card>
-
-            {/* Confidence Scores */}
-            <Card>
-              <SectionHeader icon={<Zap size={20} color="#f39c12" />} title="Confidence Scores" subtitle="Multi-dimensional performance" />
-              <div className="flex flex-col gap-3">
-                {[
-                  { label: "Today's Confidence", val: reportData?.todayConfidenceScore  ?? 0 },
-                  { label: "Weekly Confidence",  val: reportData?.weeklyConfidenceScore  ?? 0 },
-                  { label: "Overall Confidence", val: reportData?.overallConfidenceScore ?? 0 },
-                ].map(({ label, val }, i) => (
-                  <div key={i}>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-[11px] font-bold text-[#464652]">{label}</span>
-                      <span className="text-[11px] font-black text-[#141779]">{val}%</span>
-                    </div>
-                    <ProgressBar value={val} color={val >= 70 ? "bg-[#006a62]" : val >= 50 ? "bg-[#f39c12]" : "bg-[#ba1a1a]"} />
-                  </div>
-                ))}
-              </div>
-            </Card>
-
-            {/* Skill Evolution */}
-            <Card>
-              <SectionHeader icon={<Target size={20} color="#006a62" />} title="Skill Evolution" subtitle="Subject mastery status" />
-              <div className="flex flex-col gap-2">
-                {subjects.slice(0, 5).map((sb: any, i: number) => (
-                  <div key={i} className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100 shadow-sm">
-                    <span className="text-xs font-bold text-[#464652]">{sb.subject}</span>
-                    <span className={`text-xs font-bold px-2 py-1 rounded-md ${sb.accuracy >= 80 ? "text-green-600 bg-green-50" : sb.accuracy >= 60 ? "text-blue-600 bg-blue-50" : "text-orange-600 bg-orange-50"}`}>
-                      {sb.accuracy >= 80 ? "Mastered" : sb.accuracy >= 60 ? "Improving" : "Needs Work"}
-                    </span>
-                  </div>
-                ))}
-                {subjects.length === 0 && <p className="text-xs text-center text-[#767683]">Complete more quests to see skill evolution!</p>}
-              </div>
-            </Card>
-
-            {/* Strengths */}
-            <div className="bg-gradient-to-br from-[#141779] to-[#30007f] rounded-2xl p-5 shadow-lg text-white">
-              <div className="flex items-center gap-2 mb-3">
-                <Lightbulb size={20} className="text-yellow-400" />
-                <h3 className="text-sm font-bold">Strengths &amp; Smart Insights</h3>
-              </div>
-              <div className="flex flex-col gap-2">
-                {strengths.map((s: string, i: number) => (
-                  <div key={i} className="bg-white/10 rounded-lg p-2.5 flex gap-2 items-start">
-                    <CheckCircle size={13} className="text-[#57fae9] shrink-0 mt-0.5" />
-                    <p className="text-xs text-indigo-100">{s}</p>
-                  </div>
-                ))}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500">{t("end_date", "End Date")}</label>
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  className="w-full bg-white border-2 border-slate-200 rounded-xl p-2 text-xs font-bold text-slate-800 focus:border-[#141779] outline-none transition-colors"
+                />
               </div>
             </div>
           </div>
+        ) : (
+          <button 
+            onClick={() => setShowDateSheet(true)}
+            className="w-full bg-white border-2 border-slate-100 p-4 rounded-[24px] flex items-center justify-between shadow-xs hover:border-slate-200 transition-all active:scale-[0.99]"
+          >
+            <div className="text-left">
+              <span className="text-sm font-black text-slate-800 flex items-center gap-1.5">
+                {getDateLabel().label}
+              </span>
+              <p className="text-xs font-bold text-slate-500 mt-0.5">
+                {getDateLabel().range}
+              </p>
+            </div>
+            <ChevronDown size={20} className="text-slate-400" />
+          </button>
         )}
 
+        {/* 2. Sub-filters row 1: Subject & Customize */}
+        <div className="flex gap-3 w-full">
+          {/* Subject pill */}
+          <button
+            onClick={() => setShowSubjectSheet(true)}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-black border-2 shadow-xs active:scale-[0.98] transition-all ${
+              subjectFilter !== "all"
+                ? "border-[#141779] text-[#141779] bg-indigo-50"
+                : "bg-white border-slate-100 text-slate-700 hover:border-slate-200"
+            }`}
+          >
+            <span>📚</span>
+            <span>{subjectFilter === "all" ? t('all_subjects', 'All Subjects') : getTranslatedSubject(subjectFilter)}</span>
+            <ChevronDown size={14} className="text-slate-400" />
+          </button>
+
+          {/* Customize pill */}
+          <button
+            onClick={() => setShowCustomizeSheet(true)}
+            className="flex-1 flex items-center justify-center gap-2 bg-white border-2 border-slate-100 py-3 px-4 rounded-xl text-xs font-black text-slate-700 shadow-xs hover:border-slate-200 active:scale-[0.98] transition-all"
+          >
+            <span>⚙️</span>
+            <span>{t('customize', 'Customize')}</span>
+            <ChevronDown size={14} className="text-slate-400" />
+          </button>
+        </div>
+
+        {/* Sub-filters row 2: Export */}
+        <button
+          onClick={() => setShowExportSheet(true)}
+          className="w-full flex items-center justify-center gap-2 bg-white border-2 border-slate-100 py-3 px-4 rounded-xl text-xs font-black text-slate-700 shadow-xs hover:border-indigo-200 hover:bg-indigo-50 active:scale-[0.98] transition-all"
+        >
+          <span>↓</span>
+          <span>{t('export_report_data', 'Export Report Data')}</span>
+        </button>
+
+        {/* Today's Activity Card */}
+        <Card>
+          <SectionHeader icon={<Clock size={20} color="#006a62" />} title={displayLabel} subtitle={t('session_stats_engagement', 'Session stats & engagement')} />
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            <StatBox label={t('time_min', 'TIME (MIN)')}  value={displayTime} />
+            <StatBox label={t('questions', 'QUESTIONS')}   value={displaySolved} color="text-[#006a62]" />
+            <StatBox label={t('accuracy', 'ACCURACY')}    value={`${displayAccuracy}%`} color="text-[#30007f]" />
+          </div>
+          <div className="flex justify-between items-center mb-1">
+            <span className="text-[10px] font-bold text-[#464652] uppercase">{t('confidence', 'CONFIDENCE')}</span>
+            <span className="text-sm font-black text-[#141779]">{displayAccuracy}%</span>
+          </div>
+          <ProgressBar value={displayAccuracy} color="bg-gradient-to-r from-[#141779] via-[#30007f] to-[#57fae9]" />
+          
+          {compareFilter === "previous" && (() => {
+            const prevHistory = reportData?.monthlyTimelineHistory || [];
+            if (prevHistory.length >= 2) {
+              const curr = prevHistory[prevHistory.length - 1]?.masteryScore ?? displayAccuracy;
+              const prev = prevHistory[prevHistory.length - 2]?.masteryScore ?? displayAccuracy;
+              const delta = curr - prev;
+              const deltaStr = delta >= 0 ? `↑ ${delta}%` : `↓ ${Math.abs(delta)}%`;
+              const color = delta >= 0 ? "text-emerald-600" : "text-red-600";
+              return (
+                <div className={`mt-3 text-xs font-black ${color} flex items-center gap-1.5`}>
+                  <span>{deltaStr} {t("vs_previous_period", "vs previous period")}</span>
+                </div>
+              );
+            }
+            return null;
+          })()}
+        </Card>
+
+        {/* Question Analytics Card */}
+        <Card>
+          <SectionHeader icon={<BarChart2 size={20} color="#30007f" />} title={t("question_analytics", "Question Analytics")} subtitle={t("overall_performance_metrics", "Overall performance metrics")} />
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <StatBox label={t("total_attempted", "Total Attempted")} value={filteredQA.totalAttempted ?? 0} />
+            <StatBox label={t("accuracy", "Accuracy")}        value={`${filteredQA.accuracy ?? 0}%`} color="text-[#006a62]" />
+            <StatBox label={t("correct", "Correct")}         value={filteredQA.correct ?? 0} color="text-[#006a62]" />
+            <StatBox label={t("wrong", "Wrong")}           value={filteredQA.wrong ?? 0} color="text-[#ba1a1a]" />
+          </div>
+          {(filteredQA.avgTimePerQuestion ?? 0) > 0 && (
+            <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 flex justify-between items-center">
+              <span className="text-xs font-bold text-indigo-700">{t("avg_time_per_question", "Avg. Time per Question")}</span>
+              <span className="text-sm font-black text-indigo-900">{filteredQA.avgTimePerQuestion}s</span>
+            </div>
+          )}
+        </Card>
+
+        {/* Subject Performance Section */}
+        <Card>
+          <SectionHeader icon={<BookOpen size={20} color="#141779" />} title={t("subject_performance", "Subject Performance")} subtitle={t("accuracy_by_subject", "Accuracy by subject")} />
+          <div className="space-y-4 mt-2">
+            {subjects.map((s: any, idx: number) => (
+              <div key={idx} className="space-y-1.5">
+                <div className="flex justify-between items-center text-xs font-black text-slate-800">
+                  <span className="capitalize">{s.subject}</span>
+                  <span className="text-[#141779] font-black">{s.accuracy ?? 0}%</span>
+                </div>
+                <ProgressBar value={s.accuracy ?? 0} color={SUBJECT_COLORS[idx % SUBJECT_COLORS.length].bar} />
+              </div>
+            ))}
+            {subjects.length === 0 && (
+              <p className="text-xs text-[#767683] text-center py-2">{t("no_subject_activity_data", "No subject activity data available.")}</p>
+            )}
+          </div>
+        </Card>
+
+        {/* Reading Analytics Card */}
+        <Card>
+          <SectionHeader icon={<BookMarked size={20} color="#006a62" />} title={t("reading_analytics", "Reading Analytics")} subtitle={t("pdf_chapter_reading_progress", "PDF chapter reading progress")} />
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <StatBox label={t("chapters_read", "Chapters Read")}   value={rA.chaptersRead ?? 0} color="text-[#006a62]" />
+            <StatBox label={t("completion_rate", "Completion Rate")} value={`${rA.completionRate ?? 0}%`} color="text-[#141779]" />
+          </div>
+          <ProgressBar value={rA.completionRate ?? 0} color="bg-[#006a62]" />
+          <div className="mt-3 bg-[#006a62]/5 border border-[#006a62]/10 rounded-xl p-3 flex justify-between items-center">
+            <span className="text-xs font-bold text-[#006a62]">{t("total_reading_time", "Total Reading Time")}</span>
+            <span className="text-sm font-black text-[#006a62]">{formatReadingTime(rA.totalReadingTime ?? 0)}</span>
+          </div>
+        </Card>
+
+        {/* Boss Round Analytics Card */}
+        <Card>
+          <SectionHeader icon={<ShieldCheck size={20} color="#ba1a1a" />} title={t("boss_round_analytics", "Boss Round Analytics")} subtitle={t("battle_performance_history", "Battle performance history")} />
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <StatBox label={t("total_attempts", "Total Attempts")} value={bA.totalAttempts ?? 0} />
+            <StatBox label={t("pass_rate", "Pass Rate")} value={`${bA.passRate ?? 0}%`} color={(bA.passRate ?? 0) >= 60 ? "text-[#006a62]" : "text-[#ba1a1a]"} />
+            <StatBox label={t("wins", "Wins")}  value={bA.wins ?? 0}   color="text-[#006a62]" />
+            <StatBox label={t("losses", "Losses")} value={bA.losses ?? 0} color="text-[#ba1a1a]" />
+          </div>
+          <ProgressBar value={bA.passRate ?? 0} color={(bA.passRate ?? 0) >= 60 ? "bg-[#006a62]" : "bg-[#ba1a1a]"} />
+          
+          {bossHistory.length > 0 && (
+            <div className="mt-4 border-t border-slate-100 pt-4 space-y-2">
+              <h4 className="text-[10px] font-bold text-[#464652] uppercase tracking-wide">{t("recent_battles", "Recent Battles")}</h4>
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                {bossHistory.map((b: any, idx: number) => {
+                  const statusUpper = (b.status || "").toUpperCase();
+                  const isWon = statusUpper === "WON" || statusUpper === "VICTORY";
+                  const isLost = statusUpper === "LOST" || statusUpper === "DEFEAT";
+
+                  const statusText = isWon
+                    ? t("victory", "Victory")
+                    : (isLost ? t("defeat", "Defeat") : t("in_progress", "In Progress"));
+
+                  const statusBg = isWon 
+                    ? "bg-green-50 text-green-700 border-green-200" 
+                    : (isLost ? "bg-red-50 text-red-700 border-red-200" : "bg-amber-50 text-amber-700 border-amber-200");
+                  
+                  const diffLower = (b.difficulty || "").toLowerCase();
+                  const diffText = diffLower === "easy" ? t("easy", "Easy") : (diffLower === "medium" ? t("medium", "Medium") : (diffLower === "hard" ? t("hard", "Hard") : b.difficulty));
+
+                  let bossNameText = b.bossName || t("boss_round", "Boss Round");
+                  if (bossNameText.includes("Egg Thief")) {
+                    bossNameText = bossNameText.replace("Egg Thief", t("boss_egg_thief", "Egg Thief"));
+                  }
+                  bossNameText = bossNameText.replace(/\(Easy\)/gi, `(${t("easy", "Easy")})`)
+                    .replace(/\(Medium\)/gi, `(${t("medium", "Medium")})`)
+                    .replace(/\(Hard\)/gi, `(${t("hard", "Hard")})`);
+
+                  let formattedDate = "";
+                  try {
+                    if (b.date) {
+                      const d = new Date(b.date);
+                      formattedDate = d.toLocaleDateString(i18n.language === "gu" ? "gu-IN" : "en-US", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit"
+                      });
+                    }
+                  } catch (e) {}
+
+                  return (
+                    <div key={idx} className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex justify-between items-center transition-all">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-slate-800 truncate">{bossNameText}</p>
+                        <p className="text-[10px] font-bold text-[#767683] mt-0.5">{formattedDate}</p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[9px] bg-slate-200/80 text-slate-700 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
+                          {diffText}
+                        </span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wide ${statusBg}`}>
+                          {statusText}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </Card>
+
+        {/* Daily Mastery & Risk Trend Chart */}
+        <Card>
+          <SectionHeader icon={<TrendingUp size={20} color="#141779" />} title={t("daily_mastery_risk_trend", "Daily Mastery & Risk Trend")} subtitle={t("last_7_days", "Last 7 days")} />
+          {chartHistory.length === 0 ? (
+            <div className="py-10 text-center text-xs text-[#767683]">{t("solve_questions_trend", "Solve questions to generate trend analytics.")}</div>
+          ) : (
+            <div className="relative">
+              <div className="flex items-center justify-center gap-4 mb-4 text-[10px] font-bold text-[#464652]">
+                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#00bbf9]" /><span>{t("mastery", "Mastery")}</span></div>
+                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#f39c12]" /><span>{t("focus", "Focus")}</span></div>
+                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#ba1a1a]" /><span>{t("risk", "Risk")}</span></div>
+              </div>
+              <svg ref={svgRef} viewBox="0 0 500 220" className="w-full overflow-visible select-none cursor-pointer"
+                onMouseMove={handleMouseMove} onMouseLeave={() => setHoveredIndex(null)}>
+                <defs>
+                  <linearGradient id="mGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#00bbf9" stopOpacity="0.2"/>
+                    <stop offset="100%" stopColor="#00bbf9" stopOpacity="0"/>
+                  </linearGradient>
+                </defs>
+                {[0, 25, 50, 75, 100].map(v => (
+                  <g key={v}>
+                    <line x1={pL} y1={getY(v)} x2={chartWidth - pR} y2={getY(v)} stroke="#e2e8f0" strokeWidth="1" />
+                    <text x={pL - 10} y={getY(v) + 4} textAnchor="end" fontSize="12" fontWeight="bold" className="text-[12px] fill-[#334155] font-extrabold">{v}%</text>
+                  </g>
+                ))}
+                {chartHistory.length > 0 && (
+                  <>
+                    <path d={masteryAreaPath} fill="url(#mGrad)" />
+                    <path d={masteryPath} fill="none" stroke="#00bbf9" strokeWidth="3" strokeLinecap="round" />
+                    <path d={weaknessPath} fill="none" stroke="#f39c12" strokeWidth="2.5" strokeDasharray="4,4" />
+                    <path d={riskPath} fill="none" stroke="#ba1a1a" strokeWidth="2" />
+                    {chartHistory.map((pt: any, i: number) => {
+                      const isHovered = hoveredIndex === i;
+                      return (
+                        <g key={i}>
+                          <circle cx={getX(i)} cy={getY(pt.masteryScore)} r={isHovered ? 6 : 4} fill="#00bbf9" stroke="#fff" strokeWidth="1.5" />
+                          <circle cx={getX(i)} cy={getY(pt.weaknessScore)} r={isHovered ? 5 : 3.5} fill="#f39c12" stroke="#fff" strokeWidth="1.5" />
+                          <circle cx={getX(i)} cy={getY(pt.riskIndex)} r={isHovered ? 5 : 3.5} fill="#ba1a1a" stroke="#fff" strokeWidth="1" />
+                        </g>
+                      );
+                    })}
+                  </>
+                )}
+                {chartHistory.map((pt: any, i: number) => (
+                  <text key={i} x={getX(i)} y={chartHeight - pB + 22} textAnchor="middle" fontSize="13" fontWeight="bold" className="text-[13px] fill-[#141779] font-extrabold">{pt.date}</text>
+                ))}
+              </svg>
+              {hoveredIndex !== null && chartHistory[hoveredIndex] && (
+                <div className="mt-3 p-3 bg-white border border-gray-100 rounded-xl shadow-sm grid grid-cols-3 gap-2 text-center">
+                  <div className="bg-blue-50 p-1.5 rounded-lg">
+                    <p className="text-[9px] font-bold text-blue-700 uppercase">{t("mastery", "Mastery")}</p>
+                    <p className="text-sm font-bold text-blue-900">{chartHistory[hoveredIndex].masteryScore}%</p>
+                  </div>
+                  <div className="bg-amber-50 p-1.5 rounded-lg">
+                    <p className="text-[9px] font-bold text-amber-700 uppercase">{t("focus", "Focus")}</p>
+                    <p className="text-sm font-bold text-amber-900">{chartHistory[hoveredIndex].weaknessScore}%</p>
+                  </div>
+                  <div className="bg-red-50 p-1.5 rounded-lg">
+                    <p className="text-[9px] font-bold text-red-700 uppercase">{t("risk", "Risk")}</p>
+                    <p className={`text-sm font-bold ${chartHistory[hoveredIndex].riskIndex >= 50 ? "text-red-700" : "text-green-600"}`}>{chartHistory[hoveredIndex].riskIndex}%</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
+
+        {/* Cognitive Strengths & Weaknesses */}
+        <Card>
+          <h3 className="text-sm font-bold text-[#191c1e] mb-3">💪 {t("conceptual_strengths", "Conceptual Strengths")}</h3>
+          {!hasStrengths
+            ? <p className="text-xs text-[#767683]">{t("complete_more_quests_strengths", "Complete more quests to identify strengths.")}</p>
+            : strengths.map((s: string, i: number) => (
+              <div key={i} className="bg-green-50 border border-green-100 rounded-xl p-3 mb-2 flex gap-2 items-start">
+                <CheckCircle size={14} className="text-green-600 shrink-0 mt-0.5" />
+                <p className="text-xs text-green-800 font-semibold">{formatInsightMessage(s)}</p>
+              </div>
+            ))}
+        </Card>
+
+        <Card>
+          <h3 className="text-sm font-bold text-[#191c1e] mb-3">⚠️ {t("focus_areas", "Focus Areas")}</h3>
+          {!hasWeaknesses
+            ? <p className="text-xs text-[#767683]">{t("no_weaknesses_detected", "No weaknesses detected yet.")}</p>
+            : weaknesses.map((w: string, i: number) => (
+              <div key={i} className="bg-orange-50 border border-orange-100 rounded-xl p-3 mb-2 flex gap-2 items-start">
+                <AlertTriangle size={14} className="text-orange-600 shrink-0 mt-0.5" />
+                <p className="text-xs text-orange-800 font-semibold">{formatInsightMessage(w)}</p>
+              </div>
+            ))}
+        </Card>
+
+        {/* Incorrect Questions Review (Mistakes) */}
+        <Card>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full bg-[#ba1a1a]/10 flex items-center justify-center shrink-0">
+              <AlertTriangle size={20} className="text-[#ba1a1a]" />
+            </div>
+            <div>
+              <h2 className="text-[15px] font-bold text-[#191c1e]">{t("incorrect_questions_mistakes", "Incorrect Questions (Mistakes)")}</h2>
+              <p className="text-xs text-[#767683]">{t("review_recent_incorrect", "Review recent questions answered incorrectly")}</p>
+            </div>
+          </div>
+
+          {mistakes.length === 0 ? (
+            <div className="bg-green-50 border border-green-100 rounded-xl p-4 text-center">
+              <span className="text-2xl mb-1 block">🎉</span>
+              <p className="text-xs text-green-800 font-semibold">{t("no_recent_mistakes", "Excellent! No recent mistakes recorded. Keep up the great work!")}</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {(showAllMistakes ? mistakes : mistakes.slice(0, 5)).map((m: any, idx: number) => (
+                <div key={idx} className="bg-slate-50 border-l-[4px] border-l-[#ba1a1a] rounded-xl p-4 shadow-xs border border-slate-100">
+                  <p className="text-[14px] font-bold text-slate-800 mb-2.5 leading-snug">{m.questionText}</p>
+                  
+                  <div className="flex flex-wrap items-center gap-2 text-[10px] font-black">
+                    <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md capitalize">
+                      📚 {m.subject === "General" ? t("general", "General") : m.subject}
+                    </span>
+                    <span className="bg-slate-200/70 text-slate-700 px-2 py-0.5 rounded-md">
+                      📖 {m.chapter === "Practice Quiz" ? t("practice_quiz", "Practice Quiz") : m.chapter}
+                    </span>
+                    {m.timeSpent > 0 && (
+                      <span className="bg-amber-50 text-amber-700 px-2 py-0.5 rounded-md flex items-center gap-1">
+                        ⏱️ {m.timeSpent}s
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {mistakes.length > 5 && (
+                <button
+                  onClick={() => setShowAllMistakes(!showAllMistakes)}
+                  className="w-full mt-2 py-2.5 border border-dashed border-[#141779] text-[#141779] hover:bg-[#141779]/5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1"
+                >
+                  {showAllMistakes ? (
+                    <>{t("show_less", "Show Less")} <ChevronUp size={14} /></>
+                  ) : (
+                    <>{t("show_all_mistakes", "Show All Mistakes ({{count}})", { count: mistakes.length })} <ChevronDown size={14} /></>
+                  )}
+                </button>
+              )}
+            </div>
+          )}
+        </Card>
+
+        {/* Risk Alerts */}
+        {hasRisks && (
+          <Card>
+            <SectionHeader icon={<AlertTriangle size={20} color="#ba1a1a" />} title={t("risk_alerts", "Risk Alerts")} subtitle={t("automatically_detected_warnings", "Automatically detected warnings")} />
+            <div className="flex flex-col gap-2">
+              {risks.map((r: string, i: number) => (
+                <div key={i} className="bg-red-50 border border-red-100 rounded-xl p-3 flex gap-2 items-start">
+                  <AlertTriangle size={15} className="text-red-600 shrink-0 mt-0.5" />
+                  <p className="text-xs text-red-700 font-semibold">{r}</p>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* Recommendations */}
+        <Card>
+          <SectionHeader icon={<Lightbulb size={20} color="#f39c12" />} title={t("parent_recommendations", "Parent Recommendations")} subtitle={t("personalised_action_steps", "Personalised action steps")} />
+          <div className="flex flex-col gap-2">
+            {recommendations.map((rec: string, i: number) => (
+              <div key={i} className="bg-amber-50 border border-amber-100 rounded-xl p-3 flex gap-2 items-start">
+                <CheckCircle size={15} className="text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-800 font-semibold">{translateRecommendation(rec)}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
       </main>
+
+      {/* Date Sheet Modal */}
+      <BottomSheet isOpen={showDateSheet} onClose={() => setShowDateSheet(false)} title={t("select_time_period", "Select Time Period")}>
+        <div className="flex flex-col gap-2">
+          {["today", "yesterday", "this_week", "this_month", "custom"].map((opt) => (
+            <button
+              key={opt}
+              onClick={() => {
+                setDateFilter(opt);
+                if (opt !== "custom") {
+                  setShowDateSheet(false);
+                }
+              }}
+              className={`w-full py-3.5 px-4 rounded-2xl text-sm font-black text-left capitalize transition-colors flex justify-between items-center ${
+                dateFilter === opt
+                  ? "bg-indigo-50 text-[#141779] border-2 border-indigo-200"
+                  : "bg-slate-50 text-slate-800 border-2 border-slate-100 hover:bg-slate-100"
+              }`}
+            >
+              <span>{t(opt, opt.replace("_", " "))}</span>
+              {dateFilter === opt && <span className="text-indigo-600 text-xs">✓ {t("active", "Active")}</span>}
+            </button>
+          ))}
+          {dateFilter === "custom" && (
+            <div className="mt-4 p-4 bg-slate-50 border-2 border-slate-100 rounded-3xl space-y-3">
+              <h4 className="text-xs font-black text-[#141779] uppercase">{t("custom_date_range", "Custom Date Range")}</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500">{t("start_date", "Start Date")}</label>
+                  <input
+                    type="date"
+                    value={customStartDate}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-xl p-2 text-xs font-bold text-slate-800"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500">{t("end_date", "End Date")}</label>
+                  <input
+                    type="date"
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-xl p-2 text-xs font-bold text-slate-800"
+                  />
+                </div>
+              </div>
+              <button
+                onClick={() => setShowDateSheet(false)}
+                className="w-full mt-2 bg-[#141779] text-white py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-transform active:scale-[0.98]"
+              >
+                {t("apply_custom_range", "Apply Custom Range")}
+              </button>
+            </div>
+          )}
+        </div>
+      </BottomSheet>
+
+      {/* Subject Sheet Modal */}
+      <BottomSheet isOpen={showSubjectSheet} onClose={() => setShowSubjectSheet(false)} title={t("select_subject", "Select Subject")}>
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={() => {
+              setSubjectFilter("all");
+              setShowSubjectSheet(false);
+            }}
+            className={`w-full py-3.5 px-4 rounded-2xl text-sm font-black text-left transition-colors flex justify-between items-center ${
+              subjectFilter === "all"
+                ? "bg-indigo-50 text-[#141779] border-2 border-indigo-200"
+                : "bg-slate-50 text-slate-800 border-2 border-slate-100 hover:bg-slate-100"
+            }`}
+          >
+            <span>{t("all_subjects", "All Subjects")}</span>
+            {subjectFilter === "all" && <span className="text-indigo-600 text-xs">✓ {t("active", "Active")}</span>}
+          </button>
+          {subjects.map((s: any) => (
+            <button
+              key={s.subject}
+              onClick={() => {
+                setSubjectFilter(s.subject);
+                setShowSubjectSheet(false);
+              }}
+              className={`w-full py-3.5 px-4 rounded-2xl text-sm font-black text-left transition-colors flex justify-between items-center ${
+                subjectFilter === s.subject
+                  ? "bg-indigo-50 text-[#141779] border-2 border-indigo-200"
+                  : "bg-slate-50 text-slate-800 border-2 border-slate-100 hover:bg-slate-100"
+              }`}
+            >
+              <span className="capitalize">{getTranslatedSubject(s.subject)}</span>
+              {subjectFilter === s.subject && <span className="text-indigo-600 text-xs">✓ {t("active", "Active")}</span>}
+            </button>
+          ))}
+        </div>
+      </BottomSheet>
+
+      {/* Customize Sheet Modal */}
+      <BottomSheet isOpen={showCustomizeSheet} onClose={() => setShowCustomizeSheet(false)} title={t("customize_report", "Customize Report")}>
+        <div className="space-y-5">
+          {/* Time Period */}
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t("time_period", "Time Period")}</label>
+            <div className="grid grid-cols-3 gap-2">
+              {(["today", "this_week", "this_month", "yesterday", "custom"] as const).map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => setDateFilter(opt)}
+                  className={`py-2.5 px-1 text-[10px] font-black rounded-xl border text-center transition-colors capitalize ${
+                    dateFilter === opt
+                      ? "bg-[#141779] text-white border-[#141779]"
+                      : "bg-slate-50 text-slate-800 border-slate-200"
+                  }`}
+                >
+                  {t(opt, opt.replace(/_/g, " "))}
+                </button>
+              ))}
+            </div>
+            {dateFilter === "custom" && (
+              <div className="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-0.5">
+                    <label className="text-[9px] font-bold text-slate-500">{t("start_date", "Start Date")}</label>
+                    <input
+                      type="date"
+                      value={customStartDate}
+                      onChange={(e) => setCustomStartDate(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-[10px] font-bold text-slate-800"
+                    />
+                  </div>
+                  <div className="space-y-0.5">
+                    <label className="text-[9px] font-bold text-slate-500">{t("end_date", "End Date")}</label>
+                    <input
+                      type="date"
+                      value={customEndDate}
+                      onChange={(e) => setCustomEndDate(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-[10px] font-bold text-slate-800"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Subject */}
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t("subject", "Subject")}</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setSubjectFilter("all")}
+                className={`py-2.5 px-3 text-xs font-black rounded-xl border text-center transition-colors ${
+                  subjectFilter === "all"
+                    ? "bg-[#141779] text-white border-[#141779]"
+                    : "bg-slate-50 text-slate-800 border-slate-200"
+                }`}
+              >
+                {t("all_subjects", "All Subjects")}
+              </button>
+              {subjects.map((s: any) => (
+                <button
+                  key={s.subject}
+                  onClick={() => setSubjectFilter(s.subject)}
+                  className={`py-2.5 px-3 text-xs font-black rounded-xl border text-center transition-colors capitalize ${
+                    subjectFilter === s.subject
+                      ? "bg-[#141779] text-white border-[#141779]"
+                      : "bg-slate-50 text-slate-800 border-slate-200"
+                  }`}
+                >
+                  {getTranslatedSubject(s.subject)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={() => setShowCustomizeSheet(false)}
+            className="w-full bg-[#141779] text-white py-3.5 rounded-2xl text-sm font-black uppercase tracking-wider transition-transform active:scale-[0.98]"
+          >
+            ✓ {t("apply_and_close", "Apply & Close")}
+          </button>
+        </div>
+      </BottomSheet>
+
+      {/* Export Sheet Modal */}
+      <BottomSheet isOpen={showExportSheet} onClose={() => setShowExportSheet(false)} title={t("export_report", "Export Report")}>
+        <div className="space-y-4">
+          <p className="text-xs text-[#767683] font-bold text-center">
+            {t("choose_export_format", "Choose your preferred format to export or share this learning report.")}
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => {
+                handleDownload("pdf");
+                setShowExportSheet(false);
+              }}
+              disabled={isDownloading !== null}
+              className="py-3.5 px-4 bg-[#141779] hover:bg-[#1a1e9e] active:scale-95 text-white rounded-2xl font-black text-xs sm:text-sm transition-all flex flex-col items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
+            >
+              <span className="text-lg">📄</span>
+              <span>{t("download_pdf", "Download PDF")}</span>
+              {isDownloading === "pdf" && <Loader2 size={14} className="animate-spin mt-1" />}
+            </button>
+            
+            <button
+              onClick={() => {
+                handleDownload("word");
+                setShowExportSheet(false);
+              }}
+              disabled={isDownloading !== null}
+              className="py-3.5 px-4 bg-[#006a62] hover:bg-[#008c81] active:scale-95 text-white rounded-2xl font-black text-xs sm:text-sm transition-all flex flex-col items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
+            >
+              <span className="text-lg">📝</span>
+              <span>{t("download_word", "Download Word")}</span>
+              {isDownloading === "word" && <Loader2 size={14} className="animate-spin mt-1" />}
+            </button>
+          </div>
+          
+          <button
+            onClick={() => {
+              handleShare();
+              setShowExportSheet(false);
+            }}
+            className="w-full py-3.5 px-4 border-2 border-[#141779] text-[#141779] hover:bg-[#141779]/5 active:scale-[0.98] rounded-2xl font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2"
+          >
+            📤 {t("share_report_link", "Share Report Link")}
+          </button>
+        </div>
+      </BottomSheet>
+
+      {/* Child Switcher Modal */}
+      <ChildSwitcherModal
+        isOpen={showSwitcher}
+        onClose={() => setShowSwitcher(false)}
+        user={userData}
+        onUserUpdated={(u) => setUserData(u)}
+        onSwitched={() => {
+          sessionStorage.removeItem("parent_report_cache");
+          setLoading(true);
+          setRefreshKey(k => k + 1);
+        }}
+      />
+    </div>
+  );
+}
+
+function BottomSheet({ isOpen, onClose, title, children }: { isOpen: boolean, onClose: () => void, title: string, children: React.ReactNode }) {
+  const { t } = useTranslation();
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-slate-950/60 z-[200] flex items-end justify-center animate-in fade-in duration-200">
+      <div className="absolute inset-0" onClick={onClose} />
+      <div className="bg-white rounded-t-[32px] w-full max-w-[430px] p-6 pb-10 relative z-10 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[90vh] overflow-y-auto font-sans">
+        <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-5" />
+        <div className="flex justify-between items-center mb-5">
+          <h3 className="text-base font-black text-[#141779]">{title}</h3>
+          <button onClick={onClose} className="text-xs font-bold text-slate-500 hover:text-slate-900 bg-slate-100 px-3 py-1.5 rounded-full transition-colors">
+            {t("close", "Close")}
+          </button>
+        </div>
+        {children}
+      </div>
     </div>
   );
 }

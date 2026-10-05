@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { X, CheckCircle, ArrowLeft } from "lucide-react";
+import { X, CheckCircle } from "lucide-react";
 import * as Icons from "lucide-react";
 import { apiFetch } from "../../../api";
+import { useTranslation } from "react-i18next";
 
 export default function ParentLessonPlayerScreen() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const lessonId = searchParams.get('id') || 'focus';
@@ -67,7 +69,7 @@ export default function ParentLessonPlayerScreen() {
     if (completing) return;
     setCompleting(true);
     try {
-      await apiFetch('/api/parent/learning-library/complete', {
+      const res = await apiFetch('/api/parent/learning-library/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -75,10 +77,17 @@ export default function ParentLessonPlayerScreen() {
           acceptMission: missionAccepted
         })
       });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data?.user) {
+          localStorage.setItem("userData", JSON.stringify(json.data.user));
+          window.dispatchEvent(new Event("userDataUpdated"));
+        }
+      }
     } catch (e) {
       console.error(e);
     }
-    navigate('/parent/lessons');
+    navigate(-1);
   };
 
   const handleOptionSelect = (option: string, isCorrect: boolean) => {
@@ -175,7 +184,7 @@ export default function ParentLessonPlayerScreen() {
                 }`}
               >
                 {opt.label && <span className="font-bold block mb-1">{opt.label}</span>}
-                <span className="text-lg">{opt.text}</span>
+                <span className="text-lg block break-words w-full">{opt.text}</span>
               </button>
             ))}
           </div>
@@ -183,7 +192,7 @@ export default function ParentLessonPlayerScreen() {
             <div className="bg-[#006a62] text-white p-5 rounded-2xl shadow-lg flex flex-col gap-3">
               <div className="flex items-center gap-2 text-[#57fae9]">
                 <CheckCircle size={24} fill="currentColor" className="text-white" />
-                <h3 className="font-bold text-xl">{slide.feedback?.title || "Correct!"}</h3>
+                <h3 className="font-bold text-xl">{slide.feedback?.title || t("correct", "Correct!")}</h3>
               </div>
               <p className="text-white/90 font-medium">{slide.feedback?.subtitle}</p>
               <p className="font-bold">{slide.feedback?.text}</p>
@@ -237,7 +246,7 @@ export default function ParentLessonPlayerScreen() {
             <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 ${missionAccepted ? 'border-[#006a62] bg-[#006a62] text-white' : 'border-[#c7c5d4]'}`}>
               {missionAccepted && <Icons.Check size={14} strokeWidth={3} />}
             </div>
-            <span className="font-bold text-lg">{slide.buttonText || "I Accept"}</span>
+            <span className="font-bold text-lg">{slide.buttonText || t("i_accept", "I Accept")}</span>
           </button>
         </div>
       );
@@ -250,7 +259,7 @@ export default function ParentLessonPlayerScreen() {
             <IconComponent size={48} />
           </IllustrationBlock>
         )}
-        <h2 className={`text-2xl font-bold mb-6 ${slide.themeText || 'text-[#141779]'}`}>{slide.title || lessonData?.title || "Lesson Details"}</h2>
+        <h2 className={`text-2xl font-bold mb-6 ${slide.themeText || 'text-[#141779]'}`}>{slide.title || lessonData?.title || t("lesson_details", "Lesson Details")}</h2>
         {slide.text && <p className="text-lg text-[#464652] leading-relaxed max-w-md mx-auto mb-4">{slide.text}</p>}
         {slide.description && <p className="text-lg text-[#464652] leading-relaxed max-w-md mx-auto mb-4">{slide.description}</p>}
         {Array.isArray(slide.content) && (
@@ -294,9 +303,9 @@ export default function ParentLessonPlayerScreen() {
             <IllustrationBlock bg="bg-gray-200" text="text-gray-500">
               <Icons.MonitorOff size={48} />
             </IllustrationBlock>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Content Coming Soon</h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">{t("content_coming_soon", "Content Coming Soon")}</h2>
             <p className="text-gray-500 font-medium px-4">
-              We are working hard to prepare this lesson for you. Please check back later!
+              {t("preparing_lesson_sub", "We are working hard to prepare this lesson for you. Please check back later!")}
             </p>
           </div>
         ) : (
@@ -312,7 +321,7 @@ export default function ParentLessonPlayerScreen() {
             onClick={() => navigate(-1)}
             className="w-full bg-[#141779] text-white py-4 rounded-full font-bold text-lg flex justify-center items-center shadow-lg shadow-[#141779]/30 active:scale-95 transition-transform"
           >
-            Go Back
+            {t("go_back", "Go Back")}
           </button>
         ) : (
           <>
@@ -322,7 +331,7 @@ export default function ParentLessonPlayerScreen() {
                 disabled={!showFeedback}
                 className={`w-full py-4 rounded-full font-bold text-lg flex justify-center items-center gap-2 transition-all shadow-lg ${showFeedback ? 'bg-[#006a62] text-white hover:bg-[#00524c] active:scale-95' : 'bg-[#e0e3e5] text-[#767683] cursor-not-allowed'}`}
               >
-                {currentStep === totalSteps - 1 ? "Finish Lesson" : "Continue"}
+                {currentStep === totalSteps - 1 ? t("finish_lesson", "Finish Lesson") : t("continue", "Continue")}
               </button>
             ) : slides[currentStep]?.type === 'mission' ? (
               <button
@@ -330,14 +339,14 @@ export default function ParentLessonPlayerScreen() {
                 disabled={!missionAccepted}
                 className={`w-full py-4 rounded-full font-bold text-lg flex justify-center items-center gap-2 transition-all shadow-lg ${missionAccepted ? 'bg-[#141779] text-white hover:bg-[#0f1159] active:scale-95' : 'bg-[#e0e3e5] text-[#767683] cursor-not-allowed'}`}
               >
-                Complete Lesson
+                {t("complete_lesson", "Complete Lesson")}
               </button>
             ) : (
               <button
                 onClick={nextStep}
                 className="w-full bg-[#141779] text-white py-4 rounded-full font-bold text-lg flex justify-center items-center shadow-lg shadow-[#141779]/30 active:scale-95 transition-transform"
               >
-                {currentStep === totalSteps - 1 ? "Finish Lesson" : (currentStep === 0 ? "Continue" : "Next")}
+                {currentStep === totalSteps - 1 ? t("finish_lesson", "Finish Lesson") : (currentStep === 0 ? t("continue", "Continue") : t("next", "Next"))}
               </button>
             )}
           </>
@@ -346,3 +355,4 @@ export default function ParentLessonPlayerScreen() {
     </div>
   );
 }
+

@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, UserRound, GraduationCap, Cake, BookOpen, Save, Camera, ChevronDown, Check } from "lucide-react";
+import { ArrowLeft, UserRound, GraduationCap, Cake, BookOpen, Save, Camera, ChevronDown, Check, Lock, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "../../../api";
 
 const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect, placeholder }: any) => {
   const [isOpen, setIsOpen] = useState(false);
+  const isBoard = label ? label.toLowerCase().includes("board") : false;
+  const supportedBoards = ["CBSE (NCERT)", "GSEB", "CBSE"];
 
   return (
     <div className="flex flex-col gap-2 flex-1 relative">
@@ -39,27 +41,46 @@ const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.95, opacity: 0 }}
-                className="w-full max-w-[320px] bg-white rounded-3xl p-6 max-h-[60vh] flex flex-col"
+                className="w-full max-w-[320px] bg-white rounded-3xl p-6 max-h-[65vh] flex flex-col shadow-2xl"
                 onClick={e => e.stopPropagation()}
               >
-                <h3 className="text-xl font-bold text-[#141779] mb-4 text-center">Select {label}</h3>
+                <h3 className="text-xl font-bold text-[#141779] mb-1 text-center">Select {label}</h3>
+                {isBoard && (
+                  <p className="text-[11px] font-semibold text-slate-400 text-center mb-3">
+                    Only CBSE & GSEB are currently active
+                  </p>
+                )}
                 <div className="overflow-y-auto pr-2">
-                  {options.map((opt: string) => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => {
-                        onSelect(opt);
-                        setIsOpen(false);
-                      }}
-                      className="w-full flex items-center justify-between py-4 border-b border-[#f2f4f6] last:border-0"
-                    >
-                      <span className={`text-base ${value === opt ? 'font-bold text-[#141779]' : 'font-medium text-[#464652]'}`}>
-                        {opt}
-                      </span>
-                      {value === opt && <Check size={20} color="#141779" />}
-                    </button>
-                  ))}
+                  {options.map((opt: string) => {
+                    const isLocked = isBoard && !supportedBoards.includes(opt);
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        disabled={isLocked}
+                        onClick={() => {
+                          if (isLocked) return;
+                          onSelect(opt);
+                          setIsOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between py-3.5 px-2 border-b border-[#f2f4f6] last:border-0 rounded-xl transition-colors ${
+                          isLocked ? 'opacity-40 cursor-not-allowed bg-slate-50/50' : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className={`text-base ${isLocked ? 'text-slate-400 font-medium' : value === opt ? 'font-bold text-[#141779]' : 'font-medium text-[#464652]'}`}>
+                            {opt}
+                          </span>
+                          {isLocked && (
+                            <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-200 text-slate-500 px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <Lock size={10} /> Locked
+                            </span>
+                          )}
+                        </div>
+                        {value === opt && !isLocked && <Check size={20} color="#141779" />}
+                      </button>
+                    );
+                  })}
                 </div>
               </motion.div>
             </motion.div>
@@ -92,7 +113,7 @@ export default function EditProfileScreen() {
     }
   };
 
-  const classes = ["Nursery", "KG", "Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"];
+  const classes = ["Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"];
   const ages = ["4 Years", "5 Years", "6 Years", "7 Years", "8 Years", "9 Years", "10 Years", "11 Years", "12 Years", "13 Years", "14 Years", "15 Years"];
   const boards = ["CBSE (NCERT)", "GSEB", "ICSE", "State Board", "IB", "IGCSE"];
 
@@ -175,8 +196,9 @@ export default function EditProfileScreen() {
         <div className="bg-[rgba(255,255,255,0.7)] rounded-3xl p-6 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_2px_10px_rgba(0,0,0,0.05)]">
           <form onSubmit={handleSave} className="flex flex-col gap-5">
             {msg && (
-              <div className={`fixed bottom-10 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-lg text-center font-bold text-sm ${msg.includes("success") ? "bg-[#006a62] text-white" : "bg-[#ba1a1a] text-white"} animate-in fade-in slide-in-from-bottom-5`}>
-                {msg}
+              <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] px-4.5 py-2.5 rounded-full shadow-xl text-center font-bold text-xs bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white border border-[#57fae9]/40 animate-in fade-in slide-in-from-top-4 flex items-center justify-center gap-2.5 max-w-[90vw] w-auto">
+                <Sparkles size={16} className="text-[#57fae9] shrink-0" />
+                <span className="truncate max-w-[280px] sm:max-w-[340px] line-clamp-1">{msg}</span>
               </div>
             )}
             {/* Photo Upload Section */}

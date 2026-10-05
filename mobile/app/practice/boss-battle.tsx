@@ -7,6 +7,7 @@ import {
   View,
   Dimensions,
   ActivityIndicator,
+  ScrollView,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -72,6 +73,20 @@ export default function BossBattleScreen() {
     retryBattle,
     resetBattle,
   } = useBossBattleStore();
+
+  const subjectKey = String(params.subjectName || "Maths").toLowerCase();
+  
+  const floatingChars = React.useMemo(() => {
+    if (subjectKey.includes("math") || subjectKey.includes("calc") || subjectKey.includes("arithmetic")) {
+      return ["+", "−", "×", "÷", "?", "✏️", "📖", "🐉", "👹", "⭐"];
+    } else if (subjectKey.includes("science") || subjectKey.includes("planet") || subjectKey.includes("sun") || subjectKey.includes("earth") || subjectKey.includes("space")) {
+      return ["🔬", "🧪", "🧬", "🪐", "⚛️", "🚀", "⭐", "🐉", "🦁"];
+    } else if (subjectKey.includes("english") || subjectKey.includes("grammar") || subjectKey.includes("vocab") || subjectKey.includes("read") || subjectKey.includes("story") || subjectKey.includes("book")) {
+      return ["A", "B", "C", "✍️", "📖", "📚", "📝", "⭐", "🐉", "🦉"];
+    } else {
+      return ["🌍", "🏛️", "🗺️", "📜", "💡", "🎨", "⭐", "🐉", "🦄", "📖"];
+    }
+  }, [subjectKey]);
 
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [showAnswerFeedback, setShowAnswerFeedback] = useState(false);
@@ -374,6 +389,7 @@ export default function BossBattleScreen() {
   }));
 
   const currentQ = battleQuestions[currentQuestionIndex];
+  const isSmallOptions = currentQ && currentQ.options.length > 0 && currentQ.options.every((opt: string) => String(opt).length <= 12);
 
   return (
     <View style={styles.root}>
@@ -385,7 +401,7 @@ export default function BossBattleScreen() {
       
       {/* Floating stars/symbols */}
       <View style={styles.ambientSymbolsContainer}>
-        {["+", "−", "×", "÷", "?", "✏️", "📖", "🐉", "👹", "⭐"].map((char, index) => (
+        {floatingChars.map((char, index) => (
           <Text
             key={index}
             style={[
@@ -500,11 +516,11 @@ export default function BossBattleScreen() {
               <View style={styles.questionSection}>
                 <View style={styles.questionCard}>
                   <Text style={styles.questionIndexLabel}>QUESTION {currentQuestionIndex + 1}</Text>
-                  <Text style={styles.questionText}>{currentQ.question}</Text>
+                  <Text style={styles.questionText}>{currentQ.question.replace(/^(Boss\s+)?(Challenge|Question)(\s*#\d+)?(\s*\([^)]+\))?:\s*/i, "").trim().replace(/^\w/, c => c.toUpperCase()).normalize("NFD").replace(/[\u0300-\u036f]/g, "")}</Text>
                 </View>
 
                 {/* Question Options */}
-                <View style={styles.optionsGrid}>
+                <View style={[styles.optionsGrid, isSmallOptions && { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 10 }]}>
                   {currentQ.options.map((option, idx) => {
                     const isSelected = selectedOption === option;
                     const isCorrectAns = correctAnswer === option;
@@ -532,17 +548,17 @@ export default function BossBattleScreen() {
                     return (
                       <TouchableOpacity
                         key={idx}
-                        style={[styles.optionBtn, buttonStyle]}
+                        style={[styles.optionBtn, buttonStyle, isSmallOptions && { width: '48.5%', paddingVertical: 10, paddingHorizontal: 12 }]}
                         activeOpacity={0.8}
                         onPress={() => handleOptionPress(option)}
                         disabled={showAnswerFeedback}
                       >
-                        <Text style={[styles.optionText, textStyle]}>{option}</Text>
+                        <Text style={[styles.optionText, textStyle, isSmallOptions && { fontSize: 13 }]}>{option}</Text>
                         {showAnswerFeedback && isCorrectAns && (
-                          <MaterialIcons name="check-circle" size={24} color="#00e676" />
+                          <MaterialIcons name="check-circle" size={isSmallOptions ? 16 : 24} color="#00e676" />
                         )}
                         {showAnswerFeedback && isWrongAns && (
-                          <MaterialIcons name="cancel" size={24} color="#ff1744" />
+                          <MaterialIcons name="cancel" size={isSmallOptions ? 16 : 24} color="#ff1744" />
                         )}
                       </TouchableOpacity>
                     );
@@ -764,7 +780,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#ff9100",
     borderRadius: 28,
-    padding: 32,
+    padding: 20,
     alignItems: "center",
     width: "100%",
     shadowColor: "#ff9100",
@@ -778,18 +794,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
     letterSpacing: 3,
-    marginBottom: 20,
+    marginBottom: 10,
   },
   introAvatarCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
     backgroundColor: "rgba(255, 145, 0, 0.15)",
     borderWidth: 2,
     borderColor: "#ff9100",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 20,
+    marginBottom: 12,
     shadowColor: "#ff9100",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -797,14 +813,14 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   introAvatarEmoji: {
-    fontSize: 64,
+    fontSize: 48,
   },
   introBossName: {
     color: "#ffffff",
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: "800",
     textAlign: "center",
-    marginBottom: 6,
+    marginBottom: 4,
     fontFamily: "Quicksand",
   },
   introSubjectText: {
@@ -812,15 +828,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
     textAlign: "center",
-    marginBottom: 28,
+    marginBottom: 16,
   },
   rewardsPreview: {
     width: "100%",
     backgroundColor: "rgba(0, 0, 0, 0.3)",
     borderRadius: 16,
-    padding: 16,
+    padding: 12,
     alignItems: "center",
-    marginBottom: 32,
+    marginBottom: 20,
   },
   rewardsPreviewTitle: {
     color: "#ffeb3b",
@@ -902,14 +918,14 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "rgba(255, 23, 68, 0.2)",
     borderRadius: 20,
-    padding: 16,
-    marginTop: 10,
-    gap: 16,
+    padding: 10,
+    marginTop: 4,
+    gap: 10,
   },
   bossAvatarOuter: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: "rgba(255, 23, 68, 0.15)",
     borderWidth: 2,
     borderColor: "#ff1744",
@@ -921,37 +937,37 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
   },
   bossEmoji: {
-    fontSize: 42,
+    fontSize: 28,
   },
   bossStatsBox: {
     flex: 1,
   },
   bossNameText: {
     color: "#ffffff",
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: "800",
-    marginBottom: 8,
+    marginBottom: 4,
   },
   playerSection: {
-    marginTop: 12,
+    marginTop: 6,
   },
   playerCard: {
     borderWidth: 1.5,
     borderRadius: 20,
-    padding: 16,
+    padding: 10,
   },
   playerName: {
     color: "#00e676",
     fontSize: 14,
     fontWeight: "800",
-    marginBottom: 8,
+    marginBottom: 4,
     letterSpacing: 1,
   },
   progressContainer: {
     width: "100%",
   },
   progressBarBg: {
-    height: 12,
+    height: 8,
     backgroundColor: "rgba(255, 255, 255, 0.1)",
     borderRadius: 6,
     overflow: "hidden",
@@ -970,15 +986,15 @@ const styles = StyleSheet.create({
   questionSection: {
     flex: 1,
     justifyContent: "center",
-    gap: 20,
-    marginVertical: 16,
+    gap: 10,
+    marginVertical: 8,
   },
   questionCard: {
     backgroundColor: "rgba(255, 255, 255, 0.07)",
     borderWidth: 1.5,
     borderColor: "rgba(255, 255, 255, 0.15)",
-    borderRadius: 24,
-    padding: 24,
+    borderRadius: 18,
+    padding: 14,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
@@ -989,23 +1005,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
     letterSpacing: 2,
-    marginBottom: 10,
+    marginBottom: 4,
   },
   questionText: {
     color: "#ffffff",
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: "700",
-    lineHeight: 28,
+    lineHeight: 22,
   },
   optionsGrid: {
-    gap: 12,
+    gap: 8,
   },
   optionBtn: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 18,
     borderWidth: 2,
   },
@@ -1031,7 +1047,7 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   optionText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
     flex: 1,
   },
@@ -1058,7 +1074,7 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     backgroundColor: "#e91e63",
-    paddingVertical: 16,
+    paddingVertical: 12,
     borderRadius: 9999,
     flexDirection: "row",
     alignItems: "center",
@@ -1072,7 +1088,7 @@ const styles = StyleSheet.create({
   },
   actionBtnText: {
     color: "#ffffff",
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "800",
     letterSpacing: 1,
   },

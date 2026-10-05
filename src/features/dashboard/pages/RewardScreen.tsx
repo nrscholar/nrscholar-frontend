@@ -132,8 +132,11 @@ const ScratchCard = ({ width, height, onReveal, children }: any) => {
   );
 };
 
+import { useTranslation } from "react-i18next";
+
 export default function RewardScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const returnTo = searchParams.get("returnTo");
@@ -142,23 +145,42 @@ export default function RewardScreen() {
   const navState = location.state;
 
   const [isRevealed, setIsRevealed] = useState(false);
+  const [isCollecting, setIsCollecting] = useState(false);
+
+  // Sync latest coins and XP from backend DB to localStorage whenever reward is revealed or on load
+  const syncUserProfile = async () => {
+    try {
+      const res = await apiFetch("/api/users/me");
+      const json = await res.json();
+      if (json.success && json.data?.user) {
+        localStorage.setItem("userData", JSON.stringify(json.data.user));
+        window.dispatchEvent(new Event("userDataUpdated"));
+      }
+    } catch (e) {
+      console.error("Failed to sync user profile on reward screen:", e);
+    }
+  };
 
   useEffect(() => {
      if (isRevealed) {
-       if (rewardType === "coins" || rewardType === "boss") {
-           // Rewards are already granted securely by the backend logic when the event occurred.
-           // We just display the success visual here.
-       } else if (rewardType === "badge") {
+       if (rewardType === "badge") {
            apiFetch("/api/users/add-badge", {
                method: "POST",
                headers: { "Content-Type": "application/json" },
                body: JSON.stringify({ badge: "Sharpshooter" })
+           }).finally(() => {
+               syncUserProfile();
            });
+       } else {
+           syncUserProfile();
        }
      }
   }, [rewardType, amount, isRevealed]);
 
-  const handleCollect = () => {
+  const handleCollect = async () => {
+     if (isCollecting) return;
+     setIsCollecting(true);
+     await syncUserProfile();
      if (returnTo) navigate(returnTo, { state: navState, replace: true });
      else navigate('/', { replace: true });
   };
@@ -183,20 +205,20 @@ export default function RewardScreen() {
     }));
   }, []);
 
-  let title = "Bonus Reward!";
-  let subtitle = `You earned ${amount} coins for answering 5 in a row!`;
-  let tagText = "COIN BONUS";
+  let title = t('bonus_reward', 'Bonus Reward!');
+  let subtitle = t('earned_coins_subtitle', { amount, defaultValue: `You earned ${amount} coins for answering 5 in a row!` });
+  let tagText = t('coin_bonus', 'COIN BONUS');
   let iconUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuDQ-b12m1P3gH05_q7R3rO0lP-iM9_wD8Y9H6hR0pP6I5R1E3pP6N-I5xZ7-x5H4sI5o8Q2lG3E5hU7eW3vY9bM1qX4pA8xZ0qY9H8bN7E5hI5R1uP6O9P1_6oH3qY2lE5aI1eQ9M3kL6R1fN5iM8qQ9H6qG5fJ1eW3_Q8rN6aU1mZ7gV5bI5R1pQ2vW4jX6_O7aI1mZ7";
   
   if (rewardType === "boss") {
-      title = "Boss Defeated!";
-      subtitle = `You conquered the chapter and earned ${amount} coins!`;
-      tagText = "BOSS REWARD";
+      title = t('boss_defeated_title', 'Boss Defeated!');
+      subtitle = t('conquered_chapter_subtitle', { amount, defaultValue: `You conquered the chapter and earned ${amount} coins!` });
+      tagText = t('boss_reward', 'BOSS REWARD');
       iconUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuCcG8R4hY8vG9D5P8H6O3L9R4N9oU1I3P4V9L6P4P8W3oK5M7U3O8E9S4U5H9E5K4H9R3U5E8N5U7E3U8O8R8L9D4L6L6D4O6C8U9D9P9H8O5I3"; // example fallback
   } else if (rewardType === "badge") {
-      title = "Sharpshooter";
-      subtitle = "You answered 25 questions correctly in a single session! You earned a new badge.";
-      tagText = "RARE BADGE";
+      title = t('sharpshooter', 'Sharpshooter');
+      subtitle = t('sharpshooter_subtitle', 'You answered 25 questions correctly in a single session! You earned a new badge.');
+      tagText = t('rare_badge', 'RARE BADGE');
       iconUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuDRHcKf0YYUdWtSVgiFjyLzgE1kfrmmZWWzbveF9vkixJAqjrF0XMH3oCXrixUC2_HUTVTURn2DC-nEzuWliaHK3DkO7Ht1cmKa2gliF3ZUMeRcVd5DU5okkJIEX2Kqf-QrWeLu1YzYJafK0AI6N3Yjzhd40gNeonYhWmVHbnJiGH4v-zoJl9wP_Sv88krUYwFx-Z2ckgWuS490qD8NtGOp-WGNeo7T_WYS-N4TFygSvNnlHZk8jv9cS0PyLQr8Ca4G_zNk4mEPlw";
   }
 
@@ -244,7 +266,7 @@ export default function RewardScreen() {
         {isRevealed && (
           <div className="flex items-center gap-2">
             <Sparkles size={20} color="#57fae9" />
-            <span className="text-sm font-semibold text-white tracking-wide">NEW UNLOCK</span>
+            <span className="text-sm font-semibold text-white tracking-wide">{t('new_unlock', 'NEW UNLOCK')}</span>
           </div>
         )}
 
@@ -337,7 +359,7 @@ export default function RewardScreen() {
             onClick={handleCollect}
             className="w-full h-[60px] rounded-full bg-[#57fae9] flex items-center justify-center gap-2 shadow-[0_10px_15px_rgba(42,221,205,0.4)] hover:bg-[#45e0d0] transition-colors"
           >
-            <span className="text-[#007168] text-xl font-bold">Collect</span>
+            <span className="text-[#007168] text-xl font-bold">{t('collect', 'Collect')}</span>
             <ChevronsRight size={24} color="#007168" />
           </button>
         </div>

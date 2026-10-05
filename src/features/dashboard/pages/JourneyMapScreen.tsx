@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { apiFetch } from "../../../api";
-import { motion, AnimatePresence } from "framer-motion";
-import InteractiveCompanion from "../../../components/InteractiveCompanion";
+import MapWorld from "../../../components/map/MapWorld";
+import { ArrowLeft } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface City {
   _id?: string;
@@ -17,6 +18,7 @@ interface City {
 export default function JourneyMapScreen() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [fuel, setFuel] = useState(0);
   const [xp, setXp] = useState(0);
@@ -31,6 +33,7 @@ export default function JourneyMapScreen() {
   // Mapped UI cities for visual representation
   const uiCities = [
     { name: "Egg Village", emoji: "🥚", fallbackXp: 0, reward: "Dragon Egg", rewardColor: "text-secondary-fixed" },
+    { name: "Hatchling Haven", emoji: "🐣", fallbackXp: 500, reward: "Hatchling Dragon", rewardColor: "text-amber-500" },
     { name: "Forest Kingdom", emoji: "🐉", fallbackXp: 1000, reward: "Baby Dragon", rewardColor: "text-primary" },
     { name: "Magic Desert", emoji: "🔥", fallbackXp: 2500, reward: "Fire Dragon", rewardColor: "text-orange-500" },
     { name: "Ice Kingdom", emoji: "❄️", fallbackXp: 5000, reward: "Ice Dragon", rewardColor: "text-blue-500" },
@@ -38,9 +41,13 @@ export default function JourneyMapScreen() {
     { name: "Cloud City", emoji: "☁️", fallbackXp: 15000, reward: "Sky Dragon", rewardColor: "text-sky-500" },
     { name: "Crystal Caves", emoji: "💎", fallbackXp: 20000, reward: "Crystal Dragon", rewardColor: "text-teal-400" },
     { name: "Underworld", emoji: "🌋", fallbackXp: 30000, reward: "Shadow Dragon", rewardColor: "text-red-600" },
-    { name: "Starry Sky", emoji: "⭐", fallbackXp: 40000, reward: "Star Dragon", rewardColor: "text-yellow-400" },
     { name: "Galactic Core", emoji: "🌌", fallbackXp: 50000, reward: "Cosmic Dragon", rewardColor: "text-indigo-500" },
+    { name: "Stone Age Hunter", emoji: "🏹", fallbackXp: 65000, reward: "Hunter Dragon", rewardColor: "text-amber-700" },
+    { name: "Bronze Craftsman", emoji: "🔨", fallbackXp: 80000, reward: "Bronze Dragon", rewardColor: "text-amber-600" },
+    { name: "Civilization Leader", emoji: "👑", fallbackXp: 100000, reward: "Apex Dragon", rewardColor: "text-yellow-500" },
   ];
+
+  const [journeyData, setJourneyData] = useState<any>(null);
 
   useEffect(() => {
     const fetchJourney = async () => {
@@ -49,6 +56,9 @@ export default function JourneyMapScreen() {
       let userXp = 0;
       let userCoins = 0;
       let userName = "Explorer";
+      let activeChildClass = "";
+      let activeChildBoard = "";
+      let activeChildId = "";
 
       const token = localStorage.getItem("userToken");
       if (token) {
@@ -56,89 +66,48 @@ export default function JourneyMapScreen() {
           const uRes = await apiFetch("/api/users/me");
           const uData = await uRes.json();
           if (uData.success) {
-            userFuel = uData.data.user.fuel !== undefined ? uData.data.user.fuel : 0;
-            userXp = uData.data.user.xp !== undefined ? uData.data.user.xp : 0; // Fixed default
-            userCoins = uData.data.user.coins !== undefined ? uData.data.user.coins : 0;
-            userName = uData.data.user.childName || uData.data.user.fullName || "Explorer";
-            setChildPhoto(uData.data.user.childPhoto || "");
-            setUserLevel(uData.data.user.level || 1);
+            const u = uData.data.user;
+            userFuel = u.fuel !== undefined ? u.fuel : 0;
+            userXp = u.xp !== undefined ? u.xp : 0;
+            userCoins = u.coins !== undefined ? u.coins : 0;
+            userName = u.childName || u.fullName || "Explorer";
+            setChildPhoto(u.childPhoto || "");
+            setUserLevel(u.level || 1);
+            activeChildClass = u.childClass || "";
+            activeChildBoard = u.childBoard || "";
+            activeChildId = u.activeChildId || "";
           }
         } catch (e) {}
       }
       
-      // Fallback
-      if (userXp === undefined || userXp === null || userName === "Explorer") {
-        const cached = localStorage.getItem("userData");
-        if (cached) {
-          try {
-            const u = JSON.parse(cached);
-            userFuel = u.fuel !== undefined ? u.fuel : 0;
-            userName = u.childName || u.fullName || u.name || "Explorer";
-            userXp = u.xp !== undefined ? u.xp : 0;
-            userCoins = u.coins !== undefined ? u.coins : 0;
-            setChildPhoto(u.childPhoto || "");
-            setUserLevel(u.level || 1);
-          } catch(e) {}
-        }
-      }
       setFuel(userFuel);
       setXp(userXp);
       setCoins(userCoins);
       setUsername(userName);
 
-      const xpThresholds = [0, 1000, 2500, 5000, 10000, 15000, 20000, 30000, 40000, 50000];
-
-      // Fetch cities
+      // Fetch 3-tier multi-year journey progress
       try {
-        const cRes = await apiFetch("/api/practice/cities");
-        const cData = await cRes.json();
-        if (cData.success && cData.data.length > 0) {
-          const mapped = cData.data.map((c: any, index: number) => {
-            const reqXp = xpThresholds[index] || 0;
-            return {
-              _id: c._id || c.id,
-              name: c.name,
-              landmark: c.landmark,
-              fact: c.fact,
-              badge: c.badge,
-              requiredXp: reqXp,
-              unlocked: userXp >= reqXp
-            };
-          });
-          setCities(mapped);
-        } else {
-          // Fallback to static if no cities from API
-          setCities(uiCities.map((c, index) => {
-            const reqXp = xpThresholds[index] || 0;
-            return {
-              name: c.name,
-              landmark: "", fact: "", badge: "",
-              requiredXp: reqXp,
-              unlocked: userXp >= reqXp
-            };
-          }));
+        let url = "/api/journey/progress";
+        const params = new URLSearchParams();
+        if (activeChildClass) params.append("classLevel", activeChildClass);
+        if (activeChildBoard) params.append("board", activeChildBoard);
+        if (activeChildId) params.append("child_id", activeChildId);
+        
+        const q = params.toString();
+        if (q) {
+          url += `?${q}`;
+        }
+        
+        const jRes = await apiFetch(url);
+        if (jRes.ok) {
+          const jData = await jRes.json();
+          if (jData.success && jData.data) {
+            setJourneyData(jData.data);
+          }
         }
       } catch (e) {
-        console.error("Failed to fetch cities", e);
-        setCities(uiCities.map((c, index) => {
-          const reqXp = xpThresholds[index] || 0;
-          return {
-            name: c.name,
-            landmark: "", fact: "", badge: "",
-            requiredXp: reqXp,
-            unlocked: userXp >= reqXp
-          };
-        }));
+        console.error("Failed to fetch journey progress", e);
       }
-
-      // Fetch unread notifications
-      try {
-        const notifRes = await apiFetch("/api/notifications");
-        const notifData = await notifRes.json();
-        if (notifData.success && notifData.data) {
-          setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
-        }
-      } catch (e) {}
 
       setLoading(false);
     };
@@ -156,29 +125,88 @@ export default function JourneyMapScreen() {
     }
   }, [loading, location.state]);
 
+  const getThemeKey = (cityName: string): string => {
+    if (!cityName) return "dragon";
+    const name = cityName.toLowerCase();
+    if (name.includes("desert") || name.includes("forest") || name.includes("egg") || name.includes("mountain") || name.includes("dragon")) return "dragon";
+    if (name.includes("lab") || name.includes("science") || name.includes("crystal") || name.includes("quantum")) return "science";
+    if (name.includes("arena") || name.includes("champion") || name.includes("podium") || name.includes("habits")) return "social";
+    if (name.includes("space") || name.includes("star") || name.includes("galactic") || name.includes("sky") || name.includes("cloud")) return "space";
+    if (name.includes("ocean") || name.includes("water") || name.includes("underworld") || name.includes("trench")) return "ocean";
+    if (name.includes("ruins") || name.includes("ancient") || name.includes("history") || name.includes("temple")) return "history";
+    return "dragon";
+  };
+
   if (loading) {
     return (
-      <div className="bg-background text-on-surface flex items-center justify-center min-h-screen">
-        <div className="relative w-full max-w-[430px] h-screen bg-surface-bright flex flex-col overflow-hidden shadow-2xl animate-pulse">
-          <header className="fixed top-0 w-full max-w-[430px] z-50 flex justify-between items-center px-4 py-4 bg-surface/80 border-b-[1.5px] border-outline-variant/30 gap-2">
-            <div className="flex items-center gap-2 flex-1">
-              <div className="w-8 h-8 rounded-full bg-surface-container-highest shrink-0" />
-              <div className="w-10 h-10 rounded-full bg-surface-container-highest shrink-0" />
-              <div className="flex-1">
-                <div className="h-4 bg-surface-container-highest rounded w-2/3 mb-1" />
-                <div className="h-3 bg-surface-container-highest rounded w-1/3" />
+      <div className="bg-[#F7F9FB] text-slate-900 font-sans flex items-center justify-center min-h-screen">
+        <div className="relative w-full max-w-[430px] h-screen bg-gradient-to-b from-[#EEF2FF] via-[#F5F3FF] to-[#FFFFFF] flex flex-col overflow-hidden shadow-2xl animate-pulse">
+          
+          {/* Header Skeleton */}
+          <header className="shrink-0 w-full z-50 flex justify-between items-center px-4 py-3.5 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-xs">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8.5 h-8.5 rounded-full bg-slate-200 shrink-0" />
+              <div className="w-9 h-9 rounded-full bg-indigo-200 shrink-0" />
+              <div className="flex flex-col gap-1.5">
+                <div className="w-28 h-3.5 rounded-md bg-slate-200" />
+                <div className="w-16 h-2.5 rounded-md bg-slate-200" />
               </div>
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <div className="w-9 h-9 rounded-full bg-surface-container-highest" />
-              <div className="w-14 h-8 rounded-full bg-surface-container-highest" />
-              <div className="w-14 h-8 rounded-full bg-surface-container-highest" />
+            <div className="flex items-center gap-1.5">
+              <div className="w-20 h-7 rounded-full bg-teal-100/70 shrink-0" />
+              <div className="w-16 h-7 rounded-full bg-indigo-100/70 shrink-0" />
             </div>
           </header>
-          <main className="flex-1 mt-20 px-6 py-4 flex flex-col items-center gap-10">
-            <div className="w-full h-[300px] bg-surface-container rounded-3xl" />
-            <div className="w-64 h-32 bg-surface-container rounded-2xl" />
-            <div className="w-64 h-32 bg-surface-container rounded-2xl" />
+
+          {/* Map Body Skeleton */}
+          <main className="flex-1 w-full p-4 overflow-hidden relative flex flex-col items-center pt-8">
+            {/* Vertical dashed line skeleton */}
+            <div className="absolute top-12 bottom-20 w-1 bg-indigo-200/50 rounded-full" />
+
+            {/* Node Cards Skeleton */}
+            <div className="w-full flex flex-col gap-8 relative z-10">
+              {/* Card 1 (Left aligned) */}
+              <div className="flex justify-start w-full">
+                <div className="w-[78%] bg-white/90 border border-slate-200 rounded-3xl p-4 shadow-sm flex gap-3 items-start">
+                  <div className="w-11 h-11 rounded-2xl bg-teal-200/80 shrink-0" />
+                  <div className="flex-1 flex flex-col gap-2">
+                    <div className="w-16 h-3 rounded bg-teal-200/60" />
+                    <div className="w-28 h-4 rounded bg-slate-200" />
+                    <div className="w-full h-2 rounded-full bg-slate-200 mt-1" />
+                    <div className="w-20 h-5 rounded-full bg-slate-100" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2 (Right aligned) */}
+              <div className="flex justify-end w-full">
+                <div className="w-[78%] bg-white/90 border border-slate-200 rounded-3xl p-4 shadow-sm flex gap-3 items-start">
+                  <div className="w-11 h-11 rounded-2xl bg-indigo-200/80 shrink-0" />
+                  <div className="flex-1 flex flex-col gap-2">
+                    <div className="w-16 h-3 rounded bg-indigo-200/60" />
+                    <div className="w-32 h-4 rounded bg-slate-200" />
+                    <div className="w-full h-2 rounded-full bg-slate-200 mt-1" />
+                    <div className="w-20 h-5 rounded-full bg-slate-100" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3 (Left aligned) */}
+              <div className="flex justify-start w-full">
+                <div className="w-[78%] bg-white/90 border border-slate-200 rounded-3xl p-4 shadow-sm flex gap-3 items-start">
+                  <div className="w-11 h-11 rounded-2xl bg-slate-200 shrink-0" />
+                  <div className="flex-1 flex flex-col gap-2">
+                    <div className="w-16 h-3 rounded bg-slate-200" />
+                    <div className="w-28 h-4 rounded bg-slate-200" />
+                    <div className="w-full h-2 rounded-full bg-slate-200 mt-1" />
+                    <div className="w-20 h-5 rounded-full bg-slate-100" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Floating Action Button Skeleton */}
+            <div className="absolute bottom-6 right-6 w-14 h-14 rounded-full bg-indigo-400/80 shadow-lg" />
           </main>
         </div>
       </div>
@@ -288,203 +316,61 @@ export default function JourneyMapScreen() {
   else if (xp >= 2500) startXpOfStage = 2500;
   else if (xp >= 1000) startXpOfStage = 1000;
 
-  const stageRange = dragonNextGoal - startXpOfStage;
-  const dragonProgress = stageRange > 0 ? Math.min(100, Math.round(((xp - startXpOfStage) / stageRange) * 100)) : 100;
-
   return (
-    <div className="bg-background text-on-surface flex items-center justify-center min-h-screen">
-      <div className="relative w-full max-w-[430px] h-screen bg-surface-bright flex flex-col overflow-hidden shadow-2xl">
+    <div className="bg-[#F7F9FB] text-slate-900 font-sans flex items-center justify-center h-screen">
+      <div className="relative w-full max-w-[430px] h-screen bg-[#F7F9FB] flex flex-col overflow-hidden shadow-2xl">
         
-        {/* TopAppBar */}
-        <header className="fixed top-0 w-full max-w-[430px] z-50 flex justify-between items-center px-4 py-4 bg-surface/80 dark:bg-surface-dim/80 backdrop-blur-lg border-b-[1.5px] border-outline-variant/30 shadow-sm gap-2">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <button onClick={() => navigate('/home')} className="p-1 hover:opacity-80 transition-opacity shrink-0">
-              <span className="material-symbols-outlined text-primary">arrow_back</span>
+        {/* Header */}
+        <header className="shrink-0 w-full z-50 flex justify-between items-center px-4 py-3.5 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <button 
+              onClick={() => navigate('/home')} 
+              className="w-8.5 h-8.5 rounded-full bg-slate-50 hover:bg-slate-100 active:scale-95 flex items-center justify-center text-[#141779] transition-all border border-slate-200"
+            >
+              <ArrowLeft size={20} />
             </button>
-            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary shrink-0">
-              {childPhoto ? (
-                <img alt="User Profile" className="w-full h-full object-cover" src={childPhoto}/>
-              ) : (
-                <img alt="User Profile" className="w-full h-full object-cover" src={`https://ui-avatars.com/api/?name=${encodeURIComponent(username || "Kid")}&background=random`}/>
-              )}
+            <div className="w-9 h-9 rounded-full bg-[#141779] text-white flex items-center justify-center font-black text-xs border-2 border-white shadow-xs">
+              {journeyData?.classLevel || userLevel}
             </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="font-display text-label-lg font-bold text-primary truncate">{username}</h1>
-              <div className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-[14px] text-secondary shrink-0" style={{fontVariationSettings: "'FILL' 1"}}>stars</span>
-                <p className="text-[10px] font-bold text-on-surface-variant truncate">Explorer Lvl {userLevel}</p>
-              </div>
+            <div>
+              <h1 className="text-sm font-black text-[#141779] uppercase tracking-wider leading-none">
+                {journeyData?.tierTitle ? t(journeyData.tierTitle.toLowerCase().replace(/ /g, '_'), { defaultValue: journeyData.tierTitle }) : t('growth_journey', 'Growth Journey')}
+              </h1>
+              <p className="text-[10px] font-bold text-[#006a62] mt-0.5">
+                {journeyData?.character ? t(journeyData.character.toLowerCase().replace(/ /g, '_'), { defaultValue: journeyData.character }) : t('explorer', 'Explorer')} {journeyData?.rank && journeyData.rank !== "None" ? `(${journeyData.rank})` : ""}
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button 
-              onClick={() => navigate("/notifications")}
-              className="w-9 h-9 rounded-full bg-surface-container flex items-center justify-center hover:opacity-85 transition-all shrink-0"
-            >
-              <div className="relative">
-                <span className="material-symbols-outlined text-[20px] text-primary">notifications</span>
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border border-surface pointer-events-none z-10">
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
-              </div>
-            </button>
-            <div className="flex items-center gap-1 bg-surface-container px-2.5 py-1.5 rounded-full whitespace-nowrap">
-              <span className="material-symbols-outlined text-[16px] text-orange-500" style={{fontVariationSettings: "'FILL' 1"}}>local_fire_department</span>
-              <span className="text-[11px] font-bold">{xp >= 1000 ? `${(xp/1000).toFixed(1)}k` : xp} XP</span>
+
+          <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1 bg-teal-50 border border-teal-200 px-2.5 py-1 rounded-full text-[10px] font-black text-[#006a62]">
+              <span>📚 {journeyData ? `${journeyData.completedChapters}/${journeyData.totalTierChapters}` : "0/0"} ({journeyData?.progressPercentage || 0}%)</span>
             </div>
-            <div className="flex items-center gap-1 bg-surface-container px-2.5 py-1.5 rounded-full whitespace-nowrap">
-              <span className="material-symbols-outlined text-[16px] text-yellow-500" style={{fontVariationSettings: "'FILL' 1"}}>monetization_on</span>
-              <span className="text-[11px] font-bold">{coins}</span>
+            <div className="flex items-center gap-1 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full text-[10px] font-black text-[#141779]">
+              <span>⭐ {xp} XP</span>
             </div>
           </div>
         </header>
 
-        {/* Main Map Content Area */}
-        <main className="flex-1 mt-20 mb-24 overflow-y-auto no-scrollbar relative px-6 py-4">
-          
-          {/* Dynamic Dragon Pet Widget */}
-          <div 
-            onClick={() => navigate('/evolution')}
-            className="bg-gradient-to-br from-primary-container to-secondary-container rounded-3xl p-5 mb-8 shadow-[0_8px_30px_rgba(0,106,98,0.2)] border border-white/40 flex flex-col items-center relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform group"
-          >
-            <div className="absolute top-2 right-4 flex items-center gap-1 bg-white/40 px-2 py-1 rounded-full group-hover:bg-white/60 transition-colors">
-              <span className="text-[10px] font-bold text-primary tracking-widest uppercase">Tap to View</span>
-              <span className="material-symbols-outlined text-[12px] text-primary">open_in_new</span>
-            </div>
-            
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 blur-2xl rounded-full translate-x-10 -translate-y-10"></div>
-            
-            <h2 className="text-sm font-black uppercase tracking-widest text-primary mb-1 mt-2">My Dragon Companion</h2>
-            <p className="text-xs font-bold text-on-surface-variant mb-4">{dragonMessage}</p>
-            
-            <div className="w-36 h-36 bg-white/50 rounded-full flex items-center justify-center p-2 mb-4 shadow-inner ring-4 ring-white relative z-10 overflow-hidden">
-              <InteractiveCompanion scale={companionScale} url={dragonModelUrl} fallbackImage={dragonFallbackImage} />
-            </div>
-            
-            <h3 className="text-xl font-black text-primary mb-2">{dragonStage}</h3>
-            
-            <div className="w-full bg-white/60 rounded-full h-3 overflow-hidden shadow-inner flex mb-1">
-              <div className="h-full bg-gradient-to-r from-orange-400 to-yellow-400 transition-all duration-1000" style={{width: `${dragonProgress}%`}}></div>
-            </div>
-            <div className="w-full flex justify-between px-1">
-              <span className="text-[10px] font-bold text-on-surface-variant">{xp} XP</span>
-              <span className="text-[10px] font-bold text-on-surface-variant">Next: {dragonNextGoal} XP</span>
-            </div>
+        {/* Evolving Character Alert Banner */}
+        {journeyData?.isEvolved && (
+          <div className="shrink-0 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white px-4 py-2 text-center text-xs font-black uppercase tracking-wider shadow-md animate-pulse border-b border-indigo-300/40">
+            ✨ DRAGON EVOLVED INTO SCIENTIST! 🔬
           </div>
+        )}
 
-          <div ref={scrollRef} className="relative min-h-[800px] py-10 flex flex-col items-center gap-16">
-            <div 
-              className="absolute top-0 bottom-0 left-1/2 w-[160px] -ml-[80px] pointer-events-none z-0"
-              style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg width='160' height='300' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M 80 0 C 180 75, 180 75, 80 150 C -20 225, -20 225, 80 300' fill='none' stroke='%23cbd5e1' stroke-width='4' stroke-dasharray='10 10' stroke-linecap='round'/%3E%3C/svg%3E")`,
-                backgroundRepeat: 'repeat-y',
-                backgroundPosition: 'center top'
-              }}
-            ></div>
-
-            {cities.map((city, idx) => {
-              const uiCity = uiCities[Math.min(idx, uiCities.length - 1)];
-              const isUltimate = idx === cities.length - 1;
-              const isNext = !city.unlocked && (idx === 0 || cities[idx - 1].unlocked);
-              const translateClass = idx % 2 === 0 ? "translate-x-[-40px]" : "translate-x-[40px]";
-
-              if (isUltimate) {
-                const canPlay = isNext || city.unlocked;
-                return (
-                  <div key={idx} id={`city-${idx}`} className={`relative z-10 w-full flex justify-center mb-10 ${!canPlay ? 'grayscale' : ''}`}>
-                    <div className="glass-card bg-white dark:bg-surface p-6 rounded-3xl w-72 text-center border-2 border-dashed border-outline-variant transition-all">
-                      <div className="w-16 h-16 bg-surface-container mx-auto rounded-full flex items-center justify-center mb-4 text-3xl">{uiCity.emoji}</div>
-                      <h3 className="font-headline text-headline-md font-bold text-on-surface-variant mb-2">{city.name}</h3>
-                      <p className="text-label-sm text-outline mb-4">The Final Legend awaits...</p>
-                      <div className="py-2 px-4 bg-tertiary-fixed text-on-tertiary-fixed rounded-full inline-block font-bold text-xs">{city.requiredXp.toLocaleString()} XP NEEDED</div>
-                    </div>
-                  </div>
-                );
-              }
-
-              if (city.unlocked) {
-                return (
-                  <div key={idx} id={`city-${idx}`} className={`relative z-10 w-full flex justify-center ${translateClass}`}>
-                    <div 
-                      onClick={() => navigate('/evolution')}
-                      className="glass-card bg-white dark:bg-surface p-4 rounded-2xl w-64 border-l-4 border-secondary-fixed shadow-[0_4px_20px_rgba(0,106,98,0.2)] transition-all group cursor-pointer active:scale-95"
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-2 py-0.5 rounded-full">UNLOCKED</span>
-                        <span className="material-symbols-outlined text-secondary-fixed text-xl" style={{fontVariationSettings: "'FILL' 1"}}>check_circle</span>
-                      </div>
-                      <h3 className="font-headline text-body-lg font-bold text-primary mb-1">{city.name}</h3>
-                      <p className="text-label-sm text-on-surface-variant mb-3">{idx === 0 ? "The journey begins here..." : "Completed area"}</p>
-                      <div className="flex items-center gap-3 bg-surface-container/50 p-2 rounded-lg">
-                        <div className="w-10 h-10 bg-white rounded-md flex items-center justify-center text-2xl">{uiCity.emoji}</div>
-                        <div>
-                          <p className="text-[10px] font-bold text-on-surface-variant">REWARD</p>
-                          <p className="text-label-sm font-bold text-primary">{uiCity.reward}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
-
-              if (isNext) {
-                const progressToNext = Math.min((xp / city.requiredXp) * 100, 100);
-                return (
-                  <div key={idx} id={`city-${idx}`} className={`relative z-10 w-full flex justify-center ${translateClass}`}>
-                    <div 
-                      className="glass-card bg-white dark:bg-surface p-4 rounded-2xl w-64 border-l-4 border-primary shadow-lg ring-2 ring-primary/20 transition-all group"
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="bg-primary-fixed text-on-primary-fixed text-[10px] font-bold px-2 py-0.5 rounded-full">IN PROGRESS</span>
-                        <div className="flex items-center gap-1 text-primary">
-                          <span className="material-symbols-outlined text-sm text-orange-500" style={{fontVariationSettings: "'FILL' 1"}}>local_fire_department</span>
-                          <span className="text-label-sm font-bold">{city.requiredXp >= 1000 ? `${(city.requiredXp/1000).toFixed(1)}k` : city.requiredXp}</span>
-                        </div>
-                      </div>
-                      <h3 className="font-headline text-body-lg font-bold text-primary mb-1">{city.name}</h3>
-                      <div className="w-full h-1.5 bg-surface-container rounded-full mb-3 overflow-hidden">
-                        <div className="h-full bg-primary transition-all duration-500" style={{width: `${progressToNext}%`}}></div>
-                      </div>
-                      <div className="flex items-center gap-3 bg-primary/5 p-2 rounded-lg border border-primary/10">
-                        <div className="w-10 h-10 bg-white/50 rounded-md flex items-center justify-center text-2xl">{uiCity.emoji}</div>
-                        <div>
-                          <p className="text-[10px] font-bold text-on-surface-variant uppercase">REWARD</p>
-                          <p className="text-label-sm font-bold text-primary">Unlock {uiCity.reward}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
-
-              return (
-                <div key={idx} id={`city-${idx}`} className={`relative z-10 w-full flex justify-center ${translateClass}`}>
-                  <div 
-                    className={`glass-card bg-white dark:bg-surface p-4 rounded-2xl w-64 ${idx % 2 === 0 ? 'grayscale-[0.5]' : 'grayscale'}`}
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="bg-surface-container-highest text-on-surface-variant text-[10px] font-bold px-2 py-0.5 rounded-full">LOCKED</span>
-                      <div className="flex items-center gap-1 text-on-surface-variant">
-                        <span className="material-symbols-outlined text-sm">local_fire_department</span>
-                        <span className="text-label-sm font-bold">{city.requiredXp >= 1000 ? `${(city.requiredXp/1000).toFixed(1)}k` : city.requiredXp}</span>
-                      </div>
-                    </div>
-                    <h3 className="font-headline text-body-lg font-bold text-on-surface-variant mb-1">{city.name}</h3>
-                    <p className="text-label-sm text-outline mb-3">Locked by Mystery</p>
-                    <div className="flex items-center gap-3 bg-surface-container/30 p-2 rounded-lg">
-                      <div className="w-10 h-10 bg-surface-container rounded-md flex items-center justify-center text-2xl opacity-30">{uiCity.emoji}</div>
-                      <div>
-                        <p className="text-[10px] font-bold text-outline">REWARD</p>
-                        <p className="text-label-sm font-bold text-outline">{uiCity.reward}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        {/* Growth Journey Roadmap View */}
+        <main className="flex-1 w-full overflow-y-auto no-scrollbar relative">
+          <MapWorld
+            themeKey={journeyData?.tierKey === "scientist" ? "science" : journeyData?.tierKey === "social_proof" ? "social" : "dragon"}
+            xp={xp}
+            userLevel={userLevel}
+            nodes={journeyData?.nodes}
+            progressPercentage={journeyData?.progressPercentage}
+            onEnterStage={(stage) => {
+              navigate('/practice/chapters');
+            }}
+          />
         </main>
       </div>
     </div>

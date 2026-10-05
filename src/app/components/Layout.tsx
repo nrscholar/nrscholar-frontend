@@ -1,8 +1,9 @@
-import { Link, useLocation, Outlet } from "react-router-dom";
+import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import { Home, MessageSquare, BookOpen, BarChart2, User } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 export default function Layout() {
+  const navigate = useNavigate();
   const location = useLocation();
   const currentPath = location.pathname;
   const { t } = useTranslation();
@@ -22,25 +23,26 @@ export default function Layout() {
         <Outlet />
       </div>
 
-      {/* Floating Bottom Glassmorphic Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center px-4 py-3 bg-[rgba(247,249,251,0.65)] backdrop-blur-lg border-t-[1.5px] border-[rgba(255,255,255,0.4)] rounded-t-[24px] shadow-[0_-8px_32px_rgba(0,0,0,0.05)]">
+      {/* Floating Bottom Navigation Bar (Matching Screenshot Theme) */}
+      <nav className="fixed bottom-2 left-4 right-4 max-w-md mx-auto z-50 flex items-center justify-between px-2 py-1.5 bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-3xl shadow-[0_10px_35px_rgba(0,0,0,0.08)]">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentPath === item.path || (item.path !== "/home" && currentPath.startsWith(item.path));
 
           return (
-            <Link
+            <button
               key={item.path}
-              to={item.path}
-              className={`flex flex-col items-center justify-center gap-1 h-[56px] min-w-[64px] px-2 rounded-2xl transition-all duration-300 ${
+              type="button"
+              onClick={() => navigate(item.path)}
+              className={`flex-1 flex flex-col items-center justify-center py-2 px-1 gap-1 rounded-2xl transition-all duration-300 ${
                 isActive
-                  ? "bg-[#57fae9] text-[#007168] shadow-sm scale-105"
-                  : "text-[#464652] hover:text-[#007168]"
+                  ? "bg-[#1c1970] text-white shadow-md shadow-[#1c1970]/25 font-bold"
+                  : "text-[#787a91] hover:text-[#1c1970] hover:bg-slate-50 active:scale-95 font-medium"
               }`}
             >
-              <Icon size={20} strokeWidth={isActive ? 2.5 : 2} className="shrink-0" />
-              <span className="text-[10px] font-bold tracking-wide whitespace-nowrap">{item.label}</span>
-            </Link>
+              <Icon size={19} strokeWidth={isActive ? 2.5 : 2} className="shrink-0" />
+              <span className="text-[10px] tracking-tight whitespace-nowrap leading-none">{item.label}</span>
+            </button>
           );
         })}
       </nav>

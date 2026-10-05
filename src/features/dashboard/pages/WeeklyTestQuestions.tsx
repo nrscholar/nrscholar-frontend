@@ -57,8 +57,24 @@ export default function WeeklyTestQuestionsScreen() {
           const res = await apiFetch("/api/practice/weekly-test");
           const json = await res.json();
           if (json.success && json.data) {
-            setQuestionsData(json.data.questions);
-            setTipsData(json.data.tips);
+            const rawQs = json.data.questions || [];
+            const shuffledQs = rawQs.map((q: any) => {
+              if (!q.options || !Array.isArray(q.options) || q.options.length < 2) return q;
+              const correctVal = q.options[q.correct] !== undefined ? q.options[q.correct] : q.answer;
+              const opts = [...q.options];
+              for (let i = opts.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [opts[i], opts[j]] = [opts[j], opts[i]];
+              }
+              const newCorrect = opts.indexOf(correctVal);
+              return {
+                ...q,
+                options: opts,
+                correct: newCorrect !== -1 ? newCorrect : q.correct
+              };
+            });
+            setQuestionsData(shuffledQs);
+            setTipsData(json.data.tips || []);
           }
         } catch (e) {}
       })();
@@ -251,7 +267,7 @@ export default function WeeklyTestQuestionsScreen() {
                     {OPTION_LABELS[idx]}
                   </span>
                 </div>
-                <span className={`text-xl font-black mt-2 ${textClass}`}>{opt}</span>
+                <span className={`text-xl font-black mt-2 w-full break-words text-center px-2 ${textClass}`}>{opt}</span>
                 
                 {confirmed && idx === q.correct && (
                   <Check className="absolute bottom-2 right-3 text-[#30007f]" size={20} strokeWidth={4} />

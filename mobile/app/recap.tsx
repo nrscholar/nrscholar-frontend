@@ -93,7 +93,7 @@ export default function RecapScreen() {
             </Text>
             {wrongs.map((wrong: any, i: number) => (
               <View key={i} style={styles.card}>
-                <Text style={styles.qActual}>{wrong.questionText || "Question Text"}</Text>
+                <Text style={styles.qActual}>{(wrong.questionText || "Question Text").normalize("NFD").replace(/[\u0300-\u036f]/g, "")}</Text>
                 
                 <View style={[styles.pill, { backgroundColor: C.wrongBg }]}>
                   <Text style={[styles.pillText, { color: C.wrongText }]}>

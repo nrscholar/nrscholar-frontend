@@ -1,10 +1,14 @@
 import { AlertCircle, ArrowLeft, CheckCircle, Delete } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
 
 export default function ParentalGateScreen() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const targetPath = searchParams.get("returnTo") || "/parent/dashboard";
+  const { t } = useTranslation();
   const [mode, setMode] = useState<"loading" | "set-step1" | "set-step2" | "enter" | "reset-step1" | "reset-step2">("loading");
   const [pin, setPin] = useState("");
   const [tempPin, setTempPin] = useState("");
@@ -91,8 +95,9 @@ export default function ParentalGateScreen() {
       const json = await res.json();
       
       if (json.success) {
+        sessionStorage.setItem("parentPinVerified", "true");
         setSuccessMsg("Access Granted");
-        setTimeout(() => navigate("/parent/dashboard"), 1000);
+        setTimeout(() => navigate(targetPath, { replace: true }), 600);
       } else {
         const errorDetail = typeof json.detail === 'string' ? json.detail : (json.detail ? JSON.stringify(json.detail) : "");
         setErrorMsg(json.message || errorDetail || "Incorrect PIN");
@@ -114,8 +119,9 @@ export default function ParentalGateScreen() {
       const json = await res.json();
       
       if (json.success) {
+        sessionStorage.setItem("parentPinVerified", "true");
         setSuccessMsg("PIN Set Successfully!");
-        setTimeout(() => navigate("/parent/dashboard"), 1000);
+        setTimeout(() => navigate(targetPath, { replace: true }), 1000);
       } else {
         const errorDetail = typeof json.detail === 'string' ? json.detail : (json.detail ? JSON.stringify(json.detail) : "");
         setErrorMsg(json.message || errorDetail || "Failed to set PIN");
@@ -137,8 +143,9 @@ export default function ParentalGateScreen() {
       const json = await res.json();
       
       if (json.success) {
+        sessionStorage.setItem("parentPinVerified", "true");
         setSuccessMsg("PIN Reset Successfully!");
-        setTimeout(() => navigate("/parent/dashboard"), 1000);
+        setTimeout(() => navigate(targetPath, { replace: true }), 1000);
       } else {
         const errorDetail = typeof json.detail === 'string' ? json.detail : (json.detail ? JSON.stringify(json.detail) : "");
         setErrorMsg(json.message || errorDetail || "Failed to reset PIN");
@@ -224,18 +231,18 @@ export default function ParentalGateScreen() {
         
         <div className="text-center mb-8">
           <h2 className="text-2xl font-bold text-[#141779] mb-2">
-            {mode === "set-step1" ? "Set Parent PIN" : 
-             mode === "set-step2" ? "Confirm Parent PIN" : 
-             mode === "enter" ? "Enter Parent PIN" : 
-             mode === "reset-step1" ? "Enter New PIN" : 
-             "Confirm New PIN"}
+            {mode === "set-step1" ? t('set_parent_pin', 'Set Parent PIN') : 
+             mode === "set-step2" ? t('confirm_parent_pin', 'Confirm Parent PIN') : 
+             mode === "enter" ? t('enter_parent_pin', 'Enter Parent PIN') : 
+             mode === "reset-step1" ? t('enter_new_pin', 'Enter New PIN') : 
+             t('confirm_new_pin', 'Confirm New PIN')}
           </h2>
           <p className="text-sm font-medium text-[#464652] max-w-[280px]">
-            {mode === "set-step1" ? "Create a 4-digit security code to keep parental controls secure." : 
-             mode === "set-step2" ? "Re-enter your 4-digit PIN to confirm." : 
-             mode === "enter" ? "Enter your 4-digit security code to access parental controls." : 
-             mode === "reset-step1" ? "Enter your new 4-digit PIN." : 
-             "Re-enter your new 4-digit PIN to confirm."}
+            {mode === "set-step1" ? t('create_pin_desc', 'Create a 4-digit security code to keep parental controls secure.') : 
+             mode === "set-step2" ? t('reenter_pin_confirm', 'Re-enter your 4-digit PIN to confirm.') : 
+             mode === "enter" ? t('enter_pin_access_desc', 'Enter your 4-digit security code to access parental controls.') : 
+             mode === "reset-step1" ? t('enter_new_pin_desc', 'Enter your new 4-digit PIN.') : 
+             t('reenter_new_pin_confirm', 'Re-enter your new 4-digit PIN to confirm.')}
           </p>
         </div>
 
@@ -259,13 +266,13 @@ export default function ParentalGateScreen() {
           {errorMsg && (
             <div className="flex items-center gap-2 text-[#ba1a1a] bg-[#ffdad6] px-4 py-1.5 rounded-full text-sm font-bold">
               <AlertCircle size={16} />
-              {errorMsg}
+              {t(errorMsg.toLowerCase().replace(/[^a-z0-9]/g, '_'), { defaultValue: errorMsg })}
             </div>
           )}
           {successMsg && (
             <div className="flex items-center gap-2 text-[#006a62] bg-[#d0f0ed] px-4 py-1.5 rounded-full text-sm font-bold">
               <CheckCircle size={16} />
-              {successMsg}
+              {t(successMsg.toLowerCase().replace(/[^a-z0-9]/g, '_'), { defaultValue: successMsg })}
             </div>
           )}
         </div>
@@ -303,7 +310,7 @@ export default function ParentalGateScreen() {
         {(mode === "set-step1" || mode === "set-step2") && (
           <div className="mt-8 w-full max-w-[320px] flex flex-col gap-4">
             <button onClick={() => navigate(-1)} className="text-[#767683] text-sm font-bold hover:underline">
-              Skip for now
+              {t('skip_for_now', 'Skip for now')}
             </button>
           </div>
         )}
@@ -314,7 +321,7 @@ export default function ParentalGateScreen() {
             onClick={handleForgotPin}
             className="mt-8 text-[#141779] text-sm font-bold hover:underline"
           >
-            Forgot PIN?
+            {t('forgot_pin_q', 'Forgot PIN?')}
           </button>
         )}
 
@@ -324,13 +331,13 @@ export default function ParentalGateScreen() {
       {showForgotModal && (
         <div className="absolute inset-0 z-[100] flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-3xl w-full max-w-[340px] p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
-            <h3 className="text-xl font-bold text-[#141779] mb-2">Verify Identity</h3>
-            <p className="text-sm text-[#464652] mb-6">Enter your account credentials to reset the Parent PIN.</p>
+            <h3 className="text-xl font-bold text-[#141779] mb-2">{t('verify_identity', 'Verify Identity')}</h3>
+            <p className="text-sm text-[#464652] mb-6">{t('verify_credentials_desc', 'Enter your account credentials to reset the Parent PIN.')}</p>
             
             <div className="flex flex-col gap-4">
               <input
                 type="tel"
-                placeholder="Mobile Number"
+                placeholder={t('mobile_number_placeholder', 'Mobile Number')}
                 value={forgotMobile}
                 onChange={handleMobileChange}
                 onKeyDown={handleKeyDown}
@@ -345,7 +352,7 @@ export default function ParentalGateScreen() {
               />
               <input
                 type="password"
-                placeholder="Password"
+                placeholder={t('password_placeholder', 'Password')}
                 value={forgotPassword}
                 onChange={(e) => setForgotPassword(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -363,14 +370,14 @@ export default function ParentalGateScreen() {
                   disabled={isVerifying || !forgotMobile || !forgotPassword}
                   className="w-full py-3.5 rounded-xl font-bold text-white bg-[#006a62] disabled:opacity-50 transition-opacity flex items-center justify-center"
                 >
-                  {isVerifying ? "Verifying..." : "Verify"}
+                  {isVerifying ? t('verifying', 'Verifying...') : t('verify_btn', 'Verify')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowForgotModal(false)}
                   className="w-full py-3.5 rounded-xl font-bold text-[#464652] hover:bg-[#f7f9fb] transition-colors"
                 >
-                  Cancel
+                  {t('cancel', 'Cancel')}
                 </button>
               </div>
             </div>

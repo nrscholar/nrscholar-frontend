@@ -44,9 +44,39 @@ export default function ChatScreen() {
   const [isTyping, setIsTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  const [userData, setUserData] = useState<any>(() => {
+    try {
+      const u = localStorage.getItem("userData");
+      return u ? JSON.parse(u) : null;
+    } catch (e) { return null; }
+  });
+  const [unreadCount, setUnreadCount] = useState(0);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
+
+  useEffect(() => {
+    const fetchProfileAndNotifications = async () => {
+      try {
+        const res = await apiFetch("/api/users/me");
+        const json = await res.json();
+        if (json.success && json.data?.user) {
+          setUserData(json.data.user);
+          localStorage.setItem("userData", JSON.stringify(json.data.user));
+        }
+      } catch (e) {}
+
+      try {
+        const nRes = await apiFetch("/api/notifications");
+        const nJson = await nRes.json();
+        if (nJson.success && nJson.data) {
+          setUnreadCount(nJson.data.filter((n: any) => !n.isRead).length);
+        }
+      } catch (e) {}
+    };
+    fetchProfileAndNotifications();
+  }, []);
 
   const handleSend = async (textToSend?: string) => {
     const text = textToSend || input.trim();
@@ -98,19 +128,66 @@ export default function ChatScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] font-sans flex flex-col relative pb-32">
+    <div className="min-h-screen bg-[#f7f9fb] font-sans flex flex-col relative pb-32 max-w-md mx-auto">
       
-      {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 bg-[rgba(247,249,251,0.8)] border-b border-[rgba(255,255,255,0.4)] sticky top-0 z-50 backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity">
-            <ArrowLeft size={24} color="#141779" />
-          </button>
-          <h1 className="text-2xl font-bold text-[#141779]">NR Scholar</h1>
+      {/* Sticky Header */}
+      <header className="sticky top-0 left-0 right-0 w-full max-w-md mx-auto z-50 bg-white border-b border-slate-100 rounded-b-[28px] shadow-xs pb-1">
+        <div className="flex items-center justify-between px-4 py-3 gap-2">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <button
+              onClick={() => navigate("/profile")}
+              className="w-10 h-10 rounded-full border-2 border-indigo-100 overflow-hidden hover:opacity-90 transition-opacity shrink-0 bg-[#141779] shadow-xs"
+            >
+              {userData?.childPhoto ? (
+                <img src={userData.childPhoto} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-[#141779] text-white font-bold text-xs flex items-center justify-center">
+                  {userData?.childName ? userData.childName.slice(0, 2).toUpperCase() : "NR"}
+                </div>
+              )}
+            </button>
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                <h1 className="text-sm font-black text-slate-900 leading-tight truncate">{userData?.childName || "Explorer"}</h1>
+                <span className="text-[10px] text-[#4f46e5] bg-[#eef2ff] font-black px-2 py-0.5 rounded-full border border-indigo-100 shrink-0">
+                  {userData?.childClass || t('class_10', { defaultValue: "Class 10" })}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="text-[11px] text-slate-400 font-extrabold whitespace-nowrap">
+                  {t('explorer_level', { defaultValue: "Explorer Level" })} {userData?.level || 1}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Currency & Streak Stats */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => navigate("/home")}
+              className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
+            >
+              <span className="text-[11px] font-black text-[#ea580c] leading-none">🔥 {userData?.streakDays || 0}</span>
+            </button>
+            <button
+              onClick={() => navigate("/practice/inventory")}
+              className="bg-[#fffbeb] border border-amber-100/80 rounded-2xl px-2 py-1 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
+            >
+              <span className="text-[11px] font-black text-[#b45309] leading-none">🪙 {userData?.coins || 0}</span>
+            </button>
+            <button
+              onClick={() => navigate("/notifications")}
+              className="w-9 h-9 rounded-2xl bg-slate-50 shadow-2xs flex items-center justify-center hover:bg-slate-100 transition-all shrink-0 border border-slate-100 relative"
+            >
+              <Bell size={16} className="text-[#1c1970]" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border border-white pointer-events-none z-10">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
-        <button className="p-2 hover:bg-[rgba(20,23,121,0.05)] rounded-full transition-colors">
-          <Bell size={24} color="#464652" />
-        </button>
       </header>
 
       {/* Chat Messages */}

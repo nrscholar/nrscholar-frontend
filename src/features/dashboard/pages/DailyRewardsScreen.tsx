@@ -3,6 +3,7 @@ import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Gift, History, HelpCircle, Shield, Sparkles, Star } from "lucide-react";
 import { apiFetch } from "../../../api";
+import { useTranslation } from "react-i18next";
 
 interface Reward {
   name: string;
@@ -17,11 +18,13 @@ interface Reward {
 
 export default function DailyRewardsScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const initialType = searchParams.get("type") || "daily";
+  const startType = initialType === "chapter" ? "daily" : initialType;
 
-  const [spinType, setSpinType] = useState<string>(initialType);
+  const [spinType, setSpinType] = useState<string>(startType);
   const [balances, setBalances] = useState<any>({
     daily_spins_balance: 0,
     chapter_spins_balance: 0,
@@ -33,8 +36,10 @@ export default function DailyRewardsScreen() {
   const [activeRewards, setActiveRewards] = useState<Reward[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSpinning, setIsSpinning] = useState(false);
+  const [isBuying, setIsBuying] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [showModal, setShowModal] = useState(false);
+  const [showBuyConfirmModal, setShowBuyConfirmModal] = useState(false);
   const [wonReward, setWonReward] = useState<Reward | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -63,6 +68,64 @@ export default function DailyRewardsScreen() {
   useEffect(() => {
     fetchSpinStatus();
   }, []);
+
+  const handleOpenBuyConfirm = () => {
+    if (isSpinning || isBuying) return;
+    setErrorMessage("");
+
+    const cost = (spinType === "daily" || spinType === "boss_revival") ? 100 : 150;
+    const cachedData = localStorage.getItem("userData");
+    let userCoins = 0;
+    if (cachedData) {
+      try {
+        const u = JSON.parse(cachedData);
+        userCoins = u.coins || 0;
+      } catch (e) {}
+    }
+
+    if (userCoins < cost) {
+      setErrorMessage("You don't have enough coins to buy a spin!");
+      return;
+    }
+
+    setShowBuyConfirmModal(true);
+  };
+
+  const confirmAndBuySpin = async () => {
+    if (isSpinning || isBuying) return;
+    setIsBuying(true);
+    setErrorMessage("");
+    try {
+      const response = await apiFetch("/api/retention/spin-wheel/buy-spin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ spin_type: spinType })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setBalances(data.balances);
+        const cachedData = localStorage.getItem("userData");
+        if (cachedData) {
+          try {
+            const u = JSON.parse(cachedData);
+            u.coins = data.coins;
+            localStorage.setItem("userData", JSON.stringify(u));
+          } catch (e) {}
+        }
+        window.dispatchEvent(new Event("userDataUpdated"));
+        setErrorMessage("");
+        setShowBuyConfirmModal(false);
+      } else {
+        setErrorMessage(data.message || "You don't have enough coins to buy a spin!");
+        setShowBuyConfirmModal(false);
+      }
+    } catch (e: any) {
+      setErrorMessage("You don't have enough coins to buy a spin!");
+      setShowBuyConfirmModal(false);
+    } finally {
+      setIsBuying(false);
+    }
+  };
 
   const getShortName = (name: string) => {
     if (name === "AI Motivation Card") return "AI Motivation";
@@ -189,46 +252,33 @@ export default function DailyRewardsScreen() {
     setIsSpinning(true);
 
     try {
-      // Server-side reward generation
-      const res = await apiFetch("/api/retention/spin-wheel/spin", {
+      // Phase 1: Preview the spin to let server pick the winning segment
+      const previewRes = await apiFetch("/api/retention/spin-wheel/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          spin_type: spinType,
-          boss_id: searchParams.get("boss_id") || undefined,
-          chapter_id: searchParams.get("chapter_id") || undefined
+          spin_type: spinType
         })
       });
-      const data = await res.json();
+      const previewData = await previewRes.json();
 
-      if (!res.ok) {
-        throw new Error(data.detail || "Server failed to initiate spin");
+      if (!previewRes.ok) {
+        throw new Error(previewData.detail || "Server failed to initiate spin preview");
       }
 
-      const reward = data.reward;
-      const finalBalances = data.balances;
+      const token = previewData.token;
+      const rewardsList = previewData.rewards;
+      const selectedReward = rewardsList[previewData.winning_index];
 
-      if (data.user) {
-        const stored = localStorage.getItem("userData");
-        if (stored) {
-          const u = JSON.parse(stored);
-          u.coins = data.user.coins;
-          u.xp = data.user.xp;
-          u.level = data.user.level;
-          localStorage.setItem("userData", JSON.stringify(u));
-        }
-        window.dispatchEvent(new Event("userDataUpdated"));
-      }
-
-      // Find the index of the won reward on the wheel
+      // Find the index of this selected reward on our local interleaved wheel pool
       const pool = getDisplayRewards();
       let index = pool.findIndex(
-        (r) => r.name.toLowerCase() === reward.name.toLowerCase()
+        (r) => r.name.toLowerCase() === selectedReward.name.toLowerCase()
       );
 
       if (index === -1) {
-        // Fallback: match by reward type or category
-        index = pool.findIndex((r) => r.reward_type === reward.reward_type);
+        // Fallback: match by reward type
+        index = pool.findIndex((r) => r.reward_type === selectedReward.reward_type);
         if (index === -1) index = 0;
       }
 
@@ -237,10 +287,43 @@ export default function DailyRewardsScreen() {
 
       // Spin 6 full times, and calculate ending alignment to target slice
       const spinsCount = 6;
-      const finalAngle = rotation + (spinsCount * 360) + (360 - (index * segmentAngle) - (segmentAngle / 2));
+      const currentSpins = Math.floor(rotation / 360);
+      const targetOffset = 360 - (index * segmentAngle) - (segmentAngle / 2);
+      const finalAngle = (currentSpins + spinsCount) * 360 + targetOffset;
 
       setRotation(finalAngle);
-      setWonReward(reward);
+      setWonReward(selectedReward);
+
+      // Phase 2: Claim the reward in parallel while the wheel is spinning
+      const claimRes = await apiFetch("/api/retention/spin-wheel/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: token,
+          boss_id: searchParams.get("boss_id") || undefined,
+          chapter_id: searchParams.get("chapter_id") || undefined
+        })
+      });
+      const claimData = await claimRes.json();
+
+      if (!claimRes.ok) {
+        throw new Error(claimData.detail || "Server failed to claim spin reward");
+      }
+
+      const finalBalances = claimData.balances;
+
+      if (claimData.user) {
+        const stored = localStorage.getItem("userData");
+        if (stored) {
+          const u = JSON.parse(stored);
+          u.coins = claimData.user.coins;
+          u.xp = claimData.user.xp;
+          u.level = claimData.user.level;
+          localStorage.setItem("userData", JSON.stringify(u));
+        }
+        window.dispatchEvent(new Event("userDataUpdated"));
+      }
+
       setBalances(finalBalances);
 
       // Animation duration: 6.5 seconds
@@ -291,34 +374,29 @@ export default function DailyRewardsScreen() {
   const segmentAngle = 360 / currentRewards.length;
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-[#141779] w-full flex flex-col items-center overflow-x-hidden font-headline relative">
-      {/* Background Grid */}
+    <div className="min-h-screen bg-white text-slate-900 w-full flex flex-col items-center overflow-x-hidden font-headline relative">
+      {/* Background Soft Glow */}
       <div 
-        className="absolute inset-0 pointer-events-none opacity-30" 
-        style={{
-          backgroundImage: "radial-gradient(circle, rgba(20,23,121,0.15) 1px, transparent 1px)",
-          backgroundSize: "32px 32px"
-        }}
+        className="absolute inset-0 pointer-events-none opacity-40 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-50/60 via-slate-50 to-white" 
       />
 
       {/* Top App Bar */}
-      <header className="w-full z-50 bg-[#f7f9fb]/80 backdrop-blur-lg border-b border-[#141779]/10 flex justify-between items-center px-6 py-4 max-w-[430px] mx-auto">
-        <button onClick={handleBack} className="active:scale-95 transition-transform text-[#141779]">
+      <header className="w-full z-50 bg-white/90 backdrop-blur-lg border-b border-slate-200 flex justify-between items-center px-6 py-4 max-w-[430px] mx-auto">
+        <button onClick={handleBack} className="active:scale-95 transition-transform text-slate-700 hover:text-slate-950">
           <ArrowLeft className="w-6 h-6" />
         </button>
-        <h1 className="text-xl font-bold tracking-wide">
-          {spinType === "boss_revival" ? "Revival Wheel" : "Daily Rewards"}
+        <h1 className="text-lg font-black tracking-widest text-indigo-950">
+          {spinType === "boss_revival" ? t('revival_wheel', 'REVIVAL WHEEL') : t('lucky_wheel', 'LUCKY WHEEL')}
         </h1>
         <div className="w-6 h-6" />
       </header>
 
       {/* Tabs for different spin types (Hidden if boss revival) */}
       {spinType !== "boss_revival" && (
-        <div className="flex gap-2 p-2 bg-[#141779]/5 border border-[#141779]/10 rounded-full mt-4 max-w-[360px] w-[90%] mx-auto overflow-x-auto no-scrollbar relative z-10">
+        <div className="flex gap-2 p-1.5 bg-slate-100 border border-slate-200 rounded-full mt-5 max-w-[360px] w-[90%] mx-auto relative z-10 shadow-inner">
           {[
-            { id: "daily", label: "Daily" },
-            { id: "chapter", label: "Chapter" },
-            { id: "event", label: "Event" }
+            { id: "daily", label: `${t('daily', 'DAILY')} (${balances.daily_spins_balance || 0} ${t('left', 'LEFT')})` },
+            { id: "event", label: `${t('event', 'EVENT')} (${balances.event_spins_balance || 0} ${t('left', 'LEFT')})` }
           ].map((tab) => {
             const isActive = spinType === tab.id;
             return (
@@ -330,10 +408,10 @@ export default function DailyRewardsScreen() {
                     setErrorMessage("");
                   }
                 }}
-                className={`flex-1 py-2 px-4 rounded-full text-sm font-bold transition-all duration-300 whitespace-nowrap ${
+                className={`flex-1 py-2 px-4 rounded-full text-xs font-black tracking-wider uppercase transition-all duration-300 whitespace-nowrap ${
                   isActive
-                    ? "bg-[#141779] text-white shadow-md"
-                    : "text-[#141779]/60 hover:text-[#141779]"
+                    ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md border border-violet-500/30"
+                    : "text-slate-500 hover:text-slate-900"
                 }`}
               >
                 {tab.label}
@@ -344,20 +422,20 @@ export default function DailyRewardsScreen() {
       )}
 
       {/* Main Canvas */}
-      <main className="relative flex-1 w-full max-w-[430px] flex flex-col items-center justify-center px-6 pt-8 pb-24 gap-8 z-10">
+      <main className="relative flex-1 w-full max-w-[430px] flex flex-col items-center justify-center px-6 pt-6 pb-24 gap-6 z-10">
         
         {/* Reward Info Header */}
-        <div className="text-center space-y-2">
-          <p className="text-xs font-bold uppercase tracking-[2px] text-[#008477]">
-            {spinType === "boss_revival" ? "BOSS EMERGENCY" : "QUANTUM EXPEDITION"}
+        <div className="text-center space-y-1.5">
+          <p className="text-[10px] font-black uppercase tracking-[3px] text-indigo-600">
+            {spinType === "boss_revival" ? t('boss_emergency', 'BOSS EMERGENCY') : t('daily_rewards', 'DAILY REWARDS')}
           </p>
-          <h2 className="text-2xl font-bold text-[#141779]">
-            {spinType === "boss_revival" ? "Spin the Revival Wheel" : "Spin the Quantum Wheel"}
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900">
+            {spinType === "boss_revival" ? t('spin_the_revival_wheel', 'Spin the Revival Wheel') : t('unlock_special_rewards', 'Unlock Special Rewards')}
           </h2>
-          <p className="text-sm text-[#141779]/60">
+          <p className="text-xs sm:text-sm font-bold text-slate-500">
             {spinType === "boss_revival" 
-              ? "Recover hearts to jump back into the battle!"
-              : "Upgrade your learning kit with daily rewards."}
+              ? t('recover_hearts_desc', 'Recover hearts to jump back into the battle!')
+              : t('upgrade_learning_kit_desc', 'Upgrade your learning kit with premium rewards.')}
           </p>
         </div>
 
@@ -420,6 +498,8 @@ export default function DailyRewardsScreen() {
             <div className="absolute inset-0 pointer-events-none">
               {currentRewards.map((reward, i) => {
                 const angle = i * segmentAngle + segmentAngle / 2;
+                const rawName = getShortName(reward.name);
+                const translatedName = t(rawName.toLowerCase().replace(/ /g, '_'), { defaultValue: rawName });
                 return (
                   <div
                     key={i}
@@ -437,7 +517,7 @@ export default function DailyRewardsScreen() {
                         textShadow: "0px 1px 2px rgba(0, 0, 0, 0.8)"
                       }}
                     >
-                      {getShortName(reward.name)}
+                      {translatedName}
                     </span>
                   </div>
                 );
@@ -455,40 +535,111 @@ export default function DailyRewardsScreen() {
           </div>
         </div>
 
-        {/* Error message display */}
+        {/* Error message display in bold red font */}
         {errorMessage && (
-          <div className="w-full p-3 bg-red-50 border border-red-200 text-red-700 text-sm font-semibold rounded-xl text-center">
+          <div className="w-full p-3.5 bg-red-50 border-2 border-red-200 text-red-600 font-black text-xs sm:text-sm rounded-2xl text-center shadow-xs uppercase tracking-wider">
             {errorMessage}
           </div>
         )}
 
         {/* Controls */}
-        <div className="w-full space-y-4">
-          <button
-            onClick={startSpin}
-            disabled={isSpinning || getSpinBalance() <= 0}
-            style={{
-              boxShadow: getSpinBalance() > 0 ? "0 4px 15px rgba(20,23,121,0.2)" : "none"
-            }}
-            className={`w-full py-4 rounded-full font-bold text-lg tracking-wide uppercase transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 ${
-              isSpinning 
-                ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
-                : getSpinBalance() > 0
-                ? "bg-[#141779] text-white hover:bg-[#141779]/95"
-                : "bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300/40"
-            }`}
-          >
-            {isSpinning ? "Calibrating..." : "Initialize Spin"}
-          </button>
+        <div className="w-full space-y-3">
+          {getSpinBalance() > 0 ? (
+            <button
+              onClick={startSpin}
+              disabled={isSpinning}
+              className={`w-full py-4 rounded-full font-black text-lg tracking-wider uppercase transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 border ${
+                isSpinning 
+                  ? "bg-gradient-to-r from-violet-600 via-indigo-600 to-violet-600 text-white opacity-90 cursor-not-allowed border-violet-500/40"
+                  : "bg-gradient-to-r from-violet-600 via-indigo-600 to-violet-600 hover:scale-[1.01] hover:shadow-[0_0_25px_rgba(124,58,237,0.6)] text-white border-violet-500/40 animate-pulse"
+              }`}
+            >
+              {isSpinning ? t('spinning', '🌀 Spinning...') : t('spin', 'SPIN')}
+            </button>
+          ) : (
+            <button
+              onClick={handleOpenBuyConfirm}
+              disabled={isSpinning || isBuying}
+              className="w-full py-4 rounded-full font-black text-base sm:text-lg tracking-wider uppercase transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] hover:brightness-110 text-white shadow-lg border border-indigo-300/40"
+            >
+              <span>{isBuying ? t('purchasing', 'Purchasing...') : t('buy_spin', { cost: (spinType === "daily" || spinType === "boss_revival") ? 100 : 150, defaultValue: `🛒 Buy 1 Spin (${(spinType === "daily" || spinType === "boss_revival") ? "100 🪙" : "150 🪙"})` })}</span>
+            </button>
+          )}
 
-          <div className="flex items-center justify-center gap-2 text-[#141779]/70 text-sm font-semibold">
-            <History className="w-4 h-4" />
-            <span className="font-bold uppercase tracking-wider">
-              {getSpinBalance()} attempts left
+          <div className="flex items-center justify-center gap-2 text-indigo-300 text-xs font-black">
+            <History className="w-4 h-4 text-cyan-400" />
+            <span className="font-bold uppercase tracking-widest text-slate-600">
+              {getSpinBalance()} {t('attempts_left', 'ATTEMPTS LEFT')}
             </span>
           </div>
         </div>
       </main>
+
+      {/* Buy Spin Confirmation Modal */}
+      <AnimatePresence>
+        {showBuyConfirmModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center px-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-950/80 backdrop-blur-xs"
+              onClick={() => !isBuying && setShowBuyConfirmModal(false)}
+            />
+
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="relative bg-white w-full max-w-[360px] p-6 rounded-[32px] flex flex-col items-center text-center gap-5 border-2 border-amber-200 shadow-2xl overflow-hidden z-10 text-slate-950"
+            >
+              <div className="w-16 h-16 rounded-full bg-amber-100 border-2 border-amber-400 flex items-center justify-center shadow-inner">
+                <Gift className="w-8 h-8 text-amber-600" />
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-xl font-black text-slate-950">
+                  {t('confirm_spin_purchase', 'Buy Extra Spin?')}
+                </h3>
+                <p className="text-xs sm:text-sm font-semibold text-slate-600 leading-relaxed">
+                  {t('confirm_spin_purchase_desc', {
+                    cost: (spinType === "daily" || spinType === "boss_revival") ? 100 : 150,
+                    type: spinType.toUpperCase(),
+                    defaultValue: `Are you sure you want to spend ${(spinType === "daily" || spinType === "boss_revival") ? 100 : 150} coins to purchase 1 ${spinType.toUpperCase()} spin?`
+                  })}
+                </p>
+              </div>
+
+              <div className="w-full bg-amber-50 border border-amber-200 rounded-2xl p-3 flex justify-between items-center text-xs font-bold text-amber-900">
+                <span className="flex items-center gap-1.5">
+                  <span>🪙</span> {t('cost', 'Cost')}:
+                </span>
+                <span className="text-amber-700 font-extrabold text-sm">
+                  {(spinType === "daily" || spinType === "boss_revival") ? 100 : 150} Coins
+                </span>
+              </div>
+
+              <div className="w-full flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowBuyConfirmModal(false)}
+                  disabled={isBuying}
+                  className="flex-1 py-3.5 rounded-full font-black text-sm uppercase tracking-wider text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all border border-slate-300"
+                >
+                  {t('cancel', 'Cancel')}
+                </button>
+                <button
+                  onClick={confirmAndBuySpin}
+                  disabled={isBuying}
+                  className="flex-1 py-3.5 rounded-full font-black text-sm uppercase tracking-wider text-white bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] hover:brightness-110 transition-all shadow-md border border-indigo-300/40 flex items-center justify-center gap-1.5"
+                >
+                  {isBuying ? t('purchasing', 'Buying...') : t('confirm', 'Confirm')}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Winner Modal */}
       <AnimatePresence>
@@ -499,7 +650,7 @@ export default function DailyRewardsScreen() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/50 backdrop-blur-md"
+              className="absolute inset-0 bg-slate-950/80"
               onClick={handleClaim}
             />
 
@@ -509,7 +660,7 @@ export default function DailyRewardsScreen() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="relative bg-white w-full max-w-[360px] p-8 rounded-3xl flex flex-col items-center text-center gap-6 border border-slate-200 shadow-2xl overflow-hidden"
+              className="relative bg-white w-full max-w-[360px] p-8 rounded-[32px] flex flex-col items-center text-center gap-6 border-2 border-slate-200 shadow-2xl overflow-hidden text-slate-950"
             >
               {/* Glow backdrop */}
               <div className="absolute inset-0 bg-radial-gradient(circle,rgba(20,23,121,0.05)_0%,transparent_70%) pointer-events-none" />
@@ -529,32 +680,31 @@ export default function DailyRewardsScreen() {
               </div>
 
               <div>
-                <h3 className="text-2xl font-extrabold text-[#141779] tracking-wide">
-                  Mission Success!
+                <h3 className="text-2xl font-black text-slate-950 tracking-wide">
+                  {t('nailed_it', '🎉 Nailed It!')}
                 </h3>
                 <p className="text-sm text-slate-600 mt-2">
-                  You've unlocked the{" "}
-                  <span className="font-bold" style={{ color: wonReward.color }}>
-                    {wonReward.name}
-                  </span>{" "}
-                  reward.
+                  {t('youve_unlocked', "You've unlocked:")}{" "}
+                  <span className="font-extrabold text-lg block mt-1" style={{ color: wonReward.color }}>
+                    {t(wonReward.name.toLowerCase().replace(/[^a-z0-9]/g, '_'), { defaultValue: wonReward.name })}
+                  </span>
                 </p>
                 
                 {/* Motivation message */}
-                <div className="mt-4 p-3 bg-slate-50 rounded-2xl text-xs text-slate-500 border border-slate-200/50 italic">
-                  "Excellent! Your consistency has been rewarded. Keep going!"
+                <div className="mt-4 p-4 bg-indigo-50/50 rounded-2xl text-xs font-semibold text-indigo-950 border border-indigo-100 italic">
+                  {t('reward_motivation_msg', '"Awesome! Use this reward to help in your next mission. Keep up the great work!"')}
                 </div>
               </div>
 
               <button
                 onClick={handleClaim}
-                className="w-full py-4 rounded-full font-bold text-base tracking-wide uppercase transition-all duration-300 transform active:scale-95 text-white"
+                className="w-full py-4 rounded-full font-black text-base tracking-wider uppercase transition-all duration-300 transform active:scale-95 text-white"
                 style={{
                   backgroundColor: wonReward.color,
                   boxShadow: `0 4px 15px ${wonReward.color}40`
                 }}
               >
-                Claim Reward
+                {t('claim_reward', 'Claim Reward')}
               </button>
             </motion.div>
           </div>

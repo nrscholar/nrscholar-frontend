@@ -101,6 +101,7 @@ export default function WeeklyTestQuestionsScreen() {
   const sc = subjectColor(q.subject);
 
   const isCorrect = selected === q.correct;
+  const isSmallOptions = q.options.length > 0 && q.options.every((opt: any) => String(opt).length <= 12);
 
   const handleConfirm = () => {
     if (selected === null) return;
@@ -173,9 +174,8 @@ export default function WeeklyTestQuestionsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 100 }]}
-        showsVerticalScrollIndicator={false}
+      <View
+        style={[styles.scroll, { flex: 1, paddingBottom: 16 }]}
       >
         {/* ── Progress ── */}
         <View style={styles.progressSection}>
@@ -214,7 +214,7 @@ export default function WeeklyTestQuestionsScreen() {
           {/* Question content */}
           <View style={styles.questionContent}>
             <Text style={styles.challengeLabel}>CHALLENGE</Text>
-            <Text style={styles.questionText}>{q.text}</Text>
+            <Text style={styles.questionText}>{q.text.normalize("NFD").replace(/[\u0300-\u036f]/g, "")}</Text>
           </View>
 
           {/* Decorative watermark */}
@@ -222,11 +222,11 @@ export default function WeeklyTestQuestionsScreen() {
         </View>
 
         {/* ── Options Grid ── */}
-        <View style={styles.optionsGrid}>
+        <View style={[styles.optionsGrid, !isSmallOptions && { flexDirection: "column" }]}>
           {q.options.map((opt, idx) => (
             <TouchableOpacity
               key={idx}
-              style={getOptionStyle(idx)}
+              style={[getOptionStyle(idx), !isSmallOptions && { width: "100%" }]}
               activeOpacity={0.8}
               onPress={() => !confirmed && setSelected(idx)}
             >
@@ -257,7 +257,7 @@ export default function WeeklyTestQuestionsScreen() {
             <Text style={styles.tipText}>{tip}</Text>
           </View>
         </View>
-      </ScrollView>
+      </View>
 
       {/* ── Fixed Confirm Button ── */}
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 16 }]}>

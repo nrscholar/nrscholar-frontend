@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Rocket, ArrowLeft, Sparkles, UserRound, GraduationCap, Cake, ChevronDown, Check, BookOpen } from "lucide-react";
+import { Rocket, ArrowLeft, Sparkles, UserRound, GraduationCap, Cake, ChevronDown, Check, BookOpen, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect, placeholder }: any) => {
   const [isOpen, setIsOpen] = useState(false);
+  const isBoard = label.toLowerCase().includes("board");
+  const supportedBoards = ["CBSE (NCERT)", "GSEB", "CBSE"];
 
   return (
     <div className="flex flex-col gap-2 flex-1 relative">
@@ -12,15 +14,15 @@ const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full h-14 bg-[rgba(255,255,255,0.5)] rounded-full pl-12 pr-10 text-base font-medium text-[#191c1e] border-2 border-white flex items-center justify-start text-left relative"
+        className="w-full h-14 bg-[rgba(255,255,255,0.5)] rounded-full pl-10 pr-8 sm:pl-12 sm:pr-10 text-sm sm:text-base font-medium text-[#191c1e] border-2 border-white flex items-center justify-start text-left relative"
       >
-        <div className="absolute left-4 z-10 flex items-center h-full top-0">
-          <Icon size={22} color={iconColor} />
+        <div className="absolute left-3 sm:left-4 z-10 flex items-center h-full top-0">
+          <Icon size={20} className="sm:w-[22px] sm:h-[22px]" color={iconColor} />
         </div>
-        <span className={`truncate ${value ? "text-[#191c1e]" : "text-[#c7c5d4]"}`}>
+        <span className={`block flex-1 min-w-0 truncate ${value ? "text-[#191c1e]" : "text-[#c7c5d4]"}`}>
           {value || placeholder}
         </span>
-        <ChevronDown size={24} color="#767683" className="absolute right-3" />
+        <ChevronDown size={20} className="absolute right-2 sm:right-3 sm:w-[24px] sm:h-[24px]" color="#767683" />
       </button>
 
       <AnimatePresence>
@@ -30,34 +32,53 @@ const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-[rgba(0,0,0,0.5)] z-50 flex items-center justify-center p-6"
+              className="fixed inset-x-0 bottom-0 top-[72px] bg-[rgba(0,0,0,0.5)] z-50 flex items-center justify-center p-6"
               onClick={() => setIsOpen(false)}
             >
               <motion.div
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.95, opacity: 0 }}
-                className="w-full max-w-[320px] bg-white rounded-3xl p-6 max-h-[60vh] flex flex-col"
+                className="w-full max-w-[320px] bg-white rounded-3xl p-6 max-h-[65vh] flex flex-col shadow-2xl"
                 onClick={e => e.stopPropagation()}
               >
-                <h3 className="text-xl font-bold text-[#141779] mb-4 text-center">Select {label}</h3>
-                <div className="overflow-y-auto pr-2">
-                  {options.map((opt: string) => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => {
-                        onSelect(opt);
-                        setIsOpen(false);
-                      }}
-                      className="w-full flex items-center justify-between py-4 border-b border-[#f2f4f6] last:border-0"
-                    >
-                      <span className={`text-base ${value === opt ? 'font-bold text-[#141779]' : 'font-medium text-[#464652]'}`}>
-                        {opt}
-                      </span>
-                      {value === opt && <Check size={20} color="#141779" />}
-                    </button>
-                  ))}
+                <h3 className="text-xl font-bold text-[#141779] mb-1 text-center">Select {label}</h3>
+                {isBoard && (
+                  <p className="text-[11px] font-semibold text-slate-400 text-center mb-3">
+                    Only CBSE & GSEB are currently active
+                  </p>
+                )}
+                <div className="overflow-y-auto pr-1">
+                  {options.map((opt: string) => {
+                    const isLocked = isBoard && !supportedBoards.includes(opt);
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        disabled={isLocked}
+                        onClick={() => {
+                          if (isLocked) return;
+                          onSelect(opt);
+                          setIsOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between py-3.5 px-2 border-b border-[#f2f4f6] last:border-0 rounded-xl transition-colors ${
+                          isLocked ? 'opacity-40 cursor-not-allowed bg-slate-50/50' : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className={`text-base ${isLocked ? 'text-slate-400 font-medium' : value === opt ? 'font-bold text-[#141779]' : 'font-medium text-[#464652]'}`}>
+                            {opt}
+                          </span>
+                          {isLocked && (
+                            <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-200 text-slate-500 px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <Lock size={10} /> Locked
+                            </span>
+                          )}
+                        </div>
+                        {value === opt && !isLocked && <Check size={20} color="#141779" />}
+                      </button>
+                    );
+                  })}
                 </div>
               </motion.div>
             </motion.div>
@@ -77,7 +98,7 @@ export default function SignupStep2Screen() {
   const [age, setAge] = useState(searchParams.get("age") || "");
   const [selectedBoard, setSelectedBoard] = useState(searchParams.get("board") || "");
 
-  const classes = ["Nursery", "KG", "Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"];
+  const classes = ["Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"];
   const ages = ["4 Years", "5 Years", "6 Years", "7 Years", "8 Years", "9 Years", "10 Years", "11 Years", "12 Years", "13 Years", "14 Years", "15 Years"];
   const boards = ["CBSE (NCERT)", "GSEB", "ICSE", "State Board", "IB", "IGCSE"];
 

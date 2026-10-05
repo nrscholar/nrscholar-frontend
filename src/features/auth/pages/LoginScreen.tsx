@@ -1,15 +1,18 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Rocket, BookOpen, Phone, Lock, Eye, EyeOff, ArrowRight, KeyRound } from "lucide-react";
+import { Rocket, BookOpen, Phone, Lock, Eye, EyeOff, ArrowRight, KeyRound, Users, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
 import { apiFetch } from "../../../api";
 
 export default function LoginScreen() {
   const navigate = useNavigate();
-  const [loginTab, setLoginTab] = useState<"mobile" | "code">("mobile");
+  const [loginRole, setLoginRole] = useState<"parent" | "child" | "family_code">("child");
+  const [scholarMethod, setScholarMethod] = useState<"mobile" | "child_code">("mobile");
   const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
   const [childCode, setChildCode] = useState("");
+  const [familyCode, setFamilyCode] = useState("");
+  const [parentPin, setParentPin] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -17,18 +20,19 @@ export default function LoginScreen() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
+    setLoading(true);
 
-    if (loginTab === "mobile") {
-      if (!mobile.trim() || !password.trim()) {
-        setErrorMsg("Please enter your mobile number and password.");
+    if (loginRole === "family_code") {
+      if (!familyCode.trim()) {
+        setErrorMsg("Please enter the 6-character Family Link Code (e.g. FAM-8492).");
+        setLoading(false);
         return;
       }
-      setLoading(true);
       try {
-        const response = await apiFetch("/api/users/login", {
+        const response = await apiFetch("/api/users/family-link/join", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mobile, password })
+          body: JSON.stringify({ familyCode: familyCode.trim(), pin: parentPin.trim() })
         });
         const data = await response.json();
         setLoading(false);
@@ -38,21 +42,25 @@ export default function LoginScreen() {
             localStorage.setItem("refreshToken", data.data.refreshToken);
           }
           localStorage.setItem("userData", JSON.stringify(data.data.user));
+          localStorage.setItem("deviceRole", "parent");
           sessionStorage.clear();
-          navigate("/home");
+          navigate("/parent/gate");
         } else {
-          setErrorMsg(data.message || "Invalid credentials.");
+          setErrorMsg(data.detail || data.message || "Invalid Family Link Code or PIN.");
         }
       } catch (e) {
         setErrorMsg("Unable to connect. Is the server running?");
         setLoading(false);
       }
-    } else {
+      return;
+    }
+
+    if (loginRole === "child" && scholarMethod === "child_code") {
       if (!childCode.trim()) {
-        setErrorMsg("Please enter the child's unique code.");
+        setErrorMsg("Please enter your Child Code (e.g. ARY3821).");
+        setLoading(false);
         return;
       }
-      setLoading(true);
       try {
         const response = await apiFetch("/api/users/login-child-code", {
           method: "POST",
@@ -67,23 +75,63 @@ export default function LoginScreen() {
             localStorage.setItem("refreshToken", data.data.refreshToken);
           }
           localStorage.setItem("userData", JSON.stringify(data.data.user));
+          localStorage.setItem("deviceRole", "child");
           sessionStorage.clear();
           navigate("/home");
         } else {
-          setErrorMsg(data.message || "Invalid Child Code.");
+          setErrorMsg(data.detail || data.message || "Invalid Child Code.");
         }
       } catch (e) {
         setErrorMsg("Unable to connect. Is the server running?");
         setLoading(false);
       }
+      return;
+    }
+
+    // Standard Mobile + Password Login (For Parent or Scholar with Mobile method)
+    if (!mobile.trim() || !password.trim()) {
+      setErrorMsg("Please enter your mobile number and password.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await apiFetch("/api/users/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mobile, password })
+      });
+      const data = await response.json();
+      setLoading(false);
+      if (data.success) {
+        localStorage.setItem("userToken", data.data.token);
+        if (data.data.refreshToken) {
+          localStorage.setItem("refreshToken", data.data.refreshToken);
+        }
+        localStorage.setItem("userData", JSON.stringify(data.data.user));
+        sessionStorage.clear();
+
+        if (loginRole === "parent") {
+          localStorage.setItem("deviceRole", "parent");
+          navigate("/parent/gate");
+        } else {
+          localStorage.setItem("deviceRole", "child");
+          navigate("/home");
+        }
+      } else {
+        setErrorMsg(data.detail || data.message || "Invalid mobile number or password.");
+      }
+    } catch (e) {
+      setErrorMsg("Unable to connect. Is the server running?");
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-[#f7f9fb] font-sans flex flex-col relative overflow-hidden">
       
-      {/* Top 40%: Vibrant Hero Image */}
-      <div className="h-[38vh] w-full relative">
+      {/* Top 35%: Hero Header */}
+      <div className="h-[35vh] w-full relative">
         <img
           src="https://lh3.googleusercontent.com/aida-public/AB6AXuCFNKwPrtS83UvIEkqBto7V5ys1m7JDMLjJjFqK1e7Gxjb_ZusQCLoBxC-zdESJR4p2l6cM0dfUm0HvIlji1k3L82ebKyONS4MPuuGm20GFeJq4vQheATDJ3v6ZMRdE34NrakAV89kRMzGdWInjI3o3cYRynpfTHp4nLjdgzQqOtllBc2p6kkd2WsVwQC7jWW_Cr_3HFWqCc8ZKmnhnNh9Jgpy6SGQ04yt44Oh093XOg1MpQtc7yDC1BV90cMzw2JtBk4Niv5xBYw"
           alt="Hero"
@@ -91,132 +139,221 @@ export default function LoginScreen() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#f7f9fb] via-[rgba(247,249,251,0.5)] to-transparent" />
         
-        {/* Floating Cosmic Element */}
         <motion.div
-          animate={{ y: [0, -10, 0] }}
+          animate={{ y: [0, -8, 0] }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-12 left-6 bg-[rgba(255,255,255,0.7)] rounded-full p-3 border-[1.5px] border-[rgba(255,255,255,0.4)] backdrop-blur-sm"
+          className="absolute top-10 left-6 bg-white/80 rounded-full p-3 border border-white/50 backdrop-blur-sm shadow-md"
         >
           <Rocket size={24} color="#141779" />
         </motion.div>
       </div>
 
-      {/* Bottom 60%: Login Card */}
-      <div className="flex-1 bg-white rounded-t-[32px] -mt-6 border-t border-[rgba(255,255,255,0.4)] shadow-[0_-10px_30px_rgba(0,0,0,0.1)] relative z-10 flex flex-col items-center pt-6 px-6 pb-6">
+      {/* Bottom 65%: Login Card */}
+      <div className="flex-1 bg-white rounded-t-[36px] -mt-8 border-t border-slate-100 shadow-[0_-10px_35px_rgba(0,0,0,0.08)] relative z-10 flex flex-col items-center pt-6 px-6 pb-6 select-none">
         
         {/* Brand Identity */}
         <div className="flex flex-col items-center mb-4 text-center">
-          <div className="w-14 h-14 bg-[#141779] rounded-2xl flex items-center justify-center mb-2 shadow-[0_0_20px_rgba(87,250,233,0.3)]">
-            <BookOpen size={28} color="white" />
+          <div className="w-13 h-13 bg-[#141779] rounded-2xl flex items-center justify-center mb-1.5 shadow-md">
+            <BookOpen size={26} color="white" />
           </div>
-          <h1 className="text-2xl font-bold text-[#141779] tracking-[-0.5px]">NR Scholar</h1>
-          <p className="text-xs text-[#767683] font-medium mt-0.5">Welcome back to NR Scholar</p>
+          <h1 className="text-xl font-black text-[#141779] tracking-tight">NR Scholar</h1>
+          <p className="text-xs text-[#767683] font-semibold">Select your role & log in to start</p>
         </div>
 
-        {/* Login Method Toggle */}
-        <div className="w-full max-w-[340px] bg-gray-100 p-1 rounded-full flex mb-4 border border-gray-200">
+        {/* MAIN ROLE SELECTION TABS */}
+        <div className="w-full max-w-[350px] bg-slate-100 p-1.5 rounded-full flex gap-1 mb-4 border border-slate-200/80">
           <button
             type="button"
-            onClick={() => { setLoginTab("mobile"); setErrorMsg(""); }}
-            className={`flex-1 py-2 rounded-full text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-              loginTab === "mobile" ? "bg-[#141779] text-white shadow-sm" : "text-gray-600 hover:text-[#141779]"
+            onClick={() => { setLoginRole("child"); setErrorMsg(""); }}
+            className={`flex-1 py-2.5 rounded-full text-xs font-bold transition-all flex items-center justify-center gap-1 ${
+              loginRole === "child" ? "bg-[#141779] text-white shadow-[0_2px_8px_rgba(20,23,121,0.25)]" : "text-slate-600 hover:text-[#141779]"
             }`}
           >
-            <Phone size={14} />
-            <span>Mobile Login</span>
+            <span>Scholar 🎓</span>
           </button>
+
           <button
             type="button"
-            onClick={() => { setLoginTab("code"); setErrorMsg(""); }}
-            className={`flex-1 py-2 rounded-full text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-              loginTab === "code" ? "bg-[#141779] text-white shadow-sm" : "text-gray-600 hover:text-[#141779]"
+            onClick={() => { setLoginRole("parent"); setErrorMsg(""); }}
+            className={`flex-1 py-2.5 rounded-full text-xs font-bold transition-all flex items-center justify-center gap-1 ${
+              loginRole === "parent" ? "bg-[#141779] text-white shadow-[0_2px_8px_rgba(20,23,121,0.25)]" : "text-slate-600 hover:text-[#141779]"
             }`}
           >
-            <KeyRound size={14} />
-            <span>Unique Child Code</span>
+            <span>Parent 👨‍👩‍👧</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setLoginRole("family_code"); setErrorMsg(""); }}
+            className={`flex-1 py-2.5 rounded-full text-xs font-bold transition-all flex items-center justify-center gap-1 ${
+              loginRole === "family_code" ? "bg-[#141779] text-white shadow-[0_2px_8px_rgba(20,23,121,0.25)]" : "text-slate-600 hover:text-[#141779]"
+            }`}
+          >
+            <span>Family 🔑</span>
           </button>
         </div>
+
+        {/* SCHOLAR METHOD SUB-TABS (Only when Scholar role is selected) */}
+        {loginRole === "child" && (
+          <div className="w-full max-w-[350px] bg-slate-100/90 p-1.5 rounded-2xl flex gap-1 mb-4 border border-slate-200/60 shadow-inner">
+            <button
+              type="button"
+              onClick={() => { setScholarMethod("mobile"); setErrorMsg(""); }}
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                scholarMethod === "mobile"
+                  ? "bg-white text-[#141779] shadow-sm font-extrabold"
+                  : "text-slate-500 hover:text-slate-800 font-semibold"
+              }`}
+            >
+              <Phone size={16} className={scholarMethod === "mobile" ? "text-[#141779]" : "text-slate-400"} />
+              <span>Mobile No.</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setScholarMethod("child_code"); setErrorMsg(""); }}
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                scholarMethod === "child_code"
+                  ? "bg-white text-[#141779] shadow-sm font-extrabold"
+                  : "text-slate-500 hover:text-slate-800 font-semibold"
+              }`}
+            >
+              <KeyRound size={16} className={scholarMethod === "child_code" ? "text-[#141779]" : "text-slate-400"} />
+              <span>Child Code</span>
+            </button>
+          </div>
+        )}
 
         {errorMsg && (
-          <div className="w-full max-w-[340px] bg-[#ffdad6] text-[#ba1a1a] text-xs font-semibold p-3 rounded-xl mb-4 text-center">
+          <div className="w-full max-w-[350px] bg-red-50 border border-red-200 text-red-600 text-xs font-bold p-3 rounded-xl mb-4 text-center">
             {errorMsg}
           </div>
         )}
 
-        {/* Login Fields */}
-        <form onSubmit={handleLogin} className="w-full max-w-[340px] flex flex-col gap-4 mb-6">
-          {loginTab === "mobile" ? (
+        {/* LOGIN FORM */}
+        <form onSubmit={handleLogin} className="w-full max-w-[350px] flex flex-col gap-4 mb-6">
+          {loginRole === "family_code" ? (
             <>
-              <div className="relative flex items-center">
-                <Phone size={20} color="#767683" className="absolute left-4" />
-                <input
-                  type="tel"
-                  placeholder="Enter Mobile Number"
-                  value={mobile}
-                  onChange={(e) => setMobile(e.target.value)}
-                  className="w-full h-14 bg-[#eceef0] rounded-full pl-12 pr-4 text-base font-medium text-[#191c1e] focus:outline-none focus:ring-2 focus:ring-[#141779] transition-shadow placeholder:text-[#767683]"
-                  required
-                />
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-bold text-slate-600 px-1 uppercase tracking-wider">Family Link Code</label>
+                <div className="relative flex items-center">
+                  <Users size={20} className="text-slate-400 absolute left-4 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="E.G. FAM-8492"
+                    value={familyCode}
+                    onChange={(e) => setFamilyCode(e.target.value.toUpperCase())}
+                    className="w-full h-14 bg-slate-50 rounded-2xl pl-12 pr-4 text-sm font-black tracking-wider uppercase text-[#141779] border border-slate-200/90 focus:outline-none focus:ring-2 focus:ring-[#141779]/20 focus:border-[#141779] focus:bg-white transition-all placeholder:font-medium placeholder:tracking-normal placeholder:text-slate-400"
+                    required
+                  />
+                </div>
               </div>
 
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-bold text-slate-600 px-1 uppercase tracking-wider">Parent 4-Digit PIN</label>
                 <div className="relative flex items-center">
-                  <Lock size={20} color="#767683" className="absolute left-4" />
+                  <Lock size={20} className="text-slate-400 absolute left-4 pointer-events-none" />
+                  <input
+                    type="password"
+                    maxLength={4}
+                    placeholder="Enter 4-Digit PIN"
+                    value={parentPin}
+                    onChange={(e) => setParentPin(e.target.value)}
+                    className="w-full h-14 bg-slate-50 rounded-2xl pl-12 pr-4 text-sm font-black tracking-widest text-[#141779] border border-slate-200/90 focus:outline-none focus:ring-2 focus:ring-[#141779]/20 focus:border-[#141779] focus:bg-white transition-all placeholder:font-medium placeholder:tracking-normal placeholder:text-slate-400"
+                    required
+                  />
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-500 font-semibold px-1 leading-relaxed">
+                Enter the 6-character Family Link Code & PIN generated from Parent Settings on your primary device.
+              </p>
+            </>
+          ) : loginRole === "child" && scholarMethod === "child_code" ? (
+            <>
+              {/* SCHOLAR CHILD CODE LOGIN */}
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-bold text-slate-600 px-1 uppercase tracking-wider">Unique Child Code</label>
+                <div className="relative flex items-center">
+                  <KeyRound size={20} className="text-slate-400 absolute left-4 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="e.g. ARY3821"
+                    value={childCode}
+                    onChange={(e) => setChildCode(e.target.value.toUpperCase())}
+                    className="w-full h-14 bg-slate-50 rounded-2xl pl-12 pr-4 text-sm font-black tracking-wider uppercase text-[#141779] border border-slate-200/90 focus:outline-none focus:ring-2 focus:ring-[#141779]/20 focus:border-[#141779] focus:bg-white transition-all placeholder:font-medium placeholder:tracking-normal placeholder:text-slate-400"
+                    required
+                  />
+                </div>
+                <p className="text-[11px] text-slate-500 font-semibold px-1 mt-0.5">
+                  Enter your unique student code provided by your parent or teacher.
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* MOBILE NO. & PASSWORD LOGIN (Scholar Mobile mode OR Parent) */}
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-bold text-slate-600 px-1 uppercase tracking-wider">
+                  {loginRole === "parent" ? "Parent Mobile Number" : "Mobile Number"}
+                </label>
+                <div className="relative flex items-center">
+                  <Phone size={20} className="text-slate-400 absolute left-4 pointer-events-none" />
+                  <input
+                    type="tel"
+                    placeholder="Enter 10-digit mobile number"
+                    value={mobile}
+                    onChange={(e) => setMobile(e.target.value)}
+                    className="w-full h-14 bg-slate-50 rounded-2xl pl-12 pr-4 text-sm font-bold text-[#141779] border border-slate-200/90 focus:outline-none focus:ring-2 focus:ring-[#141779]/20 focus:border-[#141779] focus:bg-white transition-all placeholder:text-slate-400 placeholder:font-medium"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-bold text-slate-600 px-1 uppercase tracking-wider">
+                  {loginRole === "parent" ? "Parent Password" : "Password"}
+                </label>
+                <div className="relative flex items-center">
+                  <Lock size={20} className="text-slate-400 absolute left-4 pointer-events-none" />
                   <input
                     type={showPassword ? "text" : "password"}
-                    placeholder="Enter Password"
+                    placeholder="Enter password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full h-14 bg-[#eceef0] rounded-full pl-12 pr-12 text-base font-medium text-[#191c1e] focus:outline-none focus:ring-2 focus:ring-[#141779] transition-shadow placeholder:text-[#767683]"
+                    className="w-full h-14 bg-slate-50 rounded-2xl pl-12 pr-12 text-sm font-bold text-[#141779] border border-slate-200/90 focus:outline-none focus:ring-2 focus:ring-[#141779]/20 focus:border-[#141779] focus:bg-white transition-all placeholder:text-slate-400 placeholder:font-medium"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 p-1 hover:bg-gray-200 rounded-full transition-colors"
+                    className="absolute right-3.5 p-1.5 hover:bg-slate-200/80 rounded-full transition-colors"
                   >
-                    {showPassword ? <Eye size={20} color="#767683" /> : <EyeOff size={20} color="#767683" />}
+                    {showPassword ? <Eye size={18} className="text-slate-500" /> : <EyeOff size={18} className="text-slate-500" />}
                   </button>
                 </div>
-                <div className="flex justify-end px-2">
-                  <button type="button" onClick={() => navigate("/forgot-password")} className="text-xs font-semibold text-[#006a62] hover:underline">
+                <div className="flex justify-end px-1 mt-0.5">
+                  <button type="button" onClick={() => navigate("/forgot-password")} className="text-xs font-bold text-[#006a62] hover:underline">
                     Forgot Password?
                   </button>
                 </div>
               </div>
             </>
-          ) : (
-            <div className="flex flex-col gap-3">
-              <div className="relative flex items-center">
-                <KeyRound size={20} color="#767683" className="absolute left-4" />
-                <input
-                  type="text"
-                  placeholder="e.g. ARY3821"
-                  value={childCode}
-                  onChange={(e) => setChildCode(e.target.value.toUpperCase())}
-                  className="w-full h-14 bg-[#eceef0] rounded-full pl-12 pr-4 text-base font-extrabold tracking-wider uppercase text-[#141779] focus:outline-none focus:ring-2 focus:ring-[#141779] transition-shadow placeholder:text-[#767683] placeholder:font-normal placeholder:tracking-normal"
-                  required
-                />
-              </div>
-              <p className="text-xs text-gray-500 font-medium px-2">
-                Enter the unique 6-character child code provided in the parent portal to link device.
-              </p>
-            </div>
           )}
 
-          {/* Action Area */}
-          <div className="flex flex-col gap-4 mt-2">
+          {/* Action Button */}
+          <div className="flex flex-col gap-3.5 mt-3">
             <button
               type="submit"
               disabled={loading}
-              className={`w-full h-14 bg-[#141779] rounded-full flex items-center justify-center gap-2 shadow-[0_4px_10px_rgba(20,23,121,0.3)] transition-opacity ${loading ? 'opacity-80 cursor-wait' : 'hover:opacity-90'}`}
+              className={`w-full h-14 bg-[#141779] rounded-full flex items-center justify-center gap-3 shadow-[0_4px_15px_rgba(20,23,121,0.3)] transition-all ${
+                loading ? 'opacity-70 cursor-wait' : 'hover:opacity-90 active:scale-98'
+              }`}
             >
               {loading ? (
                 <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  <span className="text-white text-lg font-bold">
-                    {loginTab === "mobile" ? "Login" : "Link & Access"}
+                  <span className="text-white text-base font-semibold uppercase tracking-wider">
+                    {loginRole === "parent" ? "Access Parent Portal" : loginRole === "family_code" ? "Link Family Device" : "Start Learning"}
                   </span>
                   <ArrowRight size={20} color="white" />
                 </>
@@ -224,16 +361,13 @@ export default function LoginScreen() {
             </button>
 
             <div className="flex justify-center items-center gap-1">
-              <span className="text-sm text-[#767683] font-medium">Don't have an account? </span>
-              <button type="button" onClick={() => navigate("/signup-step1")} className="text-sm font-bold text-[#141779] hover:underline">
+              <span className="text-xs text-[#767683] font-semibold">Don't have an account? </span>
+              <button type="button" onClick={() => navigate("/signup-step1")} className="text-xs font-black text-[#141779] hover:underline">
                 Sign up
               </button>
             </div>
           </div>
         </form>
-
-        {/* Visual Decorative Spacer */}
-        <div className="w-12 h-1 bg-[#e0e3e5] rounded-full mt-auto mb-2" />
 
       </div>
     </div>

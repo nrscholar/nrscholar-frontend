@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Bell, Star, Heart, Lock, Sparkles, PartyPopper, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Bell, Star, Lock, Sparkles, Check, CheckCircle2, BookOpen } from "lucide-react";
 import { apiFetch } from "../../../api";
-
+import { useTranslation } from "react-i18next";
 
 export default function HabitsScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [completed, setCompleted] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
@@ -56,7 +57,7 @@ export default function HabitsScreen() {
         setCompleted(true);
         setTimeout(() => {
           setShowModal(true);
-        }, 500);
+        }, 400);
       }
     } catch (e) {
       console.error("Failed to complete habit", e);
@@ -65,138 +66,214 @@ export default function HabitsScreen() {
     }
   };
 
+  const currentDay = habit?.currentDay || 1;
+
   return (
-    <div className="min-h-screen bg-[#f7f9fb] font-sans relative overflow-hidden pb-10">
-      {/* Background Elements */}
-      <div className="absolute top-[25%] -left-[50px] w-[150px] h-[150px] bg-[rgba(0,106,98,0.1)] rounded-full z-0" />
-      <div className="absolute bottom-[25%] -right-[50px] w-[180px] h-[180px] bg-[rgba(20,23,121,0.05)] rounded-full z-0" />
+    <div className="min-h-screen bg-[#F8FAFF] bg-gradient-to-b from-[#F0F4FF] via-[#F8FAFF] to-[#FFFFFF] text-slate-900 w-full flex flex-col items-center overflow-x-hidden font-sans relative pb-12">
+      {/* Soft ambient background glows */}
+      <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[320px] h-[180px] bg-[#12D6D1]/8 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-48 right-2 w-[220px] h-[220px] bg-[#8C68F6]/6 rounded-full blur-3xl pointer-events-none" />
 
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 bg-[rgba(247,249,251,0.8)] border-b border-[rgba(255,255,255,0.2)] sticky top-0 z-40 backdrop-blur-md">
+      <header className="w-full z-40 bg-white/90 backdrop-blur-md border-b border-slate-100/80 flex justify-between items-center px-5 py-3.5 max-w-[430px] mx-auto sticky top-0 shadow-2xs">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => navigate(-1)} 
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            className="w-9 h-9 hover:bg-slate-100 active:scale-95 rounded-full transition-all flex items-center justify-center shrink-0"
           >
-            <ArrowLeft size={24} color="#141779" />
+            <ArrowLeft size={20} className="text-[#2D328F]" />
           </button>
-          <h1 className="text-xl font-bold text-[#141779]">Good Habits</h1>
+          <h1 className="text-lg font-black tracking-tight text-[#2D328F]">{t('good_habits', 'Good Habits')}</h1>
         </div>
         <button 
           onClick={() => navigate("/notifications")} 
-          className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all relative shrink-0"
+          className="w-9 h-9 rounded-full bg-white shadow-2xs flex items-center justify-center hover:bg-slate-50 active:scale-95 transition-all relative shrink-0 border border-slate-200/80"
         >
-          <Bell size={20} className="text-[#141779]" />
+          <Bell size={18} className="text-[#2D328F]" />
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-bold border-2 border-white">
-              {unreadCount}
-            </span>
+            <span className="absolute top-0.5 right-0.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white" />
           )}
         </button>
       </header>
 
-      <main className="px-6 pt-8 flex flex-col items-center gap-8 relative z-10">
+      <main className="px-5 pt-5 flex flex-col items-center gap-5 w-full max-w-[430px] relative z-10">
         
-        {/* Title Section */}
-        <div className="flex flex-col items-center">
-          <h2 className="text-2xl font-bold text-[#141779] mb-1">Good Habits & Values</h2>
-          <span className="text-sm font-semibold text-[#006a62]">Sparkle like a Star today!</span>
+        {/* Main Title Section */}
+        <div className="text-center space-y-1">
+          <h2 className="text-2xl sm:text-[26px] font-black text-[#2D328F] tracking-tight">
+            {t('daily_habit_journey', 'Daily Habit Journey')}
+          </h2>
+          <p className="text-[11px] sm:text-xs font-black text-[#12D6D1] uppercase tracking-wider flex items-center justify-center gap-1">
+            <span>{t('build_smart_habits_desc', 'BUILD SMART HABITS, GAIN GOLD STARS!')}</span>
+            <span className="text-[#FBBF24]">⭐</span>
+          </p>
         </div>
 
-        {/* Progress Orbit Tracker */}
-        <div className="flex justify-center gap-4 w-full">
-          {/* Past Day (currentDay - 2) */}
-          {(habit?.currentDay > 2) && (
-            <div className="flex flex-col items-center gap-1">
-              <div className="w-12 h-12 rounded-full bg-[#57fae9] flex items-center justify-center shadow-[0_0_10px_rgba(87,250,233,0.5)]">
-                <Star size={24} color="#00201d" className="fill-[#00201d]" />
-              </div>
-              <span className="text-xs font-bold text-[#464652]">Day {habit.currentDay - 2}</span>
-            </div>
-          )}
-          
-          {/* Past Day (currentDay - 1) */}
-          {(habit?.currentDay > 1) && (
-            <div className="flex flex-col items-center gap-1">
-              <div className="w-12 h-12 rounded-full bg-[#57fae9] flex items-center justify-center shadow-[0_0_10px_rgba(87,250,233,0.5)]">
-                <Star size={24} color="#00201d" className="fill-[#00201d]" />
-              </div>
-              <span className="text-xs font-bold text-[#464652]">Day {habit.currentDay - 1}</span>
-            </div>
-          )}
+        {/* Progress Journey Bar Component */}
+        <div className="w-full bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-[0_4px_20px_rgba(45,50,143,0.04)] relative">
+          {/* Connecting Dotted Line */}
+          <div className="absolute top-[38px] left-12 right-12 h-[2px] border-t-2 border-dashed border-slate-200 pointer-events-none" />
 
-          {/* Today (currentDay) */}
-          <div className="flex flex-col items-center gap-1">
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-              completed 
-                ? "bg-[#57fae9] shadow-[0_0_10px_rgba(87,250,233,0.5)]" 
-                : "border-2 border-dashed border-[#2addcd]"
-            }`}>
-              {completed ? (
-                <Star size={24} color="#00201d" className="fill-[#00201d]" />
-              ) : (
-                <Heart size={24} color="#2addcd" className="fill-[#2addcd]" />
-              )}
-            </div>
-            <span className="text-xs font-bold text-[#464652]">Day {habit?.currentDay || 1} (Today)</span>
-          </div>
+          <div className="flex justify-between items-center w-full relative z-10">
+            
+            {/* Step 1 */}
+            {currentDay === 1 ? (
+              /* If currentDay is Day 1, Step 1 is TODAY (Active) */
+              <div className="flex flex-col items-center gap-1 min-w-[70px] relative">
+                <div className="absolute -top-3.5 bg-gradient-to-r from-[#2D328F] to-[#8C68F6] text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full shadow-2xs border border-white">
+                  TODAY
+                </div>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 border-white relative z-10 shadow-sm ${
+                  completed 
+                    ? "bg-[#12D6D1] text-white" 
+                    : "bg-[#2D328F] text-white ring-4 ring-[#2D328F]/15"
+                }`}>
+                  {completed ? (
+                    <Check size={18} strokeWidth={3} className="text-white" />
+                  ) : (
+                    <Star size={17} className="fill-[#FBBF24] text-[#FBBF24]" />
+                  )}
+                </div>
+                <span className={`text-[11px] font-extrabold ${completed ? "text-[#12D6D1]" : "text-[#2D328F]"}`}>
+                  {completed ? "Completed" : "In Progress"}
+                </span>
+                <span className="text-[10px] font-medium text-slate-400">Day 1</span>
+              </div>
+            ) : (
+              /* If currentDay > 1 (e.g. Day 5), Step 1 is the Previous Day (Completed) */
+              <div className="flex flex-col items-center gap-1 min-w-[70px]">
+                <div className="w-10 h-10 rounded-full bg-[#12D6D1] text-white flex items-center justify-center shadow-xs border-2 border-white relative">
+                  <Check size={18} strokeWidth={3} className="text-white" />
+                </div>
+                <span className="text-[11px] font-extrabold text-[#12D6D1]">Completed</span>
+                <span className="text-[10px] font-medium text-slate-400">Day {currentDay - 1}</span>
+              </div>
+            )}
 
-          {/* Next Day (currentDay + 1) */}
-          <div className="flex flex-col items-center gap-1 opacity-40">
-            <div className="w-12 h-12 rounded-full border-2 border-dashed border-[#c7c5d4] flex items-center justify-center">
-              <Lock size={24} color="#767683" />
-            </div>
-            <span className="text-xs font-bold text-[#464652]">Day {(habit?.currentDay || 1) + 1}</span>
+            {/* Step 2 */}
+            {currentDay === 1 ? (
+              /* If currentDay is Day 1, Step 2 is Day 2 (Locked) */
+              <div className="flex flex-col items-center gap-1 min-w-[70px] opacity-60">
+                <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 text-slate-400 flex items-center justify-center">
+                  <Lock size={15} />
+                </div>
+                <span className="text-[11px] font-bold text-slate-400">Locked</span>
+                <span className="text-[10px] font-medium text-slate-400">Day 2</span>
+              </div>
+            ) : (
+              /* If currentDay > 1 (e.g. Day 5), Step 2 is TODAY (Active) */
+              <div className="flex flex-col items-center gap-1 min-w-[70px] relative">
+                <div className="absolute -top-3.5 bg-gradient-to-r from-[#2D328F] to-[#8C68F6] text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full shadow-2xs border border-white">
+                  TODAY
+                </div>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 border-white relative z-10 shadow-sm ${
+                  completed 
+                    ? "bg-[#12D6D1] text-white" 
+                    : "bg-[#2D328F] text-white ring-4 ring-[#2D328F]/15"
+                }`}>
+                  {completed ? (
+                    <Check size={18} strokeWidth={3} className="text-white" />
+                  ) : (
+                    <Star size={17} className="fill-[#FBBF24] text-[#FBBF24]" />
+                  )}
+                </div>
+                <span className={`text-[11px] font-extrabold ${completed ? "text-[#12D6D1]" : "text-[#2D328F]"}`}>
+                  {completed ? "Completed" : "In Progress"}
+                </span>
+                <span className="text-[10px] font-medium text-slate-400">Day {currentDay}</span>
+              </div>
+            )}
+
+            {/* Step 3 */}
+            {currentDay === 1 ? (
+              /* If currentDay is Day 1, Step 3 is Day 3 (Locked) */
+              <div className="flex flex-col items-center gap-1 min-w-[70px] opacity-60">
+                <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 text-slate-400 flex items-center justify-center">
+                  <Lock size={15} />
+                </div>
+                <span className="text-[11px] font-bold text-slate-400">Locked</span>
+                <span className="text-[10px] font-medium text-slate-400">Day 3</span>
+              </div>
+            ) : (
+              /* If currentDay > 1 (e.g. Day 5), Step 3 is Next Day (Locked) */
+              <div className="flex flex-col items-center gap-1 min-w-[70px] opacity-60">
+                <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 text-slate-400 flex items-center justify-center">
+                  <Lock size={15} />
+                </div>
+                <span className="text-[11px] font-bold text-slate-400">Locked</span>
+                <span className="text-[10px] font-medium text-slate-400">Day {currentDay + 1}</span>
+              </div>
+            )}
+
           </div>
         </div>
 
-        {/* Daily Lesson Card */}
-        <div className="bg-[rgba(255,255,255,0.7)] rounded-2xl p-6 flex flex-col items-center border-[1.5px] border-[rgba(255,255,255,0.4)] shadow-[0_2px_10px_rgba(0,0,0,0.05)] w-full max-w-[400px]">
+        {/* Daily Lesson Hero Card */}
+        <div className="bg-white rounded-3xl p-5 sm:p-6 flex flex-col border border-[#FBBF24]/30 shadow-[0_8px_30px_rgba(45,50,143,0.06)] w-full relative overflow-hidden">
           {loading ? (
-            <div className="py-6 flex flex-col items-center justify-center w-full animate-pulse gap-2">
-              <div className="w-16 h-16 bg-gray-200 rounded-2xl mb-4" />
-              <div className="h-6 bg-gray-200 rounded w-2/3 mb-2" />
-              <div className="h-4 bg-gray-200 rounded w-5/6" />
-              <div className="h-4 bg-gray-200 rounded w-4/6 mb-6" />
-              <div className="h-14 w-full bg-gray-200 rounded-full" />
+            <div className="py-6 flex flex-col items-center justify-center w-full animate-pulse gap-3">
+              <div className="w-14 h-14 bg-slate-200 rounded-2xl mb-2" />
+              <div className="h-6 bg-slate-200 rounded w-2/3 mb-2" />
+              <div className="h-4 bg-slate-200 rounded w-5/6" />
+              <div className="h-4 bg-slate-200 rounded w-4/6 mb-6" />
+              <div className="h-12 w-full bg-slate-200 rounded-2xl" />
             </div>
           ) : (
             <>
-              <div className="w-16 h-16 bg-[#e0e0ff] rounded-2xl flex items-center justify-center mb-4">
-                <Sparkles size={36} color="#141779" />
+              {/* Top Tag Badges Header */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 bg-[#8C68F6]/10 text-[#8C68F6] text-[10px] font-black uppercase tracking-wider rounded-full border border-[#8C68F6]/20">
+                    {t('lesson_label', { day: currentDay, defaultValue: `LESSON ${currentDay}` })}
+                  </span>
+                  <span className="px-2.5 py-1 bg-amber-50 text-amber-700 text-[10px] font-black uppercase tracking-wider rounded-full border border-amber-200/60 flex items-center gap-1">
+                    <span className="text-[#FBBF24]">⭐</span>
+                    <span>{habit?.category || 'HONESTY'}</span>
+                  </span>
+                </div>
+                {completed && (
+                  <span className="text-xs font-extrabold text-[#12D6D1] flex items-center gap-1 bg-[#12D6D1]/10 px-2.5 py-1 rounded-full border border-[#12D6D1]/20">
+                    <CheckCircle2 size={13} />
+                    <span>Done</span>
+                  </span>
+                )}
               </div>
-              <span className="text-xs font-extrabold text-[#006a62] uppercase tracking-wider mb-1">Lesson {habit?.currentDay || 1}</span>
-              <h3 className="text-xl font-bold text-[#141779] text-center mb-3">
-                {habit?.title || "Daily Lesson"}
-              </h3>
-              <p className="text-base font-medium text-[#464652] text-center leading-6 mb-8 px-2">
-                {habit?.description || "Loading your lesson..."}
+
+              {/* Compact Illustration & Lesson Title */}
+              <div className="flex items-center gap-3.5 mb-3">
+                <div className="w-13 h-13 rounded-2xl bg-gradient-to-br from-[#F5F3FF] to-[#EEF1FF] border border-[#8C68F6]/20 flex items-center justify-center text-2xl shrink-0 shadow-2xs">
+                  <span>🦁</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-xl font-black text-[#2D328F] leading-snug tracking-tight">
+                    {habit?.title || t('the_magic_of_honesty', 'The Magic of Honesty')}
+                  </h3>
+                </div>
+              </div>
+
+              {/* Story Description Paragraph */}
+              <p className="text-xs sm:text-sm font-semibold text-slate-600 leading-relaxed mb-6">
+                {habit?.description || t('lion_story_desc', 'Leo the Lion found a shiny coin that didn’t belong to him. Instead of keeping it, he asked his friends if they lost it. Being honest made Leo feel even braver than his roar!')}
               </p>
 
-              {/* Interaction Button */}
+              {/* Primary Action Button */}
               <button
                 disabled={completed || !habit || submitting}
                 onClick={handleComplete}
-                className={`w-full py-4 rounded-full flex items-center justify-center gap-2 transition-all ${
-                  completed ? 'border-2 cursor-not-allowed' : 'bg-[#141779] shadow-[0_4px_10px_rgba(20,23,121,0.3)] hover:opacity-90 active:scale-[0.98]'
+                className={`w-full py-3.5 rounded-2xl flex items-center justify-center gap-2.5 transition-all duration-300 shadow-md ${
+                  completed 
+                    ? 'bg-[#12D6D1]/15 border border-[#12D6D1]/30 text-[#0f9f9b] font-black cursor-not-allowed' 
+                    : 'bg-gradient-to-r from-[#2D328F] via-[#3B40A4] to-[#8C68F6] hover:brightness-110 text-white font-black hover:scale-[1.01] active:scale-[0.98] border border-white/20'
                 }`}
-                style={completed ? { backgroundColor: '#e6f7ed', borderColor: '#b2ecc6' } : {}}
               >
                 {submitting ? (
-                  <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <span 
-                      className={`text-base font-bold ${completed ? '' : 'text-white'}`}
-                      style={completed ? { color: '#0f7d3d' } : {}}
-                    >
-                      {completed ? `Claimed +${habit?.rewardPoints || 10} Points` : "Complete Story"}
+                    <BookOpen size={18} className="shrink-0 text-white" />
+                    <span className="text-xs sm:text-sm font-black uppercase tracking-wider">
+                      {completed ? t('story_completed', 'Story Completed ✓') : t('complete_story', 'Complete Story')}
                     </span>
-                    {completed ? (
-                      <CheckCircle2 size={22} color="#0f7d3d" />
-                    ) : (
-                      <PartyPopper size={22} color="white" />
-                    )}
                   </>
                 )}
               </button>
@@ -204,25 +281,30 @@ export default function HabitsScreen() {
           )}
         </div>
 
+        {/* Reward Modal Popup */}
         {showModal && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-6 backdrop-blur-sm">
-            <div className="bg-white rounded-[24px] p-6 flex flex-col items-center w-full max-w-[320px] shadow-2xl animate-in fade-in zoom-in duration-300">
-              <div className="w-16 h-16 bg-[#fff0da] rounded-full flex items-center justify-center mb-4">
-                <PartyPopper size={32} color="#ff9f43" />
+          <div className="fixed inset-0 bg-[#2D328F]/40 backdrop-blur-xs z-50 flex items-center justify-center p-6">
+            <div className="bg-white rounded-3xl p-6 sm:p-7 flex flex-col items-center w-full max-w-[340px] border border-slate-200 shadow-2xl animate-in fade-in zoom-in-95 duration-300 relative overflow-hidden">
+              <div className="w-16 h-16 bg-[#12D6D1]/10 border border-[#12D6D1]/30 rounded-2xl flex items-center justify-center mb-4 text-3xl">
+                <span>⭐</span>
               </div>
-              <h3 className="text-xl font-bold text-[#141779] text-center mb-2">Brilliant!</h3>
-              <p className="text-[#464652] text-center mb-6">You earned <span className="font-bold text-[#ff9f43]">{habit?.rewardPoints || 10} Points</span> for completing today's story.</p>
+              <h3 className="text-xl font-black text-[#2D328F] text-center mb-1">
+                🎉 {t('splendid', 'Splendid!')}
+              </h3>
+              <p className="text-xs font-semibold text-slate-600 text-center mb-6 leading-relaxed">
+                {t('earned_points_desc', { points: habit?.rewardPoints || 10, defaultValue: `You earned +${habit?.rewardPoints || 10} Gold Stars for practicing this habit today!` })}
+              </p>
               <button 
                 onClick={() => { setShowModal(false); navigate(-1); }}
-                className="w-full bg-[#141779] text-white py-3 rounded-full font-bold hover:opacity-90 transition-opacity"
+                className="w-full bg-gradient-to-r from-[#2D328F] to-[#8C68F6] text-white py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-md active:scale-95"
               >
-                Continue Journey
+                {t('continue_journey', 'Continue Journey')}
               </button>
             </div>
           </div>
         )}
-
       </main>
     </div>
   );
 }
+

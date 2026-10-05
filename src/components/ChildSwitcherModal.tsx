@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { X, Plus, Check, Sparkles, Copy, CheckCircle2, KeyRound } from "lucide-react";
+import { X, Plus, Check, Sparkles, Copy, CheckCircle2, KeyRound, ChevronDown } from "lucide-react";
 import { apiFetch } from "../api";
+import { useTranslation } from "react-i18next";
+import { copyToClipboard } from "../utils/clipboard";
 
 interface ChildProfile {
   childId: string;
@@ -17,9 +19,11 @@ interface ChildSwitcherModalProps {
   onClose: () => void;
   user: any;
   onUserUpdated: (user: any) => void;
+  onSwitched?: () => void; // optional: called after switch/add instead of page reload
 }
 
-export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdated }: ChildSwitcherModalProps) {
+export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdated, onSwitched }: ChildSwitcherModalProps) {
+  const { t } = useTranslation();
   const [switching, setSwitching] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showLinkForm, setShowLinkForm] = useState(false);
@@ -33,12 +37,14 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
   const [newClass, setNewClass] = useState("Class 1");
   const [newAge, setNewAge] = useState(6);
   const [newBoard, setNewBoard] = useState("CBSE");
+  const [isClassOpen, setIsClassOpen] = useState(false);
+  const classes = ["Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"];
 
   if (!isOpen) return null;
 
-  const handleCopyCode = (code: string, e: React.MouseEvent) => {
+  const handleCopyCode = async (code: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(code);
+    await copyToClipboard(code);
     setCopiedCode(code);
     setTimeout(() => setCopiedCode(null), 2000);
   };
@@ -58,12 +64,14 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
       if (json.success && json.data?.user) {
         localStorage.setItem("userToken", json.data.token);
         localStorage.setItem("userData", JSON.stringify(json.data.user));
+        const pin = sessionStorage.getItem("parentPinVerified");
         sessionStorage.clear();
+        if (pin) sessionStorage.setItem("parentPinVerified", pin);
         onUserUpdated(json.data.user);
         setShowLinkForm(false);
         setLinkCode("");
         onClose();
-        window.location.reload();
+        if (onSwitched) onSwitched(); else window.location.reload();
       } else {
         setLinkError(json.message || "Invalid Child Code.");
       }
@@ -74,7 +82,7 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
     }
   };
 
-  const children: ChildProfile[] = user?.children || [
+  const rawChildren: ChildProfile[] = user?.children || [
     {
       childId: "child_1",
       childName: user?.childName || "Child 1",
@@ -84,6 +92,12 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
       childPhoto: user?.childPhoto || ""
     }
   ];
+  // Deduplicate by childId — last entry wins (backend may have migration duplicates)
+  const childMap = new Map<string, ChildProfile>();
+  for (const c of rawChildren) {
+    childMap.set(c.childId, c);
+  }
+  const children: ChildProfile[] = Array.from(childMap.values());
 
   const activeChildId = user?.activeChildId || children[0]?.childId || "child_1";
 
@@ -99,10 +113,12 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
       const json = await res.json();
       if (json.success && json.data?.user) {
         localStorage.setItem("userData", JSON.stringify(json.data.user));
+        const pin = sessionStorage.getItem("parentPinVerified");
         sessionStorage.clear(); // Clear cached subject/chapter progress for previous child
+        if (pin) sessionStorage.setItem("parentPinVerified", pin);
         onUserUpdated(json.data.user);
         onClose();
-        window.location.reload();
+        if (onSwitched) onSwitched(); else window.location.reload();
       }
     } catch (e) {
       console.error("Failed to switch child", e);
@@ -129,12 +145,14 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
       const json = await res.json();
       if (json.success && json.data?.user) {
         localStorage.setItem("userData", JSON.stringify(json.data.user));
+        const pin = sessionStorage.getItem("parentPinVerified");
         sessionStorage.clear(); // Clear cached progress
+        if (pin) sessionStorage.setItem("parentPinVerified", pin);
         onUserUpdated(json.data.user);
         setShowAddForm(false);
         setNewName("");
         onClose();
-        window.location.reload();
+        if (onSwitched) onSwitched(); else window.location.reload();
       }
     } catch (e) {
       console.error("Failed to add child", e);
@@ -150,8 +168,8 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
         {/* Header */}
         <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 shrink-0">
           <div>
-            <h3 className="text-lg sm:text-xl font-extrabold text-[#141779]">Switch Child Profile</h3>
-            <p className="text-[11px] sm:text-xs text-[#767683] font-semibold mt-0.5">Select active child to customize learning path</p>
+            <h3 className="text-lg sm:text-xl font-extrabold text-[#141779]">{t("switch_child_profile", "Switch Child Profile")}</h3>
+            <p className="text-[11px] sm:text-xs text-[#767683] font-semibold mt-0.5">{t("select_active_child_sub", "Select active child to customize learning path")}</p>
           </div>
           <button 
             onClick={onClose}
@@ -170,6 +188,12 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
               {children.map((c) => {
                 const isActive = c.childId === activeChildId;
                 const isPending = switching === c.childId;
+
+                const displayClass = c.childClass 
+                  ? (c.childClass.toLowerCase().includes("class") 
+                      ? t("class_num", { num: c.childClass.replace(/\D/g, ""), defaultValue: c.childClass })
+                      : t(c.childClass.toLowerCase().replace(/\s+/g, "_"), c.childClass))
+                  : t("class_3", "Class 3");
 
                 return (
                   <div
@@ -196,7 +220,7 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
                         <h4 className="font-extrabold text-[#141779] text-sm sm:text-base truncate">{c.childName}</h4>
                         <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                           <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-[#141779] border border-indigo-100 text-[10px] font-bold">
-                            {c.childClass || "Class 3"}
+                            {displayClass}
                           </span>
                           {c.uniqueCode && (
                             <button
@@ -208,12 +232,12 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
                               {copiedCode === c.uniqueCode ? (
                                 <>
                                   <CheckCircle2 size={10} className="text-emerald-600 shrink-0" />
-                                  <span className="text-emerald-600 font-bold">Copied!</span>
+                                  <span className="text-emerald-600 font-bold">{t("copied", "Copied!")}</span>
                                 </>
                               ) : (
                                 <>
                                   <Copy size={10} className="shrink-0" />
-                                  <span>Code: {c.uniqueCode}</span>
+                                  <span>{t("code_prefix", "Code:")} {c.uniqueCode}</span>
                                 </>
                               )}
                             </button>
@@ -231,7 +255,7 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
                         </span>
                       ) : (
                         <span className="text-xs font-bold text-[#141779] bg-gray-100 px-3 py-1.5 rounded-full hover:bg-[#141779] hover:text-white transition-colors">
-                          Select
+                          {t("select", "Select")}
                         </span>
                       )}
                     </div>
@@ -246,7 +270,7 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
                     className="w-full py-3 sm:py-3.5 border-2 border-dashed border-indigo-200 rounded-2xl text-[#141779] font-bold text-xs sm:text-sm flex items-center justify-center gap-2 hover:bg-indigo-50/50 hover:border-[#141779] transition-all"
                   >
                     <Plus size={18} />
-                    <span>Add Second Child Profile</span>
+                    <span>{t("add_second_child_profile", "+ Add Second Child Profile")}</span>
                   </button>
                   
                   <button
@@ -254,7 +278,7 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
                     className="w-full py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-gray-100 transition-all"
                   >
                     <KeyRound size={14} className="text-[#141779]" />
-                    <span>Link existing child via Unique Code</span>
+                    <span>{t("link_existing_child_via_code", "Link existing child via Unique Code")}</span>
                   </button>
                 </div>
               )}
@@ -264,11 +288,11 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
             <form onSubmit={handleLinkByCode} className="space-y-4">
               <div className="bg-indigo-50/60 p-3 rounded-xl border border-indigo-100 text-xs font-semibold text-[#141779] flex items-center gap-2">
                 <KeyRound size={16} className="text-indigo-600 shrink-0" />
-                <span>Enter a 6-character Unique Child Code to link an existing child to this device.</span>
+                <span>{t("enter_unique_child_code_desc", "Enter a 6-character Unique Child Code to link an existing child to this device.")}</span>
               </div>
 
               <div>
-                <label className="block text-xs font-extrabold text-[#141779] uppercase tracking-wider mb-1">Unique Child Code</label>
+                <label className="block text-xs font-extrabold text-[#141779] uppercase tracking-wider mb-1">{t("unique_child_code_label", "Unique Child Code")}</label>
                 <input
                   type="text"
                   required
@@ -289,14 +313,14 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
                   onClick={() => setShowLinkForm(false)}
                   className="flex-1 h-11 text-xs sm:text-sm font-bold text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
                 >
-                  Cancel
+                  {t("cancel", "Cancel")}
                 </button>
                 <button
                   type="submit"
                   disabled={linking || !linkCode.trim()}
                   className="flex-1 h-11 bg-[#141779] text-white text-xs sm:text-sm font-bold rounded-xl disabled:opacity-50 hover:opacity-90 transition-opacity"
                 >
-                  {linking ? "Linking..." : "Link Child"}
+                  {linking ? t("linking", "Linking...") : t("link_child", "Link Child")}
                 </button>
               </div>
             </form>
@@ -305,11 +329,11 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
             <form onSubmit={handleAddChild} className="space-y-4">
               <div className="bg-indigo-50/60 p-3 rounded-xl border border-indigo-100 text-xs font-semibold text-[#141779] flex items-center gap-2">
                 <Sparkles size={16} className="text-indigo-600 shrink-0" />
-                <span>Add a second child to manage learning under 1 parent account.</span>
+                <span>{t("add_second_child_desc", "Add a second child to manage learning under 1 parent account.")}</span>
               </div>
 
               <div>
-                <label className="block text-xs font-extrabold text-[#141779] uppercase tracking-wider mb-1">Child's Name</label>
+                <label className="block text-xs font-extrabold text-[#141779] uppercase tracking-wider mb-1">{t("childs_name_label", "Child's Name")}</label>
                 <input
                   type="text"
                   required
@@ -321,23 +345,38 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-extrabold text-[#141779] uppercase tracking-wider mb-1">Grade / Class</label>
-                  <select
-                    value={newClass}
-                    onChange={(e) => setNewClass(e.target.value)}
-                    className="w-full px-3 h-12 rounded-xl border border-gray-200 font-semibold text-sm focus:outline-none focus:border-[#141779] bg-white"
+                <div className="relative">
+                  <label className="block text-xs font-extrabold text-[#141779] uppercase tracking-wider mb-1">{t("grade_class_label", "Grade / Class")}</label>
+                  <button
+                    type="button"
+                    onClick={() => setIsClassOpen(!isClassOpen)}
+                    className="w-full px-3 h-12 rounded-xl border border-gray-200 font-semibold text-sm focus:outline-none focus:border-[#141779] bg-white flex items-center justify-between text-left"
                   >
-                    <option value="Class 1">Class 1</option>
-                    <option value="Class 2">Class 2</option>
-                    <option value="Class 3">Class 3</option>
-                    <option value="Class 4">Class 4</option>
-                    <option value="Class 5">Class 5</option>
-                  </select>
+                    <span>{newClass}</span>
+                    <ChevronDown size={18} className="text-gray-400" />
+                  </button>
+                  {isClassOpen && (
+                    <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50">
+                      {classes.map((cls) => (
+                        <button
+                          key={cls}
+                          type="button"
+                          onClick={() => {
+                            setNewClass(cls);
+                            setIsClassOpen(false);
+                          }}
+                          className={`w-full px-4 py-2.5 text-left text-sm font-semibold hover:bg-indigo-50/60 transition-colors flex items-center justify-between ${newClass === cls ? 'text-indigo-600 bg-indigo-50/30' : 'text-gray-700'}`}
+                        >
+                          <span>{cls}</span>
+                          {newClass === cls && <Check size={14} className="text-indigo-600" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div>
-                  <label className="block text-xs font-extrabold text-[#141779] uppercase tracking-wider mb-1">Age (Years)</label>
+                  <label className="block text-xs font-extrabold text-[#141779] uppercase tracking-wider mb-1">{t("age_years_label", "Age (Years)")}</label>
                   <input
                     type="number"
                     min={3}
@@ -355,7 +394,7 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
                   onClick={() => setShowAddForm(false)}
                   className="flex-1 h-11 rounded-xl border border-gray-200 font-bold text-xs sm:text-sm text-gray-600 hover:bg-gray-50"
                 >
-                  Cancel
+                  {t("cancel", "Cancel")}
                 </button>
 
                 <button
@@ -363,7 +402,7 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
                   disabled={adding}
                   className="flex-1 h-11 rounded-xl bg-[#141779] text-white font-bold text-xs sm:text-sm shadow-md hover:bg-[#101362] flex items-center justify-center gap-2"
                 >
-                  {adding ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : "Save Child"}
+                  {adding ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : t("save_child", "Save Child")}
                 </button>
               </div>
             </form>

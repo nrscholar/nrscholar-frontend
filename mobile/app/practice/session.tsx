@@ -116,11 +116,13 @@ export default function SessionScreen() {
   const q = questions[currentQ];
   const qOptions = q?.interaction?.details?.options || q?.options || [];
   const qAnswer = q?.interaction?.details?.answer || q?.answer || "";
-  const qText = q?.interaction?.details?.question || q?.question || "";
+  const qTextRaw = q?.interaction?.details?.question || q?.question || "";
+  const qText = qTextRaw.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const sceneTitle = q?.title || "Mission";
   const interactionType = q?.interaction?.type;
   const isDragObjects = interactionType === "drag_objects";
   const isTextInput = !isDragObjects && qOptions.length === 0;
+  const isSmallOptions = qOptions.length > 0 && qOptions.every((opt: string) => String(opt).length <= 12);
 
   useEffect(() => {
     if (isDragObjects) {
@@ -143,14 +145,14 @@ export default function SessionScreen() {
     if (isTextInput && textAnswer.trim() === "") return;
     setShowFeedback(true);
     
-    const isAnsCorrect = isTextInput ? textAnswer.trim().toLowerCase() === String(qAnswer).trim().toLowerCase() : qOptions[selectedOption] === qAnswer;
+    const isAnsCorrect = selectedOption !== null ? qOptions[selectedOption] === qAnswer : textAnswer.trim().toLowerCase() === String(qAnswer).trim().toLowerCase();
     if (isAnsCorrect) {
       setTotalCorrect(prev => prev + 1);
     } else {
       setIncorrectTracker(prev => [...prev, {
         questionId: q._id,
         questionText: qText,
-        userAnswer: isTextInput ? textAnswer.trim() : qOptions[selectedOption],
+        userAnswer: selectedOption !== null ? qOptions[selectedOption] : textAnswer.trim(),
         correctAnswer: qAnswer
       }]);
     }
@@ -322,8 +324,9 @@ export default function SessionScreen() {
           tracker.map((t: any) => String(t.questionId))
         );
         const details = questions.map((qs) => {
-          const qTextLocal =
+          const qTextLocalRaw =
             qs.interaction?.details?.question || qs.question || "Practice Question";
+          const qTextLocal = qTextLocalRaw.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
           const isCorrectLocal = !correctSet.has(String(qs._id));
           return {
             questionText: qTextLocal,
@@ -475,10 +478,7 @@ export default function SessionScreen() {
         </View>
       </View>
 
-      <ScrollView 
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]}
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={styles.scrollContent}>
         {/* Question Card */}
         <View style={styles.questionCard}>
           <MaterialIcons name="rocket-launch" size={48} color={C.secondary} style={styles.questionIcon} />
@@ -607,32 +607,10 @@ export default function SessionScreen() {
               placeholderTextColor={C.onSurfaceVariant}
               editable={!showFeedback}
             />
-            {showFeedback && !isCorrect && (
-              <View style={{
-                backgroundColor: C.surfaceContainerLowest,
-                borderWidth: 2,
-                borderColor: C.onErrorContainer,
-                borderRadius: 12,
-                padding: 12,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.05,
-                shadowRadius: 5,
-                elevation: 1,
-              }}>
-                <MaterialIcons name="check" size={20} color={C.secondary} />
-                <Text style={{ color: C.onErrorContainer, fontWeight: "700", fontSize: 16 }}>
-                  Correct Answer: {qAnswer}
-                </Text>
-              </View>
-            )}
+
           </View>
         ) : (
-          <View style={styles.optionsGrid}>
+          <View style={[styles.optionsGrid, isSmallOptions && { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }]}>
             {qOptions.map((opt: string, idx: number) => {
               const isSelected = idx === selectedOption;
               const letter = String.fromCharCode(65 + idx); // A, B, C, D
@@ -641,22 +619,22 @@ export default function SessionScreen() {
               return (
                 <TouchableOpacity
                   key={idx}
-                  style={[styles.podBase, getPodStyle(idx)]}
+                  style={[styles.podBase, getPodStyle(idx), isSmallOptions && { width: '48.5%', paddingVertical: 10, paddingHorizontal: 12 }]}
                   activeOpacity={0.8}
                   onPress={() => handleOptionPress(idx)}
                   disabled={showFeedback}
                 >
-                  <View style={styles.podLeft}>
-                    <View style={[styles.letterCircle, getLetterStyle(idx)]}>
-                      <Text style={[styles.letterText, (isSelected || isThisCorrect) && { color: C.white }]}>{letter}</Text>
+                  <View style={[styles.podLeft, isSmallOptions && { gap: 8 }]}>
+                    <View style={[styles.letterCircle, getLetterStyle(idx), isSmallOptions && { width: 28, height: 28, borderRadius: 14 }]}>
+                      <Text style={[styles.letterText, (isSelected || isThisCorrect) && { color: C.white }, isSmallOptions && { fontSize: 12 }]}>{letter}</Text>
                     </View>
-                    <Text style={styles.podText}>{opt}</Text>
+                    <Text style={[styles.podText, isSmallOptions && { fontSize: 14 }]}>{opt}</Text>
                   </View>
                   
                   {/* Check Indicator */}
                   {(isSelected || isThisCorrect) && (
-                    <View style={[styles.checkIndicator, showFeedback && !isThisCorrect && { backgroundColor: C.onErrorContainer }]}>
-                      <MaterialIcons name={showFeedback && !isThisCorrect ? "close" : "check"} size={16} color={C.white} />
+                    <View style={[styles.checkIndicator, showFeedback && !isThisCorrect && { backgroundColor: C.onErrorContainer }, isSmallOptions && { width: 20, height: 20, borderRadius: 10 }]}>
+                      <MaterialIcons name={showFeedback && !isThisCorrect ? "close" : "check"} size={isSmallOptions ? 12 : 16} color={C.white} />
                     </View>
                   )}
                 </TouchableOpacity>
@@ -665,15 +643,7 @@ export default function SessionScreen() {
           </View>
         )}
 
-        {/* Feedback Message */}
-        {showFeedback && (
-          <View style={[styles.feedbackMsg, { backgroundColor: isCorrect ? C.tertiaryContainer : C.errorContainer }]}>
-            <Text style={[styles.feedbackMsgText, { color: isCorrect ? C.secondary : C.onErrorContainer }]}>
-              {isCorrect ? "Correct! Brilliant job! ⭐" : `Not quite! The correct answer is ${qAnswer} 💪`}
-            </Text>
-          </View>
-        )}
-      </ScrollView>
+      </View>
 
       {/* Footer Action */}
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 24) }]}>
@@ -777,6 +747,7 @@ function BossEntranceOverlay({ subjectName, onStartBattle }: { subjectName: stri
     bossIcon = "🦄";
   }
 
+
   // Animation values
   const scale = useSharedValue(0.3);
   const opacity = useSharedValue(0);
@@ -814,25 +785,6 @@ function BossEntranceOverlay({ subjectName, onStartBattle }: { subjectName: stri
         colors={["#0c0e3d", "#1c0d35", "#30007f"]}
         style={[styles.overlayContainer, { justifyContent: "center", alignItems: "center" }]}
       >
-        {/* Floating particles background */}
-        <View style={styles.particlesContainer}>
-          {Array.from({ length: 15 }).map((_, i) => (
-            <Text
-              key={i}
-              style={[
-                styles.particleText,
-                {
-                  left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 100}%`,
-                  fontSize: Math.random() * 20 + 20,
-                  opacity: 0.15,
-                },
-              ]}
-            >
-              {["+", "-", "×", "÷", "📚", "🚀", "💡", "⭐"][i % 8]}
-            </Text>
-          ))}
-        </View>
 
         <Reanimated.View style={[styles.bossEntranceCard, animatedStyle]}>
           <Text style={styles.alertText}>🚨 ALERT! BOSS APPROACHING! 🚨</Text>
@@ -959,16 +911,17 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {
+    flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 24,
-    gap: 32,
+    paddingTop: 16,
+    gap: 16,
   },
 
   // Question Card
   questionCard: {
     backgroundColor: C.glassBg,
     borderRadius: 16,
-    padding: 32,
+    padding: 20,
     borderWidth: 1.5,
     borderColor: C.glassBorder,
     alignItems: "center",
@@ -982,23 +935,23 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   questionText: {
-    fontSize: 26,
+    fontSize: 20,
     fontWeight: "700",
     color: C.primary,
     textAlign: "center",
-    lineHeight: 34,
+    lineHeight: 28,
   },
 
   // Choice Pods
   optionsGrid: {
-    gap: 16,
+    gap: 10,
   },
   podBase: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 24,
-    paddingVertical: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
     borderRadius: 16,
     backgroundColor: C.surfaceContainerLowest,
     borderWidth: 2,
@@ -1097,24 +1050,13 @@ const styles = StyleSheet.create({
     gap: 16,
   },
 
-  feedbackMsg: {
-    padding: 16,
-    borderRadius: 12,
-    marginTop: -8,
-  },
-  feedbackMsgText: {
-    fontSize: 14,
-    fontWeight: "700",
-    textAlign: "center",
-  },
 
   // Footer
   footer: {
-    position: "absolute",
-    bottom: 0,
     width: "100%",
     paddingHorizontal: 24,
-    paddingTop: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
     backgroundColor: "transparent",
   },
   actionBtn: {
