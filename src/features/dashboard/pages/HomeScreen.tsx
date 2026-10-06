@@ -472,7 +472,7 @@ export default function HomeScreen() {
         </div>
       </header>
 
-      <main className="px-5 pt-[78px] flex flex-col gap-4 relative z-10">
+      <main className="px-4 pt-[78px] flex flex-col gap-4 relative z-10">
         {/* 1. ADVENTURE HERO CARD */}
         {(() => {
           const effectiveTheme = (() => {

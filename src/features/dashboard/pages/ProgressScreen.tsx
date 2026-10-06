@@ -346,7 +346,7 @@ export default function ProgressScreen() {
         </div>
       </header>
 
-      <main className="px-5 pt-3.5 sm:pt-5 flex flex-col gap-4 relative z-10">
+      <main className="px-4 pt-3.5 sm:pt-5 flex flex-col gap-4 relative z-10">
         {/* 1. TOP XP HERO CARD */}
         <section className="bg-gradient-to-br from-[#17177F] via-[#141779] to-[#0D0E4C] rounded-[24px] p-4 sm:p-5 text-white shadow-[0_10px_35px_-8px_rgba(23,23,127,0.35)] relative overflow-hidden">
           <div className="w-48 h-48 rounded-full bg-white/5 blur-2xl absolute -right-6 -bottom-6 pointer-events-none" />

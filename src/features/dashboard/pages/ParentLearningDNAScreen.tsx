@@ -7,6 +7,23 @@ import {
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
 
+// Helper to render dynamic Lucide icons returned by backend API
+const renderIcon = (iconName: string, size = 18, className = "") => {
+  switch (iconName) {
+    case "Trophy": return <Trophy size={size} className={className} />;
+    case "Heart": return <Heart size={size} className={className} />;
+    case "Sparkles": return <Sparkles size={size} className={className} />;
+    case "BookOpen": return <BookOpen size={size} className={className} />;
+    case "Flame": return <Flame size={size} className={className} />;
+    case "Compass": return <Compass size={size} className={className} />;
+    case "Zap": return <Zap size={size} className={className} />;
+    case "Activity": return <Activity size={size} className={className} />;
+    case "Target": return <Target size={size} className={className} />;
+    case "BrainCircuit": return <BrainCircuit size={size} className={className} />;
+    default: return <Sparkles size={size} className={className} />;
+  }
+};
+
 export default function ParentLearningDNAScreen() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -74,43 +91,47 @@ export default function ParentLearningDNAScreen() {
   // Derive dynamic properties from data
   const hasData = dnaData?.hasData !== false;
   
-  // Resolve modal percentages — 0 when no real data from API
+  // Resolve modal percentages
   const visualPct = dnaData?.visualPercentage ?? 0;
   const kinestheticPct = dnaData?.kinestheticPercentage ?? 0;
   const readingPct = dnaData?.readingPercentage ?? 0;
 
-  // Resolve dominant learning style name and badge
+  // Resolve dominant learning style name and badge dynamically
   const dominantProfile = dnaData?.dominantProfile || "";
-  let learnerIdentity = "Visual Explorer";
-  let identityBadge = "";
+  let learnerIdentity = dnaData?.learnerIdentity || "Visual Explorer";
+  let identityBadge = dnaData?.identityBadge || "";
   
-  if (dominantProfile.toLowerCase().includes("kinesthetic")) {
-    learnerIdentity = "Hands-on Builder";
-    identityBadge = kinestheticPct > 0 ? `Top ${100 - kinestheticPct}% Kinesthetic Learner` : "Kinesthetic Learner";
-  } else if (dominantProfile.toLowerCase().includes("reading") || dominantProfile.toLowerCase().includes("write")) {
-    learnerIdentity = "Creative Thinker";
-    identityBadge = readingPct > 0 ? `Top ${100 - readingPct}% Focused Reader` : "Reading & Writing Learner";
-  } else if (dominantProfile) {
-    identityBadge = visualPct > 0 ? `Top ${100 - visualPct}% Visual Learner` : "Visual-Spatial Learner";
-  } else {
-    identityBadge = "Learning Profile";
+  if (!identityBadge) {
+    if (dominantProfile.toLowerCase().includes("kinesthetic")) {
+      learnerIdentity = "Hands-on Builder";
+      identityBadge = kinestheticPct > 0 ? `Top ${Math.max(5, 100 - kinestheticPct)}% Kinesthetic Learner` : "Kinesthetic Learner";
+    } else if (dominantProfile.toLowerCase().includes("reading") || dominantProfile.toLowerCase().includes("write")) {
+      learnerIdentity = "Creative Thinker";
+      identityBadge = readingPct > 0 ? `Top ${Math.max(5, 100 - readingPct)}% Focused Reader` : "Reading & Writing Learner";
+    } else if (dominantProfile) {
+      identityBadge = visualPct > 0 ? `Top ${Math.max(5, 100 - visualPct)}% Visual Learner` : "Visual-Spatial Learner";
+    } else {
+      identityBadge = "Learning Profile";
+    }
   }
 
-  // Resolve learning power metrics — 0 when no real data
+  // Resolve learning power metrics
   const focusVal = dnaData?.metrics?.focus ?? 0;
   const confidenceVal = dnaData?.metrics?.confidence ?? 0;
   const consistencyVal = dnaData?.metrics?.motivation ?? 0;
 
-  // Resolve growth mindset metrics — 0 when no real data
+  // Resolve growth mindset metrics
   const curiosityVal = dnaData?.metrics?.curiosity ?? 0;
   const resilienceVal = dnaData?.metrics?.resilience ?? 0;
   const creativityVal = dnaData?.metrics?.learningSpeed ?? 0;
 
-  // AI recommendations — no hardcoded fallback tip
+  // AI recommendations
   const firstTip = dnaData?.tips?.[0] || null;
 
-  // Resolve dynamic activities based on dominant profile
-  const activities = dominantProfile.toLowerCase().includes("kinesthetic") 
+  // Dynamic activities based on backend telemetry
+  const activities = Array.isArray(dnaData?.activities) && dnaData.activities.length > 0
+    ? dnaData.activities
+    : dominantProfile.toLowerCase().includes("kinesthetic") 
     ? [
         { name: "Build It", icon: Trophy, desc: "Solve quizzes containing spatial drag-and-drop actions.", stars: 5 },
         { name: "Practice Together", icon: Heart, desc: "Run a multiplayer quiz and compete in teams.", stars: 5 },
@@ -209,26 +230,26 @@ export default function ParentLearningDNAScreen() {
   };
 
   const translateActivityName = (name: string) => {
-    if (name === "Build It") return t("act_build_it", "Build It");
-    if (name === "Practice Together") return t("act_practice_together", "Practice Together");
-    if (name === "Draw It") return t("act_draw_it", "Draw It");
-    if (name === "Watch It") return t("act_watch_it", "Watch It");
+    if (name === "Build It" || name.includes("Build")) return t("act_build_it", name);
+    if (name === "Practice Together" || name.includes("Team")) return t("act_practice_together", name);
+    if (name === "Draw It" || name.includes("Sketch")) return t("act_draw_it", name);
+    if (name === "Watch It" || name.includes("Videos")) return t("act_watch_it", name);
     return t(name, name);
   };
 
   const translateActivityDesc = (desc: string) => {
-    if (desc.includes("spatial drag-and-drop actions")) return t("desc_act_build_it_spatial", "Solve quizzes containing spatial drag-and-drop actions.");
-    if (desc.includes("multiplayer quiz and compete")) return t("desc_act_practice_multiplayer", "Run a multiplayer quiz and compete in teams.");
-    if (desc.includes("shapes and concepts")) return t("desc_act_draw_math", "Draw shapes and concepts to explain math puzzles.");
-    if (desc.includes("concept video cards")) return t("desc_act_watch_roadmap", "Watch concept video cards on the roadmap.");
-    if (desc.includes("word problems aloud")) return t("desc_act_practice_aloud", "Collaboratively read word problems aloud.");
-    if (desc.includes("reader summaries")) return t("desc_act_watch_summaries", "Read chapter reader summaries on the dashboard.");
-    if (desc.includes("diagrams associated")) return t("desc_act_draw_text", "Draw diagrams associated with text descriptions.");
-    if (desc.includes("word sorting games")) return t("desc_act_build_sorting", "Solve vocabulary word sorting games.");
-    if (desc.includes("concepts and models")) return t("desc_act_draw_models", "Draw concepts and models to process questions.");
-    if (desc.includes("animations of math")) return t("desc_act_watch_animations", "Watch active animations of math and science.");
-    if (desc.includes("block puzzles")) return t("desc_act_build_blocks", "Construct spatial block puzzles in practice games.");
-    if (desc.includes("flashcard visual drills")) return t("desc_act_practice_flashcards", "Run flashcard visual drills together.");
+    if (desc.includes("spatial drag-and-drop actions")) return t("desc_act_build_it_spatial", desc);
+    if (desc.includes("multiplayer quiz and compete")) return t("desc_act_practice_multiplayer", desc);
+    if (desc.includes("shapes and concepts")) return t("desc_act_draw_math", desc);
+    if (desc.includes("concept video cards")) return t("desc_act_watch_roadmap", desc);
+    if (desc.includes("word problems aloud")) return t("desc_act_practice_aloud", desc);
+    if (desc.includes("reader summaries")) return t("desc_act_watch_summaries", desc);
+    if (desc.includes("diagrams associated")) return t("desc_act_draw_text", desc);
+    if (desc.includes("word sorting games")) return t("desc_act_build_sorting", desc);
+    if (desc.includes("concepts and models")) return t("desc_act_draw_models", desc);
+    if (desc.includes("animations of math")) return t("desc_act_watch_animations", desc);
+    if (desc.includes("block puzzles")) return t("desc_act_build_blocks", desc);
+    if (desc.includes("flashcard visual drills")) return t("desc_act_practice_flashcards", desc);
     return t(desc, desc);
   };
 
@@ -267,10 +288,14 @@ export default function ParentLearningDNAScreen() {
           <img 
             alt="User Profile" 
             className="w-full h-full object-cover"
-            src={profilePic || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=141779&color=fff`}
+            src={dnaData?.childPhoto || profilePic || `https://ui-avatars.com/api/?name=${encodeURIComponent(dnaData?.childName || username)}&background=141779&color=fff`}
           />
         </div>
-        <h1 className="text-xl font-extrabold text-[#141779]">{t("learning_dna", "Learning DNA")}</h1>
+        <h1 className="text-xl font-extrabold text-[#141779] truncate">
+          {dnaData?.childName
+            ? t("child_learning_dna", { name: dnaData.childName, defaultValue: `${dnaData.childName}'s Learning DNA` })
+            : t("learning_dna", "Learning DNA")}
+        </h1>
       </header>
 
       {!hasData ? (
@@ -327,11 +352,11 @@ export default function ParentLearningDNAScreen() {
             </div>
 
             <span className="bg-[#e9e8ff] text-[#4d40b3] text-[11px] font-extrabold tracking-wider px-3 py-1 rounded-full mb-1 border border-[#4d40b3]/10">
-              {translateIdentityBadge(identityBadge)}
+              {translateIdentityBadge(dnaData?.identityBadge || identityBadge)}
             </span>
-            <h2 className="text-2xl font-black text-[#141779] mb-3">{translateLearnerIdentity(learnerIdentity)}</h2>
+            <h2 className="text-2xl font-black text-[#141779] mb-3">{translateLearnerIdentity(dnaData?.learnerIdentity || learnerIdentity)}</h2>
             <p className="text-[14px] text-[#555562] leading-relaxed max-w-[340px]">
-              {translateDnaDescription(dnaData?.description || "Processes spatial concepts dynamically, resolving math and science models through interactive games rather than plain text descriptions.")}
+              {translateDnaDescription(dnaData?.description || "")}
             </p>
           </div>
 
@@ -483,12 +508,11 @@ export default function ParentLearningDNAScreen() {
           <div>
             <h3 className="text-sm font-extrabold text-[#7c7d8a] tracking-wider uppercase mb-3 px-1">{t("recommended_activities", "RECOMMENDED ACTIVITIES")}</h3>
             <div className="grid grid-cols-2 gap-3">
-              {activities.slice(0, 4).map((act, index) => {
-                const ActIcon = act.icon;
+              {activities.slice(0, 4).map((act: any, index: number) => {
                 return (
                   <div key={index} className="bg-white border border-gray-100 rounded-[22px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.01)] flex flex-col gap-2">
                     <div className="w-8 h-8 rounded-xl bg-[#e3eafc] text-[#2f61d5] flex items-center justify-center shrink-0 mb-0.5">
-                      <ActIcon size={16} />
+                      {typeof act.icon === "string" ? renderIcon(act.icon, 16, "text-[#2f61d5]") : <act.icon size={16} />}
                     </div>
                     <h4 className="text-[14px] font-black text-[#1e1e24]">{translateActivityName(act.name)}</h4>
                     <p className="text-[10px] text-[#7c7d8a] leading-normal font-medium grow">
@@ -499,8 +523,8 @@ export default function ParentLearningDNAScreen() {
                         <Star 
                           key={i} 
                           size={10} 
-                          fill={i < act.stars ? "#ffb300" : "none"} 
-                          stroke={i < act.stars ? "none" : "#ffb300"} 
+                          fill={i < (act.stars || 4) ? "#ffb300" : "none"} 
+                          stroke={i < (act.stars || 4) ? "none" : "#ffb300"} 
                         />
                       ))}
                     </div>
@@ -520,51 +544,65 @@ export default function ParentLearningDNAScreen() {
               </div>
             ) : null}
             <div className="grid grid-cols-2 gap-4">
-              
-              {/* Focus Master */}
-              <div className={`border rounded-[22px] p-4 text-center flex flex-col items-center gap-1.5 transition-all ${
-                focusVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5
-                  ? "bg-[#e8e9fc] border-[#141779]/20 opacity-100" 
-                  : "bg-gray-50/50 border-dashed border-gray-200 opacity-50"
-              }`}>
-                <Trophy size={20} className={focusVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? "text-[#141779]" : "text-gray-400"} />
-                <h4 className="text-[13px] font-extrabold text-[#191c1e]">{t("badge_focus_master", "Focus Master")}</h4>
-                <span className="text-[9px] font-bold text-[#7c7d8a]">{focusVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? t("unlocked", "Unlocked") : t("locked", "Locked")}</span>
-              </div>
+              {dnaData?.badges && Array.isArray(dnaData.badges) ? (
+                dnaData.badges.map((b: any) => (
+                  <div key={b.id} className={`border rounded-[22px] p-4 text-center flex flex-col items-center gap-1.5 transition-all ${
+                    b.unlocked
+                      ? "bg-[#e8e9fc] border-[#141779]/20 opacity-100 shadow-2xs" 
+                      : "bg-gray-50/50 border-dashed border-gray-200 opacity-50"
+                  }`}>
+                    {renderIcon(b.icon, 20, b.unlocked ? "text-[#141779]" : "text-gray-400")}
+                    <h4 className="text-[13px] font-extrabold text-[#191c1e]">{t(b.name.toLowerCase().replace(/ /g, "_"), { defaultValue: String(b.name) })}</h4>
+                    <span className="text-[9px] font-bold text-[#7c7d8a]">{b.unlocked ? t("unlocked", "Unlocked") : (b.progressText ? String(b.progressText) : t("locked", "Locked"))}</span>
+                  </div>
+                ))
+              ) : (
+                <>
+                  {/* Fallback grid items */}
+                  <div className={`border rounded-[22px] p-4 text-center flex flex-col items-center gap-1.5 transition-all ${
+                    focusVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5
+                      ? "bg-[#e8e9fc] border-[#141779]/20 opacity-100" 
+                      : "bg-gray-50/50 border-dashed border-gray-200 opacity-50"
+                  }`}>
+                    <Trophy size={20} className={focusVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? "text-[#141779]" : "text-gray-400"} />
+                    <h4 className="text-[13px] font-extrabold text-[#191c1e]">{t("badge_focus_master", "Focus Master")}</h4>
+                    <span className="text-[9px] font-bold text-[#7c7d8a]">{focusVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? t("unlocked", "Unlocked") : t("locked", "Locked")}</span>
+                  </div>
 
-              {/* 7-Day Streak */}
-              <div className={`border rounded-[22px] p-4 text-center flex flex-col items-center gap-1.5 transition-all ${
-                consistencyVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5
-                  ? "bg-[#fff3d6] border-[#b07b00]/20 opacity-100" 
-                  : "bg-gray-50/50 border-dashed border-gray-200 opacity-50"
-              }`}>
-                <Flame size={20} className={consistencyVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? "text-[#b07b00]" : "text-gray-400"} />
-                <h4 className="text-[13px] font-extrabold text-[#191c1e]">{t("badge_7day_streak", "7-Day Streak")}</h4>
-                <span className="text-[9px] font-bold text-[#7c7d8a]">{consistencyVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? t("unlocked", "Unlocked") : t("locked", "Locked")}</span>
-              </div>
+                  {/* 7-Day Streak */}
+                  <div className={`border rounded-[22px] p-4 text-center flex flex-col items-center gap-1.5 transition-all ${
+                    consistencyVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5
+                      ? "bg-[#fff3d6] border-[#b07b00]/20 opacity-100" 
+                      : "bg-gray-50/50 border-dashed border-gray-200 opacity-50"
+                  }`}>
+                    <Flame size={20} className={consistencyVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? "text-[#b07b00]" : "text-gray-400"} />
+                    <h4 className="text-[13px] font-extrabold text-[#191c1e]">{t("badge_7day_streak", "7-Day Streak")}</h4>
+                    <span className="text-[9px] font-bold text-[#7c7d8a]">{consistencyVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? t("unlocked", "Unlocked") : t("locked", "Locked")}</span>
+                  </div>
 
-              {/* Curious Mind */}
-              <div className={`border rounded-[22px] p-4 text-center flex flex-col items-center gap-1.5 transition-all ${
-                curiosityVal >= 65 && (dnaData?.totalAttempts ?? 0) >= 5
-                  ? "bg-[#dcf5f2] border-[#008272]/20 opacity-100" 
-                  : "bg-gray-50/50 border-dashed border-gray-200 opacity-50"
-              }`}>
-                <Compass size={20} className={curiosityVal >= 65 && (dnaData?.totalAttempts ?? 0) >= 5 ? "text-[#008272]" : "text-gray-400"} />
-                <h4 className="text-[13px] font-extrabold text-[#191c1e]">{t("badge_curious_mind", "Curious Mind")}</h4>
-                <span className="text-[9px] font-bold text-[#7c7d8a]">{curiosityVal >= 65 && (dnaData?.totalAttempts ?? 0) >= 5 ? t("unlocked", "Unlocked") : t("locked", "Locked")}</span>
-              </div>
+                  {/* Curious Mind */}
+                  <div className={`border rounded-[22px] p-4 text-center flex flex-col items-center gap-1.5 transition-all ${
+                    curiosityVal >= 65 && (dnaData?.totalAttempts ?? 0) >= 5
+                      ? "bg-[#dcf5f2] border-[#008272]/20 opacity-100" 
+                      : "bg-gray-50/50 border-dashed border-gray-200 opacity-50"
+                  }`}>
+                    <Compass size={20} className={curiosityVal >= 65 && (dnaData?.totalAttempts ?? 0) >= 5 ? "text-[#008272]" : "text-gray-400"} />
+                    <h4 className="text-[13px] font-extrabold text-[#191c1e]">{t("badge_curious_mind", "Curious Mind")}</h4>
+                    <span className="text-[9px] font-bold text-[#7c7d8a]">{curiosityVal >= 65 && (dnaData?.totalAttempts ?? 0) >= 5 ? t("unlocked", "Unlocked") : t("locked", "Locked")}</span>
+                  </div>
 
-              {/* Fast Learner */}
-              <div className={`border rounded-[22px] p-4 text-center flex flex-col items-center gap-1.5 transition-all ${
-                creativityVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5
-                  ? "bg-[#dcf2e6] border-[#1a874b]/20 opacity-100" 
-                  : "bg-gray-50/50 border-dashed border-gray-200 opacity-50"
-              }`}>
-                <Zap size={20} className={creativityVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? "text-[#1a874b]" : "text-gray-400"} />
-                <h4 className="text-[13px] font-extrabold text-[#191c1e]">{t("badge_fast_learner", "Fast Learner")}</h4>
-                <span className="text-[9px] font-bold text-[#7c7d8a]">{creativityVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? t("unlocked", "Unlocked") : t("locked", "Locked")}</span>
-              </div>
-
+                  {/* Fast Learner */}
+                  <div className={`border rounded-[22px] p-4 text-center flex flex-col items-center gap-1.5 transition-all ${
+                    creativityVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5
+                      ? "bg-[#dcf2e6] border-[#1a874b]/20 opacity-100" 
+                      : "bg-gray-50/50 border-dashed border-gray-200 opacity-50"
+                  }`}>
+                    <Zap size={20} className={creativityVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? "text-[#1a874b]" : "text-gray-400"} />
+                    <h4 className="text-[13px] font-extrabold text-[#191c1e]">{t("badge_fast_learner", "Fast Learner")}</h4>
+                    <span className="text-[9px] font-bold text-[#7c7d8a]">{creativityVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? t("unlocked", "Unlocked") : t("locked", "Locked")}</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
