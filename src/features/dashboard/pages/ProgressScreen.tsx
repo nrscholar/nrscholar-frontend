@@ -4,6 +4,7 @@ import { ArrowLeft, Award, Flame, Bell, Rocket, Atom, ShieldCheck, Zap, Trophy, 
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
+import StreakModal from "../../../components/StreakModal";
 
 // Math-aligned level thresholds matching backend:
 // Level 1: 0 XP
@@ -41,6 +42,7 @@ export default function ProgressScreen() {
   const [streakDays, setStreakDays] = useState(0);
   const [xp, setXp] = useState(0);
   const [coins, setCoins] = useState(0);
+  const [showStreakModal, setShowStreakModal] = useState(false);
   const [userData, setUserData] = useState<any>(null);
   const [username, setUsername] = useState("Explorer");
   const [userPhoto, setUserPhoto] = useState("");
@@ -321,7 +323,7 @@ export default function ProgressScreen() {
         {/* Currency & Streak Stats */}
         <div className="flex items-center gap-1.5 shrink-0">
           <button
-            onClick={() => navigate("/home")}
+            onClick={() => setShowStreakModal(true)}
             className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
           >
             <span className="text-[11px] font-black text-[#ea580c] leading-none">🔥 {streakDays || 0}</span>
@@ -408,7 +410,10 @@ export default function ProgressScreen() {
             </div>
           </div>
 
-          <div className="bg-white rounded-[16px] sm:rounded-[20px] p-2.5 sm:p-4 text-center shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-[#E0E3E5]/60 flex flex-col items-center justify-center gap-1.5 sm:gap-2 hover:shadow-[0_8px_25px_rgba(0,0,0,0.06)] transition-all overflow-hidden">
+          <div 
+            onClick={() => setShowStreakModal(true)}
+            className="bg-white rounded-[16px] sm:rounded-[20px] p-2.5 sm:p-4 text-center shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-[#E0E3E5]/60 flex flex-col items-center justify-center gap-1.5 sm:gap-2 hover:shadow-[0_8px_25px_rgba(0,0,0,0.06)] transition-all overflow-hidden cursor-pointer active:scale-95"
+          >
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#FFC83D]/20 flex items-center justify-center text-[#D97706] shadow-2xs shrink-0">
               <Flame size={16} className="fill-[#D97706]" />
             </div>
@@ -809,6 +814,12 @@ export default function ProgressScreen() {
           </div>
         </section>
       </main>
+
+      <StreakModal
+        isOpen={showStreakModal}
+        onClose={() => setShowStreakModal(false)}
+        streakDays={streakDays}
+      />
     </div>
   );
 }

@@ -29,7 +29,20 @@ export default function ParentDashboardScreen() {
   const [todayConfidenceScore, setTodayConfidenceScore] = useState(0);
 
   const [weeklyTrend, setWeeklyTrend] = useState<{ day: string, score: number }[]>([]);
-  const [subjectBreakdown, setSubjectBreakdown] = useState<{ subject: string, accuracy: number }[]>([]);
+  const [subjectBreakdown, setSubjectBreakdown] = useState<{
+    subject: string;
+    accuracy: number;
+    chaptersCompleted?: number;
+    totalChapters?: number;
+    progress?: number;
+    correctAnswers?: number;
+    wrongAnswers?: number;
+    bossSuccessRate?: number;
+    monthImprovement?: number | null;
+    prevMonthAccuracy?: number | null;
+    currentMonthAccuracy?: number | null;
+    timeline?: any[];
+  }[]>([]);
   const [lastActivity, setLastActivity] = useState<string>("Exploring new quests...");
   const [lastActivityDetails, setLastActivityDetails] = useState<any>(null);
   const [top3SubjectsTrend, setTop3SubjectsTrend] = useState<any[]>([]);
@@ -268,6 +281,9 @@ export default function ParentDashboardScreen() {
       .replace(/needs attention with (\d+)% accuracy/g, (_, acc) =>
         t("insight_needs_attention", { acc, defaultValue: `${acc}% ચોકસાઈ સાથે વધુ ધ્યાન આપવાની જરૂર છે.` })
       )
+      .replace(/needs improvement with (\d+)% accuracy/g, (_, acc) =>
+        t("insight_needs_improvement", { acc, defaultValue: `${acc}% ચોકસાઈ સાથે સુધારાની જરૂર છે.` })
+      )
       .replace(/is maintaining good scores across all subjects/g,
         t("insight_maintaining_good", "તમામ વિષયોમાં સારું પ્રદર્શન જાળવી રહ્યું છે.")
       )
@@ -302,14 +318,25 @@ export default function ParentDashboardScreen() {
     lowestAcc = sorted[sorted.length - 1].accuracy;
   }
 
+  const maxAccuracy = subjectBreakdown.length > 0 ? Math.max(...subjectBreakdown.map(s => s.accuracy)) : 0;
+  const actualStrengthSubjects = subjectBreakdown.filter(s => s.accuracy === maxAccuracy && s.accuracy >= 60);
+  const actualWeakSubjects = subjectBreakdown.filter(s => s.accuracy >= 60 && s.accuracy < maxAccuracy);
+  const actualRiskSubjects = subjectBreakdown.filter(s => s.accuracy < 60);
+
   const cleanChildName = (!childName || childName === "999" || /^\d+$/.test(childName)) ? "your child" : childName;
   const activeTrend = modalType === "risks" ? riskTrend : undefined;
-  const targetAcc = modalType === "strengths" ? (highestAcc ?? undefined) : modalType === "weaknesses" ? (lowestAcc ?? undefined) : undefined;
+  const targetAcc = modalType === "strengths"
+    ? (maxAccuracy || undefined)
+    : modalType === "weaknesses"
+    ? (actualWeakSubjects.length > 0 ? Math.min(...actualWeakSubjects.map(s => s.accuracy)) : (lowestAcc ?? undefined))
+    : modalType === "risks"
+    ? (actualRiskSubjects.length > 0 ? Math.min(...actualRiskSubjects.map(s => s.accuracy)) : (lowestAcc ?? undefined))
+    : undefined;
   const translatedHighest = highestSubject ? translateSubjectName(highestSubject) : "";
   const translatedLowest = lowestSubject ? translateSubjectName(lowestSubject) : "";
 
   const chartTitle = modalType === "strengths"
-    ? (translatedHighest ? `${translatedHighest} ${t("trend", "Trend")}` : t("top_subject_trend", "Top Subject Trend"))
+    ? (actualStrengthSubjects.length > 0 ? `${actualStrengthSubjects.map(s => translateSubjectName(s.subject)).join(" & ")} ${t("trend", "Trend")}` : (translatedHighest ? `${translatedHighest} ${t("trend", "Trend")}` : t("top_subject_trend", "Top Subject Trend")))
     : modalType === "weaknesses"
     ? (translatedLowest ? `${translatedLowest} ${t("focus_trend", "Focus Trend")}` : t("focus_area_trend", "Focus Area Trend"))
     : modalType === "risks"
@@ -607,17 +634,23 @@ export default function ParentDashboardScreen() {
                   </div>
                   <ChevronRight size={18} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
                 </div>
-                {!hasEnoughData || strengths.length === 0 || strengths[0] === "No strength for now." || strengths[0]?.includes("Not enough Data") ? (
+                {subjectBreakdown.length === 0 ? (
                   <span className="inline-block text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full mt-1">
                     {t('not_enough_data_for_now', 'Not enough data for now')}
                   </span>
+                ) : actualStrengthSubjects.length === 0 ? (
+                  <span className="inline-block text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full mt-1">
+                    {t('no_strengths_yet', 'No strength for now.')}
+                  </span>
                 ) : (
-                  <div className="space-y-1 mt-1">
-                    {strengths.slice(0, 2).map((s: string, i: number) => (
-                      <p key={i} className="text-xs text-slate-700 font-bold line-clamp-1 flex items-center gap-1">
-                        <CheckCircle size={12} className="text-green-600 shrink-0" />
-                        <span>{translateInsightText(s)}</span>
-                      </p>
+                  <div className="space-y-1.5 mt-1">
+                    {actualStrengthSubjects.map((ss, i) => (
+                      <div key={i} className="flex items-start gap-1.5 text-xs font-bold text-[#006a62]">
+                        <CheckCircle size={13} className="text-[#006a62] shrink-0 mt-0.5" />
+                        <span className="leading-snug">
+                          {translateSubjectName(ss.subject)} is currently high performing with {ss.accuracy}% accuracy.
+                        </span>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -638,21 +671,24 @@ export default function ParentDashboardScreen() {
                   </div>
                   <ChevronRight size={18} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
                 </div>
-                {!hasEnoughData || weaknesses.length === 0 || weaknesses[0] === "No weakness for now." || weaknesses[0]?.includes("Not enough Data") ? (
+                {subjectBreakdown.length === 0 ? (
                   <span className="inline-block text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full mt-1">
                     {t('not_enough_data_for_now', 'Not enough data for now')}
                   </span>
+                ) : actualWeakSubjects.length === 0 ? (
+                  <span className="inline-block text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full mt-1 border border-emerald-100">
+                    {t('all_subjects_top_level', 'All subjects at top level 🎉')}
+                  </span>
                 ) : (
-                  <div className="space-y-1 mt-1">
-                    {weaknesses.slice(0, 2).map((w: string, i: number) => {
-                      const isRecovery = w.includes("right track") || w.includes("recovered") || w.includes("improved");
-                      return (
-                        <p key={i} className={`text-xs font-bold line-clamp-1 flex items-center gap-1 ${isRecovery ? 'text-emerald-700' : 'text-amber-800'}`}>
-                          <AlertTriangle size={12} className={`${isRecovery ? 'text-emerald-600' : 'text-amber-600'} shrink-0`} />
-                          <span>{translateInsightText(w)}</span>
-                        </p>
-                      );
-                    })}
+                  <div className="space-y-1.5 mt-1">
+                    {actualWeakSubjects.map((ws, i) => (
+                      <div key={i} className="flex items-start gap-1.5 text-xs font-bold text-[#ba1a1a]">
+                        <AlertTriangle size={13} className="text-[#ba1a1a] shrink-0 mt-0.5" />
+                        <span className="leading-snug">
+                          {translateSubjectName(ws.subject)} needs improvement with {ws.accuracy}% accuracy.
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -672,17 +708,23 @@ export default function ParentDashboardScreen() {
                   </div>
                   <ChevronRight size={18} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
                 </div>
-                {!hasEnoughData || risks.length === 0 || risks[0] === "No risk for now." || risks[0]?.includes("Not enough Data") ? (
+                {subjectBreakdown.length === 0 ? (
                   <span className="inline-block text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full mt-1">
                     {t('not_enough_data_for_now', 'Not enough data for now')}
                   </span>
+                ) : actualRiskSubjects.length === 0 ? (
+                  <span className="inline-block text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full mt-1 border border-emerald-100">
+                    {t('no_risk_alerts_badge', '✅ No Risk Alerts')}
+                  </span>
                 ) : (
-                  <div className="space-y-1 mt-1">
-                    {risks.slice(0, 2).map((r: string, i: number) => (
-                      <p key={i} className="text-xs text-rose-800 font-bold line-clamp-1 flex items-center gap-1">
-                        <AlertTriangle size={12} className="text-rose-600 shrink-0" />
-                        <span>{translateInsightText(r)}</span>
-                      </p>
+                  <div className="space-y-1.5 mt-1">
+                    {actualRiskSubjects.map((rs, i) => (
+                      <div key={i} className="flex items-start gap-1.5 text-xs font-bold text-rose-800">
+                        <AlertTriangle size={13} className="text-rose-600 shrink-0 mt-0.5" />
+                        <span className="leading-snug">
+                          {translateSubjectName(rs.subject)} needs attention with {rs.accuracy}% accuracy.
+                        </span>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -949,20 +991,39 @@ export default function ParentDashboardScreen() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-5 space-y-4">
-              {!hasEnoughData ? (
+              {subjectBreakdown.length === 0 && !hasEnoughData ? (
                 <div className="flex flex-col items-center justify-center p-8 bg-slate-50 border border-slate-200/80 rounded-2xl text-center my-4">
                   <span className="text-4xl mb-2">📊</span>
                   <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">{t("not_enough_data_for_now", "Not Enough Data For Now")}</h4>
                   <p className="text-xs text-slate-500 font-bold mt-2 leading-relaxed">
-                    {t("not_enough_data_desc", "Complete 2 to 3 chapters to unlock personalized cognitive strengths, weakness analysis, and 7-day trend graphs!")}
+                    {t("not_enough_data_desc", "Complete quizzes or tests to unlock personalized cognitive strengths, weakness analysis, and 7-day trend graphs!")}
                   </p>
                 </div>
-              ) : modalType === "risks" && (!hasRiskAlert || risks[0] === "No risk for now.") ? (
+              ) : modalType === "risks" && actualRiskSubjects.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-8 bg-emerald-50 border border-emerald-200 rounded-2xl text-center my-4">
                   <span className="text-4xl mb-2">✅</span>
                   <h4 className="text-sm font-black text-emerald-900 uppercase tracking-wider">{t("no_risk_alerts", "No Risk Alerts")}</h4>
                   <p className="text-xs text-emerald-700 font-bold mt-2 leading-relaxed">
                     {t("no_risk_alerts_desc", { name: cleanChildName, defaultValue: `All clear! ${cleanChildName} is performing consistently with scores above 60% across all subjects.` })}
+                  </p>
+                </div>
+              ) : modalType === "weaknesses" && actualWeakSubjects.length === 0 ? (
+                <div className="flex flex-col items-center justify-center p-8 bg-emerald-50 border border-emerald-200 rounded-2xl text-center my-4">
+                  <span className="text-4xl mb-2">🎉</span>
+                  <h4 className="text-sm font-black text-emerald-900 uppercase tracking-wider">{t("no_weaknesses_title", "No Weaknesses Detected")}</h4>
+                  <p className="text-xs text-emerald-700 font-bold mt-2 leading-relaxed">
+                    {t("fantastic_no_subjects_below_top", {
+                      name: cleanChildName,
+                      defaultValue: `Great job! ${cleanChildName} has all active subjects performing at the top level.`
+                    })}
+                  </p>
+                </div>
+              ) : modalType === "strengths" && actualStrengthSubjects.length === 0 ? (
+                <div className="flex flex-col items-center justify-center p-8 bg-slate-50 border border-slate-200 rounded-2xl text-center my-4">
+                  <span className="text-4xl mb-2">💪</span>
+                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">{t("no_strengths_title", "No Strengths Yet")}</h4>
+                  <p className="text-xs text-slate-500 font-bold mt-2 leading-relaxed">
+                    {t("keep_playing_build_strengths", "Keep playing to build up strong subjects above 60%!")}
                   </p>
                 </div>
               ) : (
@@ -985,7 +1046,7 @@ export default function ParentDashboardScreen() {
                     </div>
 
                     {/* Custom SVG Line Graph */}
-                    <div className="relative w-full h-[160px] mt-6">
+                    <div className="w-full mt-5">
                       {chart.points.length === 0 ? (
                         <div className="w-full h-[120px] bg-gray-50 border border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-center p-4">
                           <Activity size={24} className="text-gray-400 mb-2 animate-pulse" />
@@ -993,144 +1054,295 @@ export default function ParentDashboardScreen() {
                           <p className="text-[10px] text-gray-400 mt-1">{t("no_performance_data_yet", "No performance data recorded for this week yet.")}</p>
                         </div>
                       ) : (
-                        <>
-                          <svg viewBox="0 0 300 120" className="w-full h-full overflow-visible">
-                            <defs>
-                              <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor={chartColor} stopOpacity="0.4" />
-                                <stop offset="100%" stopColor={chartColor} stopOpacity="0" />
-                              </linearGradient>
-                            </defs>
+                        <div className="w-full">
+                          <div className="w-full h-[120px]">
+                            <svg viewBox="0 0 300 120" className="w-full h-full overflow-visible">
+                              <defs>
+                                <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="0%" stopColor={chartColor} stopOpacity="0.4" />
+                                  <stop offset="100%" stopColor={chartColor} stopOpacity="0" />
+                                </linearGradient>
+                              </defs>
 
-                            {/* Grid Lines */}
-                            <line x1="0" y1="0" x2="300" y2="0" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
-                            <line x1="0" y1="60" x2="300" y2="60" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
-                            <line x1="0" y1="120" x2="300" y2="120" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
+                              {/* Grid Lines */}
+                              <line x1="0" y1="0" x2="300" y2="0" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
+                              <line x1="0" y1="60" x2="300" y2="60" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
+                              <line x1="0" y1="120" x2="300" y2="120" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
 
-                            {/* Area Fill */}
-                            <path
-                              d={chart.pathArea}
-                              fill="url(#lineGradient)"
-                              className="animate-in fade-in duration-700"
-                            />
-
-                            {/* The Line */}
-                            <path
-                              d={chart.pathLine}
-                              fill="none"
-                              stroke={chartColor}
-                              strokeWidth="3.5"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="drop-shadow-sm animate-in slide-in-from-left-4 duration-700"
-                            />
-
-                            {/* Data Points */}
-                            {chart.points.map((p, idx) => (
-                              <circle
-                                key={idx}
-                                cx={p.x}
-                                cy={p.y}
-                                r={idx === chart.points.length - 1 ? 5 : 4}
-                                fill={idx === chart.points.length - 1 ? chartColor : "#ffffff"}
-                                stroke={idx === chart.points.length - 1 ? "#ffffff" : chartColor}
-                                strokeWidth="2.5"
-                                className={idx === chart.points.length - 1 ? "animate-pulse" : ""}
+                              {/* Area Fill */}
+                              <path
+                                d={chart.pathArea}
+                                fill="url(#lineGradient)"
+                                className="animate-in fade-in duration-700"
                               />
-                            ))}
-                          </svg>
+
+                              {/* The Line */}
+                              <path
+                                d={chart.pathLine}
+                                fill="none"
+                                stroke={chartColor}
+                                strokeWidth="3.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="drop-shadow-sm animate-in slide-in-from-left-4 duration-700"
+                              />
+
+                              {/* Data Points */}
+                              {chart.points.map((p, idx) => (
+                                <circle
+                                  key={idx}
+                                  cx={p.x}
+                                  cy={p.y}
+                                  r={idx === chart.points.length - 1 ? 5 : 4}
+                                  fill={idx === chart.points.length - 1 ? chartColor : "#ffffff"}
+                                  stroke={idx === chart.points.length - 1 ? "#ffffff" : chartColor}
+                                  strokeWidth="2.5"
+                                  className={idx === chart.points.length - 1 ? "animate-pulse" : ""}
+                                />
+                              ))}
+                            </svg>
+                          </div>
 
                           {/* X Axis Labels */}
-                          <div className="flex justify-between text-[10px] font-bold text-[#767683] mt-4 px-1">
+                          <div className="flex justify-between text-[11px] font-semibold text-[#767683] mt-3.5 pt-1 px-1">
                             {chart.labels.map((lbl, idx) => (
                               <span key={idx} style={{ color: idx === chart.labels.length - 1 ? chartColor : undefined }}>{lbl}</span>
                             ))}
                           </div>
-                        </>
+                        </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Subject Breakdown Bars */}
-                  <div className="space-y-4">
-                    <h3 className="text-[13px] font-bold text-[#141779] mb-3 border-b border-gray-100 pb-2">
-                      {modalType === "strengths" ? t("top_subjects_ge_60", "Top Subjects (≥ 60%)") : modalType === "weaknesses" ? t("needs_attention_lt_60", "Needs Attention (< 60%)") : modalType === "risks" ? t("at_risk_subjects_lt_60", "At-Risk Subjects (< 60%)") : t("performance_by_subject", "Performance by Subject")}
+                  {/* Subject Breakdown / Weaknesses Section */}
+                  <div className="space-y-3">
+                    <h3 className="text-[13px] font-bold text-[#141779] border-b border-gray-100 pb-2">
+                      {modalType === "strengths"
+                        ? t("top_performing_subjects", "Top Performing Subject(s)")
+                        : modalType === "weaknesses"
+                        ? t("areas_for_review_title", "Areas for Improvement (≥ 60%)")
+                        : modalType === "risks"
+                        ? t("at_risk_subjects_lt_60", "At-Risk Subjects (< 60%)")
+                        : t("performance_by_subject", "Performance by Subject")}
                     </h3>
-                    {subjectBreakdown
-                      .slice()
-                      .filter(sb => {
-                        if (modalType === "strengths") return sb.accuracy >= 60;
-                        if (modalType === "weaknesses" || modalType === "risks") return sb.accuracy < 60;
-                        return true;
-                      })
-                      .sort((a, b) => {
-                        if (modalType === "weaknesses" || modalType === "risks") return a.accuracy - b.accuracy;
-                        return b.accuracy - a.accuracy;
-                      })
-                      .map((sb, idx) => {
-                        const isStrength = sb.accuracy >= 60;
-                        const barColor = isStrength ? "#006a62" : "#ba1a1a";
-                        const bgColor = isStrength ? "bg-[#006a62]/10" : "bg-[#ba1a1a]/10";
 
-                        return (
-                          <div key={idx}>
-                            <div className="flex justify-between text-xs font-bold mb-1.5">
-                              <span className={isStrength ? "text-[#006a62]" : "text-[#ba1a1a]"}>
-                                {translateSubjectName(sb.subject)} {isStrength ? "💪" : "⚠️"}
-                              </span>
-                              <span className={isStrength ? "text-[#006a62]" : "text-[#ba1a1a]"}>{sb.accuracy}%</span>
-                            </div>
-                            <div className={`h-2.5 w-full ${bgColor} rounded-full overflow-hidden`}>
-                              <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${sb.accuracy}%`, backgroundColor: barColor }} />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    {subjectBreakdown.length === 0 && (
-                      <p className="text-xs text-[#767683]">{t("play_more_quests_breakdown", "Play more quests to see detailed subject breakdown!")}</p>
+                    {modalType === "weaknesses" ? (
+                      /* Enhanced Weaknesses / Needs Attention Cards */
+                      <div className="space-y-3">
+                        {subjectBreakdown
+                          .slice()
+                          .filter(sb => sb.accuracy >= 60 && sb.accuracy < maxAccuracy)
+                          .sort((a, b) => a.accuracy - b.accuracy)
+                          .map((sb, idx) => {
+                            const improvementNeeded = Math.max(1, maxAccuracy - sb.accuracy);
+                            const subjName = translateSubjectName(sb.subject);
+                            const normSubj = sb.subject.toLowerCase();
+
+                            // Actionable recommendation tailored to this subject
+                            const matchingWeakness = weaknesses?.find(
+                              w =>
+                                w.toLowerCase().includes(normSubj) &&
+                                !w.includes("No weakness") &&
+                                !w.includes("Not enough Data")
+                            );
+
+                            let insightText = "";
+                            if (matchingWeakness && !matchingWeakness.includes("currently")) {
+                              insightText = translateInsightText(matchingWeakness);
+                            } else if (sb.wrongAnswers !== undefined && sb.wrongAnswers > 0) {
+                              insightText = t("weakness_insight_review_mistakes", {
+                                subject: subjName,
+                                count: sb.wrongAnswers,
+                                defaultValue: `Practice ${subjName} regularly and review recent mistakes.`
+                              });
+                            } else if (sb.accuracy < 40) {
+                              insightText = t("weakness_insight_foundational", {
+                                subject: subjName,
+                                defaultValue: `Revise foundational chapter concepts in ${subjName} and retry practice quizzes.`
+                              });
+                            } else if (normSubj.includes("math")) {
+                              insightText = t("weakness_insight_math", {
+                                subject: subjName,
+                                defaultValue: `Focus on the topics where recent quiz accuracy is low.`
+                              });
+                            } else if (normSubj.includes("gujarati") || normSubj.includes("english") || normSubj.includes("hindi")) {
+                              insightText = t("weakness_insight_language", {
+                                subject: subjName,
+                                defaultValue: `Practice ${subjName} regularly and review recent mistakes.`
+                              });
+                            } else {
+                              insightText = t("weakness_insight_general", {
+                                subject: subjName,
+                                defaultValue: `Practice ${subjName} regularly and focus on topics where recent quiz accuracy is low.`
+                              });
+                            }
+
+                            return (
+                              <div
+                                key={idx}
+                                className="bg-white rounded-2xl p-4 border border-red-100/90 shadow-xs space-y-2.5"
+                              >
+                                {/* Subject Header & Status Badge */}
+                                <div className="flex justify-between items-center">
+                                  <h4 className="text-sm font-black text-slate-800 flex items-center gap-1.5">
+                                    <span>{subjName}</span>
+                                    <span className="text-xs">⚠️</span>
+                                  </h4>
+                                  <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-red-50 text-[#ba1a1a] border border-red-100 flex items-center gap-1">
+                                    <span className="text-[8px]">●</span>
+                                    <span>{t("status_needs_improvement", "Needs Improvement")}</span>
+                                  </span>
+                                </div>
+
+                                {/* Current Performance & Gap */}
+                                <div className="flex justify-between items-center text-xs font-bold">
+                                  <span className="text-[#ba1a1a] font-bold">
+                                    {`${subjName} needs improvement with ${sb.accuracy}% accuracy.`}
+                                  </span>
+                                  <span className="text-[11px] text-[#ba1a1a] font-bold bg-red-50/70 px-2 py-0.5 rounded-md">
+                                    {t("improvement_needed_gap", {
+                                      gap: improvementNeeded,
+                                      defaultValue: `+${improvementNeeded}% to match top subject`
+                                    })}
+                                  </span>
+                                </div>
+
+                                {/* Progress Bar */}
+                                <div className="h-2.5 w-full bg-red-100/70 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full rounded-full bg-[#ba1a1a] transition-all duration-700"
+                                    style={{ width: `${Math.min(100, Math.max(5, sb.accuracy))}%` }}
+                                  />
+                                </div>
+
+                                {/* Additional metrics if available */}
+                                {(sb.wrongAnswers !== undefined && sb.correctAnswers !== undefined && (sb.correctAnswers + sb.wrongAnswers > 0)) && (
+                                  <div className="flex items-center gap-3 text-[11px] text-slate-500 font-semibold pt-0.5">
+                                    <span>{t("accuracy_label", "Accuracy")}: {sb.accuracy}%</span>
+                                    <span>•</span>
+                                    <span className="text-slate-600">{t("solved_count", { correct: sb.correctAnswers, total: sb.correctAnswers + sb.wrongAnswers, defaultValue: `${sb.correctAnswers}/${sb.correctAnswers + sb.wrongAnswers} correct` })}</span>
+                                    {sb.wrongAnswers > 0 && (
+                                      <>
+                                        <span>•</span>
+                                        <span className="text-[#ba1a1a]">{t("mistakes_count", { count: sb.wrongAnswers, defaultValue: `${sb.wrongAnswers} mistakes` })}</span>
+                                      </>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Actionable Insight Box */}
+                                <div className="bg-amber-50/60 rounded-xl p-2.5 border border-amber-100/80 text-[11px] leading-relaxed">
+                                  <span className="font-extrabold text-[#ba1a1a]">
+                                    {t("actionable_insight_label", "Actionable Insight")}:{" "}
+                                  </span>
+                                  <span className="font-semibold text-slate-700">{insightText}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                        {/* If NO weak subjects */}
+                        {subjectBreakdown.length > 0 &&
+                          actualWeakSubjects.length === 0 && (
+                            <p className="text-xs text-[#006a62] font-semibold bg-[#006a62]/10 p-3.5 rounded-xl text-center">
+                              {t("fantastic_no_subjects_below_top", {
+                                name: cleanChildName,
+                                defaultValue: `🎉 Fantastic! ${cleanChildName} has all active subjects performing at the top level.`
+                              })}
+                            </p>
+                          )}
+
+                        {/* If no subject breakdown data */}
+                        {subjectBreakdown.length === 0 && (
+                          <p className="text-xs text-[#767683]">{t("play_more_quests_breakdown", "Play more quests to see detailed subject breakdown!")}</p>
+                        )}
+                      </div>
+                    ) : (
+                      /* modalType === "strengths" or modalType === "risks" (preserve exact existing format) */
+                      <div className="space-y-3">
+                        {subjectBreakdown
+                          .slice()
+                          .filter(sb => {
+                            if (modalType === "strengths") return sb.accuracy === maxAccuracy && sb.accuracy >= 60;
+                            if (modalType === "risks") return sb.accuracy < 60;
+                            return true;
+                          })
+                          .sort((a, b) => {
+                            if (modalType === "risks") return a.accuracy - b.accuracy;
+                            return b.accuracy - a.accuracy;
+                          })
+                          .map((sb, idx) => {
+                            const isStrength = sb.accuracy >= 60;
+                            const barColor = isStrength ? "#006a62" : "#ba1a1a";
+                            const bgColor = isStrength ? "bg-[#006a62]/10" : "bg-[#ba1a1a]/10";
+
+                            return (
+                              <div key={idx}>
+                                <div className="flex justify-between items-center text-xs font-bold mb-1.5">
+                                  <span className={isStrength ? "text-[#006a62]" : "text-[#ba1a1a]"}>
+                                    {isStrength
+                                      ? `${translateSubjectName(sb.subject)} is currently high performing with ${sb.accuracy}% accuracy.`
+                                      : `${translateSubjectName(sb.subject)} needs attention with ${sb.accuracy}% accuracy.`}
+                                  </span>
+                                </div>
+                                <div className={`h-2.5 w-full ${bgColor} rounded-full overflow-hidden`}>
+                                  <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${sb.accuracy}%`, backgroundColor: barColor }} />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        {subjectBreakdown.length === 0 && (
+                          <p className="text-xs text-[#767683]">{t("play_more_quests_breakdown", "Play more quests to see detailed subject breakdown!")}</p>
+                        )}
+                        {subjectBreakdown.length > 0 &&
+                          modalType === "risks" &&
+                          actualRiskSubjects.length === 0 && (
+                            <p className="text-xs text-[#006a62] font-semibold bg-[#006a62]/10 p-3 rounded-lg text-center mt-2">
+                              {t("fantastic_no_subjects_below_60", { name: cleanChildName, defaultValue: `🎉 Fantastic! ${cleanChildName} has no subjects below 60% right now.` })}
+                            </p>
+                          )}
+                        {subjectBreakdown.length > 0 &&
+                          modalType === "strengths" &&
+                          actualStrengthSubjects.length === 0 && (
+                            <p className="text-xs text-[#ba1a1a] font-semibold bg-[#ba1a1a]/10 p-3 rounded-lg text-center mt-2">
+                              {t("keep_playing_build_strengths", "Keep playing to build up strong subjects above 60%!")}
+                            </p>
+                          )}
+                      </div>
                     )}
-                    {subjectBreakdown.length > 0 &&
-                      (modalType === "weaknesses" || modalType === "risks") &&
-                      subjectBreakdown.every(sb => sb.accuracy >= 60) && (
-                        <p className="text-xs text-[#006a62] font-semibold bg-[#006a62]/10 p-3 rounded-lg text-center mt-2">
-                          {t("fantastic_no_subjects_below_60", { name: cleanChildName, defaultValue: `🎉 Fantastic! ${cleanChildName} has no subjects below 60% right now.` })}
-                        </p>
-                      )}
-                    {subjectBreakdown.length > 0 &&
-                      modalType === "strengths" &&
-                      subjectBreakdown.every(sb => sb.accuracy < 60) && (
-                        <p className="text-xs text-[#ba1a1a] font-semibold bg-[#ba1a1a]/10 p-3 rounded-lg text-center mt-2">
-                          {t("keep_playing_build_strengths", "Keep playing to build up strong subjects above 60%!")}
-                        </p>
-                      )}
                   </div>
 
-                  <div className="bg-indigo-50 p-4 rounded-xl shadow-sm border border-indigo-100">
-                    <p className="text-xs text-[#141779] leading-relaxed">
-                      <span className="font-bold text-[#141779]">{t("actionable_insight", "Actionable Insight: ")} </span>
-                      {modalType === "risks" ? (
-                        risks && risks.length > 0 && risks[0] !== "No risk for now." ? (
-                          translateInsightText(risks.join(" "))
+                  {/* General Insight Box (kept for strengths, risks, or other non-weakness views) */}
+                  {modalType !== "weaknesses" && (
+                    <div className="bg-indigo-50 p-4 rounded-xl shadow-sm border border-indigo-100">
+                      <p className="text-xs text-[#141779] leading-relaxed">
+                        <span className="font-bold text-[#141779]">{t("actionable_insight", "Actionable Insight: ")} </span>
+                        {modalType === "risks" ? (
+                          actualRiskSubjects.length > 0 ? (
+                            translateInsightText(
+                              actualRiskSubjects
+                                .map(s => `${translateSubjectName(s.subject)} needs attention with ${s.accuracy}% accuracy.`)
+                                .join(" ")
+                            )
+                          ) : (
+                            <>{t("maintaining_good_scores", { name: cleanChildName, defaultValue: `${cleanChildName} is maintaining good scores across all subjects.` })}</>
+                          )
+                        ) : modalType === "strengths" ? (
+                          actualStrengthSubjects.length > 0 ? (
+                            translateInsightText(
+                              actualStrengthSubjects
+                                .map(s => `${translateSubjectName(s.subject)} is currently high performing with ${s.accuracy}% accuracy.`)
+                                .join(" ")
+                            )
+                          ) : (
+                            <>{t("showing_good_performance", { name: cleanChildName, defaultValue: `${cleanChildName} is showing good performance in active subjects.` })}</>
+                          )
                         ) : (
-                          <>{t("maintaining_good_scores", { name: cleanChildName, defaultValue: `${cleanChildName} is maintaining good scores across all subjects.` })}</>
-                        )
-                      ) : modalType === "weaknesses" ? (
-                        weaknesses && weaknesses.length > 0 && weaknesses[0] !== "No weakness for now." ? (
-                          translateInsightText(weaknesses.join(" "))
-                        ) : (
-                          <>{t("no_weak_subjects_identified", "No weak subjects identified right now.")}</>
-                        )
-                      ) : modalType === "strengths" ? (
-                        strengths && strengths.length > 0 && strengths[0] !== "No strength for now." ? (
-                          translateInsightText(strengths.join(" "))
-                        ) : (
-                          <>{t("showing_good_performance", { name: cleanChildName, defaultValue: `${cleanChildName} is showing good performance in active subjects.` })}</>
-                        )
-                      ) : (
-                        <>{t("no_trend_data_available", "No trend data available yet. Complete more quizzes to get personalized insights.")}</>
-                      )}
-                    </p>
-                  </div>
+                          <>{t("no_trend_data_available", "No trend data available yet. Complete more quizzes to get personalized insights.")}</>
+                        )}
+                      </p>
+                    </div>
+                  )}
                 </>
               )}
             </div>

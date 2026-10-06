@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Sparkles, User, PlusCircle, Send, ArrowLeft, Bell } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
+import StreakModal from "../../../components/StreakModal";
 
 type Message = {
   id: string;
@@ -42,6 +43,7 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>(getInitialMessages(t));
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [showStreakModal, setShowStreakModal] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const [userData, setUserData] = useState<any>(() => {
@@ -164,7 +166,7 @@ export default function ChatScreen() {
           {/* Currency & Streak Stats */}
           <div className="flex items-center gap-1.5 shrink-0">
             <button
-              onClick={() => navigate("/home")}
+              onClick={() => setShowStreakModal(true)}
               className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
             >
               <span className="text-[11px] font-black text-[#ea580c] leading-none">🔥 {userData?.streakDays || 0}</span>
@@ -288,6 +290,11 @@ export default function ChatScreen() {
 
       </div>
 
+      <StreakModal
+        isOpen={showStreakModal}
+        onClose={() => setShowStreakModal(false)}
+        streakDays={userData?.streakDays || 0}
+      />
     </div>
   );
 }

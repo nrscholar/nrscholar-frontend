@@ -4,6 +4,7 @@ import { Zap, Coins, Flame, Users, HelpCircle, LogOut, Gift, ChevronRight, Troph
 import { motion } from "framer-motion";
 import { apiFetch, clearAuthSession } from "../../../api";
 import { useTranslation } from "react-i18next";
+import StreakModal from "../../../components/StreakModal";
 
 // Math-aligned level thresholds matching backend
 function getLevelInfo(xp: number) {
@@ -34,6 +35,8 @@ export default function ProfileScreen() {
   const { t, i18n } = useTranslation();
   const [loading] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showStreakModal, setShowStreakModal] = useState(false);
+  const [retentionStreak, setRetentionStreak] = useState<any>(null);
 
   const [user, setUser] = useState<any>(() => {
     const stored = localStorage.getItem("userData");
@@ -81,6 +84,21 @@ export default function ProfileScreen() {
       } catch (e) {}
     };
     fetchNotifications();
+  }, []);
+
+  useEffect(() => {
+    const fetchStreak = async () => {
+      try {
+        const res = await apiFetch("/api/retention/streak");
+        if (res.ok) {
+          const data = await res.json();
+          setRetentionStreak(data);
+        }
+      } catch (e) {
+        console.error("Failed to fetch streak in ProfileScreen", e);
+      }
+    };
+    fetchStreak();
   }, []);
 
   if (!user || loading) {
@@ -145,7 +163,7 @@ export default function ProfileScreen() {
         {/* Top Header Currency & Streak Stats */}
         <div className="flex items-center gap-1.5 shrink-0">
           <button
-            onClick={() => navigate("/home")}
+            onClick={() => setShowStreakModal(true)}
             className="bg-orange-50/80 border border-orange-100 rounded-xl px-2.5 py-1 flex items-center gap-1 hover:bg-orange-100/60 active:scale-95 transition-all shadow-2xs"
           >
             <span className="text-xs font-bold text-orange-600">🔥 {streakDays || 0}</span>
@@ -276,7 +294,10 @@ export default function ProfileScreen() {
           </div>
 
           {/* Streak */}
-          <div className="bg-white border border-slate-100 hover:border-slate-200 transition-all rounded-2xl p-3.5 flex flex-col items-center text-center shadow-xs">
+          <div 
+            onClick={() => setShowStreakModal(true)}
+            className="bg-white border border-slate-100 hover:border-slate-200 transition-all rounded-2xl p-3.5 flex flex-col items-center text-center shadow-xs cursor-pointer active:scale-95"
+          >
             <div className="w-9 h-9 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center mb-1.5 border border-orange-100/50">
               <Flame size={18} className="fill-orange-500" />
             </div>
@@ -341,7 +362,10 @@ export default function ProfileScreen() {
               <span className="text-lg mb-0.5">🏆</span>
               <span className="text-[10px] font-semibold text-slate-800 truncate w-full">{t('math_ace', 'Math Ace')}</span>
             </div>
-            <div className={`bg-white border rounded-2xl p-2.5 flex flex-col items-center text-center shadow-xs transition-all ${isStreakUnlocked ? 'border-slate-100' : 'border-slate-100 opacity-45'}`}>
+            <div 
+              onClick={() => setShowStreakModal(true)}
+              className={`bg-white border rounded-2xl p-2.5 flex flex-col items-center text-center shadow-xs transition-all cursor-pointer active:scale-95 ${isStreakUnlocked ? 'border-slate-100' : 'border-slate-100 opacity-45'}`}
+            >
               <span className="text-lg mb-0.5">🔥</span>
               <span className="text-[10px] font-semibold text-slate-800 truncate w-full">{t('streak', 'Streak')}</span>
             </div>
@@ -468,6 +492,14 @@ export default function ProfileScreen() {
           </div>
         </div>
       )}
+
+      {/* Streak Modal */}
+      <StreakModal
+        isOpen={showStreakModal}
+        onClose={() => setShowStreakModal(false)}
+        streakDays={streakDays}
+        retentionStreak={retentionStreak}
+      />
     </div>
   );
 }

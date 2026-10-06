@@ -4,6 +4,7 @@ import { ArrowLeft, Rocket, Sun, Compass, Globe, Moon, CheckCircle, Lock, Bell, 
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
+import StreakModal from "../../../components/StreakModal";
 
 export default function ChaptersScreen() {
   const navigate = useNavigate();
@@ -27,6 +28,7 @@ export default function ChaptersScreen() {
   const [expandedChapter, setExpandedChapter] = useState<string | null>(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [showSubModal, setShowSubModal] = useState(false);
+  const [showStreakModal, setShowStreakModal] = useState(false);
 
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -270,7 +272,7 @@ export default function ChaptersScreen() {
           {/* Currency & Streak Stats */}
           <div className="flex items-center gap-1.5 shrink-0">
             <button
-              onClick={() => navigate("/home")}
+              onClick={() => setShowStreakModal(true)}
               className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
             >
               <span className="text-[11px] font-black text-[#ea580c] leading-none">🔥 {streakDays || 0}</span>
@@ -665,6 +667,12 @@ export default function ChaptersScreen() {
           <span className="truncate max-w-[280px] sm:max-w-[340px] line-clamp-1">{toastMessage}</span>
         </div>
       )}
+
+      <StreakModal
+        isOpen={showStreakModal}
+        onClose={() => setShowStreakModal(false)}
+        streakDays={streakDays}
+      />
     </div>
   );
 }

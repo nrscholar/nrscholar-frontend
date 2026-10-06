@@ -18,6 +18,8 @@ export default function ParentRoadmapScreen() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [contentHeight, setContentHeight] = useState(0);
   
   const cachedRoadmap = (() => {
     try {
@@ -62,6 +64,60 @@ export default function ParentRoadmapScreen() {
     }
     fetchRoadmap();
   }, []);
+
+  useEffect(() => {
+    const updateHeight = () => {
+      if (contentRef.current) {
+        const h = contentRef.current.offsetHeight;
+        if (h > 0) {
+          setContentHeight(h + 96);
+        }
+      }
+    };
+
+    updateHeight();
+    const timer = setTimeout(updateHeight, 300);
+
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined" && contentRef.current) {
+      ro = new ResizeObserver(() => updateHeight());
+      ro.observe(contentRef.current);
+    }
+
+    window.addEventListener("resize", updateHeight);
+    return () => {
+      clearTimeout(timer);
+      if (ro) ro.disconnect();
+      window.removeEventListener("resize", updateHeight);
+    };
+  }, [roadmapData, loading]);
+
+  const stagesCount = roadmapData?.stages?.length || 10;
+  const svgHeight = contentHeight > 0 ? contentHeight : Math.max(1200, stagesCount * 250);
+
+  const roadmapPathD = (() => {
+    const xPattern = [88, 168, 88, 168, 128];
+    const n = stagesCount;
+    const stageHeight = svgHeight / (n || 1);
+    
+    let d = "M128 0";
+    let prevX = 128;
+    let prevY = 0;
+
+    for (let i = 0; i < n; i++) {
+      const targetX = xPattern[i % xPattern.length];
+      const targetY = Math.round((i + 0.5) * stageHeight);
+      const cpY1 = prevY + (targetY - prevY) * 0.45;
+      const cpY2 = prevY + (targetY - prevY) * 0.55;
+      d += ` C ${prevX} ${cpY1}, ${targetX} ${cpY2}, ${targetX} ${targetY}`;
+      prevX = targetX;
+      prevY = targetY;
+    }
+
+    // Smoothly exit towards the bottom center
+    d += ` C ${prevX} ${prevY + (svgHeight - prevY) * 0.5}, 128 ${prevY + (svgHeight - prevY) * 0.5}, 128 ${svgHeight}`;
+    return d;
+  })();
 
   const translateStageTitle = (title: string) => {
     if (!title) return "";
@@ -169,7 +225,7 @@ export default function ParentRoadmapScreen() {
     <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans overflow-hidden selection:bg-[#57fae9]">
       <style>{`
         .glass-card {
-            background: rgba(255, 255, 255, 0.7);
+            background: #ffffff;
             backdrop-filter: blur(12px);
             border: 1.5px solid rgba(255, 255, 255, 0.8);
         }
@@ -213,138 +269,148 @@ export default function ParentRoadmapScreen() {
       </header>
 
       {/* Main Content Area */}
-      <main className="relative h-screen w-full flex flex-col items-center justify-center pt-16 pb-20">
+      <main className="relative h-screen w-full flex flex-col items-center justify-center pt-20 pb-24">
         {/* Adventure Roadmap Container */}
-        <div ref={containerRef} className="relative w-full max-w-[430px] h-full flex flex-col items-center overflow-y-auto no-scrollbar py-12">
+        <div ref={containerRef} className="relative w-full max-w-[430px] h-full flex flex-col items-center overflow-y-auto no-scrollbar pt-6 pb-36 px-4 scroll-pt-24 scroll-pb-32">
           
           {/* Roadmap SVG Path (Visual Guide) */}
-          <svg className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-[1200px] pointer-events-none z-0 opacity-20" fill="none" viewBox="0 0 256 1200" xmlns="http://www.w3.org/2000/svg">
-            <path className="roadmap-path" d="M128 0 C 128 150, 200 150, 200 300 C 200 450, 56 450, 56 600 C 56 750, 200 750, 200 900 C 200 1050, 128 1050, 128 1200" stroke="#141779" strokeWidth="4"></path>
+          <svg
+            className="absolute top-0 left-1/2 -translate-x-1/2 w-64 pointer-events-none z-0 opacity-20"
+            style={{ height: `${svgHeight}px` }}
+            viewBox={`0 0 256 ${svgHeight}`}
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path className="roadmap-path" d={roadmapPathD} stroke="#141779" strokeWidth="4"></path>
           </svg>
 
-          {roadmapData?.stages?.map((stage: any, index: number) => {
-            const isCompleted = stage.status === "completed";
-            const isActive = stage.status === "active";
-            const isLocked = stage.status === "locked";
-            
-            const positionClasses = [
-              "-translate-x-12",
-              "translate-x-12",
-              "-translate-x-8",
-              "translate-x-12",
-              "0" // centered for last
-            ];
-            
-            const IconComp = IconMap[stage.icon] || Star;
-            const translateClass = positionClasses[index % positionClasses.length];
-            
-            if (isCompleted) {
-              return (
-                <div key={stage.id} className={`relative z-10 w-full mb-20 flex justify-center ${translateClass}`}>
-                  <div 
-                    onClick={() => navigate(`/parent/lessons?category=${encodeURIComponent(stage.title)}`)}
-                    className="glass-card p-4 rounded-xl w-48 shadow-sm flex flex-col items-center cursor-pointer hover:shadow-md hover:scale-105 active:scale-95 transition-all"
-                  >
-                    <div className="w-10 h-10 bg-[#006a62] rounded-full flex items-center justify-center mb-2 shadow-lg shadow-[#006a62]/20">
-                      <IconComp size={20} color="white" strokeWidth={3} />
+          <div ref={contentRef} className="w-full flex flex-col items-center relative z-10">
+            {roadmapData?.stages?.map((stage: any, index: number) => {
+              const isCompleted = stage.status === "completed";
+              const isActive = stage.status === "active";
+              const isLocked = stage.status === "locked";
+              
+              const positionClasses = [
+                "-translate-x-6",
+                "translate-x-6",
+                "-translate-x-6",
+                "translate-x-6",
+                "0" // centered for 5th and 10th
+              ];
+              
+              const IconComp = IconMap[stage.icon] || Star;
+              const translateClass = positionClasses[index % positionClasses.length];
+              
+              if (isCompleted) {
+                return (
+                  <div key={stage.id} className={`relative z-10 w-full mb-14 flex justify-center ${translateClass}`}>
+                    <div 
+                      onClick={() => navigate(`/parent/lessons?category=${encodeURIComponent(stage.title)}`)}
+                      className="glass-card bg-white p-4 rounded-2xl w-48 sm:w-52 shadow-sm flex flex-col items-center cursor-pointer hover:shadow-md hover:scale-105 active:scale-95 transition-all"
+                    >
+                      <div className="w-10 h-10 bg-[#006a62] rounded-full flex items-center justify-center mb-2 shadow-lg shadow-[#006a62]/20">
+                        <IconComp size={20} color="white" strokeWidth={3} />
+                      </div>
+                      {stage.xpRequired > 0 ? (
+                        <div className="flex items-center gap-1 mb-1">
+                          <Star size={14} color="#006a62" />
+                          <span className="text-xs text-[#464652] font-bold uppercase">{stage.xpRequired} XP</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-[#006a62] font-bold uppercase tracking-wider mb-1">{t("unlocked", "Unlocked")}</span>
+                      )}
+                      <h3 className="text-base font-bold text-[#191c1e] text-center">{translateStageTitle(stage.title)}</h3>
+                      {stage.rewards && (
+                        <div className="mt-2 text-[10px] text-[#464652] grid grid-cols-2 gap-x-2 gap-y-1">
+                          {stage.rewards.map((rw: any, i: number) => {
+                            const RIcon = IconMap[rw.icon] || Star;
+                            return (
+                              <span key={i} className="flex items-center gap-1"><RIcon size={12} /> {translateRewardLabel(rw.label)}</span>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                    {stage.xpRequired > 0 ? (
+                  </div>
+                );
+              }
+              
+              if (isActive) {
+                return (
+                  <div key={stage.id} className={`relative z-20 w-full mb-14 flex justify-center ${translateClass}`}>
+                    <div 
+                      onClick={() => navigate(`/parent/lessons?category=${encodeURIComponent(stage.title)}`)}
+                      className="glass-card bg-white p-5 rounded-2xl w-52 sm:w-56 shadow-xl border-[#006a62] border-2 animate-pulse-teal flex flex-col items-center scale-105 cursor-pointer hover:shadow-2xl active:scale-[1.02] transition-all"
+                    >
+                      <div className="w-12 h-12 bg-[#2d328f] rounded-full flex items-center justify-center mb-3 shadow-lg ring-4 ring-[#006a62]/30">
+                        <IconComp size={24} color="#9ba1ff" />
+                      </div>
                       <div className="flex items-center gap-1 mb-1">
-                        <Star size={14} color="#006a62" />
-                        <span className="text-xs text-[#464652] font-bold uppercase">{stage.xpRequired} XP</span>
+                        <Star size={16} color="#006a62" />
+                        <span className="text-sm text-[#141779] font-bold uppercase">{stage.xpRequired} XP</span>
                       </div>
-                    ) : (
-                      <span className="text-xs text-[#006a62] font-bold uppercase tracking-wider mb-1">{t("unlocked", "Unlocked")}</span>
-                    )}
-                    <h3 className="text-base font-bold text-[#191c1e] text-center">{translateStageTitle(stage.title)}</h3>
-                    {stage.rewards && (
-                      <div className="mt-2 text-[10px] text-[#464652] grid grid-cols-2 gap-x-2 gap-y-1">
-                        {stage.rewards.map((rw: any, i: number) => {
-                          const RIcon = IconMap[rw.icon] || Star;
-                          return (
-                            <span key={i} className="flex items-center gap-1"><RIcon size={12} /> {translateRewardLabel(rw.label)}</span>
-                          );
-                        })}
+                      <h3 className="text-2xl font-bold text-[#141779] mb-2">{translateStageTitle(stage.title)}</h3>
+                      
+                      <div className="w-full bg-[#eceef0] rounded-full h-2 mb-1 overflow-hidden">
+                        <div className="bg-[#006a62] h-full rounded-full transition-all duration-1000" style={{ width: `${stage.progress}%` }}></div>
                       </div>
-                    )}
+                      {stage.nextStageName && (
+                        <p className="text-[10px] text-[#464652] font-medium mb-3">
+                          {t("percent_to_target", { percent: stage.progress, target: translateStageTitle(stage.nextStageName), defaultValue: `${stage.progress}% to ${translateStageTitle(stage.nextStageName)}` })}
+                        </p>
+                      )}
+                      
+                      {stage.rewards && (
+                        <div className="mt-1 flex gap-3 text-[11px] text-[#464652] font-semibold bg-[#57fae9]/20 px-3 py-1 rounded-full">
+                          {stage.rewards.map((rw: any, i: number) => {
+                            const RIcon = IconMap[rw.icon] || Star;
+                            return (
+                              <span key={i} className="flex items-center gap-1"><RIcon size={14} /> {translateRewardLabel(rw.label)}</span>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            }
-            
-            if (isActive) {
-              return (
-                <div key={stage.id} className={`relative z-20 w-full mb-20 flex justify-center ${translateClass}`}>
-                  <div 
-                    onClick={() => navigate(`/parent/lessons?category=${encodeURIComponent(stage.title)}`)}
-                    className="glass-card p-5 rounded-2xl w-56 shadow-xl border-[#006a62] border-2 animate-pulse-teal flex flex-col items-center scale-105 bg-white/90 cursor-pointer hover:shadow-2xl active:scale-[1.02] transition-all"
-                  >
-                    <div className="w-12 h-12 bg-[#2d328f] rounded-full flex items-center justify-center mb-3 shadow-lg ring-4 ring-[#006a62]/30">
-                      <IconComp size={24} color="#9ba1ff" />
-                    </div>
-                    <div className="flex items-center gap-1 mb-1">
-                      <Star size={16} color="#006a62" />
-                      <span className="text-sm text-[#141779] font-bold uppercase">{stage.xpRequired} XP</span>
-                    </div>
-                    <h3 className="text-2xl font-bold text-[#141779] mb-2">{translateStageTitle(stage.title)}</h3>
-                    
-                    <div className="w-full bg-[#eceef0] rounded-full h-2 mb-1 overflow-hidden">
-                      <div className="bg-[#006a62] h-full rounded-full transition-all duration-1000" style={{ width: `${stage.progress}%` }}></div>
-                    </div>
-                    {stage.nextStageName && (
-                      <p className="text-[10px] text-[#464652] font-medium mb-3">
-                        {t("percent_to_target", { percent: stage.progress, target: translateStageTitle(stage.nextStageName), defaultValue: `${stage.progress}% to ${translateStageTitle(stage.nextStageName)}` })}
-                      </p>
-                    )}
-                    
-                    {stage.rewards && (
-                      <div className="mt-1 flex gap-3 text-[11px] text-[#464652] font-semibold bg-[#57fae9]/20 px-3 py-1 rounded-full">
-                        {stage.rewards.map((rw: any, i: number) => {
-                          const RIcon = IconMap[rw.icon] || Star;
-                          return (
-                            <span key={i} className="flex items-center gap-1"><RIcon size={14} /> {translateRewardLabel(rw.label)}</span>
-                          );
-                        })}
+                );
+              }
+              
+              if (isLocked) {
+                return (
+                  <div key={stage.id} className={`relative z-10 w-full mb-14 flex justify-center ${translateClass}`}>
+                    <div className="bg-[#eceef0] p-4 rounded-2xl w-48 sm:w-52 shadow-sm flex flex-col items-center border border-[#767683]/15">
+                      <div className="w-full flex flex-col items-center opacity-80">
+                        <div className="w-10 h-10 bg-[#767683] rounded-full flex items-center justify-center mb-2 shadow-xs">
+                          <IconComp size={20} color="white" />
+                        </div>
+                        <span className="text-xs text-[#767683] font-bold uppercase tracking-wider mb-1">{t("locked_caps", "LOCKED")}</span>
+                        <h3 className="text-base font-bold text-[#464652] text-center">{translateStageTitle(stage.title)}</h3>
+                        {stage.description && (
+                          <p className="text-[10px] text-center mt-1 text-[#767683] leading-relaxed">{translateStageDesc(stage.description)}</p>
+                        )}
+                        {stage.rewards && (
+                          <div className="mt-2 text-[10px] text-[#767683] flex items-center gap-1 font-medium">
+                            {stage.rewards.map((rw: any, i: number) => {
+                              const RIcon = IconMap[rw.icon] || Star;
+                              return (
+                                <span key={i} className="flex items-center gap-1"><RIcon size={12} /> {translateRewardLabel(rw.label)}</span>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </div>
-              );
-            }
-            
-            if (isLocked) {
-              return (
-                <div key={stage.id} className={`relative z-10 w-full mb-20 flex justify-center ${translateClass} opacity-60 grayscale-[0.5]`}>
-                  <div className="bg-[#eceef0] p-4 rounded-xl w-48 shadow-sm flex flex-col items-center border border-[#767683]/10">
-                    <div className="w-10 h-10 bg-[#767683] rounded-full flex items-center justify-center mb-2">
-                      <IconComp size={20} color="white" />
                     </div>
-                    <span className="text-xs text-[#767683] font-bold uppercase tracking-wider mb-1">{t("locked_caps", "LOCKED")}</span>
-                    <h3 className="text-base font-bold text-[#464652] text-center">{translateStageTitle(stage.title)}</h3>
-                    {stage.description && (
-                      <p className="text-[10px] text-center mt-1 text-[#767683]">{translateStageDesc(stage.description)}</p>
-                    )}
-                    {stage.rewards && (
-                      <div className="mt-2 text-[10px] text-[#767683] flex items-center gap-1">
-                        {stage.rewards.map((rw: any, i: number) => {
-                          const RIcon = IconMap[rw.icon] || Star;
-                          return (
-                            <span key={i} className="flex items-center gap-1"><RIcon size={12} /> {translateRewardLabel(rw.label)}</span>
-                          );
-                        })}
-                      </div>
-                    )}
                   </div>
-                </div>
-              );
-            }
-            
-            return null;
-          })}
+                );
+              }
+              
+              return null;
+            })}
+          </div>
         </div>
 
         {/* Floating Action Button */}
-        <button onClick={() => navigate('/parent/lessons')} className="fixed bottom-24 right-6 w-14 h-14 bg-[#141779] text-white rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-transform z-40 hover:bg-[#30007f]">
+        <button onClick={() => navigate('/parent/lessons')} className="fixed bottom-24 right-5 w-14 h-14 bg-[#141779] text-white rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-transform z-40 hover:bg-[#30007f]">
           <Play size={24} fill="currentColor" />
         </button>
       </main>
