@@ -60,7 +60,7 @@ const MysteryBoxHeroSVG = ({ type }: { type?: string }) => {
 export default function InventoryScreen() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<"Mystery Boxes" | "Dragon Academy" | "Cities" | "Badges">("Mystery Boxes");
+  const [activeTab, setActiveTab] = useState<"Mystery Boxes" | "Dragon Academy" | "Journey" | "Badges">("Mystery Boxes");
 
   const [mysteryBoxes, setMysteryBoxes] = useState<any>({});
   const [dragons, setDragons] = useState<any[]>([]);
@@ -268,8 +268,11 @@ export default function InventoryScreen() {
   const xpThresholds = [0, 500, 1000, 2500, 5000, 10000, 15000, 20000, 30000, 50000, 65000, 80000, 100000];
   const cities = journeyNodes.length > 0
     ? journeyNodes.map((node, index) => {
+        const minClass = node.minClass || (index < 3 ? 1 : index < 6 ? 2 : index < 9 ? 3 : 4);
         let status = t('status_locked', "Locked 🔒");
-        if (node.completed) {
+        if (node.isFutureClass) {
+          status = t('unlocks_at_class_short', { count: minClass, defaultValue: `Unlocks at Class ${minClass} 🔒` });
+        } else if (node.completed || node.isPriorClass) {
           status = t('status_completed', "Completed 🎉");
         } else if (node.unlocked) {
           status = t('status_current_location', "Current Location 📍");
@@ -278,10 +281,13 @@ export default function InventoryScreen() {
         return {
           id: String(index),
           name: node.name || node.title,
+          minClass,
+          isFutureClass: Boolean(node.isFutureClass),
           status
         };
       })
     : citiesData.map((cityData, index) => {
+        const minClass = index < 3 ? 1 : index < 6 ? 2 : index < 9 ? 3 : 4;
         const reqXp = xpThresholds[index] || 0;
         const nextReqXp = xpThresholds[index + 1] || 99999;
         const isUnlocked = xp >= reqXp;
@@ -297,6 +303,8 @@ export default function InventoryScreen() {
         return {
           id: String(index),
           name: cityData.name,
+          minClass,
+          isFutureClass: !isUnlocked,
           status
         };
       });
@@ -500,7 +508,7 @@ export default function InventoryScreen() {
             {[
               { id: "Mystery Boxes", label: t('boxes_tab', 'BOXES'), icon: Gift },
               { id: "Dragon Academy", label: t('dragons_tab', 'DRAGONS'), icon: Sparkles },
-              { id: "Cities", label: t('cities_tab', 'CITIES'), icon: MapPin },
+              { id: "Journey", label: t('journey_tab', 'JOURNEY'), icon: MapPin },
               { id: "Badges", label: t('badges_tab', 'BADGES'), icon: Trophy },
             ].map((tab) => {
               const Icon = tab.icon;
@@ -788,8 +796,8 @@ export default function InventoryScreen() {
           </section>
         )}
 
-        {/* CATEGORY 3: CITIES WORLD DISCOVERY MAP */}
-        {activeTab === "Cities" && (
+        {/* CATEGORY 3: JOURNEY WORLD DISCOVERY MAP */}
+        {activeTab === "Journey" && (
           <section className="flex flex-col gap-3">
             <div className="flex items-center justify-between px-1 mb-1">
               <span className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1.5">
@@ -801,40 +809,72 @@ export default function InventoryScreen() {
               </span>
             </div>
 
-            <div className="flex flex-col relative pb-4 px-1">
-              {/* Vertical Connection Beam */}
-              <div className="absolute left-[31px] top-6 bottom-6 w-1 bg-[#E5DBFB] -z-10 rounded-full" />
-              
-              {cities.map((item, index) => {
-                const isLocked = item.status.includes('Locked');
-                const isCurrent = item.status.includes('Current');
+            <div className="flex flex-col gap-3">
+              {Array.from(new Set(cities.map(c => c.minClass))).sort((a, b) => a - b).map((cNum) => {
+                const classCities = cities.filter(c => c.minClass === cNum);
+                const userClassNum = userLevel || 1;
+                const isCompletedClass = cNum < userClassNum;
+                const isCurrentClass = cNum === userClassNum;
+                const isLockedClass = cNum > userClassNum;
+
+                const classHeaders: Record<number, string> = {
+                  1: "Class 1 • Hatchling Realm 🥚",
+                  2: "Class 2 • Desert Realm 🔥",
+                  3: "Class 3 • Cloud Realm ☁️",
+                  4: "Class 4 • Cosmos Realm 🌌"
+                };
+
                 return (
-                  <div 
-                    key={item.id} 
-                    onClick={() => navigate("/practice/journey-map", { state: { scrollTo: index } })}
-                    className={`flex items-center gap-3.5 mb-4 relative cursor-pointer active:scale-98 transition-all ${isLocked ? 'opacity-60 grayscale-[0.4]' : ''}`}
-                  >
-                    {/* Node Circle */}
-                    <div className={`w-12 h-12 rounded-full border-2 flex items-center justify-center shrink-0 z-10 transition-all ${
-                      isCurrent ? 'bg-[#6C4DFF] border-white text-white shadow-[0_4px_16px_rgba(108,77,255,0.4)] scale-110' : 
-                      isLocked ? 'bg-gray-100 border-white text-gray-400' : 'bg-[#3520A8] border-white text-white shadow-md'
-                    }`}>
-                      <MapPin size={20} className={isCurrent ? 'text-white' : isLocked ? 'text-gray-400' : 'text-white'} />
+                  <div key={cNum} className="bg-white border-2 border-[#E5DBFB] rounded-2xl p-3.5 shadow-sm space-y-3">
+                    <div className="flex items-center justify-between pb-2 border-b border-[#E5DBFB] gap-2 w-full">
+                      <span className="text-[11px] font-black text-[#141779] uppercase tracking-wide truncate flex-1 min-w-0">
+                        {classHeaders[cNum] || `Class ${cNum} Realm 🎓`}
+                      </span>
+                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0 whitespace-nowrap ${
+                        isCompletedClass ? "bg-indigo-50 text-[#141779] border border-indigo-200" : isCurrentClass ? "bg-indigo-100 text-[#141779] border border-indigo-200" : "bg-slate-100 text-slate-500 border border-slate-200"
+                      }`}>
+                        {isCompletedClass ? "✓ Completed" : isCurrentClass ? "⚡ Active Class" : `🔒 Class ${cNum}`}
+                      </span>
                     </div>
 
-                    {/* Location Card */}
-                    <div className={`flex-1 rounded-2xl p-3.5 border-2 transition-all ${
-                      isCurrent 
-                        ? 'bg-[#F2ECFF] border-[#6C4DFF] shadow-sm' 
-                        : 'bg-white border-[#E5DBFB]'
-                    }`}>
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-xs font-black text-[#141779] uppercase tracking-wide">{t(item.name.toLowerCase().trim().replace(/\s+/g, '_'), { defaultValue: item.name })}</h3>
-                        <ChevronRight size={16} className="text-[#6D28D9]" />
-                      </div>
-                      <p className={`text-[9px] font-black uppercase tracking-wider mt-1 ${isCurrent ? 'text-[#6C4DFF]' : isLocked ? 'text-gray-400' : 'text-[#D97706]'}`}>
-                        {item.status}
-                      </p>
+                    <div className="space-y-2.5">
+                      {classCities.map((item) => {
+                        const isLocked = item.status.includes('Locked') || isLockedClass;
+                        const isCurrent = item.status.includes('Current') && isCurrentClass;
+                        return (
+                          <div 
+                            key={item.id} 
+                            onClick={() => navigate("/practice/journey-map", { state: { scrollTo: item.id } })}
+                            className={`flex items-center gap-3 p-2.5 rounded-xl border transition-all cursor-pointer active:scale-98 ${
+                              isCurrent 
+                                ? 'bg-[#F2ECFF] border-[#6C4DFF] shadow-xs' 
+                                : isLocked 
+                                ? 'bg-slate-50 border-slate-200 opacity-60' 
+                                : 'bg-white border-[#E5DBFB] hover:border-[#6C4DFF]'
+                            }`}
+                          >
+                            <div className={`w-10 h-10 rounded-full border flex items-center justify-center shrink-0 ${
+                              isCurrent ? 'bg-[#6C4DFF] border-white text-white shadow-sm' :
+                              isLocked ? 'bg-slate-200 border-white text-slate-400' : 'bg-[#3520A8] border-white text-white'
+                            }`}>
+                              <MapPin size={18} />
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-xs font-black text-[#141779] uppercase tracking-wide truncate">
+                                {t(item.name.toLowerCase().trim().replace(/\s+/g, '_'), { defaultValue: item.name })}
+                              </h3>
+                              <p className={`text-[9px] font-black uppercase tracking-wider mt-0.5 ${
+                                isCurrent ? 'text-[#6C4DFF]' : isLocked ? 'text-slate-400' : 'text-[#D97706]'
+                              }`}>
+                                {item.status}
+                              </p>
+                            </div>
+
+                            <ChevronRight size={16} className="text-[#6D28D9] shrink-0" />
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );

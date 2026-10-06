@@ -151,13 +151,19 @@ export default function ChaptersScreen() {
         if (pData?.success && Array.isArray(pData.data)) {
           const progMap: Record<string, any> = {};
           pData.data.forEach((p: any) => {
-            if (p.completed && !p.chapterCompleted) p.chapterCompleted = true;
+            const mList = p.completedMissions || [];
+            if (mList.length > 0 && mList.length < 5) {
+              p.completed = false;
+              p.chapterCompleted = false;
+            } else if (p.completed && !p.chapterCompleted) {
+              p.chapterCompleted = true;
+            }
             progMap[p.chapterId] = p;
           });
           setChapterProgressMap(progMap);
 
           const completedIds = pData.data
-            .filter((p: any) => p.chapterCompleted || p.completed)
+            .filter((p: any) => (p.chapterCompleted || p.completed) && (!p.completedMissions || p.completedMissions.length >= 5))
             .map((p: any) => p.chapterId);
           setCompletedChapters(completedIds);
         }
@@ -535,7 +541,7 @@ export default function ChaptersScreen() {
                                 <h3 className="text-sm font-black text-[#17157F] leading-tight truncate">
                                   {displayTitle}
                                 </h3>
-                                <span className="text-xs text-[#5B5CFF] font-bold underline shrink-0">
+                                <span className="text-[10.5px] font-black uppercase tracking-wider text-white bg-gradient-to-r from-[#141779] to-[#25218c] px-3 py-1 rounded-full shrink-0 shadow-xs hover:brightness-110 active:scale-95 transition-all">
                                   {isExpanded ? t('close', 'Close') : t('review', 'Review')}
                                 </span>
                               </div>

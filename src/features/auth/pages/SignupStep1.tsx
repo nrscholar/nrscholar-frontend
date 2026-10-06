@@ -12,19 +12,28 @@ export default function SignupStep1Screen() {
   const [loading, setLoading] = useState(false);
 
   const validateMobile = (mobile: string) => {
-    // Check for exactly 10 digits
-    const regex = /^\d{10}$/;
+    // Check for exactly 10 digits starting with 6, 7, 8, or 9
+    const regex = /^[6-9]\d{9}$/;
     return regex.test(mobile);
   };
 
   const handleNext = async (e: React.FormEvent) => {
     e.preventDefault();
+    const cleanMobile = mobile.replace(/\D/g, "");
     if (!fullName.trim()) {
       setErrorMsg("Please enter your name");
       return;
     }
-    if (!validateMobile(mobile)) {
-      setErrorMsg("Please enter a valid mobile number (10 digits)");
+    if (!cleanMobile) {
+      setErrorMsg("Please enter your mobile number");
+      return;
+    }
+    if (cleanMobile.length !== 10) {
+      setErrorMsg("Mobile number must be exactly 10 digits");
+      return;
+    }
+    if (!/^[6-9]/.test(cleanMobile)) {
+      setErrorMsg("Mobile number must start with 6, 7, 8, or 9");
       return;
     }
     
