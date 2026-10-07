@@ -1,0 +1,25 @@
+---
+name: testing
+description: Use when verifying a nrscholar-frontend change — running lint and type-check builds for web and mobile and producing the manual test plan (roles, phone/WebView, languages, heavy screens); also use if the team decides to introduce automated tests.
+---
+
+# Testing — nrscholar-frontend
+
+Rules: the `testing-and-verification` rule. There's no automated runner yet.
+
+## Workflow
+
+1. **Web:** `npm run lint`, then `npm run build`. Report errors.
+2. **Mobile (if touched):** `cd mobile && yarn lint`, and `npx tsc --noEmit` if types changed.
+3. **Manual test plan** for the developer, tailored to the change:
+   - Happy path, loading, offline/error, empty.
+   - Child role and parent role (gate enforced).
+   - Phone width in the browser, plus inside the app WebView (Android at least).
+   - English plus Hindi or Gujarati.
+   - Heavy screens: enter/exit 3 times (no leaks, animations stop, timers reset).
+   - Rewards/XP changes: values update everywhere after the action (caches cleared).
+4. Report the commands with results, plus the plan.
+
+## Introducing automated tests (only when agreed)
+
+Run `dependency-evaluation` first. Suggested start: Vitest + React Testing Library for pure logic (scoring, XP/level math, formatters) and hooks. `jest-expo` for mobile logic. Don't add a runner as a side effect of another task.

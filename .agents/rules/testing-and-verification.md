@@ -1,0 +1,25 @@
+---
+trigger: model_decision
+description: Apply when verifying any nrscholar-frontend change before calling it done — lint, type-check build, manual test plan for web, WebView and mobile; no automated test runner exists yet
+---
+
+# Testing and verification — nrscholar-frontend
+
+There's no automated test suite yet. Quality gates are TypeScript, ESLint and manual checks.
+
+| Part | Checks |
+| --- | --- |
+| Web (`/`) | `npm run lint`, `npm run build` (`tsc -b && vite build`) |
+| Mobile (`mobile/`) | `yarn lint` (`expo lint`). Type errors show in the editor and in `npx tsc --noEmit` |
+
+Note: the web ESLint config turns off `no-explicit-any` and `no-unused-vars`, so review those by hand in new code.
+
+AI assistants: run the checks you can, then hand the developer a **manual test plan**:
+
+- Happy path + loading + error (offline → the `apiFetch` 503 path) + empty data.
+- **Child and parent roles.** Parent screens are blocked for children (parental gate).
+- Phone width (360px) in the browser, and **inside the mobile WebView** when the screen is opened from the app.
+- English + Hindi or Gujarati when text changed.
+- Heavy screens: open, leave and reopen a few times (no leaks, no frozen animations).
+
+Introducing tests (Vitest + React Testing Library for web, Jest via `jest-expo` for mobile) goes through the `dependency-evaluation` skill and team agreement first.
