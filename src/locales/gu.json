@@ -1292,6 +1292,25 @@
     "badge_epic_badge": "એપિક બેજ",
     "desc_streak_master": "3+ દિવસ ડેઇલી સ્ટ્રીક ચેમ્પિયન",
     "desc_found_epic_box": "એપિક મિસ્ટ્રી બોક્સમાં મળેલું!",
-    "desc_earned_achievement": "સિદ્ધિ મેળવેલ"
+    "desc_earned_achievement": "સિદ્ધિ મેળવેલ",
+    "sec": "સેકન્ડ",
+    "mins": "મિનિટ",
+    "hr": "કલાક",
+    "hrs": "કલાક",
+    "practice_session": "પ્રેક્ટિસ સત્ર",
+    "reading_session": "વાંચન સત્ર",
+    "shadow_arena_battle": "શેડો એરેના યુદ્ધ",
+    "quiz": "ક્વિઝ",
+    "live_battle_vs": "1v1 લાઈવ બેટલ",
+    "exploring_new_quests": "નવા ક્વેસ્ટ્સ શોધવામાં આવે છે...",
+    "completed_reading": "વાંચન પૂર્ણ કર્યું",
+    "completed": "પૂર્ણ કર્યું",
+    "view_details": "વિગતો જુઓ",
+    "show_more": "વધુ જુઓ",
+    "question_singular": "પ્રશ્ન",
+    "questions_plural": "પ્રશ્નો",
+    "just_now": "હમણાં જ",
+    "weekly_engagement": "સાપ્તાહિક જોડાણ",
+    "recent_activity": "તાજેતરની પ્રવૃત્તિ"
   }
 }

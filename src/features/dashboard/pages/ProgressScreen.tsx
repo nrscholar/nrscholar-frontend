@@ -267,19 +267,37 @@ export default function ProgressScreen() {
   const totalBadgesCount = Math.max(badges.length, unlockedMilestonesCount);
 
   // Filter growth list based on active subject selection & ensure single graph display per selected subject
+  const matchSubject = (item: any, activeSub: any) => {
+    if (!item || !activeSub) return false;
+    if (item.subjectId && (item.subjectId === activeSub._id || item.subjectId === activeSub.id)) return true;
+    
+    const iName = (item.rawName || item.name || "").toLowerCase();
+    const aName = (activeSub.name || activeSub.subject || "").toLowerCase();
+    
+    if (iName === aName || iName.includes(aName) || aName.includes(iName)) return true;
+    
+    const isGuj = (s: string) => s.includes("guj") || s.includes("ગુજરાત") || s.includes("ગુજરાતી") || s.includes("गुजરા");
+    const isMath = (s: string) => s.includes("math") || s.includes("ગણિત") || s.includes("गणित");
+    const isSci = (s: string) => s.includes("sci") || s.includes("વિજ્ઞાન") || s.includes("विज्ञान");
+    const isEng = (s: string) => s.includes("eng") || s.includes("અંગ્રેજી") || s.includes("अंग्रेजी");
+    const isSoc = (s: string) => s.includes("soc") || s.includes("social") || s.includes("સમાજ") || s.includes("સામાજિક");
+
+    if (isGuj(iName) && isGuj(aName)) return true;
+    if (isMath(iName) && isMath(aName)) return true;
+    if (isSci(iName) && isSci(aName)) return true;
+    if (isEng(iName) && isEng(aName)) return true;
+    if (isSoc(iName) && isSoc(aName)) return true;
+    
+    return false;
+  };
+
   let filteredGrowth = activeSubject
-    ? weeklyGrowth.filter((item: any) => 
-        item.subjectId === activeSubject._id || 
-        item.name.toLowerCase().replace(/ /g, '_') === activeSubject.name.toLowerCase().replace(/ /g, '_') ||
-        item.name.toLowerCase().includes(activeSubject.name.toLowerCase()) || 
-        activeSubject.name.toLowerCase().includes(item.name.toLowerCase()) ||
-        (item.name.toLowerCase().startsWith('math') && activeSubject.name.toLowerCase().startsWith('math'))
-      )
+    ? weeklyGrowth.filter((item: any) => matchSubject(item, activeSubject))
     : weeklyGrowth;
 
-  // Restrict to exactly 1 primary graph for the active subject
+  // Restrict to exactly 1 primary graph for the active subject, fallback to first item if filtered is empty
   const displayedGrowth = activeSubject
-    ? (filteredGrowth.length > 0 ? [filteredGrowth[0]] : [])
+    ? (filteredGrowth.length > 0 ? [filteredGrowth[0]] : (weeklyGrowth.length > 0 ? [weeklyGrowth[0]] : []))
     : (weeklyGrowth.length > 0 ? [weeklyGrowth[0]] : []);
 
   return (
@@ -291,7 +309,7 @@ export default function ProgressScreen() {
       </div>
 
       {/* TOP APP BAR / GAME HUD (Curved Sticky Design) */}
-      <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex items-center justify-between px-4 py-3 bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-[28px] shadow-xs gap-2">
+      <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex items-center justify-between px-4 py-3 bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-2xl shadow-xs gap-2">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <button
             onClick={() => navigate("/profile")}
@@ -305,15 +323,17 @@ export default function ProgressScreen() {
               </div>
             )}
           </button>
-          <div className="flex flex-col min-w-0">
-            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-              <h1 className="text-sm font-black text-slate-900 leading-tight truncate">{username || "Explorer"}</h1>
-              <span className="text-[10px] text-[#4f46e5] bg-[#eef2ff] font-black px-2 py-0.5 rounded-full border border-indigo-100 shrink-0">
+          <div className="flex flex-col min-w-0 justify-center">
+            {/* Line 1: Name + Class on same line */}
+            <div className="flex items-center gap-1.5 min-w-0">
+              <h1 className="text-sm font-black text-slate-900 leading-tight truncate max-w-[130px]">{username || "Explorer"}</h1>
+              <span className="text-[10px] text-[#4f46e5] bg-[#eef2ff] font-black px-2 py-0.5 rounded-full border border-indigo-100 shrink-0 whitespace-nowrap">
                 {userData?.childClass || t('class_10', { defaultValue: "Class 10" })}
               </span>
             </div>
-            <div className="flex items-center gap-1.5 mt-1">
-              <span className="text-[11px] text-slate-400 font-extrabold whitespace-nowrap">
+            {/* Line 2: Level */}
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-[11.5px] text-slate-400 font-extrabold whitespace-nowrap">
                 {t('explorer_level', { defaultValue: "Explorer Level" })} {level}
               </span>
             </div>
@@ -324,13 +344,13 @@ export default function ProgressScreen() {
         <div className="flex items-center gap-1.5 shrink-0">
           <button
             onClick={() => setShowStreakModal(true)}
-            className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
+            className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1.5 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
           >
             <span className="text-[11px] font-black text-[#ea580c] leading-none">🔥 {streakDays || 0}</span>
           </button>
           <button
             onClick={() => navigate("/practice/inventory")}
-            className="bg-[#fffbeb] border border-amber-100/80 rounded-2xl px-2 py-1 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
+            className="bg-[#fffbeb] border border-amber-100/80 rounded-2xl px-2 py-1.5 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
           >
             <span className="text-[11px] font-black text-[#b45309] leading-none">🪙 {coins || 0}</span>
           </button>
@@ -608,7 +628,7 @@ export default function ProgressScreen() {
                               <div className="h-32 flex items-end">
                                 <motion.div
                                   initial={{ height: 0 }}
-                                  animate={{ height: `${Math.max(16, (item.thisWeekAccuracy / 100) * 120)}px` }}
+                                  animate={{ height: item.thisWeekAccuracy > 0 ? `${Math.max(8, (item.thisWeekAccuracy / 100) * 120)}px` : '4px' }}
                                   transition={{ duration: 0.7, ease: "easeOut" }}
                                   className="w-12 sm:w-14 rounded-t-[16px] rounded-b-[4px] bg-gradient-to-t from-[#4F46E5] to-[#7C6CFF] shadow-[0_6px_16px_rgba(79,70,229,0.25)] hover:scale-[1.03] transition-transform duration-200 overflow-hidden relative"
                                 >
@@ -629,7 +649,7 @@ export default function ProgressScreen() {
                               <div className="h-32 flex items-end">
                                 <motion.div
                                   initial={{ height: 0 }}
-                                  animate={{ height: `${Math.max(16, (item.lastWeekAccuracy / 100) * 120)}px` }}
+                                  animate={{ height: item.lastWeekAccuracy > 0 ? `${Math.max(8, (item.lastWeekAccuracy / 100) * 120)}px` : '4px' }}
                                   transition={{ duration: 0.7, delay: 0.1, ease: "easeOut" }}
                                   className="w-12 sm:w-14 rounded-t-[16px] rounded-b-[4px] bg-gradient-to-t from-[#94A3B8] to-[#CBD5E1] shadow-[0_6px_16px_rgba(148,163,184,0.2)] hover:scale-[1.03] transition-transform duration-200 overflow-hidden relative"
                                 >

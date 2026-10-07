@@ -27,60 +27,60 @@ export default function KidsActivityScreen() {
   const translateSubjectName = (subj: string) => {
     if (!subj) return "";
     const lower = subj.toLowerCase();
-    if (lower.includes("gujarati")) return t("gujarati", "ગુજરાતી");
-    if (lower.includes("math")) return t("maths", "ગણિત");
-    if (lower.includes("english")) return t("english_subject", "અંગ્રેજી");
-    if (lower.includes("science")) return t("science", "વિજ્ઞાન");
-    if (lower.includes("social")) return t("social_studies", "સામાજિક વિજ્ઞાન");
-    if (lower.includes("hindi")) return t("hindi_subject", "હિન્દી");
+    if (lower.includes("gujarati")) return t("gujarati", "Gujarati");
+    if (lower.includes("math")) return t("maths", "Maths");
+    if (lower.includes("english")) return t("english_subject", "English");
+    if (lower.includes("science")) return t("science", "Science");
+    if (lower.includes("social")) return t("social_studies", "Social Science");
+    if (lower.includes("hindi")) return t("hindi_subject", "Hindi");
     return t(subj, subj);
   };
 
   const translateActivityTitle = (title: string) => {
-    if (!title) return t("practice_session", "પ્રેક્ટિસ સત્ર");
+    if (!title) return t("practice_session", "Practice Session");
     if (title.includes("1v1 Live Battle vs") || title.includes("1v1 Battle vs")) {
       const opp = title.replace(/1v1 (?:Live )?Battle vs\s*/i, "").trim();
-      return `${t("live_battle_vs", "1v1 લાઈવ બેટલ")} વિ ${opp}`;
+      return `${t("live_battle_vs", "1v1 Live Battle")} vs ${opp}`;
     }
     if (title === "Exploring new quests..." || title.includes("Exploring new quests")) {
-      return t("exploring_new_quests", "નવા ક્વેસ્ટ્સ શોધવામાં આવે છે...");
+      return t("exploring_new_quests", "Exploring new quests...");
     }
-    if (title === "Practice Session") return t("practice_session", "પ્રેક્ટિસ સત્ર");
-    if (title === "Reading Session") return t("reading_session", "વાંચન સત્ર");
-    if (title === "Shadow Arena Battle" || title.includes("Shadow Arena")) return t("shadow_arena_battle", "શેડો એરેના યુદ્ધ");
-    if (title === "Quiz") return t("quiz", "ક્વિઝ");
+    if (title === "Practice Session") return t("practice_session", "Practice Session");
+    if (title === "Reading Session") return t("reading_session", "Reading Session");
+    if (title === "Shadow Arena Battle" || title.includes("Shadow Arena")) return t("shadow_arena_battle", "Shadow Arena Battle");
+    if (title === "Quiz") return t("quiz", "Quiz");
     if (title.startsWith("Completed reading:")) {
       const rest = title.replace("Completed reading:", "").trim();
-      return `${t("completed_reading", "વાંચન પૂર્ણ કર્યું")}: ${t(rest, rest)}`;
+      return `${t("completed_reading", "Completed Reading")}: ${t(rest, rest)}`;
     }
     if (title.startsWith("Completed Chapter")) {
       const chapNum = title.replace(/Completed Chapter\s*/i, "").trim();
-      return t("completed_chapter_num", { num: chapNum, defaultValue: `અધ્યાય ${chapNum} પૂર્ણ કર્યો` });
+      return t("completed_chapter_num", { num: chapNum, defaultValue: `Completed Chapter ${chapNum}` });
     }
     if (title.startsWith("Completed")) {
       const rest = title.replace("Completed", "").trim();
-      return `${t("completed", "પૂર્ણ કર્યું")} ${t(rest, rest)}`;
+      return `${t("completed", "Completed")} ${t(rest, rest)}`;
     }
     return t(title, title);
   };
 
   const formatTime = (seconds: number) => {
-    if (seconds === undefined || seconds === null) return `0 ${t("sec", "સેકન્ડ")}`;
-    if (seconds < 60) return `${seconds} ${t("sec", "સેકન્ડ")}`;
+    if (seconds === undefined || seconds === null) return `0 ${t("sec", "sec")}`;
+    if (seconds < 60) return `${seconds} ${t("sec", "sec")}`;
     const mins = Math.floor(seconds / 60);
-    if (mins < 60) return `${mins} ${t("mins", "મિનિટ")}`;
+    if (mins < 60) return `${mins} ${t("mins", "mins")}`;
     const hours = Math.floor(mins / 60);
     const remainingMins = mins % 60;
-    const hourStr = hours === 1 ? t("hr", "કલાક") : t("hrs", "કલાક");
+    const hourStr = hours === 1 ? t("hr", "hr") : t("hrs", "hrs");
     if (remainingMins === 0) return `${hours} ${hourStr}`;
-    return `${hours} ${hourStr} ${remainingMins} ${t("mins", "મિનિટ")}`;
+    return `${hours} ${hourStr} ${remainingMins} ${t("mins", "mins")}`;
   };
 
   const formatEngagementHours = (str: string) => {
-    if (!str) return `0 ${t("mins", "મિનિટ")}`;
+    if (!str) return `0 ${t("mins", "mins")}`;
     return str
-      .replace(/(\d+)\s*hrs?/gi, (_, h) => `${h} ${t("hrs", "કલાક")}`)
-      .replace(/(\d+)\s*mins?/gi, (_, m) => `${m} ${t("mins", "મિનિટ")}`);
+      .replace(/(\d+)\s*hrs?/gi, (_, h) => `${h} ${t("hrs", "hrs")}`)
+      .replace(/(\d+)\s*mins?/gi, (_, m) => `${m} ${t("mins", "mins")}`);
   };
 
   useEffect(() => {
@@ -366,20 +366,20 @@ export default function KidsActivityScreen() {
                                   <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs font-black">
                                     <span className="flex items-center gap-1 text-slate-600 font-bold">
                                       <BookOpen size={12} className="text-slate-500" />
-                                      {activity.type === 'reading' ? t("reading_session", "વાંચન સત્ર") : `0 ${t("questions_plural", "પ્રશ્નો")}`}
+                                      {activity.type === 'reading' ? t("reading_session", "Reading Session") : `0 ${t("questions_plural", "questions")}`}
                                     </span>
                                     <span className="flex items-center gap-0.5 text-[#141779] font-black hover:underline transition-all">
-                                      {activity.type === 'reading' ? t("view_details", "વિગતો જુઓ") : t("show_more", "વધુ જુઓ")} <ChevronRight size={14} className="mt-[0.5px]" />
+                                      {activity.type === 'reading' ? t("view_details", "View Details") : t("show_more", "View More")} <ChevronRight size={14} className="mt-[0.5px]" />
                                     </span>
                                   </div>
                                 ) : (
                                   <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs font-black">
                                     <span className="flex items-center gap-1 text-slate-600 font-bold">
                                       <BookOpen size={12} className="text-slate-500" />
-                                      {activity.details.length} {activity.details.length === 1 ? t("question_singular", "પ્રશ્ન") : t("questions_plural", "પ્રશ્નો")}
+                                      {activity.details.length} {activity.details.length === 1 ? t("question_singular", "question") : t("questions_plural", "questions")}
                                     </span>
                                     <span className="flex items-center gap-0.5 text-[#141779] font-black hover:underline transition-all">
-                                      {t("show_more", "વધુ જુઓ")} <ChevronRight size={14} className="mt-[0.5px]" />
+                                      {t("show_more", "View More")} <ChevronRight size={14} className="mt-[0.5px]" />
                                     </span>
                                   </div>
                                 )}

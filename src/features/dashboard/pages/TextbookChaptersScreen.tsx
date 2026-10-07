@@ -3,6 +3,7 @@ import { ArrowLeft, BookOpen } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { apiFetch } from "../../../api";
+import { prefetchPdf } from "../../../utils/pdfCache";
 
 export default function TextbookChaptersScreen() {
   const navigate = useNavigate();
@@ -43,6 +44,10 @@ export default function TextbookChaptersScreen() {
         const json = await res.json();
         if (json.success && json.data) {
           setChapters(json.data);
+          // Prefetch first 3 unlocked chapter PDFs in the background
+          json.data.slice(0, 3).forEach((ch: any) => {
+            if (ch._id) prefetchPdf(ch._id);
+          });
         }
       } catch (error) {
         console.error("Error fetching textbook chapters:", error);

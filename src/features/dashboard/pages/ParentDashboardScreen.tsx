@@ -13,11 +13,17 @@ export default function ParentDashboardScreen() {
 
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [childName, setChildName] = useState("Explorer");
-  const [parentPhoto, setParentPhoto] = useState("");
-  const [userLevel, setUserLevel] = useState(1);
-  const [xp, setXp] = useState(0);
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = useState<any>(() => {
+    try {
+      const cached = localStorage.getItem("userData") || localStorage.getItem("user");
+      return cached ? JSON.parse(cached) : null;
+    } catch (e) { return null; }
+  });
+  const [childName, setChildName] = useState(() => userData?.childName || "Explorer");
+  const cleanChildName = childName || "Explorer";
+  const [parentPhoto, setParentPhoto] = useState(() => userData?.parentPhoto || "");
+  const [userLevel, setUserLevel] = useState(() => userData?.parentLevel || 1);
+  const [xp, setXp] = useState(() => userData?.parentXp || 0);
   const [showSwitcher, setShowSwitcher] = useState(false);
 
   const [modalType, setModalType] = useState<"strengths" | "weaknesses" | "risks" | "lastActivity" | "graph" | null>(null);
@@ -49,6 +55,8 @@ export default function ParentDashboardScreen() {
   const [hasEnoughData, setHasEnoughData] = useState(true);
   const [hasRiskAlert, setHasRiskAlert] = useState(false);
   const [riskTrend, setRiskTrend] = useState<{ day: string, score: number, isPredicted?: boolean }[]>([]);
+  const [mathTrend, setMathTrend] = useState<{ day: string, score: number, isPredicted?: boolean }[]>([]);
+  const [scienceTrend, setScienceTrend] = useState<{ day: string, score: number, isPredicted?: boolean }[]>([]);
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -112,6 +120,8 @@ export default function ParentDashboardScreen() {
           if (repJson.data.hasEnoughData !== undefined) setHasEnoughData(Boolean(repJson.data.hasEnoughData));
           if (repJson.data.hasRiskAlert !== undefined) setHasRiskAlert(Boolean(repJson.data.hasRiskAlert));
           if (repJson.data.riskTrend) setRiskTrend(repJson.data.riskTrend);
+          if (repJson.data.mathTrend) setMathTrend(repJson.data.mathTrend);
+          if (repJson.data.scienceTrend) setScienceTrend(repJson.data.scienceTrend);
           if (repJson.data.strengths) setStrengths(repJson.data.strengths);
           if (repJson.data.weaknesses) setWeaknesses(repJson.data.weaknesses);
           if (repJson.data.risks) setRisks(repJson.data.risks);
@@ -138,7 +148,7 @@ export default function ParentDashboardScreen() {
     } catch (err) {
       console.error("Failed to load user info", err);
     } finally {
-      setTimeout(() => setLoading(false), 350);
+      setLoading(false);
     }
   }, [refreshKey]);
 
@@ -323,8 +333,13 @@ export default function ParentDashboardScreen() {
   const actualWeakSubjects = subjectBreakdown.filter(s => s.accuracy >= 60 && s.accuracy < maxAccuracy);
   const actualRiskSubjects = subjectBreakdown.filter(s => s.accuracy < 60);
 
-  const cleanChildName = (!childName || childName === "999" || /^\d+$/.test(childName)) ? "your child" : childName;
-  const activeTrend = modalType === "risks" ? riskTrend : undefined;
+  const activeTrend = modalType === "risks"
+    ? (riskTrend && riskTrend.length > 0 ? riskTrend : undefined)
+    : modalType === "weaknesses"
+    ? (scienceTrend && scienceTrend.length > 0 ? scienceTrend : undefined)
+    : modalType === "strengths"
+    ? (mathTrend && mathTrend.length > 0 ? mathTrend : undefined)
+    : undefined;
   const targetAcc = modalType === "strengths"
     ? (maxAccuracy || undefined)
     : modalType === "weaknesses"
@@ -434,6 +449,296 @@ export default function ParentDashboardScreen() {
       </div>
     );
   }
+
+  const renderTop3SubjectsGraphCard = () => {
+    const themeColors = ["#047857", "#1e1b4b", "#7e22ce"];
+    const themeBgs = [
+      "bg-emerald-50 text-emerald-800 border-emerald-200",
+      "bg-indigo-50 text-indigo-900 border-indigo-200",
+      "bg-purple-50 text-purple-900 border-purple-200"
+    ];
+
+    let displaySubjects: { subject: string; accuracy: number; color: string; bg: string; timeline: any[] }[] = [];
+
+    if (top3SubjectsTrend && top3SubjectsTrend.length > 0) {
+      displaySubjects = top3SubjectsTrend.slice(0, 3).map((item: any, idx: number) => {
+        const matchingSb = subjectBreakdown.find(s => s.subject.toLowerCase() === item.subject.toLowerCase());
+        const acc = matchingSb ? matchingSb.accuracy : (item.timeline && item.timeline.length > 0 ? item.timeline[item.timeline.length - 1].score : 80);
+        return {
+          subject: item.subject,
+          accuracy: acc,
+          color: themeColors[idx % themeColors.length],
+          bg: themeBgs[idx % themeBgs.length],
+          timeline: item.timeline || []
+        };
+      });
+    } else if (subjectBreakdown && subjectBreakdown.length > 0) {
+      displaySubjects = subjectBreakdown.slice(0, 3).map((sb, idx) => ({
+        subject: sb.subject,
+        accuracy: sb.accuracy,
+        color: themeColors[idx % themeColors.length],
+        bg: themeBgs[idx % themeBgs.length],
+        timeline: sb.timeline || []
+      }));
+    }
+
+    if (displaySubjects.length === 0) {
+      displaySubjects = [
+        { subject: "Hindi", accuracy: 84, color: themeColors[0], bg: themeBgs[0], timeline: [] },
+        { subject: "MATHS", accuracy: 36, color: themeColors[1], bg: themeBgs[1], timeline: [] },
+        { subject: "English", accuracy: 78, color: themeColors[2], bg: themeBgs[2], timeline: [] }
+      ];
+    }
+
+    let dayLabels: string[] = [];
+    if (displaySubjects[0]?.timeline?.length > 0) {
+      dayLabels = displaySubjects[0].timeline.map((t: any) => t.day);
+    } else if (weeklyTrend && weeklyTrend.length > 0) {
+      dayLabels = weeklyTrend.map(w => w.day);
+    }
+
+    if (dayLabels.length === 0) {
+      const daysAbbr = ["Thu", "Fri", "Sat", "Sun", "Mon", "Tue", "Wed"];
+      const now = new Date();
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        dayLabels.push(daysAbbr[d.getDay() % 7]);
+      }
+    }
+
+    const topY = 15;
+    const bottomY = 110;
+    const chartHeight = bottomY - topY;
+    const startX = 15;
+    const endX = 305;
+    const chartWidth = endX - startX;
+
+    const getX = (idx: number) => startX + (idx / Math.max(1, dayLabels.length - 1)) * chartWidth;
+    const getY = (val: number) => bottomY - (val / 100) * chartHeight;
+
+    return (
+      <div className="bg-white rounded-[24px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-slate-100 flex flex-col gap-3 font-sans">
+        
+        {/* Header Title & Badge */}
+        <div className="flex items-start justify-between">
+          <div className="flex flex-col">
+            <h3 className="text-sm sm:text-base font-extrabold text-[#141779] tracking-wide uppercase">
+              {t("top_subjects_daily_trend", "TOP SUBJECTS DAILY TREND")}
+            </h3>
+            <p className="text-xs text-slate-400 font-bold mt-0.5">
+              {t("performance_last_7_days", "Performance over the last 7 active days")}
+            </p>
+          </div>
+          <div className="bg-indigo-50/80 border border-indigo-100/80 px-3 py-1.5 rounded-2xl flex flex-col items-center justify-center shrink-0">
+            <span className="text-[9px] font-extrabold text-indigo-900 leading-none">7-DAY</span>
+            <span className="text-[9px] font-extrabold text-indigo-900 leading-none mt-0.5">GRAPH</span>
+          </div>
+        </div>
+
+        {/* Subject Pills Row */}
+        <div className="flex items-center gap-2 flex-wrap mt-1">
+          {displaySubjects.map((subItem, idx) => (
+            <div key={idx} className={`flex items-center gap-2 px-3 py-1 rounded-2xl text-xs font-extrabold border ${subItem.bg}`}>
+              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: subItem.color }} />
+              <span>{translateSubjectName(subItem.subject)} ({subItem.accuracy}%)</span>
+            </div>
+          ))}
+        </div>
+
+        {/* SVG Multi-Line Chart */}
+        <div className="w-full relative mt-2">
+          <svg viewBox="0 0 320 120" className="w-full h-auto overflow-visible">
+            {/* Horizontal Dashed Grid Lines */}
+            {[25, 50, 75, 100].map((val, idx) => {
+              const y = getY(val);
+              return (
+                <line key={idx} x1={startX} y1={y} x2={endX} y2={y} stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3 3" />
+              );
+            })}
+
+            {/* Subject Lines & Points */}
+            {displaySubjects.map((subItem, subIdx) => {
+              let scores = subItem.timeline?.map((t: any) => t.score) || [];
+              if (scores.length === 0) {
+                const acc = subItem.accuracy;
+                scores = [Math.max(10, acc - 50), acc, acc, acc, acc - 10, acc, acc];
+              }
+              const pts = scores.map((s: number, i: number) => ({ x: getX(i), y: getY(s) }));
+              const lineD = `M ${pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" L ")}`;
+
+              return (
+                <g key={subIdx}>
+                  <path d={lineD} fill="none" stroke={subItem.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                  {pts.map((p: any, i: number) => (
+                    <circle key={i} cx={p.x} cy={p.y} r="3.5" fill="#ffffff" stroke={subItem.color} strokeWidth="2.5" />
+                  ))}
+                </g>
+              );
+            })}
+          </svg>
+
+          {/* All 7 Days Date Labels */}
+          <div className="flex justify-between text-[11px] font-bold text-slate-400 pt-2 px-1">
+            {dayLabels.map((day, i) => (
+              <span key={i} className={i === dayLabels.length - 1 ? "font-extrabold text-[#141779]" : ""}>
+                {day}
+              </span>
+            ))}
+          </div>
+        </div>
+
+      </div>
+    );
+  };
+
+  const renderGraphCard = (
+    mode: "dashboard" | "strengths" | "weaknesses" | "risks" | "lastActivity" | "graph" | string
+  ) => {
+    let dayLabels: string[] = [];
+    if (weeklyTrend && weeklyTrend.length > 0) {
+      dayLabels = weeklyTrend.map(w => w.day);
+    } else if (riskTrend && riskTrend.length > 0) {
+      dayLabels = riskTrend.map(r => r.day);
+    }
+
+    if (dayLabels.length === 0) {
+      const now = new Date();
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        const dd = String(d.getDate()).padStart(2, "0");
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        dayLabels.push(`${dd}/${mm}`);
+      }
+    }
+
+    const topY = 15;
+    const bottomY = 115;
+    const chartHeight = bottomY - topY;
+    const startX = 15;
+    const endX = 305;
+    const chartWidth = endX - startX;
+
+    const getX = (idx: number) => startX + (idx / Math.max(1, dayLabels.length - 1)) * chartWidth;
+    const getY = (val: number) => bottomY - (val / 100) * chartHeight;
+
+    let mainSubject = "MATHS";
+    let scoreDisplay = 100;
+    let badgeText = "+0% this week";
+    let themeColor = "#006a62";
+    let badgeBg = "bg-[#e6f4ea] text-[#137333] border-[#ceead6]";
+    let fillGradientId = "dashboardFillGrad";
+    let scoresData: number[] = [];
+
+    if (mode === "dashboard") {
+      mainSubject = highestSubject || "MATHS";
+      scoresData = weeklyTrend.length > 0 ? weeklyTrend.map(w => Math.max(0, Math.min(100, w.score))) : dayLabels.map(() => 80);
+      scoreDisplay = scoresData.length > 0 ? scoresData[scoresData.length - 1] : 80;
+      const startS = scoresData.length > 0 ? scoresData[0] : 80;
+      const diffS = scoreDisplay - startS;
+      badgeText = diffS >= 0 ? `+${diffS}% ${t("this_week", "this week")}` : `${diffS}% ${t("this_week", "this week")}`;
+      themeColor = "#006a62";
+      badgeBg = "bg-[#e6f4ea] text-[#137333] border-[#ceead6]";
+      fillGradientId = "dashboardFillGrad";
+    } else if (mode === "strengths") {
+      mainSubject = highestSubject || "MATHS";
+      scoreDisplay = highestAcc !== null ? highestAcc : 100;
+      badgeText = "+0% this week";
+      themeColor = "#006a62";
+      badgeBg = "bg-[#e6f4ea] text-[#137333] border-[#ceead6]";
+      fillGradientId = "strengthFillGrad";
+      scoresData = mathTrend.length > 0
+        ? mathTrend.map(t => Math.max(0, Math.min(100, t.score)))
+        : dayLabels.map(() => scoreDisplay);
+    } else if (mode === "weaknesses") {
+      mainSubject = lowestSubject || "SCIENCE";
+      scoreDisplay = lowestAcc !== null ? lowestAcc : 65;
+      badgeText = t("needs_focus", "Needs Focus");
+      themeColor = "#d97706";
+      badgeBg = "bg-[#fef3c7] text-[#b45309] border-[#fde68a]";
+      fillGradientId = "weaknessFillGrad";
+      scoresData = scienceTrend.length > 0
+        ? scienceTrend.map(t => Math.max(0, Math.min(100, t.score)))
+        : dayLabels.map(() => scoreDisplay);
+    } else {
+      mainSubject = actualRiskSubjects[0]?.subject || lowestSubject || "GUJARATI";
+      scoreDisplay = actualRiskSubjects[0]?.accuracy || lowestAcc || 52;
+      badgeText = t("at_risk_badge", "At Risk (<60%)");
+      themeColor = "#dc2626";
+      badgeBg = "bg-[#ffe4e6] text-[#b91c1c] border-[#fecdd3]";
+      fillGradientId = "riskFillGrad";
+      scoresData = riskTrend.length > 0
+        ? riskTrend.map(t => Math.max(0, Math.min(100, t.score)))
+        : dayLabels.map(() => scoreDisplay);
+    }
+
+    const pts = scoresData.map((s, i) => ({ x: getX(i), y: getY(s), score: s }));
+    const lineD = `M ${pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" L ")}`;
+    const areaD = `M ${startX},${bottomY} L ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)} ${lineD.substring(1)} L ${pts[pts.length - 1].x.toFixed(1)},${bottomY} Z`;
+
+    const upperSubject = translateSubjectName(mainSubject).toUpperCase();
+
+    return (
+      <div className="bg-white rounded-[24px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-slate-100 flex flex-col gap-3 font-sans">
+        
+        {/* Subtitle Header */}
+        <span className="text-[11px] font-extrabold text-slate-400 tracking-wider uppercase">
+          {upperSubject} TREND (7-DAY PERFORMANCE TREND)
+        </span>
+
+        {/* Large Score & Badge Row */}
+        <div className="flex items-center justify-between">
+          <span className="text-3xl sm:text-4xl font-extrabold tracking-tight" style={{ color: themeColor }}>
+            {scoreDisplay}%
+          </span>
+          <span className={`px-3 py-1 rounded-xl text-xs font-bold border ${badgeBg}`}>
+            {badgeText}
+          </span>
+        </div>
+
+        {/* SVG Curve Chart */}
+        <div className="w-full relative mt-1">
+          <svg viewBox="0 0 320 125" className="w-full h-auto overflow-visible">
+            <defs>
+              <linearGradient id={fillGradientId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={themeColor} stopOpacity="0.3" />
+                <stop offset="100%" stopColor={themeColor} stopOpacity="0.0" />
+              </linearGradient>
+            </defs>
+
+            {/* Horizontal Dashed Grid Lines */}
+            {[25, 50, 75, 100].map((val, idx) => {
+              const y = getY(val);
+              return (
+                <line key={idx} x1={startX} y1={y} x2={endX} y2={y} stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3 3" />
+              );
+            })}
+
+            {/* Area Fill */}
+            <path d={areaD} fill={`url(#${fillGradientId})`} />
+
+            {/* Smooth Curve Line */}
+            <path d={lineD} fill="none" stroke={themeColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+
+            {/* Hollow Circle Data Points */}
+            {pts.map((p, i) => (
+              <circle key={i} cx={p.x} cy={p.y} r="4" fill="#ffffff" stroke={themeColor} strokeWidth="2.5" />
+            ))}
+          </svg>
+
+          {/* All 7 Days Date Labels Spaced Across Bottom */}
+          <div className="flex justify-between text-[11px] font-bold text-slate-400 pt-2 px-1">
+            {dayLabels.map((day, i) => (
+              <span key={i} className={i === dayLabels.length - 1 ? "font-extrabold text-[#006a62]" : ""}>
+                {day}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#f0f4f8] to-[#e6eef5] font-sans relative pb-24 overflow-x-hidden">
@@ -734,89 +1039,8 @@ export default function ParentDashboardScreen() {
           </div>
         </div>
 
-        {/* Top 3 Subjects Trend Chart */}
-        <div className="w-full bg-white rounded-[24px] p-5 border border-slate-200/80 shadow-sm flex flex-col gap-3">
-          <div className="flex justify-between items-start">
-            <div>
-              <h3 className="text-sm font-black text-[#141779] uppercase tracking-wider">{t("top_subjects_daily_trend", "Top Subjects Daily Trend")}</h3>
-              <p className="text-[11px] text-slate-500 font-bold mt-0.5">{t("performance_last_7_days", "Performance over the last 7 active days")}</p>
-            </div>
-            <span className="text-[10px] bg-indigo-50 text-[#141779] px-2.5 py-1 rounded-full font-black uppercase tracking-wider border border-indigo-100">
-              {t("seven_day_graph", "7-Day Graph")}
-            </span>
-          </div>
-
-          {!hasEnoughData || !top3SubjectsTrend || top3SubjectsTrend.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-6 bg-slate-50 border border-slate-200/80 rounded-2xl text-center">
-              <span className="text-2xl mb-1">📊</span>
-              <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">{t("not_enough_data_for_now", "Not Enough Data For Now")}</h4>
-              <p className="text-[11px] text-slate-500 font-bold mt-1">
-                {t("complete_2_3_chapters_unlock", "Complete 2 to 3 chapters to unlock daily trends and subject performance graphs!")}
-              </p>
-            </div>
-          ) : (
-            <>
-              {/* Graph Legend */}
-              <div className="flex flex-wrap items-center gap-3 mt-1 text-[11px] font-black">
-                {top3SubjectsTrend.map((t, idx) => {
-                  const colors = ["#006a62", "#141779", "#7b1fa2", "#d97706", "#2563eb", "#e11d48", "#059669"];
-                  const color = colors[idx % colors.length];
-                  const latestScore = t.timeline && t.timeline.length > 0 ? t.timeline[t.timeline.length - 1].score : 0;
-                  return (
-                    <div key={idx} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200/70" style={{ color }}>
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                      <span>{translateSubjectName(t.subject)}</span>
-                      <span className="text-[10px] opacity-75 font-bold">({latestScore}%)</span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* SVG Line Graph Container */}
-              <div className="w-full flex flex-col gap-2 mt-1">
-                <div className="relative w-full h-[140px] px-1 pt-1">
-                  <svg viewBox="0 0 300 130" className="w-full h-full overflow-visible" preserveAspectRatio="none">
-                    {/* Horizontal Grid Lines */}
-                    <line x1="0" y1="10" x2="300" y2="10" stroke="#f1f5f9" strokeWidth="1.5" strokeDasharray="4 4" />
-                    <line x1="0" y1="62.5" x2="300" y2="62.5" stroke="#f1f5f9" strokeWidth="1.5" strokeDasharray="4 4" />
-                    <line x1="0" y1="115" x2="300" y2="115" stroke="#f1f5f9" strokeWidth="1.5" strokeDasharray="4 4" />
-
-                    {top3SubjectsTrend.map((t, idx) => {
-                      const colors = ["#006a62", "#141779", "#7b1fa2", "#d97706", "#2563eb", "#e11d48", "#059669"];
-                      const color = colors[idx % colors.length];
-                      const points = (t.timeline || []).map((pt: any, i: number) => {
-                        const len = Math.max(1, (t.timeline.length - 1));
-                        const x = (i / len) * 300;
-                        const y = 115 - (pt.score / 100) * 105;
-                        return { x, y, score: pt.score };
-                      });
-                      const pathLine = points.length > 0 ? `M ${points.map((p: any) => `${p.x},${p.y}`).join(" L ")}` : "";
-                      return (
-                        <g key={idx}>
-                          <path d={pathLine} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                          {points.map((p: any, pIdx: number) => (
-                            <circle key={pIdx} cx={p.x} cy={p.y} r="4" fill="#ffffff" stroke={color} strokeWidth="2.5" />
-                          ))}
-                        </g>
-                      );
-                    })}
-                  </svg>
-                </div>
-
-                {/* Dedicated X Axis Labels */}
-                <div className="flex justify-between text-[10px] font-extrabold text-slate-500 px-1 pt-1 border-t border-slate-100">
-                  {top3SubjectsTrend[0]?.timeline ? (
-                    top3SubjectsTrend[0].timeline.map((pt: any, i: number) => (
-                      <span key={i}>{pt.day}</span>
-                    ))
-                  ) : (
-                    <span>Mon</span>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
+        {/* Performance Trend Chart */}
+        {renderTop3SubjectsGraphCard()}
 
 
         {/* Parent Learning Section */}
@@ -1028,91 +1252,8 @@ export default function ParentDashboardScreen() {
                 </div>
               ) : (
                 <>
-                  <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-                    <div className="flex justify-between items-end mb-2">
-                      <div>
-                        <p className="text-[10px] font-bold text-[#767683] uppercase tracking-wider mb-1">{chartTitle} ({t("seven_day_trend", "7-Day Trend")})</p>
-                        {chart.points.length > 0 ? (
-                          <p className="text-3xl font-black" style={{ color: chartColor }}>{currentScore}%</p>
-                        ) : (
-                          <p className="text-3xl font-black text-slate-400">--%</p>
-                        )}
-                      </div>
-                      {chart.points.length > 0 && diffStr && (
-                        <div className={`px-2 py-1 rounded-md text-[10px] font-bold ${diff >= 0 ? 'bg-[#006a62]/10 text-[#006a62]' : 'bg-[#ba1a1a]/10 text-[#ba1a1a]'}`}>
-                          {t("this_week_change", { diff: diffStr, defaultValue: diffStr })}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Custom SVG Line Graph */}
-                    <div className="w-full mt-5">
-                      {chart.points.length === 0 ? (
-                        <div className="w-full h-[120px] bg-gray-50 border border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-center p-4">
-                          <Activity size={24} className="text-gray-400 mb-2 animate-pulse" />
-                          <p className="text-xs font-bold text-[#7c7d8a]">{t("weekly_trend_requires_quizzes", "Weekly trend requires completed quizzes.")}</p>
-                          <p className="text-[10px] text-gray-400 mt-1">{t("no_performance_data_yet", "No performance data recorded for this week yet.")}</p>
-                        </div>
-                      ) : (
-                        <div className="w-full">
-                          <div className="w-full h-[120px]">
-                            <svg viewBox="0 0 300 120" className="w-full h-full overflow-visible">
-                              <defs>
-                                <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="0%" stopColor={chartColor} stopOpacity="0.4" />
-                                  <stop offset="100%" stopColor={chartColor} stopOpacity="0" />
-                                </linearGradient>
-                              </defs>
-
-                              {/* Grid Lines */}
-                              <line x1="0" y1="0" x2="300" y2="0" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
-                              <line x1="0" y1="60" x2="300" y2="60" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
-                              <line x1="0" y1="120" x2="300" y2="120" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
-
-                              {/* Area Fill */}
-                              <path
-                                d={chart.pathArea}
-                                fill="url(#lineGradient)"
-                                className="animate-in fade-in duration-700"
-                              />
-
-                              {/* The Line */}
-                              <path
-                                d={chart.pathLine}
-                                fill="none"
-                                stroke={chartColor}
-                                strokeWidth="3.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="drop-shadow-sm animate-in slide-in-from-left-4 duration-700"
-                              />
-
-                              {/* Data Points */}
-                              {chart.points.map((p, idx) => (
-                                <circle
-                                  key={idx}
-                                  cx={p.x}
-                                  cy={p.y}
-                                  r={idx === chart.points.length - 1 ? 5 : 4}
-                                  fill={idx === chart.points.length - 1 ? chartColor : "#ffffff"}
-                                  stroke={idx === chart.points.length - 1 ? "#ffffff" : chartColor}
-                                  strokeWidth="2.5"
-                                  className={idx === chart.points.length - 1 ? "animate-pulse" : ""}
-                                />
-                              ))}
-                            </svg>
-                          </div>
-
-                          {/* X Axis Labels */}
-                          <div className="flex justify-between text-[11px] font-semibold text-[#767683] mt-3.5 pt-1 px-1">
-                            {chart.labels.map((lbl, idx) => (
-                              <span key={idx} style={{ color: idx === chart.labels.length - 1 ? chartColor : undefined }}>{lbl}</span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  {/* Modal-Specific Distinct Graph Card */}
+                  {modalType && renderGraphCard(modalType)}
 
                   {/* Subject Breakdown / Weaknesses Section */}
                   <div className="space-y-3">

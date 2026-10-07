@@ -69,6 +69,8 @@ export default function ParentLessonPlayerScreen() {
     if (completing) return;
     setCompleting(true);
     try {
+      // Invalidate session cache immediately
+      sessionStorage.removeItem("parent_learning_library_cache");
       const res = await apiFetch('/api/parent/learning-library/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -81,11 +83,12 @@ export default function ParentLessonPlayerScreen() {
         const json = await res.json();
         if (json.success && json.data?.user) {
           localStorage.setItem("userData", JSON.stringify(json.data.user));
-          window.dispatchEvent(new Event("userDataUpdated"));
         }
       }
+      window.dispatchEvent(new Event("userDataUpdated"));
     } catch (e) {
       console.error(e);
+      window.dispatchEvent(new Event("userDataUpdated"));
     }
     navigate(-1);
   };

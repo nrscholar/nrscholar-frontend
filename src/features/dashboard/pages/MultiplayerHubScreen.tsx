@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
+import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
 
 const getSubjectStyle = (name: string) => {
   const n = name.toLowerCase();
@@ -186,14 +187,15 @@ export default function MultiplayerHubScreen() {
     }).catch(() => {});
   }, [activeSubject, myClass]);
 
-  useEffect(() => {
-    if (error) {
-      const timer = setTimeout(() => {
-        setError("");
-      }, 5000);
-      return () => clearTimeout(timer);
+  const showNotice = (msg: string) => {
+    if (msg) {
+      showNotificationToast({
+        title: t('battle_notice', 'BATTLE NOTICE ⚔️'),
+        message: msg,
+        type: "warning"
+      });
     }
-  }, [error]);
+  };
 
   const [selectedChaptersList, setSelectedChaptersList] = useState<string[]>([]);
 
@@ -201,22 +203,41 @@ export default function MultiplayerHubScreen() {
     if (chName === "Mix Chapters" || chName === "Mix Chapters (All)") {
       return true;
     }
-    const computedIdx = idx !== undefined ? idx : chaptersList.indexOf(chName);
-    const targetChap = practiceChapters[computedIdx];
-    const chapId = targetChap ? String(targetChap._id || targetChap.chapterId || "").replace(/_hard$/, "") : "";
-    if (!chapId) return false;
-    return completedChapterIds.includes(chapId) || completedChapterIds.includes(`${chapId}_hard`);
+    const computedIdx = (idx !== undefined && idx >= 0)
+      ? idx
+      : chaptersList.findIndex(item => item === chName || item.startsWith(chName) || chName.startsWith(item));
+
+    if (computedIdx >= 0 && computedIdx < practiceChapters.length) {
+      const targetChap = practiceChapters[computedIdx];
+      const chapId = targetChap ? String(targetChap._id || targetChap.chapterId || targetChap.id || "").replace(/_hard$/, "") : "";
+      const rawName = targetChap ? (targetChap.name || targetChap.title || targetChap.chapter_name || "") : "";
+      if (chapId && (completedChapterIds.includes(chapId) || completedChapterIds.includes(`${chapId}_hard`))) {
+        return true;
+      }
+      if (rawName && completedChapterIds.some(id => id.toLowerCase() === rawName.toLowerCase())) {
+        return true;
+      }
+    }
+
+    // Fallback check against completedChapterIds matching chapter numbers or names
+    return completedChapterIds.some(id => 
+      id === chName || 
+      chName.toLowerCase().includes(id.toLowerCase()) || 
+      id.toLowerCase().includes(chName.toLowerCase())
+    );
   };
 
   const isChapterUnlocked = (chName: string, idx?: number) => {
     if (chName === "Mix Chapters" || chName === "Mix Chapters (All)") {
       return true;
     }
-    const computedIdx = idx !== undefined ? idx : chaptersList.indexOf(chName);
-    if (computedIdx === 0) {
-      return true;
-    }
-    return isSubscribed;
+    const computedIdx = (idx !== undefined && idx >= 0)
+      ? idx
+      : chaptersList.findIndex(item => item === chName || item.startsWith(chName) || chName.startsWith(item));
+
+    const isSubAllowed = computedIdx === 0 || isSubscribed;
+    const isCompleted = isChapterCompleted(chName, computedIdx);
+    return isSubAllowed && isCompleted;
   };
 
   const getMixChapterOrder = () => {
@@ -232,34 +253,36 @@ export default function MultiplayerHubScreen() {
   const handleCreateRoom = async () => {
     const unlockedChapters = isSubscribed ? chaptersList : (chaptersList.length > 0 ? [chaptersList[0]] : ["Chapter 1"]);
     const effectiveSelectedChapters = selectedChaptersList.length > 0 ? selectedChaptersList : unlockedChapters;
-    const isValid = effectiveSelectedChapters.every((ch) => {
-      const idx = chaptersList.indexOf(ch);
-      return isChapterCompleted(ch, idx);
-    });
 
-    try {
-      const storedUser = localStorage.getItem("user");
-      const uid = storedUser ? JSON.parse(storedUser)._id : "unknown";
-      console.log("[DEBUG Battle Validation]", {
-        userId: uid,
-        selectedChapters: effectiveSelectedChapters,
-        unlockedChapters,
-        userCompletedChapters: completedChapterIds,
-        isValid
-      });
-    } catch (e) {}
-
-    if (selectedChaptersList.length > 0) {
-      for (const ch of selectedChaptersList) {
+    // Verify chapter completion for creator prior to checking coin balance
+    const chaptersToCheck = selectedChaptersList.length > 0 
+      ? selectedChaptersList 
+      : (isSubscribed ? chaptersList : (chaptersList.length > 0 ? [chaptersList[0]] : []));
+    
+    if (chaptersToCheck.length > 0) {
+      for (const ch of chaptersToCheck) {
         const idx = chaptersList.indexOf(ch);
-        if (!isChapterCompleted(ch, idx)) {
-          setError(t('chapter_missions_not_completed', 'You must complete all missions of this chapter first before playing it in Friendly Battle!'));
+        const isDone = isChapterCompleted(ch, idx);
+        if (!isDone) {
+          const formattedChapName = ch.includes(":") ? ch : `${ch}`;
+          showNotice(t('must_complete_specific_chapter', { 
+            chapter: formattedChapName, 
+            defaultValue: `You must complete ${formattedChapName} first before playing it in Shadow Arena!` 
+          }));
           return;
         }
       }
+    } else if (completedChapterIds.length === 0) {
+      const fallbackChap = chaptersList[0] || "Chapter 1";
+      showNotice(t('must_complete_specific_chapter', { 
+        chapter: fallbackChap, 
+        defaultValue: `You must complete ${fallbackChap} in ${activeSubject?.name || "this subject"} first before playing it in Shadow Arena!` 
+      }));
+      return;
     }
+
     if (myCoins < entryFee) {
-      setError(t('not_enough_coins_arena', { entryFee, defaultValue: `Not enough coins! You need at least ${entryFee} coins to play Shadow Arena in this city.` }));
+      showNotice(t('not_enough_coins_arena', { entryFee, defaultValue: `Not enough coins! You need at least ${entryFee} coins to play Shadow Arena in this city.` }));
       return;
     }
     setLoading(true);
@@ -277,13 +300,13 @@ export default function MultiplayerHubScreen() {
       } else {
         const errMsg = data.message || "Failed to create room";
         if (errMsg.includes("Not enough coins")) {
-          setError(t('not_enough_coins_arena', { entryFee, defaultValue: errMsg }));
+          showNotice(t('not_enough_coins_arena', { entryFee, defaultValue: errMsg }));
         } else {
-          setError(errMsg);
+          showNotice(errMsg);
         }
       }
     } catch (e) {
-      setError(t('network_error', 'Network error'));
+      showNotice(t('network_error', 'Network error'));
     } finally {
       setLoading(false);
     }
@@ -291,15 +314,14 @@ export default function MultiplayerHubScreen() {
 
   const handleJoinRoom = async () => {
     if (myCoins < 100) {
-      setError("Not enough coins! You need at least 100 coins to join any Arena match.");
+      showNotice("Not enough coins! You need at least 100 coins to join any Arena match.");
       return;
     }
     if (joinCode.length < 6) {
-      setError("Code must be at least 6 characters");
+      showNotice("Code must be at least 6 characters");
       return;
     }
     setLoading(true);
-    setError("");
     try {
       const res = await apiFetch("/api/multiplayer/room/join", {
         method: "POST",
@@ -310,10 +332,10 @@ export default function MultiplayerHubScreen() {
       if (data.success && data.data) {
         navigate(`/multiplayer-room/${data.data.roomId}`);
       } else {
-        setError(data.message || "Invalid room code");
+        showNotice(data.message || "Invalid room code");
       }
     } catch (e) {
-      setError("Network error");
+      showNotice("Network error");
     } finally {
       setLoading(false);
     }
@@ -451,19 +473,6 @@ export default function MultiplayerHubScreen() {
           </button>
         </section>
 
-        {/* DYNAMIC ERROR TOAST */}
-        {error && (
-          <div className="fixed top-4 left-1/2 -translate-x-1/2 w-[90%] max-w-[400px] bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white border border-[#57fae9]/40 rounded-full px-4.5 py-2.5 shadow-xl backdrop-blur-md z-[9999] flex items-center justify-between gap-2.5 animate-in fade-in slide-in-from-top-4 duration-300">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="text-sm shrink-0">⚠️</span>
-              <p className="text-xs font-bold text-slate-100 leading-tight truncate max-w-[260px] sm:max-w-[320px] line-clamp-1">{error}</p>
-            </div>
-            <button onClick={() => setError("")} className="p-1 text-slate-300 hover:text-white hover:bg-white/10 rounded-full shrink-0">
-              <X size={15} />
-            </button>
-          </div>
-        )}
-
         {/* TAB 1: CREATE BATTLE SETUP */}
         {activeTab === "create" && (
           <div className="flex-1 flex flex-col justify-between my-1 gap-2">
@@ -580,11 +589,10 @@ export default function MultiplayerHubScreen() {
                                 }
                               } else {
                                 if (idx >= 1 && !isSubscribed) {
-                                  setError(t('premium_chapter_locked', 'Selecting Chapter 2+ in Friendly Battle requires a Premium subscription!'));
+                                  showNotice(t('premium_chapter_locked', 'Selecting Chapter 2+ in Friendly Battle requires a Premium subscription!'));
                                 } else {
-                                  setError(t('chapter_missions_not_completed', 'You must complete all missions of this chapter first before playing it in Friendly Battle!'));
+                                  showNotice(t('must_complete_specific_chapter', { chapter: c, defaultValue: `You must complete ${c} first before playing it in Shadow Arena!` }));
                                 }
-                                setTimeout(() => setError(""), 4000);
                               }
                             }}
                             className={`px-3.5 py-2.5 text-xs font-bold cursor-pointer transition-colors border-b border-[#F0EBFB] last:border-0 flex items-center justify-between ${

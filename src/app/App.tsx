@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useNavigate, useLocation } from "react-router-dom";
 import Layout from "./components/Layout";
 import ParentLayout from "./components/ParentLayout";
+import AnimatedStackContainer from "./components/AnimatedStackContainer";
 import ChildSwitcherModal from "../components/ChildSwitcherModal";
 import { Clock, Sparkles, ChevronRight, X } from "lucide-react";
 
@@ -28,6 +29,7 @@ import ChatScreen from "../features/dashboard/pages/ChatScreen";
 import EvolutionScreen from "../features/dashboard/pages/EvolutionScreen";
 import HabitsScreen from "../features/dashboard/pages/HabitsScreen";
 import HomeScreen from "../features/dashboard/pages/HomeScreen";
+import NeuroPlayScreen from "../features/dashboard/pages/NeuroPlayScreen";
 import InventoryScreen from "../features/dashboard/pages/InventoryScreen";
 import JourneyMapScreen from "../features/dashboard/pages/JourneyMapScreen";
 import NotificationsScreen from "../features/dashboard/pages/NotificationsScreen";
@@ -366,6 +368,14 @@ const ScreenTimeTracker = () => {
   return null;
 };
 
+const StackLayout = () => {
+  return (
+    <div className="w-full h-[100dvh] overflow-hidden">
+      <AnimatedStackContainer />
+    </div>
+  );
+};
+
 const ProtectedRoute = () => {
   const token = localStorage.getItem("userToken");
   if (!token) return <Navigate to="/login" replace />;
@@ -436,16 +446,6 @@ function PinGuard() {
                 <Route path="/chat" element={<ChatScreen />} />
               </Route>
               
-              <Route path="/edit-profile" element={<EditProfileScreen />} />
-              <Route path="/assessment-summary" element={<AssessmentSummary />} />
-              <Route path="/scan-and-learn" element={<ScanAndLearn />} />
-              <Route path="/chapter-reader" element={<ChapterReaderScreen />} />
-              <Route path="/chapter-questions" element={<ChapterQuestionsScreen />} />
-              <Route path="/practice/inventory" element={<InventoryScreen />} />
-              <Route path="/practice/journey-map" element={<JourneyMapScreen />} />
-              <Route path="/practice/collections" element={<InventoryScreen />} />
-              <Route path="/parent" element={<ParentalGateScreen />} />
-              <Route path="/parent/gate" element={<ParentalGateScreen />} />
               <Route element={<ParentLayout />}>
                 <Route path="/parent/dashboard" element={<ParentDashboardScreen />} />
                 <Route path="/parent/reports" element={<ParentReportScreen />} />
@@ -461,25 +461,40 @@ function PinGuard() {
                 <Route path="/parent/lessons/player" element={<ParentLessonPlayerScreen />} />
                 <Route path="/parent/subscription" element={<ParentSubscriptionScreen />} />
               </Route>
-              <Route path="/practice/reward" element={<RewardScreen />} />
-              <Route path="/daily-rewards" element={<DailyRewardsScreen />} />
-              <Route path="/weekly-test" element={<WeeklyTestScreen />} />
-              <Route path="/weekly-test-questions" element={<WeeklyTestQuestionsScreen />} />
-              <Route path="/weekly-test-results" element={<WeeklyTestResultsScreen />} />
-              <Route path="/scan-history" element={<ScanHistory />} />
-              <Route path="/good-habits" element={<HabitsScreen />} />
-              <Route path="/recap" element={<RecapScreen />} />
-              <Route path="/notifications" element={<NotificationsScreen />} />
-              <Route path="/evolution" element={<EvolutionScreen />} />
-              <Route path="/boss-battle" element={<BossBattleScreen />} />
-              <Route path="/multiplayer-hub" element={<MultiplayerHubScreen />} />
-              <Route path="/multiplayer-room/:roomId" element={<MultiplayerRoomScreen />} />
-              <Route path="/multiplayer-battle/:roomId" element={<MultiplayerBattleScreen />} />
-              <Route path="/textbook/subjects" element={<TextbookSubjectsScreen />} />
-              <Route path="/textbook/chapters" element={<TextbookChaptersScreen />} />
-              <Route path="/textbook/reader" element={<ChapterReaderScreen />} />
-              <Route path="/mission-roadmap" element={<MissionMapScreen />} />
-              <Route path="/mission-play" element={<MissionPlayScreen />} />
+
+              {/* Sub-routes with Native Stack Card Slide */}
+              <Route element={<StackLayout />}>
+                <Route path="/edit-profile" element={<EditProfileScreen />} />
+                <Route path="/assessment-summary" element={<AssessmentSummary />} />
+                <Route path="/scan-and-learn" element={<ScanAndLearn />} />
+                <Route path="/chapter-reader" element={<ChapterReaderScreen />} />
+                <Route path="/chapter-questions" element={<ChapterQuestionsScreen />} />
+                <Route path="/practice/inventory" element={<InventoryScreen />} />
+                <Route path="/practice/journey-map" element={<JourneyMapScreen />} />
+                <Route path="/practice/collections" element={<InventoryScreen />} />
+                <Route path="/parent" element={<ParentalGateScreen />} />
+                <Route path="/parent/gate" element={<ParentalGateScreen />} />
+                <Route path="/practice/reward" element={<RewardScreen />} />
+                <Route path="/daily-rewards" element={<DailyRewardsScreen />} />
+                <Route path="/weekly-test" element={<WeeklyTestScreen />} />
+                <Route path="/weekly-test-questions" element={<WeeklyTestQuestionsScreen />} />
+                <Route path="/weekly-test-results" element={<WeeklyTestResultsScreen />} />
+                <Route path="/scan-history" element={<ScanHistory />} />
+                <Route path="/good-habits" element={<HabitsScreen />} />
+                <Route path="/recap" element={<RecapScreen />} />
+                <Route path="/notifications" element={<NotificationsScreen />} />
+                <Route path="/evolution" element={<EvolutionScreen />} />
+                <Route path="/boss-battle" element={<BossBattleScreen />} />
+                <Route path="/multiplayer-hub" element={<MultiplayerHubScreen />} />
+                <Route path="/multiplayer-room/:roomId" element={<MultiplayerRoomScreen />} />
+                <Route path="/multiplayer-battle/:roomId" element={<MultiplayerBattleScreen />} />
+                <Route path="/textbook/subjects" element={<TextbookSubjectsScreen />} />
+                <Route path="/textbook/chapters" element={<TextbookChaptersScreen />} />
+                <Route path="/textbook/reader" element={<ChapterReaderScreen />} />
+                <Route path="/mission-roadmap" element={<MissionMapScreen />} />
+                <Route path="/mission-play" element={<MissionPlayScreen />} />
+                <Route path="/neuro-play" element={<NeuroPlayScreen />} />
+              </Route>
             </Route>
             
             <Route path="*" element={<NotFoundScreen />} />

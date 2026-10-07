@@ -133,10 +133,10 @@ export default function ProfileScreen() {
   const currentLang = (i18n?.language || localStorage.getItem('i18nextLng') || 'en').slice(0, 2);
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-slate-900 font-sans pb-28 max-w-lg mx-auto relative overflow-x-hidden selection:bg-[#141779] selection:text-white">
+    <div className="min-h-screen bg-[#f7f9fb] text-slate-900 font-sans pb-28 max-w-md mx-auto relative overflow-x-hidden selection:bg-[#141779] selection:text-white">
       
       {/* TOP APP BAR (Sticky Standard Header - 100% Unified) */}
-      <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex items-center justify-between px-4 py-2.5 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-2xs gap-2">
+      <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex items-center justify-between px-4 pt-3 pb-3 bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-2xl shadow-[0_4px_16px_rgba(20,23,121,0.05)] gap-2">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <div className="w-10 h-10 rounded-full border-2 border-indigo-100 overflow-hidden bg-slate-100 shrink-0 shadow-2xs">
             {user.childPhoto ? (
@@ -147,16 +147,20 @@ export default function ProfileScreen() {
               </div>
             )}
           </div>
-          <div className="flex flex-col min-w-0">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <h1 className="text-sm font-bold text-slate-900 leading-tight truncate">{user.childName || user.name || "Explorer"}</h1>
-              <span className="text-[10px] text-[#141779] bg-indigo-50/80 font-bold px-2 py-0.5 rounded-full border border-indigo-100/60 shrink-0">
+          <div className="flex flex-col min-w-0 justify-center">
+            {/* Line 1: Name + Class on same line */}
+            <div className="flex items-center gap-1.5 min-w-0">
+              <h1 className="text-sm font-black text-slate-900 leading-tight truncate max-w-[130px]">{user.childName || user.name || "Explorer"}</h1>
+              <span className="text-[10px] text-[#4f46e5] bg-[#eef2ff] font-black px-2 py-0.5 rounded-full border border-indigo-100 shrink-0 whitespace-nowrap">
                 {user.childClass || t('class_10', { defaultValue: "Class 10" })}
               </span>
             </div>
-            <span className="text-[11px] text-slate-500 font-medium whitespace-nowrap mt-0.5">
-              {t('explorer_level', { defaultValue: "Explorer Level" })} {userLevel}
-            </span>
+            {/* Line 2: Level */}
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-[11.5px] text-slate-400 font-extrabold whitespace-nowrap">
+                {t('explorer_level', { defaultValue: "Explorer Level" })} {userLevel}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -164,21 +168,21 @@ export default function ProfileScreen() {
         <div className="flex items-center gap-1.5 shrink-0">
           <button
             onClick={() => setShowStreakModal(true)}
-            className="bg-orange-50/80 border border-orange-100 rounded-xl px-2.5 py-1 flex items-center gap-1 hover:bg-orange-100/60 active:scale-95 transition-all shadow-2xs"
+            className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1.5 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
           >
-            <span className="text-xs font-bold text-orange-600">🔥 {streakDays || 0}</span>
+            <span className="text-[11px] font-black text-[#ea580c] leading-none">🔥 {streakDays || 0}</span>
           </button>
           <button
             onClick={() => navigate("/practice/inventory")}
-            className="bg-amber-50/80 border border-amber-100 rounded-xl px-2.5 py-1 flex items-center gap-1 hover:bg-amber-100/60 active:scale-95 transition-all shadow-2xs"
+            className="bg-[#fffbeb] border border-amber-100/80 rounded-2xl px-2 py-1.5 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
           >
-            <span className="text-xs font-bold text-amber-700">🪙 {coins || 0}</span>
+            <span className="text-[11px] font-black text-[#b45309] leading-none">🪙 {coins || 0}</span>
           </button>
           <button
             onClick={() => navigate("/notifications")}
-            className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200/80 shadow-2xs flex items-center justify-center hover:bg-slate-100 active:scale-95 transition-all shrink-0 relative"
+            className="w-9 h-9 rounded-2xl bg-slate-50 shadow-2xs flex items-center justify-center hover:bg-slate-100 transition-all shrink-0 border border-slate-100 relative"
           >
-            <Bell size={17} className="text-slate-700" />
+            <Bell size={16} className="text-[#1c1970]" />
             {unreadCount > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border border-white pointer-events-none z-10">
                 {unreadCount > 9 ? '9+' : unreadCount}
@@ -188,7 +192,7 @@ export default function ProfileScreen() {
         </div>
       </header>
 
-      <main className="px-4 pt-3 flex flex-col gap-3.5 relative z-10">
+      <main className="px-4 pt-2.5 flex flex-col gap-3.5 relative z-10">
         
         {/* 1. FLAGSHIP PLAYER HERO CARD (Micro-Polished Layout) */}
         <section className="bg-white border border-slate-100 rounded-3xl p-4 shadow-xs relative overflow-hidden flex flex-col gap-3.5">

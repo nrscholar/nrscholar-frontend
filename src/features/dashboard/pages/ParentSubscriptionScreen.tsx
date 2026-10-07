@@ -1,14 +1,63 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, CheckCircle, Sparkles, LayoutGrid, CheckSquare, Users, EyeOff, Check, Minus, Lock } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import { apiFetch } from "../../../api";
 
 export default function ParentSubscriptionScreen() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [isYearly, setIsYearly] = useState(false);
   const [subscriptionPlan, setSubscriptionPlan] = useState("free");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    async function loadSub() {
+      try {
+        const cached = localStorage.getItem("userData");
+        if (cached) {
+          const u = JSON.parse(cached);
+          if (u.is_subscribed || u.isSubscribed) setSubscriptionPlan("pro");
+        }
+        const meRes = await apiFetch("/api/users/me");
+        const meJson = await meRes.json();
+        if (meJson.success && meJson.data?.user) {
+          const u = meJson.data.user;
+          localStorage.setItem("userData", JSON.stringify(u));
+          if (u.is_subscribed || u.isSubscribed) setSubscriptionPlan("pro");
+        }
+      } catch (e) {}
+    }
+    loadSub();
+  }, []);
+
+  const handlePlanSelect = async (planId: string) => {
+    setLoading(true);
+    try {
+      const res = await apiFetch("/api/parent/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSubscriptionPlan(planId);
+        const cached = localStorage.getItem("userData");
+        let u = cached ? JSON.parse(cached) : {};
+        const isSub = planId.toLowerCase() === "pro";
+        u.is_subscribed = isSub;
+        u.isSubscribed = isSub;
+        u.subscription = planId;
+        localStorage.setItem("userData", JSON.stringify(u));
+        window.dispatchEvent(new Event("userDataUpdated"));
+      }
+    } catch (e) {
+      console.error("Subscription error", e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#f7f9fb] font-sans pb-10">
@@ -77,8 +126,8 @@ export default function ParentSubscriptionScreen() {
             </div>
 
             <button 
-              disabled={subscriptionPlan === "free"}
-              onClick={() => setSubscriptionPlan("free")}
+              disabled={subscriptionPlan === "free" || loading}
+              onClick={() => handlePlanSelect("free")}
               className={`w-full py-4 rounded-full transition-colors font-bold text-sm ${
                 subscriptionPlan === "free" ? 'bg-[#e0e3e5] text-[#767683]' : 'border-[1.5px] border-[#c7c5d4] text-[#141779] hover:bg-gray-50'
               }`}
@@ -131,8 +180,8 @@ export default function ParentSubscriptionScreen() {
             </div>
 
             <button 
-              disabled={subscriptionPlan === "pro"}
-              onClick={() => setSubscriptionPlan("pro")}
+              disabled={subscriptionPlan === "pro" || loading}
+              onClick={() => handlePlanSelect("pro")}
               className={`w-full py-4 rounded-full transition-colors font-bold text-sm ${
                 subscriptionPlan === "pro" ? 'bg-[#e0e3e5] text-[#767683]' : 'bg-[#141779] text-white hover:opacity-90 shadow-[0_4px_8px_rgba(20,23,121,0.15)]'
               }`}

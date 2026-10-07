@@ -133,7 +133,7 @@ export default function ChatScreen() {
     <div className="min-h-screen bg-[#f7f9fb] font-sans flex flex-col relative pb-32 max-w-md mx-auto">
       
       {/* Sticky Header */}
-      <header className="sticky top-0 left-0 right-0 w-full max-w-md mx-auto z-50 bg-white border-b border-slate-100 rounded-b-[28px] shadow-xs pb-1">
+      <header className="sticky top-0 left-0 right-0 w-full max-w-md mx-auto z-50 bg-white border-b border-slate-100 rounded-b-2xl shadow-xs pb-1">
         <div className="flex items-center justify-between px-4 py-3 gap-2">
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <button
@@ -148,15 +148,17 @@ export default function ChatScreen() {
                 </div>
               )}
             </button>
-            <div className="flex flex-col min-w-0">
-              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                <h1 className="text-sm font-black text-slate-900 leading-tight truncate">{userData?.childName || "Explorer"}</h1>
-                <span className="text-[10px] text-[#4f46e5] bg-[#eef2ff] font-black px-2 py-0.5 rounded-full border border-indigo-100 shrink-0">
+            <div className="flex flex-col min-w-0 justify-center">
+              {/* Line 1: Name + Class on same line */}
+              <div className="flex items-center gap-1.5 min-w-0">
+                <h1 className="text-sm font-black text-slate-900 leading-tight truncate max-w-[130px]">{userData?.childName || "Explorer"}</h1>
+                <span className="text-[10px] text-[#4f46e5] bg-[#eef2ff] font-black px-2 py-0.5 rounded-full border border-indigo-100 shrink-0 whitespace-nowrap">
                   {userData?.childClass || t('class_10', { defaultValue: "Class 10" })}
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 mt-1">
-                <span className="text-[11px] text-slate-400 font-extrabold whitespace-nowrap">
+              {/* Line 2: Level */}
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-[11.5px] text-slate-400 font-extrabold whitespace-nowrap">
                   {t('explorer_level', { defaultValue: "Explorer Level" })} {userData?.level || 1}
                 </span>
               </div>
@@ -167,13 +169,13 @@ export default function ChatScreen() {
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={() => setShowStreakModal(true)}
-              className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
+              className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1.5 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
             >
               <span className="text-[11px] font-black text-[#ea580c] leading-none">🔥 {userData?.streakDays || 0}</span>
             </button>
             <button
               onClick={() => navigate("/practice/inventory")}
-              className="bg-[#fffbeb] border border-amber-100/80 rounded-2xl px-2 py-1 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
+              className="bg-[#fffbeb] border border-amber-100/80 rounded-2xl px-2 py-1.5 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
             >
               <span className="text-[11px] font-black text-[#b45309] leading-none">🪙 {userData?.coins || 0}</span>
             </button>

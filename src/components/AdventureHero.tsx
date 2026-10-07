@@ -213,8 +213,8 @@ export default function AdventureHero({
   const legProgress = activeNode?.nodeProgressPercentage !== undefined
     ? Math.round(activeNode.nodeProgressPercentage)
     : (journeyData?.progressPercentage !== undefined
-        ? Math.round(journeyData.progressPercentage)
-        : (progressPercentage !== undefined ? progressPercentage : Math.min(100, Math.max(0, Math.round((xp / targetXp) * 100)))));
+      ? Math.round(journeyData.progressPercentage)
+      : (progressPercentage !== undefined ? progressPercentage : Math.min(100, Math.max(0, Math.round((xp / targetXp) * 100)))));
   const chaptersRemaining = journeyData?.chaptersNeededForNext !== undefined ? journeyData.chaptersNeededForNext : chaptersNeededForNext;
   const xpRemaining = Math.max(0, targetXp - xp);
   const pathD = "M 62 46 C 110 5, 215 65, 278 32";
@@ -364,7 +364,7 @@ export default function AdventureHero({
           <div className="flex justify-between items-center text-[9.5px] font-extrabold text-slate-300 mt-0.5">
             <span>{t('unlock_label', { destination: endName, defaultValue: `${endName} Unlock` })}</span>
             <span className="text-[#FFC83D] font-extrabold">
-              {chaptersRemaining !== undefined 
+              {chaptersRemaining !== undefined
                 ? (chaptersRemaining > 0 ? t('chapters_remaining_count', { count: chaptersRemaining, defaultValue: `${chaptersRemaining} chapter(s) remaining` }) : t('stage_complete', { defaultValue: "Stage Complete!" }))
                 : (xpRemaining > 0 ? t('xp_remaining_count', { count: xpRemaining, defaultValue: `${xpRemaining} XP Remaining` }) : t('ready_to_unlock', { defaultValue: "Ready to Unlock!" }))}
             </span>

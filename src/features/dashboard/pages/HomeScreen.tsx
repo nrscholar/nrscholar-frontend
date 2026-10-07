@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Bookmark, BookOpen, CheckCircle, ChevronRight, Clock, Gift, Map, Shield, Star, Bell, Crown, Gem, Trophy } from "lucide-react";
+import { Bookmark, BookOpen, Brain, CheckCircle, ChevronRight, Clock, Gift, Map, Shield, Star, Bell, Crown, Gem, Swords, Trophy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -410,7 +410,7 @@ export default function HomeScreen() {
       <div className="absolute bottom-[20%] -left-[25%] w-[320px] h-[320px] rounded-full bg-[rgba(20,23,121,0.05)] pointer-events-none" />
 
       {/* TOP HEADER */}
-      <header className="fixed top-0 left-0 right-0 max-w-md mx-auto flex items-center justify-between px-4 py-2.5 bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-[28px] shadow-xs z-50 gap-2">
+      <header className="fixed top-0 left-0 right-0 max-w-md mx-auto flex items-center justify-between px-4 pt-3 pb-3 bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-2xl shadow-[0_4px_16px_rgba(20,23,121,0.05)] z-50 gap-2">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <button
             onClick={() => navigate("/profile")}
@@ -428,16 +428,17 @@ export default function HomeScreen() {
               </div>
             )}
           </button>
-          <div className="flex flex-col min-w-0">
-            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-              <h1 className="text-sm font-black text-slate-900 leading-tight truncate">{childName}</h1>
-              <span className="text-[10px] text-[#4f46e5] bg-[#eef2ff] font-black px-2 py-0.5 rounded-full border border-indigo-100 shrink-0">
+          <div className="flex flex-col min-w-0 justify-center">
+            {/* Line 1: Child Name & Class Badge side-by-side on 1 line */}
+            <div className="flex items-center gap-1.5 min-w-0">
+              <h1 className="text-sm font-black text-slate-900 leading-tight truncate max-w-[130px]">{childName}</h1>
+              <span className="text-[10px] text-[#4f46e5] bg-[#eef2ff] font-black px-2 py-0.5 rounded-full border border-indigo-100 shrink-0 whitespace-nowrap">
                 {userData?.childClass || t('class_10', { defaultValue: "Class 10" })}
               </span>
-
             </div>
-            <div className="flex items-center gap-1.5 mt-1">
-              <span className="text-[12px] text-slate-400 font-extrabold whitespace-nowrap">
+            {/* Line 2: Explorer Level */}
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-[11.5px] text-slate-400 font-extrabold whitespace-nowrap">
                 {t('explorer_level', { defaultValue: "Explorer Level" })} {userLevel}
               </span>
             </div>
@@ -448,13 +449,13 @@ export default function HomeScreen() {
         <div className="flex items-center gap-1.5 shrink-0">
           <button
             onClick={() => setShowStreakModal(true)}
-            className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1 flex flex-col items-center justify-center min-w-[48px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
+            className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1.5 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
           >
             <span className="text-[11px] font-black text-[#ea580c] leading-none">🔥 {retentionStreak?.currentStreak ?? streakDays ?? 0}</span>
           </button>
           <button
             onClick={() => navigate("/practice/inventory")}
-            className="bg-[#fffbeb] border border-amber-100/80 rounded-2xl px-2 py-1 flex flex-col items-center justify-center min-w-[48px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
+            className="bg-[#fffbeb] border border-amber-100/80 rounded-2xl px-2 py-1.5 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
           >
             <span className="text-[11px] font-black text-[#b45309] leading-none">🪙 {coins || 0}</span>
           </button>
@@ -473,7 +474,7 @@ export default function HomeScreen() {
         </div>
       </header>
 
-      <main className="px-4 pt-[78px] flex flex-col gap-4 relative z-10">
+      <main className="px-4 pt-[68px] flex flex-col gap-3.5 relative z-10">
         {/* 1. ADVENTURE HERO CARD */}
         {(() => {
           const effectiveTheme = (() => {
@@ -510,7 +511,7 @@ export default function HomeScreen() {
           );
         })()}
 
-        {/* 2. FOUR QUICK ACTION BENTO GRID (2x2 Cards with Continue Learning in position) */}
+        {/* 2. SIX QUICK ACTION BENTO GRID (2x3 Cards with Continue Learning, Good Habits, Journey, My Collections, Brain Quest, Shadow Arena) */}
         <section className="grid grid-cols-2 gap-3">
           {/* Continue Learning */}
           <button
@@ -667,25 +668,56 @@ export default function HomeScreen() {
               </div>
             </div>
           </button>
-        </section>
 
-        {/* 3. SHADOW ARENA (1V1) CARD */}
-        <section>
+          {/* Neuro Play */}
           <button
-            onClick={() => navigate("/multiplayer-hub")}
-            className="w-full bg-[#1c1970] rounded-[24px] p-4 flex items-center justify-between shadow-md hover:scale-[1.01] transition-transform border border-[#2d28a3]/40 relative overflow-hidden"
+            onClick={() => navigate("/neuro-play")}
+            className="bg-[#f3e8ff] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#d8b4fe]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group"
           >
-            <div className="flex items-center gap-3.5 z-10">
-              <div className="w-11 h-11 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center text-white shrink-0 shadow-inner">
-                <span className="text-2xl">⚔️</span>
-              </div>
-              <div className="text-left">
-                <h3 className="text-sm font-black text-white tracking-wide mb-0.5">{t('shadow_arena', 'Shadow Arena')}</h3>
-                <p className="text-[11px] text-indigo-200/90 font-bold">{t('challenge_friends', 'Challenge friends in realtime battles')}</p>
+            <div className="w-9 h-9 rounded-full bg-[#ede9fe] flex items-center justify-center">
+              <Brain size={18} className="text-[#8b5cf6]" />
+            </div>
+            <div className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
+              <ChevronRight size={14} />
+            </div>
+            <div className="mt-2">
+              <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('neuro_play', 'Neuro Play')}</h3>
+              <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-2 truncate">{t('brain_skill_lab', 'Brain Skill Lab & Quests')}</p>
+              <div className="space-y-1">
+                <div className="text-[9.5px] font-extrabold text-[#7c3aed] truncate flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#7c3aed] shrink-0" />
+                  <span className="truncate">{t('day_1_quests', 'Day 1 Quests (M01 & M02)')}</span>
+                </div>
+                <div className="w-full h-1.5 bg-[#ede9fe] rounded-full overflow-hidden">
+                  <div className="h-full bg-[#8b5cf6] rounded-full transition-all duration-500" style={{ width: '50%' }} />
+                </div>
               </div>
             </div>
-            <div className="w-8 h-8 rounded-full bg-white/15 text-white flex items-center justify-center backdrop-blur-md border border-white/20 z-10">
-              <ChevronRight size={16} />
+          </button>
+
+          {/* Shadow Arena */}
+          <button
+            onClick={() => navigate("/multiplayer-hub")}
+            className="bg-[#e8fdf5] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#b7f4d8]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group"
+          >
+            <div className="w-9 h-9 rounded-full bg-[#d1fae5] flex items-center justify-center">
+              <Swords size={18} className="text-[#059669]" />
+            </div>
+            <div className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
+              <ChevronRight size={14} />
+            </div>
+            <div className="mt-2">
+              <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('shadow_arena', 'Shadow Arena')}</h3>
+              <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-2 truncate">{t('challenge_friends_short', 'Challenge friends in real...')}</p>
+              <div className="space-y-1">
+                <div className="text-[9.5px] font-extrabold text-[#059669] truncate flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] shrink-0" />
+                  <span className="truncate">{t('1v1_battle_arena', '1v1 Battle Arena')}</span>
+                </div>
+                <div className="w-full h-1.5 bg-[#d1fae5] rounded-full overflow-hidden">
+                  <div className="h-full bg-[#10b981] rounded-full transition-all duration-500" style={{ width: '70%' }} />
+                </div>
+              </div>
             </div>
           </button>
         </section>

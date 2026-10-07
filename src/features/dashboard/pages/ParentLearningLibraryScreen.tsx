@@ -37,12 +37,20 @@ const filterList = [
 export default function ParentLearningLibraryScreen() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const getInitialLibraryData = () => {
+    try {
+      const cached = sessionStorage.getItem("parent_learning_library_cache");
+      return cached ? JSON.parse(cached) : null;
+    } catch (e) { return null; }
+  };
+
+  const initialLib = getInitialLibraryData();
   const [activeFilter, setActiveFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const [topics, setTopics] = useState<any[]>([]);
-  const [progress, setProgress] = useState({ completed: 0, total: 100 });
+  const [topics, setTopics] = useState<any[]>(initialLib?.topics || []);
+  const [progress, setProgress] = useState(initialLib?.progress || { completed: 0, total: 100 });
   const [showMore, setShowMore] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialLib);
 
   const categoryStats = (topics || []).reduce((acc, topic) => {
     if (!topic) return acc;
@@ -60,7 +68,9 @@ export default function ParentLearningLibraryScreen() {
   useEffect(() => {
     const fetchLibrary = async () => {
       try {
-        setLoading(true);
+        if (topics.length === 0) {
+          setLoading(true);
+        }
         const res = await apiFetch('/api/parent/learning-library');
         const data = await res.json();
         if (data && data.success && data.data) {
@@ -68,6 +78,7 @@ export default function ParentLearningLibraryScreen() {
           if (data.data.progress) {
             setProgress(data.data.progress);
           }
+          sessionStorage.setItem("parent_learning_library_cache", JSON.stringify(data.data));
         }
       } catch (e) {
         console.error("Failed to fetch library", e);
@@ -76,6 +87,14 @@ export default function ParentLearningLibraryScreen() {
       }
     };
     fetchLibrary();
+
+    const handleUserDataUpdate = () => {
+      fetchLibrary();
+    };
+    window.addEventListener("userDataUpdated", handleUserDataUpdate);
+    return () => {
+      window.removeEventListener("userDataUpdated", handleUserDataUpdate);
+    };
   }, []);
 
   const filteredTopics = (topics || []).filter(topic => {

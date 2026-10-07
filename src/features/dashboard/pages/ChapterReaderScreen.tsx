@@ -3,16 +3,14 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import { Document, Page, pdfjs } from 'react-pdf';
+import { getOrFetchPdfUrl, getCachedPdfUrl } from "../../../utils/pdfCache";
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
 try {
-  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    'pdfjs-dist/build/pdf.worker.min.mjs',
-    import.meta.url,
-  ).toString();
-} catch (_) {
   pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+} catch (_) {
+  pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
 }
 
 const pdfOptions = {
@@ -34,6 +32,7 @@ export default function ChapterReaderScreen() {
   const title = searchParams.get("title") || "Chapter Reader";
   const subjectName = searchParams.get("subjectName") || "";
 
+  const initialCachedUrl = getCachedPdfUrl(chapterId || "");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [markingComplete, setMarkingComplete] = useState(false);
 
@@ -93,8 +92,8 @@ export default function ChapterReaderScreen() {
     };
   }, [scale, activeSlot, slotAScale, slotBScale]);
 
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(initialCachedUrl);
+  const [loading, setLoading] = useState(!initialCachedUrl);
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [numPages, setNumPages] = useState<number>();
   const [pageNumber, setPageNumber] = useState<number>(1);
@@ -127,16 +126,18 @@ export default function ChapterReaderScreen() {
   useEffect(() => { return () => { logReadingTime(); }; }, []);
 
   const loadPdf = async () => {
-    setLoading(true);
+    if (!chapterId) {
+      setPdfError("No chapter ID provided");
+      setLoading(false);
+      return;
+    }
+    if (!initialCachedUrl) {
+      setLoading(true);
+    }
     setPdfError(null);
     try {
-      if (!chapterId) {
-        throw new Error("No chapter ID provided");
-      }
-      const res = await apiFetch(`/api/textbook/chapter/${chapterId}/pdf`);
-      if (!res.ok) throw new Error("Failed to load PDF file from server");
-      const blob = await res.blob();
-      setPdfUrl(URL.createObjectURL(blob));
+      const url = await getOrFetchPdfUrl(chapterId);
+      setPdfUrl(url);
     } catch (error: any) {
       console.error("Error loading PDF:", error);
       setPdfError(error.message || "Failed to load PDF document");
@@ -147,7 +148,6 @@ export default function ChapterReaderScreen() {
 
   useEffect(() => {
     loadPdf();
-    return () => { if (pdfUrl) URL.revokeObjectURL(pdfUrl); };
   }, [chapterId]);
 
   useEffect(() => {
@@ -440,7 +440,7 @@ export default function ChapterReaderScreen() {
   };
 
   return (
-    <div className={`flex flex-col bg-white ${isFullscreen ? 'fixed inset-0 z-50' : 'h-screen overflow-hidden'}`}>
+    <div className={`flex flex-col bg-white ${isFullscreen ? 'fixed inset-0 z-50' : 'w-full h-[100dvh] overflow-hidden'}`}>
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       {!isFullscreen && (
@@ -523,7 +523,7 @@ export default function ChapterReaderScreen() {
                 paddingLeft: Math.max(0, Math.floor((availW - currentWidth) / 2)),
                 paddingRight: Math.max(0, Math.floor((availW - currentWidth) / 2)),
                 paddingTop: '0.75rem',
-                paddingBottom: '9rem',
+                paddingBottom: '11rem',
                 backgroundColor: '#ffffff',
                 boxSizing: 'border-box',
               }}
@@ -573,7 +573,7 @@ export default function ChapterReaderScreen() {
 
         {/* ── Floating controls ─────────────────────────────────────────────── */}
         {pdfUrl && numPages && (
-          <div className="absolute bottom-3 left-0 right-0 flex flex-col items-center gap-2 pointer-events-none z-30 px-4">
+          <div className="absolute bottom-5 sm:bottom-4 left-0 right-0 flex flex-col items-center gap-2 pointer-events-none z-30 px-4">
 
             {/* Mark complete overlay button on final page */}
             {!loading && pageNumber === numPages && (

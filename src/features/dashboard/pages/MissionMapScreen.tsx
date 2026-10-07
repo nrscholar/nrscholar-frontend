@@ -4,6 +4,7 @@ import { ArrowLeft, Lock, CheckCircle2, Check, Play, Star, Trophy, Sparkles, Awa
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
 import { motion } from "framer-motion";
+import { prefetchPdf } from "../../../utils/pdfCache";
 
 export default function MissionMapScreen() {
   const navigate = useNavigate();
@@ -18,6 +19,12 @@ export default function MissionMapScreen() {
   const [childPhoto, setChildPhoto] = useState("");
   const [userClass, setUserClass] = useState("Class 3");
   const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (chapterId) {
+      prefetchPdf(chapterId);
+    }
+  }, [chapterId]);
 
   useEffect(() => {
     async function loadRoadmap() {
@@ -167,7 +174,7 @@ export default function MissionMapScreen() {
   const themeMeta = getThemeHeader();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#17157F] font-sans pb-28 relative selection:bg-[#5B5CFF] selection:text-white overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#17157F] font-sans pb-44 relative selection:bg-[#5B5CFF] selection:text-white overflow-x-hidden">
       {/* Background World Glow Accents */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[35%] rounded-full bg-[#5B5CFF]/10 blur-[90px]" />
@@ -245,7 +252,7 @@ export default function MissionMapScreen() {
       </div>
 
       {/* Mission Path Timeline */}
-      <main className="px-4 pt-4 max-w-[430px] mx-auto w-full relative z-10 flex flex-col gap-4">
+      <main className="px-4 pt-4 pb-16 max-w-[430px] mx-auto w-full relative z-10 flex flex-col gap-4">
         {(() => {
           const completedMissionsCount = missions.filter((m: any) => m.status === "completed").length;
           const totalMissionsCount = missions.length || 1;
@@ -287,7 +294,7 @@ export default function MissionMapScreen() {
           );
         })()}
 
-        <section className="relative py-2 flex flex-col gap-4">
+        <section className="relative py-2 pb-16 flex flex-col gap-4">
           {missions.map((m: any, index: number) => {
             const isCompleted = m.status === "completed";
             const isRetest = m.status === "retest";

@@ -1281,6 +1281,25 @@
     "badge_epic_badge": "Epic Badge",
     "desc_streak_master": "3+ Day Daily Streak Champion",
     "desc_found_epic_box": "Found in an Epic Mystery Box!",
-    "desc_earned_achievement": "Earned achievement"
+    "desc_earned_achievement": "Earned achievement",
+    "sec": "sec",
+    "mins": "mins",
+    "hr": "hr",
+    "hrs": "hrs",
+    "practice_session": "Practice Session",
+    "reading_session": "Reading Session",
+    "shadow_arena_battle": "Shadow Arena Battle",
+    "quiz": "Quiz",
+    "live_battle_vs": "1v1 Live Battle",
+    "exploring_new_quests": "Exploring new quests...",
+    "completed_reading": "Completed Reading",
+    "completed": "Completed",
+    "view_details": "View Details",
+    "show_more": "View More",
+    "question_singular": "question",
+    "questions_plural": "questions",
+    "just_now": "Just now",
+    "weekly_engagement": "Weekly Engagement",
+    "recent_activity": "Recent Activity"
   }
 }

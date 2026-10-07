@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Rocket, Sun, Compass, Globe, Moon, CheckCircle, Lock, Bell, Sparkles, Trophy, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
+import { prefetchPdf } from "../../../utils/pdfCache";
 import StreakModal from "../../../components/StreakModal";
+import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
 
 export default function ChaptersScreen() {
   const navigate = useNavigate();
@@ -12,13 +14,39 @@ export default function ChaptersScreen() {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
 
-  const [loading, setLoading] = useState(true);
-  const [subjects, setSubjects] = useState<any[]>([]);
-  const [activeSubject, setActiveSubject] = useState<any>(null);
-  const [chapters, setChapters] = useState<any[]>([]);
+  // Synchronous cache initialization for 0ms instant display
+  const getInitialSubjects = () => {
+    try {
+      const cached = sessionStorage.getItem("cached_practice_subjects");
+      return cached ? JSON.parse(cached) : [];
+    } catch (e) { return []; }
+  };
+
+  const getInitialActiveSubject = () => {
+    const initialSubs = getInitialSubjects();
+    if (initialSubs.length === 0) return null;
+    const savedId = sessionStorage.getItem("activeSubjectId");
+    return initialSubs.find((s: any) => s._id === savedId) || initialSubs[0];
+  };
+
+  const getInitialChapters = (subjectId?: string) => {
+    if (!subjectId) return [];
+    try {
+      const cached = sessionStorage.getItem(`cached_chapters_${subjectId}`);
+      return cached ? JSON.parse(cached) : [];
+    } catch (e) { return []; }
+  };
+
+  const initialSubjects = getInitialSubjects();
+  const initialActive = getInitialActiveSubject();
+  const initialChapters = getInitialChapters(initialActive?._id);
+
+  const [subjects, setSubjects] = useState<any[]>(initialSubjects);
+  const [activeSubject, setActiveSubject] = useState<any>(initialActive);
+  const [chapters, setChapters] = useState<any[]>(initialChapters);
+  const [loading, setLoading] = useState(initialChapters.length === 0);
   const [completedChapters, setCompletedChapters] = useState<string[]>([]);
   const [chapterProgressMap, setChapterProgressMap] = useState<Record<string, any>>({});
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [childName, setChildName] = useState("Kid");
   const [childPhoto, setChildPhoto] = useState("");
   const [childClass, setChildClass] = useState("");
@@ -30,62 +58,92 @@ export default function ChaptersScreen() {
   const [showSubModal, setShowSubModal] = useState(false);
   const [showStreakModal, setShowStreakModal] = useState(false);
 
+  const activeSubjectRef = useRef<string | null>(initialActive?._id || null);
+
+  const handleSelectSubject = (sub: any) => {
+    if (!sub || sub._id === activeSubject?._id) return;
+    activeSubjectRef.current = sub._id;
+    setActiveSubject(sub);
+    sessionStorage.setItem("activeSubjectId", sub._id);
+
+    // Instant 0ms synchronous chapter swap / skeleton loader
+    const cachedChs = getInitialChapters(sub._id);
+    if (cachedChs.length > 0) {
+      setChapters(cachedChs);
+      setLoading(false);
+    } else {
+      setChapters([]);
+      setLoading(true);
+    }
+  };
+
   const showToast = (message: string) => {
-    setToastMessage(message);
-    setTimeout(() => setToastMessage(null), 3000);
+    showNotificationToast({
+      title: t('chapter_locked', 'CHAPTER LOCKED 🔒'),
+      message,
+      type: "lock"
+    });
   };
 
   useEffect(() => {
     const fetchSubjects = async () => {
-      try {
-        const cached = localStorage.getItem("userData");
-        if (cached) {
-          try {
-            const u = JSON.parse(cached);
-            setChildName(u.childName || u.name || "Kid");
-            setChildPhoto(u.childPhoto || u.photo || "");
-            setChildClass(u.childClass || u.class_name || u.className || "");
-            setStreakDays(u.streakDays || u.streak_days || u.streak || 0);
-            setCoins(u.coins || u.xp || 0);
-            setIsSubscribed(Boolean(u.is_subscribed || u.isSubscribed));
-          } catch (e) { }
-        }
-        const meRes = await apiFetch("/api/users/me");
-        const meJson = await meRes.json();
-        if (meJson.success && meJson.data?.user) {
-          const u = meJson.data.user;
+      // 1. Read cached user data instantly
+      const cachedUser = localStorage.getItem("userData");
+      if (cachedUser) {
+        try {
+          const u = JSON.parse(cachedUser);
           setChildName(u.childName || u.name || "Kid");
           setChildPhoto(u.childPhoto || u.photo || "");
           setChildClass(u.childClass || u.class_name || u.className || "");
           setStreakDays(u.streakDays || u.streak_days || u.streak || 0);
           setCoins(u.coins || u.xp || 0);
           setIsSubscribed(Boolean(u.is_subscribed || u.isSubscribed));
-        }
-      } catch (e) { }
+        } catch (e) { }
+      }
 
+      // 2. Parallel background fetch for user, notifications, subjects, and controls
       try {
-        const notifRes = await apiFetch("/api/notifications");
-        const notifData = await notifRes.json();
-        if (notifData.success && notifData.data) {
-          setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
-        }
-      } catch (e) { }
-
-      try {
-        const [subRes, controlsRes] = await Promise.all([
-          apiFetch("/api/practice/subjects"),
-          apiFetch("/api/parent/controls")
+        const [meRes, notifRes, subRes, controlsRes] = await Promise.all([
+          apiFetch("/api/users/me").catch(() => null),
+          apiFetch("/api/notifications").catch(() => null),
+          apiFetch("/api/practice/subjects").catch(() => null),
+          apiFetch("/api/parent/controls").catch(() => null)
         ]);
 
+        if (meRes?.ok) {
+          try {
+            const meJson = await meRes.json();
+            if (meJson.success && meJson.data?.user) {
+              const u = meJson.data.user;
+              localStorage.setItem("userData", JSON.stringify(u));
+              setChildName(u.childName || u.name || "Kid");
+              setChildPhoto(u.childPhoto || u.photo || "");
+              setChildClass(u.childClass || u.class_name || u.className || "");
+              setStreakDays(u.streakDays || u.streak_days || u.streak || 0);
+              setCoins(u.coins || u.xp || 0);
+              setIsSubscribed(Boolean(u.is_subscribed || u.isSubscribed));
+            }
+          } catch (e) { }
+        }
+
+        if (notifRes?.ok) {
+          try {
+            const notifData = await notifRes.json();
+            if (notifData.success && notifData.data) {
+              setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
+            }
+          } catch (e) { }
+        }
+
         let subData: any = { success: false, data: [] };
-        try {
-          if (subRes.ok) subData = await subRes.json();
-        } catch (e) { }
+        if (subRes?.ok) {
+          try { subData = await subRes.json(); } catch (e) { }
+        }
 
         let controlsData: any = { success: false };
-        try {
-          if (controlsRes.ok) controlsData = await controlsRes.json();
-        } catch (e) { }
+        if (controlsRes?.ok) {
+          try { controlsData = await controlsRes.json(); } catch (e) { }
+        }
 
         let restricted: Record<string, boolean> = {};
         if (controlsData?.success && controlsData.data?.parentControls?.restrictedSubjects) {
@@ -97,12 +155,15 @@ export default function ChaptersScreen() {
 
           if (allowedSubjects.length > 0) {
             setSubjects(allowedSubjects);
+            sessionStorage.setItem("cached_practice_subjects", JSON.stringify(allowedSubjects));
             const savedSubjectId = sessionStorage.getItem("activeSubjectId");
             const found = allowedSubjects.find((s: any) => s._id === savedSubjectId);
             if (found) {
               setActiveSubject(found);
+              activeSubjectRef.current = found._id;
             } else {
               setActiveSubject(allowedSubjects[0]);
+              activeSubjectRef.current = allowedSubjects[0]._id;
               sessionStorage.setItem("activeSubjectId", allowedSubjects[0]._id);
             }
           } else {
@@ -110,8 +171,10 @@ export default function ChaptersScreen() {
             setLoading(false);
           }
         } else {
-          setSubjects([]);
-          setLoading(false);
+          if (subjects.length === 0) {
+            setSubjects([]);
+            setLoading(false);
+          }
         }
       } catch (e) {
         console.error("Failed to fetch subjects", e);
@@ -124,26 +187,47 @@ export default function ChaptersScreen() {
   useEffect(() => {
     if (!activeSubject) return;
 
+    const currentSubId = activeSubject._id;
+    activeSubjectRef.current = currentSubId;
+
     const fetchChapters = async () => {
-      setLoading(true);
+      const cachedChs = getInitialChapters(currentSubId);
+      if (cachedChs.length > 0) {
+        setChapters(cachedChs);
+        setLoading(false);
+      } else {
+        setChapters([]);
+        setLoading(true);
+      }
+
       try {
         const [chRes, pRes] = await Promise.all([
-          apiFetch(`/api/practice/chapters/${activeSubject._id}`),
-          apiFetch(`/api/practice/chapter-progress`)
+          apiFetch(`/api/practice/chapters/${currentSubId}`).catch(() => null),
+          apiFetch(`/api/practice/chapter-progress`).catch(() => null)
         ]);
 
+        if (activeSubjectRef.current !== currentSubId) return;
+
         let chData: any = { success: false, data: [] };
-        try {
-          if (chRes.ok) chData = await chRes.json();
-        } catch (e) { }
+        if (chRes?.ok) {
+          try { chData = await chRes.json(); } catch (e) { }
+        }
 
         let pData: any = { success: false, data: [] };
-        try {
-          if (pRes.ok) pData = await pRes.json();
-        } catch (e) { }
+        if (pRes?.ok) {
+          try { pData = await pRes.json(); } catch (e) { }
+        }
+
+        if (activeSubjectRef.current !== currentSubId) return;
 
         if (chData?.success && Array.isArray(chData.data)) {
           setChapters(chData.data);
+          sessionStorage.setItem(`cached_chapters_${currentSubId}`, JSON.stringify(chData.data));
+          // Prefetch first 3 chapter PDFs in the background
+          chData.data.slice(0, 3).forEach((c: any) => {
+            const cid = c._id || c.chapterId;
+            if (cid) prefetchPdf(cid);
+          });
         } else {
           setChapters([]);
         }
@@ -170,7 +254,9 @@ export default function ChaptersScreen() {
       } catch (e) {
         console.error("Failed to fetch chapters");
       } finally {
-        setLoading(false);
+        if (activeSubjectRef.current === currentSubId) {
+          setLoading(false);
+        }
       }
     };
     fetchChapters();
@@ -237,7 +323,7 @@ export default function ChaptersScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#17157F] font-sans pb-28 relative selection:bg-[#5B5CFF] selection:text-white overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#17157F] font-sans pb-44 relative selection:bg-[#5B5CFF] selection:text-white overflow-x-hidden">
       {/* Background World Glow Accents */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[35%] rounded-full bg-[#5B5CFF]/10 blur-[90px]" />
@@ -245,7 +331,7 @@ export default function ChaptersScreen() {
       </div>
 
       {/* TOP APP BAR / GAME HUD (Curved Sticky Design) */}
-      <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex flex-col bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-[28px] shadow-xs gap-2 pb-2">
+      <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex flex-col bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-2xl shadow-xs gap-2 pb-2">
         <div className="flex items-center justify-between px-4 py-3 gap-2">
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <button
@@ -260,15 +346,17 @@ export default function ChaptersScreen() {
                 </div>
               )}
             </button>
-            <div className="flex flex-col min-w-0">
-              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                <h1 className="text-sm font-black text-slate-900 leading-tight truncate">{childName || "Explorer"}</h1>
-                <span className="text-[10px] text-[#4f46e5] bg-[#eef2ff] font-black px-2 py-0.5 rounded-full border border-indigo-100 shrink-0">
+            <div className="flex flex-col min-w-0 justify-center">
+              {/* Line 1: Name + Class on same line */}
+              <div className="flex items-center gap-1.5 min-w-0">
+                <h1 className="text-sm font-black text-slate-900 leading-tight truncate max-w-[130px]">{childName || "Explorer"}</h1>
+                <span className="text-[10px] text-[#4f46e5] bg-[#eef2ff] font-black px-2 py-0.5 rounded-full border border-indigo-100 shrink-0 whitespace-nowrap">
                   {childClass || t('class_10', { defaultValue: "Class 10" })}
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 mt-1">
-                <span className="text-[11px] text-slate-400 font-extrabold whitespace-nowrap">
+              {/* Line 2: Level */}
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-[11.5px] text-slate-400 font-extrabold whitespace-nowrap">
                   {t('explorer_level', { defaultValue: "Explorer Level" })} {Math.min(99, completedChaptersCount + 1)}
                 </span>
               </div>
@@ -279,13 +367,13 @@ export default function ChaptersScreen() {
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={() => setShowStreakModal(true)}
-              className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
+              className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1.5 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
             >
               <span className="text-[11px] font-black text-[#ea580c] leading-none">🔥 {streakDays || 0}</span>
             </button>
             <button
               onClick={() => navigate("/practice/inventory")}
-              className="bg-[#fffbeb] border border-amber-100/80 rounded-2xl px-2 py-1 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
+              className="bg-[#fffbeb] border border-amber-100/80 rounded-2xl px-2 py-1.5 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
             >
               <span className="text-[11px] font-black text-[#b45309] leading-none">🪙 {coins || 0}</span>
             </button>
@@ -314,10 +402,7 @@ export default function ChaptersScreen() {
               return (
                 <button
                   key={sub._id}
-                  onClick={() => {
-                    setActiveSubject(sub);
-                    sessionStorage.setItem("activeSubjectId", sub._id);
-                  }}
+                  onClick={() => handleSelectSubject(sub)}
                   className={`px-4 py-1.5 rounded-full font-black text-xs whitespace-nowrap transition-all uppercase tracking-wider flex items-center gap-1.5 shrink-0 ${
                     isActive 
                       ? 'bg-gradient-to-r from-[#5B5CFF] to-[#17157F] text-white shadow-md border border-[#5B5CFF]' 
@@ -663,14 +748,6 @@ export default function ChaptersScreen() {
               {t('maybe_later', 'Maybe Later')}
             </button>
           </motion.div>
-        </div>
-      )}
-
-      {/* TOAST NOTIFICATION */}
-      {toastMessage && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white px-4.5 py-2.5 rounded-full shadow-[0_12px_30px_rgba(20,23,121,0.4)] border border-[#57fae9]/40 z-[9999] font-bold text-xs flex items-center justify-center gap-2.5 max-w-[90vw] w-auto animate-in fade-in slide-in-from-top-4 duration-300">
-          <Lock size={15} className="text-[#57fae9] shrink-0" />
-          <span className="truncate max-w-[280px] sm:max-w-[340px] line-clamp-1">{toastMessage}</span>
         </div>
       )}
 
