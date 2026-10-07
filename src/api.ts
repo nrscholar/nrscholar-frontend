@@ -108,9 +108,14 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 15000);
 
+  const API_BASE = import.meta.env.VITE_API_URL || "";
+  const requestUrl = (url.startsWith("http://") || url.startsWith("https://"))
+    ? url
+    : `${API_BASE}${url.startsWith("/") ? url : "/" + url}`;
+
   let response;
   try {
-    response = await fetch(url, { ...options, headers, signal: controller.signal });
+    response = await fetch(requestUrl, { ...options, headers, signal: controller.signal });
     clearTimeout(timeoutId);
   } catch (e) {
     clearTimeout(timeoutId);
@@ -119,7 +124,7 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
     try {
       const retryController = new AbortController();
       const retryTimeout = setTimeout(() => retryController.abort(), 15000);
-      response = await fetch(url, { ...options, headers, signal: retryController.signal });
+      response = await fetch(requestUrl, { ...options, headers, signal: retryController.signal });
       clearTimeout(retryTimeout);
     } catch (retryErr) {
       console.error("Network error on retry", retryErr);

@@ -68,7 +68,7 @@ export default function ChapterReaderScreen() {
   const [hasRenderedOnce, setHasRenderedOnce] = useState<boolean>(false);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Background rasterization: when scale settles, rasterize in the inactive slot
   useEffect(() => {
