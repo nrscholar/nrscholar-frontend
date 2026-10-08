@@ -1,0 +1,32 @@
+---
+name: feature-development
+description: Use when building a new feature or screen in nrscholar-frontend (web app in src/ and/or the Expo mobile shell in mobile/) — child or parent screens, learning activities, rewards, reports, settings. Triggers on "add a screen", "build a feature", "implement X for kids/parents".
+---
+
+# Feature development — nrscholar-frontend
+
+## Inspect first
+
+1. Where it lives: a web screen (`src/features/<feature>/pages/`), a native screen (`mobile/app/`), or a web screen opened from mobile via `practice/webview.tsx`?
+2. The closest existing screen of the same kind. Read it fully, including how it fetches (`apiFetch`), its loading/error handling and translations.
+3. Reusable pieces: `src/components/` (characters, `LottiePlayer`, `ChildSwitcherModal`), `src/app/components/Layout.tsx`, `src/api.ts` helpers, theme tokens in `tailwind.config.js`, existing locale keys. On mobile: `mobile/components/`, `mobile/hooks/`, `services/api.ts`.
+4. The backend endpoints (separate repo). Confirm request and response shapes. Don't guess.
+5. Who may see it: child, parent (behind the parental gate), or both. Subscription-gated?
+
+## Workflow
+
+1. **Restate** the acceptance criteria: role, phone layout, offline/error behavior, languages.
+2. **Plan** the files: `types.ts` → feature `api.ts` → `hooks/useX.ts` → `components/` → `pages/<Name>Screen.tsx` → route in `App.tsx` (lazy if heavy) → locale keys (en/hi/gu). Mobile: route file + `services/api.ts` usage + store if needed.
+3. **Contract or bridge changes** (new web route opened from mobile, token/storage keys, API shape) → run `impact-analysis` and wait.
+4. **Implement** per the rules: typed, no new `any`, theme tokens, `t()` everywhere, the four UI states, child-appropriate copy, the parental gate respected, effects cleaned up.
+5. **Verify:** `npm run lint` + `npm run build` (and `yarn lint` in `mobile/` if touched), plus the manual test plan (`testing` skill).
+6. **Self-review** with `code-review`.
+
+## Checklist
+
+- [ ] The screen stays thin. Logic lives in hooks/api/components. Files < ~400 lines.
+- [ ] Uses `apiFetch` via the feature's `api.ts`. Handles `success: false` and the 503 offline response.
+- [ ] Theme tokens, no new hex classes. Works at 360px and in the WebView.
+- [ ] `t()` for all text, keys in en/hi/gu.
+- [ ] Role and parental-gate rules respected. Heavy screen lazy-loaded.
+- [ ] Lint + build pass. Manual plan provided.
