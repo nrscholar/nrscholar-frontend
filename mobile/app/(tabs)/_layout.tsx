@@ -11,11 +11,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { authApi } from "../services/api";
 import { MaterialIcons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
+import * as Haptics from "expo-haptics";
 
 function CustomTabBar({ state, navigation, controls }: any) {
   const insets = useSafeAreaInsets();
 
-  // Match the keys with the route names and assign HTML-based icons
   const visibleItems = [
     { name: "index", label: "Home", icon: "home" },
     ...(controls.allowChat ? [{ name: "chat", label: "AI Chat", icon: "chat" }] : []),
@@ -32,6 +32,10 @@ function CustomTabBar({ state, navigation, controls }: any) {
 
         const onPress = () => {
           if (routeIndex === -1) return;
+          try {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          } catch (e) {}
+
           const event = navigation.emit({
             type: "tabPress",
             target: state.routes[routeIndex]?.key,

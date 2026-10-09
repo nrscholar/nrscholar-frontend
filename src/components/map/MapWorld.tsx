@@ -287,6 +287,7 @@ export default function MapWorld({
           const isCompletedClass = cNum < inferredActiveClass;
           const isCurrentClass = cNum === inferredActiveClass;
           const isLockedClass = cNum > inferredActiveClass;
+          const isAllStagesCompleted = classStages.length > 0 && classStages.every(s => Boolean(s.nodeData?.completed));
 
           return (
             <div key={cNum} id={`class-section-${cNum}`} className="w-full flex flex-col">
@@ -310,14 +311,19 @@ export default function MapWorld({
                       </div>
 
                       <div className="shrink-0 flex-shrink-0 ml-1">
-                        {isCompletedClass && (
-                          <span className="bg-white/20 border border-white/30 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1 shadow-xs whitespace-nowrap shrink-0">
-                            ✓ {t('completed_upper', 'COMPLETED')}
-                          </span>
-                        )}
                         {isCurrentClass && (
                           <span className={`${headerInfo.badgeClass} text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1 shadow-md animate-pulse whitespace-nowrap shrink-0`}>
                             ⚡ {t('current_class', 'CURRENT CLASS')}
+                          </span>
+                        )}
+                        {isCompletedClass && isAllStagesCompleted && (
+                          <span className="bg-emerald-500/30 border border-emerald-400 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1 shadow-xs whitespace-nowrap shrink-0">
+                            ✓ {t('completed_upper', 'COMPLETED')}
+                          </span>
+                        )}
+                        {isCompletedClass && !isAllStagesCompleted && (
+                          <span className="bg-white/20 border border-white/30 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1 shadow-xs whitespace-nowrap shrink-0">
+                            📚 CLASS {cNum}
                           </span>
                         )}
                         {isLockedClass && (
@@ -341,18 +347,22 @@ export default function MapWorld({
               {/* CLASS STAGE CARDS */}
               {classStages.map((stage) => {
                 const globalIndex = rawStages.findIndex(s => s.id === stage.id);
-                const state = getStageState(stage, globalIndex);
-                const isCompleted = state === "completed" || isCompletedClass;
-                const isCurrent = state === "current" && isCurrentClass;
-                const isUpcoming = state === "upcoming" || isLockedClass;
-
-                const stageProgress = isCompleted
-                  ? 100
-                  : isCurrent
-                  ? (stage.nodeData && stage.nodeData.nodeProgressPercentage !== undefined
-                      ? Math.round(stage.nodeData.nodeProgressPercentage)
-                      : Math.min(95, Math.round(((xp % 1000) / 1000) * 100)))
+                const isNodeCompleted = Boolean(stage.nodeData ? stage.nodeData.completed : false);
+                const stageProgPct = stage.nodeData?.nodeProgressPercentage !== undefined
+                  ? Math.round(stage.nodeData.nodeProgressPercentage)
                   : 0;
+
+                // Unlocked rule:
+                // - Current standard (cNum === inferredActiveClass): unlocked if stage is active/unlocked in current class
+                // - Prior/other standards (cNum < inferredActiveClass): unlocked ONLY IF progress > 0% or completed! If 0%, it stays locked.
+                // - Future standards (cNum > inferredActiveClass): locked.
+                const isNodeUnlocked = isCurrentClass
+                  ? Boolean(stage.nodeData ? stage.nodeData.unlocked : stage.unlocked)
+                  : (isNodeCompleted || stageProgPct > 0);
+
+                const isCompleted = isNodeCompleted;
+                const isCurrent = isNodeUnlocked && !isCompleted && (isCurrentClass || stageProgPct > 0);
+                const stageProgress = isCompleted ? 100 : (isNodeUnlocked ? stageProgPct : 0);
 
                 const left = isLeft(globalIndex);
 
@@ -363,12 +373,12 @@ export default function MapWorld({
                       border: isSpaceDark ? "border border-white/20" : "border border-[#141779]/20",
                       shadow: "shadow-md",
                       iconBgClass: "bg-[#141779]",
-                      barColor: "bg-[#141779]",
+                      barColor: "bg-emerald-500",
                       pill: isSpaceDark ? "bg-white/10 border-white/20 text-white/80" : "bg-indigo-50 border-indigo-200 text-[#141779]",
                       titleColor: isSpaceDark ? "text-white" : "text-[#141779]",
-                      labelColor: isSpaceDark ? "text-indigo-600" : "text-[#141779]",
+                      labelColor: isSpaceDark ? "text-emerald-400" : "text-emerald-600",
                     }
-                  : isCurrent
+                  : isNodeUnlocked
                   ? {
                       bg: isSpaceDark ? "bg-white/15 backdrop-blur-md" : "bg-white",
                       border: isSpaceDark ? "border-2 border-cyan-400/60" : "border-2 border-[#141779]",
@@ -417,6 +427,9 @@ export default function MapWorld({
                           if (isLockedClass) {
                             setLockedNotice(`🔒 ${stage.name} unlocks when you reach Class ${cNum}!`);
                             setTimeout(() => setLockedNotice(null), 3000);
+                          } else if (!isNodeUnlocked && !isCompleted) {
+                            setLockedNotice(`🔒 ${stage.name} is locked. Complete previous chapters in Class ${cNum} to unlock!`);
+                            setTimeout(() => setLockedNotice(null), 3000);
                           } else {
                             setSelectedStage(stage);
                           }
@@ -424,7 +437,7 @@ export default function MapWorld({
                         className={`
                           ${cardStyle.bg} ${cardStyle.border} ${cardStyle.shadow}
                           rounded-3xl p-4 w-[80%] cursor-pointer transition-all relative overflow-hidden
-                          ${isLockedClass ? "opacity-60 bg-slate-50/60 grayscale-[0.2]" : ""}
+                          ${!isNodeUnlocked && !isCompleted ? "opacity-60 bg-slate-50/60 grayscale-[0.2]" : ""}
                         `}
                       >
                         {/* Glow accent for current node */}
@@ -441,8 +454,8 @@ export default function MapWorld({
                               ) : (
                                 <>
                                   {isCompleted && <Check size={20} color="white" strokeWidth={3} />}
-                                  {isCurrent && <Sparkles size={18} className="text-[#57fae9] animate-pulse" />}
-                                  {isUpcoming && <Lock size={16} color="white" />}
+                                  {isNodeUnlocked && <Sparkles size={18} className="text-[#57fae9] animate-pulse" />}
+                                  {!isNodeUnlocked && <Lock size={16} color="white" />}
                                 </>
                               )}
                               {/* Level Badge */}
@@ -458,7 +471,13 @@ export default function MapWorld({
                           {/* Content column */}
                           <div className="flex-1 min-w-0">
                             <span className={`text-[9px] font-black uppercase tracking-widest ${cardStyle.labelColor}`}>
-                              {isLockedClass ? `🔒 ${t('unlocks_at_class_short', { count: cNum, defaultValue: `Class ${cNum}` })}` : isCompleted ? `✓ ${t('unlocked_status', 'Unlocked')}` : isCurrent ? `▶ ${t('in_progress_status', 'In Progress')}` : `⏸ ${t('locked_status', 'Locked')}`}
+                              {isLockedClass
+                                ? `🔒 ${t('unlocks_at_class_short', { count: cNum, defaultValue: `Class ${cNum}` })}`
+                                : isCompleted
+                                ? `✓ ${t('completed', 'Completed')}`
+                                : isNodeUnlocked
+                                ? (stageProgPct > 0 ? `▶ ${t('in_progress_status', 'In Progress')}` : `✓ ${t('unlocked_status', 'Unlocked')}`)
+                                : `🔒 ${t('locked_status', 'Locked')}`}
                             </span>
                             <h3 className={`text-sm font-black leading-snug mt-0.5 ${cardStyle.titleColor}`}>
                               {t(stage.name.toLowerCase().replace(/ /g, '_'), { defaultValue: stage.name })}

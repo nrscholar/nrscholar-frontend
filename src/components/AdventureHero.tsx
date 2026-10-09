@@ -22,6 +22,7 @@ export interface AdventureThemeConfig {
   bgGradient: string;
   accentBorderColor: string;
   accentTextColor: string;
+  ctaGradient: string;
   bgDecorations: string[];
   pathColor: string;
 }
@@ -35,8 +36,8 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     missionTitle: "Complete today's learning quest to cross Dragon Valley",
     missionProgress: { current: 3, total: 5 },
     missionRewardText: "+50 XP & Dragon Scale",
-    currentLocationName: "Forest Kingdom",
-    destinationName: "Dragon Cave",
+    currentLocationName: "Egg Village",
+    destinationName: "Hatchling Haven",
     rewardName: "Dragon Egg",
     rewardIcon: "🥚",
     characterIcon: "🐉",
@@ -44,8 +45,9 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     ctaTextKey: "continue_adventure",
     ctaText: "CONTINUE ADVENTURE →",
     bgGradient: "from-[#141779] via-[#1c1970] to-[#25218c]",
-    accentBorderColor: "border-[#FFC83D] shadow-none",
+    accentBorderColor: "border-indigo-400/60",
     accentTextColor: "text-[#57fae9]",
+    ctaGradient: "from-[#141779] via-[#1c1970] to-[#25218c] border-indigo-300/40 shadow-[0_6px_20px_rgba(20,23,121,0.35)]",
     bgDecorations: ["☁️", "🏔️", "🏰", "🔥"],
     pathColor: "#35E5D4",
   },
@@ -57,8 +59,8 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     missionTitle: "Complete 4 science challenges to ignite the lab furnace",
     missionProgress: { current: 2, total: 4 },
     missionRewardText: "+60 XP & Quantum Core",
-    currentLocationName: "Research Bench",
-    destinationName: "Quantum Lab",
+    currentLocationName: "Apprentice Lab",
+    destinationName: "Atom Academy",
     rewardName: "Advanced Lab",
     rewardIcon: "🔬",
     characterIcon: "🦉",
@@ -68,6 +70,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     bgGradient: "from-[#0b0c3f] via-[#141779] to-[#0284c7]",
     accentBorderColor: "border-cyan-400/60",
     accentTextColor: "text-cyan-200",
+    ctaGradient: "from-[#0b0c3f] via-[#141779] to-[#0284c7] border-cyan-300/40 shadow-[0_6px_20px_rgba(2,132,199,0.35)]",
     bgDecorations: ["⚡", "⚛️", "🧪", "✨"],
     pathColor: "#38bdf8",
   },
@@ -79,8 +82,8 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     missionTitle: "Complete 3 daily habit challenges",
     missionProgress: { current: 1, total: 3 },
     missionRewardText: "+40 XP & Arena Star",
-    currentLocationName: "Training Grounds",
-    destinationName: "Victory Podium",
+    currentLocationName: "Bronze Novice",
+    destinationName: "Bronze Vanguard",
     rewardName: "Silver Medal",
     rewardIcon: "🥈",
     characterIcon: "🦁",
@@ -90,6 +93,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     bgGradient: "from-[#1c1970] via-[#311075] to-[#4338ca]",
     accentBorderColor: "border-indigo-300/60",
     accentTextColor: "text-indigo-200",
+    ctaGradient: "from-[#1c1970] via-[#311075] to-[#4338ca] border-indigo-300/40 shadow-[0_6px_20px_rgba(79,70,229,0.35)]",
     bgDecorations: ["⭐", "🏆", "🚩", "✨"],
     pathColor: "#818cf8",
   },
@@ -112,6 +116,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     bgGradient: "from-slate-950 via-indigo-950 to-purple-950",
     accentBorderColor: "border-purple-400",
     accentTextColor: "text-purple-300",
+    ctaGradient: "from-[#1e1035] via-[#2e1065] to-[#581c87] border-purple-300/40 shadow-[0_6px_20px_rgba(88,28,135,0.35)]",
     bgDecorations: ["🌌", "🪐", "✨", "☄️"],
     pathColor: "#c084fc",
   },
@@ -134,6 +139,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     bgGradient: "from-sky-800 via-cyan-900 to-slate-950",
     accentBorderColor: "border-teal-300",
     accentTextColor: "text-teal-200",
+    ctaGradient: "from-[#082f49] via-[#075985] to-[#0e7490] border-teal-300/40 shadow-[0_6px_20px_rgba(14,116,144,0.35)]",
     bgDecorations: ["🫧", "🐠", "🪸", "⚓"],
     pathColor: "#2dd4bf",
   },
@@ -156,6 +162,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     bgGradient: "from-amber-800 via-stone-900 to-slate-950",
     accentBorderColor: "border-amber-400",
     accentTextColor: "text-amber-300",
+    ctaGradient: "from-[#451a03] via-[#78350f] to-[#92400e] border-amber-300/40 shadow-[0_6px_20px_rgba(146,64,14,0.35)]",
     bgDecorations: ["🏛️", "📜", "🏺", "⌛"],
     pathColor: "#fbbf24",
   },
@@ -202,24 +209,54 @@ export default function AdventureHero({
   const displayXpReward = missionXpReward !== undefined ? missionXpReward : 140;
   const displayCoinReward = missionCoinReward !== undefined ? missionCoinReward : 105;
 
-  const rawStart = journeyData?.currentLocation || currentLocationName || "Egg Village";
-  const rawEnd = journeyData?.nextNodeName || destinationName || "Hatchling Haven";
-  const startName = rawStart === "Egg Village" ? t('egg_village', { defaultValue: "Egg Village" }) : rawStart;
-  const endName = rawEnd === "Hatchling Haven" ? t('hatchling_haven', { defaultValue: "Hatchling Haven" }) : rawEnd;
+  const rawStart = journeyData?.currentLocation || currentLocationName || theme.currentLocationName;
+  const rawEnd = journeyData?.nextNodeName || destinationName || theme.destinationName;
+  const startName = t(rawStart.toLowerCase().replace(/ /g, '_'), { defaultValue: rawStart });
+  const endName = t(rawEnd.toLowerCase().replace(/ /g, '_'), { defaultValue: rawEnd });
 
   const displayMissionTitle = missionTitle || theme.missionTitle;
   const displayMissionProgress = missionProgress || theme.missionProgress;
-  const activeNode = journeyData?.nodes?.find((n: any) => n.unlocked && !n.completed) || journeyData?.nodes?.[0];
+  const currentClassNum = journeyData?.classLevel;
+  const activeClassNodes = currentClassNum
+    ? (journeyData?.nodes?.filter((n: any) => n.minClass === currentClassNum) || [])
+    : (journeyData?.nodes || []);
+
+  const activeNode = activeClassNodes.find((n: any) => n.unlocked && !n.completed)
+    || activeClassNodes[0]
+    || journeyData?.nodes?.find((n: any) => n.unlocked && !n.completed)
+    || journeyData?.nodes?.[0];
+
   const legProgress = activeNode?.nodeProgressPercentage !== undefined
     ? Math.round(activeNode.nodeProgressPercentage)
-    : (journeyData?.progressPercentage !== undefined
-      ? Math.round(journeyData.progressPercentage)
-      : (progressPercentage !== undefined ? progressPercentage : Math.min(100, Math.max(0, Math.round((xp / targetXp) * 100)))));
+    : (journeyData?.currentClassProgress !== undefined
+      ? Math.round(journeyData.currentClassProgress)
+      : (journeyData?.progressPercentage !== undefined
+        ? Math.round(journeyData.progressPercentage)
+        : (progressPercentage !== undefined ? progressPercentage : 0)));
   const chaptersRemaining = journeyData?.chaptersNeededForNext !== undefined ? journeyData.chaptersNeededForNext : chaptersNeededForNext;
   const xpRemaining = Math.max(0, targetXp - xp);
-  const pathD = "M 62 46 C 110 5, 215 65, 278 32";
-  const pathLength = 250;
-  const mascotLeftPercent = 25 + (legProgress / 100) * 54;
+  const legProgressClamped = Math.min(100, Math.max(0, legProgress));
+
+  // Exact percentage-based coordinate mapping (viewBox 0 0 1000 100, preserveAspectRatio="none")
+  // Enhanced adventure winding curve connecting Start and Destination
+  const pathD = "M 140 48 C 320 6, 640 90, 860 48";
+  const pathLength = 790;
+
+  // Mascot parameter along the Bezier curve: starts at 0.16 (beside start pin) at 0%, reaches 0.86 (near destination) at 100%
+  const u = 0.16 + (legProgressClamped / 100) * 0.70;
+  const oneMinusU = 1 - u;
+  const b0 = oneMinusU * oneMinusU * oneMinusU;
+  const b1 = 3 * oneMinusU * oneMinusU * u;
+  const b2 = 3 * oneMinusU * u * u;
+  const b3 = u * u * u;
+
+  // Exact coordinates on the curve in percentages (0% - 100%)
+  const mascotXPercent = (b0 * 140 + b1 * 320 + b2 * 640 + b3 * 860) / 10;
+  const mascotYPercent = b0 * 48 + b1 * 6 + b2 * 90 + b3 * 48;
+
+  // Progress line connects along the curve directly to the mascot
+  const strokeProgress = legProgressClamped > 0 ? (u * pathLength) : 0;
+  const strokeDashoffset = pathLength - strokeProgress;
 
   return (
     <div className="w-full max-w-[430px] mx-auto flex flex-col gap-3 font-sans">
@@ -228,29 +265,29 @@ export default function AdventureHero({
         className={`w-full rounded-[28px] bg-gradient-to-r ${theme.bgGradient} p-4 border-4 ${theme.accentBorderColor} relative overflow-hidden text-white flex flex-col gap-3 select-none`}
       >
         {/* Ambient environmental particles / animations */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none overflow-hidden select-none">
           <motion.div
-            animate={{ x: [-60, 380] }}
-            transition={{ repeat: Infinity, duration: 24, ease: "linear" }}
-            className="absolute top-2 left-0 text-2xl opacity-30"
+            animate={{ x: [-40, 360] }}
+            transition={{ repeat: Infinity, duration: 28, ease: "linear" }}
+            className="absolute top-1 left-0 text-xl opacity-20"
           >
             {theme.bgDecorations[0] || "☁️"}
           </motion.div>
           <motion.div
-            animate={{ x: [380, -60] }}
-            transition={{ repeat: Infinity, duration: 32, ease: "linear" }}
-            className="absolute top-8 left-0 text-xl opacity-20"
+            animate={{ x: [360, -40] }}
+            transition={{ repeat: Infinity, duration: 34, ease: "linear" }}
+            className="absolute top-7 left-0 text-lg opacity-15"
           >
-            {theme.bgDecorations[0] || "☁️"}
+            {theme.bgDecorations[1] || "✨"}
           </motion.div>
 
           {Array.from({ length: 4 }).map((_, i) => (
             <motion.div
               key={i}
-              initial={{ y: 130, x: 40 + i * 85, opacity: 0, scale: 0.5 }}
-              animate={{ y: [130, 20], opacity: [0, 0.7, 0.7, 0], scale: [0.5, 1.1, 0.5] }}
+              initial={{ y: 110, x: 50 + i * 80, opacity: 0, scale: 0.5 }}
+              animate={{ y: [110, 15], opacity: [0, 0.6, 0.6, 0], scale: [0.5, 1, 0.5] }}
               transition={{ repeat: Infinity, duration: 3.5 + i, delay: i * 0.7 }}
-              className="absolute text-sm"
+              className="absolute text-xs"
             >
               {theme.bgDecorations[3] || "✨"}
             </motion.div>
@@ -272,21 +309,15 @@ export default function AdventureHero({
         </div>
 
         {/* LIVING ADVENTURE WORLD SCENE (Flying Mascot over path to destination) */}
-        <div className="relative w-full h-[60px] z-10 flex flex-col justify-between my-1">
-          <div className="absolute inset-0 flex justify-between items-end px-2 opacity-20 pointer-events-none">
-            <span className="text-3xl">{theme.bgDecorations[1] || "🏔️"}</span>
-            <span className="text-2xl mb-4">{theme.bgDecorations[0] || "☁️"}</span>
-            <span className="text-2xl opacity-15">{theme.bgDecorations[2] || "🏰"}</span>
-          </div>
-
-          <div className="absolute inset-0 flex items-center justify-center">
-            <svg viewBox="0 0 330 70" className="w-full h-full overflow-visible">
+        <div className="relative w-full h-[88px] z-10 my-0.5">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <svg viewBox="0 0 1000 100" preserveAspectRatio="none" className="w-full h-full overflow-visible">
               <path
                 d={pathD}
                 fill="none"
                 stroke="rgba(255,255,255,0.25)"
                 strokeWidth="4"
-                strokeDasharray="6 6"
+                strokeDasharray="8 8"
                 strokeLinecap="round"
               />
               <path
@@ -295,75 +326,96 @@ export default function AdventureHero({
                 stroke={theme.pathColor}
                 strokeWidth="5"
                 strokeDasharray={pathLength}
-                strokeDashoffset={pathLength - (pathLength * legProgress) / 100}
+                strokeDashoffset={strokeDashoffset}
                 strokeLinecap="round"
                 className="transition-all duration-1000"
               />
             </svg>
+          </div>
 
-            {/* START NODE */}
-            <div className="absolute left-2 bottom-0 flex flex-col items-center z-10">
-              <div className="w-7 h-7 rounded-full bg-white border-2 border-slate-700 flex items-center justify-center text-xs shadow-md">
-                📍
+          {/* START NODE (Aligned at 14% Center) */}
+          <div
+            className="absolute top-1/2 flex flex-col items-center z-10 w-[86px] text-center pointer-events-none"
+            style={{ left: "14%", transform: "translate(-50%, -50%)" }}
+          >
+            <div className="w-8 h-8 rounded-full bg-white border-2 border-slate-700 flex items-center justify-center text-sm shadow-md shrink-0">
+              📍
+            </div>
+            <span
+              title={startName}
+              className="text-[9px] font-black text-slate-200 uppercase mt-1 tracking-tight bg-black/60 px-1.5 py-0.5 rounded backdrop-blur-xs w-full truncate block shadow-xs"
+            >
+              {startName}
+            </span>
+          </div>
+
+          {/* CHARACTER MASCOT (Rides mathematically on the curve path) */}
+          <div
+            className="absolute transition-all duration-1000 ease-out z-20 pointer-events-none"
+            style={{
+              left: `${mascotXPercent}%`,
+              top: `${mascotYPercent}%`,
+              transform: "translate(-50%, -50%)",
+            }}
+          >
+            <motion.div
+              animate={{ y: [-2, 2, -2], rotate: [-3, 3, -3] }}
+              transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
+              className="flex flex-col items-center group pointer-events-auto cursor-pointer"
+            >
+              <div className="text-4xl filter drop-shadow-[0_6px_12px_rgba(0,0,0,0.5)] select-none">
+                {journeyData?.characterEmoji || theme.characterIcon}
               </div>
-              <span className="text-[9px] font-black text-slate-200 uppercase mt-0.5 tracking-tighter bg-black/60 px-1.5 py-0.5 rounded backdrop-blur-xs whitespace-nowrap">
-                {startName}
+              <span className="text-[9px] font-black bg-[#141779] text-white px-2 py-0.5 rounded-full uppercase shadow-md -mt-1 tracking-wider border border-indigo-300/50 whitespace-nowrap">
+                {t('you', { defaultValue: "YOU" })}
               </span>
-            </div>
+            </motion.div>
+          </div>
 
-            {/* CHARACTER MASCOT */}
-            <div className="absolute inset-x-0 inset-y-0 pointer-events-none z-20">
-              <div
-                className="h-full flex items-center transition-all duration-1000"
-                style={{ marginLeft: `calc(${mascotLeftPercent}% - 18px)` }}
-              >
-                <motion.div
-                  animate={{ y: [-4, 4, -4], rotate: [-4, 4, -4] }}
-                  transition={{ repeat: Infinity, duration: 1.6, ease: "easeInOut" }}
-                  className="flex flex-col items-center group cursor-pointer"
-                >
-                  <div className="text-4xl filter drop-shadow-[0_6px_12px_rgba(0,0,0,0.4)] select-none">
-                    {theme.characterIcon}
-                  </div>
-                  <span className="text-[9px] font-black bg-[#141779] text-white px-2 py-0.5 rounded-full uppercase shadow-md -mt-1 tracking-wider border border-indigo-300/50">
-                    {t('you', { defaultValue: "YOU" })}
-                  </span>
-                </motion.div>
-              </div>
-            </div>
-
-            {/* DESTINATION NODE */}
-            <div className="absolute right-0 top-1 flex flex-col items-center z-10">
-              <motion.div
-                animate={{ scale: [1, 1.12, 1] }}
-                transition={{ repeat: Infinity, duration: 2 }}
-                className="w-10 h-10 rounded-2xl bg-white/15 border-2 border-indigo-200 flex items-center justify-center text-xl shadow-lg backdrop-blur-md relative"
-              >
-                <span className="select-none">{journeyData?.nextNodeEmoji || theme.rewardIcon}</span>
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-teal-400 rounded-full animate-ping" />
-              </motion.div>
-              <span className="text-[9px] font-black text-indigo-200 uppercase mt-0.5 tracking-tighter bg-black/70 px-1.5 py-0.5 rounded backdrop-blur-xs whitespace-nowrap shadow-sm">
-                {t(rawEnd.toLowerCase().replace(/ /g, '_'), { defaultValue: rawEnd })}
-              </span>
-            </div>
+          {/* DESTINATION NODE (Aligned at 86% Center) */}
+          <div
+            className="absolute top-1/2 flex flex-col items-center z-10 w-[86px] text-center pointer-events-none"
+            style={{ left: "86%", transform: "translate(-50%, -50%)" }}
+          >
+            <motion.div
+              animate={{ scale: [1, 1.08, 1] }}
+              transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+              className="w-10 h-10 rounded-2xl bg-white/15 border-2 border-indigo-200 flex items-center justify-center text-xl shadow-lg backdrop-blur-md relative shrink-0"
+            >
+              <span className="select-none">{journeyData?.nextNodeEmoji || theme.rewardIcon}</span>
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-teal-400 rounded-full animate-ping" />
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-teal-400 rounded-full" />
+            </motion.div>
+            <span
+              title={endName}
+              className="text-[9px] font-black text-indigo-200 uppercase mt-1 tracking-tight bg-black/70 px-1.5 py-0.5 rounded backdrop-blur-xs w-full truncate block shadow-xs"
+            >
+              {endName}
+            </span>
           </div>
         </div>
 
         {/* PROGRESS SUPPORTING INDICATOR */}
         <div className="z-10 bg-black/30 border border-white/10 rounded-2xl p-2.5 flex flex-col gap-1 backdrop-blur-md">
           <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-200">
-            <span>{t('progress_to', { destination: endName, defaultValue: `Progress to ${endName}` })}</span>
-            <span className="text-[#FFC83D] font-black">{t('completed_label', { percent: legProgress, defaultValue: `${legProgress}% COMPLETED` })}</span>
+            <span className="truncate max-w-[65%]" title={t('progress_to', { destination: endName, defaultValue: `Progress to ${endName}` })}>
+              {t('progress_to', { destination: endName, defaultValue: `Progress to ${endName}` })}
+            </span>
+            <span className="text-[#FFC83D] font-black shrink-0">
+              {t('completed_label', { percent: legProgressClamped, defaultValue: `${legProgressClamped}% COMPLETED` })}
+            </span>
           </div>
           <div className="w-full h-2 bg-white/15 rounded-full overflow-hidden p-0.5">
             <div
               className="h-full bg-gradient-to-r from-[#35E5D4] via-[#14C8C6] to-[#006a62] rounded-full transition-all duration-700 shadow-xs"
-              style={{ width: `${legProgress}%` }}
+              style={{ width: `${legProgressClamped}%` }}
             />
           </div>
           <div className="flex justify-between items-center text-[9.5px] font-extrabold text-slate-300 mt-0.5">
-            <span>{t('unlock_label', { destination: endName, defaultValue: `${endName} Unlock` })}</span>
-            <span className="text-[#FFC83D] font-extrabold">
+            <span className="truncate max-w-[60%]" title={t('unlock_label', { destination: endName, defaultValue: `${endName} Unlock` })}>
+              {t('unlock_label', { destination: endName, defaultValue: `${endName} Unlock` })}
+            </span>
+            <span className="text-[#FFC83D] font-extrabold shrink-0">
               {chaptersRemaining !== undefined
                 ? (chaptersRemaining > 0 ? t('chapters_remaining_count', { count: chaptersRemaining, defaultValue: `${chaptersRemaining} chapter(s) remaining` }) : t('stage_complete', { defaultValue: "Stage Complete!" }))
                 : (xpRemaining > 0 ? t('xp_remaining_count', { count: xpRemaining, defaultValue: `${xpRemaining} XP Remaining` }) : t('ready_to_unlock', { defaultValue: "Ready to Unlock!" }))}
@@ -374,7 +426,7 @@ export default function AdventureHero({
         {/* PRIMARY ACTION CTA BUTTON */}
         <button
           onClick={onCtaClick}
-          className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] hover:from-[#1c1970] hover:to-[#2e2aab] text-white font-black text-xs uppercase tracking-wider shadow-[0_6px_20px_rgba(20,23,121,0.35)] active:scale-95 transition-all border-2 border-indigo-300/40 flex items-center justify-center gap-2 z-10"
+          className={`w-full py-3.5 rounded-2xl bg-gradient-to-r ${theme.ctaGradient} hover:brightness-110 text-white font-black text-xs uppercase tracking-wider active:scale-95 transition-all border-2 flex items-center justify-center gap-2 z-10 cursor-pointer`}
         >
           <span>{t(theme.ctaTextKey, { defaultValue: theme.ctaText })}</span>
         </button>
