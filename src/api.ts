@@ -172,8 +172,9 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
           refreshPromise = (async () => {
             const refreshController = new AbortController();
             const refreshTimeout = setTimeout(() => refreshController.abort(), 30000);
+            const refreshUrl = (API_BASE ? `${API_BASE}/api/users/refresh` : "/api/users/refresh");
             try {
-              const res = await fetch("/api/users/refresh", {
+              const res = await fetch(refreshUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ refreshToken }),
@@ -204,7 +205,7 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
           const retryController = new AbortController();
           const retryTimeout = setTimeout(() => retryController.abort(), 30000);
           try {
-            response = await fetch(url, { ...options, headers, signal: retryController.signal });
+            response = await fetch(requestUrl, { ...options, headers, signal: retryController.signal });
             clearTimeout(retryTimeout);
           } catch (e) {
             clearTimeout(retryTimeout);
