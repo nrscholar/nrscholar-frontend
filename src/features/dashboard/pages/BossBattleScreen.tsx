@@ -7,6 +7,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import DragonCharacter from "../../../components/DragonCharacter";
 import MonsterCharacter from "../../../components/MonsterCharacter";
+import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 import { useTranslation } from "react-i18next";
 
 // Fire Sparks particle config for Boss Battle background
@@ -32,6 +33,24 @@ export default function BossBattleScreen() {
   const searchParams = new URLSearchParams(location.search);
   const worldId = searchParams.get("worldId") || "w1";
   const returnTo = searchParams.get("returnTo");
+
+  // Helper to determine the Roadmap return URL
+  const getRoadmapUrl = () => {
+    if (returnTo && !returnTo.includes("/practice/journey-map")) {
+      return decodeURIComponent(returnTo);
+    }
+    const chapterId = searchParams.get("chapterId");
+    const chapterName = searchParams.get("chapterName");
+    const subjectName = searchParams.get("subjectName");
+    if (chapterId) {
+      const qParams = new URLSearchParams();
+      qParams.set("chapterId", chapterId);
+      if (chapterName) qParams.set("title", chapterName);
+      if (subjectName) qParams.set("subjectName", subjectName);
+      return `/mission-roadmap?${qParams.toString()}`;
+    }
+    return "/practice/chapters";
+  };
 
   // Sync active language setting from user/child profile or localStorage
   useEffect(() => {
@@ -104,6 +123,55 @@ export default function BossBattleScreen() {
   const [revivalSpins, setRevivalSpins] = useState(0);
   const [showReviveModal, setShowReviveModal] = useState(false);
   const [pendingLossData, setPendingLossData] = useState<any>(null);
+  const [showBuySpinConfirmModal, setShowBuySpinConfirmModal] = useState(false);
+  const [isBuyingRevivalSpin, setIsBuyingRevivalSpin] = useState(false);
+
+  const handleConfirmBuyRevivalSpin = async () => {
+    if (userCoins < 100) {
+      showToast(t('not_enough_coins', "Not enough coins! You need 100 coins."));
+      setShowBuySpinConfirmModal(false);
+      return;
+    }
+    setIsBuyingRevivalSpin(true);
+    try {
+      const res = await apiFetch("/api/retention/spin-wheel/buy-revival", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      const json = await res.json();
+      if (json.success) {
+        const newSpins = json.balances?.boss_revival_spins_balance || 1;
+        const newCoins = json.coins !== undefined ? json.coins : Math.max(0, userCoins - 100);
+        setRevivalSpins(newSpins);
+        setUserCoins(newCoins);
+
+        try {
+          const uRes = await apiFetch("/api/users/me");
+          const uJson = await uRes.json();
+          if (uJson.success && uJson.data?.user) {
+            localStorage.setItem("userData", JSON.stringify(uJson.data.user));
+            window.dispatchEvent(new Event("userDataUpdated"));
+          }
+        } catch (ue) {}
+
+        setShowBuySpinConfirmModal(false);
+        setShowReviveModal(false);
+        showToast(t('purchased_revival_spin', "Purchased 1 Revival Spin! 🎉"));
+
+        setTimeout(() => {
+          navigate(`/daily-rewards?type=boss_revival&boss_id=${battleData?.battleId}`);
+        }, 300);
+      } else {
+        showToast(json.message || t('purchase_failed', "Purchase failed."));
+        setShowBuySpinConfirmModal(false);
+      }
+    } catch (e) {
+      showToast(t('purchase_failed', "Purchase failed."));
+      setShowBuySpinConfirmModal(false);
+    } finally {
+      setIsBuyingRevivalSpin(false);
+    }
+  };
 
   useEffect(() => {
     setQuestionStartTime(Date.now());
@@ -294,12 +362,29 @@ export default function BossBattleScreen() {
         if (nextBossHp <= 0) {
           setShowConfetti(true);
           submitActivityLog(newAnswers).catch(() => {});
-          setTimeout(() => {
-            if (returnTo) {
-               navigate(`/practice/reward?type=boss&amount=1000&returnTo=${encodeURIComponent(returnTo)}`, { state: location.state, replace: true });
-            } else {
-               navigate(`/practice/reward?type=coins&amount=1000&returnTo=/practice/journey-map`, { replace: true });
+          const roadmapUrl = getRoadmapUrl();
+
+          // Claim boss victory rewards to guarantee database update
+          apiFetch("/api/world/boss/claim", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              battleId: battleData.battleId,
+              chapterId: searchParams.get("chapterId") || "ch1",
+              difficulty: searchParams.get("difficulty") || "easy",
+              coins: 1000,
+              xp: 500
+            })
+          }).then(async (claimRes) => {
+            const claimJson = await claimRes.json();
+            if (claimJson.success && claimJson.data?.user) {
+              localStorage.setItem("userData", JSON.stringify(claimJson.data.user));
+              window.dispatchEvent(new Event("userDataUpdated"));
             }
+          }).catch(console.error);
+
+          setTimeout(() => {
+            navigate(`/practice/reward?type=boss&amount=1000&returnTo=${encodeURIComponent(roadmapUrl)}`, { state: location.state, replace: true });
           }, 1000);
         } else if (nextHearts <= 0) {
           submitActivityLog(newAnswers).catch(() => {});
@@ -358,12 +443,28 @@ export default function BossBattleScreen() {
             
             submitActivityLog(newAnswers).catch(() => {});
 
-            setTimeout(() => {
-              if (returnTo) {
-                 navigate(`/practice/reward?type=boss&amount=${rewardAmt}&returnTo=${encodeURIComponent(returnTo)}`, { state: location.state, replace: true });
-              } else {
-                 navigate(`/practice/reward?type=coins&amount=${rewardAmt}&returnTo=/practice/journey-map`, { replace: true });
+            // Claim boss victory rewards to ensure database sync & update local state
+            apiFetch("/api/world/boss/claim", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                battleId: battleData.battleId,
+                chapterId: chapterId || "ch1",
+                difficulty: searchParams.get("difficulty") || "easy",
+                coins: rewardAmt,
+                xp: 500
+              })
+            }).then(async (claimRes) => {
+              const claimJson = await claimRes.json();
+              if (claimJson.success && claimJson.data?.user) {
+                localStorage.setItem("userData", JSON.stringify(claimJson.data.user));
+                window.dispatchEvent(new Event("userDataUpdated"));
               }
+            }).catch(console.error);
+
+            const roadmapUrl = getRoadmapUrl();
+            setTimeout(() => {
+              navigate(`/practice/reward?type=boss&amount=${rewardAmt}&returnTo=${encodeURIComponent(roadmapUrl)}`, { state: location.state, replace: true });
             }, 1000);
           } else if (status === "LOST") {
             submitActivityLog(newAnswers).catch(() => {});
@@ -428,8 +529,8 @@ export default function BossBattleScreen() {
     return (
       <div className="min-h-screen bg-[#f4efff] flex flex-col items-center justify-center text-[#141779] px-6 text-center">
         <h2 className="text-2xl font-black mb-4">Boss has fled!</h2>
-        <button onClick={() => navigate(-1)} className="bg-[#141779] text-white px-8 py-3 rounded-full font-black uppercase tracking-wider shadow-md">
-          Retreat
+        <button onClick={() => navigate(getRoadmapUrl(), { replace: true })} className="bg-[#141779] text-white px-8 py-3 rounded-full font-black uppercase tracking-wider shadow-md hover:bg-[#101362] transition-colors">
+          {t('retreat', 'Retreat to Roadmap')}
         </button>
       </div>
     );
@@ -811,34 +912,22 @@ export default function BossBattleScreen() {
               <div className="flex flex-col gap-2 w-full">
                 {revivalSpins > 0 ? (
                   <button
-                    onClick={() => navigate(`/daily-rewards?type=boss_revival&boss_id=${battleData?.battleId}`)}
+                    onClick={() => {
+                      setShowReviveModal(false);
+                      navigate(`/daily-rewards?type=boss_revival&boss_id=${battleData?.battleId}`);
+                    }}
                     className="w-full py-4 bg-[#141779] text-white font-bold rounded-full hover:bg-[#101362] active:scale-95 transition-all uppercase tracking-wide text-sm flex items-center justify-center gap-2 shadow-md"
                   >
                     <span>🔥 {t('spin_to_revive', 'Spin to Revive')}</span>
                   </button>
                 ) : (
                   <button
-                    onClick={async () => {
+                    onClick={() => {
                       if (userCoins < 100) {
                         showToast(t('not_enough_coins', "Not enough coins! You need 100 coins."));
                         return;
                       }
-                      try {
-                        const res = await apiFetch("/api/retention/spin-wheel/buy-revival", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" }
-                        });
-                        const json = await res.json();
-                        if (json.success) {
-                          setRevivalSpins(json.balances.boss_revival_spins_balance || 1);
-                          setUserCoins(json.coins);
-                          showToast(t('purchased_revival_spin', "Purchased 1 Revival Spin! 🎉"));
-                        } else {
-                          showToast(json.message || t('purchase_failed', "Purchase failed."));
-                        }
-                      } catch (e) {
-                        showToast(t('purchase_failed', "Purchase failed."));
-                      }
+                      setShowBuySpinConfirmModal(true);
                     }}
                     className="w-full py-4 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white font-bold rounded-full hover:brightness-110 active:scale-95 transition-all uppercase tracking-wide text-sm flex items-center justify-center gap-2 shadow-md border border-indigo-300/40"
                   >
@@ -858,6 +947,38 @@ export default function BossBattleScreen() {
         )}
       </AnimatePresence>
 
+      {/* Buy Revival Spin Confirmation Modal */}
+      <UnifiedConfirmModal
+        isOpen={showBuySpinConfirmModal}
+        onClose={() => !isBuyingRevivalSpin && setShowBuySpinConfirmModal(false)}
+        onConfirm={handleConfirmBuyRevivalSpin}
+        title={t('confirm_buy_spin_title', 'Buy Revival Spin?')}
+        message={
+          <div className="space-y-3">
+            <p className="text-xs sm:text-sm font-semibold text-slate-600 leading-relaxed">
+              {t('confirm_buy_spin_desc', 'Spend 100 coins to buy 1 Revival Spin? You can spin the Revival Wheel to recover hearts and keep fighting!')}
+            </p>
+            <div className="w-full bg-amber-50 border border-amber-200 rounded-2xl p-3 flex justify-between items-center text-xs font-bold text-amber-900">
+              <span className="flex items-center gap-1.5">
+                <span>🪙</span> {t('cost', 'Cost')}:
+              </span>
+              <span className="text-amber-700 font-black text-sm">
+                100 Coins
+              </span>
+            </div>
+            <div className="text-[11px] font-bold text-slate-500 text-left px-1 flex justify-between">
+              <span>{t('your_coins', 'Current Coins')}: <strong className="text-slate-800">{userCoins}</strong></span>
+              <span>{t('coins_after', 'Remaining')}: <strong className="text-slate-800">{Math.max(0, userCoins - 100)}</strong></span>
+            </div>
+          </div>
+        }
+        confirmText={isBuyingRevivalSpin ? t('purchasing', 'Buying...') : t('confirm_spend_coins', 'Yes, Spend 100 Coins')}
+        cancelText={t('cancel', 'Cancel')}
+        variant="primary"
+        loading={isBuyingRevivalSpin}
+        icon={<span className="text-3xl">🪙</span>}
+      />
+
       {/* LOSS OVERLAY SCREEN */}
       {lossOverlay.show && (
         <div className="fixed inset-0 z-[120] bg-[#f4efff] flex flex-col items-center justify-center p-6 text-center animate-in zoom-in duration-300">
@@ -868,15 +989,11 @@ export default function BossBattleScreen() {
           <p className="text-sm font-bold text-[#464652] mb-6 max-w-xs">{t('boss_defeat_desc', 'You ran out of hearts! Keep practicing to come back stronger!')}</p>
           <button
             onClick={() => {
-              if (returnTo) {
-                navigate(decodeURIComponent(returnTo), { replace: true });
-              } else {
-                navigate("/practice/journey-map", { replace: true });
-              }
+              navigate(getRoadmapUrl(), { replace: true });
             }}
-            className="w-full max-w-xs py-4 bg-[#141779] text-white font-black uppercase tracking-widest rounded-full shadow-md"
+            className="w-full max-w-xs py-4 bg-[#141779] hover:bg-[#101362] text-white font-black uppercase tracking-widest rounded-full shadow-md transition-all active:scale-95"
           >
-            {t('return_to_map', 'Return to Map')}
+            {t('return_to_map', 'Return to Chapter Roadmap')}
           </button>
         </div>
       )}

@@ -20,6 +20,7 @@ import { class7Skills } from "../../../data/neuroplay/class7Skills";
 import { class8Skills } from "../../../data/neuroplay/class8Skills";
 import { class9Skills } from "../../../data/neuroplay/class9Skills";
 import { class10Skills } from "../../../data/neuroplay/class10Skills";
+import { skillImages } from "../../../data/neuroplay/skillImages";
 
 const allNeuroPlaySkills = [
   ...class1Skills,
@@ -75,13 +76,13 @@ const renderSkillIcon = (iconName: string, category: any, size = 32) => {
   }
 
   return (
-    <div className="relative mx-auto mb-4 flex items-center justify-center">
+    <div className="relative mx-auto mb-2 sm:mb-3 flex items-center justify-center">
       {/* Outer subtle glow ring */}
-      <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-[30px] p-2 ring-4 ${ringColor} flex items-center justify-center transition-transform hover:scale-105 duration-300`}>
+      <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-[22px] sm:rounded-[26px] p-1.5 ring-4 ${ringColor} flex items-center justify-center transition-transform hover:scale-105 duration-300`}>
         {/* Core Vibrant Gradient Badge */}
-        <div className={`w-full h-full rounded-[24px] bg-gradient-to-tr ${gradient} text-white shadow-lg shadow-indigo-500/25 flex items-center justify-center relative overflow-hidden`}>
-          <div className="absolute inset-0 bg-white/15 rounded-[24px] blur-xs"></div>
-          <IconComponent size={size} className="relative z-10 text-white drop-shadow-md" />
+        <div className={`w-full h-full rounded-[18px] sm:rounded-[22px] bg-gradient-to-tr ${gradient} text-white shadow-lg shadow-indigo-500/25 flex items-center justify-center relative overflow-hidden`}>
+          <div className="absolute inset-0 bg-white/15 rounded-[18px] sm:rounded-[22px] blur-xs"></div>
+          <IconComponent size={typeof size === 'number' ? size : 32} className="relative z-10 text-white drop-shadow-md" />
         </div>
       </div>
     </div>
@@ -107,54 +108,10 @@ const formatRichText = (text: string) => {
   });
 };
 
-const curatedPhotos = [
-  "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1507413245164-6160d8298b31?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1457369804613-52c61a468e7d?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1518241353330-0f7941c2d9b5?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1499209974431-9dddcece7f88?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1596495578065-6e0763fa1178?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1513258496099-48168024aec0?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1501504905252-473c47e087f8?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1588072432836-e10032774350?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1584697964190-71c4c15377bf?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1606326608606-aa0b62935f2b?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1516534775068-ba3e7458af70?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1534644107580-3a4dbd494a95?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1516979187457-637abb4f9353?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1472289065668-ce650ac443d2?auto=format&fit=crop&q=80&w=400",
-  "https://images.unsplash.com/photo-1503428593586-e225b39bddfe?auto=format&fit=crop&q=80&w=400"
-];
-
 const getSkillPhoto = (skill: any): string => {
   if (skill.imageUrl) return skill.imageUrl;
-  const str = String(skill.id || skill.title || "");
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = (hash << 5) - hash + str.charCodeAt(i);
-    hash |= 0;
-  }
-  const index = Math.abs(hash) % curatedPhotos.length;
-  return curatedPhotos[index];
+  if (skill.id && skillImages[skill.id]) return skillImages[skill.id];
+  return "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&q=80&w=400";
 };
 
 const categoryIcons: Record<string, string> = {
@@ -440,20 +397,6 @@ export default function NeuroPlayScreen() {
       );
       setTimeout(() => setQuestionErrorToast(null), 2500);
       return;
-    }
-
-    // Card 6 Gate: MUST check ALL checklist items to proceed
-    if (currentCard.type === "action_checklist") {
-      const allChecked = checklistState.length > 0 && checklistState.every(x => x === true);
-      if (!allChecked) {
-        setQuestionErrorToast(
-          lang === "hi" ? "आगे बढ़ने से पहले सभी चेकलिस्ट आइटम टिक करें!" : 
-          lang === "gu" ? "આગળ વધતા પહેલાં બધા ચકાસણી બોક્સ પસંદ કરો!" : 
-          "Please check all checklist items before proceeding!"
-        );
-        setTimeout(() => setQuestionErrorToast(null), 2500);
-        return;
-      }
     }
 
     setQuestionErrorToast(null);
@@ -874,7 +817,7 @@ export default function NeuroPlayScreen() {
       {/* (Ultra-Polished Light Theme • 10/10 Aesthetic Score)                */}
       {/* ═════════════════════════════════════════════════════════════════════ */}
       {viewMode === "player" && (
-        <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans flex flex-col justify-between relative overflow-x-hidden">
+        <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans pb-28 relative overflow-x-hidden selection:bg-indigo-500 selection:text-white">
           
           {/* Ambient Background Glows matching application */}
           <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
@@ -884,24 +827,24 @@ export default function NeuroPlayScreen() {
           </div>
 
           {/* TOP APP BAR & PROGRESS BAR */}
-          <header className="px-5 sm:px-6 py-4 flex items-center justify-between z-50 sticky top-0 bg-white/85 backdrop-blur-xl border-b border-slate-200/80 shadow-2xs max-w-lg mx-auto w-full">
+          <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-slate-200/80 px-4 sm:px-6 py-3 flex items-center justify-between shadow-2xs">
             <button 
               onClick={() => setViewMode("library")} 
-              className="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 text-[#141779] flex items-center justify-center transition-all active:scale-95 shadow-2xs border border-slate-200/60"
+              className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-[#141779] flex items-center justify-center transition-all active:scale-95 shadow-2xs border border-slate-200/60"
               aria-label="Back to Library"
             >
-              <ArrowLeft size={20} />
+              <ArrowLeft size={18} />
             </button>
             
             {/* Center Header: Skill Title & Progress Tracker */}
-            <div className="flex-1 mx-3 sm:mx-4 flex flex-col items-center gap-1.5 min-w-0">
+            <div className="flex-1 mx-3 sm:mx-4 flex flex-col items-center gap-1 min-w-0">
               <div className="flex items-center justify-between w-full text-[11px] font-extrabold text-[#141779]">
                 <span className="truncate max-w-[170px] sm:max-w-[220px] font-black">{getText(selectedSkill.title)}</span>
-                <span className="text-[#4F46E5] bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100 shrink-0 font-black">
+                <span className="text-[#4F46E5] bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100 shrink-0 font-black text-[10px]">
                   {activeCardIndex + 1} / {totalCards}
                 </span>
               </div>
-              <div className="bg-slate-200/80 rounded-full h-2 w-full overflow-hidden shadow-inner">
+              <div className="bg-slate-200/80 rounded-full h-1.5 w-full overflow-hidden shadow-inner">
                 <div 
                   className="bg-gradient-to-r from-[#141779] via-[#4F46E5] to-[#7C3AED] h-full rounded-full transition-all duration-500 ease-out shadow-sm"
                   style={{ width: `${((activeCardIndex + 1) / totalCards) * 100}%` }}
@@ -913,7 +856,7 @@ export default function NeuroPlayScreen() {
             <div className="flex items-center bg-slate-100 border border-slate-200 rounded-full p-0.5 shadow-2xs">
               <button
                 onClick={() => setLang("en")}
-                className={`px-2 py-1 rounded-full text-[10px] font-black transition-all ${
+                className={`px-2 py-0.5 rounded-full text-[10px] font-black transition-all ${
                   lang === "en" ? "bg-[#141779] text-white shadow-xs" : "text-slate-500 hover:text-[#141779]"
                 }`}
               >
@@ -921,7 +864,7 @@ export default function NeuroPlayScreen() {
               </button>
               <button
                 onClick={() => setLang("hi")}
-                className={`px-2 py-1 rounded-full text-[10px] font-black transition-all ${
+                className={`px-2 py-0.5 rounded-full text-[10px] font-black transition-all ${
                   lang === "hi" ? "bg-[#141779] text-white shadow-xs" : "text-slate-500 hover:text-[#141779]"
                 }`}
               >
@@ -929,7 +872,7 @@ export default function NeuroPlayScreen() {
               </button>
               <button
                 onClick={() => setLang("gu")}
-                className={`px-2 py-1 rounded-full text-[10px] font-black transition-all ${
+                className={`px-2 py-0.5 rounded-full text-[10px] font-black transition-all ${
                   lang === "gu" ? "bg-[#141779] text-white shadow-xs" : "text-slate-500 hover:text-[#141779]"
                 }`}
               >
@@ -938,8 +881,8 @@ export default function NeuroPlayScreen() {
             </div>
           </header>
 
-          {/* MAIN LESSON CONTAINER (Centered Elevated Glassmorphic Card) */}
-          <main className="flex-1 px-4 sm:px-6 pt-5 pb-32 flex flex-col justify-center max-w-md sm:max-w-lg w-full mx-auto relative z-10">
+          {/* MAIN LESSON CONTAINER */}
+          <main className="max-w-md sm:max-w-lg mx-auto px-4 sm:px-6 pt-5 pb-6 relative z-10">
             
             {/* Warning Toast */}
             <AnimatePresence>
@@ -948,7 +891,7 @@ export default function NeuroPlayScreen() {
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="bg-rose-600 text-white font-black text-xs px-4 py-2.5 rounded-full mb-3 shadow-lg mx-auto flex items-center gap-2 border border-rose-300 z-30"
+                  className="bg-rose-600 text-white font-black text-xs px-4 py-2 rounded-full mb-3 shadow-lg mx-auto flex items-center gap-2 border border-rose-300 z-30"
                 >
                   <span>⚠️ {questionErrorToast}</span>
                 </motion.div>
@@ -963,7 +906,7 @@ export default function NeuroPlayScreen() {
                 initial="enter"
                 animate="center"
                 exit="exit"
-                className="w-full bg-white/95 backdrop-blur-2xl rounded-[32px] p-6 sm:p-7 shadow-[0_15px_45px_rgba(20,23,121,0.08)] border border-slate-200/80 relative overflow-hidden"
+                className="w-full bg-white/95 backdrop-blur-2xl rounded-[28px] p-5 sm:p-6 shadow-[0_10px_35px_rgba(20,23,121,0.06)] border border-slate-200/80 relative overflow-hidden"
               >
                 
                 {/* ────────────────── CARD 1: PROBLEM HOOK ────────────────── */}
@@ -1228,51 +1171,43 @@ export default function NeuroPlayScreen() {
                   </div>
                 )}
 
-                {/* ────────────────── CARD 6: ACTION CHECKLIST (STRICT GATED) ────────────────── */}
+                {/* ────────────────── CARD 6: ACTION CHECKLIST (CLEAN INFORMATION LIST) ────────────────── */}
                 {currentCard.type === "action_checklist" && (
-                  <div className="space-y-4">
-                    {renderSkillIcon(currentCard.icon, selectedSkill.category, 36)}
+                  <div className="space-y-3 sm:space-y-4">
+                    {renderSkillIcon(currentCard.icon, selectedSkill.category, 30)}
 
                     <div className="text-center">
-                      <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-teal-50 border border-teal-200/80 text-[#006a62] font-extrabold text-[10px] tracking-wider uppercase mb-2 shadow-2xs">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-teal-50 border border-teal-200/80 text-[#006a62] font-extrabold text-[10px] tracking-wider uppercase mb-1.5 shadow-2xs">
                         <CheckSquare size={12} className="text-[#006a62]" />
                         <span>Step 6 • Action Checklist</span>
                       </span>
-                      <h2 className="text-xl sm:text-2xl font-black text-[#141779] leading-tight mb-1">
+                      <h2 className="text-lg sm:text-xl font-black text-[#141779] leading-tight mb-1">
                         {formatRichText(getText(currentCard.title))}
                       </h2>
-                      <p className="text-[11px] text-slate-500 font-semibold italic mb-3">
-                        {currentCard.interaction_note || "Check off each action step to unlock the Final Mission"}
+                      <p className="text-[11px] text-slate-500 font-semibold italic mb-2">
+                        {lang === "hi" 
+                          ? "इन महत्वपूर्ण चरणों को पढ़ें और सीधे 'आगे' पर क्लिक करें"
+                          : lang === "gu"
+                          ? "આ મહત્વપૂર્ણ પગલાં વાંચો અને સીધા 'આગળ' પર ક્લિક કરો"
+                          : "Read through these action steps to apply this skill in your daily routine"}
                       </p>
                     </div>
 
-                    {/* Checklist Steps */}
-                    <div className="space-y-2.5">
-                      {currentCard.steps?.map((st: any, idx: number) => {
-                        const isChecked = checklistState[idx];
-                        return (
-                          <button
-                            key={idx}
-                            onClick={() => handleToggleChecklist(idx)}
-                            className={`w-full text-left p-3.5 rounded-2xl border-2 transition-all flex items-center gap-3.5 shadow-xs ${
-                              isChecked
-                                ? "border-teal-500 bg-teal-50/80 text-teal-950 font-black"
-                                : "border-slate-200 bg-white text-slate-800 hover:border-indigo-300 font-bold"
-                            }`}
-                          >
-                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 transition-all ${
-                              isChecked
-                                ? "bg-teal-600 text-white shadow-sm"
-                                : "border-2 border-slate-300 text-slate-500 bg-slate-50"
-                            }`}>
-                              {isChecked ? "✓" : (st.step_number || st.correct_order || idx + 1)}
-                            </div>
-                            <span className="text-xs sm:text-sm leading-snug">
-                              {formatRichText(getText(st.text))}
-                            </span>
-                          </button>
-                        );
-                      })}
+                    {/* Checklist Steps as Clean Informational Items */}
+                    <div className="space-y-2">
+                      {currentCard.steps?.map((st: any, idx: number) => (
+                        <div
+                          key={idx}
+                          className="w-full text-left p-3 rounded-2xl border border-teal-100 bg-teal-50/40 text-slate-800 flex items-center gap-3 shadow-2xs"
+                        >
+                          <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 bg-[#006a62] text-white shadow-xs">
+                            {st.step_number || st.correct_order || idx + 1}
+                          </div>
+                          <span className="text-xs sm:text-sm font-bold text-slate-800 leading-snug">
+                            {formatRichText(getText(st.text))}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -1302,9 +1237,9 @@ export default function NeuroPlayScreen() {
                       <button
                         onClick={handleClaimMission}
                         disabled={submitting}
-                        className="mx-auto flex items-center justify-center gap-2.5 px-8 py-4 rounded-full bg-gradient-to-r from-[#141779] via-[#2563EB] to-[#4F46E5] hover:brightness-110 text-white font-black text-sm sm:text-base shadow-xl shadow-indigo-500/25 active:scale-95 transition-all w-full max-w-sm"
+                        className="mx-auto flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] hover:brightness-110 text-white font-black text-sm sm:text-base shadow-lg shadow-indigo-900/20 active:scale-95 transition-all w-full max-w-sm"
                       >
-                        <Award size={22} className="text-yellow-300" />
+                        <Award size={20} className="text-yellow-300" />
                         <span>
                           {submitting 
                             ? (lang === 'hi' ? "कैलकुलेट हो रहा है..." : lang === 'gu' ? "ગણતરી થઈ રહી છે..." : "Calculating XP...") 
@@ -1312,29 +1247,29 @@ export default function NeuroPlayScreen() {
                         </span>
                       </button>
                     ) : (
-                      <div className="bg-gradient-to-r from-[#006a62] to-[#047857] text-white rounded-3xl p-6 shadow-xl space-y-4 max-w-md mx-auto">
+                      <div className="bg-gradient-to-r from-[#006a62] to-[#047857] text-white rounded-2xl p-5 shadow-lg space-y-3 max-w-md mx-auto">
                         <div className="flex items-center justify-center gap-2">
-                          <CheckCircle2 size={30} className="text-[#57fae9]" />
-                          <h3 className="text-xl font-black">
+                          <CheckCircle2 size={26} className="text-[#57fae9]" />
+                          <h3 className="text-lg font-black">
                             {completedSkillIds.includes(selectedSkill.id) 
                               ? (lang === 'hi' ? 'मिशन पूरा हुआ! +20 XP' : lang === 'gu' ? 'મિશન પૂર્ણ થયું! +20 XP' : 'Mission Completed! +20 XP') 
                               : 'Practice Completed!'}
                           </h3>
                         </div>
-                        <p className="text-xs sm:text-sm font-semibold text-white/90">
+                        <p className="text-xs font-semibold text-white/90">
                           {lang === 'hi'
                             ? 'शाबाश! आपने यह स्किल पूरा कर लिया है और अगला स्किल अनलॉक हो गया है!'
                             : lang === 'gu'
                             ? 'શાબાશ! તમે આ સ્કીલ પૂર્ણ કરી લીધું છે અને આગામી સ્કીલ અનલોક થઈ ગયું છે!'
                             : 'Awesome! You have completed this micro-lesson and unlocked the next skill in sequence!'}
                         </p>
-                        <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2.5">
+                        <div className="pt-1 flex flex-col sm:flex-row items-center justify-center gap-2.5">
                           <button
                             onClick={async () => {
                               await handleClaimMission();
                               handleLaunchNextSkill();
                             }}
-                            className="w-full sm:w-auto px-6 py-3 rounded-full bg-[#57fae9] text-[#141779] font-black text-xs sm:text-sm shadow-md active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-white text-[#141779] font-black text-xs sm:text-sm shadow-md active:scale-95 transition-all flex items-center justify-center gap-1.5"
                           >
                             <span>{lang === 'hi' ? 'अगला स्किल चालू करें' : lang === 'gu' ? 'આગળનું સ્કીલ શરૂ કરો' : 'Next Skill'}</span>
                             <ChevronRight size={16} />
@@ -1344,7 +1279,7 @@ export default function NeuroPlayScreen() {
                               await handleClaimMission();
                               setViewMode("library");
                             }}
-                            className="w-full sm:w-auto px-6 py-3 rounded-full bg-white/20 text-white font-bold text-xs sm:text-sm hover:bg-white/30 active:scale-95 transition-all"
+                            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-white/20 text-white font-bold text-xs sm:text-sm hover:bg-white/30 active:scale-95 transition-all"
                           >
                             {lang === 'hi' ? 'लाइब्रेरी पर जाएं' : lang === 'gu' ? 'લાઇબ્રેરી પર જાઓ' : 'Back to Library'}
                           </button>
@@ -1363,7 +1298,7 @@ export default function NeuroPlayScreen() {
             {activeCardIndex > 0 && (
               <button
                 onClick={handlePrev}
-                className="px-5 py-3.5 rounded-full border-2 border-slate-200 text-slate-600 hover:bg-slate-100 active:scale-95 font-black text-sm transition-all shadow-2xs"
+                className="px-5 py-3 rounded-2xl border-2 border-slate-200 text-slate-700 bg-white hover:bg-slate-50 active:scale-95 font-black text-sm transition-all shadow-2xs"
               >
                 {lang === 'hi' ? 'पीछे' : lang === 'gu' ? 'પાછળ' : 'Back'}
               </button>
@@ -1372,7 +1307,7 @@ export default function NeuroPlayScreen() {
             {activeCardIndex < totalCards - 1 ? (
               <button
                 onClick={handleNext}
-                className="flex-1 bg-gradient-to-r from-[#141779] via-[#1e1b4b] to-[#4F46E5] text-white py-4 rounded-full font-black text-base flex justify-center items-center gap-2 shadow-xl shadow-indigo-900/20 hover:brightness-110 active:scale-95 transition-all"
+                className="flex-1 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white py-3.5 rounded-2xl font-black text-sm sm:text-base flex justify-center items-center gap-2 shadow-lg hover:brightness-110 active:scale-95 transition-all"
               >
                 <span>{lang === 'hi' ? 'आगे' : lang === 'gu' ? 'આગળ' : 'Continue'}</span>
                 <ChevronRight size={18} />
@@ -1383,7 +1318,7 @@ export default function NeuroPlayScreen() {
                   await handleClaimMission();
                   setViewMode("library");
                 }}
-                className="flex-1 bg-gradient-to-r from-[#006a62] to-[#047857] text-white py-4 rounded-full font-black text-base flex justify-center items-center gap-2 shadow-xl shadow-emerald-700/20 hover:brightness-110 active:scale-95 transition-all"
+                className="flex-1 bg-gradient-to-r from-[#006a62] to-[#047857] text-white py-3.5 rounded-2xl font-black text-sm sm:text-base flex justify-center items-center gap-2 shadow-lg hover:brightness-110 active:scale-95 transition-all"
               >
                 <span>{lang === 'hi' ? 'लाइब्रेरी पर जाएं' : lang === 'gu' ? 'લાઇબ્રેરી પર જાઓ' : 'Finish & Return to Library'}</span>
                 <CheckCircle2 size={18} />

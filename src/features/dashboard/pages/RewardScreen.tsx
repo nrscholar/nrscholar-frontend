@@ -171,6 +171,17 @@ export default function RewardScreen() {
            }).finally(() => {
                syncUserProfile();
            });
+       } else if (rewardType === "boss") {
+           apiFetch("/api/world/boss/claim", {
+               method: "POST",
+               headers: { "Content-Type": "application/json" },
+               body: JSON.stringify({
+                   coins: amount || 1000,
+                   difficulty: "easy"
+               })
+           }).finally(() => {
+               syncUserProfile();
+           });
        } else {
            syncUserProfile();
        }
@@ -181,7 +192,7 @@ export default function RewardScreen() {
      if (isCollecting) return;
      setIsCollecting(true);
      await syncUserProfile();
-     if (returnTo) navigate(returnTo, { state: navState, replace: true });
+     if (returnTo) navigate(decodeURIComponent(returnTo), { state: navState, replace: true });
      else navigate('/', { replace: true });
   };
 

@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { apiFetch, clearAuthSession } from "../../../api";
 import { useTranslation } from "react-i18next";
 import StreakModal from "../../../components/StreakModal";
+import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 
 // Math-aligned level thresholds matching backend
 function getLevelInfo(xp: number) {
@@ -469,33 +470,17 @@ export default function ProfileScreen() {
       </main>
 
       {/* Logout Confirmation Modal */}
-      {showLogoutModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-5">
-          <div className="bg-white w-full max-w-xs rounded-3xl p-6 shadow-xl border border-slate-100 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-3 border border-red-100">
-              <LogOut size={24} />
-            </div>
-            <h3 className="text-base font-bold text-slate-900 mb-1">{t('logout_device', 'Logout Device')}</h3>
-            <p className="text-xs text-slate-500 mb-5 leading-relaxed">
-              {t('logout_confirm_msg', 'Are you sure you want to log out from this device? You will need your credentials to sign back in.')}
-            </p>
-            <div className="flex flex-col gap-2">
-              <button 
-                onClick={handleLogout}
-                className="w-full py-2.5 bg-red-600 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-xs hover:bg-red-700 active:scale-[0.98] transition-all"
-              >
-                {t('yes_logout_device', 'Yes, Logout Device')}
-              </button>
-              <button 
-                onClick={() => setShowLogoutModal(false)}
-                className="w-full py-2.5 bg-slate-100 text-slate-700 rounded-xl font-semibold text-xs hover:bg-slate-200 active:scale-[0.98] transition-all"
-              >
-                {t('cancel', 'Cancel')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <UnifiedConfirmModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleLogout}
+        title={t('logout_device', 'Logout Device')}
+        message={t('logout_confirm_msg', 'Are you sure you want to log out from this device? You will need your credentials to sign back in.')}
+        confirmText={t('yes_logout_device', 'Yes, Logout Device')}
+        cancelText={t('cancel', 'Cancel')}
+        variant="danger"
+        icon={<LogOut size={28} className="text-rose-600" />}
+      />
 
       {/* Streak Modal */}
       <StreakModal

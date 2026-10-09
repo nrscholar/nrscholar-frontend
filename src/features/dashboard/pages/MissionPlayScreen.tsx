@@ -546,35 +546,19 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     { _id: "fq4", question: "What comes after the letter B in the alphabet?", options: ["C", "A", "D", "E"], answer: "C", type: "multiple_choice" }
   ];
 
-  const shuffleQuestionOptions = (questions: any[]) => {
-    return questions.map((q) => {
-      if (!q || !q.options || !Array.isArray(q.options) || q.options.length < 2) return q;
-      const opts = [...q.options];
-      for (let i = opts.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [opts[i], opts[j]] = [opts[j], opts[i]];
-      }
-      return { ...q, options: opts };
-    });
-  };
-
-  const rawQuiz = (missionData?.quizQuestions && missionData.quizQuestions.length > 0)
-    ? missionData.quizQuestions
-    : defaultQuiz;
-
-  const quizQuestions = useMemo(() => shuffleQuestionOptions(rawQuiz), [rawQuiz]);
-
-  const rawBoss = (missionData?.bossQuestions && missionData.bossQuestions.length > 0)
-    ? missionData.bossQuestions
-    : (() => {
-        const half = Math.ceil(quizQuestions.length / 2);
-        return [...quizQuestions.slice(half), ...quizQuestions.slice(0, half)];
-      })();
+  const quizQuestions = useMemo(() => {
+    return (missionData?.quizQuestions && missionData.quizQuestions.length > 0)
+      ? missionData.quizQuestions
+      : defaultQuiz;
+  }, [missionData?.quizQuestions]);
 
   const bossQuestions = useMemo(() => {
-    const list = rawBoss.length > 0 ? rawBoss : (quizQuestions.length > 0 ? quizQuestions : defaultQuiz);
-    return shuffleQuestionOptions(list);
-  }, [rawBoss, quizQuestions]);
+    if (missionData?.bossQuestions && missionData.bossQuestions.length > 0) {
+      return missionData.bossQuestions;
+    }
+    const half = Math.ceil(quizQuestions.length / 2);
+    return [...quizQuestions.slice(half), ...quizQuestions.slice(0, half)];
+  }, [missionData?.bossQuestions, quizQuestions]);
 
   const bossMaxHp = 3;
   const bossHearts = Math.max(0, bossMaxHp - bossDamageCount);
@@ -600,30 +584,11 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   }, [currentBossIndex, activeBossQ?._id]);
 
   const activeBossOptions = useMemo(() => {
-    const rawOpts = (activeBossQ?.options && Array.isArray(activeBossQ.options) && activeBossQ.options.length > 0)
-      ? activeBossQ.options
-      : [activeBossQ?.answer || "Option 1", "Option 2", "Option 3", "Option 4"];
-
-    const opts = [...rawOpts];
-    // Seeded PRNG Fisher-Yates shuffle per question text/id
-    const seedStr = String(activeBossQ?._id || activeBossQ?.question || currentBossIndex);
-    let h = 2166136261;
-    for (let i = 0; i < seedStr.length; i++) {
-      h = Math.imul(h ^ seedStr.charCodeAt(i), 16777619);
+    if (activeBossQ?.options && Array.isArray(activeBossQ.options) && activeBossQ.options.length > 0) {
+      return activeBossQ.options;
     }
-    const rng = () => {
-      h += h << 13;
-      h ^= h >> 7;
-      h += h << 3;
-      h ^= h >> 17;
-      return ((h += h << 5) >>> 0) / 4294967296;
-    };
-    for (let i = opts.length - 1; i > 0; i--) {
-      const j = Math.floor(rng() * (i + 1));
-      [opts[i], opts[j]] = [opts[j], opts[i]];
-    }
-    return opts;
-  }, [activeBossQ?._id, activeBossQ?.question, activeBossQ?.options, currentBossIndex]);
+    return [activeBossQ?.answer || "Option 1", "Option 2", "Option 3", "Option 4"];
+  }, [activeBossQ?._id, activeBossQ?.options, activeBossQ?.answer]);
 
   const bossName = missionData?.bossName || "Boss Guardian";
   const missionTitle = missionData?.title || `Mission ${missionSeq}`;
@@ -956,6 +921,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
         : (quizSelected !== null ? String(currentQ?.options?.[quizSelected]) : "");
       const newAns = {
         questionId: currentQ?._id,
+        questionText: currentQ?.question || currentQ?.text || currentQ?.title || "",
         isCorrect: isCorrect,
         selectedAnswer: selectedValue,
         timeSpent: QUESTION_TIME_LIMIT - questionTimeLeft
@@ -999,6 +965,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     const isCorrect = String(optionText).trim().toLowerCase() === String(activeBossQ?.answer).trim().toLowerCase();
     const newAns = {
       questionId: activeBossQ?._id,
+      questionText: activeBossQ?.question || activeBossQ?.text || activeBossQ?.title || "",
       isCorrect: isCorrect,
       selectedAnswer: optionText,
       timeSpent: QUESTION_TIME_LIMIT - questionTimeLeft
@@ -1019,6 +986,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     }
     const newAns = {
       questionId: activeBossQ?._id,
+      questionText: activeBossQ?.question || activeBossQ?.text || activeBossQ?.title || "",
       isCorrect: isCorrect,
       selectedAnswer: isBossLanguageDrag ? String(selectedBossDragValue) : String(bossBasketCount),
       timeSpent: QUESTION_TIME_LIMIT - questionTimeLeft
@@ -1069,6 +1037,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
         const newAns = {
           questionId: currentQ?._id,
+          questionText: currentQ?.question || currentQ?.text || currentQ?.title || "",
           isCorrect: false,
           selectedAnswer: "TIMEOUT",
           timeSpent: QUESTION_TIME_LIMIT
@@ -1090,6 +1059,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
         const newAns = {
           questionId: activeBossQ?._id,
+          questionText: activeBossQ?.question || activeBossQ?.text || activeBossQ?.title || "",
           isCorrect: false,
           selectedAnswer: "TIMEOUT",
           timeSpent: QUESTION_TIME_LIMIT
@@ -1965,11 +1935,11 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                 <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
                   <div className="flex items-center gap-1 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 text-amber-800 font-bold text-xs shrink-0 whitespace-nowrap">
                     <Zap size={12} className="text-amber-500 fill-amber-400" />
-                    <span>{xpEarned} XP</span>
+                    <span>+{completionResult?.xpEarned ?? xpEarned} XP</span>
                   </div>
                   <div className="flex items-center gap-1 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200 text-teal-800 font-bold text-xs shrink-0 whitespace-nowrap">
                     <Award size={12} className="text-teal-600 fill-teal-500" />
-                    <span>{coinsEarned} Coins</span>
+                    <span>+{completionResult?.coinsEarned ?? coinsEarned} Coins</span>
                   </div>
                 </div>
 
@@ -1994,7 +1964,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                 </h2>
                 <p className="text-xs text-[#464652] font-semibold mb-4">{t('progression_report', 'Chapter Progression & Performance Report')}</p>
 
-                <div className="flex flex-col items-center gap-1.5 mb-5">
+                <div className="flex flex-col items-center gap-1.5 mb-4">
                   <div className="flex gap-2">
                     {[1, 2, 3].map((s) => (
                       <Star
@@ -2015,16 +1985,40 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                   )}
                 </div>
 
+                {/* Questions Breakdown Metric Card */}
+                <div className="w-full bg-white border border-gray-200 rounded-2xl p-3 mb-4 flex items-center justify-around shadow-xs text-xs font-black">
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] text-gray-400 uppercase tracking-wider">{t('total_questions', 'Questions')}</span>
+                    <span className="text-slate-800 text-sm mt-0.5">{quizQuestions.length + bossDamageCount + wrongAnswerCount}</span>
+                  </div>
+                  <div className="w-px h-6 bg-gray-200" />
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] text-emerald-600 uppercase tracking-wider">{t('correct', 'Correct')}</span>
+                    <span className="text-emerald-700 text-sm mt-0.5">✅ {quizCorrectCount + bossDamageCount}</span>
+                  </div>
+                  <div className="w-px h-6 bg-gray-200" />
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] text-rose-600 uppercase tracking-wider">{t('incorrect', 'Mistakes')}</span>
+                    <span className="text-rose-700 text-sm mt-0.5">❌ {Math.max(0, (quizQuestions.length - quizCorrectCount) + wrongAnswerCount)}</span>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 gap-3 w-full mb-4">
                   <div className="bg-white border border-gray-200 rounded-3xl p-4 flex flex-col items-center shadow-xs">
                     <span className="text-[10px] font-black text-[#767683] uppercase tracking-wider">{t('accuracy', 'Accuracy')}</span>
                     <span className="text-3xl font-black text-emerald-600 mt-1">
-                      {completionResult?.accuracy ?? Math.round((quizCorrectCount / Math.max(1, quizQuestions.length)) * 100)}%
+                      {completionResult?.accuracy ?? Math.round(((quizCorrectCount + bossDamageCount) / Math.max(1, quizQuestions.length + bossDamageCount + wrongAnswerCount)) * 100)}%
                     </span>
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full mt-1 border border-emerald-200">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full mt-1 border ${
+                      (completionResult?.accuracy ?? 100) >= 85
+                        ? "text-emerald-700 bg-emerald-50 border-emerald-200"
+                        : (completionResult?.accuracy ?? 100) >= 65
+                        ? "text-blue-700 bg-blue-50 border-blue-200"
+                        : "text-amber-700 bg-amber-50 border-amber-200"
+                    }`}>
                       {completionResult?.targetStatus 
                         ? t(String(completionResult.targetStatus || "").toLowerCase().replace(/ /g, '_'), { defaultValue: completionResult.targetStatus })
-                        : ((completionResult?.accuracy ?? 100) >= 85 ? t('target_exceeded', 'Target Exceeded') : t('target_met', 'Target Met'))}
+                        : ((completionResult?.accuracy ?? 100) >= 85 ? t('target_exceeded', 'Target Exceeded') : (completionResult?.accuracy ?? 100) >= 65 ? t('target_met', 'Target Met') : t('needs_practice', 'Needs Practice'))}
                     </span>
                   </div>
 

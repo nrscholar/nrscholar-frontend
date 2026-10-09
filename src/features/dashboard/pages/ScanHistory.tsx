@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Trash2, BookOpen } from "lucide-react";
+import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 
 interface ScanItem {
   id: number;
@@ -14,6 +15,7 @@ export default function ScanHistory() {
   const navigate = useNavigate();
   const [history, setHistory] = useState<ScanItem[]>([]);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [showClearModal, setShowClearModal] = useState(false);
 
   useEffect(() => {
     const historyStr = localStorage.getItem('scanHistory');
@@ -27,10 +29,13 @@ export default function ScanHistory() {
   }, []);
 
   const clearHistory = () => {
-    if (window.confirm("Are you sure you want to delete all scan history?")) {
-      localStorage.removeItem('scanHistory');
-      setHistory([]);
-    }
+    setShowClearModal(true);
+  };
+
+  const confirmClearHistory = () => {
+    localStorage.removeItem('scanHistory');
+    setHistory([]);
+    setShowClearModal(false);
   };
 
   const deleteItem = (id: number) => {
@@ -157,6 +162,19 @@ export default function ScanHistory() {
           )}
         </div>
       </main>
+
+      {/* Clear History Confirmation Modal */}
+      <UnifiedConfirmModal
+        isOpen={showClearModal}
+        onClose={() => setShowClearModal(false)}
+        onConfirm={confirmClearHistory}
+        title="Clear Scan History?"
+        message="Are you sure you want to delete all saved scan history? This action cannot be undone."
+        confirmText="Yes, Clear All"
+        cancelText="Cancel"
+        variant="danger"
+        icon={<Trash2 size={28} className="text-rose-600" />}
+      />
     </div>
   );
 }

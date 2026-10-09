@@ -14,6 +14,10 @@ interface Tip {
   title?: string;
   description?: string;
   rewardPoints?: number;
+  category?: string;
+  actionStep?: string;
+  status?: string;
+  subject?: string;
 }
 
 interface Milestone {
@@ -49,13 +53,10 @@ export default function ParentDailyTipScreen() {
   const [accuracy, setAccuracy] = useState(cachedTip?.accuracy || 0);
   const [childCity, setChildCity] = useState(cachedTip?.childCity || "Egg Village");
 
-  // Daily tip from backend
-  const [tip, setTip] = useState<Tip | null>(cachedTip?.tip || {
-    title: t("model_self_regulation", "Model Self-Regulation"),
-    description: t("model_self_regulation_desc", "When you feel frustrated, speak your coping strategy aloud: 'I'm feeling a bit overwhelmed, so I'm going to take three deep breaths.'"),
-    benefit: t("model_self_regulation_benefit", "Teaches emotional control by example."),
-  });
-  const [tipLoading, setTipLoading] = useState(!cachedTip);
+  // Daily tip from backend (no fake static tip fallback)
+  const [tip, setTip] = useState<Tip | null>(cachedTip?.tip || null);
+  const [tipLoading, setTipLoading] = useState(!cachedTip?.tip);
+  const [metrics, setMetrics] = useState<any>(cachedTip?.metrics || null);
 
   // ── Level XP thresholds ──────────────────────────────────────────────────
   function getXpForLevel(lvl: number): number {
@@ -78,18 +79,27 @@ export default function ParentDailyTipScreen() {
     ? Math.min(100, Math.round(((xp - xpForCurrentLevel) / (xpForNextLevel - xpForCurrentLevel)) * 100))
     : 100;
 
-  // ── Dynamic Growth Rate Calculation ─────────────────────────────────────
+  // ── Dynamic Growth Rate Calculation (ZERO Fake Fallback Percentages) ───────
+  const hasRealData = metrics?.hasRealData ?? (totalTests > 0 || accuracy > 0);
   const baseGrowthFromXp = Math.min(100, Math.round((roadmapXp / 2500) * 100));
-  const accuracyContribution = accuracy > 0 ? accuracy : 75;
-  const growthScore = Math.min(100, Math.max(15, Math.round((baseGrowthFromXp * 0.5) + (accuracyContribution * 0.5))));
+
+  // Compute genuine growth score only if real attempts/tests exist
+  const computedGrowthScore = (metrics?.growthScore !== undefined && metrics?.growthScore !== null)
+    ? metrics.growthScore
+    : (hasRealData
+        ? Math.min(100, Math.round((baseGrowthFromXp * 0.5) + (accuracy * 0.5)))
+        : null);
+
+  const growthScore = computedGrowthScore;
 
   // Dynamic growth message based on score
-  const growthMessage =
-    growthScore >= 80 ? t("growth_msg_80", "Outstanding! You're in the top tier of parents! 🏆") :
-    growthScore >= 60 ? t("growth_msg_60", "You're soaring! Keep the momentum going! 🚀") :
-    growthScore >= 40 ? t("growth_msg_40", "Good progress! Every day counts. 💪") :
-    growthScore >= 20 ? t("growth_msg_20", "Getting started — consistency is your superpower! 🌱") :
-    t("growth_msg_0", "Begin your journey — complete lessons to grow! ✨");
+  const growthMessage = !hasRealData
+    ? t("growth_msg_new_user", "Welcome! Complete your child's first quest to unlock real-time growth analytics. 🌱")
+    : (growthScore !== null && growthScore >= 80 ? t("growth_msg_80", "Outstanding! You're in the top tier of parents! 🏆") :
+       growthScore !== null && growthScore >= 60 ? t("growth_msg_60", "You're soaring! Keep the momentum going! 🚀") :
+       growthScore !== null && growthScore >= 40 ? t("growth_msg_40", "Good progress! Every day counts. 💪") :
+       growthScore !== null && growthScore >= 20 ? t("growth_msg_20", "Getting started — consistency is your superpower! 🌱") :
+       t("growth_msg_0", "Begin your journey — complete lessons to grow! ✨"));
 
   // ── Dynamic Milestones built from real User & Report Data ─────────────────
   const milestones: Milestone[] = [
@@ -113,19 +123,23 @@ export default function ParentDailyTipScreen() {
     },
     {
       icon: <Star size={22} />,
-      title: totalStars >= 50 || xp >= 500 ? t("milestones_50", "50+ Learning Milestones! ⭐") : t("points_earned_progress", { count: Math.min(50, totalStars || Math.round(xp / 10)), defaultValue: `${Math.min(50, totalStars || Math.round(xp / 10))}/50 Points Earned` }),
-      subtitle: totalStars >= 50 || xp >= 500 ? t("rising_star_family", "Rising star family!") : t("complete_lessons_stars", "Complete lessons & quests to earn milestone stars"),
-      completed: totalStars >= 50 || xp >= 500,
-      progress: Math.min(100, Math.round((Math.max(totalStars, xp / 10) / 50) * 100)),
+      title: totalStars >= 50 ? t("milestones_50", "50+ Learning Milestones! ⭐") : t("points_earned_progress", { count: totalStars, defaultValue: `${totalStars}/50 Points Earned` }),
+      subtitle: totalStars >= 50 ? t("rising_star_family", "Rising star family!") : t("complete_lessons_stars", "Complete lessons & quests to earn milestone stars"),
+      completed: totalStars >= 50,
+      progress: Math.min(100, Math.round((totalStars / 50) * 100)),
       iconBg: "bg-amber-100",
       iconColor: "text-amber-600",
     },
     {
       icon: <Brain size={22} />,
-      title: accuracy >= 70 || xp >= 1200 ? t("cognitive_mastery_70", "70%+ Cognitive Mastery! 🧠") : t("cognitive_accuracy_fmt", { acc: accuracy || 70, defaultValue: `${accuracy || 70}% Cognitive Accuracy` }),
-      subtitle: accuracy >= 70 || xp >= 1200 ? t("high_reasoning_perf", "High reasoning & logic performance!") : t("keep_practicing_boost", "Keep practicing to boost cognitive score"),
-      completed: accuracy >= 70 || xp >= 1200,
-      progress: Math.min(100, Math.max(20, accuracy || Math.round((xp / 1200) * 100))),
+      title: hasRealData
+        ? (accuracy >= 70 ? t("cognitive_mastery_70", "70%+ Cognitive Mastery! 🧠") : t("cognitive_accuracy_fmt", { acc: accuracy, defaultValue: `${accuracy}% Cognitive Accuracy` }))
+        : t("cognitive_baseline", "Cognitive Baseline 🧠"),
+      subtitle: hasRealData
+        ? (accuracy >= 70 ? t("high_reasoning_perf", "High reasoning & logic performance!") : t("keep_practicing_boost", "Keep practicing to boost cognitive score"))
+        : t("awaiting_first_mission", "Complete 1st quest to calculate cognitive accuracy"),
+      completed: hasRealData && accuracy >= 70,
+      progress: hasRealData ? Math.min(100, accuracy) : 0,
       iconBg: "bg-emerald-100",
       iconColor: "text-emerald-700",
     },
@@ -142,6 +156,26 @@ export default function ParentDailyTipScreen() {
         .then(tJson => {
           if (tJson.success && tJson.data) {
             setTip(tJson.data);
+            if (tJson.data.childName) {
+              setChildName(tJson.data.childName);
+            }
+            if (tJson.data.metrics) {
+              setMetrics(tJson.data.metrics);
+              nextCache.metrics = tJson.data.metrics;
+              if (tJson.data.metrics.accuracy !== null && tJson.data.metrics.accuracy !== undefined) {
+                setAccuracy(tJson.data.metrics.accuracy);
+                nextCache.accuracy = tJson.data.metrics.accuracy;
+              }
+              if (tJson.data.metrics.streak !== undefined) {
+                setStreak(tJson.data.metrics.streak);
+              }
+              if (tJson.data.metrics.totalStars !== undefined) {
+                setTotalStars(tJson.data.metrics.totalStars);
+              }
+              if (tJson.data.metrics.totalTests !== undefined) {
+                setTotalTests(tJson.data.metrics.totalTests);
+              }
+            }
             nextCache.tip = tJson.data;
           }
         })
@@ -196,11 +230,15 @@ export default function ParentDailyTipScreen() {
             const rJson = await rRes.json();
             if (rJson.success && rJson.data) {
               const tests = Math.max(rJson.data.totalTests || 0, rJson.data.totalChaptersCompleted || 0, rJson.data.todaySolved > 0 ? 1 : 0);
-              const acc = rJson.data.overallAccuracy || rJson.data.weeklyConfidenceScore || 0;
-              setTotalTests(tests);
-              setAccuracy(acc);
+              const acc = (rJson.data.overallAccuracy !== undefined && rJson.data.overallAccuracy !== null)
+                ? rJson.data.overallAccuracy
+                : (rJson.data.weeklyConfidenceScore || 0);
+              setTotalTests(prev => Math.max(prev, tests));
+              if (acc > 0) {
+                setAccuracy(acc);
+                nextCache.accuracy = acc;
+              }
               nextCache.totalTests = tests;
-              nextCache.accuracy = acc;
             }
           }
 
@@ -299,9 +337,16 @@ export default function ParentDailyTipScreen() {
               </div>
               <h2 className="text-[#141779] font-black text-lg">{t("todays_parenting_tip", "Today's Parenting Tip")}</h2>
             </div>
-            <span className="text-[11px] font-black text-slate-500 bg-slate-100 px-3 py-1 rounded-full uppercase tracking-wider">
-              {t("day_num", { day: new Date().getDate(), defaultValue: `Day ${new Date().getDate()}` })}
-            </span>
+            <div className="flex items-center gap-1.5">
+              {tip?.category && (
+                <span className="text-[10px] font-black text-[#006a62] bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                  {tip.category}
+                </span>
+              )}
+              <span className="text-[11px] font-black text-slate-500 bg-slate-100 px-3 py-1 rounded-full uppercase tracking-wider">
+                {t("day_num", { day: new Date().getDate(), defaultValue: `Day ${new Date().getDate()}` })}
+              </span>
+            </div>
           </div>
 
           {tipLoading ? (
@@ -312,6 +357,12 @@ export default function ParentDailyTipScreen() {
             </div>
           ) : tip ? (
             <>
+              {tip.subject && (
+                <div className="flex items-center gap-2 self-start bg-indigo-50/80 text-[#141779] border border-indigo-200 px-3 py-1 rounded-full text-xs font-black">
+                  <span>🎯 {t("focus_subject", "Subject Focus")}: {tip.subject}</span>
+                </div>
+              )}
+
               {tip.instead ? (
                 <div className="bg-slate-50 rounded-2xl p-4 flex flex-col gap-3 border border-slate-200/80">
                   <div className="flex flex-col gap-1">
@@ -328,6 +379,16 @@ export default function ParentDailyTipScreen() {
                 <div className="bg-gradient-to-br from-indigo-50/80 to-teal-50/50 rounded-2xl p-5 border border-indigo-100/80 shadow-2xs">
                   {tip.title && <p className="text-[#141779] font-black text-base mb-2">💡 {translateTipField(tip.title)}</p>}
                   <p className="text-slate-800 font-bold text-sm leading-relaxed tracking-tight">{translateTipField(tip.description)}</p>
+                </div>
+              )}
+
+              {tip.actionStep && (
+                <div className="flex items-start gap-2.5 text-indigo-900 bg-indigo-50/70 p-3 rounded-xl border border-indigo-100/80">
+                  <Target size={18} className="shrink-0 mt-0.5 text-indigo-600" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600">{t("action_step", "Action Step")}</span>
+                    <p className="text-xs font-bold text-indigo-950 leading-snug">{translateTipField(tip.actionStep)}</p>
+                  </div>
                 </div>
               )}
 
@@ -359,18 +420,31 @@ export default function ParentDailyTipScreen() {
 
         {/* ── Dynamic Growth Score Ring ── */}
         <section className="w-full bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md flex flex-col items-center justify-center text-center">
-          <div className="relative w-44 h-44 flex items-center justify-center mb-2">
-            <div className="absolute inset-0 bg-[#57fae9]/20 rounded-full blur-2xl animate-pulse"></div>
-            <div
-              className="w-40 h-40 rounded-full flex items-center justify-center relative p-1.5 shadow-md"
-              style={{ background: `conic-gradient(from 0deg, #006a62 0%, #57fae9 ${growthScore}%, #e2e8f0 ${growthScore}%)` }}
-            >
-              <div className="w-full h-full rounded-full bg-white flex flex-col items-center justify-center shadow-inner">
-                <span className="text-[#006a62] font-black text-[42px] leading-none">{growthScore}%</span>
-                <span className="text-slate-600 font-extrabold text-[11px] uppercase tracking-wider mt-1">{t("growth_score", "Growth Score")}</span>
+          {hasRealData && growthScore !== null ? (
+            <div className="relative w-44 h-44 flex items-center justify-center mb-2">
+              <div className="absolute inset-0 bg-[#57fae9]/20 rounded-full blur-2xl animate-pulse"></div>
+              <div
+                className="w-40 h-40 rounded-full flex items-center justify-center relative p-1.5 shadow-md"
+                style={{ background: `conic-gradient(from 0deg, #006a62 0%, #57fae9 ${growthScore}%, #e2e8f0 ${growthScore}%)` }}
+              >
+                <div className="w-full h-full rounded-full bg-white flex flex-col items-center justify-center shadow-inner">
+                  <span className="text-[#006a62] font-black text-[42px] leading-none">{growthScore}%</span>
+                  <span className="text-slate-600 font-extrabold text-[11px] uppercase tracking-wider mt-1">{t("growth_score", "Growth Score")}</span>
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="relative w-44 h-44 flex items-center justify-center mb-2">
+              <div className="absolute inset-0 bg-teal-400/20 rounded-full blur-2xl animate-pulse"></div>
+              <div className="w-40 h-40 rounded-full border-4 border-dashed border-teal-300 flex items-center justify-center relative p-1.5 bg-gradient-to-br from-teal-50 to-indigo-50">
+                <div className="w-full h-full rounded-full bg-white/95 flex flex-col items-center justify-center text-center p-3">
+                  <span className="text-3xl mb-1">🌱</span>
+                  <span className="text-[#141779] font-black text-sm uppercase tracking-wide">{t("day_1_explorer", "Day 1 Explorer")}</span>
+                  <span className="text-slate-500 font-bold text-[10px] mt-0.5">{t("ready_to_start", "Ready to Start")}</span>
+                </div>
+              </div>
+            </div>
+          )}
           <p className="text-slate-800 font-black text-base px-2 leading-snug mt-1">{growthMessage}</p>
           <div className="mt-3 bg-indigo-50 border border-indigo-100 text-[#141779] px-4 py-1.5 rounded-full text-xs font-black">
             {stageName} · {t("roadmap_stage", "Roadmap Stage")}

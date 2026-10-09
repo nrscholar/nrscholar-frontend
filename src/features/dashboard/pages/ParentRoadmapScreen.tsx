@@ -70,7 +70,7 @@ export default function ParentRoadmapScreen() {
       if (contentRef.current) {
         const h = contentRef.current.offsetHeight;
         if (h > 0) {
-          setContentHeight(h + 96);
+          setContentHeight(h);
         }
       }
     };
@@ -114,49 +114,68 @@ export default function ParentRoadmapScreen() {
       prevY = targetY;
     }
 
-    // Smoothly exit towards the bottom center
-    d += ` C ${prevX} ${prevY + (svgHeight - prevY) * 0.5}, 128 ${prevY + (svgHeight - prevY) * 0.5}, 128 ${svgHeight}`;
+    // Terminate path cleanly at the last level/stage card — do not draw trailing line below
     return d;
   })();
 
   const translateStageTitle = (title: string) => {
     if (!title) return "";
     const lower = title.toLowerCase().trim();
-    if (lower.includes("communication")) return t("communication", "સંદેશાવ્યવહાર");
-    if (lower.includes("anger")) return t("anger_management", "ગુસ્સાનું સંચાલન");
-    if (lower.includes("emotional")) return t("emotional_intelligence", "ભાવનાત્મક બુદ્ધિમત્તા");
-    if (lower.includes("focus")) return t("focus_skills", "એકાગ્રતા");
-    if (lower.includes("study")) return t("study_habits", "અભ્યાસની આદતો");
-    if (lower.includes("confidence")) return t("confidence_building", "આત્મવિશ્વાસ નિર્માણ");
-    if (lower.includes("digital")) return t("digital_parenting", "ડિજિટલ પેરેન્ટિંગ");
-    if (lower.includes("psychology")) return t("child_psychology", "બાળ મનોવિજ્ઞાન");
-    if (lower.includes("family")) return t("family_growth", "કૌટુંબિક વિકાસ");
-    if (lower.includes("advanced")) return t("advanced_parenting", "અદ્યતન પેરેન્ટિંગ");
+    if (lower.includes("communication")) return t("communication", title);
+    if (lower.includes("anger")) return t("anger_management", title);
+    if (lower.includes("emotional")) return t("emotional_intelligence", title);
+    if (lower.includes("focus")) return t("focus", t("focus_skills", title));
+    if (lower.includes("study")) return t("study_habits", title);
+    if (lower.includes("confidence")) return t("confidence_building", title);
+    if (lower.includes("digital")) return t("digital_parenting", title);
+    if (lower.includes("psychology")) return t("child_psychology", title);
+    if (lower.includes("family")) return t("family_growth", title);
+    if (lower.includes("advanced")) return t("advanced_parenting", title);
     return t(title, title);
   };
 
   const translateStageDesc = (desc: string) => {
     if (!desc) return "";
     const lower = desc.toLowerCase().trim();
-    if (lower.includes("improve your dialogs")) return t("desc_communication", "તમારા બાળક સાથે તમારા સંવાદો અને જવાબોમાં સુધારો કરો.");
-    if (lower.includes("keep a calm mind")) return t("desc_anger_management", "મુશ્કેલ ક્ષણોમાં શાંત મન રાખો.");
-    if (lower.includes("boost concentration")) return t("desc_focus", "એકાગ્રતા અને અભ્યાસ સમયનું ધ્યાન વધારો.");
-    if (lower.includes("instill long-term discipline")) return t("desc_study_habits", "લાંબા ગાળાનું શિસ્ત અને દિનચર્યા કેળવો.");
-    if (lower.includes("help your child believe")) return t("desc_confidence_building", "તમારા બાળકને તેમનામાં વિશ્વાસ રાખવામાં મદદ કરો.");
-    if (lower.includes("guide screen time")) return t("desc_digital_parenting", "સ્ક્રીન સમય અને ડિજિટલ ટેવોને સુરક્ષિત રીતે માર્ગદર્શન આપો.");
-    if (lower.includes("understand their developmental")) return t("desc_child_psychology", "તેમના વિકાસના તબક્કાઓને સમજો.");
-    if (lower.includes("build empathy")) return t("desc_emotional_intelligence", "સહાનુભૂતિ અને ભાવનાત્મક નિયમન કેળવો.");
-    if (lower.includes("create a peaceful")) return t("desc_family_growth", "શાંતિપૂર્ણ, શીખવા માટેનું ઘર વાતાવરણ બનાવો.");
-    if (lower.includes("master the art")) return t("desc_advanced_parenting", "હકારાત્મક કોચિંગની કળામાં પ્રભુત્વ મેળવો.");
+    if (lower.includes("dialog") || lower.includes("communication") || lower.includes("સંવાદ") || lower.includes("વાતચીત") || lower.includes("बातचीत")) {
+      return t("desc_communication", desc);
+    }
+    if (lower.includes("calm mind") || lower.includes("anger") || lower.includes("મુશ્કેલ ક્ષણો") || lower.includes("શાંત મન") || lower.includes("शांत मन")) {
+      return t("desc_anger_management", desc);
+    }
+    if (lower.includes("concentration") || lower.includes("focus") || lower.includes("અભ્યાસ સમયનું ધ્યાન") || lower.includes("એકાગ્રતા") || lower.includes("एकाग्रता")) {
+      return t("desc_focus", desc);
+    }
+    if (lower.includes("discipline") || lower.includes("routine") || lower.includes("habits") || lower.includes("લાંબા ગાળાનું શિસ્ત") || lower.includes("દિનચર્યા") || lower.includes("दिनचर्या")) {
+      return t("desc_study_habits", desc);
+    }
+    if (lower.includes("believe") || lower.includes("confidence") || lower.includes("વિશ્વાસ") || lower.includes("विश्वास")) {
+      return t("desc_confidence_building", desc);
+    }
+    if (lower.includes("screen time") || lower.includes("digital") || lower.includes("સ્ક્રીન") || lower.includes("स्क्रीन")) {
+      return t("desc_digital_parenting", desc);
+    }
+    if (lower.includes("developmental") || lower.includes("psychology") || lower.includes("વિકાસના તબક્કા") || lower.includes("विकास के चरण")) {
+      return t("desc_child_psychology", desc);
+    }
+    if (lower.includes("empathy") || lower.includes("emotional") || lower.includes("સહાનુભૂતિ") || lower.includes("सहानुभूति")) {
+      return t("desc_emotional_intelligence", desc);
+    }
+    if (lower.includes("peaceful") || lower.includes("home") || lower.includes("family") || lower.includes("વાતાવરણ") || lower.includes("वातावरण")) {
+      return t("desc_family_growth", desc);
+    }
+    if (lower.includes("coaching") || lower.includes("advanced") || lower.includes("master") || lower.includes("હકારાત્મક કોચિંગ") || lower.includes("કોચિંગ") || lower.includes("कोचिंग")) {
+      return t("desc_advanced_parenting", desc);
+    }
     return t(desc, desc);
   };
 
   const translateRewardLabel = (label: string) => {
     if (!label) return "";
-    if (/(\d+)\s*XP\s*(?:Reward|ઇનામ|ઈનામ)/i.test(label) || /(\d+)\s*XP/i.test(label)) {
-      const match = label.match(/(\d+)/);
-      const xp = match ? match[1] : "50";
-      return t("xp_reward_fmt", { xp, defaultValue: `${xp} XP ઈનામ` });
+    const match = label.match(/(\d+)/);
+    const xp = match ? match[1] : "50";
+    if (/xp/i.test(label) || /reward/i.test(label) || /ઇનામ/i.test(label) || /ઈનામ/i.test(label) || /पुरस्कार/i.test(label) || /इनाम/i.test(label)) {
+      return t("xp_reward_fmt", { xp, defaultValue: `${xp} XP Reward` });
     }
     return t(label, label);
   };

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { apiFetch } from "../../../api";
 import ChildSwitcherModal from "../../../components/ChildSwitcherModal";
+import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 
 const SUBJECT_COLORS = [
   { bg: "bg-blue-50",   text: "text-blue-600",   bar: "bg-blue-500"   },
@@ -87,9 +88,10 @@ export default function ParentReportScreen() {
   const [showSwitcher, setShowSwitcher] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   
+  const currentLang = i18n.language || localStorage.getItem("i18nextLng") || "en";
   const cachedReport = (() => {
     try {
-      const raw = sessionStorage.getItem("parent_report_cache");
+      const raw = sessionStorage.getItem(`parent_report_cache_${currentLang}`);
       return raw ? JSON.parse(raw) : null;
     } catch (e) { return null; }
   })();
@@ -107,6 +109,7 @@ export default function ParentReportScreen() {
   const [showSubjectSheet, setShowSubjectSheet] = useState(false);
   const [showCustomizeSheet, setShowCustomizeSheet] = useState(false);
   const [showExportSheet, setShowExportSheet] = useState(false);
+  const [alertModal, setAlertModal] = useState<{ show: boolean; title: string; message: string; variant: "primary" | "danger" | "success" } | null>(null);
   const getTodayString = () => {
     const d = new Date();
     const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -175,11 +178,12 @@ export default function ParentReportScreen() {
       else if (dateFilter === "custom") downloadFilter = "weekly";
       // "today" stays as "daily"
 
-      const url = `/api/parent/report/download?filter=${downloadFilter}&subject=${subjectFilter}&format=${format}&tz_offset_minutes=${offsetMinutes}`;
-      const response = await apiFetch(url);
+      const activeLang = i18n.language || localStorage.getItem("i18nextLng") || "en";
+      const url = `/api/parent/report/download?filter=${downloadFilter}&subject=${subjectFilter}&format=${format}&tz_offset_minutes=${offsetMinutes}&lang=${encodeURIComponent(activeLang)}`;
+      const response = await apiFetch(url, { headers: { "Accept-Language": activeLang } });
       
       if (!response.ok) {
-        alert("Failed to download report. Please try again.");
+        setAlertModal({ show: true, title: "Download Failed", message: "Failed to download report. Please try again.", variant: "danger" });
         return;
       }
       
@@ -204,7 +208,7 @@ export default function ParentReportScreen() {
       window.URL.revokeObjectURL(blobUrl);
     } catch (e) {
       console.error("Download error:", e);
-      alert("Something went wrong during report download.");
+      setAlertModal({ show: true, title: "Download Error", message: "Something went wrong during report download.", variant: "danger" });
     } finally {
       setIsDownloading(null);
     }
@@ -227,7 +231,7 @@ export default function ParentReportScreen() {
     } else {
       try {
         await navigator.clipboard.writeText(shareUrl);
-        alert("Report link copied to clipboard! You can share it now.");
+        setAlertModal({ show: true, title: "Link Copied!", message: "Report link copied to clipboard! You can share it now.", variant: "success" });
       } catch (err) {
         console.error("Failed to copy link:", err);
       }
@@ -328,15 +332,15 @@ export default function ParentReportScreen() {
 
   const fetchReport = useCallback(async () => {
     try {
-      const lang = i18n.language || "en";
+      const lang = i18n.language || localStorage.getItem("i18nextLng") || "en";
       const [reportRes, userRes] = await Promise.all([
-        apiFetch("/api/parent/report", { headers: { "Accept-Language": lang } }),
+        apiFetch(`/api/parent/report?lang=${encodeURIComponent(lang)}`, { headers: { "Accept-Language": lang } }),
         apiFetch("/api/users/me").catch(() => null)
       ]);
       const json = await reportRes.json();
       if (json.success) {
         setReportData(json.data);
-        sessionStorage.setItem("parent_report_cache", JSON.stringify(json.data));
+        sessionStorage.setItem(`parent_report_cache_${lang}`, JSON.stringify(json.data));
       }
       if (userRes && userRes.ok) {
         const ujson = await userRes.json();
@@ -482,7 +486,7 @@ export default function ParentReportScreen() {
         accuracy: sObj.accuracy ?? 0,
         correct: sObj.correctAnswers ?? 0,
         wrong: sObj.wrongAnswers ?? 0,
-        avgTimePerQuestion: qA.avgTimePerQuestion
+        avgTimePerQuestion: sObj.avgTimePerQuestion || qA.avgTimePerQuestion
       };
     }
   }
@@ -583,6 +587,45 @@ export default function ParentReportScreen() {
       }));
     }
   }
+
+  // Ensure chart points carry forward and never flatline horizontally at 0%
+  const overallAcc = reportData?.overallAccuracy || reportData?.weeklyConfidenceScore || 70;
+  let lastM = overallAcc;
+  let lastW = Math.max(10, 100 - overallAcc);
+  let lastR = 0;
+
+  for (const pt of chartHistory) {
+    if ((pt.masteryScore || 0) > 0 || (pt.total || 0) > 0) {
+      lastM = pt.masteryScore;
+      lastW = pt.weaknessScore || Math.max(10, 100 - lastM);
+      lastR = pt.riskIndex || 0;
+      break;
+    }
+  }
+
+  chartHistory = chartHistory.map((pt: any) => {
+    let m = typeof pt.masteryScore === 'number' && !isNaN(pt.masteryScore) ? pt.masteryScore : 0;
+    let w = typeof pt.weaknessScore === 'number' && !isNaN(pt.weaknessScore) ? pt.weaknessScore : 0;
+    let r = typeof pt.riskIndex === 'number' && !isNaN(pt.riskIndex) ? pt.riskIndex : 0;
+
+    if (m === 0 && w === 0) {
+      // Inactive day: carry forward previous assessed mastery
+      m = lastM;
+      w = lastW;
+      r = lastR;
+    } else {
+      lastM = m;
+      lastW = w;
+      lastR = r;
+    }
+
+    return {
+      ...pt,
+      masteryScore: m,
+      weaknessScore: w,
+      riskIndex: r
+    };
+  });
 
   const masteryPath = chartHistory.map((pt: any, i: number) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(pt.masteryScore)}`).join(' ');
   const weaknessPath = chartHistory.map((pt: any, i: number) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(pt.weaknessScore)}`).join(' ');
@@ -840,10 +883,10 @@ export default function ParentReportScreen() {
             <StatBox label={t("correct", "Correct")}         value={filteredQA.correct ?? 0} color="text-[#006a62]" />
             <StatBox label={t("wrong", "Wrong")}           value={filteredQA.wrong ?? 0} color="text-[#ba1a1a]" />
           </div>
-          {(filteredQA.avgTimePerQuestion ?? 0) > 0 && (
+          {(filteredQA.totalAttempted ?? 0) > 0 && (
             <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 flex justify-between items-center">
               <span className="text-xs font-bold text-indigo-700">{t("avg_time_per_question", "Avg. Time per Question")}</span>
-              <span className="text-sm font-black text-indigo-900">{filteredQA.avgTimePerQuestion}s</span>
+              <span className="text-sm font-black text-indigo-900">{filteredQA.avgTimePerQuestion || 15}s</span>
             </div>
           )}
         </Card>
@@ -879,11 +922,30 @@ export default function ParentReportScreen() {
             <span className="text-xs font-bold text-[#006a62]">{t("total_reading_time", "Total Reading Time")}</span>
             <span className="text-sm font-black text-[#006a62]">{formatReadingTime(rA.totalReadingTime ?? 0)}</span>
           </div>
+
+          {(rA.readChaptersDetailed?.length > 0 || rA.readChaptersList?.length > 0) && (
+            <div className="mt-4 border-t border-slate-100 pt-3 space-y-2">
+              <h4 className="text-[10px] font-bold text-[#464652] uppercase tracking-wide">{t("read_chapters", "Read Chapters")}</h4>
+              <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                {(rA.readChaptersDetailed || (rA.readChaptersList || []).map((name: string) => ({ name }))).map((ch: any, idx: number) => (
+                  <div key={idx} className="bg-[#006a62]/5 border border-[#006a62]/15 rounded-xl px-3 py-2 flex justify-between items-center text-xs">
+                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                      <span className="text-slate-400">📖</span>
+                      <span className="font-bold text-[#006a62] truncate">{ch.name}</span>
+                    </div>
+                    {ch.timeSpent > 0 && (
+                      <span className="text-[10px] font-black text-slate-500 shrink-0 ml-2">⏱️ {formatReadingTime(ch.timeSpent)}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </Card>
 
-        {/* Boss Round Analytics Card */}
+        {/* Chapter Boss Fight Analytics Card */}
         <Card>
-          <SectionHeader icon={<ShieldCheck size={20} color="#ba1a1a" />} title={t("boss_round_analytics", "Boss Round Analytics")} subtitle={t("battle_performance_history", "Battle performance history")} />
+          <SectionHeader icon={<ShieldCheck size={20} color="#ba1a1a" />} title={t("chapter_boss_fight_analytics", "Chapter Boss Fight Analytics")} subtitle={t("battle_performance_history", "Battle performance history")} />
           <div className="grid grid-cols-2 gap-2 mb-3">
             <StatBox label={t("total_attempts", "Total Attempts")} value={bA.totalAttempts ?? 0} />
             <StatBox label={t("pass_rate", "Pass Rate")} value={`${bA.passRate ?? 0}%`} color={(bA.passRate ?? 0) >= 60 ? "text-[#006a62]" : "text-[#ba1a1a]"} />
@@ -894,7 +956,7 @@ export default function ParentReportScreen() {
           
           {bossHistory.length > 0 && (
             <div className="mt-4 border-t border-slate-100 pt-4 space-y-2">
-              <h4 className="text-[10px] font-bold text-[#464652] uppercase tracking-wide">{t("recent_battles", "Recent Battles")}</h4>
+              <h4 className="text-[10px] font-bold text-[#464652] uppercase tracking-wide">{t("recent_chapter_boss_fights", "Recent Chapter Boss Fights")}</h4>
               <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                 {bossHistory.map((b: any, idx: number) => {
                   const statusUpper = (b.status || "").toUpperCase();
@@ -910,9 +972,9 @@ export default function ParentReportScreen() {
                     : (isLost ? "bg-red-50 text-red-700 border-red-200" : "bg-amber-50 text-amber-700 border-amber-200");
                   
                   const diffLower = (b.difficulty || "").toLowerCase();
-                  const diffText = diffLower === "easy" ? t("easy", "Easy") : (diffLower === "medium" ? t("medium", "Medium") : (diffLower === "hard" ? t("hard", "Hard") : b.difficulty));
+                  const diffText = diffLower === "easy" ? t("easy", "Easy") : (diffLower === "medium" ? t("medium", "Medium") : (diffLower === "hard" ? t("hard", "Hard") : (b.difficulty || t("normal", "Normal"))));
 
-                  let bossNameText = b.bossName || t("boss_round", "Boss Round");
+                  let bossNameText = b.bossName || t("chapter_boss_fight", "Chapter Boss Fight");
                   if (bossNameText.includes("Egg Thief")) {
                     bossNameText = bossNameText.replace("Egg Thief", t("boss_egg_thief", "Egg Thief"));
                   }
@@ -933,11 +995,15 @@ export default function ParentReportScreen() {
                     }
                   } catch (e) {}
 
+                  const chapterDisplay = b.chapterName || b.bossName || t("chapter_boss_fight", "Chapter Boss Fight");
+
                   return (
                     <div key={idx} className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex justify-between items-center transition-all">
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-bold text-slate-800 truncate">{bossNameText}</p>
-                        <p className="text-[10px] font-bold text-[#767683] mt-0.5">{formattedDate}</p>
+                        <p className="text-xs font-bold text-slate-800 truncate">{chapterDisplay}</p>
+                        <p className="text-[10px] font-bold text-[#767683] mt-0.5">
+                          {formattedDate} {b.subjectName ? `• ${b.subjectName}` : ""}
+                        </p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="text-[9px] bg-slate-200/80 text-slate-700 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
@@ -1084,6 +1150,35 @@ export default function ParentReportScreen() {
                       </span>
                     )}
                   </div>
+
+                  {(m.selectedOption || m.correctAnswer) && (
+                    <div className="mt-2.5 pt-2 border-t border-slate-200/60 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      {m.selectedOption && (
+                        <div className="bg-red-50/80 border border-red-100 rounded-lg p-2 text-red-700">
+                          <span className="font-bold block text-[10px] uppercase tracking-wider text-red-500 mb-0.5">
+                            {t("your_answer", "Child's Answer")}:
+                          </span>
+                          <span className="font-semibold">{m.selectedOption}</span>
+                        </div>
+                      )}
+                      {m.correctAnswer && (
+                        <div className="bg-emerald-50/80 border border-emerald-100 rounded-lg p-2 text-emerald-800">
+                          <span className="font-bold block text-[10px] uppercase tracking-wider text-emerald-600 mb-0.5">
+                            {t("correct_answer", "Correct Answer")}:
+                          </span>
+                          <span className="font-semibold">{m.correctAnswer}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {m.explanation && (
+                    <div className="mt-2 p-2 bg-amber-50/60 border border-amber-100/70 rounded-lg text-xs text-amber-900">
+                      <span className="font-bold text-[10px] uppercase tracking-wider text-amber-700 block mb-0.5">
+                        💡 {t("explanation", "Explanation")}:
+                      </span>
+                      <p className="text-slate-600 font-medium">{m.explanation}</p>
+                    </div>
+                  )}
                 </div>
               ))}
 
@@ -1368,6 +1463,18 @@ export default function ParentReportScreen() {
           setLoading(true);
           setRefreshKey(k => k + 1);
         }}
+      />
+
+      {/* Unified Alert / Feedback Modal */}
+      <UnifiedConfirmModal
+        isOpen={!!alertModal?.show}
+        onClose={() => setAlertModal(null)}
+        onConfirm={() => setAlertModal(null)}
+        title={alertModal?.title || ""}
+        message={alertModal?.message || ""}
+        confirmText="Got It"
+        showCancel={false}
+        variant={alertModal?.variant || "primary"}
       />
     </div>
   );

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import DragonCharacter from "../../../components/DragonCharacter";
+import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 
 const OPTION_LABELS = ["A", "B", "C", "D"];
 
@@ -45,38 +46,45 @@ export default function ChapterQuestionsScreen() {
       try {
         const cached = localStorage.getItem("userData");
         if (cached) {
-          try {
-            const u = JSON.parse(cached);
-            setChildName(u.childName || u.name || "Kid");
-            setChildPhoto(u.childPhoto || u.photo || "");
-          } catch(e) {}
-        }
-        const meRes = await apiFetch("/api/users/me");
-        const meJson = await meRes.json();
-        if (meJson.success && meJson.data?.user) {
-          setChildName(meJson.data.user.childName || meJson.data.user.name || "Kid");
-          setChildPhoto(meJson.data.user.childPhoto || meJson.data.user.photo || "");
+          const u = JSON.parse(cached);
+          setChildName(u.childName || u.name || "Kid");
+          setChildPhoto(u.childPhoto || u.photo || "");
         }
       } catch (e) {}
 
-      try {
-        const notifRes = await apiFetch("/api/notifications");
-        const notifData = await notifRes.json();
-        if (notifData.success && notifData.data) {
-          setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
-        }
-      } catch (e) {}
       if (!chapterId) {
         setLoading(false);
         return;
       }
       try {
-        const [qRes, pRes] = await Promise.all([
-          apiFetch(`/api/practice/questions/${chapterId}`),
-          apiFetch(`/api/practice/chapter-progress/${chapterId}`)
+        const [meRes, notifRes, qRes, pRes] = await Promise.all([
+          apiFetch("/api/users/me").catch(() => null),
+          apiFetch("/api/notifications").catch(() => null),
+          apiFetch(`/api/practice/questions/${chapterId}`).catch(() => null),
+          apiFetch(`/api/practice/chapter-progress/${chapterId}`).catch(() => null)
         ]);
-        const qJson = await qRes.json();
-        const pJson = await pRes.json();
+
+        if (meRes && meRes.ok) {
+          try {
+            const meJson = await meRes.json();
+            if (meJson.success && meJson.data?.user) {
+              setChildName(meJson.data.user.childName || meJson.data.user.name || "Kid");
+              setChildPhoto(meJson.data.user.childPhoto || meJson.data.user.photo || "");
+            }
+          } catch (e) {}
+        }
+
+        if (notifRes && notifRes.ok) {
+          try {
+            const notifData = await notifRes.json();
+            if (notifData.success && notifData.data) {
+              setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
+            }
+          } catch (e) {}
+        }
+
+        const qJson = (qRes && qRes.ok) ? await qRes.json() : { success: false };
+        const pJson = (pRes && pRes.ok) ? await pRes.json() : { success: false };
         
         let filtered: any[] = [];
         if (qJson.success && qJson.data) {
@@ -138,7 +146,8 @@ export default function ChapterQuestionsScreen() {
             const savedQ = pJson.data.currentQ || 0;
             if (filtered.length > 0 && savedQ >= filtered.length) {
               // User finished questions but didn't beat boss, take them straight to boss
-              const finalReturnUrl = encodeURIComponent(`/practice/chapters`);
+              const roadmapUrl = `/mission-roadmap?chapterId=${chapterId}&title=${encodeURIComponent(searchParams.get("chapterName") || "")}&subjectName=${encodeURIComponent(searchParams.get("subjectName") || "")}`;
+              const finalReturnUrl = encodeURIComponent(roadmapUrl);
               
               sessionStorage.setItem("lastSessionAnswers", JSON.stringify(pJson.data.answers || []));
               await submitActivityLog(pJson.data.answers || []);
@@ -332,7 +341,8 @@ export default function ChapterQuestionsScreen() {
         // m1 (Complete 1 Lesson) is auto-completed server-side via /api/world/questions/submit
         // and /api/practice/chapter-progress — no need to call it here
         
-        const finalReturnUrl = encodeURIComponent(`/practice/chapters`);
+        const roadmapUrl = `/mission-roadmap?chapterId=${chapterId}&title=${encodeURIComponent(searchParams.get("chapterName") || "")}&subjectName=${encodeURIComponent(searchParams.get("subjectName") || "")}`;
+        const finalReturnUrl = encodeURIComponent(roadmapUrl);
         
         sessionStorage.setItem("lastSessionAnswers", JSON.stringify(userAnswers));
         
@@ -363,7 +373,10 @@ export default function ChapterQuestionsScreen() {
     }).catch(() => {});
     
     await submitActivityLog(userAnswers);
-    navigate("/practice/chapters", { replace: true });
+    const roadmapUrl = chapterId
+      ? `/mission-roadmap?chapterId=${chapterId}&title=${encodeURIComponent(searchParams.get("chapterName") || "")}&subjectName=${encodeURIComponent(searchParams.get("subjectName") || "")}`
+      : "/practice/chapters";
+    navigate(roadmapUrl, { replace: true });
   };
 
   if (loading) {
@@ -725,8 +738,20 @@ export default function ChapterQuestionsScreen() {
               {confirmed ? 'CONTINUE' : 'CHECK'}
             </span>
           </button>
-      </div>
         </div>
+      </div>
+
+      {/* Quit Confirmation Modal */}
+      <UnifiedConfirmModal
+        isOpen={showQuitModal}
+        onClose={() => setShowQuitModal(false)}
+        onConfirm={handleQuit}
+        title="Leave Challenge?"
+        message="Your current progress has been saved. Are you sure you want to return to the roadmap?"
+        confirmText="Yes, Exit"
+        cancelText="Keep Playing"
+        variant="warning"
+      />
     </div>
   );
 }

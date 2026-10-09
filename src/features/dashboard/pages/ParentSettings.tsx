@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { apiFetch, clearAuthSession } from "../../../api";
 import { useTranslation } from "react-i18next";
 import { translateNotificationTitle, translateNotificationMessage } from "../../../utils/notificationTranslator";
+import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 
 const CustomDropdown = ({ label, icon: Icon, iconColor, value, options = [], onSelect, placeholder }: any) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -181,6 +182,7 @@ export default function ParentSettings() {
   const [restrictedSubjects, setRestrictedSubjects] = useState<Record<string, boolean>>({});
   const [showResetModal, setShowResetModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showSaveConfirmModal, setShowSaveConfirmModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [contentLanguage, setContentLanguage] = useState("en");
@@ -1249,7 +1251,7 @@ export default function ParentSettings() {
           {/* Save Profiles Button */}
           <motion.div variants={itemVariants} className="mt-2">
             <button
-              onClick={handleSaveProfiles}
+              onClick={() => setShowSaveConfirmModal(true)}
               disabled={isSavingProfile}
               className="w-full h-14 bg-[#141779] hover:bg-[#1e23a0] rounded-full flex items-center justify-center gap-3 shadow-md active:scale-95 transition-all disabled:opacity-70 text-white font-black text-base"
             >
@@ -1261,49 +1263,39 @@ export default function ParentSettings() {
       )}
     </motion.main>
 
+    {/* Save Profile Confirmation Modal */}
+    <UnifiedConfirmModal
+      isOpen={showSaveConfirmModal}
+      onClose={() => setShowSaveConfirmModal(false)}
+      onConfirm={() => {
+        setShowSaveConfirmModal(false);
+        handleSaveProfiles();
+      }}
+      title="Save Profile Changes?"
+      message="Are you sure you want to save all changes made to your parent and child profiles?"
+      confirmText="Yes, Save Profiles"
+      cancelText="Cancel"
+      variant="primary"
+      loading={isSavingProfile}
+      icon={<Save size={28} className="text-[#141779]" />}
+    />
+
     {/* Reset Modal */}
-    <AnimatePresence>
-      {showResetModal && (
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-6"
-        >
-          <motion.div 
-            initial={{ scale: 0.9, y: 20, opacity: 0 }}
-            animate={{ scale: 1, y: 0, opacity: 1 }}
-            exit={{ scale: 0.9, y: 20, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="bg-white rounded-[32px] p-8 w-full max-w-[360px] flex flex-col items-center shadow-2xl relative overflow-hidden"
-          >
-            <div className="w-16 h-16 rounded-full bg-rose-50 border border-rose-200 flex items-center justify-center mb-4">
-              <Trash2 size={32} className="text-rose-600" />
-            </div>
-            <h2 className="text-lg font-black text-[#141779] text-center mb-2">
-              Wipe All Data?
-            </h2>
-            <p className="text-xs text-slate-600 font-bold text-center leading-relaxed mb-6">
-              This action is <span className="font-black text-rose-600">irreversible</span>. It will permanently delete all coins, level achievements, completed chapters, and badges.
-            </p>
-            <div className="flex flex-col w-full gap-3">
-              <button 
-                onClick={handleResetJourney}
-                className="w-full py-3 rounded-full bg-rose-600 hover:bg-rose-700 text-white font-black text-sm shadow-md transition-all flex items-center justify-center"
-              >
-                Yes, Wipe Data
-              </button>
-              <button 
-                onClick={() => setShowResetModal(false)}
-                className="w-full py-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-sm transition-colors flex items-center justify-center"
-              >
-                Cancel
-              </button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <UnifiedConfirmModal
+      isOpen={showResetModal}
+      onClose={() => setShowResetModal(false)}
+      onConfirm={handleResetJourney}
+      title="Wipe All Data?"
+      message={
+        <span>
+          This action is <span className="font-black text-rose-600">irreversible</span>. It will permanently delete all coins, level achievements, completed chapters, and badges.
+        </span>
+      }
+      confirmText="Yes, Wipe Data"
+      cancelText="Cancel"
+      variant="danger"
+      icon={<Trash2 size={28} className="text-rose-600" />}
+    />
 
     {/* Toast Notification */}
     <AnimatePresence>
@@ -1321,111 +1313,53 @@ export default function ParentSettings() {
     </AnimatePresence>
 
     {/* Custom Logout Modal */}
-    {showLogoutModal && (
-      <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-[100] flex items-center justify-center p-5">
-        <div className="bg-white w-full max-w-sm rounded-[32px] p-6 shadow-2xl border border-slate-200">
-          <h3 className="text-lg font-black text-[#141779] text-center mb-2">{t('logout') || 'Logout'}</h3>
-          <p className="text-xs font-bold text-slate-600 text-center mb-6">
-            Are you sure you want to logout?
-          </p>
-          <div className="flex flex-col gap-3">
-            <button 
-              onClick={handleLogout}
-              className="w-full py-3 bg-rose-600 text-white rounded-full font-black text-sm shadow-md hover:bg-rose-700 transition-colors"
-            >
-              Yes, Logout
-            </button>
-            <button 
-              onClick={() => setShowLogoutModal(false)}
-              className="w-full py-3 bg-slate-100 text-slate-700 rounded-full font-black text-sm hover:bg-slate-200 transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
+    <UnifiedConfirmModal
+      isOpen={showLogoutModal}
+      onClose={() => setShowLogoutModal(false)}
+      onConfirm={handleLogout}
+      title={t('logout') || "Logout"}
+      message="Are you sure you want to logout? You will need your credentials to log back in."
+      confirmText="Yes, Logout"
+      cancelText="Cancel"
+      variant="danger"
+      icon={<LogOut size={28} className="text-rose-600" />}
+    />
 
     {/* Custom Delete Confirmation Modal */}
-    {deleteConfirmOpen && (
-      <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-[100] flex items-center justify-center p-5 animate-in fade-in duration-200">
-        <div className="bg-white w-full max-w-sm rounded-[32px] p-6 shadow-2xl border border-slate-200 text-center flex flex-col items-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-rose-50 flex items-center justify-center text-rose-600">
-            <Trash2 size={28} />
-          </div>
-          
-          <div>
-            <h3 className="text-lg font-black text-[#141779]">Delete Profile</h3>
-            <p className="text-xs font-bold text-slate-600 mt-2">
-              Are you sure you want to delete this child profile? All progress for this child will be lost.
-            </p>
-          </div>
-          
-          <div className="flex flex-col gap-3 w-full mt-2">
-            <button
-              type="button"
-              onClick={confirmDeleteChild}
-              className="w-full py-3 bg-rose-600 text-white rounded-full font-black text-sm shadow-md hover:bg-rose-700 transition-colors"
-            >
-              Yes, Delete
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setDeleteConfirmOpen(false);
-                setChildIdToDelete(null);
-              }}
-              className="w-full py-3 bg-slate-100 text-slate-700 rounded-full font-black text-sm hover:bg-slate-200 transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
+    <UnifiedConfirmModal
+      isOpen={deleteConfirmOpen}
+      onClose={() => {
+        setDeleteConfirmOpen(false);
+        setChildIdToDelete(null);
+      }}
+      onConfirm={confirmDeleteChild}
+      title="Delete Profile"
+      message="Are you sure you want to delete this child profile? All progress for this child will be permanently lost."
+      confirmText="Yes, Delete"
+      cancelText="Cancel"
+      variant="danger"
+      icon={<Trash2 size={28} className="text-rose-600" />}
+    />
 
     {/* Custom Regenerate Code Confirmation Modal */}
-    {regenConfirmOpen && (
-      <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-[100] flex items-center justify-center p-5 animate-in fade-in duration-200">
-        <div className="bg-white w-full max-w-sm rounded-[32px] p-6 shadow-2xl border border-slate-200 text-center flex flex-col items-center gap-4 font-sans">
-          <div className="w-14 h-14 rounded-full bg-indigo-50 flex items-center justify-center text-[#141779]">
-            <RefreshCw size={28} />
-          </div>
-          
-          <div>
-            <h3 className="text-lg font-black text-[#141779]">
-              {childIdToRegen === "family" ? "Regenerate Family Code" : "Regenerate Code"}
-            </h3>
-            <p className="text-xs font-bold text-slate-600 mt-2">
-              {childIdToRegen === "family"
-                ? "Are you sure you want to regenerate a new random Family Link Code? All co-parents using the old code will need to link again."
-                : "Are you sure you want to regenerate a new random device code for this child? The old code will stop working immediately."
-              }
-            </p>
-          </div>
-          
-          <div className="flex flex-col gap-3 w-full mt-2">
-            <button
-              type="button"
-              onClick={confirmRegenCode}
-              className="w-full py-3 bg-[#141779] text-white rounded-full font-black text-sm shadow-md hover:opacity-90 transition-opacity"
-            >
-              Yes, Regenerate
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setRegenConfirmOpen(false);
-                setChildIdToRegen(null);
-              }}
-              className="w-full py-3 bg-slate-100 text-slate-700 rounded-full font-black text-sm hover:bg-slate-200 transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
+    <UnifiedConfirmModal
+      isOpen={regenConfirmOpen}
+      onClose={() => {
+        setRegenConfirmOpen(false);
+        setChildIdToRegen(null);
+      }}
+      onConfirm={confirmRegenCode}
+      title={childIdToRegen === "family" ? "Regenerate Family Code" : "Regenerate Device Code"}
+      message={
+        childIdToRegen === "family"
+          ? "Are you sure you want to regenerate a new random Family Link Code? All co-parents using the old code will need to link again."
+          : "Are you sure you want to regenerate a new random device code for this child? The old code will stop working immediately."
+      }
+      confirmText="Yes, Regenerate"
+      cancelText="Cancel"
+      variant="primary"
+      icon={<RefreshCw size={28} className="text-[#141779]" />}
+    />
 
     {/* Notifications Side Panel / Modal Drawer */}
     {showNotifications && (

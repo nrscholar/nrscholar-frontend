@@ -319,7 +319,14 @@ export default function KidsActivityScreen() {
                                 className="ml-6 bg-white rounded-[20px] p-4 border border-slate-200/80 shadow-xs hover:shadow-md transition-all cursor-pointer hover:scale-[1.01]"
                               >
                                 <div className="flex justify-between items-start mb-1.5">
-                                  <h3 className="text-sm font-black text-[#141779] pr-3 leading-tight">{activityTitle}</h3>
+                                  <div className="flex items-center gap-2 flex-wrap pr-3">
+                                    <h3 className="text-sm font-black text-[#141779] leading-tight">{activityTitle}</h3>
+                                    {activity.attemptNumber && (
+                                      <span className="text-[10px] font-black text-amber-800 bg-amber-100/90 border border-amber-300 px-2 py-0.5 rounded-full shrink-0">
+                                        {t("attempt_number", { num: activity.attemptNumber, defaultValue: `Attempt #${activity.attemptNumber}` })}
+                                      </span>
+                                    )}
+                                  </div>
                                   <div className="flex flex-col items-end gap-1 shrink-0">
                                     <span className="text-[10px] font-black text-slate-500 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
                                       <Clock size={10} /> {activity.time || (activity.createdAt ? new Date(activity.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : t("just_now", "Just now"))}
@@ -406,7 +413,14 @@ export default function KidsActivityScreen() {
             {/* Modal Header */}
             <div className="px-6 py-5 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white z-10 rounded-t-[32px] sm:rounded-[24px]">
               <div>
-                <h2 className="text-lg font-black text-[#141779]">{translateActivityTitle(selectedActivity.title)}</h2>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-lg font-black text-[#141779]">{translateActivityTitle(selectedActivity.title)}</h2>
+                  {selectedActivity.attemptNumber && (
+                    <span className="text-xs font-black text-amber-800 bg-amber-100/90 border border-amber-300 px-2.5 py-0.5 rounded-full">
+                      {t("attempt_number", { num: selectedActivity.attemptNumber, defaultValue: `Attempt #${selectedActivity.attemptNumber}` })}
+                    </span>
+                  )}
+                </div>
                 <div className="flex gap-3 mt-1">
                   <span className="text-xs font-black text-[#006a62] flex items-center gap-1">
                     <CheckCircle2 size={14} /> {selectedActivity.correctQuestions}/{selectedActivity.totalQuestions}
@@ -434,7 +448,7 @@ export default function KidsActivityScreen() {
                 {Array.isArray(selectedActivity.details) && selectedActivity.details.length > 0 ? (
                   selectedActivity.details.map((detail: any, idx: number) => {
                     const rawText = detail.questionText || "";
-                    const isGeneric = !rawText || rawText.trim() === "" || rawText.toLowerCase().includes("practice question");
+                    const isGeneric = !rawText || rawText.trim() === "" || rawText.toLowerCase().includes("practice question") || rawText.toLowerCase().startsWith("que ") || rawText.toLowerCase().startsWith("question #");
                     const qTitle = isGeneric
                       ? t('question_number', { num: idx + 1, number: idx + 1, defaultValue: `Question #${idx + 1}` })
                       : rawText;
@@ -444,8 +458,14 @@ export default function KidsActivityScreen() {
                         <div className={`mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${detail.isCorrect ? 'bg-teal-50 border border-teal-200 text-[#006a62]' : 'bg-red-50 border border-red-200 text-red-600'}`}>
                           {detail.isCorrect ? <CheckCircle2 size={16} strokeWidth={3} /> : <X size={16} strokeWidth={3} />}
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <p className="text-sm font-extrabold text-slate-800 mb-2 leading-snug">{qTitle}</p>
+                          {detail.selectedOption && (
+                            <p className="text-xs font-semibold text-slate-600 mb-2 truncate">
+                              <span className="text-slate-400 font-bold">{t('your_answer', 'Your answer')}: </span>
+                              <span className={detail.isCorrect ? "text-teal-700 font-bold" : "text-rose-600 font-bold"}>{detail.selectedOption}</span>
+                            </p>
+                          )}
                           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600">
                             <Clock size={12} />
                             <span className="text-xs font-black">

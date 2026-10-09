@@ -564,11 +564,12 @@ export default function ChaptersScreen() {
                         <button 
                           onClick={(e) => { 
                             e.stopPropagation(); 
-                            navigate(`/boss-battle?worldId=w1&chapterId=${chap._id}&difficulty=easy&returnTo=/practice/journey-map&subjectName=${encodeURIComponent(activeSubject?.name || "")}&chapterName=${encodeURIComponent(displayTitle)}`); 
+                            const roadmapUrl = `/mission-roadmap?chapterId=${chap._id}&title=${encodeURIComponent(displayTitle)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}`;
+                            navigate(`/boss-battle?worldId=w1&chapterId=${chap._id}&difficulty=easy&returnTo=${encodeURIComponent(roadmapUrl)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}&chapterName=${encodeURIComponent(displayTitle)}`); 
                           }} 
                           className="bg-[#FFC83D]/20 border border-[#FFC83D] text-[#17157F] px-3.5 py-2 rounded-xl font-bold text-xs hover:bg-[#FFC83D] transition-all flex items-center justify-between"
                         >
-                          <span>{t('chapter_boss_round', '🏆 Chapter Boss Round')}</span>
+                          <span>{t('chapter_boss_round', '🏆 Chapter Boss Fight')}</span>
                           <ChevronRight size={16} />
                         </button>
                       </motion.div>

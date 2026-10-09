@@ -28,31 +28,40 @@ export default function MissionMapScreen() {
 
   useEffect(() => {
     async function loadRoadmap() {
-      let activeClass = "Class 3";
       try {
-        const meRes = await apiFetch("/api/users/me");
-        const meJson = await meRes.json();
-        if (meJson.success && meJson.data?.user) {
-          setChildName(meJson.data.user.childName || "Explorer");
-          setChildPhoto(meJson.data.user.childPhoto || meJson.data.user.photo || "");
-          activeClass = meJson.data.user.childClass || "Class 3";
-          setUserClass(activeClass);
-        }
-      } catch (e) {}
+        const [meRes, notifRes, missionsRes] = await Promise.all([
+          apiFetch("/api/users/me").catch(() => null),
+          apiFetch("/api/notifications").catch(() => null),
+          apiFetch(`/api/practice/chapters/${chapterId}/missions`).catch(() => null)
+        ]);
 
-      try {
-        const notifRes = await apiFetch("/api/notifications");
-        const notifData = await notifRes.json();
-        if (notifData.success && notifData.data) {
-          setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
+        if (meRes && meRes.ok) {
+          try {
+            const meJson = await meRes.json();
+            if (meJson.success && meJson.data?.user) {
+              setChildName(meJson.data.user.childName || "Explorer");
+              setChildPhoto(meJson.data.user.childPhoto || meJson.data.user.photo || "");
+              setUserClass(meJson.data.user.childClass || "Class 3");
+            }
+          } catch (e) {}
         }
-      } catch (e) {}
 
-      try {
-        const res = await apiFetch(`/api/practice/chapters/${chapterId}/missions?classLevel=${encodeURIComponent(activeClass)}`);
-        const json = await res.json();
-        if (json.success && json.data) {
-          setChapterData(json.data);
+        if (notifRes && notifRes.ok) {
+          try {
+            const notifData = await notifRes.json();
+            if (notifData.success && notifData.data) {
+              setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
+            }
+          } catch (e) {}
+        }
+
+        if (missionsRes && missionsRes.ok) {
+          try {
+            const json = await missionsRes.json();
+            if (json.success && json.data) {
+              setChapterData(json.data);
+            }
+          } catch (e) {}
         }
       } catch (e) {
         console.error("Failed to load mission roadmap:", e);

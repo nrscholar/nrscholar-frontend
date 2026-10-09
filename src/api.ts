@@ -1,6 +1,6 @@
 let refreshPromise: Promise<any> | null = null;
 let userMeCache: { data: any; timestamp: number } | null = null;
-let lastParentReport: { data: any; timestamp: number } | null = null;
+let lastParentReport: { data: any; timestamp: number; lang?: string } | null = null;
 const CACHE_TTL = 600000; // 10 minutes cache TTL
 
 export function clearUserMeCache() {
@@ -14,6 +14,11 @@ export function clearParentReportCache() {
   lastParentReport = null;
   try {
     localStorage.removeItem("parentReportCache");
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith("parentReportCache")) {
+        localStorage.removeItem(key);
+      }
+    }
   } catch (e) {}
 }
 
@@ -65,22 +70,24 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
     } catch (e) {}
   }
 
+  const currentLang = localStorage.getItem("i18nextLng") || "en";
+
   // Check cache for /api/parent/report GET requests
   const isReportRequest = (url.includes("/api/parent/report") || url.includes("parent/report")) && !url.includes("/report/download") && reqMethod === "GET";
   if (isReportRequest) {
     const now = Date.now();
-    if (lastParentReport && (now - lastParentReport.timestamp < CACHE_TTL)) {
+    if (lastParentReport && lastParentReport.lang === currentLang && (now - lastParentReport.timestamp < CACHE_TTL)) {
       return new Response(JSON.stringify(lastParentReport.data), {
         status: 200,
         headers: { "Content-Type": "application/json" }
       });
     }
     try {
-      const stored = localStorage.getItem("parentReportCache");
+      const stored = localStorage.getItem(`parentReportCache_${currentLang}`);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed && (now - parsed.timestamp < CACHE_TTL)) {
-          lastParentReport = parsed;
+          lastParentReport = { ...parsed, lang: currentLang };
           return new Response(JSON.stringify(parsed.data), {
             status: 200,
             headers: { "Content-Type": "application/json" }
@@ -150,9 +157,9 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
       const clone = response.clone();
       const json = await clone.json();
       const now = Date.now();
-      lastParentReport = { data: json, timestamp: now };
+      lastParentReport = { data: json, timestamp: now, lang: currentLang };
       try {
-        localStorage.setItem("parentReportCache", JSON.stringify(lastParentReport));
+        localStorage.setItem(`parentReportCache_${currentLang}`, JSON.stringify(lastParentReport));
       } catch (e) {}
     } catch (e) {}
   }

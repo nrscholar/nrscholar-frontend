@@ -579,64 +579,32 @@ export default function HomeScreen() {
           })()}
 
           {/* Journey */}
-          {(() => {
-            const nodesList = journeyData?.nodes || [];
-            const completedCount = nodesList.filter((n: any) => n.completed).length;
-            const totalStages = journeyData?.totalStages || (nodesList.length > 0 ? nodesList.length : 3);
-            const activeStageIndex = journeyData?.activeNodeIndex !== undefined
-              ? (journeyData.activeNodeIndex + 1)
-              : Math.min(completedCount + 1, totalStages);
-
-            const numDots = Math.min(Math.max(totalStages, 3), 6);
-            const dots = Array.from({ length: numDots }).map((_, idx) => {
-              if (nodesList.length > 0) {
-                return nodesList[idx]?.completed ?? (idx < completedCount);
-              }
-              return idx < completedCount;
-            });
-
-            const completedDots = dots.filter(Boolean).length;
-            const lineProgressPct = numDots > 1 ? (Math.min(completedDots, numDots - 1) / (numDots - 1)) * 100 : 0;
-
-            return (
-              <button
-                onClick={() => navigate("/practice/journey-map")}
-                className="bg-[#e6fbf7] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#b2f5ea]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group"
-              >
-                <div className="w-9 h-9 rounded-full bg-[#ccfbf1] flex items-center justify-center">
-                  <BookOpen size={18} className="text-[#0d9488]" />
-                </div>
-                <div className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
-                  <ChevronRight size={14} />
-                </div>
-                <div className="mt-2">
-                  <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('journey', 'Journey')}</h3>
-                  <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-1 truncate">{t('explorer_map', 'Explorer Map & Stages')}</p>
-
-                  <div className="relative flex items-center justify-between my-1 px-1">
-                    <div className="absolute left-2 right-2 top-1/2 -translate-y-1/2 h-1 bg-slate-200/90 rounded-full z-0" />
-                    <div
-                      className="absolute left-2 top-1/2 -translate-y-1/2 h-1 bg-[#10b981] rounded-full z-0 transition-all duration-500"
-                      style={{ width: `calc(${lineProgressPct}% * (100% - 16px) / 100)` }}
-                    />
-                    {dots.map((isDone, i) => (
-                      <span
-                        key={i}
-                        className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8.5px] font-black z-10 transition-colors shadow-2xs ${isDone ? "bg-[#10b981] text-white" : "bg-slate-300 text-white"
-                          }`}
-                      >
-                        {isDone ? "✓" : "?"}
-                      </span>
-                    ))}
-                  </div>
-
-                  <span className="text-[9.5px] font-black text-slate-500 block mt-0.5 truncate">
-                    {t('stage_progress', { stage: activeStageIndex, total: totalStages, defaultValue: `Stage ${activeStageIndex} of ${totalStages}` })}
+          <button
+            onClick={() => navigate("/practice/journey-map")}
+            className="bg-[#e6fbf7] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#b2f5ea]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group"
+          >
+            <div className="w-9 h-9 rounded-full bg-[#ccfbf1] flex items-center justify-center">
+              <BookOpen size={18} className="text-[#0d9488]" />
+            </div>
+            <div className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
+              <ChevronRight size={14} />
+            </div>
+            <div className="mt-2">
+              <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('journey', 'Journey')}</h3>
+              <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-2 truncate">{t('explorer_map', 'Explorer Map & Stages')}</p>
+              <div className="space-y-1">
+                <div className="text-[9.5px] font-extrabold text-[#0d9488] truncate flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#0d9488] shrink-0" />
+                  <span className="truncate">
+                    {t('adventure_quest_map', 'Adventure Quest Map')}
                   </span>
                 </div>
-              </button>
-            );
-          })()}
+                <div className="w-full h-1.5 bg-[#ccfbf1] rounded-full overflow-hidden">
+                  <div className="h-full bg-[#0d9488] rounded-full transition-all duration-500" style={{ width: '60%' }} />
+                </div>
+              </div>
+            </div>
+          </button>
 
           {/* My Collections */}
           <button
