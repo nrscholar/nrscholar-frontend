@@ -35,17 +35,21 @@ export default function NotificationsScreen() {
   useEffect(() => {
     async function loadNotifications() {
       try {
-        const res = await apiFetch("/api/notifications");
+        const cached = localStorage.getItem("userData");
+        let activeChildId = "";
+        let childName = "Explorer";
+        if (cached) {
+          try {
+            const u = JSON.parse(cached);
+            activeChildId = u.activeChildId || u.children?.[0]?.childId || u.childId || "";
+            childName = u.childName || "Explorer";
+          } catch (e) {}
+        }
+
+        const notifUrl = `/api/notifications?role=child${activeChildId ? `&childId=${encodeURIComponent(activeChildId)}` : ""}`;
+        const res = await apiFetch(notifUrl);
         const json = await res.json();
         if (json.success && json.data) {
-          const cached = localStorage.getItem("userData");
-          let childName = "Explorer";
-          if (cached) {
-            try {
-              childName = JSON.parse(cached).childName || "Explorer";
-            } catch (e) {}
-          }
-
           const formatted = json.data.map((n: any) => {
             let message = n.message || "";
             // Make it child-friendly by replacing childName with "You"
@@ -62,8 +66,9 @@ export default function NotificationsScreen() {
           });
           setNotifications(formatted);
 
-          // Mark all read when viewed by child
-          apiFetch("/api/notifications/mark-all-read", { method: "POST" }).catch(() => {});
+          // Mark all read when viewed by child for this specific child
+          const markUrl = `/api/notifications/mark-all-read?role=child${activeChildId ? `&childId=${encodeURIComponent(activeChildId)}` : ""}`;
+          apiFetch(markUrl, { method: "POST" }).catch(() => {});
         }
       } catch (e) {
         console.error("Failed to load notifications", e);
@@ -72,6 +77,12 @@ export default function NotificationsScreen() {
       }
     }
     loadNotifications();
+
+    const handleUserDataUpdate = () => {
+      loadNotifications();
+    };
+    window.addEventListener("userDataUpdated", handleUserDataUpdate);
+    return () => window.removeEventListener("userDataUpdated", handleUserDataUpdate);
   }, []);
 
   return (

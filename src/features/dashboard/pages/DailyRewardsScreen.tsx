@@ -225,27 +225,37 @@ export default function DailyRewardsScreen() {
     return interleaveRewards(pool);
   };
 
-  const getSpinBalance = () => {
-    switch (spinType) {
+  const getBalanceKey = (type: string) => {
+    switch (type) {
       case "daily":
-        return balances.daily_spins_balance || 0;
+        return "daily_spins_balance";
       case "chapter":
-        return balances.chapter_spins_balance || 0;
+        return "chapter_spins_balance";
       case "boss_revival":
-        return balances.boss_revival_spins_balance || 0;
+        return "boss_revival_spins_balance";
       case "event":
-        return balances.event_spins_balance || 0;
+        return "event_spins_balance";
       case "parent":
-        return balances.parent_spins_balance || 0;
+        return "parent_spins_balance";
       default:
-        return 0;
+        return "daily_spins_balance";
     }
+  };
+
+  const getSpinBalance = () => {
+    const key = getBalanceKey(spinType);
+    return balances[key] || 0;
   };
 
   const handleBack = () => {
     if (isSpinningRef.current || isSpinning) return;
     if (spinType === "boss_revival") {
-      navigate(-1);
+      const returnTo = searchParams.get("returnTo");
+      if (returnTo) {
+        navigate(decodeURIComponent(returnTo), { replace: true });
+      } else {
+        navigate(-1);
+      }
     } else {
       navigate("/home");
     }
@@ -277,19 +287,26 @@ export default function DailyRewardsScreen() {
   const startSpin = async () => {
     // 1. Immediate synchronous lock against double-clicks or mid-spin triggers
     if (isSpinningRef.current || isSpinning || showModal || isBuying) return;
+
+    setErrorMessage("");
+
+    const balanceKey = getBalanceKey(spinType);
+    const balance = balances[balanceKey] || 0;
+    if (balance <= 0) {
+      setErrorMessage(`No ${spinType.replace("_", " ")} attempts remaining`);
+      return;
+    }
+
     isSpinningRef.current = true;
     spinCompletedRef.current = false;
     pendingClaimDataRef.current = null;
     claimPromiseRef.current = null;
 
-    setErrorMessage("");
-
-    const balance = getSpinBalance();
-    if (balance <= 0) {
-      isSpinningRef.current = false;
-      setErrorMessage(`No ${spinType.replace("_", " ")} attempts remaining`);
-      return;
-    }
+    // Immediately decrement attempt count in real-time as soon as user clicks Spin
+    setBalances((prev: any) => ({
+      ...prev,
+      [balanceKey]: Math.max(0, (prev[balanceKey] || 0) - 1)
+    }));
 
     // Immediately update UI to spinning disabled state
     setIsSpinning(true);
@@ -357,6 +374,10 @@ export default function DailyRewardsScreen() {
         })
         .then((claimData) => {
           pendingClaimDataRef.current = claimData;
+          // Synchronize with server-authoritative balances as soon as received
+          if (claimData?.balances) {
+            setBalances(claimData.balances);
+          }
           return claimData;
         })
         .catch((err) => {
@@ -372,6 +393,11 @@ export default function DailyRewardsScreen() {
       }, 6550);
 
     } catch (e: any) {
+      // Rollback the immediate decrement if spin preview failed before spinning
+      setBalances((prev: any) => ({
+        ...prev,
+        [balanceKey]: (prev[balanceKey] || 0) + 1
+      }));
       setErrorMessage(e.message || "Something went wrong. Please check your connection.");
       isSpinningRef.current = false;
       setIsSpinning(false);
@@ -401,12 +427,24 @@ export default function DailyRewardsScreen() {
         }
         window.dispatchEvent(new Event("userDataUpdated"));
       }
+      if (spinType === "boss_revival") {
+        const rewardToStore = claimData.reward || wonReward;
+        if (rewardToStore) {
+          sessionStorage.setItem("boss_revival_won_reward", JSON.stringify(rewardToStore));
+        }
+      }
       pendingClaimDataRef.current = null;
+    } else if (spinType === "boss_revival" && wonReward) {
+      sessionStorage.setItem("boss_revival_won_reward", JSON.stringify(wonReward));
     }
 
     if (spinType === "boss_revival") {
-      // Navigate back to resume boss battle
-      navigate(-1);
+      const returnTo = searchParams.get("returnTo");
+      if (returnTo) {
+        navigate(decodeURIComponent(returnTo), { replace: true });
+      } else {
+        navigate(-1);
+      }
     } else {
       fetchSpinStatus();
     }

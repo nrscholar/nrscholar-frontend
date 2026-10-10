@@ -16,8 +16,16 @@ export default function HelpCenterScreen() {
       try {
         const response = await apiFetch("/api/users/faqs");
         const data = await response.json();
-        if (data.success) {
-          setFaqs(data.data);
+        if (data.success && Array.isArray(data.data)) {
+          // Client-side deduplication safeguard:
+          const seen = new Set<string>();
+          const distinctFaqs = data.data.filter((faq: any) => {
+            const q = faq.question?.trim().toLowerCase();
+            if (!q || seen.has(q)) return false;
+            seen.add(q);
+            return true;
+          });
+          setFaqs(distinctFaqs);
         }
       } catch (e) {
         console.error("Failed to fetch FAQs", e);

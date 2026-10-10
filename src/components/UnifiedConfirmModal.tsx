@@ -17,6 +17,7 @@ export interface UnifiedConfirmModalProps {
   loading?: boolean;
   showCancel?: boolean;
   maxWidth?: string;
+  zIndex?: string;
 }
 
 export default function UnifiedConfirmModal({
@@ -31,7 +32,8 @@ export default function UnifiedConfirmModal({
   icon,
   loading = false,
   showCancel = true,
-  maxWidth = "max-w-[360px]"
+  maxWidth = "max-w-[360px]",
+  zIndex = "z-[300]"
 }: UnifiedConfirmModalProps) {
   if (!isOpen) return null;
 
@@ -82,7 +84,7 @@ export default function UnifiedConfirmModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm select-none animate-in fade-in duration-200">
+      <div className={`fixed inset-0 ${zIndex} flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm select-none animate-in fade-in duration-200`}>
         <motion.div
           initial={{ scale: 0.92, opacity: 0, y: 16 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}

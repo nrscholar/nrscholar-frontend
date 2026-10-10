@@ -256,19 +256,11 @@ export default function ParentLearningDNAScreen() {
   // Dynamic Weekly Trend graph coordinates based on weeklyTrend telemetry array from backend
   const weeklyTrendData: number[] = Array.isArray(dnaData?.weeklyTrend) && dnaData.weeklyTrend.length === 7
     ? dnaData.weeklyTrend
-    : [
-        focusVal || 65, 
-        confidenceVal || 70, 
-        consistencyVal || 68, 
-        curiosityVal || 72, 
-        resilienceVal || 60, 
-        creativityVal || 80, 
-        Math.round(((focusVal || 65) + (confidenceVal || 70)) / 2)
-      ];
+    : [0, 0, 0, 0, 0, 0, 0];
 
   const chartPoints = weeklyTrendData.map((val, idx) => {
     const x = 30 + idx * 43.33; // 30 (Mon), 73.3 (Tue), 116.6 (Wed), 160 (Thu), 203.3 (Fri), 246.6 (Sat), 290 (Sun)
-    const clampedVal = Math.max(10, Math.min(100, val));
+    const clampedVal = Math.max(0, Math.min(100, val));
     const y = 68 - (clampedVal / 100) * 52; // 0% -> y=68, 100% -> y=16
     return { x: Math.round(x), y: Math.round(y), val: clampedVal };
   });
@@ -627,10 +619,15 @@ export default function ParentLearningDNAScreen() {
                         <stop offset="100%" stopColor="#ab47bc" stopOpacity="0" />
                       </linearGradient>
                     </defs>
-                    {/* Horizontal reference lines */}
-                    <line x1="30" y1="10" x2="290" y2="10" stroke="#f1f3f7" strokeWidth="1" />
-                    <line x1="30" y1="36" x2="290" y2="36" stroke="#f1f3f7" strokeWidth="1" />
-                    <line x1="30" y1="62" x2="290" y2="62" stroke="#f1f3f7" strokeWidth="1" />
+                    {/* Horizontal reference lines & Y-axis percentage labels */}
+                    <text x="24" y="19" textAnchor="end" className="text-[9px] fill-slate-400 font-bold">100%</text>
+                    <line x1="30" y1="16" x2="290" y2="16" stroke="#f1f3f7" strokeWidth="1" />
+                    
+                    <text x="24" y="45" textAnchor="end" className="text-[9px] fill-slate-400 font-bold">50%</text>
+                    <line x1="30" y1="42" x2="290" y2="42" stroke="#f1f3f7" strokeWidth="1" />
+                    
+                    <text x="24" y="71" textAnchor="end" className="text-[9px] fill-slate-400 font-bold">0%</text>
+                    <line x1="30" y1="68" x2="290" y2="68" stroke="#e2e8f0" strokeWidth="1" />
                     
                     {/* Bezier curve path */}
                     <path 

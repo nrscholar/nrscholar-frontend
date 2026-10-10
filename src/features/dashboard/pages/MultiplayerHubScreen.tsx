@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
 import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
+import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 
 const getSubjectStyle = (name: string) => {
   const n = name.toLowerCase();
@@ -692,37 +693,21 @@ export default function MultiplayerHubScreen() {
 
       </main>
 
-      {/* LEAVE CONFIRMATION MODAL */}
-      {showLeaveModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl p-5 w-full max-w-xs flex flex-col items-center text-center shadow-2xl border-2 border-[#E5DBFB] animate-in zoom-in-95 duration-200">
-            <div className="w-12 h-12 rounded-full bg-red-50 border border-red-200 flex items-center justify-center mb-3">
-              <Swords size={24} className="text-red-600" />
-            </div>
-            <h2 className="text-lg font-black text-[#141779] mb-1">{t('leave_shadow_arena_q', 'Leave Shadow Arena?')}</h2>
-            <p className="text-xs font-semibold text-[#6D28D9] mb-5">
-              {t('exit_lobby_confirm_desc', 'Are you sure you want to exit the battle lobby?')}
-            </p>
-            <div className="flex gap-2.5 w-full">
-              <button 
-                onClick={() => setShowLeaveModal(false)}
-                className="flex-1 bg-[#F4EFF7] text-[#141779] py-2.5 rounded-xl font-bold text-xs hover:bg-[#EAE2FB] transition-all border border-[#E5DBFB]"
-              >
-                {t('cancel', 'Cancel')}
-              </button>
-              <button 
-                onClick={() => {
-                  setShowLeaveModal(false);
-                  navigate("/home");
-                }}
-                className="flex-1 bg-gradient-to-r from-red-600 to-red-700 text-white py-2.5 rounded-xl font-bold text-xs hover:brightness-110 transition-all shadow-[0_4px_12px_rgba(239,68,68,0.3)]"
-              >
-                {t('leave_arena', 'Leave Arena')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* UNIFIED LEAVE CONFIRMATION MODAL */}
+      <UnifiedConfirmModal
+        isOpen={showLeaveModal}
+        onClose={() => setShowLeaveModal(false)}
+        onConfirm={() => {
+          setShowLeaveModal(false);
+          navigate("/home");
+        }}
+        title={t('leave_shadow_arena_q', 'Leave Shadow Arena?')}
+        message={t('exit_lobby_confirm_desc', 'Are you sure you want to exit the battle lobby?')}
+        confirmText={t('leave_arena', 'Leave Arena')}
+        cancelText={t('cancel', 'Cancel')}
+        variant="danger"
+        icon={<Swords size={30} className="text-rose-600" />}
+      />
     </div>
   );
 }

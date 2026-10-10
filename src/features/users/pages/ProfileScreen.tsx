@@ -77,7 +77,16 @@ export default function ProfileScreen() {
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const res = await apiFetch("/api/notifications");
+        const cached = localStorage.getItem("userData");
+        let activeChildId = "";
+        if (cached) {
+          try {
+            const u = JSON.parse(cached);
+            activeChildId = u.activeChildId || u.children?.[0]?.childId || u.childId || "";
+          } catch (e) {}
+        }
+        const notifUrl = `/api/notifications?role=child${activeChildId ? `&childId=${encodeURIComponent(activeChildId)}` : ""}`;
+        const res = await apiFetch(notifUrl);
         const json = await res.json();
         if (json.success && json.data) {
           setUnreadCount(json.data.filter((n: any) => !n.isRead).length);
@@ -85,6 +94,12 @@ export default function ProfileScreen() {
       } catch (e) {}
     };
     fetchNotifications();
+
+    const handleUserDataUpdate = () => {
+      fetchNotifications();
+    };
+    window.addEventListener("userDataUpdated", handleUserDataUpdate);
+    return () => window.removeEventListener("userDataUpdated", handleUserDataUpdate);
   }, []);
 
   useEffect(() => {

@@ -22,6 +22,8 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "../../../api";
 import { showInteractiveNotification } from "../../../services/pushNotificationService";
+import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
+import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 
 type StepPhase = "INTRO" | "QUIZ" | "MINI_REWARD" | "BOSS" | "SUMMARY";
 
@@ -309,7 +311,22 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     const saved = sessionStorage.getItem(`boss_damage_${chapterId}_${missionSeq}`);
     return saved ? (parseInt(saved, 10) || 0) : 0;
   });
-  const [childDamageCount, setChildDamageCount] = useState(0); // tracks hearts lost (0-3)
+  const [childDamageCount, setChildDamageCount] = useState(() => {
+    const isReviving = sessionStorage.getItem("mission_boss_revival_active") || sessionStorage.getItem("boss_revival_won_reward");
+    if (isReviving) {
+      const wonRewardStr = sessionStorage.getItem("boss_revival_won_reward");
+      if (wonRewardStr) {
+        try {
+          const r = JSON.parse(wonRewardStr);
+          if (r.reward_type === "heart" && r.amount) {
+            return Math.max(0, 3 - r.amount);
+          }
+        } catch (e) {}
+      }
+      return 2; // 1 heart remaining (3 - 2 = 1)
+    }
+    return 0;
+  }); // tracks hearts lost (0-3)
   const [wrongAnswerCount, setWrongAnswerCount] = useState(() => {
     if (isReplay) return 0;
     const saved = sessionStorage.getItem(`boss_wrong_${chapterId}_${missionSeq}`);
@@ -329,13 +346,17 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
   // Revival State
   const [showReviveModal, setShowReviveModal] = useState(false);
+  const [showBuySpinConfirmModal, setShowBuySpinConfirmModal] = useState(false);
+  const [isBuyingRevivalSpin, setIsBuyingRevivalSpin] = useState(false);
   const [revivalSpins, setRevivalSpins] = useState(0);
   const [hasDoubleDamage, setHasDoubleDamage] = useState(false);
   const [lossOverlay, setLossOverlay] = useState<{ show: boolean; xpLoss: number }>({ show: false, xpLoss: 0 });
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const showToast = (message: string) => {
-    setToastMessage(message);
-    setTimeout(() => setToastMessage(null), 3000);
+  const showToast = (message: string, type: "gamification" | "error" | "success" | "warning" = "gamification") => {
+    showNotificationToast({
+      title: "Mission Update",
+      message,
+      type
+    });
   };
   const [userCoins, setUserCoins] = useState(0);
 
@@ -351,6 +372,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
   const openReviveModal = async () => {
     setShowReviveModal(true);
+    setShowBuySpinConfirmModal(false);
     try {
       const res = await apiFetch("/api/users/me");
       const json = await res.json();
@@ -370,6 +392,110 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       console.error(e);
     }
   };
+
+  const handleGoToMissionSpinWheel = () => {
+    sessionStorage.setItem("mission_boss_revival_active", "true");
+    sessionStorage.setItem(`boss_damage_${chapterId}_${missionSeq}`, bossDamageCount.toString());
+    sessionStorage.setItem(`boss_wrong_${chapterId}_${missionSeq}`, wrongAnswerCount.toString());
+    sessionStorage.setItem(`boss_index_${chapterId}_${missionSeq}`, currentBossIndex.toString());
+    sessionStorage.setItem(`mission_phase_${chapterId}_${missionSeq}`, "BOSS");
+    sessionStorage.setItem(`user_answers_${chapterId}_${missionSeq}`, JSON.stringify(userAnswers));
+
+    setShowReviveModal(false);
+    setShowBuySpinConfirmModal(false);
+
+    const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+    navigate(`/daily-rewards?type=boss_revival&chapter_id=${chapterId}&mission_seq=${missionSeq}&returnTo=${returnUrl}`);
+  };
+
+  const handleConfirmBuyRevivalSpin = async () => {
+    if (userCoins < 100) {
+      showToast("Not enough coins! You need 100 coins.", "warning");
+      setShowBuySpinConfirmModal(false);
+      return;
+    }
+    setIsBuyingRevivalSpin(true);
+
+    try {
+      const res = await apiFetch("/api/retention/spin-wheel/buy-revival", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      const json = await res.json();
+      if (json.success) {
+        const newCoins = json.coins !== undefined ? json.coins : Math.max(0, userCoins - 100);
+        setUserCoins(newCoins);
+        setRevivalSpins(1);
+
+        try {
+          const uRes = await apiFetch("/api/users/me");
+          const uJson = await uRes.json();
+          if (uJson.success && uJson.data?.user) {
+            localStorage.setItem("userData", JSON.stringify(uJson.data.user));
+            window.dispatchEvent(new Event("userDataUpdated"));
+          }
+        } catch (ue) {}
+
+        sessionStorage.setItem("mission_boss_revival_active", "true");
+        sessionStorage.setItem(`boss_damage_${chapterId}_${missionSeq}`, bossDamageCount.toString());
+        sessionStorage.setItem(`boss_wrong_${chapterId}_${missionSeq}`, wrongAnswerCount.toString());
+        sessionStorage.setItem(`boss_index_${chapterId}_${missionSeq}`, currentBossIndex.toString());
+        sessionStorage.setItem(`mission_phase_${chapterId}_${missionSeq}`, "BOSS");
+        sessionStorage.setItem(`user_answers_${chapterId}_${missionSeq}`, JSON.stringify(userAnswers));
+
+        setShowBuySpinConfirmModal(false);
+        setShowReviveModal(false);
+
+        showToast("Purchased 1 Revival Spin! Heading to the wheel... 🎉", "success");
+
+        const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+        navigate(`/daily-rewards?type=boss_revival&chapter_id=${chapterId}&mission_seq=${missionSeq}&returnTo=${returnUrl}`);
+      } else {
+        showToast(json.message || "Purchase failed.", "error");
+        setShowBuySpinConfirmModal(false);
+        setShowReviveModal(true);
+      }
+    } catch (e) {
+      showToast("Purchase failed.", "error");
+      setShowBuySpinConfirmModal(false);
+      setShowReviveModal(true);
+    } finally {
+      setIsBuyingRevivalSpin(false);
+    }
+  };
+
+  // Check and apply revival bonus when returning from DailyRewardsScreen
+  useEffect(() => {
+    const isReviving = sessionStorage.getItem("mission_boss_revival_active") || sessionStorage.getItem("boss_revival_won_reward");
+    if (isReviving) {
+      const wonRewardStr = sessionStorage.getItem("boss_revival_won_reward");
+      let heartsRestored = 1;
+      if (wonRewardStr) {
+        try {
+          const r = JSON.parse(wonRewardStr);
+          if (r.reward_type === "heart" && r.amount) {
+            heartsRestored = r.amount;
+          } else if (r.reward_type === "double_damage") {
+            setHasDoubleDamage(true);
+          }
+        } catch (e) {}
+      }
+
+      setChildDamageCount(Math.max(0, 3 - heartsRestored));
+      setShowReviveModal(false);
+      setShowBuySpinConfirmModal(false);
+      setBossSelected(null);
+      setBossConfirmed(false);
+      setBossAngry(false);
+      setDragonCrying(false);
+      setQuestionTimeLeft(QUESTION_TIME_LIMIT);
+
+      sessionStorage.removeItem("mission_boss_revival_active");
+      sessionStorage.removeItem("boss_revival_won_reward");
+
+      showToast("Revived and ready! Your hearts have been restored. Defeat the boss! ❤️", "success");
+    }
+  }, []);
 
   useEffect(() => {
     sessionStorage.setItem(`boss_damage_${chapterId}_${missionSeq}`, bossDamageCount.toString());
@@ -455,15 +581,26 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           // Restore draft from database if present (ignore when starting fresh replay)
           const draft = isReplay ? null : json.data.activeDraft;
           if (draft) {
+            const savedAnswersRaw = sessionStorage.getItem(`user_answers_${chapterId}_${missionSeq}`);
+            let savedAnswers: any[] = [];
+            try { savedAnswers = savedAnswersRaw ? JSON.parse(savedAnswersRaw) : []; } catch (e) {}
+
+            const mergedAnswers = (Array.isArray(draft.userAnswers) && draft.userAnswers.length >= savedAnswers.length)
+              ? draft.userAnswers
+              : savedAnswers;
+
+            const savedWrong = parseInt(sessionStorage.getItem(`boss_wrong_${chapterId}_${missionSeq}`) || "0", 10);
+            const savedIndex = parseInt(sessionStorage.getItem(`boss_index_${chapterId}_${missionSeq}`) || "0", 10);
+
             if (typeof draft.currentQuizIndex === "number") setCurrentQuizIndex(draft.currentQuizIndex);
             if (draft.phase && draft.phase !== "INTRO") setPhase(draft.phase);
             if (typeof draft.quizCorrectCount === "number") setQuizCorrectCount(draft.quizCorrectCount);
-            if (Array.isArray(draft.userAnswers)) setUserAnswers(draft.userAnswers);
+            if (mergedAnswers.length > 0) setUserAnswers(mergedAnswers);
             if (typeof draft.xpEarned === "number") setXpEarned(draft.xpEarned);
             if (typeof draft.coinsEarned === "number") setCoinsEarned(draft.coinsEarned);
             if (typeof draft.bossDamageCount === "number") setBossDamageCount(draft.bossDamageCount);
-            if (typeof draft.wrongAnswerCount === "number") setWrongAnswerCount(draft.wrongAnswerCount);
-            if (typeof draft.currentBossIndex === "number") setCurrentBossIndex(draft.currentBossIndex);
+            setWrongAnswerCount(Math.max(draft.wrongAnswerCount || 0, savedWrong));
+            setCurrentBossIndex(Math.max(draft.currentBossIndex || 0, savedIndex));
             if (typeof draft.totalSessionSec === "number") setTotalSessionSec(draft.totalSessionSec);
           }
 
@@ -497,7 +634,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
   // Auto-sync active mission draft state to backend database (Solution 1)
   useEffect(() => {
-    if (!isDraftRestored || isQuitting || !phase || phase === "INTRO" || phase === "SUMMARY" || loading || childDamageCount >= 3) return;
+    if (!isDraftRestored || isQuitting || !phase || phase === "INTRO" || phase === "SUMMARY" || loading) return;
 
     const timeoutId = setTimeout(() => {
       apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, {
@@ -679,7 +816,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           quizCorrect: quizCorrectCount,
           quizTotal: quizQuestions.length,
           bossCorrect: bossCorrect,
-          bossTotal: bossCorrect + wrongAnswerCount,
+          bossTotal: Math.max(bossCorrect + wrongAnswerCount, currentAnswers.length - quizQuestions.length),
           timeTakenSec: totalSessionSec,
           livesRemaining: Math.max(0, 3 - finalChildDamage),
           answers: currentAnswers
@@ -807,6 +944,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     sessionStorage.removeItem(`quiz_correct_${chapterId}_${missionSeq}`);
     sessionStorage.removeItem(`xp_earned_${chapterId}_${missionSeq}`);
     sessionStorage.removeItem(`coins_earned_${chapterId}_${missionSeq}`);
+    sessionStorage.removeItem("mission_boss_revival_active");
+    sessionStorage.removeItem("boss_revival_won_reward");
 
     try {
       // Call backend retreat endpoint to apply XP deduction & reset hearts
@@ -825,13 +964,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       console.error("Failed to call retreat API:", e);
     }
 
-    // Show the defeat overlay with XP loss
-    setLossOverlay({ show: true, xpLoss: -30 });
-
-    // Navigate back to the previous screen (the roadmap) after 3 seconds
-    setTimeout(() => {
-      navigate(`/mission-roadmap?chapterId=${chapterId}`, { replace: true });
-    }, 3000);
+    // Immediately exit mission and redirect to Chapter Roadmap without lingering modals
+    navigate(`/mission-roadmap?chapterId=${chapterId}`, { replace: true });
   };
 
   // Boss Attack execution helper
@@ -872,11 +1006,33 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       const newChildDamage = Math.min(3, childDamageCount + 1);
       setChildDamageCount(newChildDamage);
 
-      // Sync updated lives to the backend immediately so that revival spin checks are accurate
+      const nextIndex = currentBossIndex + 1;
+      sessionStorage.setItem(`boss_wrong_${chapterId}_${missionSeq}`, newWrongCount.toString());
+      sessionStorage.setItem(`user_answers_${chapterId}_${missionSeq}`, JSON.stringify(currentAnswers));
+      sessionStorage.setItem(`boss_index_${chapterId}_${missionSeq}`, nextIndex.toString());
+
+      // Sync updated lives & draft to the backend immediately so that revival spin checks and question counts are preserved
       apiFetch(`/api/practice/chapters/${chapterId}/missions/hearts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ hearts: Math.max(0, 3 - newChildDamage) })
+      }).catch(console.error);
+
+      apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentQuizIndex,
+          phase,
+          quizCorrectCount,
+          userAnswers: currentAnswers,
+          xpEarned,
+          coinsEarned,
+          bossDamageCount,
+          wrongAnswerCount: newWrongCount,
+          currentBossIndex: nextIndex,
+          totalSessionSec
+        })
       }).catch(console.error);
 
       setTimeout(() => {
@@ -886,13 +1042,11 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       setTimeout(async () => {
         setBossSelected(null);
         setBossBasketCount(0);
-        const nextIndex = currentBossIndex + 1;
+        setCurrentBossIndex(nextIndex);
         if (newChildDamage >= 3) {
           openReviveModal();
         } else if (nextIndex >= bossQuestions.length) {
           await finalizeMission(bossDamageCount, newChildDamage, currentAnswers);
-        } else {
-          setCurrentBossIndex(nextIndex);
         }
       }, 1400);
     }
@@ -2198,67 +2352,53 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       )}
 
       {showReviveModal && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-900/40 backdrop-blur-md px-6 text-center">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 sm:p-6 text-center select-none">
           <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-white border-2 border-[#141779]/20 rounded-3xl p-8 max-w-sm w-full shadow-[0_20px_60px_rgba(20,23,121,0.15)] flex flex-col items-center gap-6"
+            initial={{ scale: 0.92, opacity: 0, y: 16 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            className="bg-white border border-slate-100 rounded-[32px] p-6 sm:p-7 max-w-[360px] w-full shadow-[0_20px_60px_rgba(20,23,121,0.18)] flex flex-col items-center relative text-center"
           >
-            <div className="w-20 h-20 rounded-full bg-teal-50 border-2 border-teal-200 flex items-center justify-center animate-pulse">
-              <Swords className="text-[#006a62] w-10 h-10 animate-bounce" />
+            <div className="w-16 h-16 rounded-full bg-teal-50 border border-teal-200 flex items-center justify-center mb-2 shadow-xs">
+              <Swords className="text-[#006a62] w-8 h-8" />
             </div>
             <div>
-              <h2 className="text-2xl font-black text-[#141779] uppercase tracking-widest">Final Chance!</h2>
-              <p className="text-xs font-semibold text-[#464652] mt-2 leading-relaxed">
+              <h2 className="text-xl font-black text-[#141779] leading-snug">Final Chance!</h2>
+              <p className="text-xs font-semibold text-slate-600 mt-1 leading-relaxed">
                 You ran out of hearts! Revive using the Revival Wheel to keep your current progress and fight on!
               </p>
             </div>
 
-            <div className="w-full bg-[#f8fafc] rounded-2xl p-4 border border-gray-200 flex justify-between items-center text-center shadow-xs">
+            <div className="w-full bg-slate-50 rounded-2xl p-3.5 border border-slate-200/80 flex justify-between items-center text-center shadow-xs my-4">
               <div className="flex-1">
-                <span className="text-[10px] text-[#767683] uppercase font-black tracking-widest block mb-1">Revival Spins</span>
-                <span className="text-2xl font-black text-teal-700">{revivalSpins}</span>
+                <span className="text-[10px] text-slate-500 uppercase font-black tracking-widest block mb-0.5">Revival Spins</span>
+                <span className="text-xl font-black text-teal-700">{revivalSpins}</span>
               </div>
-              <div className="w-px h-8 bg-gray-200" />
+              <div className="w-px h-8 bg-slate-200" />
               <div className="flex-1">
-                <span className="text-[10px] text-[#767683] uppercase font-black tracking-widest block mb-1">Your Coins</span>
-                <span className="text-2xl font-black text-amber-600">🪙 {Math.max(0, userCoins)}</span>
+                <span className="text-[10px] text-slate-500 uppercase font-black tracking-widest block mb-0.5">Your Coins</span>
+                <span className="text-xl font-black text-amber-600">🪙 {Math.max(0, userCoins)}</span>
               </div>
             </div>
 
             <div className="flex flex-col gap-2.5 w-full">
               {revivalSpins > 0 ? (
                 <button
-                  onClick={() => navigate(`/daily-rewards?type=boss_revival&chapter_id=${chapterId}`)}
-                  className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-black rounded-2xl hover:brightness-110 active:scale-95 transition-all uppercase tracking-wider text-sm flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20"
+                  onClick={handleGoToMissionSpinWheel}
+                  className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:brightness-110 active:scale-95 text-white font-black rounded-full uppercase tracking-wider text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
                 >
                   <span>🔥 Spin to Revive</span>
                 </button>
               ) : (
                 <button
-                  onClick={async () => {
+                  onClick={() => {
                     if (userCoins < 100) {
-                      showToast("Not enough coins! You need 100 coins.");
+                      showToast("Not enough coins! You need 100 coins.", "warning");
                       return;
                     }
-                    try {
-                      const res = await apiFetch("/api/retention/spin-wheel/buy-revival", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" }
-                      });
-                      const json = await res.json();
-                      if (json.success) {
-                        setRevivalSpins(json.balances.boss_revival_spins_balance || 1);
-                        setUserCoins(json.coins);
-                        showToast("Purchased 1 Revival Spin! 🎉");
-                      } else {
-                        showToast(json.message || "Purchase failed.");
-                      }
-                    } catch (e) {
-                      showToast("Purchase failed.");
-                    }
+                    setShowReviveModal(false);
+                    setShowBuySpinConfirmModal(true);
                   }}
-                  className="w-full py-4 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white font-black rounded-2xl hover:brightness-110 active:scale-95 transition-all uppercase tracking-wider text-sm flex items-center justify-center gap-2 shadow-md border border-indigo-300/40"
+                  className="w-full py-3.5 bg-[#141779] hover:bg-[#101362] active:scale-95 text-white font-black rounded-full uppercase tracking-wider text-xs flex items-center justify-center gap-2 shadow-md shadow-[#141779]/20 transition-all cursor-pointer"
                 >
                   <span>🛒 Buy Revival Spin (100 🪙)</span>
                 </button>
@@ -2266,7 +2406,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
               <button
                 onClick={handleGiveUp}
-                className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold rounded-2xl active:scale-95 transition-all text-xs border border-gray-200"
+                className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-full active:scale-95 transition-all text-xs cursor-pointer"
               >
                 Retreat & Lose XP
               </button>
@@ -2275,33 +2415,71 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
         </div>
       )}
 
+      {/* Buy Revival Spin Confirmation Modal */}
+      <UnifiedConfirmModal
+        isOpen={showBuySpinConfirmModal}
+        zIndex="z-[300]"
+        onClose={() => {
+          if (!isBuyingRevivalSpin) {
+            setShowBuySpinConfirmModal(false);
+            setShowReviveModal(true);
+          }
+        }}
+        onConfirm={handleConfirmBuyRevivalSpin}
+        title="Buy Revival Spin?"
+        message={
+          <div className="space-y-3">
+            <p className="text-xs sm:text-sm font-semibold text-slate-600 leading-relaxed">
+              Spend 100 coins to buy 1 Revival Spin? You can spin the Revival Wheel to recover hearts and keep fighting!
+            </p>
+            <div className="w-full bg-amber-50 border border-amber-200 rounded-2xl p-3 flex justify-between items-center text-xs font-bold text-amber-900">
+              <span className="flex items-center gap-1.5">
+                <span>🪙</span> Cost:
+              </span>
+              <span className="text-amber-700 font-black text-sm">
+                100 Coins
+              </span>
+            </div>
+            <div className="text-[11px] font-bold text-slate-500 text-left px-1 flex justify-between">
+              <span>Current Coins: <strong className="text-slate-800">{userCoins}</strong></span>
+              <span>Remaining: <strong className="text-slate-800">{Math.max(0, userCoins - 100)}</strong></span>
+            </div>
+          </div>
+        }
+        confirmText={isBuyingRevivalSpin ? "Buying..." : "Yes, Spend 100 Coins"}
+        cancelText="Cancel"
+        variant="primary"
+        loading={isBuyingRevivalSpin}
+        icon={<span className="text-3xl">🪙</span>}
+      />
+
       {/* Defeat/Retreat Overlay Animation */}
       {lossOverlay.show && (
-        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-900/40 backdrop-blur-md px-6 text-center">
+        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 sm:p-6 text-center select-none">
           <motion.div
-            initial={{ scale: 0.9, opacity: 0, y: 30 }}
+            initial={{ scale: 0.92, opacity: 0, y: 16 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            transition={{ type: "spring", duration: 0.5 }}
-            className="bg-white border-2 border-rose-200 rounded-3xl p-8 max-w-sm w-full shadow-[0_20px_60px_rgba(0,0,0,0.12)] flex flex-col items-center gap-6"
+            transition={{ type: "spring", stiffness: 350, damping: 26 }}
+            className="bg-white border border-slate-100 rounded-[32px] p-6 sm:p-7 max-w-[360px] w-full shadow-[0_20px_60px_rgba(20,23,121,0.18)] flex flex-col items-center relative text-center"
           >
-            {/* Spotlight Icon */}
-            <div className="w-20 h-20 rounded-full bg-rose-50 border-2 border-rose-200 flex items-center justify-center shadow-xs relative">
-              <ShieldAlert className="text-rose-600 w-10 h-10 animate-pulse" />
+            {/* Spotlight Icon Badge */}
+            <div className="w-16 h-16 rounded-full bg-rose-50 border border-rose-200 flex items-center justify-center mb-2 shadow-xs">
+              <ShieldAlert className="text-rose-600 w-8 h-8 animate-pulse" />
             </div>
 
             {/* Content */}
-            <div className="space-y-2">
-              <h2 className="text-2xl font-black text-[#141779] uppercase tracking-wider">
+            <div className="space-y-1 mb-2">
+              <h2 className="text-xl font-black text-[#141779] leading-snug">
                 Fall Back!
               </h2>
-              <p className="text-xs text-[#464652] leading-relaxed font-bold">
+              <p className="text-xs text-slate-600 leading-relaxed font-semibold">
                 You retreated from the mission. Rest up and try again!
               </p>
             </div>
 
             {/* Penalty Box */}
-            <div className="w-full bg-rose-50/70 rounded-2xl p-4 border border-rose-200 relative overflow-hidden">
-              <span className="text-[10px] text-rose-700 uppercase font-black tracking-widest block mb-1">
+            <div className="w-full bg-rose-50/80 rounded-2xl p-4 border border-rose-200 relative overflow-hidden my-2">
+              <span className="text-[10px] text-rose-700 uppercase font-black tracking-widest block mb-0.5">
                 XP Penalty
               </span>
               <span className="text-2xl font-black text-rose-600">
@@ -2309,15 +2487,6 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
               </span>
             </div>
           </motion.div>
-        </div>
-      )}
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div
-          className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white px-4.5 py-2.5 rounded-full shadow-[0_12px_30px_rgba(20,23,121,0.4)] border border-[#57fae9]/40 font-bold text-xs flex items-center justify-center gap-2.5 text-center max-w-[90vw] w-auto animate-in fade-in slide-in-from-top-4 duration-300"
-        >
-          <span className="text-sm shrink-0">✨</span>
-          <span className="truncate max-w-[280px] sm:max-w-[340px] line-clamp-1">{toastMessage}</span>
         </div>
       )}
 

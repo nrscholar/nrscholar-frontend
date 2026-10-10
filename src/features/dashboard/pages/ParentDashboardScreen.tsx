@@ -6,6 +6,14 @@ import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
 import ChildSwitcherModal from "../../../components/ChildSwitcherModal";
 import { translateNotificationTitle, translateNotificationMessage } from "../../../utils/notificationTranslator";
+import { 
+  getSubjectChartColor, 
+  getCategorySubjectChartColor, 
+  isCategoryTrendMode, 
+  STRENGTH_GREEN_SHADES, 
+  RISK_AMBER_SHADES, 
+  WEAKNESS_RED_SHADES 
+} from "../../../utils/chartColors";
 
 export default function ParentDashboardScreen() {
   const { t } = useTranslation();
@@ -103,7 +111,7 @@ export default function ParentDashboardScreen() {
       const tzOffset = -new Date().getTimezoneOffset();
       
       const userRes = await apiFetch("/api/users/me").catch(() => null);
-      let currentChildId = null;
+      let currentChildId = userData?.activeChildId || null;
 
       if (userRes && userRes.ok) {
         const json = await userRes.json();
@@ -114,15 +122,25 @@ export default function ParentDashboardScreen() {
           setParentPhoto(user.parentPhoto || "");
           setUserLevel(user.parentLevel || 1);
           setXp(user.parentXp || 0);
-          currentChildId = user.activeChildId || null;
+          currentChildId = user.activeChildId || currentChildId;
         }
+      }
+
+      if (!currentChildId) {
+        try {
+          const stored = localStorage.getItem("userData");
+          if (stored) {
+            const u = JSON.parse(stored);
+            currentChildId = u.activeChildId || u.children?.[0]?.childId || null;
+          }
+        } catch (e) {}
       }
 
       const childParam = currentChildId ? `&childId=${currentChildId}` : "";
       
       const [reportRes, notifRes, tipRes] = await Promise.all([
         apiFetch(`/api/parent/report?tz_offset_minutes=${tzOffset}${childParam}`).catch(() => null),
-        apiFetch("/api/notifications").catch(() => null),
+        apiFetch(`/api/notifications?role=parent${childParam}`).catch(() => null),
         apiFetch("/api/parent/daily-tip").catch(() => null)
       ]);
 
@@ -187,14 +205,27 @@ export default function ParentDashboardScreen() {
           setUserData(u);
         } catch (e) {}
       }
+      loadData();
     };
     window.addEventListener("userDataUpdated", handleUserDataUpdate);
     return () => window.removeEventListener("userDataUpdated", handleUserDataUpdate);
   }, [loadData]);
 
+  const handleOpenModal = (type: "strengths" | "weaknesses" | "risks") => {
+    setModalType(type);
+    loadData();
+  };
+
   const markAllRead = async () => {
     try {
-      await apiFetch("/api/notifications/mark-all-read?role=parent", { method: "POST" });
+      const activeCid = userData?.activeChildId || getActiveChildId() || (() => {
+        try {
+          const stored = localStorage.getItem("userData");
+          return stored ? JSON.parse(stored).activeChildId : null;
+        } catch (e) { return null; }
+      })();
+      const markParam = activeCid ? `&childId=${encodeURIComponent(activeCid)}` : "";
+      await apiFetch(`/api/notifications/mark-all-read?role=parent${markParam}`, { method: "POST" });
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
       setUnreadCount(0);
     } catch (e) { }
@@ -208,9 +239,18 @@ export default function ParentDashboardScreen() {
     const baseFinalScore = dataset[dataset.length - 1].score;
     const offset = (targetAcc !== undefined && (!customTrend || customTrend.length === 0)) ? targetAcc - baseFinalScore : 0;
 
+    let lastKnown = 0;
+    let started = false;
     const points = dataset.map((t, i) => {
       const x = (i / Math.max(1, (dataset.length - 1))) * width;
-      let score = t.score + offset;
+      let rawScore = typeof t.score === 'number' ? t.score : 0;
+      if (rawScore > 0) {
+        lastKnown = rawScore;
+        started = true;
+      } else if (started) {
+        rawScore = lastKnown;
+      }
+      let score = rawScore + offset;
       score = Math.max(0, Math.min(100, score)); // clamp
       const y = height - (score / 100) * height;
       return { x, y, score: Math.round(score), day: t.day };
@@ -506,31 +546,6 @@ export default function ParentDashboardScreen() {
   }
 
   const renderTop3SubjectsGraphCard = () => {
-    // Positive growth theme palette without any red/rose color
-    const themeColors = [
-      "#059669", // Vibrant Emerald Green
-      "#2563eb", // Royal Blue
-      "#7c3aed", // Deep Violet
-      "#d97706", // Warm Amber
-      "#0d9488", // Teal
-      "#0284c7", // Sky Blue
-      "#9333ea", // Purple
-      "#65a30d", // Fresh Lime
-      "#4338ca", // Indigo
-      "#475569"  // Slate
-    ];
-    const themeBgs = [
-      "bg-emerald-50 text-emerald-800 border-emerald-200",
-      "bg-blue-50 text-blue-900 border-blue-200",
-      "bg-purple-50 text-purple-900 border-purple-200",
-      "bg-amber-50 text-amber-900 border-amber-200",
-      "bg-teal-50 text-teal-900 border-teal-200",
-      "bg-sky-50 text-sky-900 border-sky-200",
-      "bg-violet-50 text-violet-900 border-violet-200",
-      "bg-lime-50 text-lime-900 border-lime-200",
-      "bg-indigo-50 text-indigo-900 border-indigo-200",
-      "bg-slate-50 text-slate-900 border-slate-200"
-    ];
 
     const sourceSubjects: any[] = (allSubjectsTrend && allSubjectsTrend.length > 0)
       ? allSubjectsTrend
@@ -544,11 +559,12 @@ export default function ParentDashboardScreen() {
       displaySubjects = sourceSubjects.map((item: any, idx: number) => {
         const matchingSb = subjectBreakdown.find(s => s.subject.toLowerCase() === item.subject.toLowerCase());
         const acc = matchingSb ? matchingSb.accuracy : (item.accuracy !== undefined ? item.accuracy : 0);
+        const colorEntry = getSubjectChartColor(item.subject, idx);
         return {
           subject: item.subject,
           accuracy: acc,
-          color: themeColors[idx % themeColors.length],
-          bg: themeBgs[idx % themeBgs.length],
+          color: colorEntry.color,
+          bg: colorEntry.bg,
           timeline: item.timeline || []
         };
       });
@@ -565,21 +581,24 @@ export default function ParentDashboardScreen() {
         defaultSubjNames = ["Mathematics", "Science", "English", "Hindi"];
       }
 
-      displaySubjects = defaultSubjNames.map((sName, idx) => ({
-        subject: sName,
-        accuracy: 0,
-        color: themeColors[idx % themeColors.length],
-        bg: themeBgs[idx % themeBgs.length],
-        timeline: [
-          { day: "Sat", score: 0 },
-          { day: "Sun", score: 0 },
-          { day: "Mon", score: 0 },
-          { day: "Tue", score: 0 },
-          { day: "Wed", score: 0 },
-          { day: "Thu", score: 0 },
-          { day: "Fri", score: 0 }
-        ]
-      }));
+      displaySubjects = defaultSubjNames.map((sName, idx) => {
+        const colorEntry = getSubjectChartColor(sName, idx);
+        return {
+          subject: sName,
+          accuracy: 0,
+          color: colorEntry.color,
+          bg: colorEntry.bg,
+          timeline: [
+            { day: "Sat", score: 0 },
+            { day: "Sun", score: 0 },
+            { day: "Mon", score: 0 },
+            { day: "Tue", score: 0 },
+            { day: "Wed", score: 0 },
+            { day: "Thu", score: 0 },
+            { day: "Fri", score: 0 }
+          ]
+        };
+      });
     }
 
     let dayLabels: string[] = [];
@@ -668,33 +687,29 @@ export default function ParentDashboardScreen() {
 
             {/* Dynamic Subject Lines & Points */}
             {displaySubjects.map((subItem, subIdx) => {
-              const targetAcc = subItem.accuracy > 0 ? subItem.accuracy : 70;
-              let rawScores = subItem.timeline?.map((t: any) => (typeof t.score === 'number' ? t.score : 0)) || [];
+              const rawScores = subItem.timeline?.map((t: any) => (typeof t.score === 'number' ? t.score : 0)) || [];
               
-              // Seed & carry forward to eliminate 0% flatlines on inactive days
-              let lastScore = targetAcc;
-              for (const s of rawScores) {
-                if (s > 0) { lastScore = s; break; }
+              // Enforce strict 0% baseline prior to first activity, and forward-fill once established
+              let scores: number[] = [];
+              if (rawScores.length === dayLabels.length) {
+                scores = rawScores;
+              } else {
+                scores = dayLabels.map((_, i) => (typeof rawScores[i] === 'number' ? rawScores[i] : 0));
               }
-              
-              let scores = rawScores.map((s: number) => {
+
+              let lastKnownScore = 0;
+              let scoreStarted = false;
+              scores = scores.map((s: number) => {
                 if (s > 0) {
-                  lastScore = s;
+                  lastKnownScore = s;
+                  scoreStarted = true;
                   return s;
                 }
-                return lastScore;
+                if (scoreStarted) {
+                  return lastKnownScore;
+                }
+                return 0;
               });
-
-              // If all scores are flat, identical, or lack dynamic variance, synthesize realistic natural variance
-              if (scores.length < dayLabels.length || scores.every(s => s === scores[0]) || (Math.max(...scores) - Math.min(...scores) < 3)) {
-                const offsets = [
-                  [-4, 3, -5, 4, -2, 5, 0],
-                  [3, -4, 5, -3, 6, -2, 0],
-                  [-3, 5, -2, 6, -4, 3, 0],
-                  [4, -5, 3, -4, 5, -1, 0]
-                ][subIdx % 4];
-                scores = dayLabels.map((_, i) => Math.max(0, Math.min(100, Math.round(targetAcc + offsets[i % offsets.length]))));
-              }
 
               const pts = scores.map((s: number, i: number) => ({ x: getX(i), y: getY(s) }));
               const lineD = `M ${pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" L ")}`;
@@ -708,7 +723,7 @@ export default function ParentDashboardScreen() {
                     strokeWidth="2.5" 
                     strokeLinecap="round" 
                     strokeLinejoin="round" 
-                    opacity={subItem.accuracy > 0 || scores.some(s => s > 0) ? 0.95 : 0.7}
+                    opacity={scores.some(s => s > 0) ? 0.95 : 0.4}
                   />
                   {pts.map((p: any, i: number) => (
                     <circle 
@@ -872,7 +887,7 @@ export default function ParentDashboardScreen() {
       themeColor = "#006a62";
       badgeBg = "bg-[#e6f4ea] text-[#006a62] border-[#ceead6]";
       fillGradientId = "strengthFillGrad";
-      categoryPalette = ["#006a62", "#059669", "#16a34a", "#0d9488", "#15803d"];
+      categoryPalette = STRENGTH_GREEN_SHADES.map(s => s.color);
       badgeText = t("top_performing_badge", "Top Performing (≥70%)");
     } else if (mode === "weaknesses") {
       activeSubjects = actualWeakSubjects.length > 0
@@ -881,7 +896,7 @@ export default function ParentDashboardScreen() {
       themeColor = "#dc2626"; // Critical Red Theme
       badgeBg = "bg-rose-50 text-[#dc2626] border-rose-200";
       fillGradientId = "weaknessFillGrad";
-      categoryPalette = ["#dc2626", "#e11d48", "#b91c1c", "#f43f5e", "#991b1b"];
+      categoryPalette = WEAKNESS_RED_SHADES.map(s => s.color);
       badgeText = t("needs_focus_badge", "Needs Focus (<70% for 2+ Days)");
     } else {
       // risks
@@ -891,23 +906,25 @@ export default function ParentDashboardScreen() {
       themeColor = "#d97706"; // Warning Yellow/Amber Theme
       badgeBg = "bg-amber-50 text-[#b45309] border-amber-200";
       fillGradientId = "riskFillGrad";
-      categoryPalette = ["#d97706", "#f59e0b", "#b45309", "#eab308", "#ca8a04"];
+      categoryPalette = RISK_AMBER_SHADES.map(s => s.color);
       badgeText = t("at_risk_day1_badge", "At Risk (Day 1 <70%)");
     }
 
     // 2. Multi-Subject Series Computation with Dynamic Fluctuations (no flat lines)
-    const seedOffsetPatterns = [
-      [-6, 4, -8, 5, -3, 6, 0],
-      [5, -5, 6, -4, 7, -2, 0],
-      [-4, 6, -3, 8, -6, 3, 0],
-      [4, -7, 5, -5, 6, -3, 0],
-      [-5, 5, -6, 4, -4, 5, 0]
-    ];
+    const isCategoryMode = isCategoryTrendMode(mode);
 
     const seriesList = activeSubjects.map((sItem: any, idx: number) => {
       const subjName = sItem.subject || "Subject";
       const targetAcc = typeof sItem.accuracy === "number" ? sItem.accuracy : 50;
-      const lineColor = categoryPalette[idx % categoryPalette.length];
+
+      // Categorical Color-Shading Rules for 7-Day Trend Graphs:
+      // Strengths -> Different shades of Green
+      // Risks -> Different shades of Yellow / Amber
+      // Weaknesses -> Different shades of Red
+      const colorEntry = isCategoryMode
+        ? getCategorySubjectChartColor(mode, idx)
+        : getSubjectChartColor(subjName, idx);
+      const lineColor = activeSubjects.length === 1 ? themeColor : colorEntry.color;
 
       // Match 7-day timeline: prefer sItem.trend7Day (keyed to DD/MM) or matchedTrend.timeline
       const matchedTrend = (top3SubjectsTrend || allSubjectsTrend || []).find(
@@ -927,28 +944,24 @@ export default function ParentDashboardScreen() {
         scores = riskTrend.map((t: any) => (typeof t.score === "number" ? t.score : 0));
       }
 
-      // Eliminate 0% dips on inactive days by carrying forward previous assessed accuracy
-      let lastVal = targetAcc > 0 ? targetAcc : 70;
-      for (const s of scores) {
-        if (s > 0) { lastVal = s; break; }
+      // Enforce strict 0% baseline prior to first activity, and forward-fill once established
+      if (scores.length !== dayLabels.length) {
+        scores = dayLabels.map((_, i) => (typeof scores[i] === "number" ? scores[i] : 0));
       }
-      scores = scores.map(s => {
+
+      let lastKnownSubjScore = 0;
+      let subjScoreStarted = false;
+      scores = scores.map((s: number) => {
         if (s > 0) {
-          lastVal = s;
+          lastKnownSubjScore = s;
+          subjScoreStarted = true;
           return s;
         }
-        return lastVal;
+        if (subjScoreStarted) {
+          return lastKnownSubjScore;
+        }
+        return 0;
       });
-
-      // Check for flatline: if all numbers are identical, missing, or lack dynamic variance, synthesize realistic fluctuations
-      const isFlat = scores.length < dayLabels.length || scores.every(v => v === scores[0]) || (Math.max(...scores) - Math.min(...scores) < 3);
-      if (isFlat) {
-        const pattern = seedOffsetPatterns[idx % seedOffsetPatterns.length];
-        scores = dayLabels.map((_, i) => {
-          const diff = pattern[i % pattern.length];
-          return Math.max(0, Math.min(100, Math.round(targetAcc + diff)));
-        });
-      }
 
       const pts = scores.map((s, i) => ({ x: getX(i), y: getY(s), score: s }));
       const lineD = `M ${pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" L ")}`;
@@ -989,23 +1002,27 @@ export default function ParentDashboardScreen() {
           </span>
         </div>
 
-        {/* Multi-Subject Pill Legend with Distinct Colors */}
+        {/* Multi-Subject Pill Legend with Dedicated Categorical Color Shades */}
         {activeSubjects.length > 1 && (
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 mt-0.5 -mx-1 px-1 scroll-smooth">
-            {seriesList.map((item, idx) => (
-              <div 
-                key={idx} 
-                className="flex items-center gap-1.5 px-3 py-1 rounded-2xl text-xs font-extrabold border bg-white shrink-0 whitespace-nowrap shadow-2xs"
-                style={{ borderColor: `${item.color}40` }}
-              >
-                <span 
-                  className="w-2.5 h-2.5 rounded-full shrink-0 ring-1 ring-white" 
-                  style={{ backgroundColor: item.color }} 
-                />
-                <span className="text-slate-800">{translateSubjectName(item.subject)}</span>
-                <span className="font-black" style={{ color: item.color }}>({item.accuracy}%)</span>
-              </div>
-            ))}
+            {seriesList.map((item, idx) => {
+              const colorInfo = isCategoryMode
+                ? getCategorySubjectChartColor(mode, idx)
+                : getSubjectChartColor(item.subject, idx);
+              return (
+                <div 
+                  key={idx} 
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-2xl text-xs font-extrabold border shrink-0 whitespace-nowrap shadow-2xs transition-transform active:scale-95 ${colorInfo.bg}`}
+                >
+                  <span 
+                    className="w-2.5 h-2.5 rounded-full shrink-0 ring-2 ring-white/80 shadow-xs" 
+                    style={{ backgroundColor: item.color }} 
+                  />
+                  <span>{translateSubjectName(item.subject)}</span>
+                  <span className="font-black">({item.accuracy}%)</span>
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -1156,6 +1173,7 @@ export default function ParentDashboardScreen() {
                         setUserData(json.data.user);
                         setLoading(true);
                         setRefreshKey(k => k + 1);
+                        window.dispatchEvent(new Event("userDataUpdated"));
                       }
                     } catch (e) { console.error("Switch failed", e); }
                   }}
@@ -1271,7 +1289,7 @@ export default function ParentDashboardScreen() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {/* Strengths Card */}
             <button
-              onClick={() => setModalType("strengths")}
+              onClick={() => handleOpenModal("strengths")}
               className="bg-white rounded-[20px] p-4 border border-slate-200/80 shadow-xs border-t-4 border-t-[#006a62] flex flex-col justify-between text-left hover:scale-[1.02] hover:shadow-md transition-all relative overflow-hidden group min-h-[110px]"
             >
               <div>
@@ -1308,7 +1326,7 @@ export default function ParentDashboardScreen() {
 
             {/* Weaknesses Card */}
             <button
-              onClick={() => setModalType("weaknesses")}
+              onClick={() => handleOpenModal("weaknesses")}
               className="bg-white rounded-[20px] p-4 border border-slate-200/80 shadow-xs border-t-4 border-t-[#ba1a1a] flex flex-col justify-between text-left hover:scale-[1.02] hover:shadow-md transition-all relative overflow-hidden group min-h-[110px]"
             >
               <div>
@@ -1345,7 +1363,7 @@ export default function ParentDashboardScreen() {
 
             {/* Risk Alerts Card */}
             <button
-              onClick={() => setModalType("risks")}
+              onClick={() => handleOpenModal("risks")}
               className="bg-white rounded-[20px] p-4 border border-slate-200/80 shadow-xs border-t-4 border-t-[#d97706] flex flex-col justify-between text-left hover:scale-[1.02] hover:shadow-md transition-all relative overflow-hidden group min-h-[110px]"
             >
               <div>
@@ -1651,6 +1669,12 @@ export default function ParentDashboardScreen() {
                             >
                               <div className="flex justify-between items-center">
                                 <h4 className="text-sm font-black text-slate-800 flex items-center gap-1.5">
+                                  {actualWeakSubjects.length > 1 && (
+                                    <span 
+                                      className="w-2.5 h-2.5 rounded-full shrink-0 ring-2 ring-white shadow-2xs" 
+                                      style={{ backgroundColor: getCategorySubjectChartColor("weaknesses", idx).color }} 
+                                    />
+                                  )}
                                   <span>{subjName}</span>
                                   <span className="text-xs">⚠️</span>
                                 </h4>
@@ -1676,8 +1700,11 @@ export default function ParentDashboardScreen() {
 
                               <div className="h-2.5 w-full bg-rose-100/70 rounded-full overflow-hidden">
                                 <div
-                                  className="h-full rounded-full bg-[#dc2626] transition-all duration-700"
-                                  style={{ width: `${Math.min(100, Math.max(5, sb.accuracy))}%` }}
+                                  className="h-full rounded-full transition-all duration-700"
+                                  style={{ 
+                                    width: `${Math.min(100, Math.max(5, sb.accuracy))}%`,
+                                    backgroundColor: actualWeakSubjects.length > 1 ? getCategorySubjectChartColor("weaknesses", idx).color : "#dc2626"
+                                  }}
                                 />
                               </div>
 
@@ -1726,6 +1753,12 @@ export default function ParentDashboardScreen() {
                             >
                               <div className="flex justify-between items-center">
                                 <h4 className="text-sm font-black text-slate-800 flex items-center gap-1.5">
+                                  {actualRiskSubjects.length > 1 && (
+                                    <span 
+                                      className="w-2.5 h-2.5 rounded-full shrink-0 ring-2 ring-white shadow-2xs" 
+                                      style={{ backgroundColor: getCategorySubjectChartColor("risks", idx).color }} 
+                                    />
+                                  )}
                                   <span>{subjName}</span>
                                   <span className="text-xs">🔔</span>
                                 </h4>
@@ -1743,8 +1776,11 @@ export default function ParentDashboardScreen() {
 
                               <div className="h-2.5 w-full bg-amber-100/70 rounded-full overflow-hidden">
                                 <div
-                                  className="h-full rounded-full bg-[#d97706] transition-all duration-700"
-                                  style={{ width: `${Math.min(100, Math.max(5, sb.accuracy))}%` }}
+                                  className="h-full rounded-full transition-all duration-700"
+                                  style={{ 
+                                    width: `${Math.min(100, Math.max(5, sb.accuracy))}%`,
+                                    backgroundColor: actualRiskSubjects.length > 1 ? getCategorySubjectChartColor("risks", idx).color : "#d97706"
+                                  }}
                                 />
                               </div>
 
@@ -1789,6 +1825,12 @@ export default function ParentDashboardScreen() {
                             >
                               <div className="flex justify-between items-center">
                                 <h4 className="text-sm font-black text-[#006a62] flex items-center gap-1.5">
+                                  {actualStrengthSubjects.length > 1 && (
+                                    <span 
+                                      className="w-2.5 h-2.5 rounded-full shrink-0 ring-2 ring-white shadow-2xs" 
+                                      style={{ backgroundColor: getCategorySubjectChartColor("strengths", idx).color }} 
+                                    />
+                                  )}
                                   <span>{subjName}</span>
                                   <span className="text-xs">🏆</span>
                                 </h4>
@@ -1806,8 +1848,11 @@ export default function ParentDashboardScreen() {
 
                               <div className="h-2.5 w-full bg-emerald-100/70 rounded-full overflow-hidden">
                                 <div
-                                  className="h-full rounded-full bg-[#006a62] transition-all duration-700"
-                                  style={{ width: `${Math.min(100, Math.max(5, sb.accuracy))}%` }}
+                                  className="h-full rounded-full transition-all duration-700"
+                                  style={{ 
+                                    width: `${Math.min(100, Math.max(5, sb.accuracy))}%`,
+                                    backgroundColor: actualStrengthSubjects.length > 1 ? getCategorySubjectChartColor("strengths", idx).color : "#006a62"
+                                  }}
                                 />
                               </div>
 
@@ -1885,40 +1930,91 @@ export default function ParentDashboardScreen() {
         </div>
       )}
 
-      {/* Notifications Side Panel / Modal */}
+      {/* Notifications Side Panel / Modal Drawer */}
       {showNotifications && (
-        <div className="fixed inset-0 bg-black/40 z-[100] flex justify-end">
-          <div className="w-full sm:w-[400px] h-full bg-[#f7f9fb] shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
-            <div className="flex justify-between items-center p-6 border-b border-gray-200 bg-white">
-              <h2 className="text-xl font-bold text-[#141779] flex items-center gap-2">
-                <Bell size={24} /> {t("notifications", "Notifications")}
-              </h2>
-              <button onClick={() => setShowNotifications(false)} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
-                <X size={20} color="#464652" />
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[100] flex justify-end animate-in fade-in duration-200">
+          <div className="w-full sm:w-[420px] h-full bg-[#f7f9fb] shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+            {/* Header */}
+            <div className="flex justify-between items-center p-5 sm:p-6 border-b border-slate-200/80 bg-white">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779]">
+                  <Bell size={18} />
+                </div>
+                <h2 className="text-xl font-black text-[#141779]">
+                  {t("notifications", "Notifications")}
+                </h2>
+              </div>
+              <button 
+                onClick={() => setShowNotifications(false)} 
+                className="w-9 h-9 flex items-center justify-center bg-slate-100 rounded-full hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
+                aria-label="Close"
+              >
+                <X size={18} />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+
+            {/* List */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3.5">
               {notifications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center opacity-50">
-                  <Bell size={48} className="mb-4 text-gray-400" />
-                  <p className="text-gray-500 font-medium">{t("no_recent_activity", "No recent activity to show.")}</p>
+                <div className="flex flex-col items-center justify-center h-full text-center py-16 px-4">
+                  <div className="w-16 h-16 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779] mb-3 shadow-xs">
+                    <Bell size={28} className="opacity-70" />
+                  </div>
+                  <p className="text-base font-bold text-[#141779]">
+                    {t("no_notifications_yet", "No notifications yet!")}
+                  </p>
+                  <p className="text-xs font-medium text-slate-500 mt-1 max-w-[240px]">
+                    {t("no_recent_activity", "No recent activity to show.")}
+                  </p>
                 </div>
               ) : (
                 notifications.map((notif, idx) => {
-                  let icon = "🔔";
-                  let bg = "bg-white";
-                  if (notif.type === "gamification") icon = "🎮";
-                  if (notif.type === "habit") icon = "✨";
-                  if (notif.type === "learning") icon = "📚";
+                  let iconBadge = <Bell size={18} />;
+                  let badgeStyle = "bg-indigo-50 text-[#141779] border-indigo-100";
+                  
+                  if (notif.type === "gamification") {
+                    iconBadge = <Sparkles size={18} />;
+                    badgeStyle = "bg-teal-50 text-teal-700 border-teal-200";
+                  } else if (notif.type === "habit") {
+                    iconBadge = <Flame size={18} />;
+                    badgeStyle = "bg-amber-50 text-amber-700 border-amber-200";
+                  } else if (notif.type === "learning") {
+                    iconBadge = <BookOpen size={18} />;
+                    badgeStyle = "bg-indigo-50 text-[#141779] border-indigo-200";
+                  } else if (notif.type === "reward" || notif.type === "spin") {
+                    iconBadge = <Trophy size={18} />;
+                    badgeStyle = "bg-purple-50 text-purple-700 border-purple-200";
+                  } else if (notif.type === "warning" || notif.type === "risk") {
+                    iconBadge = <AlertTriangle size={18} />;
+                    badgeStyle = "bg-rose-50 text-rose-700 border-rose-200";
+                  }
                   
                   return (
-                    <div key={idx} className={`p-4 rounded-xl shadow-sm border border-gray-100 flex gap-4 ${bg} hover:shadow-md transition-shadow`}>
-                      <div className="text-2xl pt-1">{icon}</div>
-                      <div>
-                        <h4 className="text-[14px] font-bold text-[#141779] mb-1">{formatNotifTitle(notif.title)}</h4>
-                        <p className="text-[12px] text-[#464652] leading-tight">{formatNotifMsg(notif.message)}</p>
-                        <p className="text-[10px] text-gray-400 mt-2 font-medium">
-                          {new Date(notif.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    <div 
+                      key={notif._id || idx} 
+                      className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-[0_2px_8px_rgba(20,23,121,0.04)] hover:shadow-md hover:border-indigo-200/80 transition-all flex items-start gap-3.5 text-left"
+                    >
+                      <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs mt-0.5 ${badgeStyle}`}>
+                        {iconBadge}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <h4 className="text-[15px] font-bold text-[#141779] leading-snug">
+                            {formatNotifTitle(notif.title)}
+                          </h4>
+                          {notif.createdAt && (
+                            <span className="text-xs font-semibold text-slate-500 shrink-0 mt-0.5">
+                              {new Date(notif.createdAt).toLocaleString(undefined, { 
+                                month: 'short', 
+                                day: 'numeric', 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              })}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-base font-medium text-[#191c1e] leading-relaxed mt-1">
+                          {formatNotifMsg(notif.message)}
                         </p>
                       </div>
                     </div>

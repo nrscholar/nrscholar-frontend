@@ -10,14 +10,9 @@ import {
 import { apiFetch } from "../../../api";
 import ChildSwitcherModal from "../../../components/ChildSwitcherModal";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
+import { getSubjectChartColor, DISTINCT_SUBJECT_PALETTE } from "../../../utils/chartColors";
 
-const SUBJECT_COLORS = [
-  { bg: "bg-blue-50",   text: "text-blue-600",   bar: "bg-blue-500"   },
-  { bg: "bg-green-50",  text: "text-green-600",  bar: "bg-green-500"  },
-  { bg: "bg-purple-50", text: "text-purple-600", bar: "bg-purple-500" },
-  { bg: "bg-orange-50", text: "text-orange-600", bar: "bg-orange-500" },
-  { bg: "bg-rose-50",   text: "text-rose-600",   bar: "bg-rose-500"   },
-];
+const SUBJECT_COLORS = DISTINCT_SUBJECT_PALETTE;
 
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
@@ -333,8 +328,15 @@ export default function ParentReportScreen() {
   const fetchReport = useCallback(async () => {
     try {
       const lang = i18n.language || localStorage.getItem("i18nextLng") || "en";
+      const tzOffset = -new Date().getTimezoneOffset();
+      let activeCid = null;
+      try {
+        const stored = localStorage.getItem("userData");
+        if (stored) activeCid = JSON.parse(stored).activeChildId;
+      } catch (e) {}
+      const childParam = activeCid ? `&childId=${encodeURIComponent(activeCid)}` : "";
       const [reportRes, userRes] = await Promise.all([
-        apiFetch(`/api/parent/report?lang=${encodeURIComponent(lang)}`, { headers: { "Accept-Language": lang } }),
+        apiFetch(`/api/parent/report?lang=${encodeURIComponent(lang)}&tz_offset_minutes=${tzOffset}${childParam}`, { headers: { "Accept-Language": lang } }),
         apiFetch("/api/users/me").catch(() => null)
       ]);
       const json = await reportRes.json();
@@ -503,7 +505,8 @@ export default function ParentReportScreen() {
       if (displaySolved > 0 && activeDays.length > 0) {
         const sumAcc = activeDays.reduce((acc, pt) => acc + (pt.masteryScore ?? pt.score ?? 0), 0);
         displayAccuracy = Math.round(sumAcc / activeDays.length);
-        displayTime = Math.max(1, Math.round(displaySolved * 1.5));
+        const totalMinutes = activePts.reduce((acc, pt) => acc + (pt.timeMinutes || (pt.timeSeconds ? pt.timeSeconds / 60 : 0)), 0);
+        displayTime = totalMinutes > 0 ? Math.round(totalMinutes) : Math.max(1, Math.round(displaySolved * 0.5));
       }
     }
   } else {
@@ -527,7 +530,8 @@ export default function ParentReportScreen() {
         if (displaySolved > 0 && activeDays.length > 0) {
           const sumAcc = activeDays.reduce((acc, pt) => acc + (pt.score ?? pt.masteryScore ?? 0), 0);
           displayAccuracy = Math.round(sumAcc / activeDays.length);
-          displayTime = Math.max(1, Math.round(displaySolved * 1.5));
+          const totalMinutes = matchedPts.reduce((acc: number, pt: any) => acc + (pt.timeMinutes || (pt.timeSeconds ? pt.timeSeconds / 60 : 0)), 0);
+          displayTime = totalMinutes > 0 ? Math.round(totalMinutes) : Math.max(1, Math.round(displaySolved * 0.5));
         }
       } else {
         // No practice inside targeted date range
@@ -568,62 +572,65 @@ export default function ParentReportScreen() {
 
   if (subjectFilter !== "all" && chartHistory.length > 0) {
     const activeSubj = subjects.find(s => s?.subject && s.subject.toLowerCase() === subjectFilter.toLowerCase());
-    if (activeSubj && activeSubj.timeline && activeSubj.timeline.length > 0) {
-      chartHistory = activeSubj.timeline.map((pt: any) => {
-        const score = pt.score ?? pt.masteryScore ?? 75;
+    const subjTimeline = (activeSubj?.timeline && activeSubj.timeline.length > 0) 
+      ? activeSubj.timeline 
+      : ((activeSubj?.trend7Day && activeSubj.trend7Day.length > 0) ? activeSubj.trend7Day : []);
+
+    if (subjTimeline.length > 0) {
+      chartHistory = subjTimeline.map((pt: any) => {
+        const score = typeof pt.score === 'number' ? pt.score : (typeof pt.masteryScore === 'number' ? pt.masteryScore : 0);
         return {
           day: pt.day || pt.date,
+          date: pt.date || pt.day,
+          total: pt.total,
           masteryScore: score,
-          weaknessScore: Math.max(10, 100 - score - 15),
-          riskIndex: Math.max(5, Math.round((100 - score) * 0.6))
+          weaknessScore: score > 0 ? Math.max(10, 100 - score - 15) : 0,
+          riskIndex: score > 0 ? Math.max(5, Math.round((100 - score) * 0.6)) : 0
         };
       });
     } else {
-      const acc = activeSubj?.accuracy ?? 75;
+      const acc = typeof activeSubj?.accuracy === 'number' ? activeSubj.accuracy : 0;
       chartHistory = chartHistory.map(pt => ({
         ...pt,
-        masteryScore: Math.round((pt.masteryScore || 70) * (acc / 75)),
-        weaknessScore: Math.round((pt.weaknessScore || 30) * ((100 - acc) / 25))
+        masteryScore: acc > 0 ? Math.round((pt.masteryScore || acc) * (acc / 100)) : 0,
+        weaknessScore: acc > 0 ? Math.round((pt.weaknessScore || (100 - acc)) * ((100 - acc) / 100)) : 0
       }));
     }
   }
 
-  // Ensure chart points carry forward and never flatline horizontally at 0%
-  const overallAcc = reportData?.overallAccuracy || reportData?.weeklyConfidenceScore || 70;
-  let lastM = overallAcc;
-  let lastW = Math.max(10, 100 - overallAcc);
-  let lastR = 0;
-
-  for (const pt of chartHistory) {
-    if ((pt.masteryScore || 0) > 0 || (pt.total || 0) > 0) {
-      lastM = pt.masteryScore;
-      lastW = pt.weaknessScore || Math.max(10, 100 - lastM);
-      lastR = pt.riskIndex || 0;
-      break;
-    }
-  }
+  // Carry forward last known score for unplayed days once a score is established;
+  // keep 0% baseline strictly for days prior to the first activity.
+  let runningMastery = 0;
+  let runningWeakness = 0;
+  let runningRisk = 0;
+  let scoreEstablished = false;
 
   chartHistory = chartHistory.map((pt: any) => {
-    let m = typeof pt.masteryScore === 'number' && !isNaN(pt.masteryScore) ? pt.masteryScore : 0;
-    let w = typeof pt.weaknessScore === 'number' && !isNaN(pt.weaknessScore) ? pt.weaknessScore : 0;
-    let r = typeof pt.riskIndex === 'number' && !isNaN(pt.riskIndex) ? pt.riskIndex : 0;
+    const rawM = typeof pt.masteryScore === 'number' && !isNaN(pt.masteryScore) ? pt.masteryScore : (typeof pt.score === 'number' ? pt.score : 0);
+    const hasActivity = (pt.total ?? 0) > 0 || rawM > 0;
 
-    if (m === 0 && w === 0) {
-      // Inactive day: carry forward previous assessed mastery
-      m = lastM;
-      w = lastW;
-      r = lastR;
-    } else {
-      lastM = m;
-      lastW = w;
-      lastR = r;
+    if (hasActivity && rawM > 0) {
+      runningMastery = rawM;
+      runningWeakness = typeof pt.weaknessScore === 'number' && !isNaN(pt.weaknessScore) && pt.weaknessScore > 0 ? pt.weaknessScore : Math.max(10, 100 - rawM - 15);
+      runningRisk = typeof pt.riskIndex === 'number' && !isNaN(pt.riskIndex) && pt.riskIndex > 0 ? pt.riskIndex : Math.max(5, Math.round((100 - rawM) * 0.6));
+      scoreEstablished = true;
     }
 
+    if (scoreEstablished) {
+      return {
+        ...pt,
+        masteryScore: runningMastery,
+        weaknessScore: runningWeakness,
+        riskIndex: runningRisk
+      };
+    }
+
+    // Days prior to very first activity remain 0% baseline
     return {
       ...pt,
-      masteryScore: m,
-      weaknessScore: w,
-      riskIndex: r
+      masteryScore: 0,
+      weaknessScore: 0,
+      riskIndex: 0
     };
   });
 
@@ -895,15 +902,18 @@ export default function ParentReportScreen() {
         <Card>
           <SectionHeader icon={<BookOpen size={20} color="#141779" />} title={t("subject_performance", "Subject Performance")} subtitle={t("accuracy_by_subject", "Accuracy by subject")} />
           <div className="space-y-4 mt-2">
-            {subjects.map((s: any, idx: number) => (
-              <div key={idx} className="space-y-1.5">
-                <div className="flex justify-between items-center text-xs font-black text-slate-800">
-                  <span className="capitalize">{s.subject}</span>
-                  <span className="text-[#141779] font-black">{s.accuracy ?? 0}%</span>
+            {subjects.map((s: any, idx: number) => {
+              const colorInfo = getSubjectChartColor(s.subject, idx);
+              return (
+                <div key={idx} className="space-y-1.5">
+                  <div className="flex justify-between items-center text-xs font-black text-slate-800">
+                    <span className="capitalize">{s.subject}</span>
+                    <span className="text-[#141779] font-black">{s.accuracy ?? 0}%</span>
+                  </div>
+                  <ProgressBar value={s.accuracy ?? 0} color={colorInfo.bar} />
                 </div>
-                <ProgressBar value={s.accuracy ?? 0} color={SUBJECT_COLORS[idx % SUBJECT_COLORS.length].bar} />
-              </div>
-            ))}
+              );
+            })}
             {subjects.length === 0 && (
               <p className="text-xs text-[#767683] text-center py-2">{t("no_subject_activity_data", "No subject activity data available.")}</p>
             )}
@@ -1029,16 +1039,16 @@ export default function ParentReportScreen() {
           ) : (
             <div className="relative">
               <div className="flex items-center justify-center gap-4 mb-4 text-[10px] font-bold text-[#464652]">
-                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#00bbf9]" /><span>{t("mastery", "Mastery")}</span></div>
-                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#f39c12]" /><span>{t("focus", "Focus")}</span></div>
-                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#ba1a1a]" /><span>{t("risk", "Risk")}</span></div>
+                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#2563eb]" /><span>{t("mastery", "Mastery")}</span></div>
+                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#d97706]" /><span>{t("focus", "Focus")}</span></div>
+                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#dc2626]" /><span>{t("risk", "Risk")}</span></div>
               </div>
               <svg ref={svgRef} viewBox="0 0 500 220" className="w-full overflow-visible select-none cursor-pointer"
                 onMouseMove={handleMouseMove} onMouseLeave={() => setHoveredIndex(null)}>
                 <defs>
                   <linearGradient id="mGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#00bbf9" stopOpacity="0.2"/>
-                    <stop offset="100%" stopColor="#00bbf9" stopOpacity="0"/>
+                    <stop offset="0%" stopColor="#2563eb" stopOpacity="0.2"/>
+                    <stop offset="100%" stopColor="#2563eb" stopOpacity="0"/>
                   </linearGradient>
                 </defs>
                 {[0, 25, 50, 75, 100].map(v => (
@@ -1050,16 +1060,16 @@ export default function ParentReportScreen() {
                 {chartHistory.length > 0 && (
                   <>
                     <path d={masteryAreaPath} fill="url(#mGrad)" />
-                    <path d={masteryPath} fill="none" stroke="#00bbf9" strokeWidth="3" strokeLinecap="round" />
-                    <path d={weaknessPath} fill="none" stroke="#f39c12" strokeWidth="2.5" strokeDasharray="4,4" />
-                    <path d={riskPath} fill="none" stroke="#ba1a1a" strokeWidth="2" />
+                    <path d={masteryPath} fill="none" stroke="#2563eb" strokeWidth="3" strokeLinecap="round" />
+                    <path d={weaknessPath} fill="none" stroke="#d97706" strokeWidth="2.5" strokeDasharray="4,4" />
+                    <path d={riskPath} fill="none" stroke="#dc2626" strokeWidth="2" />
                     {chartHistory.map((pt: any, i: number) => {
                       const isHovered = hoveredIndex === i;
                       return (
                         <g key={i}>
-                          <circle cx={getX(i)} cy={getY(pt.masteryScore)} r={isHovered ? 6 : 4} fill="#00bbf9" stroke="#fff" strokeWidth="1.5" />
-                          <circle cx={getX(i)} cy={getY(pt.weaknessScore)} r={isHovered ? 5 : 3.5} fill="#f39c12" stroke="#fff" strokeWidth="1.5" />
-                          <circle cx={getX(i)} cy={getY(pt.riskIndex)} r={isHovered ? 5 : 3.5} fill="#ba1a1a" stroke="#fff" strokeWidth="1" />
+                          <circle cx={getX(i)} cy={getY(pt.masteryScore)} r={isHovered ? 6 : 4} fill="#2563eb" stroke="#fff" strokeWidth="1.5" />
+                          <circle cx={getX(i)} cy={getY(pt.weaknessScore)} r={isHovered ? 5 : 3.5} fill="#d97706" stroke="#fff" strokeWidth="1.5" />
+                          <circle cx={getX(i)} cy={getY(pt.riskIndex)} r={isHovered ? 5 : 3.5} fill="#dc2626" stroke="#fff" strokeWidth="1" />
                         </g>
                       );
                     })}

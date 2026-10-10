@@ -46,6 +46,21 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
     clearParentReportCache();
   }
 
+  // Auto-inject active child ID for notification endpoints if not explicitly provided
+  if (url.includes("/api/notifications") && !url.includes("childId=") && !url.includes("child_id=")) {
+    try {
+      const stored = localStorage.getItem("userData");
+      if (stored) {
+        const u = JSON.parse(stored);
+        const activeCid = u.activeChildId || u.children?.[0]?.childId || u.childId;
+        if (activeCid) {
+          const sep = url.includes("?") ? "&" : "?";
+          url = `${url}${sep}childId=${encodeURIComponent(activeCid)}`;
+        }
+      }
+    } catch (e) {}
+  }
+
   // Check cache for /api/users/me GET requests
   if (url === "/api/users/me" && reqMethod === "GET") {
     const now = Date.now();

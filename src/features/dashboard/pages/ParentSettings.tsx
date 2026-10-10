@@ -1,11 +1,12 @@
 import { AnimatePresence, motion, Variants } from "framer-motion";
-import { ArrowLeft, Bell, BookOpen, Camera, Save, ShieldCheck, Timer, Trash2, UserRound, GraduationCap, Cake, ChevronDown, Check, Plus, Globe, LogOut, Edit3, RefreshCw, X, Lock } from "lucide-react";
+import { ArrowLeft, Bell, BookOpen, Camera, Save, ShieldCheck, Timer, Trash2, UserRound, GraduationCap, Cake, ChevronDown, Check, Plus, Globe, LogOut, Edit3, RefreshCw, X, Lock, Sparkles, Flame, Trophy, AlertTriangle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch, clearAuthSession } from "../../../api";
 import { useTranslation } from "react-i18next";
 import { translateNotificationTitle, translateNotificationMessage } from "../../../utils/notificationTranslator";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
+import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
 
 const CustomDropdown = ({ label, icon: Icon, iconColor, value, options = [], onSelect, placeholder }: any) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -183,7 +184,6 @@ export default function ParentSettings() {
   const [showResetModal, setShowResetModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showSaveConfirmModal, setShowSaveConfirmModal] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [contentLanguage, setContentLanguage] = useState("en");
 
@@ -195,9 +195,20 @@ export default function ParentSettings() {
   const formatNotifTitle = (title: string) => translateNotificationTitle(title, t);
   const formatNotifMsg = (msg: string) => translateNotificationMessage(msg, t);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (targetChildId?: string) => {
     try {
-      const res = await apiFetch("/api/notifications");
+      let activeChildId = targetChildId || user?.activeChildId;
+      if (!activeChildId) {
+        try {
+          const stored = localStorage.getItem("userData");
+          if (stored) {
+            const u = JSON.parse(stored);
+            activeChildId = u.activeChildId || u.children?.[0]?.childId || u.childId;
+          }
+        } catch (e) {}
+      }
+      const notifUrl = `/api/notifications?role=parent${activeChildId ? `&childId=${encodeURIComponent(activeChildId)}` : ""}`;
+      const res = await apiFetch(notifUrl);
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data) {
@@ -213,7 +224,18 @@ export default function ParentSettings() {
 
   const markAllNotifsRead = async () => {
     try {
-      await apiFetch("/api/notifications/mark-all-read?role=parent", { method: "POST" });
+      let activeChildId = user?.activeChildId;
+      if (!activeChildId) {
+        try {
+          const stored = localStorage.getItem("userData");
+          if (stored) {
+            const u = JSON.parse(stored);
+            activeChildId = u.activeChildId || u.children?.[0]?.childId || u.childId;
+          }
+        } catch (e) {}
+      }
+      const markUrl = `/api/notifications/mark-all-read?role=parent${activeChildId ? `&childId=${encodeURIComponent(activeChildId)}` : ""}`;
+      await apiFetch(markUrl, { method: "POST" });
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
       setUnreadNotifCount(0);
     } catch (e) {}
@@ -380,6 +402,7 @@ export default function ParentSettings() {
             setChild2Name(""); setChild2Class(""); setChild2Age("");
             setChild2Board(""); setChild2Photo(""); setChild2Code("");
           }
+          fetchNotifications(u.activeChildId);
         } catch(e) {}
       }
     };
@@ -509,8 +532,11 @@ export default function ParentSettings() {
         }
       }
 
-      setToastMessage("All profiles updated successfully! 🎉");
-      setTimeout(() => setToastMessage(null), 3000);
+      showNotificationToast({
+        title: "Settings Saved",
+        message: "All profiles updated successfully! 🎉",
+        type: "success"
+      });
       
       // Go back to main settings tab
       setTimeout(() => {
@@ -518,8 +544,11 @@ export default function ParentSettings() {
       }, 1000);
     } catch (e: any) {
       console.error(e);
-      setToastMessage(e.message || "Failed to update profiles");
-      setTimeout(() => setToastMessage(null), 3000);
+      showNotificationToast({
+        title: "Update Failed",
+        message: e.message || "Failed to update profiles",
+        type: "error"
+      });
     } finally {
       setIsSavingProfile(false);
     }
@@ -570,19 +599,29 @@ export default function ParentSettings() {
       if (json.success) {
         localStorage.removeItem("userData");
         sessionStorage.clear();
-        setToastMessage("Journey reset successfully! 🚀");
+        showNotificationToast({
+          title: "Reset Successful",
+          message: "Journey reset successfully! 🚀",
+          type: "success"
+        });
         setShowResetModal(false);
         setTimeout(() => {
           navigate("/home");
         }, 1500);
       } else {
-        setToastMessage(json.message || "Failed to reset journey");
-        setTimeout(() => setToastMessage(null), 3000);
+        showNotificationToast({
+          title: "Reset Failed",
+          message: json.message || "Failed to reset journey",
+          type: "error"
+        });
       }
     } catch (err) {
       console.error("Failed to reset journey", err);
-      setToastMessage("An error occurred while resetting journey.");
-      setTimeout(() => setToastMessage(null), 3000);
+      showNotificationToast({
+        title: "Error",
+        message: "An error occurred while resetting journey.",
+        type: "error"
+      });
     }
   };
 
@@ -640,16 +679,25 @@ export default function ParentSettings() {
           setChild2Code(k2.uniqueCode || "");
         }
 
-        setToastMessage("Child profile deleted successfully! 🗑️");
-        setTimeout(() => setToastMessage(null), 3000);
+        showNotificationToast({
+          title: "Profile Deleted",
+          message: "Child profile deleted successfully! 🗑️",
+          type: "success"
+        });
       } else {
-        setToastMessage(json.message || "Failed to delete child profile");
-        setTimeout(() => setToastMessage(null), 3000);
+        showNotificationToast({
+          title: "Delete Failed",
+          message: json.message || "Failed to delete child profile",
+          type: "error"
+        });
       }
     } catch (e: any) {
       console.error(e);
-      setToastMessage(e.message || "Failed to delete child profile");
-      setTimeout(() => setToastMessage(null), 3000);
+      showNotificationToast({
+        title: "Delete Failed",
+        message: e.message || "Failed to delete child profile",
+        type: "error"
+      });
     }
   };
 
@@ -694,11 +742,17 @@ export default function ParentSettings() {
             setUser(updatedUser);
             window.dispatchEvent(new Event("userDataUpdated"));
           }
-          setToastMessage("Family code regenerated successfully! 🔑");
-          setTimeout(() => setToastMessage(null), 3000);
+          showNotificationToast({
+            title: "Code Regenerated",
+            message: "Family code regenerated successfully! 🔑",
+            type: "success"
+          });
         } else {
-          setToastMessage(json.detail || json.message || "Failed to regenerate code.");
-          setTimeout(() => setToastMessage(null), 3000);
+          showNotificationToast({
+            title: "Regenerate Failed",
+            message: json.detail || json.message || "Failed to regenerate code.",
+            type: "warning"
+          });
         }
       } else {
         const res = await apiFetch("/api/users/child-code/update", {
@@ -718,16 +772,25 @@ export default function ParentSettings() {
             setUser(json.user);
             window.dispatchEvent(new Event("userDataUpdated"));
           }
-          setToastMessage("Device code regenerated successfully! 🔑");
-          setTimeout(() => setToastMessage(null), 3000);
+          showNotificationToast({
+            title: "Code Regenerated",
+            message: "Device code regenerated successfully! 🔑",
+            type: "success"
+          });
         } else {
-          setToastMessage(json.detail || json.message || "Failed to regenerate code.");
-          setTimeout(() => setToastMessage(null), 3000);
+          showNotificationToast({
+            title: "Regenerate Failed",
+            message: json.detail || json.message || "Failed to regenerate code.",
+            type: "warning"
+          });
         }
       }
     } catch (e) {
-      setToastMessage("Error connecting to server.");
-      setTimeout(() => setToastMessage(null), 3000);
+      showNotificationToast({
+        title: "Connection Error",
+        message: "Error connecting to server.",
+        type: "error"
+      });
     }
   };
 
@@ -953,8 +1016,11 @@ export default function ParentSettings() {
                   onClick={() => {
                     if (user?.familyCode) {
                       navigator.clipboard.writeText(user.familyCode);
-                      setToastMessage("Family Code copied!");
-                      setTimeout(() => setToastMessage(null), 2500);
+                      showNotificationToast({
+                        title: "Code Copied",
+                        message: "Family Code copied to clipboard! 📋",
+                        type: "success"
+                      });
                     }
                   }}
                   className="flex-1 sm:flex-none h-10 px-4 rounded-xl bg-[#141779] hover:bg-[#1e23a0] text-white text-xs font-black uppercase tracking-wider active:scale-95 transition-all shadow-xs flex items-center justify-center gap-1.5"
@@ -1297,21 +1363,6 @@ export default function ParentSettings() {
       icon={<Trash2 size={28} className="text-rose-600" />}
     />
 
-    {/* Toast Notification */}
-    <AnimatePresence>
-      {toastMessage && (
-        <motion.div 
-          initial={{ opacity: 0, y: -40, scale: 0.9 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -20, scale: 0.9 }}
-          className="fixed top-4 left-1/2 -translate-x-1/2 w-auto max-w-[90vw] bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white px-4.5 py-2.5 rounded-full flex items-center justify-center gap-2.5 z-[9999] shadow-[0_12px_30px_rgba(20,23,121,0.4)] border border-[#57fae9]/40"
-        >
-          <Save size={16} className="text-[#57fae9] shrink-0" />
-          <span className="text-xs font-bold tracking-wide text-center truncate max-w-[280px] sm:max-w-[340px] line-clamp-1">{toastMessage}</span>
-        </motion.div>
-      )}
-    </AnimatePresence>
-
     {/* Custom Logout Modal */}
     <UnifiedConfirmModal
       isOpen={showLogoutModal}
@@ -1363,38 +1414,89 @@ export default function ParentSettings() {
 
     {/* Notifications Side Panel / Modal Drawer */}
     {showNotifications && (
-      <div className="fixed inset-0 bg-black/40 z-[100] flex justify-end">
-        <div className="w-full sm:w-[400px] h-full bg-[#f7f9fb] shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
-          <div className="flex justify-between items-center p-6 border-b border-gray-200 bg-white">
-            <h2 className="text-xl font-bold text-[#141779] flex items-center gap-2">
-              <Bell size={24} /> {t("notifications", "સૂચનાઓ")}
-            </h2>
-            <button onClick={() => setShowNotifications(false)} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
-              <X size={20} color="#464652" />
+      <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[100] flex justify-end animate-in fade-in duration-200">
+        <div className="w-full sm:w-[420px] h-full bg-[#f7f9fb] shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+          {/* Header */}
+          <div className="flex justify-between items-center p-5 sm:p-6 border-b border-slate-200/80 bg-white">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779]">
+                <Bell size={18} />
+              </div>
+              <h2 className="text-xl font-black text-[#141779]">
+                {t("notifications", "Notifications")}
+              </h2>
+            </div>
+            <button 
+              onClick={() => setShowNotifications(false)} 
+              className="w-9 h-9 flex items-center justify-center bg-slate-100 rounded-full hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
+              aria-label="Close"
+            >
+              <X size={18} />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+
+          {/* List */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3.5">
             {notifications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center opacity-50">
-                <Bell size={48} className="mb-4 text-gray-400" />
-                <p className="text-gray-500 font-medium">{t("no_recent_activity", "હજુ સુધી કોઈ સૂચનાઓ નથી.")}</p>
+              <div className="flex flex-col items-center justify-center h-full text-center py-16 px-4">
+                <div className="w-16 h-16 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779] mb-3 shadow-xs">
+                  <Bell size={28} className="opacity-70" />
+                </div>
+                <p className="text-base font-bold text-[#141779]">
+                  {t("no_notifications_yet", "No notifications yet!")}
+                </p>
+                <p className="text-xs font-medium text-slate-500 mt-1 max-w-[240px]">
+                  {t("no_recent_activity", "No recent activity to show.")}
+                </p>
               </div>
             ) : (
               notifications.map((notif, idx) => {
-                let icon = "🔔";
-                let bg = "bg-white";
-                if (notif.type === "gamification") icon = "🎮";
-                if (notif.type === "habit") icon = "✨";
-                if (notif.type === "learning") icon = "📚";
+                let iconBadge = <Bell size={18} />;
+                let badgeStyle = "bg-indigo-50 text-[#141779] border-indigo-100";
+                
+                if (notif.type === "gamification") {
+                  iconBadge = <Sparkles size={18} />;
+                  badgeStyle = "bg-teal-50 text-teal-700 border-teal-200";
+                } else if (notif.type === "habit") {
+                  iconBadge = <Flame size={18} />;
+                  badgeStyle = "bg-amber-50 text-amber-700 border-amber-200";
+                } else if (notif.type === "learning") {
+                  iconBadge = <BookOpen size={18} />;
+                  badgeStyle = "bg-indigo-50 text-[#141779] border-indigo-200";
+                } else if (notif.type === "reward" || notif.type === "spin") {
+                  iconBadge = <Trophy size={18} />;
+                  badgeStyle = "bg-purple-50 text-purple-700 border-purple-200";
+                } else if (notif.type === "warning" || notif.type === "risk") {
+                  iconBadge = <AlertTriangle size={18} />;
+                  badgeStyle = "bg-rose-50 text-rose-700 border-rose-200";
+                }
                 
                 return (
-                  <div key={idx} className={`p-4 rounded-xl shadow-sm border border-gray-100 flex gap-4 ${bg} hover:shadow-md transition-shadow`}>
-                    <div className="text-2xl pt-1">{icon}</div>
-                    <div>
-                      <h4 className="text-[14px] font-bold text-[#141779] mb-1">{formatNotifTitle(notif.title)}</h4>
-                      <p className="text-[12px] text-[#464652] leading-tight">{formatNotifMsg(notif.message)}</p>
-                      <p className="text-[10px] text-gray-400 mt-2 font-medium">
-                        {new Date(notif.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  <div 
+                    key={notif._id || idx} 
+                    className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-[0_2px_8px_rgba(20,23,121,0.04)] hover:shadow-md hover:border-indigo-200/80 transition-all flex items-start gap-3.5 text-left"
+                  >
+                    <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs mt-0.5 ${badgeStyle}`}>
+                      {iconBadge}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <h4 className="text-[15px] font-bold text-[#141779] leading-snug">
+                          {formatNotifTitle(notif.title)}
+                        </h4>
+                        {notif.createdAt && (
+                          <span className="text-xs font-semibold text-slate-500 shrink-0 mt-0.5">
+                            {new Date(notif.createdAt).toLocaleString(undefined, { 
+                              month: 'short', 
+                              day: 'numeric', 
+                              hour: '2-digit', 
+                              minute: '2-digit' 
+                            })}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-base font-medium text-[#191c1e] leading-relaxed mt-1">
+                        {formatNotifMsg(notif.message)}
                       </p>
                     </div>
                   </div>

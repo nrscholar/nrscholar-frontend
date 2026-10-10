@@ -1,12 +1,13 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Rocket, Sun, Compass, Globe, Moon, CheckCircle, Lock, Bell, Sparkles, Trophy, ChevronRight } from "lucide-react";
+import { ArrowLeft, Rocket, Sun, Compass, Globe, Moon, CheckCircle, Lock, Bell, Sparkles, Trophy, ChevronRight, Crown } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
 import { prefetchPdf } from "../../../utils/pdfCache";
 import StreakModal from "../../../components/StreakModal";
 import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
+import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 
 export default function ChaptersScreen() {
   const navigate = useNavigate();
@@ -716,41 +717,21 @@ export default function ChaptersScreen() {
         )}
       </main>
 
-      {/* SUBSCRIPTION LOCK MODAL */}
-      {showSubModal && (
-        <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-6 text-center">
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-white rounded-[32px] p-6 max-w-sm w-full border-2 border-indigo-200 shadow-2xl flex flex-col items-center gap-4"
-          >
-            <div className="w-16 h-16 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center text-3xl shadow-inner animate-bounce">
-              👑
-            </div>
-            <div>
-              <h3 className="text-xl font-black text-slate-900">{t('unlock_full_adventure', 'Unlock Full Adventure!')}</h3>
-              <p className="text-xs font-semibold text-slate-600 mt-1 leading-relaxed">
-                {t('chapter_1_free_desc', 'Chapter 1 is free for everyone. Access to Chapter 2 and beyond requires an active StudySaathy Subscription.')}
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                setShowSubModal(false);
-                navigate("/parent/subscription");
-              }}
-              className="w-full py-3.5 bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white font-black rounded-2xl shadow-lg active:scale-95 transition-all uppercase tracking-wider text-xs border border-[#5B5CFF]"
-            >
-              {t('upgrade_subscription', 'Upgrade Subscription →')}
-            </button>
-            <button
-              onClick={() => setShowSubModal(false)}
-              className="text-xs font-bold text-slate-400 hover:text-slate-600"
-            >
-              {t('maybe_later', 'Maybe Later')}
-            </button>
-          </motion.div>
-        </div>
-      )}
+      {/* UNIFIED SUBSCRIPTION LOCK MODAL */}
+      <UnifiedConfirmModal
+        isOpen={showSubModal}
+        onClose={() => setShowSubModal(false)}
+        onConfirm={() => {
+          setShowSubModal(false);
+          navigate("/parent/subscription");
+        }}
+        title={t('unlock_full_adventure', 'Unlock Full Adventure!')}
+        message={t('chapter_1_free_desc', 'Chapter 1 is free for everyone. Access to Chapter 2 and beyond requires an active StudySaathy Subscription.')}
+        confirmText={t('upgrade_subscription', 'Upgrade Subscription →')}
+        cancelText={t('maybe_later', 'Maybe Later')}
+        variant="primary"
+        icon={<Crown size={30} className="text-[#141779]" />}
+      />
 
       <StreakModal
         isOpen={showStreakModal}

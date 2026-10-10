@@ -153,6 +153,7 @@ export default function HomeScreen() {
   const [citiesData, setCitiesData] = useState<any[]>([]);
   const [journeyData, setJourneyData] = useState<any>(null);
   const [dailyHabitData, setDailyHabitData] = useState<any>(null);
+  const [isHabitLoading, setIsHabitLoading] = useState<boolean>(true);
 
   useEffect(() => {
     if (pendingSpinPopup) {
@@ -162,9 +163,17 @@ export default function HomeScreen() {
     }
   }, [pendingSpinPopup]);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (userDoc?: any) => {
     try {
-      const res = await apiFetch("/api/notifications");
+      const u = userDoc || userData || (() => {
+        try {
+          const stored = localStorage.getItem("userData");
+          return stored ? JSON.parse(stored) : null;
+        } catch (e) { return null; }
+      })();
+      const activeChildId = u?.activeChildId || u?.children?.[0]?.childId || u?.childId || "";
+      const notifUrl = `/api/notifications?role=child${activeChildId ? `&childId=${encodeURIComponent(activeChildId)}` : ""}`;
+      const res = await apiFetch(notifUrl);
       const json = await res.json();
       if (json.success && json.data) {
         setUnreadCount(json.data.filter((n: any) => !n.isRead).length);
@@ -321,10 +330,16 @@ export default function HomeScreen() {
             const json = await res.json();
             if (json.success && json.data) {
               setDailyHabitData(json.data);
+              return;
             }
           }
+          // Graceful fallback to Day 1 if response is not successful
+          setDailyHabitData((prev: any) => prev || { currentDay: 1, isCompletedToday: false });
         } catch (e) {
           console.error("Failed to fetch daily habit info", e);
+          setDailyHabitData((prev: any) => prev || { currentDay: 1, isCompletedToday: false });
+        } finally {
+          setIsHabitLoading(false);
         }
       })();
 
@@ -360,6 +375,8 @@ export default function HomeScreen() {
           setChildPhoto(u.childPhoto || "");
           setUserLevel(u.level || 1);
           setStreakDays(u.streakDays || 0);
+          fetchJourneyData(u);
+          fetchNotifications(u);
         } catch (e) {
           console.error("Failed to parse cached userData:", e);
         }
@@ -540,7 +557,8 @@ export default function HomeScreen() {
 
           {/* Good Habits */}
           {(() => {
-            const currentHabitDay = dailyHabitData?.currentDay ?? 8;
+            const isLoading = isHabitLoading && !dailyHabitData;
+            const currentHabitDay = dailyHabitData?.currentDay || 1;
             const isCompletedToday = dailyHabitData?.isCompletedToday ?? false;
             const doneQuests = missions ? missions.filter((m: any) => m.status === 'completed' || m.status === 'claimed').length : (todayCompletedCount || 0);
             const totalQuests = missions?.length || 6;
@@ -565,14 +583,26 @@ export default function HomeScreen() {
                 <div className="mt-2">
                   <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('good_habits', 'Good Habits')}</h3>
                   <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-2 truncate">{t('daily_lessons_rewards', 'Daily lessons & rewards')}</p>
-                  <div className="space-y-1">
-                    <div className="text-[9.5px] font-extrabold text-slate-700 truncate">
-                      {habitsDoneText}
+                  {isLoading ? (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-orange-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse shrink-0" />
+                        <span className="animate-pulse truncate">{t('loading', 'Loading...')}</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-orange-100/80 rounded-full overflow-hidden">
+                        <div className="h-full bg-orange-300/60 rounded-full animate-pulse transition-all duration-500" style={{ width: '35%' }} />
+                      </div>
                     </div>
-                    <div className="w-full h-1.5 bg-orange-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-orange-400 rounded-full transition-all duration-500" style={{ width: `${habitsPct}%` }} />
+                  ) : (
+                    <div className="space-y-1">
+                      <div className="text-[9.5px] font-extrabold text-slate-700 truncate">
+                        {habitsDoneText}
+                      </div>
+                      <div className="w-full h-1.5 bg-orange-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-orange-400 rounded-full transition-all duration-500" style={{ width: `${habitsPct}%` }} />
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </button>
             );

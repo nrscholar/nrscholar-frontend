@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Copy, CheckCircle } from "lucide-react";
+import { ArrowLeft, Copy, CheckCircle, LogOut } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
 import { copyToClipboard } from "../../../utils/clipboard";
+import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
+import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
 
 export default function MultiplayerRoomScreen() {
   const navigate = useNavigate();
@@ -68,6 +70,11 @@ export default function MultiplayerRoomScreen() {
     if (room?.code) {
       await copyToClipboard(room.code);
       setCopied(true);
+      showNotificationToast({
+        title: "Code Copied",
+        message: "Room Code copied to clipboard! 📋",
+        type: "success"
+      });
       setTimeout(() => setCopied(false), 2000);
     }
   };
@@ -173,31 +180,18 @@ export default function MultiplayerRoomScreen() {
         </div>
       </main>
 
-      {/* LEAVE CONFIRMATION MODAL */}
-      {showLeaveModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-[24px] p-6 w-full max-w-sm flex flex-col items-center text-center shadow-2xl border-2 border-[#e0e0e0] animate-in zoom-in-95 duration-200">
-            <h2 className="text-2xl font-black text-[#141779] mb-2">{t('leave_room_title', 'Leave Room?')}</h2>
-            <p className="text-[#464652] font-semibold mb-6">
-              {t('leave_room_confirm', 'Are you sure you want to leave this waiting room?')}
-            </p>
-            <div className="flex gap-3 w-full">
-              <button 
-                onClick={() => setShowLeaveModal(false)}
-                className="flex-grow bg-[#f4efff] text-[#141779] py-3 rounded-xl font-bold hover:bg-[#e8ddff] transition-all border-2 border-[#e0e0e0]"
-              >
-                {t('cancel', 'Cancel')}
-              </button>
-              <button 
-                onClick={handleLeaveRoom}
-                className="flex-grow bg-[#ba1a1a] text-white py-3 rounded-xl font-bold hover:bg-[#ba1a1a]/80 transition-all"
-              >
-                {t('leave', 'Leave')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* UNIFIED LEAVE CONFIRMATION MODAL */}
+      <UnifiedConfirmModal
+        isOpen={showLeaveModal}
+        onClose={() => setShowLeaveModal(false)}
+        onConfirm={handleLeaveRoom}
+        title={t('leave_room_title', 'Leave Room?')}
+        message={t('leave_room_confirm', 'Are you sure you want to leave this waiting room?')}
+        confirmText={t('leave', 'Leave')}
+        cancelText={t('cancel', 'Cancel')}
+        variant="danger"
+        icon={<LogOut size={30} className="text-rose-600" />}
+      />
     </div>
   );
 }

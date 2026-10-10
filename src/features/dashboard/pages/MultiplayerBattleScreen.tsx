@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
+import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 
 // Hardcoded rapid fire questions for MVP multiplayer
 const BATTLE_QUESTIONS = [
@@ -723,21 +724,23 @@ export default function MultiplayerBattleScreen() {
           </div>
         )}
       </main>
-
-
       {/* PHYSICAL REWARD MODAL */}
       <AnimatePresence>
         {showRewardModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm select-none">
             <motion.div 
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="bg-gradient-to-b from-[#ffeed1] to-white rounded-[32px] p-8 w-full max-w-sm flex flex-col items-center text-center shadow-[0_0_40px_rgba(255,159,67,0.3)] border-4 border-[#ff9f43]"
+              initial={{ scale: 0.92, opacity: 0, y: 16 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              className="bg-white rounded-[32px] p-6 sm:p-8 w-full max-w-[360px] flex flex-col items-center text-center shadow-[0_20px_60px_rgba(20,23,121,0.18)] border border-slate-100 relative"
             >
-              <div className="text-[80px] mb-2">🎁</div>
-              <h2 className="text-3xl font-black text-[#141779] mb-2 uppercase">{t('incredible', 'Incredible!')}</h2>
-              <div className="bg-[#141779] text-white px-4 py-1 rounded-full text-xs font-bold tracking-widest mb-4">{t('25_wins_in_row', '25 WINS IN A ROW')}</div>
-              <p className="text-[#4b4b4b] font-bold mb-6">
+              <div className="w-20 h-20 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-4xl mb-3 shadow-xs">
+                🎁
+              </div>
+              <span className="bg-indigo-50 border border-indigo-100 text-[#141779] px-3.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-2">
+                {t('25_wins_in_row', '25 WINS IN A ROW')}
+              </span>
+              <h2 className="text-2xl font-black text-[#141779] mb-1.5 uppercase leading-snug">{t('incredible', 'Incredible!')}</h2>
+              <p className="text-xs sm:text-sm font-semibold text-slate-600 leading-relaxed mb-6">
                 {t('physical_reward_desc', 'You have reached 25 continuous wins! A physical reward box is being prepared by our team and will be shipped to your registered address!')}
               </p>
               
@@ -746,7 +749,7 @@ export default function MultiplayerBattleScreen() {
                   setShowRewardModal(false);
                   navigate("/multiplayer-hub");
                 }}
-                className="w-full bg-[#ff9f43] text-white py-4 rounded-xl font-black uppercase text-lg shadow-[0_4px_0_#d17e30] active:translate-y-[4px] active:shadow-none transition-all"
+                className="w-full bg-[#141779] hover:bg-[#101362] active:scale-95 text-white py-3.5 rounded-full font-black uppercase text-xs tracking-wider shadow-md shadow-[#141779]/20 transition-all flex items-center justify-center"
               >
                 {t('claim_my_prize', 'Claim My Prize!')}
               </button>
@@ -755,87 +758,53 @@ export default function MultiplayerBattleScreen() {
         )}
       </AnimatePresence>
 
-      {/* QUIT CONFIRMATION MODAL */}
-      <AnimatePresence>
-        {showQuitModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm">
-            <motion.div 
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              className="bg-white rounded-[24px] p-6 w-full max-w-sm flex flex-col items-center text-center shadow-2xl border-2 border-[#e0e0e0]"
-            >
-              <div className="w-16 h-16 rounded-full bg-[#ffebee] flex items-center justify-center mb-4 border border-[#ffb4ab]">
-                <X size={32} color="#ba1a1a" />
-              </div>
-              <h2 className="text-2xl font-black text-[#141779] mb-2">{t('are_you_sure', 'Are you sure?')}</h2>
-              <p className="text-[#464652] font-semibold mb-6">
-                {myStreak === 0
-                  ? t('quit_penalty_coins', 'If you leave now, you will lose the game and be penalized 100 coins!')
-                  : quitCount === 0 
-                  ? t('quit_warning_safe', 'If you leave now, you will lose the game! This is your first warning, so your streak is safe.')
-                  : quitCount === 1 
-                  ? t('quit_warning_streak_minus1', 'If you leave now, you will lose the game and your win streak will decrease by 1!')
-                  : t('quit_warning_streak_reset', 'If you leave now, you will lose the game and your win streak will be completely reset!')}
-              </p>
-              
-              <div className="flex gap-3 w-full">
-                <button 
-                  onClick={() => setShowQuitModal(false)}
-                  className="flex-grow bg-[#f4efff] text-[#141779] py-3 rounded-xl font-bold hover:bg-[#e8ddff] transition-all border-2 border-[#e0e0e0]"
-                >
-                  {t('cancel', 'Cancel')}
-                </button>
-                <button 
-                  onClick={async () => {
-                    setShowQuitModal(false);
-                    if (roomId) sessionStorage.setItem(`left_battle_${roomId}`, "true");
-                    try {
-                      await submitActivityLog(userAnswers);
-                      await apiFetch(`/api/multiplayer/room/${roomId}/quit`, { method: "POST" });
-                    } catch(e) {}
-                    navigate("/multiplayer-hub", { replace: true });
-                  }}
-                  className="flex-grow bg-[#ba1a1a] text-white py-3 rounded-xl font-bold hover:bg-[#ba1a1a]/80 transition-all"
-                >
-                  {t('yes_quit', 'Yes, Quit')}
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {/* UNIFIED QUIT CONFIRMATION MODAL */}
+      <UnifiedConfirmModal
+        isOpen={showQuitModal}
+        onClose={() => setShowQuitModal(false)}
+        onConfirm={async () => {
+          setShowQuitModal(false);
+          if (roomId) sessionStorage.setItem(`left_battle_${roomId}`, "true");
+          try {
+            await submitActivityLog(userAnswers);
+            await apiFetch(`/api/multiplayer/room/${roomId}/quit`, { method: "POST" });
+          } catch(e) {}
+          navigate("/multiplayer-hub", { replace: true });
+        }}
+        title={t('are_you_sure', 'Are you sure?')}
+        message={
+          myStreak === 0
+            ? t('quit_penalty_coins', 'If you leave now, you will lose the game and be penalized 100 coins!')
+            : quitCount === 0 
+            ? t('quit_warning_safe', 'If you leave now, you will lose the game! This is your first warning, so your streak is safe.')
+            : quitCount === 1 
+            ? t('quit_warning_streak_minus1', 'If you leave now, you will lose the game and your win streak will decrease by 1!')
+            : t('quit_warning_streak_reset', 'If you leave now, you will lose the game and your win streak will be completely reset!')
+        }
+        confirmText={t('yes_quit', 'Yes, Quit')}
+        cancelText={t('cancel', 'Cancel')}
+        variant="danger"
+        icon={<X size={30} className="text-rose-600" />}
+      />
 
-      {/* OPPONENT QUIT MODAL */}
-      <AnimatePresence>
-        {opponentQuit && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm">
-            <motion.div 
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="bg-white rounded-[24px] p-6 w-full max-w-sm flex flex-col items-center text-center shadow-2xl border-2 border-[#e0e0e0]"
-            >
-              <div className="text-[60px] mb-2">🏃‍♂️💨</div>
-              <h2 className="text-2xl font-black text-[#141779] mb-2 uppercase">{t('opponent_fled', 'Opponent Fled!')}</h2>
-              <p className="text-[#006a62] font-bold mb-6">
-                {t('opponent_left_you_win', 'Your opponent left the game. You win by default!')}
-              </p>
-              
-              <button 
-                onClick={() => {
-                  if (roomId) sessionStorage.setItem(`left_battle_${roomId}`, "true");
-                  navigate("/multiplayer-hub", { replace: true });
-                }}
-                className="w-full bg-[#141779] text-white py-3 rounded-xl font-black uppercase tracking-wider hover:bg-[#30007f] transition-all border-2 border-[#141779]"
-              >
-                {t('back_to_arena', 'BACK TO ARENA')}
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-
+      {/* UNIFIED OPPONENT QUIT MODAL */}
+      <UnifiedConfirmModal
+        isOpen={opponentQuit}
+        onClose={() => {
+          if (roomId) sessionStorage.setItem(`left_battle_${roomId}`, "true");
+          navigate("/multiplayer-hub", { replace: true });
+        }}
+        onConfirm={() => {
+          if (roomId) sessionStorage.setItem(`left_battle_${roomId}`, "true");
+          navigate("/multiplayer-hub", { replace: true });
+        }}
+        title={t('opponent_fled', 'Opponent Fled!')}
+        message={t('opponent_left_you_win', 'Your opponent left the game. You win by default!')}
+        confirmText={t('back_to_arena', 'BACK TO ARENA')}
+        showCancel={false}
+        variant="success"
+        icon={<span className="text-3xl">🏃‍♂️💨</span>}
+      />
     </div>
   );
 }

@@ -266,38 +266,51 @@ export default function ProgressScreen() {
   const unlockedMilestonesCount = [hasMathAce, isStreakUnlocked, hasScienceProdigy, hasArenaMaster].filter(Boolean).length;
   const totalBadgesCount = Math.max(badges.length, unlockedMilestonesCount);
 
+  const getCanonicalSubject = (s: string) => {
+    if (!s) return "";
+    const str = s.toLowerCase();
+    if (str.includes("social") || str.includes("સમાજ") || str.includes("સામાજિક") || str.includes("सामाजिक")) return "social_science";
+    if (str.includes("sci") || str.includes("વિજ્ઞાન") || str.includes("विज्ञान")) return "science";
+    if (str.includes("math") || str.includes("ગણિત") || str.includes("गणित")) return "math";
+    if (str.includes("guj") || str.includes("ગુજરાત") || str.includes("गुजરા")) return "gujarati";
+    if (str.includes("eng") || str.includes("અંગ્રેજી") || str.includes("अंग्रे")) return "english";
+    if (str.includes("hin") || str.includes("હિન્દી") || str.includes("हिन्दी") || str.includes("हिंदी")) return "hindi";
+    return str.trim();
+  };
+
   // Filter growth list based on active subject selection & ensure single graph display per selected subject
   const matchSubject = (item: any, activeSub: any) => {
     if (!item || !activeSub) return false;
     if (item.subjectId && (item.subjectId === activeSub._id || item.subjectId === activeSub.id)) return true;
     
-    const iName = (item.rawName || item.name || "").toLowerCase();
-    const aName = (activeSub.name || activeSub.subject || "").toLowerCase();
+    const iCanonical = getCanonicalSubject(item.rawName || item.name || "");
+    const aCanonical = getCanonicalSubject(activeSub.name || activeSub.subject || "");
+    if (iCanonical && aCanonical) {
+      return iCanonical === aCanonical;
+    }
     
-    if (iName === aName || iName.includes(aName) || aName.includes(iName)) return true;
-    
-    const isGuj = (s: string) => s.includes("guj") || s.includes("ગુજરાત") || s.includes("ગુજરાતી") || s.includes("गुजરા");
-    const isMath = (s: string) => s.includes("math") || s.includes("ગણિત") || s.includes("गणित");
-    const isSci = (s: string) => s.includes("sci") || s.includes("વિજ્ઞાન") || s.includes("विज्ञान");
-    const isEng = (s: string) => s.includes("eng") || s.includes("અંગ્રેજી") || s.includes("अंग्रेजी");
-    const isSoc = (s: string) => s.includes("soc") || s.includes("social") || s.includes("સમાજ") || s.includes("સામાજિક");
-
-    if (isGuj(iName) && isGuj(aName)) return true;
-    if (isMath(iName) && isMath(aName)) return true;
-    if (isSci(iName) && isSci(aName)) return true;
-    if (isEng(iName) && isEng(aName)) return true;
-    if (isSoc(iName) && isSoc(aName)) return true;
-    
-    return false;
+    const iName = (item.rawName || item.name || "").toLowerCase().trim();
+    const aName = (activeSub.name || activeSub.subject || "").toLowerCase().trim();
+    return iName === aName;
   };
 
   let filteredGrowth = activeSubject
     ? weeklyGrowth.filter((item: any) => matchSubject(item, activeSubject))
     : weeklyGrowth;
 
-  // Restrict to exactly 1 primary graph for the active subject, fallback to first item if filtered is empty
+  // Restrict to exactly 1 primary graph for the active subject; never bleed other subject's data!
   const displayedGrowth = activeSubject
-    ? (filteredGrowth.length > 0 ? [filteredGrowth[0]] : (weeklyGrowth.length > 0 ? [weeklyGrowth[0]] : []))
+    ? (filteredGrowth.length > 0
+        ? [filteredGrowth[0]]
+        : [{
+            subjectId: activeSubject._id,
+            name: activeSubject.name || activeSubject.subject || "Subject",
+            rawName: activeSubject.name || activeSubject.subject || "Subject",
+            icon: activeSubject.icon,
+            thisWeekAccuracy: 0,
+            lastWeekAccuracy: 0,
+            growthDelta: 0
+          }])
     : (weeklyGrowth.length > 0 ? [weeklyGrowth[0]] : []);
 
   return (

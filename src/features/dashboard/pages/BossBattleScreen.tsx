@@ -9,6 +9,7 @@ import DragonCharacter from "../../../components/DragonCharacter";
 import MonsterCharacter from "../../../components/MonsterCharacter";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 import { useTranslation } from "react-i18next";
+import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
 
 // Fire Sparks particle config for Boss Battle background
 const FIRE_PARTICLES_CONFIG = {
@@ -25,6 +26,14 @@ const FIRE_PARTICLES_CONFIG = {
   },
   detectRetina: true,
 };
+
+const BOSS_REVIVAL_REWARDS = [
+  { name: "Recover 1 Heart", reward_type: "heart", amount: 1, icon: "❤️", color: "#ef4444" },
+  { name: "Recover 2 Hearts", reward_type: "heart", amount: 2, icon: "❤️", color: "#ec4899" },
+  { name: "Recover 3 Hearts", reward_type: "heart", amount: 3, icon: "❤️", color: "#8b5cf6" },
+  { name: "Shield (Next attack)", reward_type: "shield", amount: 1, icon: "🛡️", color: "#06b6d4" },
+  { name: "Double Damage", reward_type: "double_damage", amount: 1, icon: "⚔️", color: "#f59e0b" }
+];
 
 export default function BossBattleScreen() {
   const navigate = useNavigate();
@@ -83,10 +92,12 @@ export default function BossBattleScreen() {
   const [attacking, setAttacking] = useState(false);
   const [actionResult, setActionResult] = useState<"idle" | "correct" | "wrong">("idle");
   const [lossOverlay, setLossOverlay] = useState({ show: false, xpLoss: 0 });
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const showToast = (message: string) => {
-    setToastMessage(message);
-    setTimeout(() => setToastMessage(null), 3000);
+  const showToast = (message: string, type: "gamification" | "error" | "success" | "warning" = "gamification") => {
+    showNotificationToast({
+      title: "Battle Update",
+      message,
+      type
+    });
   };
   const [userCoins, setUserCoins] = useState(0);
 
@@ -94,8 +105,19 @@ export default function BossBattleScreen() {
   const [projectile, setProjectile] = useState<{ show: boolean; type: "dragon" | "boss" }>({ show: false, type: "dragon" });
   const [damagePopup, setDamagePopup] = useState<{ show: boolean; text: string; target: "dragon" | "boss" }>({ show: false, text: "", target: "boss" });
 
+  const [showReviveModal, setShowReviveModal] = useState(false);
+  const [pendingLossData, setPendingLossData] = useState<any>(null);
+  const [showBuySpinConfirmModal, setShowBuySpinConfirmModal] = useState(false);
+  const [isBuyingRevivalSpin, setIsBuyingRevivalSpin] = useState(false);
+  const [revivalSpins, setRevivalSpins] = useState(0);
+  const [particlesInit, setParticlesInit] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [questionStartTime, setQuestionStartTime] = useState(Date.now());
+  const [userAnswers, setUserAnswers] = useState<any[]>([]);
+
   const openReviveModal = async () => {
     setShowReviveModal(true);
+    setShowBuySpinConfirmModal(false);
     try {
       const res = await apiFetch("/api/users/me");
       const json = await res.json();
@@ -115,24 +137,35 @@ export default function BossBattleScreen() {
       console.error(e);
     }
   };
-  const [particlesInit, setParticlesInit] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false);
-  
-  const [questionStartTime, setQuestionStartTime] = useState(Date.now());
-  const [userAnswers, setUserAnswers] = useState<any[]>([]);
-  const [revivalSpins, setRevivalSpins] = useState(0);
-  const [showReviveModal, setShowReviveModal] = useState(false);
-  const [pendingLossData, setPendingLossData] = useState<any>(null);
-  const [showBuySpinConfirmModal, setShowBuySpinConfirmModal] = useState(false);
-  const [isBuyingRevivalSpin, setIsBuyingRevivalSpin] = useState(false);
+
+  const handleGoToSpinWheel = () => {
+    // Save session state to sessionStorage
+    sessionStorage.setItem("boss_battle_saved_session", JSON.stringify({
+      battleId: battleData?.battleId,
+      bossHP: battleData?.bossHP,
+      currentQIndex: currentQIndex + 1,
+      userAnswers: pendingLossData?.newAnswers || userAnswers,
+      questions: battleData?.questions,
+      chapterId: searchParams.get("chapterId")
+    }));
+
+    setShowReviveModal(false);
+    setShowBuySpinConfirmModal(false);
+
+    const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+    const bossId = battleData?.battleId && battleData.battleId !== "demo_b1" ? battleData.battleId : "";
+    const chapterId = searchParams.get("chapterId") || "";
+    navigate(`/daily-rewards?type=boss_revival&boss_id=${bossId}&chapter_id=${chapterId}&returnTo=${returnUrl}`);
+  };
 
   const handleConfirmBuyRevivalSpin = async () => {
     if (userCoins < 100) {
-      showToast(t('not_enough_coins', "Not enough coins! You need 100 coins."));
+      showToast(t('not_enough_coins', "Not enough coins! You need 100 coins."), "warning");
       setShowBuySpinConfirmModal(false);
       return;
     }
     setIsBuyingRevivalSpin(true);
+
     try {
       const res = await apiFetch("/api/retention/spin-wheel/buy-revival", {
         method: "POST",
@@ -140,10 +173,9 @@ export default function BossBattleScreen() {
       });
       const json = await res.json();
       if (json.success) {
-        const newSpins = json.balances?.boss_revival_spins_balance || 1;
         const newCoins = json.coins !== undefined ? json.coins : Math.max(0, userCoins - 100);
-        setRevivalSpins(newSpins);
         setUserCoins(newCoins);
+        setRevivalSpins(1);
 
         try {
           const uRes = await apiFetch("/api/users/me");
@@ -154,20 +186,35 @@ export default function BossBattleScreen() {
           }
         } catch (ue) {}
 
+        // Save session state so we resume seamlessly where left off
+        sessionStorage.setItem("boss_battle_saved_session", JSON.stringify({
+          battleId: battleData?.battleId,
+          bossHP: battleData?.bossHP,
+          currentQIndex: currentQIndex + 1,
+          userAnswers: pendingLossData?.newAnswers || userAnswers,
+          questions: battleData?.questions,
+          chapterId: searchParams.get("chapterId")
+        }));
+
         setShowBuySpinConfirmModal(false);
         setShowReviveModal(false);
-        showToast(t('purchased_revival_spin', "Purchased 1 Revival Spin! 🎉"));
 
-        setTimeout(() => {
-          navigate(`/daily-rewards?type=boss_revival&boss_id=${battleData?.battleId}`);
-        }, 300);
+        showToast(t('purchased_revival_spin', "Purchased 1 Revival Spin! Heading to the wheel... 🎉"), "success");
+
+        // Navigate directly to the special spin wheel with 1 active spin attempt credited!
+        const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+        const bossId = battleData?.battleId && battleData.battleId !== "demo_b1" ? battleData.battleId : "";
+        const chapterId = searchParams.get("chapterId") || "";
+        navigate(`/daily-rewards?type=boss_revival&boss_id=${bossId}&chapter_id=${chapterId}&returnTo=${returnUrl}`);
       } else {
-        showToast(json.message || t('purchase_failed', "Purchase failed."));
+        showToast(json.message || t('purchase_failed', "Purchase failed."), "error");
         setShowBuySpinConfirmModal(false);
+        setShowReviveModal(true);
       }
     } catch (e) {
-      showToast(t('purchase_failed', "Purchase failed."));
+      showToast(t('purchase_failed', "Purchase failed."), "error");
       setShowBuySpinConfirmModal(false);
+      setShowReviveModal(true);
     } finally {
       setIsBuyingRevivalSpin(false);
     }
@@ -251,15 +298,73 @@ export default function BossBattleScreen() {
           { _id: "b5", question: "How many sides does a triangle have?", options: shuffleOpts(["3", "4", "5", "6"]), answer: "3" },
         ];
 
+        // Check if returning from revival session
+        const savedSessionStr = sessionStorage.getItem("boss_battle_saved_session");
+        const wonRewardStr = sessionStorage.getItem("boss_revival_won_reward");
+        let savedSession: any = null;
+        if (savedSessionStr) {
+          try {
+            savedSession = JSON.parse(savedSessionStr);
+          } catch (e) {}
+        }
+        
+        let wonReward: any = null;
+        if (wonRewardStr) {
+          try {
+            wonReward = JSON.parse(wonRewardStr);
+          } catch (e) {}
+        }
+
         if (json.success && json.data && json.data.questions && json.data.questions.length > 0) {
-          const processedQuestions = json.data.questions.map((q: any) => ({
-            ...q,
-            options: shuffleOpts(q.options)
-          }));
+          let processedQuestions = json.data.questions;
+          if (savedSession && savedSession.questions && savedSession.questions.length === json.data.questions.length) {
+            processedQuestions = savedSession.questions;
+          } else {
+            processedQuestions = json.data.questions.map((q: any) => ({
+              ...q,
+              options: shuffleOpts(q.options)
+            }));
+          }
+
+          let heartsToSet = json.data.playerHearts;
+          if (wonReward) {
+            if (wonReward.reward_type === "heart" && wonReward.amount) {
+              heartsToSet = Math.max(heartsToSet || 1, wonReward.amount);
+            } else {
+              heartsToSet = Math.max(heartsToSet || 1, 1);
+            }
+          }
+
           setBattleData({
             ...json.data,
+            playerHearts: Math.max(1, heartsToSet || 1),
+            playerHasShield: wonReward?.reward_type === "shield" ? true : (json.data.playerHasShield || false),
+            playerHasDoubleDamage: wonReward?.reward_type === "double_damage" ? true : (json.data.playerHasDoubleDamage || false),
             questions: processedQuestions
           });
+
+          if (savedSession) {
+            if (typeof savedSession.currentQIndex === 'number') {
+              setCurrentQIndex(savedSession.currentQIndex);
+            }
+            if (Array.isArray(savedSession.userAnswers)) {
+              setUserAnswers(savedSession.userAnswers);
+            }
+          }
+
+          if (wonReward || savedSession) {
+            showToast(t('revived_welcome_back', "Revived and ready! Your hearts have been restored. Defeat the boss! ❤️"), "gamification");
+            sessionStorage.removeItem("boss_battle_saved_session");
+            sessionStorage.removeItem("boss_revival_won_reward");
+          }
+
+          // Clear any state locks
+          setSelected(null);
+          setAttacking(false);
+          isAttackingRef.current = false;
+          setActionResult("idle");
+          setShowReviveModal(false);
+          setShowBuySpinConfirmModal(false);
         } else {
           setBattleData({
             battleId: "demo_b1",
@@ -504,16 +609,22 @@ export default function BossBattleScreen() {
 
   const handleGiveUp = async () => {
     setShowReviveModal(false);
-    const xpLoss = pendingLossData?.xpLoss || -30;
-    setLossOverlay({ show: true, xpLoss });
+    setShowBuySpinConfirmModal(false);
+    setLossOverlay({ show: false, xpLoss: 0 });
+    sessionStorage.removeItem("boss_battle_saved_session");
+    sessionStorage.removeItem("boss_revival_won_reward");
 
-    if (battleData?.battleId) {
+    const roadmapUrl = getRoadmapUrl();
+    if (battleData?.battleId && battleData.battleId !== "demo_b1") {
       apiFetch("/api/world/boss/confirm-retreat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ battleId: battleData.battleId })
       }).catch(() => {});
     }
+
+    // Immediately exit boss fight and redirect to Chapter Roadmap without lingering modals or state locks
+    navigate(roadmapUrl, { replace: true });
   };
 
   if (loading) {
@@ -880,43 +991,41 @@ export default function BossBattleScreen() {
       {/* BOSS REVIVAL MODAL */}
       <AnimatePresence>
         {showReviveModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm px-6 text-center">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 sm:p-6 text-center select-none">
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white border-2 border-[#141779] rounded-3xl p-8 max-w-sm w-full shadow-[0_20px_60px_rgba(20,23,121,0.2)] flex flex-col items-center gap-6 text-[#141779]"
+              initial={{ scale: 0.92, opacity: 0, y: 16 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.92, opacity: 0, y: 16 }}
+              transition={{ type: "spring", stiffness: 350, damping: 26 }}
+              className="bg-white border border-slate-100 rounded-[32px] p-6 sm:p-7 max-w-[370px] w-full shadow-[0_20px_60px_rgba(20,23,121,0.18)] flex flex-col items-center relative text-center text-[#141779]"
             >
-              <div className="w-20 h-20 rounded-full bg-[#f4efff] border-2 border-[#141779] flex items-center justify-center animate-pulse">
-                <Swords className="text-[#141779] w-10 h-10 animate-bounce" />
+              <div className="w-16 h-16 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center mb-2 shadow-xs">
+                <Swords className="text-[#141779] w-8 h-8" />
               </div>
               <div>
-                <h2 className="text-3xl font-black text-[#141779] uppercase tracking-widest">{t('final_chance', 'Final Chance!')}</h2>
-                <p className="text-sm font-semibold text-[#464652] mt-2">
+                <h2 className="text-xl font-black text-[#141779] leading-snug">{t('final_chance', 'Final Chance!')}</h2>
+                <p className="text-xs font-semibold text-slate-600 mt-1 leading-relaxed">
                   {t('boss_revive_desc', 'You ran out of hearts! Revive using the Revival Wheel to keep your current boss HP progress and fight on!')}
                 </p>
               </div>
               
-              <div className="w-full bg-[#f4efff] rounded-2xl p-4 border border-[#e0e0e0] flex justify-between items-center text-center">
+              <div className="w-full bg-slate-50 rounded-2xl p-3.5 border border-slate-200/80 flex justify-between items-center text-center shadow-xs my-4">
                 <div className="flex-1">
-                  <span className="text-[10px] text-[#767683] uppercase font-black tracking-widest block mb-1">{t('revival_spins', 'Revival Spins')}</span>
-                  <span className="text-2xl font-black text-[#141779]">{revivalSpins}</span>
+                  <span className="text-[10px] text-slate-500 uppercase font-black tracking-widest block mb-0.5">{t('revival_spins', 'Revival Spins')}</span>
+                  <span className="text-xl font-black text-[#141779]">{revivalSpins}</span>
                 </div>
-                <div className="w-px h-8 bg-[#e0e0e0]" />
+                <div className="w-px h-8 bg-slate-200" />
                 <div className="flex-1">
-                  <span className="text-[10px] text-[#767683] uppercase font-black tracking-widest block mb-1">{t('your_coins', 'Your Coins')}</span>
-                  <span className="text-2xl font-black text-[#d97706]">🪙 {Math.max(0, userCoins)}</span>
+                  <span className="text-[10px] text-slate-500 uppercase font-black tracking-widest block mb-0.5">{t('your_coins', 'Your Coins')}</span>
+                  <span className="text-xl font-black text-amber-600">🪙 {Math.max(0, userCoins)}</span>
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2 w-full">
+              <div className="flex flex-col gap-2.5 w-full">
                 {revivalSpins > 0 ? (
                   <button
-                    onClick={() => {
-                      setShowReviveModal(false);
-                      navigate(`/daily-rewards?type=boss_revival&boss_id=${battleData?.battleId}`);
-                    }}
-                    className="w-full py-4 bg-[#141779] text-white font-bold rounded-full hover:bg-[#101362] active:scale-95 transition-all uppercase tracking-wide text-sm flex items-center justify-center gap-2 shadow-md"
+                    onClick={handleGoToSpinWheel}
+                    className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:brightness-110 active:scale-95 text-white font-black rounded-full uppercase tracking-wider text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
                   >
                     <span>🔥 {t('spin_to_revive', 'Spin to Revive')}</span>
                   </button>
@@ -924,12 +1033,13 @@ export default function BossBattleScreen() {
                   <button
                     onClick={() => {
                       if (userCoins < 100) {
-                        showToast(t('not_enough_coins', "Not enough coins! You need 100 coins."));
+                        showToast(t('not_enough_coins', "Not enough coins! You need 100 coins."), "warning");
                         return;
                       }
+                      setShowReviveModal(false);
                       setShowBuySpinConfirmModal(true);
                     }}
-                    className="w-full py-4 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white font-bold rounded-full hover:brightness-110 active:scale-95 transition-all uppercase tracking-wide text-sm flex items-center justify-center gap-2 shadow-md border border-indigo-300/40"
+                    className="w-full py-3.5 bg-[#141779] hover:bg-[#101362] active:scale-95 text-white font-black rounded-full uppercase tracking-wider text-xs flex items-center justify-center gap-2 shadow-md shadow-[#141779]/20 transition-all cursor-pointer"
                   >
                     <span>🛒 {t('buy_revival_spin', 'Buy Revival Spin (100 🪙)')}</span>
                   </button>
@@ -937,9 +1047,9 @@ export default function BossBattleScreen() {
                 
                 <button
                   onClick={handleGiveUp}
-                  className="w-full py-3 bg-[#f4efff] text-[#767683] font-bold rounded-full hover:bg-[#e8ddff] active:scale-95 transition-all text-xs border border-[#e0e0e0]"
+                  className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-full active:scale-95 transition-all text-xs cursor-pointer"
                 >
-                  {t('give_up', 'Give Up')}
+                  {t('give_up', 'Give Up & Exit')}
                 </button>
               </div>
             </motion.div>
@@ -950,7 +1060,13 @@ export default function BossBattleScreen() {
       {/* Buy Revival Spin Confirmation Modal */}
       <UnifiedConfirmModal
         isOpen={showBuySpinConfirmModal}
-        onClose={() => !isBuyingRevivalSpin && setShowBuySpinConfirmModal(false)}
+        zIndex="z-[300]"
+        onClose={() => {
+          if (!isBuyingRevivalSpin) {
+            setShowBuySpinConfirmModal(false);
+            setShowReviveModal(true);
+          }
+        }}
         onConfirm={handleConfirmBuyRevivalSpin}
         title={t('confirm_buy_spin_title', 'Buy Revival Spin?')}
         message={
@@ -995,16 +1111,6 @@ export default function BossBattleScreen() {
           >
             {t('return_to_map', 'Return to Chapter Roadmap')}
           </button>
-        </div>
-      )}
-
-      {/* Toast Notification Banner */}
-      {toastMessage && (
-        <div
-          className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white px-4.5 py-2.5 rounded-full shadow-[0_12px_30px_rgba(20,23,121,0.4)] border border-[#57fae9]/40 font-bold text-xs flex items-center justify-center gap-2.5 text-center max-w-[90vw] w-auto animate-in fade-in slide-in-from-top-4 duration-300"
-        >
-          <Sparkles size={16} className="text-[#57fae9] shrink-0" />
-          <span className="truncate max-w-[280px] sm:max-w-[340px] line-clamp-1">{toastMessage}</span>
         </div>
       )}
     </div>

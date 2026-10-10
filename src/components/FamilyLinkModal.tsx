@@ -4,6 +4,7 @@ import { X, Copy, Check, Users, ShieldAlert, RefreshCw } from "lucide-react";
 import { apiFetch } from "../api";
 import { useTranslation } from "react-i18next";
 import { copyToClipboard } from "../utils/clipboard";
+import { showNotificationToast } from "./GlobalNotificationBanner";
 
 interface FamilyLinkModalProps {
   isOpen: boolean;
@@ -43,7 +44,12 @@ export default function FamilyLinkModal({ isOpen, onClose }: FamilyLinkModalProp
     if (familyCode) {
       await copyToClipboard(familyCode);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
+      showNotificationToast({
+        title: "Code Copied",
+        message: "Family Link Code copied to clipboard! 📋",
+        type: "success"
+      });
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -80,26 +86,27 @@ export default function FamilyLinkModal({ isOpen, onClose }: FamilyLinkModalProp
     <AnimatePresence>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <motion.div
-          initial={{ scale: 0.9, opacity: 0, y: 20 }}
+          initial={{ scale: 0.92, opacity: 0, y: 16 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.9, opacity: 0, y: 20 }}
-          className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl border border-slate-100 flex flex-col items-center text-center relative select-none"
+          exit={{ scale: 0.92, opacity: 0, y: 16 }}
+          transition={{ type: "spring", stiffness: 350, damping: 26 }}
+          className="w-full max-w-sm bg-white rounded-[32px] p-6 sm:p-7 shadow-[0_20px_60px_rgba(20,23,121,0.18)] border border-slate-100 flex flex-col items-center text-center relative select-none"
         >
           <button
             onClick={onClose}
             className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
 
-          <div className="w-14 h-14 bg-indigo-50 text-[#141779] rounded-2xl flex items-center justify-center mb-3">
+          <div className="w-16 h-16 rounded-full border border-indigo-100 bg-indigo-50 text-[#141779] flex items-center justify-center mb-3.5 shadow-xs">
             <Users size={28} />
           </div>
 
-          <h3 className="text-xl font-black text-[#141779] mb-1">
+          <h3 className="text-xl font-black text-[#141779] mb-1.5 leading-snug">
             {t("family_link_code_title", "Family Link Code")}
           </h3>
-          <p className="text-xs font-semibold text-slate-500 mb-5 leading-relaxed px-2">
+          <p className="text-xs font-semibold text-slate-600 mb-5 leading-relaxed px-1">
             {t("share_unique_code_desc", "Share this Unique Code with co-parents or link another smartphone to monitor learning reports.")}
           </p>
 
@@ -142,7 +149,7 @@ export default function FamilyLinkModal({ isOpen, onClose }: FamilyLinkModalProp
             </div>
           )}
 
-          <div className="bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold p-3 rounded-xl flex items-start gap-2 text-left w-full">
+          <div className="bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold p-3 rounded-2xl flex items-start gap-2 text-left w-full mb-1">
             <ShieldAlert size={18} className="shrink-0 mt-0.5" />
             <span>
               {t("family_link_security_warning", "Anyone with this Family Code and your 4-digit Parent PIN can link their phone to monitor learning reports.")}
@@ -151,7 +158,7 @@ export default function FamilyLinkModal({ isOpen, onClose }: FamilyLinkModalProp
 
           <button
             onClick={onClose}
-            className="w-full h-12 bg-slate-100 text-slate-700 font-black text-xs uppercase tracking-wider rounded-2xl mt-5 hover:bg-slate-200 transition-colors"
+            className="w-full py-3.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold text-xs uppercase tracking-wider rounded-full mt-4 transition-all"
           >
             {t("done", "Done")}
           </button>

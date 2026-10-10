@@ -1,9 +1,10 @@
 import { motion } from "framer-motion";
-import { ArrowLeft, BookOpen } from "lucide-react";
+import { ArrowLeft, BookOpen, Lock } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import { prefetchPdf } from "../../../utils/pdfCache";
+import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 
 export default function TextbookChaptersScreen() {
   const navigate = useNavigate();
@@ -169,41 +170,21 @@ export default function TextbookChaptersScreen() {
         )}
       </main>
 
-      {/* Subscription Lock Modal */}
-      {showSubModal && (
-        <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-6 text-center">
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-white rounded-[32px] p-6 max-w-sm w-full border-2 border-amber-300 shadow-2xl flex flex-col items-center gap-4"
-          >
-            <div className="w-16 h-16 rounded-full bg-amber-100 border border-amber-300 flex items-center justify-center text-3xl shadow-inner animate-bounce">
-              🔒
-            </div>
-            <div>
-              <h3 className="text-xl font-black text-slate-900">Unlock Full Textbook!</h3>
-              <p className="text-xs font-semibold text-slate-600 mt-1 leading-relaxed">
-                Chapter 1 is completely free. Accessing Chapter 2 and beyond requires an active StudySaathy Subscription.
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                setShowSubModal(false);
-                navigate("/parent/subscription");
-              }}
-              className="w-full py-3.5 bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] hover:brightness-110 text-white font-black rounded-2xl shadow-lg active:scale-95 transition-all uppercase tracking-wider text-xs border border-[#5B5CFF]"
-            >
-              Upgrade Subscription →
-            </button>
-            <button
-              onClick={() => setShowSubModal(false)}
-              className="text-xs font-bold text-slate-400 hover:text-slate-600"
-            >
-              Maybe Later
-            </button>
-          </motion.div>
-        </div>
-      )}
+      {/* Unified Subscription Lock Modal */}
+      <UnifiedConfirmModal
+        isOpen={showSubModal}
+        onClose={() => setShowSubModal(false)}
+        onConfirm={() => {
+          setShowSubModal(false);
+          navigate("/parent/subscription");
+        }}
+        title="Unlock Full Textbook!"
+        message="Chapter 1 is completely free. Accessing Chapter 2 and beyond requires an active StudySaathy Subscription."
+        confirmText="Upgrade Subscription →"
+        cancelText="Maybe Later"
+        variant="warning"
+        icon={<Lock size={30} className="text-amber-600" />}
+      />
     </div>
   );
 }

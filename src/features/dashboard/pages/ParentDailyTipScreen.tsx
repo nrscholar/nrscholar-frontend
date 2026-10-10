@@ -200,7 +200,7 @@ export default function ParentDailyTipScreen() {
               const parentXpVal = u.parentXp !== undefined ? u.parentXp : 0;
               const parentLevelVal = u.parentLevel !== undefined ? u.parentLevel : 1;
               const effectiveStars = (u.parentStars || 0) + (u.totalStars || 0) + (u.stars || 0);
-              const effectiveStreak = Math.max(u.streakDays || 0, u.parentStreak || 0);
+              const effectiveStreak = u.parentStreak !== undefined ? u.parentStreak : 0;
 
               setChildName(u.childName || childObj.childName || "Explorer");
               setParentLevel(parentLevelVal);
@@ -229,7 +229,7 @@ export default function ParentDailyTipScreen() {
           if (rRes) {
             const rJson = await rRes.json();
             if (rJson.success && rJson.data) {
-              const tests = Math.max(rJson.data.totalTests || 0, rJson.data.totalChaptersCompleted || 0, rJson.data.todaySolved > 0 ? 1 : 0);
+              const tests = rJson.data.totalChaptersCompleted || 0;
               const acc = (rJson.data.overallAccuracy !== undefined && rJson.data.overallAccuracy !== null)
                 ? rJson.data.overallAccuracy
                 : (rJson.data.weeklyConfidenceScore || 0);
@@ -344,7 +344,7 @@ export default function ParentDailyTipScreen() {
                 </span>
               )}
               <span className="text-[11px] font-black text-slate-500 bg-slate-100 px-3 py-1 rounded-full uppercase tracking-wider">
-                {t("day_num", { day: new Date().getDate(), defaultValue: `Day ${new Date().getDate()}` })}
+                {t("day_num", { day: streak > 0 ? streak : 1, defaultValue: streak > 0 ? `Day ${streak}` : "Day 1" })}
               </span>
             </div>
           </div>

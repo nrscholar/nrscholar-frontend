@@ -457,34 +457,18 @@ export default function ChapterQuestionsScreen() {
         />
       )}
 
-      {/* Quit Modal Overlay */}
-      {showQuitModal && (
-        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center px-6 backdrop-blur-sm">
-          <div className="bg-white rounded-[24px] p-6 w-full max-w-[340px] shadow-2xl flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 bg-[#ffdad6] text-[#ba1a1a] rounded-full flex items-center justify-center mb-4">
-              <XIcon size={32} strokeWidth={3} />
-            </div>
-            <h3 className="text-2xl font-black text-[#141779] mb-2 tracking-tight">Quit Quiz?</h3>
-            <p className="text-[#464652] font-medium mb-8">
-              Are you sure you want to quit the quiz? Your progress will be saved.
-            </p>
-            <div className="flex w-full gap-3">
-              <button 
-                onClick={() => setShowQuitModal(false)}
-                className="flex-1 py-4 bg-[#f4efff] text-[#141779] font-bold rounded-xl hover:bg-[#e8ddff] transition-colors"
-              >
-                No, Stay
-              </button>
-              <button 
-                onClick={handleQuit}
-                className="flex-1 py-4 bg-[#ba1a1a] text-white font-bold rounded-xl shadow-md hover:bg-[#93000a] transition-colors"
-              >
-                Yes, Quit
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Unified Quit Modal */}
+      <UnifiedConfirmModal
+        isOpen={showQuitModal}
+        onClose={() => setShowQuitModal(false)}
+        onConfirm={handleQuit}
+        title="Quit Quiz?"
+        message="Are you sure you want to quit the quiz? Your progress will be saved."
+        confirmText="Yes, Quit"
+        cancelText="No, Stay"
+        variant="danger"
+        icon={<XIcon size={30} className="text-rose-600" />}
+      />
 
       {/* Header */}
       <header className="flex items-center justify-between px-5 py-4 bg-[#f4efff] sticky top-0 z-40">

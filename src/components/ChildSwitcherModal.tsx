@@ -117,6 +117,7 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
         sessionStorage.clear(); // Clear cached subject/chapter progress for previous child
         if (pin) sessionStorage.setItem("parentPinVerified", pin);
         onUserUpdated(json.data.user);
+        window.dispatchEvent(new Event("userDataUpdated"));
         onClose();
         if (onSwitched) onSwitched(); else window.location.reload();
       }

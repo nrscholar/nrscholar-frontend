@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Bell, Star, Lock, Sparkles, Check, CheckCircle2, BookOpen } from "lucide-react";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
+import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
+import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
 
 export default function HabitsScreen() {
   const navigate = useNavigate();
@@ -55,6 +57,11 @@ export default function HabitsScreen() {
       const data = await response.json();
       if (data.success) {
         setCompleted(true);
+        showNotificationToast({
+          title: "Habit Practiced! ⭐",
+          message: `+${habit?.rewardPoints || 10} Gold Stars earned!`,
+          type: "gamification"
+        });
         setTimeout(() => {
           setShowModal(true);
         }, 400);
@@ -281,28 +288,18 @@ export default function HabitsScreen() {
           )}
         </div>
 
-        {/* Reward Modal Popup */}
-        {showModal && (
-          <div className="fixed inset-0 bg-[#2D328F]/40 backdrop-blur-xs z-50 flex items-center justify-center p-6">
-            <div className="bg-white rounded-3xl p-6 sm:p-7 flex flex-col items-center w-full max-w-[340px] border border-slate-200 shadow-2xl animate-in fade-in zoom-in-95 duration-300 relative overflow-hidden">
-              <div className="w-16 h-16 bg-[#12D6D1]/10 border border-[#12D6D1]/30 rounded-2xl flex items-center justify-center mb-4 text-3xl">
-                <span>⭐</span>
-              </div>
-              <h3 className="text-xl font-black text-[#2D328F] text-center mb-1">
-                🎉 {t('splendid', 'Splendid!')}
-              </h3>
-              <p className="text-xs font-semibold text-slate-600 text-center mb-6 leading-relaxed">
-                {t('earned_points_desc', { points: habit?.rewardPoints || 10, defaultValue: `You earned +${habit?.rewardPoints || 10} Gold Stars for practicing this habit today!` })}
-              </p>
-              <button 
-                onClick={() => { setShowModal(false); navigate(-1); }}
-                className="w-full bg-gradient-to-r from-[#2D328F] to-[#8C68F6] text-white py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-md active:scale-95"
-              >
-                {t('continue_journey', 'Continue Journey')}
-              </button>
-            </div>
-          </div>
-        )}
+        {/* UNIFIED HABIT REWARD MODAL */}
+        <UnifiedConfirmModal
+          isOpen={showModal}
+          onClose={() => { setShowModal(false); navigate(-1); }}
+          onConfirm={() => { setShowModal(false); navigate(-1); }}
+          title={t('splendid', 'Splendid!')}
+          message={t('earned_points_desc', { points: habit?.rewardPoints || 10, defaultValue: `You earned +${habit?.rewardPoints || 10} Gold Stars for practicing this habit today!` })}
+          confirmText={t('continue_journey', 'Continue Journey')}
+          showCancel={false}
+          variant="success"
+          icon={<span className="text-3xl">⭐</span>}
+        />
       </main>
     </div>
   );
