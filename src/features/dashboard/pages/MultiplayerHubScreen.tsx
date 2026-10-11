@@ -1,10 +1,11 @@
 import { ArrowLeft, Book, ChevronDown, Globe, Microscope, Shapes, Swords, Trophy, Users, Lock, BookOpen, X, Sparkles, Check, Key } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
 import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
+import ShadowArenaDuelStage, { ShadowArenaTheme } from "../../../components/ShadowArenaDuelStage";
 
 const getSubjectStyle = (name: string) => {
   const n = name.toLowerCase();
@@ -15,62 +16,9 @@ const getSubjectStyle = (name: string) => {
   return { icon: BookOpen, color: "text-[#3520A8]", bg: "bg-[#F4EFF7]", border: "border-[#6C4DFF]", activeBg: "bg-[#EAE2FB]", glow: "shadow-[0_4px_16px_rgba(108,77,255,0.25)]" };
 };
 
-// Left Shadow Fighter Silhouette SVG
-const FighterLeftSVG = () => (
-  <svg viewBox="0 0 100 120" className="w-16 h-20 sm:w-20 sm:h-24 drop-shadow-[0_0_10px_rgba(108,77,255,0.8)]">
-    <defs>
-      <linearGradient id="fighterGlowLeft" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#9C7CFF" />
-        <stop offset="100%" stopColor="#3520A8" />
-      </linearGradient>
-      <filter id="glowLeft" x="-20%" y="-20%" width="140%" height="140%">
-        <feGaussianBlur stdDeviation="3" result="blur" />
-        <feComposite in="SourceGraphic" in2="blur" operator="over" />
-      </filter>
-    </defs>
-    <g filter="url(#glowLeft)">
-      <ellipse cx="50" cy="100" rx="36" ry="8" fill="url(#fighterGlowLeft)" opacity="0.5" />
-      <circle cx="58" cy="24" r="11" fill="#140B3B" stroke="#9C7CFF" strokeWidth="2" />
-      <path d="M 46 20 Q 34 16 30 22 Q 40 24 47 26 Z" fill="#6C4DFF" />
-      <path d="M 48 35 Q 65 32 68 47 L 60 72 L 40 70 L 38 50 Z" fill="#0D0628" stroke="#6C4DFF" strokeWidth="1.5" />
-      <path d="M 64 38 L 84 30 L 90 36 L 68 48 Z" fill="#1B1052" stroke="#9C7CFF" strokeWidth="1.5" />
-      <path d="M 46 40 L 30 47 L 34 54 L 50 46 Z" fill="#0A041E" stroke="#6C4DFF" strokeWidth="1" />
-      <path d="M 42 70 L 22 100 L 12 98 L 34 67 Z" fill="#0A041E" stroke="#6C4DFF" strokeWidth="1.5" />
-      <path d="M 58 71 L 75 100 L 88 100 L 66 68 Z" fill="#140B3B" stroke="#9C7CFF" strokeWidth="1.5" />
-      <path d="M 59 14 A 11 11 0 0 1 68 27" fill="none" stroke="#F4C95D" strokeWidth="2" strokeLinecap="round" />
-    </g>
-  </svg>
-);
-
-// Right Shadow Fighter Silhouette SVG
-const FighterRightSVG = () => (
-  <svg viewBox="0 0 100 120" className="w-16 h-20 sm:w-20 sm:h-24 drop-shadow-[0_0_10px_rgba(244,201,93,0.8)]">
-    <defs>
-      <linearGradient id="fighterGlowRight" x1="100%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#F4C95D" />
-        <stop offset="100%" stopColor="#FF5252" />
-      </linearGradient>
-      <filter id="glowRight" x="-20%" y="-20%" width="140%" height="140%">
-        <feGaussianBlur stdDeviation="3" result="blur" />
-        <feComposite in="SourceGraphic" in2="blur" operator="over" />
-      </filter>
-    </defs>
-    <g filter="url(#glowRight)">
-      <ellipse cx="50" cy="100" rx="36" ry="8" fill="url(#fighterGlowRight)" opacity="0.5" />
-      <circle cx="42" cy="24" r="11" fill="#140B3B" stroke="#F4C95D" strokeWidth="2" />
-      <path d="M 54 20 Q 66 16 70 22 Q 60 24 53 26 Z" fill="#FF5252" />
-      <path d="M 52 35 Q 35 32 32 47 L 40 72 L 60 70 L 62 50 Z" fill="#0D0628" stroke="#F4C95D" strokeWidth="1.5" />
-      <path d="M 36 38 L 16 30 L 10 36 L 32 48 Z" fill="#1B1052" stroke="#F4C95D" strokeWidth="1.5" />
-      <path d="M 54 40 L 70 47 L 66 54 L 50 46 Z" fill="#0A041E" stroke="#FF5252" strokeWidth="1" />
-      <path d="M 58 70 L 78 100 L 88 98 L 66 67 Z" fill="#0A041E" stroke="#F4C95D" strokeWidth="1.5" />
-      <path d="M 42 71 L 25 100 L 12 100 L 34 68 Z" fill="#140B3B" stroke="#F4C95D" strokeWidth="1.5" />
-      <path d="M 41 14 A 11 11 0 0 0 32 27" fill="none" stroke="#00F0FF" strokeWidth="2" strokeLinecap="round" />
-    </g>
-  </svg>
-);
-
 export default function MultiplayerHubScreen() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { t } = useTranslation();
   const [joinCode, setJoinCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -79,6 +27,7 @@ export default function MultiplayerHubScreen() {
   const [chaptersList, setChaptersList] = useState<string[]>([]);
   const [myClass, setMyClass] = useState("Class 1");
   const [myCoins, setMyCoins] = useState(0);
+  const [userName, setUserName] = useState("");
   const [isChapterDropdownOpen, setIsChapterDropdownOpen] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [myStreak, setMyStreak] = useState(0);
@@ -91,21 +40,98 @@ export default function MultiplayerHubScreen() {
   const [completedChapterIds, setCompletedChapterIds] = useState<string[]>([]);
   const [isSubscribed, setIsSubscribed] = useState(false);
 
-  useEffect(() => {
+  // Helper to determine the single active journey theme:
+  // Class 1-4 -> "dragon" (2 Dragons fighting)
+  // Class 5-7 or scientist -> "science" (2 Scientists fighting)
+  // Class 8-12 or social_proof -> "social" (2 Gold Medalists fighting)
+  const resolveJourneyTheme = (tierKey?: string, childClassStr?: string): ShadowArenaTheme => {
+    if (tierKey === "scientist") return "science";
+    if (tierKey === "social_proof") return "social";
+    if (tierKey === "dragon") return "dragon";
+
+    if (childClassStr) {
+      const match = String(childClassStr).match(/\d+/);
+      const classNum = match ? parseInt(match[0], 10) : 1;
+      if (classNum >= 8) return "social";
+      if (classNum >= 5) return "science";
+      return "dragon";
+    }
+
+    return "dragon";
+  };
+
+  // Active Journey Duel Theme
+  const [arenaTheme, setArenaTheme] = useState<ShadowArenaTheme>(() => {
+    const urlTheme = searchParams.get("theme");
+    if (urlTheme && ["dragon", "science", "social"].includes(urlTheme)) return urlTheme as ShadowArenaTheme;
+
+    let cachedTier: string | undefined;
     try {
-      const cached = localStorage.getItem("user");
+      const cachedJ = localStorage.getItem("cachedJourneyData");
+      if (cachedJ) {
+        const parsed = JSON.parse(cachedJ);
+        cachedTier = parsed.tierKey;
+      }
+    } catch (e) {
+      console.warn("Failed to parse cached journey:", e);
+    }
+
+    let cachedClass: string | undefined;
+    try {
+      const uStr = localStorage.getItem("userData") || localStorage.getItem("user");
+      if (uStr) {
+        const u = JSON.parse(uStr);
+        cachedClass = u.childClass;
+      }
+    } catch (e) {
+      console.warn("Failed to parse cached user:", e);
+    }
+
+    return resolveJourneyTheme(cachedTier, cachedClass);
+  });
+
+  useEffect(() => {
+    localStorage.removeItem("shadow_arena_theme_preview");
+
+    try {
+      const cached = localStorage.getItem("userData") || localStorage.getItem("user");
       if (cached) {
         const u = JSON.parse(cached);
         setIsSubscribed(Boolean(u.is_subscribed || u.isSubscribed));
+        if (u.name || u.childName) setUserName(u.name || u.childName);
+        if (u.childClass) {
+          setMyClass(u.childClass);
+          if (!searchParams.get("theme")) {
+            setArenaTheme(resolveJourneyTheme(undefined, u.childClass));
+          }
+        }
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn("Failed to parse cached user:", e);
+    }
 
     apiFetch("/api/users/me").then(r => r.json()).then(d => {
       if (d.success && d.data?.user) {
-        if (d.data.user.childClass) setMyClass(d.data.user.childClass);
-        setMyCoins(d.data.user.coins || 0);
-        setMyStreak(d.data.user.multiplayerStreak || 0);
-        setIsSubscribed(Boolean(d.data.user.is_subscribed || d.data.user.isSubscribed));
+        const u = d.data.user;
+        if (u.name || u.childName) setUserName(u.name || u.childName);
+        if (u.childClass) {
+          setMyClass(u.childClass);
+          if (!searchParams.get("theme")) {
+            setArenaTheme(resolveJourneyTheme(undefined, u.childClass));
+          }
+
+          apiFetch(`/api/journey/progress?classLevel=${encodeURIComponent(u.childClass)}`)
+            .then(res => res.json())
+            .then(jJson => {
+              if (jJson.success && jJson.data?.tierKey && !searchParams.get("theme")) {
+                setArenaTheme(resolveJourneyTheme(jJson.data.tierKey, u.childClass));
+              }
+            })
+            .catch(() => {});
+        }
+        setMyCoins(u.coins || 0);
+        setMyStreak(u.multiplayerStreak || 0);
+        setIsSubscribed(Boolean(u.is_subscribed || u.isSubscribed));
       }
     });
 
@@ -167,7 +193,7 @@ export default function MultiplayerHubScreen() {
       const chapterNames = fetchedChapters
         .map((c, idx) => {
           const num = c.order || c.chapter_number || c.chapterNumber || (idx + 1);
-          let rawName = c.name || c.title || c.chapter_name || "";
+          const rawName = c.name || c.title || c.chapter_name || "";
           if (!rawName || rawName.toLowerCase() === "chapter 1") {
             return `Chapter ${num}`;
           }
@@ -378,48 +404,13 @@ export default function MultiplayerHubScreen() {
       {/* MAIN GAME LOBBY CONTENT AREA (COMPACT NO-SCROLL LAYOUT) */}
       <main className="px-4 py-2 flex-1 flex flex-col justify-between max-w-[430px] mx-auto w-full z-10 overflow-y-auto overflow-x-hidden scrollbar-none">
         
-        {/* HERO 1V1 SHADOW BATTLE STAGE */}
-        <section className="flex flex-col items-center shrink-0">
-          <div className="w-full bg-gradient-to-b from-[#180C4F] to-[#2B1778] border-2 border-[#6C4DFF]/40 rounded-2xl p-2.5 relative shadow-[0_8px_20px_rgba(20,23,121,0.25)] overflow-hidden">
-            {/* Background Battle Grid Lines */}
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff10_1px,transparent_1px),linear-gradient(to_bottom,#ffffff10_1px,transparent_1px)] bg-[size:16px_16px]" />
-
-            {/* Fighter Duel Stage */}
-            <div className="relative flex items-center justify-between px-3 py-1">
-              {/* Player 1 Left */}
-              <div className="flex flex-col items-center">
-                <span className="text-[9px] font-extrabold uppercase tracking-wider text-white bg-[#6C4DFF] px-2 py-0.5 rounded-full border border-[#9C7CFF] mb-0.5 shadow-sm">
-                  {t('you', 'YOU')}
-                </span>
-                <FighterLeftSVG />
-              </div>
-
-              {/* Center VS Emblem */}
-              <div className="flex flex-col items-center z-10 mx-1">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#F4C95D] via-[#FF5252] to-[#6C4DFF] p-[2px] shadow-[0_0_16px_rgba(244,201,93,0.8)] animate-pulse">
-                  <div className="w-full h-full bg-[#120738] rounded-full flex items-center justify-center">
-                    <span className="text-xs font-black text-[#F4C95D] tracking-tighter italic">VS</span>
-                  </div>
-                </div>
-                <span className="text-[11px] font-black text-white tracking-widest mt-1 uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                  {t('arena_1v1', 'ARENA 1v1')}
-                </span>
-              </div>
-
-              {/* Player 2 Right */}
-              <div className="flex flex-col items-center">
-                <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#141779] bg-[#F4C95D] px-2 py-0.5 rounded-full border border-[#FFD700] mb-0.5 shadow-sm">
-                  {t('challenger', 'CHALLENGER')}
-                </span>
-                <FighterRightSVG />
-              </div>
-            </div>
-
-            {/* Subtitle tag */}
-            <p className="text-center text-[10px] font-bold text-[#EAE2FB] mt-0.5 tracking-tight">
-              {t('shadow_arena_desc', 'Challenge your friend • Answer faster • Win rewards')}
-            </p>
-          </div>
+        {/* HERO 1V1 SHADOW BATTLE STAGE (Strict Journey Duel: 2 Dragons, 2 Scientists, or 2 Gold Medalists) */}
+        <section className="flex flex-col items-center shrink-0 w-full">
+          <ShadowArenaDuelStage
+            theme={arenaTheme}
+            playerName={userName || t('you', 'YOU')}
+            opponentName={t('challenger', 'CHALLENGER')}
+          />
         </section>
 
         {/* BATTLE STATUS & STREAK REWARD BADGE */}

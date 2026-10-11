@@ -373,7 +373,8 @@ export default function ProfileScreen() {
               onClick={() => navigate("/practice/inventory")}
               className="text-xs font-bold text-[#141779] hover:underline"
             >
-              {t('view_all', 'View All →')}
+              <span>{t('view_all', 'View All')}</span>
+              <span>→</span>
             </button>
           </div>
 

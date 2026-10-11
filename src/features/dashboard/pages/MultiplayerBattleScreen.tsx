@@ -156,6 +156,43 @@ export default function MultiplayerBattleScreen() {
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [waitTimer, setWaitTimer] = useState(0);
 
+  // Active Journey Theme ("dragon", "science", "social")
+  const [battleTheme, setBattleTheme] = useState<"dragon" | "science" | "social">(() => {
+    let cachedTier: string | undefined;
+    try {
+      const cachedJ = localStorage.getItem("cachedJourneyData");
+      if (cachedJ) {
+        const parsed = JSON.parse(cachedJ);
+        cachedTier = parsed.tierKey;
+      }
+    } catch (e) {
+      console.warn("Failed to parse cached journey:", e);
+    }
+    if (cachedTier === "scientist") return "science";
+    if (cachedTier === "social_proof") return "social";
+    if (cachedTier === "dragon") return "dragon";
+
+    let cachedClass: string | undefined;
+    try {
+      const uStr = localStorage.getItem("userData") || localStorage.getItem("user");
+      if (uStr) {
+        const u = JSON.parse(uStr);
+        cachedClass = u.childClass;
+      }
+    } catch (e) {
+      console.warn("Failed to parse cached user:", e);
+    }
+    if (cachedClass) {
+      const match = String(cachedClass).match(/\d+/);
+      const classNum = match ? parseInt(match[0], 10) : 1;
+      if (classNum >= 8) return "social";
+      if (classNum >= 5) return "science";
+      return "dragon";
+    }
+
+    return "dragon";
+  });
+
   const isHost = room?.hostId === myId;
   const myAvatar = isHost ? room?.hostAvatar : room?.guestAvatar;
   const oppAvatar = isHost ? room?.guestAvatar : room?.hostAvatar;
@@ -194,9 +231,29 @@ export default function MultiplayerBattleScreen() {
             if (data.success && data.data && data.data.user) {
                 setQuitCount(data.data.user.multiplayerQuitCount || 0);
                 setMyStreak(data.data.user.multiplayerStreak || 0);
+                if (data.data.user.childClass) {
+                  const match = String(data.data.user.childClass).match(/\d+/);
+                  const classNum = match ? parseInt(match[0], 10) : 1;
+                  if (classNum >= 8) setBattleTheme("social");
+                  else if (classNum >= 5) setBattleTheme("science");
+                  else setBattleTheme("dragon");
+
+                  apiFetch(`/api/journey/progress?classLevel=${encodeURIComponent(data.data.user.childClass)}`)
+                    .then(r => r.json())
+                    .then(jd => {
+                      if (jd.success && jd.data?.tierKey) {
+                        if (jd.data.tierKey === "scientist") setBattleTheme("science");
+                        else if (jd.data.tierKey === "social_proof") setBattleTheme("social");
+                        else if (jd.data.tierKey === "dragon") setBattleTheme("dragon");
+                      }
+                    })
+                    .catch(() => {});
+                }
             }
         }).catch(console.error);
-      } catch(e) {}
+      } catch(e) {
+        console.warn("Failed to parse userData:", e);
+      }
     }
   }, []);
 
@@ -438,7 +495,17 @@ export default function MultiplayerBattleScreen() {
           <button onClick={() => setShowQuitModal(true)} className="p-2 bg-[#f4efff] rounded-full hover:bg-[#e8ddff] border border-[#e0e0e0] transition-colors">
              <X size={20} color="#141779" />
           </button>
-          <span className="text-[#767683] text-xs font-bold uppercase tracking-widest">{t('live_battle', 'Live Battle')}</span>
+          
+          {/* Active Journey Theme Duel Badge */}
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#141779]/5 border border-[#141779]/15 shadow-xs">
+            <span className="text-sm">
+              {battleTheme === "dragon" ? "🐉" : battleTheme === "science" ? "🧪" : "🥇"}
+            </span>
+            <span className="text-[#141779] text-xs font-black uppercase tracking-wider">
+              {battleTheme === "dragon" ? t('dragon_duel', 'Dragon Duel (1v1)') : battleTheme === "science" ? t('science_duel', 'Science Duel (1v1)') : t('medalists_duel', 'Gold Medalists Duel (1v1)')}
+            </span>
+          </div>
+
           <div className="w-9" />
         </div>
         <div className="flex items-center justify-between gap-2 sm:gap-4 max-w-full">
@@ -446,7 +513,7 @@ export default function MultiplayerBattleScreen() {
           {/* MY SIDE */}
           <div className="flex-1 min-w-0 flex flex-col items-start gap-1.5">
             <div className="flex items-center gap-2 max-w-full">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-[#141779] overflow-hidden bg-white shadow-sm shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-[#141779] overflow-hidden bg-white shadow-sm shrink-0 relative">
                 <img 
                   src={myAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(myName || 'Me')}`} 
                   alt={myName || 'You'}
@@ -455,6 +522,9 @@ export default function MultiplayerBattleScreen() {
                     e.target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(myName || 'Me')}`;
                   }}
                 />
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white shadow-xs flex items-center justify-center text-[10px] border border-slate-200">
+                  {battleTheme === "dragon" ? "🐉" : battleTheme === "science" ? "🧪" : "🥇"}
+                </div>
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1">
@@ -502,7 +572,7 @@ export default function MultiplayerBattleScreen() {
                   <p className="text-[11px] font-bold text-[#767683]">{oppScore} {t('pts', 'PTS')}</p>
                 </div>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-[#ff9f43] overflow-hidden bg-white shadow-sm shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-[#ff9f43] overflow-hidden bg-white shadow-sm shrink-0 relative">
                 <img 
                   src={oppAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(oppName || 'Opponent')}`} 
                   alt={oppName || 'Opponent'}
@@ -511,6 +581,9 @@ export default function MultiplayerBattleScreen() {
                     e.target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(oppName || 'Opponent')}`;
                   }}
                 />
+                <div className="absolute -bottom-1 -left-1 w-5 h-5 rounded-full bg-white shadow-xs flex items-center justify-center text-[10px] border border-slate-200">
+                  {battleTheme === "dragon" ? "🐉" : battleTheme === "science" ? "🧪" : "🥇"}
+                </div>
               </div>
             </div>
             {/* Health/Progress Bar */}
@@ -523,10 +596,36 @@ export default function MultiplayerBattleScreen() {
       </header>
 
       {/* Main Battle Area */}
-      <main className="flex-1 flex flex-col px-6 py-8 relative z-10">
+      <main className="flex-1 flex flex-col px-6 py-6 relative z-10">
         {!isFinished ? (
           <div className="flex-1 flex flex-col">
-            <div className="mb-8 relative">
+            
+            {/* Active Theme Duel Clash Indicator */}
+            <div className="flex items-center justify-center mb-4">
+              {battleTheme === "dragon" && (
+                <div className="flex items-center gap-2 py-1 px-3 bg-gradient-to-r from-teal-500/10 via-amber-500/10 to-rose-500/10 rounded-full border border-teal-500/20 text-[11px] font-black text-[#141779] shadow-xs">
+                  <span>🐉 {t('dragon_left', 'Hero Dragon')}</span>
+                  <span className="text-orange-500 font-extrabold text-[10px] animate-pulse">🔥 CLASHING BREATH 🔥</span>
+                  <span>{t('dragon_right', 'Shadow Dragon')} 🐉</span>
+                </div>
+              )}
+              {battleTheme === "science" && (
+                <div className="flex items-center gap-2 py-1 px-3 bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-pink-500/10 rounded-full border border-cyan-500/20 text-[11px] font-black text-[#141779] shadow-xs">
+                  <span>🧪 {t('sci_left', 'Hero Scientist')}</span>
+                  <span className="text-cyan-600 font-extrabold text-[10px] animate-pulse">⚡ QUANTUM BEAM ⚡</span>
+                  <span>{t('sci_right', 'Rival Scientist')} 🧪</span>
+                </div>
+              )}
+              {battleTheme === "social" && (
+                <div className="flex items-center gap-2 py-1 px-3 bg-gradient-to-r from-amber-500/15 via-yellow-400/20 to-orange-500/15 rounded-full border border-amber-400/30 text-[11px] font-black text-[#141779] shadow-xs">
+                  <span>🥇 {t('fencer_left', 'Hero Medalist')}</span>
+                  <span className="text-amber-600 font-extrabold text-[10px] animate-pulse">⚔️ GOLDEN BLADES ⚔️</span>
+                  <span>{t('fencer_right', 'Rival Medalist')} 🥇</span>
+                </div>
+              )}
+            </div>
+
+            <div className="mb-6 relative">
                <div className="flex justify-between items-center mb-2">
                  <span className="text-[#141779] font-bold text-sm tracking-widest uppercase">{t('question_progress', { current: currentQ + 1, total: questions.length, defaultValue: `Question ${currentQ + 1}/${questions.length}` })}</span>
                  <span className={`font-black text-sm px-3 py-1 rounded-full border border-[#d0d0d0] ${timeLeft <= 5 ? 'bg-red-100 text-red-700 animate-pulse border-red-300' : 'bg-white text-[#141779]'}`}>
@@ -768,7 +867,9 @@ export default function MultiplayerBattleScreen() {
           try {
             await submitActivityLog(userAnswers);
             await apiFetch(`/api/multiplayer/room/${roomId}/quit`, { method: "POST" });
-          } catch(e) {}
+          } catch(e) {
+            console.warn("Error quitting battle:", e);
+          }
           navigate("/multiplayer-hub", { replace: true });
         }}
         title={t('are_you_sure', 'Are you sure?')}
