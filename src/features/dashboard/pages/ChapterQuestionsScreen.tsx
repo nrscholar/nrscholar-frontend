@@ -128,7 +128,6 @@ export default function ChapterQuestionsScreen() {
                 completed: true,
                 readingCompleted: true,
                 questionsCompleted: true,
-                bossCompleted: true,
                 chapterCompleted: true
               })
             });
@@ -145,17 +144,13 @@ export default function ChapterQuestionsScreen() {
           if (!pJson.data.questionsCompleted) {
             const savedQ = pJson.data.currentQ || 0;
             if (filtered.length > 0 && savedQ >= filtered.length) {
-              // User finished questions but didn't beat boss, take them straight to boss
+              // User finished questions, redirect directly to chapter roadmap
               const roadmapUrl = `/mission-roadmap?chapterId=${chapterId}&title=${encodeURIComponent(searchParams.get("chapterName") || "")}&subjectName=${encodeURIComponent(searchParams.get("subjectName") || "")}`;
-              const finalReturnUrl = encodeURIComponent(roadmapUrl);
               
               sessionStorage.setItem("lastSessionAnswers", JSON.stringify(pJson.data.answers || []));
               await submitActivityLog(pJson.data.answers || []);
               
-              navigate(`/boss-battle?worldId=w1&chapterId=${chapterId}&difficulty=easy&returnTo=${finalReturnUrl}`, {
-                state: { userAnswers: pJson.data.answers || [] },
-                replace: true
-              });
+              navigate(roadmapUrl, { replace: true });
               return;
             } else {
               setCurrentQ(savedQ);
@@ -342,14 +337,9 @@ export default function ChapterQuestionsScreen() {
         // and /api/practice/chapter-progress — no need to call it here
         
         const roadmapUrl = `/mission-roadmap?chapterId=${chapterId}&title=${encodeURIComponent(searchParams.get("chapterName") || "")}&subjectName=${encodeURIComponent(searchParams.get("subjectName") || "")}`;
-        const finalReturnUrl = encodeURIComponent(roadmapUrl);
-        
         sessionStorage.setItem("lastSessionAnswers", JSON.stringify(userAnswers));
         
-        navigate(`/boss-battle?worldId=w1&chapterId=${chapterId}&difficulty=easy&returnTo=${finalReturnUrl}&chapterName=${encodeURIComponent(searchParams.get("chapterName") || "")}&subjectName=${encodeURIComponent(searchParams.get("subjectName") || "")}`, {
-          state: { userAnswers },
-          replace: true
-        });
+        navigate(roadmapUrl, { replace: true });
       }
     }
   };

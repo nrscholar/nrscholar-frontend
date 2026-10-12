@@ -286,7 +286,7 @@ export default function ParentReportScreen() {
   const dnaAxes = [
     { val: dna.accuracy,    ang: -90,  label: "Accuracy" },
     { val: dna.speed,       ang: -18,  label: "Speed" },
-    { val: dna.resilience,  ang:  54,  label: "Boss" },
+    { val: dna.resilience,  ang:  54,  label: "Resilience" },
     { val: dna.consistency, ang: 126,  label: "Consistency" },
     { val: dna.retention,   ang: 198,  label: "Retention" },
   ];
@@ -318,7 +318,7 @@ export default function ParentReportScreen() {
       .replace(/Continue daily practice to maintain your learning streak\./g,
         t("rec_continue_daily", "તમારી શીખવાની સ્ટ્રીક જાળવી રાખવા માટે રોજિંદી પ્રેક્ટિસ ચાલુ રાખો.")
       )
-      .replace(/Try a Boss Battle to test your mastery in completed chapters!/g,
+      .replace(/Practice chapter quizzes regularly to reinforce key concepts!/g,
         t("rec_try_boss_battle", "પૂર્ણ થયેલા પ્રકરણોમાં તમારી નિપુણતા ચકાસવા માટે બોસ બેટલ અજમાવો!")
       );
 
@@ -423,8 +423,6 @@ export default function ParentReportScreen() {
 
   const qA: any          = reportData?.questionAnalytics    || {};
   const rA: any          = reportData?.readingAnalytics     || {};
-  const bA: any          = reportData?.bossAnalytics        || {};
-  const bossHistory: any[] = reportData?.bossHistory        || [];
   const subjects: any[]  = reportData?.subjectBreakdown     || [];
   const chapters: any[]  = reportData?.chapterBreakdown     || [];
   const improvements: any[] = reportData?.improvementTracking || [];
@@ -953,83 +951,6 @@ export default function ParentReportScreen() {
           )}
         </Card>
 
-        {/* Chapter Boss Fight Analytics Card */}
-        <Card>
-          <SectionHeader icon={<ShieldCheck size={20} color="#ba1a1a" />} title={t("chapter_boss_fight_analytics", "Chapter Boss Fight Analytics")} subtitle={t("battle_performance_history", "Battle performance history")} />
-          <div className="grid grid-cols-2 gap-2 mb-3">
-            <StatBox label={t("total_attempts", "Total Attempts")} value={bA.totalAttempts ?? 0} />
-            <StatBox label={t("pass_rate", "Pass Rate")} value={`${bA.passRate ?? 0}%`} color={(bA.passRate ?? 0) >= 60 ? "text-[#006a62]" : "text-[#ba1a1a]"} />
-            <StatBox label={t("wins", "Wins")}  value={bA.wins ?? 0}   color="text-[#006a62]" />
-            <StatBox label={t("losses", "Losses")} value={bA.losses ?? 0} color="text-[#ba1a1a]" />
-          </div>
-          <ProgressBar value={bA.passRate ?? 0} color={(bA.passRate ?? 0) >= 60 ? "bg-[#006a62]" : "bg-[#ba1a1a]"} />
-          
-          {bossHistory.length > 0 && (
-            <div className="mt-4 border-t border-slate-100 pt-4 space-y-2">
-              <h4 className="text-[10px] font-bold text-[#464652] uppercase tracking-wide">{t("recent_chapter_boss_fights", "Recent Chapter Boss Fights")}</h4>
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                {bossHistory.map((b: any, idx: number) => {
-                  const statusUpper = (b.status || "").toUpperCase();
-                  const isWon = statusUpper === "WON" || statusUpper === "VICTORY";
-                  const isLost = statusUpper === "LOST" || statusUpper === "DEFEAT";
-
-                  const statusText = isWon
-                    ? t("victory", "Victory")
-                    : (isLost ? t("defeat", "Defeat") : t("in_progress", "In Progress"));
-
-                  const statusBg = isWon 
-                    ? "bg-green-50 text-green-700 border-green-200" 
-                    : (isLost ? "bg-red-50 text-red-700 border-red-200" : "bg-amber-50 text-amber-700 border-amber-200");
-                  
-                  const diffLower = (b.difficulty || "").toLowerCase();
-                  const diffText = diffLower === "easy" ? t("easy", "Easy") : (diffLower === "medium" ? t("medium", "Medium") : (diffLower === "hard" ? t("hard", "Hard") : (b.difficulty || t("normal", "Normal"))));
-
-                  let bossNameText = b.bossName || t("chapter_boss_fight", "Chapter Boss Fight");
-                  if (bossNameText.includes("Egg Thief")) {
-                    bossNameText = bossNameText.replace("Egg Thief", t("boss_egg_thief", "Egg Thief"));
-                  }
-                  bossNameText = bossNameText.replace(/\(Easy\)/gi, `(${t("easy", "Easy")})`)
-                    .replace(/\(Medium\)/gi, `(${t("medium", "Medium")})`)
-                    .replace(/\(Hard\)/gi, `(${t("hard", "Hard")})`);
-
-                  let formattedDate = "";
-                  try {
-                    if (b.date) {
-                      const d = new Date(b.date);
-                      formattedDate = d.toLocaleDateString(i18n.language === "gu" ? "gu-IN" : "en-US", {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit"
-                      });
-                    }
-                  } catch (e) {}
-
-                  const chapterDisplay = b.chapterName || b.bossName || t("chapter_boss_fight", "Chapter Boss Fight");
-
-                  return (
-                    <div key={idx} className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex justify-between items-center transition-all">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-bold text-slate-800 truncate">{chapterDisplay}</p>
-                        <p className="text-[10px] font-bold text-[#767683] mt-0.5">
-                          {formattedDate} {b.subjectName ? `• ${b.subjectName}` : ""}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-[9px] bg-slate-200/80 text-slate-700 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
-                          {diffText}
-                        </span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wide ${statusBg}`}>
-                          {statusText}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </Card>
 
         {/* Daily Mastery & Risk Trend Chart */}
         <Card>

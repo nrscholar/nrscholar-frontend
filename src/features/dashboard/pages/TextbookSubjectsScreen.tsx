@@ -25,8 +25,8 @@ export default function TextbookSubjectsScreen() {
           restricted = controlsJson.data.parentControls.restrictedSubjects;
         }
 
-        if (subjJson.success && subjJson.data) {
-          const allowedSubjects = subjJson.data.filter((s: string) => !restricted[s]);
+        if (subjJson.success && Array.isArray(subjJson.data)) {
+          const allowedSubjects = subjJson.data.filter((s: string) => !restricted[s] && typeof s === "string" && s.trim().length > 0);
           setSubjects(allowedSubjects);
         }
       } catch (error) {

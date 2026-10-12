@@ -23,12 +23,14 @@ export default function JourneyMapScreen() {
   const [fuel, setFuel] = useState(0);
   const [xp, setXp] = useState(0);
   const [coins, setCoins] = useState(0);
+  const [streak, setStreak] = useState(0);
   const [username, setUsername] = useState("");
-  const [childPhoto, setChildPhoto] = useState("");
+  const [childPhoto, setChildPhoto] = useState(() => localStorage.getItem("userPhoto") || "");
   const [userLevel, setUserLevel] = useState(1);
   const [cities, setCities] = useState<City[]>([]);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [userData, setUserData] = useState<any>(null);
 
   // Mapped UI cities for visual representation
   const uiCities = [
@@ -67,15 +69,22 @@ export default function JourneyMapScreen() {
           const uData = await uRes.json();
           if (uData.success) {
             const u = uData.data.user;
+            setUserData(u);
             userFuel = u.fuel !== undefined ? u.fuel : 0;
             userXp = u.xp !== undefined ? u.xp : 0;
             userCoins = u.coins !== undefined ? u.coins : 0;
+            const userStreak = u.streakDays !== undefined ? u.streakDays : (u.currentStreak || u.streak || 0);
             userName = u.childName || u.fullName || "Explorer";
-            setChildPhoto(u.childPhoto || "");
+            const photo = u.childPhoto || u.photo || u.profilePhoto || "";
+            if (photo) {
+              setChildPhoto(photo);
+              localStorage.setItem("userPhoto", photo);
+            }
             setUserLevel(u.level || 1);
             activeChildClass = u.childClass || "";
             activeChildBoard = u.childBoard || "";
             activeChildId = u.activeChildId || "";
+            setStreak(userStreak);
           }
         } catch (e) {}
       }
@@ -143,18 +152,19 @@ export default function JourneyMapScreen() {
         <div className="relative w-full max-w-[430px] h-screen bg-gradient-to-b from-[#EEF2FF] via-[#F5F3FF] to-[#FFFFFF] flex flex-col overflow-hidden shadow-2xl animate-pulse">
           
           {/* Header Skeleton */}
-          <header className="shrink-0 w-full z-50 flex justify-between items-center px-4 py-3.5 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-xs">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8.5 h-8.5 rounded-full bg-slate-200 shrink-0" />
-              <div className="w-9 h-9 rounded-full bg-indigo-200 shrink-0" />
-              <div className="flex flex-col gap-1.5">
-                <div className="w-28 h-3.5 rounded-md bg-slate-200" />
-                <div className="w-16 h-2.5 rounded-md bg-slate-200" />
+          <header className="shrink-0 w-full z-50 flex items-center justify-between px-3 py-2.5 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-xs">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <div className="w-8 h-8 rounded-full bg-slate-200 shrink-0" />
+              <div className="w-8 h-8 rounded-full bg-indigo-200 shrink-0" />
+              <div className="flex flex-col gap-1 min-w-0 flex-1">
+                <div className="w-20 h-3 rounded-md bg-slate-200" />
+                <div className="w-14 h-2 rounded-md bg-slate-200" />
               </div>
             </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-20 h-7 rounded-full bg-teal-100/70 shrink-0" />
-              <div className="w-16 h-7 rounded-full bg-indigo-100/70 shrink-0" />
+            <div className="flex items-center gap-1 shrink-0">
+              <div className="w-14 h-6 rounded-full bg-teal-100/70" />
+              <div className="w-14 h-6 rounded-full bg-indigo-100/70" />
+              <div className="w-12 h-6 rounded-full bg-amber-100/70" />
             </div>
           </header>
 
@@ -321,34 +331,74 @@ export default function JourneyMapScreen() {
       <div className="relative w-full max-w-[430px] h-screen bg-[#F7F9FB] flex flex-col overflow-hidden shadow-2xl">
         
         {/* Header */}
-        <header className="shrink-0 w-full z-50 flex justify-between items-center px-4 py-3.5 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-xs">
-          <div className="flex items-center gap-2.5">
+        <header className="shrink-0 w-full z-50 flex items-center justify-between px-3 py-2.5 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs gap-1.5 sm:gap-2">
+          {/* Left: Back Button, Avatar, Title/Subtitle */}
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
             <button 
               onClick={() => navigate('/home')} 
-              className="w-8.5 h-8.5 rounded-full bg-slate-50 hover:bg-slate-100 active:scale-95 flex items-center justify-center text-[#141779] transition-all border border-slate-200"
+              className="w-8 h-8 rounded-full bg-slate-50 hover:bg-slate-100 active:scale-95 flex items-center justify-center text-[#141779] transition-all border border-slate-200 shrink-0 shadow-2xs"
+              aria-label="Back to Home"
             >
-              <ArrowLeft size={20} />
+              <ArrowLeft size={18} />
             </button>
-            <div className="w-9 h-9 rounded-full bg-[#141779] text-white flex items-center justify-center font-black text-xs border-2 border-white shadow-xs">
-              {journeyData?.classLevel || userLevel}
-            </div>
-            <div>
-              <h1 className="text-sm font-black text-[#141779] uppercase tracking-wider leading-none">
+
+            {/* User Profile Photo / Avatar */}
+            <button
+              onClick={() => navigate("/profile")}
+              className="w-8 h-8 rounded-full border-2 border-indigo-100 overflow-hidden hover:opacity-90 active:scale-95 transition-all shrink-0 bg-[#141779] shadow-xs flex items-center justify-center cursor-pointer"
+              aria-label="View Profile"
+            >
+              {childPhoto ? (
+                <img
+                  src={childPhoto}
+                  alt={username || "Avatar"}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-[#141779] text-white font-black text-[11px] flex items-center justify-center">
+                  {username ? username.slice(0, 2).toUpperCase() : "NR"}
+                </div>
+              )}
+            </button>
+
+            {/* Title & Character Rank */}
+            <div className="flex flex-col min-w-0 justify-center leading-tight">
+              <h1 className="text-xs font-black text-[#141779] uppercase tracking-wide truncate max-w-[85px] xs:max-w-[110px] sm:max-w-[150px]">
                 {journeyData?.tierTitle ? t(journeyData.tierTitle.toLowerCase().replace(/ /g, '_'), { defaultValue: journeyData.tierTitle }) : t('growth_journey', 'Growth Journey')}
               </h1>
-              <p className="text-[10px] font-bold text-[#006a62] mt-0.5">
+              <p className="text-[9.5px] font-bold text-[#006a62] truncate max-w-[85px] xs:max-w-[110px] sm:max-w-[150px]">
                 {journeyData?.character ? t(journeyData.character.toLowerCase().replace(/ /g, '_'), { defaultValue: journeyData.character }) : t('explorer', 'Explorer')} {journeyData?.rank && journeyData.rank !== "None" ? `(${journeyData.rank})` : ""}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <div className="flex items-center gap-1 bg-teal-50 border border-teal-200 px-2.5 py-1 rounded-full text-[10px] font-black text-[#006a62]">
-              <span>📚 {journeyData ? `${journeyData.completedChapters}/${journeyData.totalTierChapters}` : "0/0"} ({journeyData?.progressPercentage || 0}%)</span>
+          {/* Right: Stats Items (Strictly Single-Line on Mobile / iPhone 12 Pro) */}
+          <div className="flex items-center gap-1 shrink-0 flex-nowrap whitespace-nowrap">
+            {/* Chapters Progress Badge */}
+            <div className="flex items-center gap-1 bg-teal-50 border border-teal-200/80 px-2 py-0.5 rounded-full text-[10px] font-black text-[#006a62] shadow-2xs shrink-0">
+              <span className="text-[11px] leading-none">📚</span>
+              <span>{journeyData ? `${journeyData.completedChapters}/${journeyData.totalTierChapters}` : "0/0"}</span>
             </div>
-            <div className="flex items-center gap-1 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full text-[10px] font-black text-[#141779]">
-              <span>⭐ {xp} XP</span>
+
+            {/* XP Badge */}
+            <div className="flex items-center gap-1 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full text-[10px] font-black text-[#141779] shadow-2xs shrink-0">
+              <span className="text-[11px] leading-none">⭐</span>
+              <span>{xp} XP</span>
             </div>
+
+            {/* Coins Badge */}
+            <div className="flex items-center gap-1 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-full text-[10px] font-black text-[#b45309] shadow-2xs shrink-0">
+              <span className="text-[11px] leading-none">🪙</span>
+              <span>{coins}</span>
+            </div>
+
+            {/* Streak Badge (if streak > 0) */}
+            {streak > 0 && (
+              <div className="flex items-center gap-1 bg-orange-50 border border-orange-200/80 px-1.5 py-0.5 rounded-full text-[10px] font-black text-[#ea580c] shadow-2xs shrink-0">
+                <span className="text-[11px] leading-none">🔥</span>
+                <span>{streak}</span>
+              </div>
+            )}
           </div>
         </header>
 

@@ -172,8 +172,7 @@ export const useBossBattleStore = create<BossBattleState>((set, get) => ({
       : 0;
 
     const newTotalAnswered = isNewLesson ? 1 : currentProgress.totalQuestionsAnswered + 1;
-    const runningAccuracy = newTotalAnswered > 0 ? (newCorrectCount / newTotalAnswered) : 0;
-    const triggered = newCorrectCount >= 1 && runningAccuracy >= 0.70 && !currentProgress.bossTriggered;
+    const triggered = false; // Chapter boss fights removed
 
     set((state) => ({
       progress: {

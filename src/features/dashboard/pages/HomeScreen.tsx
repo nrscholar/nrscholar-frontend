@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Bookmark, BookOpen, Brain, CheckCircle, ChevronRight, Clock, Gift, Map, Shield, Star, Bell, Crown, Gem, Swords, Trophy } from "lucide-react";
+import { Bookmark, BookOpen, Brain, CheckCircle, ChevronRight, Clock, Gift, Map, Shield, Star, Bell, Crown, Gem, Swords, Trophy, Users, ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -429,65 +429,77 @@ export default function HomeScreen() {
       {/* TOP HEADER */}
       <header className="fixed top-0 left-0 right-0 max-w-md mx-auto flex items-center justify-between px-4 pt-3 pb-3 bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-2xl shadow-[0_4px_16px_rgba(20,23,121,0.05)] z-50 gap-2">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          <button
-            onClick={() => navigate("/profile")}
-            className="w-10 h-10 rounded-full border-2 border-indigo-100 overflow-hidden hover:opacity-90 transition-opacity shrink-0 bg-[#141779] shadow-xs"
-          >
-            {childPhoto ? (
-              <img
-                src={childPhoto}
-                alt="Avatar"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full bg-[#141779] text-white font-bold text-xs flex items-center justify-center">
-                {childName ? childName.slice(0, 2).toUpperCase() : "NR"}
-              </div>
-            )}
-          </button>
+          <div className="relative shrink-0">
+            <button
+              onClick={() => navigate("/profile")}
+              className="w-10 h-10 rounded-full border-2 border-indigo-100 overflow-hidden hover:opacity-90 transition-opacity shrink-0 bg-[#141779] shadow-xs block cursor-pointer"
+              aria-label="Profile Avatar"
+            >
+              {childPhoto ? (
+                <img
+                  src={childPhoto}
+                  alt="Avatar"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-[#141779] text-white font-bold text-xs flex items-center justify-center">
+                  {childName ? childName.slice(0, 2).toUpperCase() : "NR"}
+                </div>
+              )}
+            </button>
+          </div>
           <div className="flex flex-col min-w-0 justify-center">
-            {/* Line 1: Child Name & Class Badge side-by-side on 1 line */}
-            <div className="flex items-center gap-1.5 min-w-0">
-              <h1 className="text-sm font-black text-slate-900 leading-tight truncate max-w-[130px]">{childName}</h1>
-              <span className="text-[10px] text-[#4f46e5] bg-[#eef2ff] font-black px-2 py-0.5 rounded-full border border-indigo-100 shrink-0 whitespace-nowrap">
+            {/* Line 1: Child Name (Full Width, No Truncation Cramming) */}
+            <div className="min-w-0">
+              <h1 className="text-sm font-black text-slate-900 leading-tight truncate">{childName}</h1>
+            </div>
+            {/* Line 2: Class Badge, Level & Switch Pill Button */}
+            <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+              <span className="text-[10px] text-[#4f46e5] bg-[#eef2ff] font-black px-1.5 py-0.5 rounded-full border border-indigo-100 shrink-0 whitespace-nowrap">
                 {userData?.childClass || t('class_10', { defaultValue: "Class 10" })}
               </span>
-            </div>
-            {/* Line 2: Explorer Level */}
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <span className="text-[11.5px] text-slate-400 font-extrabold whitespace-nowrap">
-                {t('explorer_level', { defaultValue: "Explorer Level" })} {userLevel}
+              <span className="text-[10.5px] text-slate-400 font-extrabold whitespace-nowrap">
+                Lvl {userLevel}
               </span>
+              {userData?.children && userData.children.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setShowSwitcher(true)}
+                  className="px-2 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-[#141779] rounded-full text-[9.5px] font-black border border-indigo-200/80 active:scale-95 transition-all shrink-0 cursor-pointer"
+                  title="Switch child profile"
+                >
+                  Switch
+                </button>
+              )}
             </div>
           </div>
         </div>
 
         {/* Currency & Streak Stats */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           <button
             onClick={() => setShowStreakModal(true)}
-            className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1.5 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
+            className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform shadow-2xs"
           >
-            <span className="text-[11px] font-black text-[#ea580c] leading-none">🔥 {retentionStreak?.currentStreak ?? streakDays ?? 0}</span>
+            <span className="text-[11px] font-black text-[#ea580c] leading-none whitespace-nowrap">🔥 {retentionStreak?.currentStreak ?? streakDays ?? 0}</span>
           </button>
           <button
             onClick={() => navigate("/practice/inventory")}
-            className="bg-[#fffbeb] border border-amber-100/80 rounded-2xl px-2 py-1.5 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
+            className="bg-[#fffbeb] border border-amber-100/80 rounded-2xl px-2 py-1 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform shadow-2xs"
           >
-            <span className="text-[11px] font-black text-[#b45309] leading-none">🪙 {coins || 0}</span>
+            <span className="text-[11px] font-black text-[#b45309] leading-none whitespace-nowrap">🪙 {coins || 0}</span>
           </button>
           <button
             onClick={() => navigate("/notifications")}
-            className="w-9 h-9 rounded-2xl bg-slate-50 shadow-2xs flex items-center justify-center hover:bg-slate-100 transition-all shrink-0 border border-slate-100 relative"
+            className="w-8 h-8 rounded-2xl bg-slate-50 shadow-2xs flex items-center justify-center hover:bg-slate-100 transition-all shrink-0 border border-slate-100 relative"
           >
-            <Bell size={16} className="text-[#1c1970]" />
+            <Bell size={15} className="text-[#1c1970]" />
             {unreadCount > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border border-white pointer-events-none z-10">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
           </button>
-
         </div>
       </header>
 
@@ -1049,13 +1061,6 @@ export default function HomeScreen() {
         )}
       </AnimatePresence>
 
-      <ChildSwitcherModal
-        isOpen={showSwitcher}
-        onClose={() => setShowSwitcher(false)}
-        user={userData}
-        onUserUpdated={(u) => setUserData(u)}
-      />
-
       <AnimatePresence>
         {showStreakModal && (() => {
           const currentStreakVal = Number(retentionStreak?.currentStreak ?? streakDays ?? 0);
@@ -1183,7 +1188,7 @@ export default function HomeScreen() {
               <button
                 onClick={handleOpenRevivalConfirm}
                 disabled={revivalLoading}
-                className="w-full py-3.5 px-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 active:scale-95 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg border border-amber-300/40 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                className="w-full py-3.5 px-4 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] hover:brightness-110 active:scale-95 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-[#141779]/20 border border-indigo-200/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
               >
                 <span>🔥 Pay {streakRevivalData.reviveCost} Coins to Revive</span>
               </button>
@@ -1193,7 +1198,7 @@ export default function HomeScreen() {
                 disabled={revivalLoading}
                 className="w-full py-3 px-4 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-600 font-bold text-xs rounded-2xl transition-all"
               >
-                Start Fresh 🔄
+                Start Fresh
               </button>
             </div>
           </div>
@@ -1217,9 +1222,9 @@ export default function HomeScreen() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="relative bg-white w-full max-w-[360px] p-6 rounded-[32px] flex flex-col items-center text-center gap-5 border-2 border-amber-300 shadow-2xl overflow-hidden z-10 text-slate-950"
+              className="relative bg-white w-full max-w-[360px] p-6 rounded-[32px] flex flex-col items-center text-center gap-5 border-2 border-indigo-100 shadow-2xl overflow-hidden z-10 text-slate-950"
             >
-              <div className="w-16 h-16 rounded-full bg-amber-100 border-2 border-amber-400 flex items-center justify-center text-3xl shadow-inner">
+              <div className="w-16 h-16 rounded-full bg-indigo-50 border-2 border-indigo-200 flex items-center justify-center text-3xl shadow-inner">
                 🔥
               </div>
 
@@ -1228,13 +1233,13 @@ export default function HomeScreen() {
                   Confirm Streak Revival
                 </h3>
                 <p className="text-xs sm:text-sm font-semibold text-slate-600 leading-relaxed">
-                  Spend <span className="font-extrabold text-amber-600">{streakRevivalData.reviveCost} Coins</span> to restore your <span className="font-extrabold text-slate-900">{streakRevivalData.previousStreak}-day streak</span>?
+                  Spend <span className="font-extrabold text-[#141779]">{streakRevivalData.reviveCost} Coins</span> to restore your <span className="font-extrabold text-slate-900">{streakRevivalData.previousStreak}-day streak</span>?
                 </p>
               </div>
 
-              <div className="w-full bg-amber-50 border border-amber-200 rounded-2xl p-3 flex justify-between items-center text-xs font-bold text-amber-900">
+              <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 flex justify-between items-center text-xs font-bold text-slate-900">
                 <span>🪙 Cost:</span>
-                <span className="text-amber-700 font-extrabold text-sm">{streakRevivalData.reviveCost} Coins</span>
+                <span className="text-[#141779] font-extrabold text-sm">{streakRevivalData.reviveCost} Coins</span>
               </div>
 
               <div className="w-full flex gap-3 pt-2">
@@ -1248,7 +1253,7 @@ export default function HomeScreen() {
                 <button
                   onClick={handleReviveStreak}
                   disabled={revivalLoading}
-                  className="flex-1 py-3.5 rounded-full font-black text-xs uppercase tracking-wider text-white bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 transition-all shadow-md border border-amber-300 flex items-center justify-center gap-1.5"
+                  className="flex-1 py-3.5 rounded-full font-black text-xs uppercase tracking-wider text-white bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] hover:brightness-110 transition-all shadow-md shadow-[#141779]/20 border border-indigo-300/40 flex items-center justify-center gap-1.5"
                 >
                   {revivalLoading ? "Reviving..." : "Confirm & Pay"}
                 </button>
@@ -1257,6 +1262,21 @@ export default function HomeScreen() {
           </div>
         )}
       </AnimatePresence>
+
+      <ChildSwitcherModal
+        isOpen={showSwitcher}
+        onClose={() => setShowSwitcher(false)}
+        user={userData}
+        onUserUpdated={(updated) => {
+          setUserData(updated);
+          localStorage.setItem("userData", JSON.stringify(updated));
+          window.dispatchEvent(new Event("userDataUpdated"));
+        }}
+        onSwitched={() => {
+          fetchProfile();
+          fetchMissions();
+        }}
+      />
     </div>
   );
 }

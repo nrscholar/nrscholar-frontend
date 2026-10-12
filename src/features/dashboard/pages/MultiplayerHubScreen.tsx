@@ -149,10 +149,17 @@ export default function MultiplayerHubScreen() {
         }
 
         if (subjData.success && subjData.data && subjData.data.length > 0) {
-          const allowedSubjects = subjData.data.filter((s: any) => !restricted[s.name]);
+          const allowedSubjects = subjData.data.filter((s: any) => 
+            !restricted[s.name] && 
+            (s.totalChapters === undefined || s.totalChapters > 0) && 
+            s.hasContent !== false && 
+            s.isactive !== 0
+          );
           setSubjects(allowedSubjects);
           if (allowedSubjects.length > 0) {
             setActiveSubject(allowedSubjects[0]);
+          } else {
+            setSubjects([]);
           }
         }
       });
@@ -456,7 +463,7 @@ export default function MultiplayerHubScreen() {
             onClick={() => setActiveTab("join")}
             className={`flex-1 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
               activeTab === "join"
-                ? "bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white shadow-md border border-[#FFD700]/50"
+                ? "bg-gradient-to-r from-[#6C4DFF] to-[#3520A8] text-white shadow-md border border-[#9C7CFF]/50"
                 : "text-[#6D28D9] hover:text-[#141779]"
             }`}
           >
@@ -661,7 +668,7 @@ export default function MultiplayerHubScreen() {
                 value={joinCode}
                 onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                 maxLength={6}
-                className="w-full bg-[#F4EFF7] border-2 border-[#F59E0B] focus:border-[#D97706] rounded-xl py-3 px-4 text-center text-2xl font-black text-[#141779] tracking-[8px] focus:outline-none transition-all uppercase placeholder:text-gray-400 placeholder:tracking-normal placeholder:font-bold placeholder:text-xs"
+                className="w-full bg-[#F4EFF7] border-2 border-[#E5DBFB] focus:border-[#6C4DFF] focus:ring-2 focus:ring-[#6C4DFF]/20 rounded-xl py-3 px-4 text-center text-2xl font-black text-[#141779] tracking-[8px] focus:outline-none transition-all uppercase placeholder:text-gray-400 placeholder:tracking-normal placeholder:font-bold placeholder:text-xs"
               />
 
               <button
@@ -669,7 +676,7 @@ export default function MultiplayerHubScreen() {
                 disabled={loading || joinCode.length < 6}
                 className={`w-full py-3 rounded-xl flex flex-col items-center justify-center transition-all border ${
                   joinCode.length === 6 
-                    ? 'bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white border-[#FFD700] shadow-[0_4px_16px_rgba(245,158,11,0.4)] active:scale-[0.98]' 
+                    ? 'bg-gradient-to-r from-[#6C4DFF] via-[#512BE2] to-[#3520A8] hover:from-[#7C5DFF] hover:to-[#4529C8] text-white border-[#9C7CFF]/40 shadow-[0_4px_16px_rgba(108,77,255,0.35)] active:scale-[0.98]' 
                     : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
                 }`}
               >

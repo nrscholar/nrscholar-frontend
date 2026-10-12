@@ -55,7 +55,6 @@ import KidsActivityScreen from "../features/dashboard/pages/KidsActivityScreen";
 import WeeklyTestScreen from "../features/dashboard/pages/WeeklyTest";
 import WeeklyTestQuestionsScreen from "../features/dashboard/pages/WeeklyTestQuestions";
 import WeeklyTestResultsScreen from "../features/dashboard/pages/WeeklyTestResults";
-const BossBattleScreen = lazy(() => import("../features/dashboard/pages/BossBattleScreen"));
 const MultiplayerHubScreen = lazy(() => import("../features/dashboard/pages/MultiplayerHubScreen"));
 const MultiplayerRoomScreen = lazy(() => import("../features/dashboard/pages/MultiplayerRoomScreen"));
 const MultiplayerBattleScreen = lazy(() => import("../features/dashboard/pages/MultiplayerBattleScreen"));
@@ -484,7 +483,7 @@ function PinGuard() {
                 <Route path="/recap" element={<RecapScreen />} />
                 <Route path="/notifications" element={<NotificationsScreen />} />
                 <Route path="/evolution" element={<EvolutionScreen />} />
-                <Route path="/boss-battle" element={<BossBattleScreen />} />
+                <Route path="/boss-battle" element={<Navigate to="/practice/chapters" replace />} />
                 <Route path="/multiplayer-hub" element={<MultiplayerHubScreen />} />
                 <Route path="/multiplayer-room/:roomId" element={<MultiplayerRoomScreen />} />
                 <Route path="/multiplayer-battle/:roomId" element={<MultiplayerBattleScreen />} />

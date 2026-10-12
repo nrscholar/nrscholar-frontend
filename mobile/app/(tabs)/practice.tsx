@@ -66,8 +66,8 @@ export default function PracticeScreen() {
   const loadSubjects = async () => {
     try {
       const res = await practiceApi.getSubjects();
-      if (res.success && res.data) {
-        setSubjects(res.data);
+      if (res.success && Array.isArray(res.data)) {
+        setSubjects(res.data.filter((s: any) => (s.totalChapters === undefined || s.totalChapters > 0) && s.hasContent !== false && s.isactive !== 0));
       }
     } catch (e) {
       console.error(e);

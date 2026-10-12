@@ -86,7 +86,6 @@ export default function RootLayout() {
         <Stack.Screen name="practice/journey-map" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="practice/session" options={{ animation: 'slide_from_right', gestureEnabled: false }} />
         <Stack.Screen name="practice/results" options={{ animation: 'fade' }} />
-        <Stack.Screen name="practice/boss-battle" options={{ animation: 'fade', gestureEnabled: false }} />
         <Stack.Screen name="practice/collections" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="practice/inventory" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="practice/webview" options={{ animation: 'slide_from_right' }} />

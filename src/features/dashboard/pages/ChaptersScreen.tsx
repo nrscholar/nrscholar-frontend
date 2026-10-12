@@ -19,7 +19,11 @@ export default function ChaptersScreen() {
   const getInitialSubjects = () => {
     try {
       const cached = sessionStorage.getItem("cached_practice_subjects");
-      return cached ? JSON.parse(cached) : [];
+      if (!cached) return [];
+      const parsed = JSON.parse(cached);
+      return Array.isArray(parsed)
+        ? parsed.filter((s: any) => (s.totalChapters === undefined || s.totalChapters > 0) && s.hasContent !== false && s.isactive !== 0)
+        : [];
     } catch (e) { return []; }
   };
 
@@ -152,7 +156,13 @@ export default function ChaptersScreen() {
         }
 
         if (subData?.success && Array.isArray(subData.data) && subData.data.length > 0) {
-          const allowedSubjects = subData.data.filter((s: any) => !restricted[s.name]);
+          const allowedSubjects = subData.data.filter((s: any) => {
+            if (restricted[s.name] || restricted[s.subject]) return false;
+            if (s.totalChapters !== undefined && s.totalChapters <= 0) return false;
+            if (s.hasContent === false) return false;
+            if (s.isactive === 0) return false;
+            return true;
+          });
 
           if (allowedSubjects.length > 0) {
             setSubjects(allowedSubjects);
@@ -224,11 +234,29 @@ export default function ChaptersScreen() {
         if (chData?.success && Array.isArray(chData.data)) {
           setChapters(chData.data);
           sessionStorage.setItem(`cached_chapters_${currentSubId}`, JSON.stringify(chData.data));
-          // Prefetch first 3 chapter PDFs in the background
-          chData.data.slice(0, 3).forEach((c: any) => {
-            const cid = c._id || c.chapterId;
-            if (cid) prefetchPdf(cid);
-          });
+          if (chData.data.length === 0) {
+            // Subject has no active chapters seeded: prune from tabs to strictly hide empty subjects
+            setSubjects((prevSubjects) => {
+              const pruned = prevSubjects.filter((s) => s._id !== currentSubId);
+              sessionStorage.setItem("cached_practice_subjects", JSON.stringify(pruned));
+              if (pruned.length > 0) {
+                const nextSub = pruned[0];
+                setActiveSubject(nextSub);
+                activeSubjectRef.current = nextSub._id;
+                sessionStorage.setItem("activeSubjectId", nextSub._id);
+              } else {
+                setActiveSubject(null);
+                activeSubjectRef.current = null;
+              }
+              return pruned;
+            });
+          } else {
+            // Prefetch first 3 chapter PDFs in the background
+            chData.data.slice(0, 3).forEach((c: any) => {
+              const cid = c._id || c.chapterId;
+              if (cid) prefetchPdf(cid);
+            });
+          }
         } else {
           setChapters([]);
         }
@@ -397,24 +425,26 @@ export default function ChaptersScreen() {
 
         {/* SUBJECT SELECTION TABS */}
         <div className="flex overflow-x-auto hide-scrollbar px-4 pb-2.5 gap-2 max-w-[430px] mx-auto w-full pr-6">
-          {subjects.length > 0 ? (
-            subjects.map((sub) => {
-              const isActive = activeSubject?._id === sub._id;
-              return (
-                <button
-                  key={sub._id}
-                  onClick={() => handleSelectSubject(sub)}
-                  className={`px-4 py-1.5 rounded-full font-black text-xs whitespace-nowrap transition-all uppercase tracking-wider flex items-center gap-1.5 shrink-0 ${
-                    isActive 
-                      ? 'bg-gradient-to-r from-[#5B5CFF] to-[#17157F] text-white shadow-md border border-[#5B5CFF]' 
-                      : 'bg-white text-[#767683] border border-[#E0E3E5] hover:border-[#5B5CFF]/60'
-                  }`}
-                >
-                  <Globe size={13} className={isActive ? "text-[#FFC83D]" : "text-[#767683]"} />
-                  <span>{t(sub.name.toLowerCase(), { defaultValue: sub.name })}</span>
-                </button>
-              );
-            })
+          {subjects.filter((s) => (s.totalChapters === undefined || s.totalChapters > 0) && s.hasContent !== false && s.isactive !== 0).length > 0 ? (
+            subjects
+              .filter((s) => (s.totalChapters === undefined || s.totalChapters > 0) && s.hasContent !== false && s.isactive !== 0)
+              .map((sub) => {
+                const isActive = activeSubject?._id === sub._id;
+                return (
+                  <button
+                    key={sub._id}
+                    onClick={() => handleSelectSubject(sub)}
+                    className={`px-4 py-1.5 rounded-full font-black text-xs whitespace-nowrap transition-all uppercase tracking-wider flex items-center gap-1.5 shrink-0 ${
+                      isActive 
+                        ? 'bg-gradient-to-r from-[#5B5CFF] to-[#17157F] text-white shadow-md border border-[#5B5CFF]' 
+                        : 'bg-white text-[#767683] border border-[#E0E3E5] hover:border-[#5B5CFF]/60'
+                    }`}
+                  >
+                    <Globe size={13} className={isActive ? "text-[#FFC83D]" : "text-[#767683]"} />
+                    <span>{t(sub.name.toLowerCase(), { defaultValue: sub.name })}</span>
+                  </button>
+                );
+              })
           ) : (
             <>
               <div className="h-7 w-24 rounded-full animate-skeleton shrink-0 border border-[#5B5CFF]/20" />
@@ -559,18 +589,6 @@ export default function ChaptersScreen() {
                           className="bg-[#EEF1FF] border border-[#5B5CFF]/30 text-[#17157F] px-3.5 py-2 rounded-xl font-bold text-xs hover:bg-[#5B5CFF] hover:text-white transition-all flex items-center justify-between"
                         >
                           <span>{t('practice_mission_questions', '⚡ Practice Mission Questions')}</span>
-                          <ChevronRight size={16} />
-                        </button>
-
-                        <button 
-                          onClick={(e) => { 
-                            e.stopPropagation(); 
-                            const roadmapUrl = `/mission-roadmap?chapterId=${chap._id}&title=${encodeURIComponent(displayTitle)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}`;
-                            navigate(`/boss-battle?worldId=w1&chapterId=${chap._id}&difficulty=easy&returnTo=${encodeURIComponent(roadmapUrl)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}&chapterName=${encodeURIComponent(displayTitle)}`); 
-                          }} 
-                          className="bg-[#FFC83D]/20 border border-[#FFC83D] text-[#17157F] px-3.5 py-2 rounded-xl font-bold text-xs hover:bg-[#FFC83D] transition-all flex items-center justify-between"
-                        >
-                          <span>{t('chapter_boss_round', '🏆 Chapter Boss Fight')}</span>
                           <ChevronRight size={16} />
                         </button>
                       </motion.div>

@@ -63,7 +63,6 @@ export default function ParentDashboardScreen() {
     progress?: number;
     correctAnswers?: number;
     wrongAnswers?: number;
-    bossSuccessRate?: number;
     monthImprovement?: number | null;
     prevMonthAccuracy?: number | null;
     currentMonthAccuracy?: number | null;

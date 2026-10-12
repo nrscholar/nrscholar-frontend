@@ -148,12 +148,21 @@ export default function ProgressScreen() {
           const subRes = await apiFetch("/api/practice/subjects");
           const subData = await subRes.json();
           if (subData.success && subData.data && subData.data.length > 0) {
-            setSubjects(subData.data);
-            const savedSubId = sessionStorage.getItem("activeSubjectId");
-            const found = (savedSubId && savedSubId !== "all") ? subData.data.find((s: any) => s._id === savedSubId) : null;
-            setActiveSubject(found || subData.data[0]);
-            // Run completion stats fetch asynchronously in background
-            setTimeout(() => fetchAllSubjectCompletion(subData.data), 0);
+            const validSubs = subData.data.filter((s: any) => 
+              (s.totalChapters === undefined || s.totalChapters > 0) && 
+              s.hasContent !== false && 
+              s.isactive !== 0
+            );
+            if (validSubs.length > 0) {
+              setSubjects(validSubs);
+              const savedSubId = sessionStorage.getItem("activeSubjectId");
+              const found = (savedSubId && savedSubId !== "all") ? validSubs.find((s: any) => s._id === savedSubId) : null;
+              setActiveSubject(found || validSubs[0]);
+              // Run completion stats fetch asynchronously in background
+              setTimeout(() => fetchAllSubjectCompletion(validSubs), 0);
+            } else {
+              setSubjects([]);
+            }
           }
         } catch (e) {
           console.error("Failed to fetch subjects:", e);
@@ -484,6 +493,17 @@ export default function ProgressScreen() {
             {subjects.map((sub) => {
               const isActive = activeSubject?._id === sub._id;
               const translatedSubName = t(sub.name.toLowerCase().replace(/ /g, '_'), { defaultValue: sub.name });
+              const tabEmoji = (() => {
+                const check = `${sub.icon || ''} ${sub.name || ''}`.toLowerCase();
+                if (check.includes("guj") || check.includes("ગુજરાતી")) return "📘";
+                if (check.includes("math") || check.includes("calculator") || check.includes("calc") || check.includes("ગણિત")) return "🧮";
+                if (check.includes("sci") || check.includes("flask") || check.includes("વિજ્ઞાન")) return "🔬";
+                if (check.includes("eng") || check.includes("અંગ્રેજી")) return "📖";
+                if (check.includes("hin") || check.includes("હિન્દી") || check.includes("hindi")) return "📙";
+                if (check.includes("soc") || check.includes("સામાજિક") || check.includes("social")) return "🏛️";
+                if (sub.icon && sub.icon.length <= 4 && !/^[a-z0-9_-]+$/i.test(sub.icon)) return sub.icon;
+                return "📚";
+              })();
               return (
                 <button
                   key={sub._id}
@@ -497,7 +517,7 @@ export default function ProgressScreen() {
                       : 'bg-white text-[#767683] border border-[#E0E3E5] hover:border-[#17177F]/40 shadow-2xs'
                   }`}
                 >
-                  <Compass size={14} className={isActive ? "text-white" : "text-[#767683]"} />
+                  <span className="text-sm shrink-0 leading-none">{tabEmoji}</span>
                   <span>{translatedSubName}</span>
                 </button>
               );
@@ -541,16 +561,19 @@ export default function ProgressScreen() {
                   const isPositive = delta >= 0;
                   const translatedSubName = t(item.name.toLowerCase().replace(/ /g, '_'), { defaultValue: item.name });
 
-                  const getIcon = (n: string) => {
-                    const lower = n.toLowerCase();
-                    if (lower.includes("guj")) return "📘";
-                    if (lower.includes("math")) return "🧮";
-                    if (lower.includes("sci")) return "🔬";
-                    if (lower.includes("eng")) return "📖";
-                    return "🌎";
+                  const getIcon = (iconStr?: string, nameStr?: string) => {
+                    const check = `${iconStr || ''} ${nameStr || ''}`.toLowerCase();
+                    if (check.includes("guj") || check.includes("ગુજરાતી")) return "📘";
+                    if (check.includes("math") || check.includes("calculator") || check.includes("calc") || check.includes("ગણિત")) return "🧮";
+                    if (check.includes("sci") || check.includes("flask") || check.includes("વિજ્ઞાન")) return "🔬";
+                    if (check.includes("eng") || check.includes("અંગ્રેજી")) return "📖";
+                    if (check.includes("hin") || check.includes("હિન્દી") || check.includes("hindi")) return "📙";
+                    if (check.includes("soc") || check.includes("સામાજિક") || check.includes("social")) return "🏛️";
+                    if (iconStr && iconStr.length <= 4 && !/^[a-z0-9_-]+$/i.test(iconStr)) return iconStr;
+                    return "📚";
                   };
 
-                  const icon = item.icon || getIcon(item.name);
+                  const icon = getIcon(item.icon, item.name);
 
                   const getPerfLabel = (acc: number) => {
                     if (acc >= 85) return t('excellent_progress', 'Excellent Progress');
@@ -575,21 +598,21 @@ export default function ProgressScreen() {
                       className="flex flex-col gap-5 text-left"
                     >
                       {/* 1. SUBJECT HEADER & ACCURACY SCORE */}
-                      <div className="flex items-start justify-between">
-                        <div className="flex flex-col gap-0.5 text-left">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xl">{icon}</span>
-                            <h3 className="text-[16px] font-bold text-[#17177F]">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex flex-col gap-0.5 text-left min-w-0 flex-1">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-xl shrink-0 leading-none">{icon}</span>
+                            <h3 className="text-[16px] font-bold text-[#17177F] truncate">
                               {translatedSubName}
                             </h3>
                           </div>
-                          <span className="text-[13px] font-medium text-[#767683]">
+                          <span className="text-[13px] font-medium text-[#767683] truncate">
                             {getPerfLabel(item.thisWeekAccuracy)}
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-3">
-                          <span className="text-[34px] font-black text-[#17177F] tracking-tight leading-none">
+                        <div className="flex items-center gap-2.5 shrink-0">
+                          <span className="text-[34px] font-black text-[#17177F] tracking-tight leading-none whitespace-nowrap">
                             {item.thisWeekAccuracy}%
                           </span>
 
@@ -597,7 +620,7 @@ export default function ProgressScreen() {
                             initial={{ opacity: 0, scale: 0.8 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ duration: 0.5, delay: idx * 0.1 + 0.2 }}
-                            className={`px-[10px] py-[5px] rounded-[100px] text-[13px] font-bold flex items-center gap-1 shadow-2xs ${
+                            className={`px-[10px] py-[5px] rounded-[100px] text-[13px] font-bold flex items-center gap-1 shadow-2xs whitespace-nowrap ${
                               isPositive
                                 ? "bg-[#DCFCE7] text-[#16A34A]"
                                 : "bg-[#FEE2E2] text-[#DC2626]"

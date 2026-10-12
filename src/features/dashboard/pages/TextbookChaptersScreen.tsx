@@ -110,6 +110,12 @@ export default function TextbookChaptersScreen() {
               </div>
             ))}
           </div>
+        ) : chapters.length === 0 ? (
+          <div className="bg-white rounded-3xl p-8 border border-slate-200/80 shadow-xs text-center my-4">
+            <BookOpen size={40} className="text-[#141779] mx-auto mb-2 opacity-50" />
+            <p className="text-base font-bold text-[#141779]">No Chapters Available</p>
+            <p className="text-xs text-[#767683] mt-1 font-medium">Textbook content for {subjectQuery} will be added soon.</p>
+          </div>
         ) : (
           <div className="flex flex-col gap-6">
             {Object.keys(groupedChapters).map((unit) => {

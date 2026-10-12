@@ -164,28 +164,28 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
 
   return (
     <div className="fixed inset-0 bg-[#0f114a]/80 backdrop-blur-md z-[99999] flex items-center justify-center p-3 sm:p-4 font-sans animate-in fade-in duration-200">
-      <div className="bg-white rounded-[24px] sm:rounded-[32px] max-w-md w-full max-h-[90vh] flex flex-col p-4 sm:p-6 shadow-2xl relative border border-white/60">
+      <div className="bg-white rounded-2xl max-w-sm w-full max-h-[90vh] flex flex-col p-4 sm:p-5 shadow-2xl relative border border-white/60">
         
         {/* Header */}
-        <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 shrink-0">
+        <div className="flex items-center justify-between pb-3 border-b border-gray-100 shrink-0">
           <div>
-            <h3 className="text-lg sm:text-xl font-extrabold text-[#141779]">{t("switch_child_profile", "Switch Child Profile")}</h3>
-            <p className="text-[11px] sm:text-xs text-[#767683] font-semibold mt-0.5">{t("select_active_child_sub", "Select active child to customize learning path")}</p>
+            <h3 className="text-base font-extrabold text-[#141779]">{t("switch_child_profile", "Switch Child Profile")}</h3>
+            <p className="text-[11px] text-[#767683] font-medium">{t("select_active_child_sub", "Select active child profile")}</p>
           </div>
           <button 
             onClick={onClose}
-            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors shrink-0"
+            className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors shrink-0 cursor-pointer"
           >
-            <X size={18} />
+            <X size={15} />
           </button>
         </div>
 
         {/* Scrollable Modal Content */}
-        <div className="flex-1 overflow-y-auto pr-0.5 space-y-4">
+        <div className="flex-1 overflow-y-auto pr-0.5 space-y-3 pt-3">
           
-          {/* Child Cards */}
+          {/* Minimal Child List with Radio/Checkmark */}
           {!showAddForm && !showLinkForm ? (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {children.map((c) => {
                 const isActive = c.childId === activeChildId;
                 const isPending = switching === c.childId;
@@ -199,15 +199,15 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
                 return (
                   <div
                     key={c.childId}
-                    onClick={() => handleSwitch(c.childId)}
-                    className={`p-3.5 sm:p-4 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition-all gap-3 ${
+                    onClick={() => !isActive && !isPending && handleSwitch(c.childId)}
+                    className={`w-full p-2.5 sm:p-3 rounded-xl border flex items-center justify-between transition-all gap-3 text-left ${
                       isActive 
-                        ? "border-[#141779] bg-[#141779]/5 shadow-sm" 
-                        : "border-gray-100 bg-white hover:border-gray-200 hover:bg-gray-50"
+                        ? "border-[#141779] bg-indigo-50/50 shadow-2xs" 
+                        : "border-gray-200 bg-white hover:border-indigo-200 hover:bg-gray-50/80 cursor-pointer"
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center text-lg sm:text-xl font-black shadow-inner overflow-hidden shrink-0 ${
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-black shrink-0 overflow-hidden ${
                         isActive ? "bg-[#141779] text-white" : "bg-gray-100 text-[#141779]"
                       }`}>
                         {c.childPhoto ? (
@@ -218,46 +218,35 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        <h4 className="font-extrabold text-[#141779] text-sm sm:text-base truncate">{c.childName}</h4>
-                        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                          <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-[#141779] border border-indigo-100 text-[10px] font-bold">
-                            {displayClass}
-                          </span>
-                          {c.uniqueCode && (
-                            <button
-                              type="button"
-                              onClick={(e) => handleCopyCode(c.uniqueCode!, e)}
-                              className="text-[10px] text-[#141779] bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 px-2 py-0.5 rounded-full flex items-center gap-1 font-mono transition-colors"
-                              title="Click to copy unique child code"
-                            >
-                              {copiedCode === c.uniqueCode ? (
-                                <>
-                                  <CheckCircle2 size={10} className="text-emerald-600 shrink-0" />
-                                  <span className="text-emerald-600 font-bold">{t("copied", "Copied!")}</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Copy size={10} className="shrink-0" />
-                                  <span>{t("code_prefix", "Code:")} {c.uniqueCode}</span>
-                                </>
-                              )}
-                            </button>
-                          )}
-                        </div>
+                        <h4 className="font-bold text-[#141779] text-sm truncate">{c.childName}</h4>
+                        <span className="text-[11px] text-slate-500 font-medium">{displayClass}</span>
                       </div>
                     </div>
 
-                    <div className="flex items-center shrink-0">
+                    {/* Action Button: "Active" Badge vs "Select" Button */}
+                    <div className="shrink-0 flex items-center">
                       {isPending ? (
-                        <div className="w-5 h-5 border-2 border-[#141779] border-t-transparent rounded-full animate-spin" />
+                        <div className="px-3 py-1 rounded-lg bg-indigo-50 text-[#141779] text-xs font-bold flex items-center gap-1.5 border border-indigo-200">
+                          <div className="w-3.5 h-3.5 border-2 border-[#141779] border-t-transparent rounded-full animate-spin" />
+                          <span>Switching...</span>
+                        </div>
                       ) : isActive ? (
-                        <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#141779] text-white flex items-center justify-center shadow-xs">
-                          <Check size={16} strokeWidth={3} />
+                        <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-black flex items-center gap-1 border border-emerald-200">
+                          <Check size={13} strokeWidth={2.5} />
+                          <span>Active</span>
                         </span>
                       ) : (
-                        <span className="text-xs font-bold text-[#141779] bg-gray-100 px-3 py-1.5 rounded-full hover:bg-[#141779] hover:text-white transition-colors">
-                          {t("select", "Select")}
-                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSwitch(c.childId);
+                          }}
+                          disabled={switching !== null}
+                          className="px-3.5 py-1 rounded-lg bg-[#141779] hover:bg-[#1e23a0] active:scale-95 text-white text-xs font-black transition-all shadow-xs cursor-pointer"
+                        >
+                          Select
+                        </button>
                       )}
                     </div>
                   </div>
@@ -265,21 +254,20 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
               })}
 
               {children.length < 2 && (
-                <div className="flex flex-col gap-2 pt-1">
+                <div className="flex flex-col gap-2 pt-2 border-t border-gray-100">
                   <button
                     onClick={() => { setShowAddForm(true); setShowLinkForm(false); }}
-                    className="w-full py-3 sm:py-3.5 border-2 border-dashed border-indigo-200 rounded-2xl text-[#141779] font-bold text-xs sm:text-sm flex items-center justify-center gap-2 hover:bg-indigo-50/50 hover:border-[#141779] transition-all"
+                    className="w-full py-2 rounded-xl border border-dashed border-[#141779]/30 text-[#141779] font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-indigo-50 transition-colors cursor-pointer"
                   >
-                    <Plus size={18} />
+                    <Plus size={14} />
                     <span>{t("add_second_child_profile", "+ Add Second Child Profile")}</span>
                   </button>
                   
                   <button
                     onClick={() => { setShowLinkForm(true); setShowAddForm(false); }}
-                    className="w-full py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-gray-100 transition-all"
+                    className="text-[11px] font-bold text-slate-500 hover:text-[#141779] text-center transition-colors cursor-pointer"
                   >
-                    <KeyRound size={14} className="text-[#141779]" />
-                    <span>{t("link_existing_child_via_code", "Link existing child via Unique Code")}</span>
+                    {t("link_existing_child_via_code", "Link child with 6-character code")}
                   </button>
                 </div>
               )}

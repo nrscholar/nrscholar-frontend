@@ -171,17 +171,6 @@ export default function RewardScreen() {
            }).finally(() => {
                syncUserProfile();
            });
-       } else if (rewardType === "boss") {
-           apiFetch("/api/world/boss/claim", {
-               method: "POST",
-               headers: { "Content-Type": "application/json" },
-               body: JSON.stringify({
-                   coins: amount || 1000,
-                   difficulty: "easy"
-               })
-           }).finally(() => {
-               syncUserProfile();
-           });
        } else {
            syncUserProfile();
        }
@@ -221,12 +210,7 @@ export default function RewardScreen() {
   let tagText = t('coin_bonus', 'COIN BONUS');
   let iconUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuDQ-b12m1P3gH05_q7R3rO0lP-iM9_wD8Y9H6hR0pP6I5R1E3pP6N-I5xZ7-x5H4sI5o8Q2lG3E5hU7eW3vY9bM1qX4pA8xZ0qY9H8bN7E5hI5R1uP6O9P1_6oH3qY2lE5aI1eQ9M3kL6R1fN5iM8qQ9H6qG5fJ1eW3_Q8rN6aU1mZ7gV5bI5R1pQ2vW4jX6_O7aI1mZ7";
   
-  if (rewardType === "boss") {
-      title = t('boss_defeated_title', 'Boss Defeated!');
-      subtitle = t('conquered_chapter_subtitle', { amount, defaultValue: `You conquered the chapter and earned ${amount} coins!` });
-      tagText = t('boss_reward', 'BOSS REWARD');
-      iconUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuCcG8R4hY8vG9D5P8H6O3L9R4N9oU1I3P4V9L6P4P8W3oK5M7U3O8E9S4U5H9E5K4H9R3U5E8N5U7E3U8O8R8L9D4L6L6D4O6C8U9D9P9H8O5I3"; // example fallback
-  } else if (rewardType === "badge") {
+  if (rewardType === "badge") {
       title = t('sharpshooter', 'Sharpshooter');
       subtitle = t('sharpshooter_subtitle', 'You answered 25 questions correctly in a single session! You earned a new badge.');
       tagText = t('rare_badge', 'RARE BADGE');
