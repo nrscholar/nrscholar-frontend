@@ -368,11 +368,55 @@ const ScreenTimeTracker = () => {
 };
 
 const StackLayout = () => {
+  const location = useLocation();
+  const currentUser = (() => {
+    try {
+      const raw = localStorage.getItem("userData");
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  })();
+  const isCoParent = Boolean(
+    currentUser?.isSecondaryParent ||
+    currentUser?.isCoParent ||
+    currentUser?.role === "co_parent" ||
+    currentUser?.role === "secondary_parent" ||
+    currentUser?.primary_parent_id
+  );
+
+  // Strict isolation: Co-parent cannot access student stack routes
+  if (isCoParent && !location.pathname.startsWith("/parent")) {
+    const isPinVerified = sessionStorage.getItem("parentPinVerified") === "true";
+    return <Navigate to={isPinVerified ? "/parent/dashboard" : "/parent/gate"} replace />;
+  }
+
   return (
     <div className="w-full h-[100dvh] overflow-hidden">
       <AnimatedStackContainer />
     </div>
   );
+};
+
+const RootRedirect = () => {
+  const currentUser = (() => {
+    try {
+      const raw = localStorage.getItem("userData");
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  })();
+  const isCoParent = Boolean(
+    currentUser?.isSecondaryParent ||
+    currentUser?.isCoParent ||
+    currentUser?.role === "co_parent" ||
+    currentUser?.role === "secondary_parent" ||
+    currentUser?.primary_parent_id
+  );
+
+  const isPinVerified = sessionStorage.getItem("parentPinVerified") === "true";
+  return <Navigate to={isCoParent ? (isPinVerified ? "/parent/dashboard" : "/parent/gate") : "/home"} replace />;
 };
 
 const ProtectedRoute = () => {
@@ -425,7 +469,7 @@ function PinGuard() {
       <UniversalErrorBoundary>
         <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#141779]"></div></div>}>
           <Routes>
-            <Route path="/" element={<Navigate to="/home" replace />} />
+            <Route path="/" element={<RootRedirect />} />
             
             {/* Public Routes */}
             <Route path="/login" element={<LoginScreen />} />
@@ -461,6 +505,10 @@ function PinGuard() {
                 <Route path="/parent/subscription" element={<ParentSubscriptionScreen />} />
               </Route>
 
+              {/* Parental Gate Screens (Dedicated Protected Routes outside StackLayout and ParentLayout) */}
+              <Route path="/parent" element={<ParentalGateScreen />} />
+              <Route path="/parent/gate" element={<ParentalGateScreen />} />
+
               {/* Sub-routes with Native Stack Card Slide */}
               <Route element={<StackLayout />}>
                 <Route path="/edit-profile" element={<EditProfileScreen />} />
@@ -471,8 +519,6 @@ function PinGuard() {
                 <Route path="/practice/inventory" element={<InventoryScreen />} />
                 <Route path="/practice/journey-map" element={<JourneyMapScreen />} />
                 <Route path="/practice/collections" element={<InventoryScreen />} />
-                <Route path="/parent" element={<ParentalGateScreen />} />
-                <Route path="/parent/gate" element={<ParentalGateScreen />} />
                 <Route path="/practice/reward" element={<RewardScreen />} />
                 <Route path="/daily-rewards" element={<DailyRewardsScreen />} />
                 <Route path="/weekly-test" element={<WeeklyTestScreen />} />

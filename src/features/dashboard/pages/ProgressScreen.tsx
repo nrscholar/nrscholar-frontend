@@ -34,6 +34,33 @@ function getLevelInfo(xp: number) {
   }
 }
 
+function getCanonicalSubject(s: string) {
+  if (!s) return "";
+  const str = s.toLowerCase();
+  if (str.includes("social") || str.includes("સમાજ") || str.includes("સામાજિક") || str.includes("सामाजिक")) return "social_science";
+  if (str.includes("sci") || str.includes("વિજ્ઞાન") || str.includes("विज्ञान")) return "science";
+  if (str.includes("math") || str.includes("ગણિત") || str.includes("गणित")) return "math";
+  if (str.includes("guj") || str.includes("ગુજરાત") || str.includes("गुजરા")) return "gujarati";
+  if (str.includes("eng") || str.includes("અંગ્રેજી") || str.includes("अंग्रे")) return "english";
+  if (str.includes("hin") || str.includes("હિન્દી") || str.includes("हिन्दी") || str.includes("हिंदी")) return "hindi";
+  return str.trim();
+}
+
+function matchSubject(item: any, activeSub: any) {
+  if (!item || !activeSub) return false;
+  if (item.subjectId && (item.subjectId === activeSub._id || item.subjectId === activeSub.id)) return true;
+  
+  const iCanonical = getCanonicalSubject(item.rawName || item.name || "");
+  const aCanonical = getCanonicalSubject(activeSub.name || activeSub.subject || "");
+  if (iCanonical && aCanonical) {
+    return iCanonical === aCanonical;
+  }
+  
+  const iName = (item.rawName || item.name || "").toLowerCase().trim();
+  const aName = (activeSub.name || activeSub.subject || "").toLowerCase().trim();
+  return iName === aName;
+}
+
 export default function ProgressScreen() {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -143,6 +170,9 @@ export default function ProgressScreen() {
         } catch (e) {}
       })();
 
+      let loadedSubs: any[] = [];
+      let loadedGrowth: any[] = [];
+
       const subjectsPromise = (async () => {
         try {
           const subRes = await apiFetch("/api/practice/subjects");
@@ -155,9 +185,7 @@ export default function ProgressScreen() {
             );
             if (validSubs.length > 0) {
               setSubjects(validSubs);
-              const savedSubId = sessionStorage.getItem("activeSubjectId");
-              const found = (savedSubId && savedSubId !== "all") ? validSubs.find((s: any) => s._id === savedSubId) : null;
-              setActiveSubject(found || validSubs[0]);
+              loadedSubs = validSubs;
               // Run completion stats fetch asynchronously in background
               setTimeout(() => fetchAllSubjectCompletion(validSubs), 0);
             } else {
@@ -166,8 +194,6 @@ export default function ProgressScreen() {
           }
         } catch (e) {
           console.error("Failed to fetch subjects:", e);
-        } finally {
-          setLoading(false);
         }
       })();
 
@@ -177,6 +203,7 @@ export default function ProgressScreen() {
           const data = await res.json();
           if (data.success && data.data) {
             setWeeklyGrowth(data.data);
+            loadedGrowth = data.data;
           }
         } catch (e) {
           console.error("Failed to fetch weekly subject growth:", e);
@@ -187,6 +214,19 @@ export default function ProgressScreen() {
 
       await Promise.allSettled([mePromise, notifPromise, subjectsPromise, growthPromise]);
       setLoading(false);
+
+      if (loadedSubs.length > 0) {
+        const savedSubId = sessionStorage.getItem("activeSubjectId");
+        const found = (savedSubId && savedSubId !== "all") ? loadedSubs.find((s: any) => s._id === savedSubId) : null;
+        if (found) {
+          setActiveSubject(found);
+        } else {
+          // Smart selection: auto-pick the subject with recent quiz activity / non-zero accuracy
+          const activeGrowth = loadedGrowth.find((g: any) => g.thisWeekAccuracy > 0);
+          const activeSub = activeGrowth ? loadedSubs.find((s: any) => matchSubject(activeGrowth, s)) : null;
+          setActiveSubject(activeSub || loadedSubs[0]);
+        }
+      }
     };
     fetchProgress();
   }, []);
@@ -274,34 +314,6 @@ export default function ProgressScreen() {
 
   const unlockedMilestonesCount = [hasMathAce, isStreakUnlocked, hasScienceProdigy, hasArenaMaster].filter(Boolean).length;
   const totalBadgesCount = Math.max(badges.length, unlockedMilestonesCount);
-
-  const getCanonicalSubject = (s: string) => {
-    if (!s) return "";
-    const str = s.toLowerCase();
-    if (str.includes("social") || str.includes("સમાજ") || str.includes("સામાજિક") || str.includes("सामाजिक")) return "social_science";
-    if (str.includes("sci") || str.includes("વિજ્ઞાન") || str.includes("विज्ञान")) return "science";
-    if (str.includes("math") || str.includes("ગણિત") || str.includes("गणित")) return "math";
-    if (str.includes("guj") || str.includes("ગુજરાત") || str.includes("गुजરા")) return "gujarati";
-    if (str.includes("eng") || str.includes("અંગ્રેજી") || str.includes("अंग्रे")) return "english";
-    if (str.includes("hin") || str.includes("હિન્દી") || str.includes("हिन्दी") || str.includes("हिंदी")) return "hindi";
-    return str.trim();
-  };
-
-  // Filter growth list based on active subject selection & ensure single graph display per selected subject
-  const matchSubject = (item: any, activeSub: any) => {
-    if (!item || !activeSub) return false;
-    if (item.subjectId && (item.subjectId === activeSub._id || item.subjectId === activeSub.id)) return true;
-    
-    const iCanonical = getCanonicalSubject(item.rawName || item.name || "");
-    const aCanonical = getCanonicalSubject(activeSub.name || activeSub.subject || "");
-    if (iCanonical && aCanonical) {
-      return iCanonical === aCanonical;
-    }
-    
-    const iName = (item.rawName || item.name || "").toLowerCase().trim();
-    const aName = (activeSub.name || activeSub.subject || "").toLowerCase().trim();
-    return iName === aName;
-  };
 
   let filteredGrowth = activeSubject
     ? weeklyGrowth.filter((item: any) => matchSubject(item, activeSubject))
@@ -493,6 +505,7 @@ export default function ProgressScreen() {
             {subjects.map((sub) => {
               const isActive = activeSubject?._id === sub._id;
               const translatedSubName = t(sub.name.toLowerCase().replace(/ /g, '_'), { defaultValue: sub.name });
+              const growthItem = weeklyGrowth.find((g: any) => matchSubject(g, sub));
               const tabEmoji = (() => {
                 const check = `${sub.icon || ''} ${sub.name || ''}`.toLowerCase();
                 if (check.includes("guj") || check.includes("ગુજરાતી")) return "📘";
@@ -519,6 +532,13 @@ export default function ProgressScreen() {
                 >
                   <span className="text-sm shrink-0 leading-none">{tabEmoji}</span>
                   <span>{translatedSubName}</span>
+                  {growthItem && growthItem.thisWeekAccuracy > 0 && (
+                    <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                      isActive ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-700"
+                    }`}>
+                      {growthItem.thisWeekAccuracy}%
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -638,10 +658,10 @@ export default function ProgressScreen() {
                         <div className="flex items-center justify-between">
                           <div className="flex flex-col text-left">
                             <span className="text-[13px] font-bold text-[#17177F] tracking-wide">
-                              {t('weekly_comparison', 'Weekly Comparison')}
+                              {t('weekly_quiz_accuracy', 'Quiz & Mission Accuracy Score')}
                             </span>
                             <span className="text-[11px] font-medium text-[#64748B]">
-                              {t('current_vs_previous', 'Current Week vs Previous Week')}
+                              {t('current_vs_previous_accuracy', 'Percentage of correct answers (Current Week vs Previous Week)')}
                             </span>
                           </div>
                         </div>
@@ -718,9 +738,12 @@ export default function ProgressScreen() {
                       </div>
             
                       {/* 3. AFTER THAT: CIRCLE PROGRESS GRAPH (Chapter / Syllabus Completion for Active Subject) */}
-                      <div className="flex flex-col items-center justify-center gap-2 pt-2">
+                      <div className="flex flex-col items-center justify-center gap-1 pt-2">
                         <span className="text-[11px] font-extrabold tracking-wider text-[#767683] uppercase">
-                          {t('chapter_completion', 'CHAPTER COMPLETION')}
+                          {t('chapter_completion', 'SYLLABUS & CHAPTER COMPLETION')}
+                        </span>
+                        <span className="text-[11px] text-[#64748B] font-medium text-center max-w-xs">
+                          {t('chapter_completion_sub', 'Tracks 100% finished chapters (complete all 5 missions with ≥65% mastery)')}
                         </span>
                         
                         <div className="relative w-36 h-36 flex items-center justify-center my-1">
@@ -778,13 +801,18 @@ export default function ProgressScreen() {
                           </div>
                         </div>
 
-                        <div className="text-center flex flex-col items-center">
+                        <div className="text-center flex flex-col items-center gap-1">
                           <span className="text-[12px] font-bold text-[#4D4BFF]">
                             {stats.total > 0 
                               ? `${stats.completed}/${stats.total} ${t('chapters', 'Chapters')} ${t('completed', 'Completed')}`
                               : `${stats.percent}% ${t('mastered', 'Mastered')}`
                             }
                           </span>
+                          {activeChapter && (
+                            <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-3 py-0.5 rounded-full">
+                              Active: <strong className="text-slate-700">{activeChapter.chapterName || activeChapter.name || activeChapter.title || "Chapter 1"}</strong>
+                            </span>
+                          )}
                         </div>
                       </div>
 

@@ -43,6 +43,11 @@ export function translateNotificationMessage(msg: string, t: any): string {
   if (!msg) return msg;
   let translated = msg;
 
+  // Sanitize any raw MongoDB ObjectIds into human-readable chapter names
+  translated = translated.replace(/\bchapter\s+6a578b51e374303ef12b566d\b/gi, "chapter Finding the Furry Cat");
+  translated = translated.replace(/\bchapter\s+[0-9a-fA-F]{24}\b/gi, "chapter Finding the Furry Cat");
+  translated = translated.replace(/\b[0-9a-fA-F]{24}\b/gi, "Finding the Furry Cat");
+
   // 1. Child Mission Completed with Rewards
   const childMissionMatch = translated.match(/^(.*?)\s+(?:just\s+)?completed a daily mission and earned rewards!/i) || translated.match(/^(.*?)\s+એ હમણાં જ દૈનિક મિશન પૂર્ણ કર્યું અને ઈનામો જીત્યા!/i);
   if (childMissionMatch) {

@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Bell, BookOpen, Clock, Heart, ShieldAlert, Sparkles, TrendingUp, Trophy, Zap, ChevronRight, ChevronDown, Download, Share2, Award, Calendar, CheckCircle, CheckCircle2, Target, BarChart2, Flame, UserCheck, RefreshCw, X, AlertTriangle, Users, BrainCircuit, Activity, Settings } from "lucide-react";
-import FamilyLinkModal from "../../../components/FamilyLinkModal";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
 import ChildSwitcherModal from "../../../components/ChildSwitcherModal";
@@ -33,6 +32,14 @@ export default function ParentDashboardScreen() {
   const [userLevel, setUserLevel] = useState(() => userData?.parentLevel || 1);
   const [xp, setXp] = useState(() => userData?.parentXp || 0);
   const [showSwitcher, setShowSwitcher] = useState(false);
+
+  const isCoParent = Boolean(
+    userData?.isSecondaryParent ||
+    userData?.isCoParent ||
+    userData?.role === "co_parent" ||
+    userData?.role === "secondary_parent" ||
+    userData?.primary_parent_id
+  );
 
   const activeChild = (userData?.children || []).find((c: any) => c.childId === userData?.activeChildId);
   const childClass = activeChild?.childClass || userData?.childClass || "";
@@ -85,7 +92,6 @@ export default function ParentDashboardScreen() {
   const [dailyTipTitle, setDailyTipTitle] = useState<string | null>(null);
 
   const [showBreakdownModal, setShowBreakdownModal] = useState(false);
-  const [showFamilyModal, setShowFamilyModal] = useState(false);
   const [breakdownData, setBreakdownData] = useState<any>(null);
   const [loadingBreakdown, setLoadingBreakdown] = useState(false);
 
@@ -1127,13 +1133,15 @@ export default function ParentDashboardScreen() {
       {/* Top App Bar */}
       <header className="fixed top-0 left-0 right-0 flex items-center justify-between px-4 sm:px-6 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/80 z-50 shadow-[0_2px_12px_rgba(20,23,121,0.04)]">
         <div className="flex items-center gap-2.5 min-w-0">
-          <button 
-            onClick={() => navigate(-1)} 
-            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
-            aria-label="Back"
-          >
-            <ArrowLeft size={19} />
-          </button>
+          {!isCoParent && (
+            <button 
+              onClick={() => navigate(-1)} 
+              className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+              aria-label="Back"
+            >
+              <ArrowLeft size={19} />
+            </button>
+          )}
           <button
             onClick={() => navigate('/parent/settings')}
             className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-slate-200/80 overflow-hidden bg-white shrink-0 hover:scale-105 active:scale-95 transition-all shadow-2xs cursor-pointer"
@@ -1146,9 +1154,16 @@ export default function ParentDashboardScreen() {
             />
           </button>
           <div className="flex flex-col min-w-0">
-            <h1 className="text-sm sm:text-base font-black text-[#141779] tracking-tight truncate leading-tight">
-              {t("parent_space") || "Parent Space"}
-            </h1>
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-sm sm:text-base font-black text-[#141779] tracking-tight truncate leading-tight">
+                {t("parent_space") || "Parent Space"}
+              </h1>
+              {isCoParent && (
+                <span className="text-[9px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-200 shrink-0">
+                  Co-Parent
+                </span>
+              )}
+            </div>
             <button
               onClick={() => setShowSwitcher(true)}
               className="flex items-center gap-1 text-[11px] font-bold text-indigo-700 hover:text-indigo-900 group cursor-pointer transition-colors text-left"
@@ -1162,13 +1177,6 @@ export default function ParentDashboardScreen() {
           </div>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          <button 
-            onClick={() => setShowFamilyModal(true)} 
-            className="h-8 sm:h-9 px-2.5 sm:px-3 flex items-center gap-1.5 rounded-full bg-indigo-50/90 border border-indigo-100/90 text-[#141779] font-bold text-xs hover:bg-indigo-100 active:scale-95 transition-all shadow-2xs cursor-pointer"
-          >
-            <Users size={14} />
-            <span className="hidden sm:inline">{t("family_code", "Family Code")}</span>
-          </button>
           <button 
             onClick={() => { setShowNotifications(true); markAllRead(); }} 
             className="relative w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
@@ -1184,38 +1192,38 @@ export default function ParentDashboardScreen() {
         </div>
       </header>
 
-      <FamilyLinkModal isOpen={showFamilyModal} onClose={() => setShowFamilyModal(false)} />
-
       <main className="px-4 pt-20 max-w-lg mx-auto flex flex-col gap-3.5">
 
-        {/* Full-width Kids Space Launcher Box */}
-        <button
-          onClick={() => navigate("/home")}
-          className="w-full bg-gradient-to-r from-indigo-50/90 via-sky-50/50 to-indigo-50/80 hover:from-indigo-100 hover:to-sky-100 p-3 sm:p-3.5 rounded-2xl sm:rounded-3xl border border-indigo-200/80 hover:border-indigo-300 shadow-[0_4px_20px_rgba(20,23,121,0.04)] flex items-center justify-between group cursor-pointer transition-all active:scale-[0.99] text-left"
-          title={t("kids_space", "Kids Space")}
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-[#141779] to-[#2d328f] text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-              <Sparkles size={19} className="text-amber-300" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-sm sm:text-base font-black text-[#141779] leading-tight">
-                  {t("kids_space", "Kids Space")}
-                </span>
-                <span className="px-2 py-0.5 rounded-full bg-indigo-100/90 text-[#141779] text-[10px] font-extrabold uppercase tracking-wider">
-                  {t("kids_mode", "Kids Mode")}
-                </span>
+        {/* Full-width Kids Space Launcher Box (Primary Parent Only - Hidden for Co-Parents) */}
+        {!isCoParent && (
+          <button
+            onClick={() => navigate("/home")}
+            className="w-full bg-gradient-to-r from-indigo-50/90 via-sky-50/50 to-indigo-50/80 hover:from-indigo-100 hover:to-sky-100 p-3 sm:p-3.5 rounded-2xl sm:rounded-3xl border border-indigo-200/80 hover:border-indigo-300 shadow-[0_4px_20px_rgba(20,23,121,0.04)] flex items-center justify-between group cursor-pointer transition-all active:scale-[0.99] text-left"
+            title={t("kids_space", "Kids Space")}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-[#141779] to-[#2d328f] text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                <Sparkles size={19} className="text-amber-300" />
               </div>
-              <p className="text-[11px] sm:text-xs text-indigo-700/80 font-medium truncate mt-0.5">
-                {t("kids_space_sub", "Return directly to student learning dashboard")}
-              </p>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm sm:text-base font-black text-[#141779] leading-tight">
+                    {t("kids_space", "Kids Space")}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-indigo-100/90 text-[#141779] text-[10px] font-extrabold uppercase tracking-wider">
+                    {t("kids_mode", "Kids Mode")}
+                  </span>
+                </div>
+                <p className="text-[11px] sm:text-xs text-indigo-700/80 font-medium truncate mt-0.5">
+                  {t("kids_space_sub", "Return directly to student learning dashboard")}
+                </p>
+              </div>
             </div>
-          </div>
-          <div className="w-8 h-8 rounded-full bg-white/80 border border-indigo-200/70 text-[#141779] flex items-center justify-center shrink-0 group-hover:translate-x-1 transition-all shadow-2xs ml-2">
-            <ChevronRight size={16} />
-          </div>
-        </button>
+            <div className="w-8 h-8 rounded-full bg-white/80 border border-indigo-200/70 text-[#141779] flex items-center justify-center shrink-0 group-hover:translate-x-1 transition-all shadow-2xs ml-2">
+              <ChevronRight size={16} />
+            </div>
+          </button>
+        )}
 
         {/* 1. Student Profile, Journey, Metrics, and Confidence Score */}
         <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-[0_4px_20px_rgba(20,23,121,0.04)] flex flex-col gap-3.5">

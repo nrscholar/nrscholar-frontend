@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Plus, Check, Sparkles, Copy, CheckCircle2, KeyRound, ChevronDown } from "lucide-react";
+import { X, Plus, Check, Sparkles, Copy, CheckCircle2, KeyRound, ChevronDown, Lock, AlertTriangle } from "lucide-react";
 import { apiFetch } from "../api";
 import { useTranslation } from "react-i18next";
 import { copyToClipboard } from "../utils/clipboard";
@@ -42,6 +42,14 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
 
   if (!isOpen) return null;
 
+  const isCoParent = Boolean(
+    user?.isSecondaryParent ||
+    user?.isCoParent ||
+    user?.role === "co_parent" ||
+    user?.role === "secondary_parent" ||
+    user?.primary_parent_id
+  );
+
   const handleCopyCode = async (code: string, e: React.MouseEvent) => {
     e.stopPropagation();
     await copyToClipboard(code);
@@ -51,6 +59,10 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
 
   const handleLinkByCode = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isCoParent) {
+      setLinkError("To add a new child or modify family settings, please log in using the Primary Parent account.");
+      return;
+    }
     if (!linkCode.trim() || linking) return;
     setLinking(true);
     setLinkError("");
@@ -130,6 +142,10 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
 
   const handleAddChild = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isCoParent) {
+      alert("To add a new child or modify family settings, please log in using the Primary Parent account.");
+      return;
+    }
     if (!newName.trim() || adding) return;
     setAdding(true);
     try {
@@ -183,6 +199,21 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
         {/* Scrollable Modal Content */}
         <div className="flex-1 overflow-y-auto pr-0.5 space-y-3 pt-3">
           
+          {/* Informational Co-Parent View-Only Banner */}
+          {isCoParent && (
+            <div className="bg-amber-50 border border-amber-200/90 rounded-xl p-2.5 flex items-start gap-2.5 text-amber-900 shadow-2xs">
+              <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-amber-950">Co-Parent (View-Only Access)</span>
+                </div>
+                <p className="text-[11px] text-amber-800 leading-tight mt-0.5 font-medium">
+                  To add a new child or modify family settings, please log in using the Primary Parent account.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Minimal Child List with Radio/Checkmark */}
           {!showAddForm && !showLinkForm ? (
             <div className="space-y-2">
@@ -255,20 +286,39 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
 
               {children.length < 2 && (
                 <div className="flex flex-col gap-2 pt-2 border-t border-gray-100">
-                  <button
-                    onClick={() => { setShowAddForm(true); setShowLinkForm(false); }}
-                    className="w-full py-2 rounded-xl border border-dashed border-[#141779]/30 text-[#141779] font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-indigo-50 transition-colors cursor-pointer"
-                  >
-                    <Plus size={14} />
-                    <span>{t("add_second_child_profile", "+ Add Second Child Profile")}</span>
-                  </button>
-                  
-                  <button
-                    onClick={() => { setShowLinkForm(true); setShowAddForm(false); }}
-                    className="text-[11px] font-bold text-slate-500 hover:text-[#141779] text-center transition-colors cursor-pointer"
-                  >
-                    {t("link_existing_child_via_code", "Link child with 6-character code")}
-                  </button>
+                  {isCoParent ? (
+                    <div className="flex flex-col gap-1.5">
+                      <button
+                        type="button"
+                        disabled
+                        title="To add a new child or modify family settings, please log in using the Primary Parent account."
+                        className="w-full py-2.5 rounded-xl border border-dashed border-slate-300 bg-slate-50 text-slate-400 font-bold text-xs flex items-center justify-center gap-1.5 cursor-not-allowed opacity-80"
+                      >
+                        <Lock size={13} className="text-slate-400" />
+                        <span>{t("add_second_child_profile", "+ Add Second Child Profile")}</span>
+                      </button>
+                      <p className="text-[10px] text-center text-amber-800 font-semibold leading-tight">
+                        To add a new child or modify family settings, please log in using the Primary Parent account.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => { setShowAddForm(true); setShowLinkForm(false); }}
+                        className="w-full py-2 rounded-xl border border-dashed border-[#141779]/30 text-[#141779] font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-indigo-50 transition-colors cursor-pointer"
+                      >
+                        <Plus size={14} />
+                        <span>{t("add_second_child_profile", "+ Add Second Child Profile")}</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => { setShowLinkForm(true); setShowAddForm(false); }}
+                        className="text-[11px] font-bold text-slate-500 hover:text-[#141779] text-center transition-colors cursor-pointer"
+                      >
+                        {t("link_existing_child_via_code", "Link child with 6-character code")}
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
             </div>

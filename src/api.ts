@@ -126,9 +126,9 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
     headers.set("Expires", "0");
   }
 
-  // Add 15-second timeout using AbortController
+  // Add 30-second timeout using AbortController
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
 
   const API_BASE = import.meta.env.VITE_API_URL || "";
   const requestUrl = (url.startsWith("http://") || url.startsWith("https://"))
@@ -145,7 +145,7 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
     // Automatic retry once for idle socket drops
     try {
       const retryController = new AbortController();
-      const retryTimeout = setTimeout(() => retryController.abort(), 15000);
+      const retryTimeout = setTimeout(() => retryController.abort(), 30000);
       response = await fetch(requestUrl, { ...options, headers, signal: retryController.signal });
       clearTimeout(retryTimeout);
     } catch (retryErr) {

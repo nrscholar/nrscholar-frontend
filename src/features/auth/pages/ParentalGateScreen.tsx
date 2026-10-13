@@ -9,10 +9,8 @@ export default function ParentalGateScreen() {
   const [searchParams] = useSearchParams();
   const targetPath = searchParams.get("returnTo") || "/parent/dashboard";
   const { t } = useTranslation();
-  const cachedPinSet = typeof window !== "undefined" && localStorage.getItem("isParentPinSet") === "true";
-  const [mode, setMode] = useState<"loading" | "set-step1" | "set-step2" | "enter" | "reset-step1" | "reset-step2">(
-    cachedPinSet ? "enter" : "loading"
-  );
+  // Default to loading to prevent premature enter-mode flashing; check API for authoritative isPinSet
+  const [mode, setMode] = useState<"loading" | "set-step1" | "set-step2" | "enter" | "reset-step1" | "reset-step2">("loading");
   const [pin, setPin] = useState("");
   const [tempPin, setTempPin] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
@@ -36,9 +34,8 @@ export default function ParentalGateScreen() {
         }
       } catch (err) {
         console.error("Failed to check PIN status", err);
-        if (!cachedPinSet) {
-          setMode("set-step1");
-        }
+        const fallback = localStorage.getItem("isParentPinSet") === "true";
+        setMode(fallback ? "enter" : "set-step1");
       }
     }
     checkPinStatus();
@@ -126,7 +123,17 @@ export default function ParentalGateScreen() {
       const json = await res.json();
       
       if (json.success) {
+        localStorage.setItem("isParentPinSet", "true");
         sessionStorage.setItem("parentPinVerified", "true");
+        try {
+          const raw = localStorage.getItem("userData");
+          if (raw) {
+            const u = JSON.parse(raw);
+            u.isPinSet = true;
+            u.is_pin_set = true;
+            localStorage.setItem("userData", JSON.stringify(u));
+          }
+        } catch {}
         setSuccessMsg("PIN Set Successfully!");
         setTimeout(() => navigate(targetPath, { replace: true }), 1000);
       } else {
@@ -150,7 +157,17 @@ export default function ParentalGateScreen() {
       const json = await res.json();
       
       if (json.success) {
+        localStorage.setItem("isParentPinSet", "true");
         sessionStorage.setItem("parentPinVerified", "true");
+        try {
+          const raw = localStorage.getItem("userData");
+          if (raw) {
+            const u = JSON.parse(raw);
+            u.isPinSet = true;
+            u.is_pin_set = true;
+            localStorage.setItem("userData", JSON.stringify(u));
+          }
+        } catch {}
         setSuccessMsg("PIN Reset Successfully!");
         setTimeout(() => navigate(targetPath, { replace: true }), 1000);
       } else {
@@ -215,8 +232,33 @@ export default function ParentalGateScreen() {
     setShowForgotModal(true);
   };
 
+  const currentUser = (() => {
+    try {
+      const raw = localStorage.getItem("userData");
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  })();
+  const isCoParent = Boolean(
+    currentUser?.isSecondaryParent ||
+    currentUser?.isCoParent ||
+    currentUser?.role === "co_parent" ||
+    currentUser?.role === "secondary_parent" ||
+    currentUser?.primary_parent_id
+  );
+
   const handleBack = () => {
-    navigate("/home", { replace: true });
+    const isPinVerified = sessionStorage.getItem("parentPinVerified") === "true";
+    if (isCoParent) {
+      if (isPinVerified) {
+        navigate("/parent/dashboard", { replace: true });
+      } else {
+        navigate("/login", { replace: true });
+      }
+    } else {
+      navigate("/home", { replace: true });
+    }
   };
 
   if (mode === "loading") {

@@ -58,12 +58,27 @@ export default function LoginScreen() {
         sessionStorage.clear();
 
         // Smart Role / PIN Redirection:
-        // Case A (Checkbox checked): Directly route to Parent PIN screen (/parent/gate)
-        // Case B (Checkbox NOT checked): Intelligently check backend suggestedRoute:
-        //   - If Secondary Parent (Co-Parent) or recognized Parent account: auto-route to /parent/gate
-        //   - If primary/child account: route directly to Child Dashboard (/home)
-        const targetRoute = data.data.suggestedRoute || (loginAsParent ? "/parent/gate" : "/home");
-        const deviceRole = data.data.deviceRole || (targetRoute === "/parent/gate" ? "parent" : "child");
+        const isCoParentUser = Boolean(
+          data.data.user?.isSecondaryParent ||
+          data.data.user?.isCoParent ||
+          data.data.user?.role === "co_parent" ||
+          data.data.user?.role === "secondary_parent" ||
+          data.data.user?.primary_parent_id
+        );
+
+        const hasPinSet = Boolean(data.data.user?.isPinSet || data.data.user?.is_pin_set);
+        localStorage.setItem("isParentPinSet", hasPinSet ? "true" : "false");
+
+        let targetRoute = data.data.suggestedRoute || (loginAsParent ? "/parent/gate" : "/home");
+        let deviceRole = data.data.deviceRole || (targetRoute.startsWith("/parent") ? "parent" : "child");
+
+        if (isCoParentUser) {
+          // Co-Parents must ALWAYS route to /parent/gate to set up (first time) or verify (subsequent) PIN
+          targetRoute = "/parent/gate";
+          deviceRole = "parent";
+          sessionStorage.removeItem("parentPinVerified");
+        }
+
         localStorage.setItem("deviceRole", deviceRole);
         navigate(targetRoute);
       } else {

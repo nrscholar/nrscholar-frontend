@@ -1,4 +1,4 @@
-import { useNavigate, useLocation, Outlet } from "react-router-dom";
+import { useNavigate, useLocation, Navigate, Outlet } from "react-router-dom";
 import { Home, MessageSquare, BookOpen, BarChart2, User } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
@@ -9,6 +9,27 @@ export default function Layout() {
   const location = useLocation();
   const currentPath = location.pathname;
   const { t } = useTranslation();
+
+  const currentUser = (() => {
+    try {
+      const raw = localStorage.getItem("userData");
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  })();
+  const isCoParent = Boolean(
+    currentUser?.isSecondaryParent ||
+    currentUser?.isCoParent ||
+    currentUser?.role === "co_parent" ||
+    currentUser?.role === "secondary_parent" ||
+    currentUser?.primary_parent_id
+  );
+
+  if (isCoParent) {
+    const isPinVerified = sessionStorage.getItem("parentPinVerified") === "true";
+    return <Navigate to={isPinVerified ? "/parent/dashboard" : "/parent/gate"} replace />;
+  }
 
   // Optimistic tab tracking for 0ms lag-free tab switching
   const [activePath, setActivePath] = useState(currentPath);

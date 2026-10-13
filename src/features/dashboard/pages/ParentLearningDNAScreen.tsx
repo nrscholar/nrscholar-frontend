@@ -300,7 +300,7 @@ export default function ParentLearningDNAScreen() {
             {t("telemetry_desc", "Your child needs to solve more questions and complete roadmaps to build their cognitive Learning DNA profile.")}
           </p>
           <button 
-            onClick={() => navigate('/home')}
+            onClick={() => navigate('/parent/dashboard')}
             className="mt-4 px-8 py-4 bg-[#141779] text-white font-bold rounded-2xl shadow-md hover:scale-105 active:scale-95 transition-all text-sm"
           >
             {t("return_to_dashboard", "Return to Dashboard")}

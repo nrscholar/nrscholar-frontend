@@ -19,7 +19,7 @@ export default function ParentLayout() {
     setActivePath(location.pathname);
   }, [location.pathname]);
 
-  if (!isPinVerified) {
+  if (!isPinVerified && !currentPath.startsWith("/parent/gate") && currentPath !== "/parent") {
     const returnTo = encodeURIComponent(currentPath + location.search);
     return <Navigate to={`/parent/gate?returnTo=${returnTo}`} replace />;
   }

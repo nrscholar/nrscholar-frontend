@@ -242,6 +242,9 @@ export default function MapWorld({
             const isUserCurrentClass = cNum === inferredActiveClass;
             const isSelected = activeNavClass === cNum;
             const isPastClass = cNum < inferredActiveClass;
+            const classStages = rawStages.filter(s => s.minClass === cNum);
+            const isClassMastered = classStages.length > 0 && classStages.every(s => Boolean(s.nodeData?.completed));
+            const iconBadge = isUserCurrentClass ? "⚡" : isClassMastered ? "✓" : isPastClass ? "📖" : "🔒";
 
             return (
               <button
@@ -253,7 +256,7 @@ export default function MapWorld({
                     : "bg-white/80 text-slate-600 border border-slate-200/80 hover:bg-white hover:text-slate-900"
                 }`}
               >
-                <span className="text-[10px] shrink-0">{isUserCurrentClass ? "⚡" : isPastClass ? "✓" : "🔒"}</span>
+                <span className="text-[10px] shrink-0">{iconBadge}</span>
                 <span className="whitespace-nowrap">{`Class ${cNum}`}</span>
               </button>
             );
@@ -421,8 +424,8 @@ export default function MapWorld({
                       transition={{ delay: globalIndex * 0.04, duration: 0.35, ease: "easeOut" }}
                     >
                       <motion.div
-                        whileHover={{ y: -3, scale: 1.015 }}
-                        whileTap={{ scale: 0.97 }}
+                        whileHover={isNodeUnlocked || isCompleted ? { y: -3, scale: 1.015 } : undefined}
+                        whileTap={isNodeUnlocked || isCompleted ? { scale: 0.97 } : undefined}
                         onClick={() => {
                           if (isLockedClass) {
                             setLockedNotice(`🔒 ${stage.name} unlocks when you reach Class ${cNum}!`);
@@ -436,8 +439,8 @@ export default function MapWorld({
                         }}
                         className={`
                           ${cardStyle.bg} ${cardStyle.border} ${cardStyle.shadow}
-                          rounded-3xl p-4 w-[80%] cursor-pointer transition-all relative overflow-hidden
-                          ${!isNodeUnlocked && !isCompleted ? "opacity-60 bg-slate-50/60 grayscale-[0.2]" : ""}
+                          rounded-3xl p-4 w-[80%] transition-all relative overflow-hidden
+                          ${!isNodeUnlocked && !isCompleted ? "opacity-60 bg-slate-50/60 grayscale-[0.2] cursor-not-allowed" : "cursor-pointer"}
                         `}
                       >
                         {/* Glow accent for current node */}

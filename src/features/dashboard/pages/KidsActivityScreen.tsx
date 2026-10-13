@@ -196,20 +196,48 @@ export default function KidsActivityScreen() {
         )}
 
         {/* Analytics Summary Card */}
-        {loading ? (
-          <div className="bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md mb-5 flex items-center justify-between animate-pulse">
-            <div className="flex-1">
-              <div className="h-3 w-32 bg-slate-200 rounded mb-3"></div>
-              <div className="h-8 w-24 bg-slate-200 rounded"></div>
-            </div>
-            <div className="w-14 h-14 rounded-full bg-slate-200"></div>
-          </div>
-        ) : (
-          <div className="bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md mb-5 flex items-center justify-between">
-            <div>
-              <h2 className="text-xs font-black text-slate-500 uppercase tracking-wider mb-1">{t("weekly_engagement", "Weekly Engagement")}</h2>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-black text-[#141779]">{formatEngagementHours(engagementHours)}</span>
+        {(() => {
+          const weeklyActivitiesSecs = activities.reduce((acc, act) => {
+            const actDt = act.createdAt ? new Date(act.createdAt).getTime() : 0;
+            const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+            if (actDt >= sevenDaysAgo && act.timeTaken) {
+              return acc + act.timeTaken;
+            }
+            return acc;
+          }, 0);
+
+          const backendMins = (() => {
+            let total = 0;
+            const hrMatch = engagementHours.match(/(\d+)\s*hrs?/i);
+            const minMatch = engagementHours.match(/(\d+)\s*mins?/i);
+            if (hrMatch) total += parseInt(hrMatch[1], 10) * 60;
+            if (minMatch) total += parseInt(minMatch[1], 10);
+            return total;
+          })();
+
+          const calculatedMins = Math.floor(weeklyActivitiesSecs / 60);
+          const finalEngagementDisplay = (calculatedMins > backendMins)
+            ? formatTime(weeklyActivitiesSecs)
+            : formatEngagementHours(engagementHours);
+
+          if (loading) {
+            return (
+              <div className="bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md mb-5 flex items-center justify-between animate-pulse">
+                <div className="flex-1">
+                  <div className="h-3 w-32 bg-slate-200 rounded mb-3"></div>
+                  <div className="h-8 w-24 bg-slate-200 rounded"></div>
+                </div>
+                <div className="w-14 h-14 rounded-full bg-slate-200"></div>
+              </div>
+            );
+          }
+
+          return (
+            <div className="bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md mb-5 flex items-center justify-between">
+              <div>
+                <h2 className="text-xs font-black text-slate-500 uppercase tracking-wider mb-1">{t("weekly_engagement", "Weekly Engagement")}</h2>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-[#141779]">{finalEngagementDisplay}</span>
                 {engagementTrend !== null && engagementTrend !== undefined && (
                   <span className={`text-sm font-black flex items-center gap-1 ${engagementTrend >= 0 ? 'text-[#006a62]' : 'text-red-600'}`}>
                     {engagementTrend >= 0 ? <TrendingUp size={16} /> : <TrendingUp size={16} className="rotate-180" />} 
@@ -218,11 +246,12 @@ export default function KidsActivityScreen() {
                 )}
               </div>
             </div>
-            <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779] shadow-xs">
-              <Clock size={28} />
+              <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779] shadow-xs">
+                <Clock size={28} />
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Timeline */}
         {loading ? (

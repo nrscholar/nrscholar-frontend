@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, Variants } from "framer-motion";
-import { ArrowLeft, Bell, BookOpen, Camera, Save, ShieldCheck, Timer, Trash2, UserRound, GraduationCap, Cake, ChevronDown, Check, Plus, Globe, LogOut, Edit3, RefreshCw, X, Lock, Sparkles, Flame, Trophy, AlertTriangle, Phone, Eye, EyeOff, Users, CheckCircle2, User, Circle, Shield } from "lucide-react";
+import { ArrowLeft, Bell, BookOpen, Camera, Save, ShieldCheck, Timer, Trash2, UserRound, GraduationCap, Cake, ChevronDown, Check, Plus, Globe, LogOut, Edit3, RefreshCw, X, Lock, Sparkles, Flame, Trophy, AlertTriangle, Phone, Eye, EyeOff, Users, CheckCircle2, User, Circle, Shield, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch, clearAuthSession } from "../../../api";
@@ -279,6 +279,70 @@ export default function ParentSettings() {
   const [coParentError, setCoParentError] = useState("");
   const [coParentDeleteId, setCoParentDeleteId] = useState<string | null>(null);
   const [showDeleteCoParentModal, setShowDeleteCoParentModal] = useState(false);
+  const [isCheckingCoParentMobile, setIsCheckingCoParentMobile] = useState(false);
+  const [isCoParentMobileRegisteredInDb, setIsCoParentMobileRegisteredInDb] = useState(false);
+
+  // Debounced real-time check for co-parent phone number global registration
+  useEffect(() => {
+    const cleanM = coParentMobile.replace(/\D/g, "");
+    if (cleanM.length !== 10 || !/^[6-9]/.test(cleanM)) {
+      setIsCoParentMobileRegisteredInDb(false);
+      setIsCheckingCoParentMobile(false);
+      return;
+    }
+
+    const primaryM = (user?.mobile || "").replace(/\D/g, "").slice(-10);
+    const isSameAsPrimaryLocal = primaryM.length === 10 && cleanM === primaryM;
+    const isDuplicateCoParentLocal = secondaryParents.some(
+      (sp: any) => (sp.mobile || "").replace(/\D/g, "").slice(-10) === cleanM
+    );
+
+    if (isSameAsPrimaryLocal || isDuplicateCoParentLocal) {
+      setIsCoParentMobileRegisteredInDb(true);
+      setIsCheckingCoParentMobile(false);
+      return;
+    }
+
+    let isCancelled = false;
+    setIsCheckingCoParentMobile(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await apiFetch("/api/users/check-mobile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mobile: cleanM })
+        });
+        const data = await res.json();
+        if (!isCancelled) {
+          if (data && data.exists) {
+            setIsCoParentMobileRegisteredInDb(true);
+          } else {
+            setIsCoParentMobileRegisteredInDb(false);
+          }
+        }
+      } catch (err) {
+        console.error("Error checking mobile uniqueness:", err);
+      } finally {
+        if (!isCancelled) {
+          setIsCheckingCoParentMobile(false);
+        }
+      }
+    }, 200);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, [coParentMobile, user?.mobile, secondaryParents]);
+
+  const isCoParent = Boolean(
+    user?.isSecondaryParent ||
+    user?.isCoParent ||
+    user?.role === "co_parent" ||
+    user?.role === "secondary_parent" ||
+    user?.primary_parent_id
+  );
 
   const fetchSecondaryParents = async () => {
     try {
@@ -294,6 +358,10 @@ export default function ParentSettings() {
 
   const handleAddCoParent = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isCoParent) {
+      setCoParentError("To add a new child or modify family settings, please log in using the Primary Parent account.");
+      return;
+    }
     setCoParentError("");
     const cleanM = coParentMobile.replace(/\D/g, "");
     if (!cleanM || cleanM.length !== 10) {
@@ -305,14 +373,21 @@ export default function ParentSettings() {
       return;
     }
 
-    const primaryM = (user?.mobile || "").replace(/\D/g, "");
-    if (primaryM && (cleanM === primaryM || cleanM.replace(/^91/, "") === primaryM.replace(/^91/, ""))) {
-      setCoParentError("Cannot use the primary account's mobile number. Co-parents require their own separate phone number.");
+    const primaryM = (user?.mobile || "").replace(/\D/g, "").slice(-10);
+    if (primaryM.length === 10 && cleanM === primaryM) {
+      setCoParentError("This phone number is already registered in the system");
+      setIsCoParentMobileRegisteredInDb(true);
       return;
     }
 
-    if (secondaryParents.some((sp: any) => (sp.mobile || "").replace(/\D/g, "") === cleanM)) {
-      setCoParentError("This mobile number is already added as a co-parent for this household.");
+    if (secondaryParents.some((sp: any) => (sp.mobile || "").replace(/\D/g, "").slice(-10) === cleanM)) {
+      setCoParentError("This phone number is already registered in the system");
+      setIsCoParentMobileRegisteredInDb(true);
+      return;
+    }
+
+    if (isCoParentMobileRegisteredInDb) {
+      setCoParentError("This phone number is already registered in the system");
       return;
     }
 
@@ -354,6 +429,8 @@ export default function ParentSettings() {
         setCoParentMobile("");
         setCoParentPassword("");
         setCoParentConfirmPassword("");
+        setIsCoParentMobileRegisteredInDb(false);
+        setIsCheckingCoParentMobile(false);
         fetchSecondaryParents();
         if (json.data?.user) {
           localStorage.setItem("userData", JSON.stringify(json.data.user));
@@ -363,6 +440,9 @@ export default function ParentSettings() {
       } else {
         const errorMsg = json.detail || json.message || "Failed to create co-parent account.";
         setCoParentError(errorMsg);
+        if (errorMsg === "This phone number is already registered in the system" || /already registered/i.test(errorMsg)) {
+          setIsCoParentMobileRegisteredInDb(true);
+        }
       }
     } catch (e: any) {
       setIsSavingCoParent(false);
@@ -371,6 +451,14 @@ export default function ParentSettings() {
   };
 
   const confirmDeleteCoParent = async () => {
+    if (isCoParent) {
+      showNotificationToast({
+        title: "Permission Denied",
+        message: "To add a new child or modify family settings, please log in using the Primary Parent account.",
+        type: "warning"
+      });
+      return;
+    }
     if (!coParentDeleteId) return;
     const parentId = coParentDeleteId;
     setShowDeleteCoParentModal(false);
@@ -585,6 +673,14 @@ export default function ParentSettings() {
   };
 
   const handleSaveProfiles = async () => {
+    if (isCoParent) {
+      showNotificationToast({
+        title: "Permission Denied",
+        message: "To add a new child or modify family settings, please log in using the Primary Parent account.",
+        type: "warning"
+      });
+      return;
+    }
     setIsSavingProfile(true);
     try {
       // 1. Save Parent Profile
@@ -699,6 +795,14 @@ export default function ParentSettings() {
   };
 
   const updateSetting = async (key: string, value: any) => {
+    if (isCoParent) {
+      showNotificationToast({
+        title: "Permission Denied",
+        message: "To add a new child or modify family settings, please log in using the Primary Parent account.",
+        type: "warning"
+      });
+      return;
+    }
     try {
       await apiFetch("/api/parent/controls", {
         method: "PUT",
@@ -735,6 +839,14 @@ export default function ParentSettings() {
   };
 
   const handleResetJourney = async () => {
+    if (isCoParent) {
+      showNotificationToast({
+        title: "Permission Denied",
+        message: "To add a new child or modify family settings, please log in using the Primary Parent account.",
+        type: "warning"
+      });
+      return;
+    }
     try {
       const res = await apiFetch("/api/parent/reset-journey", {
         method: "POST"
@@ -775,6 +887,14 @@ export default function ParentSettings() {
   };
 
   const requestDeleteChild = (childId: string) => {
+    if (isCoParent) {
+      showNotificationToast({
+        title: "Permission Denied",
+        message: "To add a new child or modify family settings, please log in using the Primary Parent account.",
+        type: "warning"
+      });
+      return;
+    }
     setChildIdToDelete(childId);
     setDeleteConfirmOpen(true);
   };
@@ -862,6 +982,14 @@ export default function ParentSettings() {
   };
 
   const requestRegenCode = (childId: string) => {
+    if (isCoParent) {
+      showNotificationToast({
+        title: "Permission Denied",
+        message: "To add a new child or modify family settings, please log in using the Primary Parent account.",
+        type: "warning"
+      });
+      return;
+    }
     setChildIdToRegen(childId);
     setRegenConfirmOpen(true);
   };
@@ -872,62 +1000,34 @@ export default function ParentSettings() {
     setRegenConfirmOpen(false);
     setChildIdToRegen(null);
     try {
-      if (childId === "family") {
-        const res = await apiFetch("/api/users/family-link/update", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({})
-        });
-        const json = await res.json();
-        if (json.success && json.familyCode) {
-          if (json.user) {
-            const updatedUser = { ...json.user, familyCode: json.familyCode };
-            localStorage.setItem("userData", JSON.stringify(updatedUser));
-            setUser(updatedUser);
-            window.dispatchEvent(new Event("userDataUpdated"));
-          }
-          showNotificationToast({
-            title: "Code Regenerated",
-            message: "Family code regenerated successfully! 🔑",
-            type: "success"
-          });
+      const res = await apiFetch("/api/users/child-code/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ childId })
+      });
+      const json = await res.json();
+      if (json.success && json.uniqueCode) {
+        if (childId === "child_1") {
+          setChild1Code(json.uniqueCode);
         } else {
-          showNotificationToast({
-            title: "Regenerate Failed",
-            message: json.detail || json.message || "Failed to regenerate code.",
-            type: "warning"
-          });
+          setChild2Code(json.uniqueCode);
         }
+        if (json.user) {
+          localStorage.setItem("userData", JSON.stringify(json.user));
+          setUser(json.user);
+          window.dispatchEvent(new Event("userDataUpdated"));
+        }
+        showNotificationToast({
+          title: "Code Regenerated",
+          message: "Device code regenerated successfully! 🔑",
+          type: "success"
+        });
       } else {
-        const res = await apiFetch("/api/users/child-code/update", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ childId })
+        showNotificationToast({
+          title: "Regenerate Failed",
+          message: json.detail || json.message || "Failed to regenerate code.",
+          type: "warning"
         });
-        const json = await res.json();
-        if (json.success && json.uniqueCode) {
-          if (childId === "child_1") {
-            setChild1Code(json.uniqueCode);
-          } else {
-            setChild2Code(json.uniqueCode);
-          }
-          if (json.user) {
-            localStorage.setItem("userData", JSON.stringify(json.user));
-            setUser(json.user);
-            window.dispatchEvent(new Event("userDataUpdated"));
-          }
-          showNotificationToast({
-            title: "Code Regenerated",
-            message: "Device code regenerated successfully! 🔑",
-            type: "success"
-          });
-        } else {
-          showNotificationToast({
-            title: "Regenerate Failed",
-            message: json.detail || json.message || "Failed to regenerate code.",
-            type: "warning"
-          });
-        }
       }
     } catch (e) {
       showNotificationToast({
@@ -1134,56 +1234,6 @@ export default function ParentSettings() {
               </div>
             </motion.div>
 
-            {/* Family Link Code Card */}
-            <motion.div
-              variants={itemVariants}
-              className="bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md flex flex-col gap-4"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-[#006a62] shrink-0">
-                  <ShieldCheck size={24} />
-                </div>
-                <div>
-                  <h2 className="text-lg font-black text-[#141779]">{t('family_link_devices', 'Family Link & Devices')}</h2>
-                  <p className="text-xs font-bold text-slate-600 mt-0.5">{t('connect_coparents', 'Connect co-parents (Father & Mother) or extra devices')}</p>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="flex flex-col min-w-0">
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider truncate">{t('your_family_link_code', 'Your Family Link Code')}</span>
-                  <span className="text-xl font-black text-[#141779] tracking-widest whitespace-nowrap">{user?.familyCode || "FAM-8492"}</span>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
-                  <button
-                    onClick={() => {
-                      if (user?.familyCode) {
-                        navigator.clipboard.writeText(user.familyCode);
-                        showNotificationToast({
-                          title: "Code Copied",
-                          message: "Family Code copied to clipboard! 📋",
-                          type: "success"
-                        });
-                      }
-                    }}
-                    className="flex-1 sm:flex-none h-10 px-4 rounded-xl bg-[#141779] hover:bg-[#1e23a0] text-white text-xs font-black uppercase tracking-wider active:scale-95 transition-all shadow-xs flex items-center justify-center gap-1.5"
-                  >
-                    <span>{t('copy_code', 'Copy Code')}</span>
-                  </button>
-
-                  <button
-                    title="Regenerate Code"
-                    onClick={() => requestRegenCode("family")}
-                    className="h-10 px-3 rounded-xl bg-slate-200/80 hover:bg-slate-200 text-slate-700 hover:text-[#141779] text-xs font-black active:scale-95 flex items-center justify-center gap-1.5 transition-all"
-                  >
-                    <RefreshCw size={14} />
-                    <span>{t('regenerate', 'Regenerate')}</span>
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-
             {/* Logout Option */}
             <motion.button
               variants={itemVariants}
@@ -1201,6 +1251,22 @@ export default function ParentSettings() {
           </>
         ) : (
           <>
+            {/* Informational Banner for Co-Parents */}
+            {isCoParent && (
+              <motion.div variants={itemVariants} className="bg-amber-50 border border-amber-200/90 rounded-[24px] p-5 flex items-start gap-3.5 text-amber-900 shadow-xs mb-1">
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-extrabold text-sm text-amber-950">Co-Parent (View-Only Access)</span>
+                    <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-full bg-amber-200/70 text-amber-900">Restricted</span>
+                  </div>
+                  <p className="text-xs text-amber-800 mt-1 font-medium leading-relaxed">
+                    To add a new child or modify family settings, please log in using the Primary Parent account.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+
             {/* Parent Profile Card */}
             <motion.div variants={itemVariants} className="bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md flex flex-col gap-4">
               <h3 className="text-lg font-black text-[#141779] flex items-center gap-2">
@@ -1244,7 +1310,7 @@ export default function ParentSettings() {
                 <h3 className="text-lg font-black text-[#141779] flex items-center gap-2">
                   <UserRound size={20} className="text-[#141779]" /> {t("child_1_profile", "Child 1 Profile")}
                 </h3>
-                {hasChild2 && (
+                {hasChild2 && !isCoParent && (
                   <button
                     type="button"
                     onClick={() => requestDeleteChild("child_1")}
@@ -1328,13 +1394,19 @@ export default function ParentSettings() {
                     <span className="text-lg font-black tracking-widest text-[#141779]">
                       {child1Code || "N/A"}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => requestRegenCode("child_1")}
-                      className="px-3 py-1.5 rounded-full text-xs font-black bg-indigo-50 text-[#141779] border border-indigo-100 hover:bg-indigo-100 transition-colors"
-                    >
-                      {t("regenerate", "Regenerate")}
-                    </button>
+                    {!isCoParent ? (
+                      <button
+                        type="button"
+                        onClick={() => requestRegenCode("child_1")}
+                        className="px-3 py-1.5 rounded-full text-xs font-black bg-indigo-50 text-[#141779] border border-indigo-100 hover:bg-indigo-100 transition-colors"
+                      >
+                        {t("regenerate", "Regenerate")}
+                      </button>
+                    ) : (
+                      <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
+                        <Lock size={12} /> View-only
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1347,14 +1419,16 @@ export default function ParentSettings() {
                   <h3 className="text-lg font-black text-[#141779] flex items-center gap-2">
                     <UserRound size={20} className="text-[#141779]" /> Child 2 Profile
                   </h3>
-                  <button
-                    type="button"
-                    onClick={deleteChild2Click}
-                    className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
-                    title="Remove second child details"
-                  >
-                    <Trash2 size={18} />
-                  </button>
+                  {!isCoParent && (
+                    <button
+                      type="button"
+                      onClick={deleteChild2Click}
+                      className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
+                      title="Remove second child details"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  )}
                 </div>
 
                 <div className="flex flex-col gap-4">
@@ -1427,16 +1501,38 @@ export default function ParentSettings() {
                       <span className="text-lg font-black tracking-widest text-[#141779]">
                         {child2Code || "N/A"}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => requestRegenCode("child_2")}
-                        className="px-3 py-1.5 rounded-full text-xs font-black bg-indigo-50 text-[#141779] border border-indigo-100 hover:bg-indigo-100 transition-colors"
-                      >
-                        Regenerate
-                      </button>
+                      {!isCoParent ? (
+                        <button
+                          type="button"
+                          onClick={() => requestRegenCode("child_2")}
+                          className="px-3 py-1.5 rounded-full text-xs font-black bg-indigo-50 text-[#141779] border border-indigo-100 hover:bg-indigo-100 transition-colors"
+                        >
+                          Regenerate
+                        </button>
+                      ) : (
+                        <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
+                          <Lock size={12} /> View-only
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
+              </motion.div>
+            ) : isCoParent ? (
+              <motion.div variants={itemVariants} className="w-full flex flex-col gap-1.5">
+                <button
+                  type="button"
+                  disabled
+                  title="To add a new child or modify family settings, please log in using the Primary Parent account."
+                  className="w-full py-4 border-2 border-dashed border-slate-300 rounded-[24px] text-slate-400 font-black text-sm flex items-center justify-center gap-2 bg-slate-50 cursor-not-allowed opacity-80"
+                >
+                  <Lock size={18} className="text-slate-400" />
+                  <span>Add Second Child Profile</span>
+                </button>
+                <p className="text-[11px] text-center text-amber-800 font-semibold flex items-center justify-center gap-1">
+                  <AlertTriangle size={12} />
+                  To add a new child or modify family settings, please log in using the Primary Parent account.
+                </p>
               </motion.div>
             ) : (
               <motion.button
@@ -1475,22 +1571,34 @@ export default function ParentSettings() {
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCoParentError("");
-                    setCoParentName("");
-                    setCoParentMobile("");
-                    setCoParentPassword("");
-                    setCoParentConfirmPassword("");
-                    setCoParentRel("Mother");
-                    setShowAddCoParent(true);
-                  }}
-                  className="px-3.5 py-2 bg-[#141779] hover:bg-[#1c1970] active:scale-95 text-white rounded-xl text-xs font-black tracking-wide flex items-center gap-1.5 shadow-xs transition-all cursor-pointer shrink-0"
-                >
-                  <Plus size={15} />
-                  <span>Add Co-Parent</span>
-                </button>
+                {isCoParent ? (
+                  <button
+                    type="button"
+                    disabled
+                    title="To add a new child or modify family settings, please log in using the Primary Parent account."
+                    className="px-3.5 py-2 bg-slate-200 text-slate-500 rounded-xl text-xs font-black tracking-wide flex items-center gap-1.5 cursor-not-allowed shrink-0"
+                  >
+                    <Lock size={13} />
+                    <span>Primary Parent Only</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCoParentError("");
+                      setCoParentName("");
+                      setCoParentMobile("");
+                      setCoParentPassword("");
+                      setCoParentConfirmPassword("");
+                      setCoParentRel("Mother");
+                      setShowAddCoParent(true);
+                    }}
+                    className="px-3.5 py-2 bg-[#141779] hover:bg-[#1c1970] active:scale-95 text-white rounded-xl text-xs font-black tracking-wide flex items-center gap-1.5 shadow-xs transition-all cursor-pointer shrink-0"
+                  >
+                    <Plus size={15} />
+                    <span>Add Co-Parent</span>
+                  </button>
+                )}
               </div>
 
               {/* Display Existing Secondary Parents */}
@@ -1514,17 +1622,19 @@ export default function ParentSettings() {
                           </span>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCoParentDeleteId(sp.parentId);
-                          setShowDeleteCoParentModal(true);
-                        }}
-                        className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors shrink-0 cursor-pointer"
-                        title="Remove secondary parent"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                      {!isCoParent && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCoParentDeleteId(sp.parentId);
+                            setShowDeleteCoParentModal(true);
+                          }}
+                          className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors shrink-0 cursor-pointer"
+                          title="Remove secondary parent"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1538,14 +1648,31 @@ export default function ParentSettings() {
 
             {/* Save Profiles Button */}
             <motion.div variants={itemVariants} className="mt-2">
-              <button
-                onClick={() => setShowSaveConfirmModal(true)}
-                disabled={isSavingProfile}
-                className="w-full h-14 bg-[#141779] hover:bg-[#1e23a0] rounded-full flex items-center justify-center gap-3 shadow-md active:scale-95 transition-all disabled:opacity-70 text-white font-black text-base"
-              >
-                <span>{isSavingProfile ? "Saving Profiles..." : "Save Profiles"}</span>
-                {!isSavingProfile && <Save size={20} color="white" />}
-              </button>
+              {isCoParent ? (
+                <div className="flex flex-col gap-1.5">
+                  <button
+                    type="button"
+                    disabled
+                    title="To add a new child or modify family settings, please log in using the Primary Parent account."
+                    className="w-full h-14 bg-slate-200 text-slate-400 rounded-full flex items-center justify-center gap-3 font-black text-base cursor-not-allowed opacity-80"
+                  >
+                    <Lock size={18} />
+                    <span>View-Only Mode</span>
+                  </button>
+                  <p className="text-xs text-center text-amber-800 font-semibold">
+                    To add a new child or modify family settings, please log in using the Primary Parent account.
+                  </p>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowSaveConfirmModal(true)}
+                  disabled={isSavingProfile}
+                  className="w-full h-14 bg-[#141779] hover:bg-[#1e23a0] rounded-full flex items-center justify-center gap-3 shadow-md active:scale-95 transition-all disabled:opacity-70 text-white font-black text-base"
+                >
+                  <span>{isSavingProfile ? "Saving Profiles..." : "Save Profiles"}</span>
+                  {!isSavingProfile && <Save size={20} color="white" />}
+                </button>
+              )}
             </motion.div>
           </>
         )}
@@ -1635,12 +1762,8 @@ export default function ParentSettings() {
           setChildIdToRegen(null);
         }}
         onConfirm={confirmRegenCode}
-        title={childIdToRegen === "family" ? "Regenerate Family Code" : "Regenerate Device Code"}
-        message={
-          childIdToRegen === "family"
-            ? "Are you sure you want to regenerate a new random Family Link Code? All co-parents using the old code will need to link again."
-            : "Are you sure you want to regenerate a new random device code for this child? The old code will stop working immediately."
-        }
+        title="Regenerate Device Code"
+        message="Are you sure you want to regenerate a new random device code for this child? The old code will stop working immediately."
         confirmText="Yes, Regenerate"
         cancelText="Cancel"
         variant="primary"
@@ -1667,15 +1790,13 @@ export default function ParentSettings() {
       <AnimatePresence>
         {showAddCoParent && (() => {
           const cleanInputM = coParentMobile.replace(/\D/g, "");
-          const primaryCleanM = (user?.mobile || "").replace(/\D/g, "");
-          const isSameAsPrimary = cleanInputM.length === 10 && (
-            cleanInputM === primaryCleanM ||
-            cleanInputM.replace(/^91/, "") === primaryCleanM.replace(/^91/, "")
-          );
+          const primaryCleanM = (user?.mobile || "").replace(/\D/g, "").slice(-10);
+          const isSameAsPrimary = cleanInputM.length === 10 && primaryCleanM.length === 10 && cleanInputM === primaryCleanM;
           const isDuplicateCoParent = cleanInputM.length === 10 && secondaryParents.some(
-            (sp: any) => (sp.mobile || "").replace(/\D/g, "") === cleanInputM
+            (sp: any) => (sp.mobile || "").replace(/\D/g, "").slice(-10) === cleanInputM
           );
-          const isPhoneValid = cleanInputM.length === 10 && /^[6-9]/.test(cleanInputM) && !isSameAsPrimary && !isDuplicateCoParent;
+          const isDuplicateNumber = isSameAsPrimary || isDuplicateCoParent || isCoParentMobileRegisteredInDb;
+          const isPhoneValid = cleanInputM.length === 10 && /^[6-9]/.test(cleanInputM) && !isDuplicateNumber && !isCheckingCoParentMobile;
 
           // Exact same validation rules as signup (SignupStep3.tsx)
           const isMinLength = coParentPassword.length >= 8;
@@ -1711,6 +1832,8 @@ export default function ParentSettings() {
                     onClick={() => {
                       setShowAddCoParent(false);
                       setCoParentError("");
+                      setIsCoParentMobileRegisteredInDb(false);
+                      setIsCheckingCoParentMobile(false);
                     }}
                     className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors shrink-0 cursor-pointer"
                     aria-label="Close"
@@ -1777,14 +1900,14 @@ export default function ParentSettings() {
                     />
                   </div>
 
-                  {/* Mobile Number with Live Primary Number Check */}
+                  {/* Mobile Number with Live Registered Check */}
                   <div className="flex flex-col gap-1">
                     <div className="flex justify-between items-center text-[10px]">
                       <label className="font-black text-slate-500 uppercase tracking-wider ml-0.5">
                         Mobile Number
                       </label>
                       {cleanInputM.length > 0 && (
-                        <span className={`font-bold ${isPhoneValid ? "text-emerald-600" : "text-slate-400"}`}>
+                        <span className={`font-bold ${isDuplicateNumber ? "text-amber-600" : isPhoneValid ? "text-emerald-600" : "text-slate-400"}`}>
                           {cleanInputM.length}/10
                         </span>
                       )}
@@ -1802,27 +1925,25 @@ export default function ParentSettings() {
                           setCoParentMobile(e.target.value.replace(/\D/g, "").slice(0, 10));
                           if (coParentError) setCoParentError("");
                         }}
-                        className={`w-full h-9 bg-slate-50 rounded-xl pl-10 pr-3 text-xs font-bold text-slate-900 border transition-colors outline-none focus:bg-white ${isSameAsPrimary || isDuplicateCoParent
+                        className={`w-full h-9 bg-slate-50 rounded-xl pl-10 pr-8 text-xs font-bold text-slate-900 border transition-colors outline-none focus:bg-white ${isDuplicateNumber
                             ? "border-amber-400 bg-amber-50/30 focus:border-amber-500"
-                            : cleanInputM.length === 10 && /^[6-9]/.test(cleanInputM)
+                            : cleanInputM.length === 10 && /^[6-9]/.test(cleanInputM) && !isCheckingCoParentMobile
                               ? "border-emerald-300 focus:border-emerald-500"
                               : "border-slate-200 focus:border-[#141779]"
                           }`}
                         required
                       />
+                      {isCheckingCoParentMobile && (
+                        <span className="absolute right-2.5 flex items-center text-slate-400">
+                          <Loader2 size={14} className="animate-spin text-[#141779]" />
+                        </span>
+                      )}
                     </div>
 
-                    {/* Primary Account Warning Callout */}
-                    {isSameAsPrimary && (
+                    {/* Duplicate Phone Number Warning Callout */}
+                    {isDuplicateNumber && (
                       <p className="text-[10px] text-amber-700 font-bold bg-amber-50 border border-amber-200 rounded-lg p-2 leading-tight">
-                        ⚠️ This is already your primary number (+91 {user?.mobile}). Please provide the co-parent's own number.
-                      </p>
-                    )}
-
-                    {/* Duplicate Secondary Parent Warning */}
-                    {isDuplicateCoParent && (
-                      <p className="text-[10px] text-amber-700 font-bold bg-amber-50 border border-amber-200 rounded-lg p-2 leading-tight">
-                        ⚠️ This number is already added as a co-parent for this household.
+                        ⚠️ This phone number is already registered in the system
                       </p>
                     )}
                   </div>
@@ -1926,6 +2047,8 @@ export default function ParentSettings() {
                       onClick={() => {
                         setShowAddCoParent(false);
                         setCoParentError("");
+                        setIsCoParentMobileRegisteredInDb(false);
+                        setIsCheckingCoParentMobile(false);
                       }}
                       className="flex-1 h-9 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
                     >
