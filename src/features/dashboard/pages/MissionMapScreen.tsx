@@ -395,9 +395,9 @@ export default function MissionMapScreen() {
                           {t(m.title.toLowerCase().replace(/ /g, '_'), { defaultValue: m.title })}
                         </h4>
                         <p className="text-xs text-[#767683] mt-0.5 font-medium flex items-center gap-2">
-                          <span className="flex items-center gap-1">🎯 {m.quizCount} {t('quiz', 'Quiz')}</span>
+                          <span className="flex items-center gap-1 whitespace-nowrap">🎯 {t('quiz', 'Quiz')}</span>
                           <span className="text-slate-300">|</span>
-                          <span className="flex items-center gap-1">👹 {t(m.bossName.toLowerCase().replace(/ /g, '_'), { defaultValue: m.bossName })}</span>
+                          <span className="flex items-center gap-1 truncate">👹 {t(m.bossName.toLowerCase().replace(/ /g, '_'), { defaultValue: m.bossName })}</span>
                         </p>
                       </div>
 
