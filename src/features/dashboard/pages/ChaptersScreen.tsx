@@ -368,7 +368,17 @@ export default function ChaptersScreen() {
               className="w-10 h-10 rounded-full border-2 border-indigo-100 overflow-hidden hover:opacity-90 transition-opacity shrink-0 bg-[#141779] shadow-xs"
             >
               {childPhoto ? (
-                <img src={childPhoto} alt="Avatar" className="w-full h-full object-cover" />
+                <img
+                  src={childPhoto}
+                  alt="Avatar"
+                  width={40}
+                  height={40}
+                  loading="eager"
+                  decoding="async"
+                  // @ts-ignore fetchpriority for React 18
+                  fetchpriority="high"
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <div className="w-full h-full bg-[#141779] text-white font-bold text-xs flex items-center justify-center">
                   {childName ? childName.slice(0, 2).toUpperCase() : "NR"}

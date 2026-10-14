@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { WORLD_THEMES, MapWorldThemeConfig, MapStageConfig } from "./AdventureTheme";
 import LocationModalSheet from "./LocationModalSheet";
@@ -85,59 +85,73 @@ export default function MapWorld({
   const inferredActiveClass = activeClassLevel || (nodes?.find((n: any) => !n.isPriorClass && !n.isFutureClass)?.minClass) || userLevel || 1;
   const [activeNavClass, setActiveNavClass] = useState<number>(inferredActiveClass);
 
-  // Build full stage list from nodes or fallback defaults
-  const rawStages: (MapStageConfig & { minClass: number; nodeData?: any })[] = nodes && nodes.length > 0
-    ? nodes.map((n: any, idx: number) => {
-        const xpR = n.xpReward || Math.max(100, (n.requiredChapters || 0) * 50);
-        const coinR = n.coinReward || Math.max(50, (n.requiredChapters || 0) * 25);
-        const missionXp = Math.max(50, Math.round(xpR / 2));
-        const biomes: Array<"forest" | "cave" | "volcano" | "castle"> = ["forest", "cave", "volcano", "castle"];
-        const nodeCh = n.nodeChapters || 4;
-        const minClassNum = n.minClass || (idx < 3 ? 1 : idx < 6 ? 2 : idx < 9 ? 3 : 4);
-        return {
-          id: `node-${idx}`,
-          stageNumber: n.displayLevel || (idx + 1),
-          name: n.name,
-          subtitle: `Class ${minClassNum} • ${nodeCh} Chapters`,
-          emoji: n.emoji || "⭐",
-          storyQuote: `Complete Class ${minClassNum} chapter quests to unlock ${n.name}!`,
-          description: n.lockReason || `Class ${minClassNum} Realm`,
-          questsCount: nodeCh,
-          lessonsCount: Math.ceil(nodeCh / 2),
-          xpReward: xpR,
-          coinReward: coinR,
-          unlocked: Boolean(n.unlocked),
-          itemIcon: n.emoji || "⭐",
-          itemReward: `${nodeCh} Chapters`,
-          x: 50,
-          y: Math.max(10, 90 - idx * 20),
-          biomeType: biomes[idx % biomes.length],
-          minClass: minClassNum,
-          nodeData: n,
-          missions: [
-            { title: `${n.name} Reading Quest`, type: "reading", icon: "📖", xp: missionXp },
-            { title: `${n.name} Practice Challenge`, type: "practice", icon: "✍️", xp: missionXp }
-          ]
-        };
-      })
-    : [
-        { id: "node-0", stageNumber: 1, name: "Egg Village", subtitle: "Class 1 • Hatching Grounds", emoji: "🥚", storyQuote: "Hatch & Begin", description: "Hatch & Begin", questsCount: 4, lessonsCount: 2, xpReward: 500, coinReward: 200, itemReward: "4 Chapters", itemIcon: "🥚", unlocked: true, minClass: 1, x: 50, y: 90, biomeType: "forest", missions: [] },
-        { id: "node-1", stageNumber: 2, name: "Hatchling Haven", subtitle: "Class 1 • Nursery Realm", emoji: "🐣", storyQuote: "Nursery Realm", description: "Nursery Realm", questsCount: 4, lessonsCount: 2, xpReward: 500, coinReward: 200, itemReward: "4 Chapters", itemIcon: "🐣", unlocked: true, minClass: 1, x: 50, y: 70, biomeType: "forest", missions: [] },
-        { id: "node-2", stageNumber: 3, name: "Forest Kingdom", subtitle: "Class 1 • Enchanted Woods", emoji: "🐉", storyQuote: "Enchanted Woods", description: "Enchanted Woods", questsCount: 4, lessonsCount: 2, xpReward: 500, coinReward: 200, itemReward: "4 Chapters", itemIcon: "🐉", unlocked: false, minClass: 1, x: 50, y: 50, biomeType: "forest", missions: [] },
-        { id: "node-3", stageNumber: 4, name: "Magic Desert", subtitle: "Class 2 • Sun Sands", emoji: "🔥", storyQuote: "Sun Sands", description: "Sun Sands", questsCount: 4, lessonsCount: 2, xpReward: 800, coinReward: 350, itemReward: "4 Chapters", itemIcon: "🔥", unlocked: false, minClass: 2, x: 50, y: 40, biomeType: "cave", missions: [] },
-        { id: "node-4", stageNumber: 5, name: "Ice Kingdom", subtitle: "Class 2 • Frost Peak", emoji: "❄️", storyQuote: "Frost Peak", description: "Frost Peak", questsCount: 4, lessonsCount: 2, xpReward: 800, coinReward: 350, itemReward: "4 Chapters", itemIcon: "❄️", unlocked: false, minClass: 2, x: 50, y: 30, biomeType: "cave", missions: [] },
-        { id: "node-5", stageNumber: 6, name: "Dragon Mountain", subtitle: "Class 2 • Dragon Apex", emoji: "🏔️", storyQuote: "Dragon Apex", description: "Dragon Apex", questsCount: 4, lessonsCount: 2, xpReward: 800, coinReward: 350, itemReward: "4 Chapters", itemIcon: "🏔️", unlocked: false, minClass: 2, x: 50, y: 20, biomeType: "cave", missions: [] },
-        { id: "node-6", stageNumber: 7, name: "Cloud City", subtitle: "Class 3 • Sky Haven", emoji: "☁️", storyQuote: "Sky Haven", description: "Sky Haven", questsCount: 4, lessonsCount: 2, xpReward: 1200, coinReward: 500, itemReward: "4 Chapters", itemIcon: "☁️", unlocked: false, minClass: 3, x: 50, y: 10, biomeType: "volcano", missions: [] },
-        { id: "node-7", stageNumber: 8, name: "Crystal Caves", subtitle: "Class 3 • Gem Caverns", emoji: "💎", storyQuote: "Gem Caverns", description: "Gem Caverns", questsCount: 4, lessonsCount: 2, xpReward: 1200, coinReward: 500, itemReward: "4 Chapters", itemIcon: "💎", unlocked: false, minClass: 3, x: 50, y: 5, biomeType: "volcano", missions: [] },
-        { id: "node-8", stageNumber: 9, name: "Underworld", subtitle: "Class 3 • Deep Lair", emoji: "🌋", storyQuote: "Deep Lair", description: "Deep Lair", questsCount: 4, lessonsCount: 2, xpReward: 1200, coinReward: 500, itemReward: "4 Chapters", itemIcon: "🌋", unlocked: false, minClass: 3, x: 50, y: 0, biomeType: "volcano", missions: [] },
-        { id: "node-9", stageNumber: 10, name: "Galactic Core", subtitle: "Class 4 • Stellar Lair", emoji: "🌌", storyQuote: "Stellar Lair", description: "Stellar Lair", questsCount: 4, lessonsCount: 2, xpReward: 2000, coinReward: 800, itemReward: "4 Chapters", itemIcon: "🌌", unlocked: false, minClass: 4, x: 50, y: 0, biomeType: "castle", missions: [] },
-        { id: "node-10", stageNumber: 11, name: "Stone Age Hunter", subtitle: "Class 4 • Ancestral Lands", emoji: "🏹", storyQuote: "Ancestral Lands", description: "Ancestral Lands", questsCount: 4, lessonsCount: 2, xpReward: 2000, coinReward: 800, itemReward: "4 Chapters", itemIcon: "🏹", unlocked: false, minClass: 4, x: 50, y: 0, biomeType: "castle", missions: [] },
-        { id: "node-11", stageNumber: 12, name: "Bronze Craftsman", subtitle: "Class 4 • Forge Realm", emoji: "🔨", storyQuote: "Forge Realm", description: "Forge Realm", questsCount: 4, lessonsCount: 2, xpReward: 2000, coinReward: 800, itemReward: "4 Chapters", itemIcon: "🔨", unlocked: false, minClass: 4, x: 50, y: 0, biomeType: "castle", missions: [] },
-        { id: "node-12", stageNumber: 13, name: "Civilization Leader", subtitle: "Class 4 • Apex Throne", emoji: "👑", storyQuote: "Apex Throne", description: "Apex Throne", questsCount: 4, lessonsCount: 2, xpReward: 2000, coinReward: 800, itemReward: "4 Chapters", itemIcon: "👑", unlocked: false, minClass: 4, x: 50, y: 0, biomeType: "castle", missions: [] }
-      ];
+  // Build full stage list from nodes or fallback defaults (memoized)
+  const rawStages: (MapStageConfig & { minClass: number; nodeData?: any })[] = useMemo(() => {
+    return nodes && nodes.length > 0
+      ? nodes.map((n: any, idx: number) => {
+          const xpR = n.xpReward || Math.max(100, (n.requiredChapters || 0) * 50);
+          const coinR = n.coinReward || Math.max(50, (n.requiredChapters || 0) * 25);
+          const missionXp = Math.max(50, Math.round(xpR / 2));
+          const biomes: Array<"forest" | "cave" | "volcano" | "castle"> = ["forest", "cave", "volcano", "castle"];
+          const nodeCh = n.nodeChapters || 4;
+          const minClassNum = n.minClass || (idx < 3 ? 1 : idx < 6 ? 2 : idx < 9 ? 3 : 4);
+          return {
+            id: `node-${idx}`,
+            stageNumber: n.displayLevel || (idx + 1),
+            name: n.name,
+            subtitle: `Class ${minClassNum} • ${nodeCh} Chapters`,
+            emoji: n.emoji || "⭐",
+            storyQuote: `Complete Class ${minClassNum} chapter quests to unlock ${n.name}!`,
+            description: n.lockReason || `Class ${minClassNum} Realm`,
+            questsCount: nodeCh,
+            lessonsCount: Math.ceil(nodeCh / 2),
+            xpReward: xpR,
+            coinReward: coinR,
+            unlocked: Boolean(n.unlocked),
+            itemIcon: n.emoji || "⭐",
+            itemReward: `${nodeCh} Chapters`,
+            x: 50,
+            y: Math.max(10, 90 - idx * 20),
+            biomeType: biomes[idx % biomes.length],
+            minClass: minClassNum,
+            nodeData: n,
+            missions: [
+              { title: `${n.name} Reading Quest`, type: "reading", icon: "📖", xp: missionXp },
+              { title: `${n.name} Practice Challenge`, type: "practice", icon: "✍️", xp: missionXp }
+            ]
+          };
+        })
+      : [
+          { id: "node-0", stageNumber: 1, name: "Egg Village", subtitle: "Class 1 • Hatching Grounds", emoji: "🥚", storyQuote: "Hatch & Begin", description: "Hatch & Begin", questsCount: 4, lessonsCount: 2, xpReward: 500, coinReward: 200, itemReward: "4 Chapters", itemIcon: "🥚", unlocked: true, minClass: 1, x: 50, y: 90, biomeType: "forest", missions: [] },
+          { id: "node-1", stageNumber: 2, name: "Hatchling Haven", subtitle: "Class 1 • Nursery Realm", emoji: "🐣", storyQuote: "Nursery Realm", description: "Nursery Realm", questsCount: 4, lessonsCount: 2, xpReward: 500, coinReward: 200, itemReward: "4 Chapters", itemIcon: "🐣", unlocked: true, minClass: 1, x: 50, y: 70, biomeType: "forest", missions: [] },
+          { id: "node-2", stageNumber: 3, name: "Forest Kingdom", subtitle: "Class 1 • Enchanted Woods", emoji: "🐉", storyQuote: "Enchanted Woods", description: "Enchanted Woods", questsCount: 4, lessonsCount: 2, xpReward: 500, coinReward: 200, itemReward: "4 Chapters", itemIcon: "🐉", unlocked: false, minClass: 1, x: 50, y: 50, biomeType: "forest", missions: [] },
+          { id: "node-3", stageNumber: 4, name: "Magic Desert", subtitle: "Class 2 • Sun Sands", emoji: "🔥", storyQuote: "Sun Sands", description: "Sun Sands", questsCount: 4, lessonsCount: 2, xpReward: 800, coinReward: 350, itemReward: "4 Chapters", itemIcon: "🔥", unlocked: false, minClass: 2, x: 50, y: 40, biomeType: "cave", missions: [] },
+          { id: "node-4", stageNumber: 5, name: "Ice Kingdom", subtitle: "Class 2 • Frost Peak", emoji: "❄️", storyQuote: "Frost Peak", description: "Frost Peak", questsCount: 4, lessonsCount: 2, xpReward: 800, coinReward: 350, itemReward: "4 Chapters", itemIcon: "❄️", unlocked: false, minClass: 2, x: 50, y: 30, biomeType: "cave", missions: [] },
+          { id: "node-5", stageNumber: 6, name: "Dragon Mountain", subtitle: "Class 2 • Dragon Apex", emoji: "🏔️", storyQuote: "Dragon Apex", description: "Dragon Apex", questsCount: 4, lessonsCount: 2, xpReward: 800, coinReward: 350, itemReward: "4 Chapters", itemIcon: "🏔️", unlocked: false, minClass: 2, x: 50, y: 20, biomeType: "cave", missions: [] },
+          { id: "node-6", stageNumber: 7, name: "Cloud City", subtitle: "Class 3 • Sky Haven", emoji: "☁️", storyQuote: "Sky Haven", description: "Sky Haven", questsCount: 4, lessonsCount: 2, xpReward: 1200, coinReward: 500, itemReward: "4 Chapters", itemIcon: "☁️", unlocked: false, minClass: 3, x: 50, y: 10, biomeType: "volcano", missions: [] },
+          { id: "node-7", stageNumber: 8, name: "Crystal Caves", subtitle: "Class 3 • Gem Caverns", emoji: "💎", storyQuote: "Gem Caverns", description: "Gem Caverns", questsCount: 4, lessonsCount: 2, xpReward: 1200, coinReward: 500, itemReward: "4 Chapters", itemIcon: "💎", unlocked: false, minClass: 3, x: 50, y: 5, biomeType: "volcano", missions: [] },
+          { id: "node-8", stageNumber: 9, name: "Underworld", subtitle: "Class 3 • Deep Lair", emoji: "🌋", storyQuote: "Deep Lair", description: "Deep Lair", questsCount: 4, lessonsCount: 2, xpReward: 1200, coinReward: 500, itemReward: "4 Chapters", itemIcon: "🌋", unlocked: false, minClass: 3, x: 50, y: 0, biomeType: "volcano", missions: [] },
+          { id: "node-9", stageNumber: 10, name: "Galactic Core", subtitle: "Class 4 • Stellar Lair", emoji: "🌌", storyQuote: "Stellar Lair", description: "Stellar Lair", questsCount: 4, lessonsCount: 2, xpReward: 2000, coinReward: 800, itemReward: "4 Chapters", itemIcon: "🌌", unlocked: false, minClass: 4, x: 50, y: 0, biomeType: "castle", missions: [] },
+          { id: "node-10", stageNumber: 11, name: "Stone Age Hunter", subtitle: "Class 4 • Ancestral Lands", emoji: "🏹", storyQuote: "Ancestral Lands", description: "Ancestral Lands", questsCount: 4, lessonsCount: 2, xpReward: 2000, coinReward: 800, itemReward: "4 Chapters", itemIcon: "🏹", unlocked: false, minClass: 4, x: 50, y: 0, biomeType: "castle", missions: [] },
+          { id: "node-11", stageNumber: 12, name: "Bronze Craftsman", subtitle: "Class 4 • Forge Realm", emoji: "🔨", storyQuote: "Forge Realm", description: "Forge Realm", questsCount: 4, lessonsCount: 2, xpReward: 2000, coinReward: 800, itemReward: "4 Chapters", itemIcon: "🔨", unlocked: false, minClass: 4, x: 50, y: 0, biomeType: "castle", missions: [] },
+          { id: "node-12", stageNumber: 13, name: "Civilization Leader", subtitle: "Class 4 • Apex Throne", emoji: "👑", storyQuote: "Apex Throne", description: "Apex Throne", questsCount: 4, lessonsCount: 2, xpReward: 2000, coinReward: 800, itemReward: "4 Chapters", itemIcon: "👑", unlocked: false, minClass: 4, x: 50, y: 0, biomeType: "castle", missions: [] }
+        ];
+  }, [nodes]);
 
-  // Group stages by Class / Standard
-  const classNumbers = Array.from(new Set(rawStages.map(s => s.minClass))).sort((a, b) => a - b);
+  // Group stages by Class / Standard (memoized)
+  const classNumbers = useMemo(() => {
+    return Array.from(new Set(rawStages.map(s => s.minClass))).sort((a, b) => a - b);
+  }, [rawStages]);
+
+  const stagesByClass = useMemo(() => {
+    const map = new Map<number, (MapStageConfig & { minClass: number; nodeData?: any })[]>();
+    for (const s of rawStages) {
+      const list = map.get(s.minClass) || [];
+      list.push(s);
+      map.set(s.minClass, list);
+    }
+    return map;
+  }, [rawStages]);
 
   const getClassHeaderInfo = (cNum: number) => {
     const titles: Record<number, { title: string; subtitle: string; icon: string; gradient: string; badgeClass: string }> = {
@@ -285,7 +299,7 @@ export default function MapWorld({
       {/* MULTI-STANDARD CLASS SECTIONS CONTAINER */}
       <div className="relative w-full max-w-[390px] mx-auto flex flex-col items-stretch px-3 pt-2">
         {classNumbers.map((cNum) => {
-          const classStages = rawStages.filter(s => s.minClass === cNum);
+          const classStages = stagesByClass.get(cNum) || [];
           const headerInfo = getClassHeaderInfo(cNum);
           const isCompletedClass = cNum < inferredActiveClass;
           const isCurrentClass = cNum === inferredActiveClass;

@@ -550,6 +550,30 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   }, [phase, chapterId, missionSeq]);
 
   useEffect(() => {
+    sessionStorage.setItem(`quiz_correct_${chapterId}_${missionSeq}`, quizCorrectCount.toString());
+  }, [quizCorrectCount, chapterId, missionSeq]);
+
+  useEffect(() => {
+    sessionStorage.setItem(`xp_earned_${chapterId}_${missionSeq}`, xpEarned.toString());
+  }, [xpEarned, chapterId, missionSeq]);
+
+  useEffect(() => {
+    sessionStorage.setItem(`coins_earned_${chapterId}_${missionSeq}`, coinsEarned.toString());
+  }, [coinsEarned, chapterId, missionSeq]);
+
+  useEffect(() => {
+    sessionStorage.setItem(`boss_damage_${chapterId}_${missionSeq}`, bossDamageCount.toString());
+  }, [bossDamageCount, chapterId, missionSeq]);
+
+  useEffect(() => {
+    sessionStorage.setItem(`boss_wrong_${chapterId}_${missionSeq}`, wrongAnswerCount.toString());
+  }, [wrongAnswerCount, chapterId, missionSeq]);
+
+  useEffect(() => {
+    sessionStorage.setItem(`boss_index_${chapterId}_${missionSeq}`, currentBossIndex.toString());
+  }, [currentBossIndex, chapterId, missionSeq]);
+
+  useEffect(() => {
     if (phase === "SUMMARY") {
       sessionStorage.setItem(`summary_step_${chapterId}_${missionSeq}`, summaryStep);
     }
@@ -570,6 +594,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   useEffect(() => {
     async function fetchMission() {
       try {
+        if (missionSeq > 5 || missionSeq < 1) {
+          navigate(`/mission-roadmap?chapterId=${chapterId}`, { replace: true });
+          return;
+        }
         if (isReplay) {
           apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, { method: "DELETE" }).catch(() => {});
         }
@@ -621,6 +649,9 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           } else {
             setChildDamageCount(0);
           }
+        } else {
+          // Mission does not exist or all missions completed
+          navigate(`/mission-roadmap?chapterId=${chapterId}`, { replace: true });
         }
       } catch (e) {
         console.error("Failed to load mission:", e);
@@ -630,7 +661,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       }
     }
     fetchMission();
-  }, [chapterId, missionSeq]);
+  }, [chapterId, missionSeq, navigate]);
 
   // Auto-sync active mission draft state to backend database (Solution 1)
   useEffect(() => {
@@ -847,12 +878,15 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           setDisplayedStreak(json.data.streak || 1);
         }
       } else {
+        const currentAcc = Math.round(((quizCorrectCount + finalBossDamage) / Math.max(1, quizQuestions.length + bossQuestions.length)) * 100);
         const fallbackRes = {
           xpEarned: xpEarned || 20,
           coinsEarned: coinsEarned || 50,
           earnedXp: xpEarned || 20,
           earnedCoins: coinsEarned || 50,
-          accuracy: 100,
+          accuracy: currentAcc,
+          runAccuracy: currentAcc,
+          bestAccuracy: currentAcc,
           totalQuestions: quizQuestions.length + bossQuestions.length,
           correctAnswers: quizCorrectCount + finalBossDamage,
           streak: streak || 1,
@@ -886,7 +920,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, { method: "DELETE" });
     } catch (e) {}
 
-    navigate(`/mission-roadmap?chapterId=${chapterId}`);
+    navigate(`/mission-roadmap?chapterId=${chapterId}`, { replace: true });
   }, [chapterId, missionSeq, navigate]);
 
   const handleReplayMission = useCallback(async () => {
@@ -910,6 +944,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   }, [chapterId, missionSeq]);
 
   const handleNextMission = useCallback(async () => {
+    if (missionSeq >= 5) {
+      handleBackToRoadmap();
+      return;
+    }
     const nextSeq = missionSeq + 1;
     sessionStorage.removeItem(`user_answers_${chapterId}_${nextSeq}`);
     sessionStorage.removeItem(`mission_phase_${chapterId}_${nextSeq}`);
@@ -928,7 +966,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     } catch (e) {}
 
     window.location.href = `/mission-play?chapterId=${chapterId}&missionSeq=${nextSeq}`;
-  }, [chapterId, missionSeq]);
+  }, [chapterId, missionSeq, handleBackToRoadmap]);
 
   const handleGiveUp = async () => {
     setIsQuitting(true);
@@ -2161,8 +2199,13 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                   <div className="bg-white border border-gray-200 rounded-3xl p-4 flex flex-col items-center shadow-xs">
                     <span className="text-[10px] font-black text-[#767683] uppercase tracking-wider">{t('accuracy', 'Accuracy')}</span>
                     <span className="text-3xl font-black text-emerald-600 mt-1">
-                      {completionResult?.accuracy ?? Math.round(((quizCorrectCount + bossDamageCount) / Math.max(1, quizQuestions.length + bossDamageCount + wrongAnswerCount)) * 100)}%
+                      {completionResult?.bestAccuracy ?? completionResult?.accuracy ?? Math.round(((quizCorrectCount + bossDamageCount) / Math.max(1, quizQuestions.length + bossDamageCount + wrongAnswerCount)) * 100)}%
                     </span>
+                    {completionResult?.runAccuracy !== undefined && completionResult?.bestAccuracy !== undefined && completionResult.runAccuracy < completionResult.bestAccuracy && (
+                      <span className="text-[9px] font-extrabold text-amber-800 bg-amber-100/90 px-2 py-0.5 rounded-full border border-amber-300 mt-1 shadow-2xs">
+                        🏆 {t('best_accuracy_retained', { best: completionResult.bestAccuracy, run: completionResult.runAccuracy, defaultValue: `Best record of ${completionResult.bestAccuracy}% preserved! (This run: ${completionResult.runAccuracy}%)` })}
+                      </span>
+                    )}
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full mt-1 border ${
                       (completionResult?.accuracy ?? 100) >= 85
                         ? "text-emerald-700 bg-emerald-50 border-emerald-200"
@@ -2301,11 +2344,14 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
               {(() => {
                 const finalAcc = completionResult?.accuracy ?? Math.round((quizCorrectCount / Math.max(1, quizQuestions.length)) * 100);
                 const hasPassedMission = finalAcc >= 65;
+                const totalMissions = completionResult?.totalMissions || 5;
+                const isLastMission = missionSeq >= totalMissions;
+                const hasNextMission = hasPassedMission && !isLastMission && !completionResult?.chapterCompleted && (completionResult?.nextMissionSeq !== null && completionResult?.nextMissionSeq !== undefined);
 
                 return (
                   <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-4 py-3 shadow-[0_-8px_30px_rgba(0,0,0,0.1)]">
                     <div className="max-w-md mx-auto w-full">
-                      {hasPassedMission ? (
+                      {hasNextMission ? (
                         <div className="grid grid-cols-2 gap-3 w-full">
                           <button
                             onClick={handleBackToRoadmap}
@@ -2320,6 +2366,27 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                             <span>{t('next_mission_btn', 'Next Mission 🚀')}</span>
                             <Play size={14} className="fill-white shrink-0" />
                           </button>
+                        </div>
+                      ) : hasPassedMission ? (
+                        <div className="flex flex-col gap-2 w-full">
+                          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-2 rounded-xl text-[11px] font-black text-center leading-tight flex items-center justify-center gap-1.5">
+                            <span>🏆</span>
+                            <span>{t('all_missions_complete', 'All 5 Chapter Missions Completed! Outstanding work!')}</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3 w-full">
+                            <button
+                              onClick={handleReplayMission}
+                              className="w-full h-12 rounded-2xl bg-white border-2 border-slate-200 text-slate-700 font-black text-xs hover:bg-slate-50 flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer shadow-2xs whitespace-nowrap uppercase tracking-wider box-border"
+                            >
+                              <span>{t('replay_mission_btn', 'Replay Mission 🔄')}</span>
+                            </button>
+                            <button
+                              onClick={handleBackToRoadmap}
+                              className="w-full h-12 rounded-2xl bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] border-2 border-transparent text-white font-black text-xs shadow-md hover:brightness-110 flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer whitespace-nowrap uppercase tracking-wider box-border"
+                            >
+                              <span>🗺️ {t('roadmap', 'Roadmap')}</span>
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         <div className="flex flex-col gap-1.5 w-full">

@@ -1,7 +1,6 @@
 import { useNavigate, useLocation, Navigate, Outlet } from "react-router-dom";
 import { Home, BarChart2, BookOpen, TrendingUp, Settings } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 
 export default function ParentLayout() {
@@ -69,14 +68,12 @@ export default function ParentLayout() {
           <div className="relative flex items-center justify-between w-full">
             {/* Pure horizontal sliding active capsule pill */}
             {activeIndex >= 0 && (
-              <motion.div
-                initial={false}
-                animate={{
-                  x: `${activeIndex * 100}%`,
+              <div
+                style={{
+                  width: `${100 / navItems.length}%`,
+                  transform: `translateX(${activeIndex * 100}%)`,
                 }}
-                transition={{ type: "spring", stiffness: 320, damping: 32, mass: 0.85 }}
-                style={{ width: `${100 / navItems.length}%` }}
-                className="absolute top-0 bottom-0 left-0 bg-gradient-to-b from-[#141779] to-[#2d328f] rounded-xl shadow-md shadow-[#141779]/30 border border-white/20 z-0 will-change-transform"
+                className="absolute top-0 bottom-0 left-0 bg-gradient-to-b from-[#141779] to-[#2d328f] rounded-xl shadow-md shadow-[#141779]/30 border border-white/20 z-0 transition-transform duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] will-change-transform"
               />
             )}
 

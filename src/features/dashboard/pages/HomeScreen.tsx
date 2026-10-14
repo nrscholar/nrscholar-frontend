@@ -1,32 +1,36 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Bookmark, BookOpen, Brain, CheckCircle, ChevronRight, Clock, Gift, Map, Shield, Star, Bell, Crown, Gem, Swords, Trophy, Users, ChevronDown } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback, lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { apiFetch } from "../../../api";
-import ChildSwitcherModal from "../../../components/ChildSwitcherModal";
 import AdventureHero from "../../../components/AdventureHero";
-import StreakModal from "../../../components/StreakModal";
+
+const ChildSwitcherModal = lazy(() => import("../../../components/ChildSwitcherModal"));
 
 export default function HomeScreen() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { t } = useTranslation();
 
-  const [xp, setXp] = useState(0);
-  const [coins, setCoins] = useState(0);
-  const [childName, setChildName] = useState("Explorer");
-  const [childPhoto, setChildPhoto] = useState("");
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = useState<any>(() => {
+    try {
+      const raw = localStorage.getItem("userData");
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  });
+  const [xp, setXp] = useState<number>(() => userData?.xp || 0);
+  const [coins, setCoins] = useState<number>(() => userData?.coins || 0);
+  const [childName, setChildName] = useState<string>(() => userData?.childName || "Explorer");
+  const [childPhoto, setChildPhoto] = useState<string>(() => userData?.childPhoto || "");
+  const [userLevel, setUserLevel] = useState<number>(() => userData?.level || 1);
+  const [streakDays, setStreakDays] = useState<number>(() => userData?.streakDays || 0);
   const [showSwitcher, setShowSwitcher] = useState(false);
   const [showDailyMissionModal, setShowDailyMissionModal] = useState(false);
   const [questTab, setQuestTab] = useState<'all' | 'active' | 'completed'>('all');
 
-
   const [dailyLimitReached, setDailyLimitReached] = useState(false);
   const [todayCompletedCount, setTodayCompletedCount] = useState(0);
-  const [userLevel, setUserLevel] = useState(1);
-  const [streakDays, setStreakDays] = useState(0);
 
   const [missions, setMissions] = useState<any[]>([]);
   const [retentionStreak, setRetentionStreak] = useState<any>(null);
@@ -151,7 +155,12 @@ export default function HomeScreen() {
   };
 
   const [citiesData, setCitiesData] = useState<any[]>([]);
-  const [journeyData, setJourneyData] = useState<any>(null);
+  const [journeyData, setJourneyData] = useState<any>(() => {
+    try {
+      const raw = localStorage.getItem("cachedJourneyData");
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  });
   const [dailyHabitData, setDailyHabitData] = useState<any>(null);
   const [isHabitLoading, setIsHabitLoading] = useState<boolean>(true);
 
@@ -235,124 +244,114 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
-    const cachedJ = localStorage.getItem("cachedJourneyData");
-    if (cachedJ) {
-      try {
-        setJourneyData(JSON.parse(cachedJ));
-      } catch (e) { }
-    }
-
-    const cached = localStorage.getItem("userData");
-    if (cached) {
-      try {
-        const u = JSON.parse(cached);
-        setUserData(u);
-        setXp(u.xp || 0);
-        setCoins(u.coins || 0);
-        setChildName(u.childName || "Explorer");
-        setChildPhoto(u.childPhoto || "");
-        setUserLevel(u.level || 1);
-        setStreakDays(u.streakDays || 0);
-        fetchJourneyData(u);
-      } catch (e) { }
-    }
+    let deferTimer: any = null;
 
     const loadAllDashboardData = async () => {
       const token = localStorage.getItem("userToken");
       if (!token) return;
 
+      // Stage 1 (Critical Above-The-Fold): Fetch profile, missions, and journey immediately
       const profilePromise = fetchProfile();
       const missionsPromise = fetchMissions();
-      const notificationsPromise = fetchNotifications();
-
-      const citiesPromise = (async () => {
-        try {
-          const cRes = await apiFetch("/api/practice/cities");
-          if (cRes.ok) {
-            const cData = await cRes.json();
-            if (cData.success && cData.data) {
-              setCitiesData(cData.data);
-            }
-          }
-        } catch (e) {
-          console.error("Failed to fetch cities", e);
-        }
-      })();
-
-      const spinWheelPromise = (async () => {
-        try {
-          const spinRes = await apiFetch("/api/retention/spin-wheel/status");
-          if (spinRes.ok) {
-            const spinData = await spinRes.json();
-            if (spinData && spinData.balances) {
-              const dailyCount = spinData.balances.daily_spins_balance || 0;
-              const hasSpin = dailyCount > 0 || (spinData.balances.event_spins_balance || 0) > 0;
-              setHasFreeSpin(hasSpin);
-
-              if (dailyCount > 0 && sessionStorage.getItem("dailySpinPopupShown") !== "true") {
-                setPendingSpinPopup(true);
-              }
-            }
-          }
-        } catch (e) {
-          console.error("Failed to fetch spin wheel status", e);
-        }
-      })();
-
-      const streakSequencePromise = (async () => {
-        try {
-          try {
-            const statusRes = await apiFetch("/api/retention/streak/status");
-            if (statusRes.ok) {
-              const sData = await statusRes.json();
-              if (sData.lostStreak) {
-                setStreakRevivalData(sData);
-                setShowRevivalModal(true);
-              }
-            }
-          } catch (e) { }
-
-          const stRes = await apiFetch("/api/retention/streak");
-          if (stRes.ok) {
-            const stData = await stRes.json();
-            setRetentionStreak(stData);
-          }
-        } catch (e) {
-          console.error("Failed to fetch streak info", e);
-        }
-      })();
-
       const journeyPromise = fetchJourneyData();
-      const dailyHabitPromise = (async () => {
-        try {
-          const res = await apiFetch("/api/practice/habits/daily");
-          if (res.ok) {
-            const json = await res.json();
-            if (json.success && json.data) {
-              setDailyHabitData(json.data);
-              return;
-            }
-          }
-          // Graceful fallback to Day 1 if response is not successful
-          setDailyHabitData((prev: any) => prev || { currentDay: 1, isCompletedToday: false });
-        } catch (e) {
-          console.error("Failed to fetch daily habit info", e);
-          setDailyHabitData((prev: any) => prev || { currentDay: 1, isCompletedToday: false });
-        } finally {
-          setIsHabitLoading(false);
-        }
-      })();
 
       await Promise.allSettled([
         profilePromise,
         missionsPromise,
-        notificationsPromise,
-        citiesPromise,
-        spinWheelPromise,
-        streakSequencePromise,
-        journeyPromise,
-        dailyHabitPromise
+        journeyPromise
       ]);
+
+      // Stage 2 (Deferred Background Work): Unblock the main thread to complete FCP & LCP paint
+      deferTimer = setTimeout(async () => {
+        try {
+          const notificationsPromise = fetchNotifications();
+
+          const citiesPromise = (async () => {
+            try {
+              const cRes = await apiFetch("/api/practice/cities");
+              if (cRes.ok) {
+                const cData = await cRes.json();
+                if (cData.success && cData.data) {
+                  setCitiesData(cData.data);
+                }
+              }
+            } catch (e) {
+              console.error("Failed to fetch cities", e);
+            }
+          })();
+
+          const spinWheelPromise = (async () => {
+            try {
+              const spinRes = await apiFetch("/api/retention/spin-wheel/status");
+              if (spinRes.ok) {
+                const spinData = await spinRes.json();
+                if (spinData && spinData.balances) {
+                  const dailyCount = spinData.balances.daily_spins_balance || 0;
+                  const hasSpin = dailyCount > 0 || (spinData.balances.event_spins_balance || 0) > 0;
+                  setHasFreeSpin(hasSpin);
+
+                  if (dailyCount > 0 && sessionStorage.getItem("dailySpinPopupShown") !== "true") {
+                    setPendingSpinPopup(true);
+                  }
+                }
+              }
+            } catch (e) {
+              console.error("Failed to fetch spin wheel status", e);
+            }
+          })();
+
+          const streakSequencePromise = (async () => {
+            try {
+              try {
+                const statusRes = await apiFetch("/api/retention/streak/status");
+                if (statusRes.ok) {
+                  const sData = await statusRes.json();
+                  if (sData.lostStreak) {
+                    setStreakRevivalData(sData);
+                    setShowRevivalModal(true);
+                  }
+                }
+              } catch (e) { }
+
+              const stRes = await apiFetch("/api/retention/streak");
+              if (stRes.ok) {
+                const stData = await stRes.json();
+                setRetentionStreak(stData);
+              }
+            } catch (e) {
+              console.error("Failed to fetch streak info", e);
+            }
+          })();
+
+          const dailyHabitPromise = (async () => {
+            try {
+              const res = await apiFetch("/api/practice/habits/daily");
+              if (res.ok) {
+                const json = await res.json();
+                if (json.success && json.data) {
+                  setDailyHabitData(json.data);
+                  return;
+                }
+              }
+              // Graceful fallback to Day 1 if response is not successful
+              setDailyHabitData((prev: any) => prev || { currentDay: 1, isCompletedToday: false });
+            } catch (e) {
+              console.error("Failed to fetch daily habit info", e);
+              setDailyHabitData((prev: any) => prev || { currentDay: 1, isCompletedToday: false });
+            } finally {
+              setIsHabitLoading(false);
+            }
+          })();
+
+          await Promise.allSettled([
+            notificationsPromise,
+            citiesPromise,
+            spinWheelPromise,
+            streakSequencePromise,
+            dailyHabitPromise
+          ]);
+        } catch (e) { }
+      }, 120);
     };
 
     loadAllDashboardData();
@@ -391,6 +390,7 @@ export default function HomeScreen() {
     const pollInterval = setInterval(fetchMissions, 10000);
 
     return () => {
+      if (deferTimer) clearTimeout(deferTimer);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('userDataUpdated', handleUserDataUpdated);
       clearInterval(pollInterval);
@@ -419,7 +419,56 @@ export default function HomeScreen() {
     }
   };
 
-  const activeMission = missions.find(m => m.status !== 'claimed') || missions[0];
+  const activeMission = useMemo(() => {
+    return missions.find(m => m.status !== 'claimed') || missions[0];
+  }, [missions]);
+
+  const displayMissions = useMemo(() => {
+    const rawList = (missions && missions.length > 0 ? missions : [
+      { seq: 1, id: "seq_1", title: t('answer_10_questions', 'Answer 10 Questions'), coin_reward: 10, xp_reward: 20, current_progress: 0, target_progress: 10, status: "pending", mission_type: "answer_questions" },
+      { seq: 2, id: "seq_2", title: t('win_1_boss_battle', 'Win 1 Boss Battle'), coin_reward: 15, xp_reward: 20, current_progress: 0, target_progress: 1, status: "pending", mission_type: "boss_win" },
+      { seq: 3, id: "seq_3", title: t('win_1_shadow_arena', 'Win 1 Shadow Arena Battle'), coin_reward: 50, xp_reward: 50, current_progress: 0, target_progress: 1, status: "pending", mission_type: "shadow_arena_win" }
+    ]);
+
+    const filteredList = rawList.filter((m) => {
+      const isDone = m.status === "completed";
+      if (questTab === 'completed') return isDone;
+      if (questTab === 'active') return !isDone;
+      return true;
+    });
+
+    const sortedList = [...filteredList].sort((a, b) => {
+      const isDoneA = a.status === "completed";
+      const isReadyA = a.status === "ready_to_claim" || (a.current_progress >= (a.target_progress || 1) && !isDoneA);
+      const isDoneB = b.status === "completed";
+      const isReadyB = b.status === "ready_to_claim" || (b.current_progress >= (b.target_progress || 1) && !isDoneB);
+
+      const orderA = isReadyA ? 0 : isDoneA ? 2 : 1;
+      const orderB = isReadyB ? 0 : isDoneB ? 2 : 1;
+      if (orderA !== orderB) return orderA - orderB;
+      return (a.seq || 0) - (b.seq || 0);
+    });
+
+    return sortedList.slice(0, 3);
+  }, [missions, questTab, t]);
+
+  const effectiveTheme = useMemo(() => {
+    const themeParam = searchParams.get("theme");
+    if (themeParam && ["dragon", "science", "social"].includes(themeParam)) return themeParam;
+    if (journeyData?.tierKey === "scientist") return "science";
+    if (journeyData?.tierKey === "social_proof") return "social";
+    if (journeyData?.tierKey === "dragon") return "dragon";
+
+    const childClassStr = userData?.childClass || "";
+    const match = childClassStr.match(/\d+/);
+    const classNum = match ? parseInt(match[0], 10) : 1;
+    if (classNum >= 8) return "social";
+    if (classNum >= 5) return "science";
+    return "dragon";
+  }, [searchParams, journeyData?.tierKey, userData?.childClass]);
+
+  const handleCtaClick = useCallback(() => navigate("/practice/journey-map"), [navigate]);
+  const handleMissionClick = useCallback(() => setShowDailyMissionModal(true), []);
 
   return (
     <div className="min-h-screen bg-[#f7f9fb] text-[#141779] font-sans relative overflow-x-hidden pb-3 max-w-md mx-auto">
@@ -439,6 +488,12 @@ export default function HomeScreen() {
                 <img
                   src={childPhoto}
                   alt="Avatar"
+                  width={40}
+                  height={40}
+                  loading="eager"
+                  decoding="async"
+                  // @ts-ignore fetchpriority for React 18
+                  fetchpriority="high"
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -505,40 +560,21 @@ export default function HomeScreen() {
 
       <main className="px-4 pt-[68px] flex flex-col gap-3.5 relative z-10">
         {/* 1. ADVENTURE HERO CARD */}
-        {(() => {
-          const effectiveTheme = (() => {
-            const themeParam = searchParams.get("theme");
-            if (themeParam && ["dragon", "science", "social"].includes(themeParam)) return themeParam;
-            if (journeyData?.tierKey === "scientist") return "science";
-            if (journeyData?.tierKey === "social_proof") return "social";
-            if (journeyData?.tierKey === "dragon") return "dragon";
-
-            const childClassStr = userData?.childClass || "";
-            const match = childClassStr.match(/\d+/);
-            const classNum = match ? parseInt(match[0], 10) : 1;
-            if (classNum >= 8) return "social";
-            if (classNum >= 5) return "science";
-            return "dragon";
-          })();
-
-          return (
-            <AdventureHero
-              themeKey={effectiveTheme}
-              xp={xp}
-              targetXp={1000}
-              currentLocationName={journeyData?.currentLocation || "Egg Village"}
-              destinationName={journeyData?.nextNodeName || "Forest Kingdom"}
-              journeyData={journeyData}
-              onCtaClick={() => navigate("/practice/journey-map")}
-              onMissionClick={() => setShowDailyMissionModal(true)}
-              missionTitle={activeMission?.title}
-              missionProgress={activeMission ? { current: activeMission.current_progress ?? activeMission.currentProgress ?? 0, total: activeMission.target_progress ?? activeMission.targetProgress ?? 10 } : undefined}
-              missionRewardText={activeMission ? `+${activeMission.xp_reward ?? activeMission.xpReward ?? 20} XP & ${activeMission.coin_reward ?? activeMission.coinReward ?? 10} Coins` : undefined}
-              missionXpReward={activeMission ? (activeMission.xp_reward ?? activeMission.xpReward ?? activeMission.xp) : undefined}
-              missionCoinReward={activeMission ? (activeMission.coin_reward ?? activeMission.coinReward ?? activeMission.coins) : undefined}
-            />
-          );
-        })()}
+        <AdventureHero
+          themeKey={effectiveTheme}
+          xp={xp}
+          targetXp={1000}
+          currentLocationName={journeyData?.currentLocation || "Egg Village"}
+          destinationName={journeyData?.nextNodeName || "Forest Kingdom"}
+          journeyData={journeyData}
+          onCtaClick={handleCtaClick}
+          onMissionClick={handleMissionClick}
+          missionTitle={activeMission?.title}
+          missionProgress={activeMission ? { current: activeMission.current_progress ?? activeMission.currentProgress ?? 0, total: activeMission.target_progress ?? activeMission.targetProgress ?? 10 } : undefined}
+          missionRewardText={activeMission ? `+${activeMission.xp_reward ?? activeMission.xpReward ?? 20} XP & ${activeMission.coin_reward ?? activeMission.coinReward ?? 10} Coins` : undefined}
+          missionXpReward={activeMission ? (activeMission.xp_reward ?? activeMission.xpReward ?? activeMission.xp) : undefined}
+          missionCoinReward={activeMission ? (activeMission.coin_reward ?? activeMission.coinReward ?? activeMission.coins) : undefined}
+        />
 
         {/* 2. SIX QUICK ACTION BENTO GRID (2x3 Cards with Continue Learning, Good Habits, Journey, My Collections, Brain Quest, Shadow Arena) */}
         <section className="grid grid-cols-2 gap-3">
@@ -839,34 +875,7 @@ export default function HomeScreen() {
                   style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
                 >
                   {(() => {
-                    const rawList = (missions && missions.length > 0 ? missions : [
-                      { seq: 1, id: "seq_1", title: t('answer_10_questions', 'Answer 10 Questions'), coin_reward: 10, xp_reward: 20, current_progress: 0, target_progress: 10, status: "pending", mission_type: "answer_questions" },
-                      { seq: 2, id: "seq_2", title: t('win_1_boss_battle', 'Win 1 Boss Battle'), coin_reward: 15, xp_reward: 20, current_progress: 0, target_progress: 1, status: "pending", mission_type: "boss_win" },
-                      { seq: 3, id: "seq_3", title: t('win_1_shadow_arena', 'Win 1 Shadow Arena Battle'), coin_reward: 50, xp_reward: 50, current_progress: 0, target_progress: 1, status: "pending", mission_type: "shadow_arena_win" }
-                    ]);
-
-                    const filteredList = rawList.filter((m) => {
-                      const isDone = m.status === "completed";
-                      if (questTab === 'completed') return isDone;
-                      if (questTab === 'active') return !isDone;
-                      return true;
-                    });
-
-                    const sortedList = [...filteredList].sort((a, b) => {
-                      const isDoneA = a.status === "completed";
-                      const isReadyA = a.status === "ready_to_claim" || (a.current_progress >= (a.target_progress || 1) && !isDoneA);
-                      const isDoneB = b.status === "completed";
-                      const isReadyB = b.status === "ready_to_claim" || (b.current_progress >= (b.target_progress || 1) && !isDoneB);
-
-                      const orderA = isReadyA ? 0 : isDoneA ? 2 : 1;
-                      const orderB = isReadyB ? 0 : isDoneB ? 2 : 1;
-                      if (orderA !== orderB) return orderA - orderB;
-                      return (a.seq || 0) - (b.seq || 0);
-                    });
-
-                    const displayList = sortedList.slice(0, 3);
-
-                    if (displayList.length === 0) {
+                    if (displayMissions.length === 0) {
                       return (
                         <div className="py-8 text-center text-slate-500 font-bold text-sm">
                           {questTab === 'completed'
@@ -876,7 +885,7 @@ export default function HomeScreen() {
                       );
                     }
 
-                    return displayList.map((mission) => {
+                    return displayMissions.map((mission) => {
                       const isDone = mission.status === "completed";
                       const isReady = mission.status === "ready_to_claim" || (mission.current_progress >= (mission.target_progress || 1) && !isDone);
                       const cur = mission.current_progress || 0;
@@ -1263,20 +1272,24 @@ export default function HomeScreen() {
         )}
       </AnimatePresence>
 
-      <ChildSwitcherModal
-        isOpen={showSwitcher}
-        onClose={() => setShowSwitcher(false)}
-        user={userData}
-        onUserUpdated={(updated) => {
-          setUserData(updated);
-          localStorage.setItem("userData", JSON.stringify(updated));
-          window.dispatchEvent(new Event("userDataUpdated"));
-        }}
-        onSwitched={() => {
-          fetchProfile();
-          fetchMissions();
-        }}
-      />
+      {showSwitcher && (
+        <Suspense fallback={null}>
+          <ChildSwitcherModal
+            isOpen={showSwitcher}
+            onClose={() => setShowSwitcher(false)}
+            user={userData}
+            onUserUpdated={(updated) => {
+              setUserData(updated);
+              localStorage.setItem("userData", JSON.stringify(updated));
+              window.dispatchEvent(new Event("userDataUpdated"));
+            }}
+            onSwitched={() => {
+              fetchProfile();
+              fetchMissions();
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

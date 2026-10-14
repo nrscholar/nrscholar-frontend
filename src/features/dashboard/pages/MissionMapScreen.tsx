@@ -195,7 +195,7 @@ export default function MissionMapScreen() {
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <button
             onClick={() => navigate("/practice/chapters")}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-200 hover:bg-slate-50 active:scale-95 transition-all shadow-xs shrink-0"
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-200 hover:bg-slate-50 active:scale-95 transition-all shadow-xs shrink-0 cursor-pointer"
           >
             <ArrowLeft size={20} className="text-[#141779]" />
           </button>
@@ -314,20 +314,16 @@ export default function MissionMapScreen() {
             const savedPhase = sessionStorage.getItem(`mission_phase_${chapterId}_${m.seq}`);
             
             let hasInProgressSession = false;
-            if (isUnlocked && !isCompleted) {
-              if (Boolean(m.hasDraft)) hasInProgressSession = true;
-              if (savedAns) {
+            if (isUnlocked) {
+              if (savedPhase === "QUIZ" || savedPhase === "BOSS" || savedPhase === "MINI_REWARD") {
+                hasInProgressSession = true;
+              } else if (Boolean(m.hasDraft) && savedPhase !== "SUMMARY" && savedPhase !== "INTRO") {
+                hasInProgressSession = true;
+              } else if (savedAns && savedPhase !== "SUMMARY" && savedPhase !== "INTRO") {
                 try {
                   const arr = JSON.parse(savedAns);
                   if (Array.isArray(arr) && arr.length > 0) hasInProgressSession = true;
                 } catch (e) {}
-              }
-              if (savedPhase && savedPhase !== "SUMMARY" && savedPhase !== "INTRO") {
-                hasInProgressSession = true;
-              }
-            } else if (isUnlocked && isCompleted) {
-              if (savedPhase === "QUIZ" || savedPhase === "BOSS") {
-                hasInProgressSession = true;
               }
             }
             if (savedPhase === "SUMMARY") {

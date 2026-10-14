@@ -6,11 +6,67 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>NR Scholar</title>
     <meta name="theme-color" content="#141779">
-    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+
+    <!-- Preconnect to Google Fonts & Assets for Zero DNS Delay -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+
+    <!-- Non-render-blocking High Priority Font Delivery with Swap -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" media="print" onload="this.media='all';this.onload=null;">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" media="print" onload="this.media='all';this.onload=null;">
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap">
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap">
+    </noscript>
+
+    <!-- Critical Above-The-Fold Inlined CSS for Instant FCP (<150ms) -->
+    <style>
+      *, *::before, *::after { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        padding: 0;
+        background-color: #f7f9fb;
+        color: #141779;
+        font-family: 'Quicksand', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -webkit-tap-highlight-color: transparent;
+      }
+      #root:empty {
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f7f9fb;
+      }
+      .nr-initial-loader {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+      }
+      .nr-spinner {
+        width: 44px;
+        height: 44px;
+        border: 3.5px solid rgba(20, 23, 121, 0.12);
+        border-top-color: #141779;
+        border-radius: 50%;
+        animation: nrSpin 0.75s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        will-change: transform;
+      }
+      @keyframes nrSpin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="nr-initial-loader" aria-label="Loading NR Scholar...">
+        <div class="nr-spinner"></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

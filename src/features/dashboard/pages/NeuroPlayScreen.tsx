@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -9,31 +9,8 @@ import {
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
 
-// ─── DIRECT CLASS-WISE NEUROPLAY SKILL IMPORTS (CLASSES 1 TO 10) ────────
-import { class1Skills } from "../../../data/neuroplay/class1Skills";
-import { class2Skills } from "../../../data/neuroplay/class2Skills";
-import { class3Skills } from "../../../data/neuroplay/class3Skills";
-import { class4Skills } from "../../../data/neuroplay/class4Skills";
-import { class5Skills } from "../../../data/neuroplay/class5Skills";
-import { class6Skills } from "../../../data/neuroplay/class6Skills";
-import { class7Skills } from "../../../data/neuroplay/class7Skills";
-import { class8Skills } from "../../../data/neuroplay/class8Skills";
-import { class9Skills } from "../../../data/neuroplay/class9Skills";
-import { class10Skills } from "../../../data/neuroplay/class10Skills";
-import { skillImages } from "../../../data/neuroplay/skillImages";
-
-const allNeuroPlaySkills = [
-  ...class1Skills,
-  ...class2Skills,
-  ...class3Skills,
-  ...class4Skills,
-  ...class5Skills,
-  ...class6Skills,
-  ...class7Skills,
-  ...class8Skills,
-  ...class9Skills,
-  ...class10Skills,
-];
+// ─── DYNAMIC ON-DEMAND SKILLS LOADER (SPLITS 1.9MB DATA ACROSS CLASS CHUNKS) ──
+import { loadClassSkills, loadAllSkills, getCachedSkills, skillImages } from "../../../data/neuroplay/skillsLoader";
 
 // ─── DYNAMIC ICON RENDERER WITH VIBRANT DUAL-RING BADGES ────────────────
 const renderSkillIcon = (iconName: string, category: any, size = 32) => {
@@ -200,6 +177,37 @@ export default function NeuroPlayScreen() {
 
   // View mode: 'library' | 'player'
   const [viewMode, setViewMode] = useState<"library" | "player">("library");
+
+  // Track current viewMode for popstate handler
+  const viewModeRef = useRef(viewMode);
+  useEffect(() => {
+    viewModeRef.current = viewMode;
+  }, [viewMode]);
+
+  // Handle hardware / browser phone back button while playing a skill
+  useEffect(() => {
+    const handlePopState = () => {
+      // If user is playing a skill and presses the phone back button,
+      // return to NeuroPlay library dashboard instead of exiting to main app dashboard
+      if (viewModeRef.current === "player") {
+        setViewMode("library");
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
+
+  // Helper to exit player and sync browser history
+  const exitPlayerToLibrary = () => {
+    if (window.history.state && window.history.state.neuroplayMode === "player") {
+      window.history.back();
+    } else {
+      setViewMode("library");
+    }
+  };
   
   // Selected class tab filter: 'for_you' | 'completed' | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
   const [activeTab, setActiveTab] = useState<string | number>("for_you");
@@ -304,8 +312,48 @@ export default function NeuroPlayScreen() {
     localStorage.setItem(key, neuroplayXp.toString());
   }, [neuroplayXp, userId]);
 
+  const [allSkills, setAllSkills] = useState<any[]>(() => getCachedSkills());
+  const [skillsLoading, setSkillsLoading] = useState<boolean>(() => getCachedSkills().length === 0);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadSkills = async () => {
+      // 1. Immediate priority: user's active class or selected tab
+      const targetClass = typeof activeTab === "number" ? activeTab : studentClass;
+      const classSkills = await loadClassSkills(targetClass);
+      if (isMounted) {
+        setAllSkills((prev) => {
+          const map = new Map<string, any>();
+          prev.forEach((s) => map.set(s.id, s));
+          classSkills.forEach((s) => map.set(s.id, s));
+          return Array.from(map.values());
+        });
+        setSkillsLoading(false);
+      }
+
+      // 2. Background prefetch of all classes during idle time
+      const hydrateAll = async () => {
+        const fullList = await loadAllSkills();
+        if (isMounted) {
+          setAllSkills(fullList);
+        }
+      };
+
+      if ("requestIdleCallback" in window) {
+        (window as any).requestIdleCallback(hydrateAll);
+      } else {
+        setTimeout(hydrateAll, 300);
+      }
+    };
+
+    loadSkills();
+    return () => {
+      isMounted = false;
+    };
+  }, [studentClass, activeTab]);
+
   // Master raw skills list with embedded multi-language localization
-  const rawSkills = allNeuroPlaySkills;
+  const rawSkills = allSkills;
 
   // Compute NeuroPlay XP Level calculations (based on current class only)
   const currentClassSkills = rawSkills.filter((s: any) => (s.classLevel || 1) === studentClass);
@@ -372,6 +420,11 @@ export default function NeuroPlayScreen() {
     setChecklistState([false, false, false, false]);
     setMissionClaimed(completedSkillIds.includes(skill.id));
     setQuestionErrorToast(null);
+
+    // Push history state so phone hardware/browser back button returns to NeuroPlay library
+    if (!window.history.state || window.history.state.neuroplayMode !== "player") {
+      window.history.pushState({ neuroplayMode: "player" }, "", window.location.href);
+    }
     setViewMode("player");
   };
 
@@ -521,14 +574,14 @@ export default function NeuroPlayScreen() {
   // Launch Next Unlocked Skill directly from Card 7 (within same classLevel)
   const handleLaunchNextSkill = () => {
     const currentSkill = computedSkills.find(s => s.id === selectedSkillId);
-    if (!currentSkill) { setViewMode("library"); return; }
+    if (!currentSkill) { exitPlayerToLibrary(); return; }
     const sameClassSkills = computedSkills.filter((s: any) => (s.classLevel || 1) === (currentSkill.classLevel || 1));
     const posInClass = sameClassSkills.findIndex((s: any) => s.id === selectedSkillId);
     if (posInClass !== -1 && posInClass < sameClassSkills.length - 1) {
       const nextSkill = sameClassSkills[posInClass + 1];
       handleLaunchSkill({ ...nextSkill, isUnlocked: true });
     } else {
-      setViewMode("library");
+      exitPlayerToLibrary();
     }
   };
 
@@ -829,7 +882,7 @@ export default function NeuroPlayScreen() {
           {/* TOP APP BAR & PROGRESS BAR */}
           <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-slate-200/80 px-4 sm:px-6 py-3 flex items-center justify-between shadow-2xs">
             <button 
-              onClick={() => setViewMode("library")} 
+              onClick={exitPlayerToLibrary} 
               className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-[#141779] flex items-center justify-center transition-all active:scale-95 shadow-2xs border border-slate-200/60"
               aria-label="Back to Library"
             >
@@ -1277,7 +1330,7 @@ export default function NeuroPlayScreen() {
                           <button
                             onClick={async () => {
                               await handleClaimMission();
-                              setViewMode("library");
+                              exitPlayerToLibrary();
                             }}
                             className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-white/20 text-white font-bold text-xs sm:text-sm hover:bg-white/30 active:scale-95 transition-all"
                           >
@@ -1316,7 +1369,7 @@ export default function NeuroPlayScreen() {
               <button
                 onClick={async () => {
                   await handleClaimMission();
-                  setViewMode("library");
+                  exitPlayerToLibrary();
                 }}
                 className="flex-1 bg-gradient-to-r from-[#006a62] to-[#047857] text-white py-3.5 rounded-2xl font-black text-sm sm:text-base flex justify-center items-center gap-2 shadow-lg hover:brightness-110 active:scale-95 transition-all"
               >

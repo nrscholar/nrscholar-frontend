@@ -186,7 +186,7 @@ interface AdventureHeroProps {
   journeyData?: any;
 }
 
-export default function AdventureHero({
+function AdventureHero({
   themeKey = "dragon",
   xp = 1105,
   targetXp = 2500,
@@ -262,21 +262,21 @@ export default function AdventureHero({
     <div className="w-full max-w-[430px] mx-auto flex flex-col gap-3 font-sans">
       {/* 1. IMMERSIVE ENVIRONMENT HERO CARD (DYNAMIC THEME & ANIMATED MASCOT) */}
       <div
-        className={`w-full rounded-[28px] bg-gradient-to-r ${theme.bgGradient} p-4 border-4 ${theme.accentBorderColor} relative overflow-hidden text-white flex flex-col gap-3 select-none`}
+        className={`w-full rounded-[28px] bg-gradient-to-r ${theme.bgGradient} p-4 border-4 ${theme.accentBorderColor} relative overflow-hidden text-white flex flex-col gap-3 select-none min-h-[260px]`}
       >
         {/* Ambient environmental particles / animations */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden select-none">
           <motion.div
             animate={{ x: [-40, 360] }}
             transition={{ repeat: Infinity, duration: 28, ease: "linear" }}
-            className="absolute top-1 left-0 text-xl opacity-20"
+            className="absolute top-1 left-0 text-xl opacity-20 will-change-transform"
           >
             {theme.bgDecorations[0] || "☁️"}
           </motion.div>
           <motion.div
             animate={{ x: [360, -40] }}
             transition={{ repeat: Infinity, duration: 34, ease: "linear" }}
-            className="absolute top-7 left-0 text-lg opacity-15"
+            className="absolute top-7 left-0 text-lg opacity-15 will-change-transform"
           >
             {theme.bgDecorations[1] || "✨"}
           </motion.div>
@@ -287,7 +287,7 @@ export default function AdventureHero({
               initial={{ y: 110, x: 50 + i * 80, opacity: 0, scale: 0.5 }}
               animate={{ y: [110, 15], opacity: [0, 0.6, 0.6, 0], scale: [0.5, 1, 0.5] }}
               transition={{ repeat: Infinity, duration: 3.5 + i, delay: i * 0.7 }}
-              className="absolute text-xs"
+              className="absolute text-xs will-change-transform"
             >
               {theme.bgDecorations[3] || "✨"}
             </motion.div>
@@ -361,7 +361,7 @@ export default function AdventureHero({
             <motion.div
               animate={{ y: [-2, 2, -2], rotate: [-3, 3, -3] }}
               transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
-              className="flex flex-col items-center group pointer-events-auto cursor-pointer"
+              className="flex flex-col items-center group pointer-events-auto cursor-pointer will-change-transform"
             >
               <div className="text-4xl filter drop-shadow-[0_6px_12px_rgba(0,0,0,0.5)] select-none">
                 {journeyData?.characterEmoji || theme.characterIcon}
@@ -380,7 +380,7 @@ export default function AdventureHero({
             <motion.div
               animate={{ scale: [1, 1.08, 1] }}
               transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-              className="w-10 h-10 rounded-2xl bg-white/15 border-2 border-indigo-200 flex items-center justify-center text-xl shadow-lg backdrop-blur-md relative shrink-0"
+              className="w-10 h-10 rounded-2xl bg-white/15 border-2 border-indigo-200 flex items-center justify-center text-xl shadow-lg backdrop-blur-md relative shrink-0 will-change-transform"
             >
               <span className="select-none">{journeyData?.nextNodeEmoji || theme.rewardIcon}</span>
               <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-teal-400 rounded-full animate-ping" />
@@ -486,3 +486,5 @@ export default function AdventureHero({
     </div>
   );
 }
+
+export default React.memo(AdventureHero);

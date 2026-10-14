@@ -280,11 +280,9 @@ export default function ProfileScreen() {
             </div>
             {/* 3px Height Track Fill */}
             <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden p-0.5 shadow-2xs">
-              <motion.div 
-                initial={{ width: 0 }}
-                animate={{ width: `${levelInfo.percent}%` }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-                className="h-full bg-gradient-to-r from-[#141779] to-[#57fae9] rounded-full shadow-2xs"
+              <div 
+                style={{ width: `${levelInfo.percent}%` }}
+                className="h-full bg-gradient-to-r from-[#141779] to-[#57fae9] rounded-full shadow-2xs transition-all duration-700 ease-out"
               />
             </div>
             <p className="text-[10px] font-medium text-slate-400 mt-1.5 text-right tracking-tight">

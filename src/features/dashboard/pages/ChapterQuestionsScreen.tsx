@@ -1,12 +1,12 @@
-import Particles, { initParticlesEngine } from "@tsparticles/react";
-import { loadSlim } from "@tsparticles/slim";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, Check, X as XIcon, Bell } from "lucide-react";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import DragonCharacter from "../../../components/DragonCharacter";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
+
+const SparkleParticles = lazy(() => import("../../../components/SparkleParticles"));
 
 const OPTION_LABELS = ["A", "B", "C", "D"];
 
@@ -26,17 +26,11 @@ export default function ChapterQuestionsScreen() {
   const [basketCount, setBasketCount] = useState(0);
   const [userAnswers, setUserAnswers] = useState<any[]>([]);
   const [answeredThisSession, setAnsweredThisSession] = useState(0);
-  const [particlesInit, setParticlesInit] = useState(false);
   const [showSparkle, setShowSparkle] = useState(false);
   const [childName, setChildName] = useState("Kid");
   const [childPhoto, setChildPhoto] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
-
-
-  useEffect(() => {
-    initParticlesEngine(async (engine) => { await loadSlim(engine); }).then(() => setParticlesInit(true));
-  }, []);
 
   const [questionsData, setQuestionsData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -424,27 +418,11 @@ export default function ChapterQuestionsScreen() {
   return (
     <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col pb-24 relative overflow-hidden">
       
-      {/* ✨ Magic Sparkle Burst on Correct Answer */}
-      {showSparkle && particlesInit && (
-        <Particles
-          id="quiz-sparkle"
-          options={{
-            background: { color: { value: "transparent" } },
-            fpsLimit: 60,
-            emitters: { position: { x: 20, y: 80 }, rate: { quantity: 15, delay: 0 }, life: { count: 1 } },
-            particles: {
-              color: { value: ["#ffcc00", "#ff69b4", "#58cc02", "#00e5ff", "#e040fb"] },
-              move: { enable: true, speed: { min: 3, max: 8 }, direction: "top-right" as const, outModes: { default: "out" as const } },
-              number: { value: 0 },
-              opacity: { value: { min: 0.5, max: 1 }, animation: { enable: true, speed: 3, startValue: "max" as const, destroy: "min" as const } },
-              shape: { type: ["star", "circle"] },
-              size: { value: { min: 3, max: 8 } },
-              life: { duration: { value: 1.5 }, count: 1 },
-            },
-            detectRetina: true,
-          }}
-          className="absolute inset-0 z-[30] pointer-events-none"
-        />
+      {/* ✨ Magic Sparkle Burst on Correct Answer (Dynamically loaded) */}
+      {showSparkle && (
+        <Suspense fallback={null}>
+          <SparkleParticles />
+        </Suspense>
       )}
 
       {/* Unified Quit Modal */}
