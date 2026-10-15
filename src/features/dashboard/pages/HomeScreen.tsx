@@ -5,11 +5,16 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import AdventureHero from "../../../components/AdventureHero";
+import { startNavigationProgress } from "../../../components/NavigationProgressBar";
 
 const ChildSwitcherModal = lazy(() => import("../../../components/ChildSwitcherModal"));
 
 export default function HomeScreen() {
-  const navigate = useNavigate();
+  const rawNavigate = useNavigate();
+  const navigate = useCallback((to: any, options?: any) => {
+    startNavigationProgress();
+    rawNavigate(to, options);
+  }, [rawNavigate]);
   const [searchParams] = useSearchParams();
   const { t } = useTranslation();
 
@@ -467,7 +472,10 @@ export default function HomeScreen() {
     return "dragon";
   }, [searchParams, journeyData?.tierKey, userData?.childClass]);
 
-  const handleCtaClick = useCallback(() => navigate("/practice/journey-map"), [navigate]);
+  const handleCtaClick = useCallback(() => {
+    startNavigationProgress();
+    navigate("/practice/journey-map");
+  }, [navigate]);
   const handleMissionClick = useCallback(() => setShowDailyMissionModal(true), []);
 
   return (
@@ -476,12 +484,15 @@ export default function HomeScreen() {
       <div className="absolute bottom-[20%] -left-[25%] w-[320px] h-[320px] rounded-full bg-[rgba(20,23,121,0.05)] pointer-events-none" />
 
       {/* TOP HEADER */}
-      <header className="fixed top-0 left-0 right-0 max-w-md mx-auto flex items-center justify-between px-4 pt-3 pb-3 bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-2xl shadow-[0_4px_16px_rgba(20,23,121,0.05)] z-50 gap-2">
+      <header className="fixed top-0 left-0 right-0 max-w-md mx-auto flex items-center justify-between px-4 pt-3 pb-3 bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-2xl shadow-[0_4px_16px_rgba(20,23,121,0.05)] z-50 gap-2 select-none">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <div className="relative shrink-0">
             <button
-              onClick={() => navigate("/profile")}
-              className="w-10 h-10 rounded-full border-2 border-indigo-100 overflow-hidden hover:opacity-90 transition-opacity shrink-0 bg-[#141779] shadow-xs block cursor-pointer"
+              onClick={() => {
+                startNavigationProgress();
+                navigate("/profile");
+              }}
+              className="w-10 h-10 rounded-full border-2 border-indigo-100 overflow-hidden hover:opacity-90 active:scale-90 touch-manipulation transition-all shrink-0 bg-[#141779] shadow-xs block cursor-pointer"
               aria-label="Profile Avatar"
             >
               {childPhoto ? (
@@ -534,19 +545,25 @@ export default function HomeScreen() {
         <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           <button
             onClick={() => setShowStreakModal(true)}
-            className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform shadow-2xs"
+            className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1 flex items-center justify-center hover:scale-105 active:scale-95 touch-manipulation transition-transform shadow-2xs cursor-pointer"
           >
             <span className="text-[11px] font-black text-[#ea580c] leading-none whitespace-nowrap">🔥 {retentionStreak?.currentStreak ?? streakDays ?? 0}</span>
           </button>
           <button
-            onClick={() => navigate("/practice/inventory")}
-            className="bg-[#fffbeb] border border-amber-100/80 rounded-2xl px-2 py-1 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform shadow-2xs"
+            onClick={() => {
+              startNavigationProgress();
+              navigate("/practice/inventory");
+            }}
+            className="bg-[#fffbeb] border border-amber-100/80 rounded-2xl px-2 py-1 flex items-center justify-center hover:scale-105 active:scale-90 touch-manipulation transition-transform shadow-2xs cursor-pointer"
           >
             <span className="text-[11px] font-black text-[#b45309] leading-none whitespace-nowrap">🪙 {coins || 0}</span>
           </button>
           <button
-            onClick={() => navigate("/notifications")}
-            className="w-8 h-8 rounded-2xl bg-slate-50 shadow-2xs flex items-center justify-center hover:bg-slate-100 transition-all shrink-0 border border-slate-100 relative"
+            onClick={() => {
+              startNavigationProgress();
+              navigate("/notifications");
+            }}
+            className="w-8 h-8 rounded-2xl bg-slate-50 shadow-2xs flex items-center justify-center hover:bg-slate-100 active:scale-90 touch-manipulation transition-all shrink-0 border border-slate-100 relative cursor-pointer"
           >
             <Bell size={15} className="text-[#1c1970]" />
             {unreadCount > 0 && (

@@ -436,6 +436,31 @@ export default function ParentReportScreen() {
   const hasWeaknesses = weaknesses.length > 0 && !weaknesses.some(w => w.toLowerCase().includes("not enough data") || w.toLowerCase().includes("no weakness"));
   const hasRisks = risks.length > 0 && !risks.some(r => r.toLowerCase().includes("not enough data") || r.toLowerCase().includes("no risk"));
 
+  // Subject matching helper
+  const matchSubject = (s1?: string, s2?: string): boolean => {
+    if (!s1 || !s2) return false;
+    const a = s1.trim().toLowerCase();
+    const b = s2.trim().toLowerCase();
+    if (a === b) return true;
+    if ((a === "math" || a === "maths" || a === "mathematics") && (b === "math" || b === "maths" || b === "mathematics")) return true;
+    return false;
+  };
+
+  // Date key normalizer: converts any "YYYY-MM-DD" or "DD/MM" string to standard "DD/MM"
+  const normalizeDateKey = (raw: any): string => {
+    if (!raw) return "";
+    const s = String(raw).trim();
+    const slashMatch = s.match(/^(\d{1,2})\/(\d{1,2})/);
+    if (slashMatch) {
+      return `${slashMatch[1].padStart(2, "0")}/${slashMatch[2].padStart(2, "0")}`;
+    }
+    const isoMatch = s.match(/^\d{4}-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+      return `${isoMatch[2]}/${isoMatch[1]}`;
+    }
+    return s;
+  };
+
   // 1. Identify overall timeline points based on dateFilter
   let activePts: any[] = [];
   if (dateFilter === "today") {
@@ -443,9 +468,9 @@ export default function ParentReportScreen() {
   } else if (dateFilter === "yesterday") {
     activePts = monthlyHistory.length >= 2 ? monthlyHistory.slice(-2, -1) : (dailyHistory.length >= 2 ? dailyHistory.slice(-2, -1) : []);
   } else if (dateFilter === "this_week") {
-    activePts = monthlyHistory.slice(-7);
+    activePts = monthlyHistory.length >= 7 ? monthlyHistory.slice(-7) : (dailyHistory.length > 0 ? dailyHistory : monthlyHistory);
   } else if (dateFilter === "this_month") {
-    activePts = monthlyHistory.slice(-30);
+    activePts = monthlyHistory.length > 0 ? monthlyHistory.slice(-30) : dailyHistory;
   } else if (dateFilter === "custom") {
     if (customStartDate && customEndDate) {
       const s = new Date(customStartDate);
@@ -460,7 +485,7 @@ export default function ParentReportScreen() {
         return true;
       });
     } else {
-      activePts = monthlyHistory;
+      activePts = monthlyHistory.length > 0 ? monthlyHistory : dailyHistory;
     }
   }
 
@@ -479,7 +504,7 @@ export default function ParentReportScreen() {
   // Compute filteredQA for the card
   let filteredQA = { ...qA };
   if (subjectFilter !== "all") {
-    const sObj = subjects.find(s => s?.subject && s.subject.toLowerCase() === subjectFilter.toLowerCase());
+    const sObj = subjects.find(s => matchSubject(s?.subject, subjectFilter));
     if (sObj) {
       filteredQA = {
         totalAttempted: (sObj.correctAnswers ?? 0) + (sObj.wrongAnswers ?? 0),
@@ -509,30 +534,58 @@ export default function ParentReportScreen() {
     }
   } else {
     // Subject-specific metrics
-    const sObj = subjects.find(s => s?.subject && s.subject.toLowerCase() === subjectFilter.toLowerCase());
+    const sObj = subjects.find(s => matchSubject(s?.subject, subjectFilter));
     if (sObj) {
-      const sTimeline = sObj.timeline || [];
-      const targetDates = new Set(activePts.map(pt => pt.date || pt.day).filter(Boolean));
+      const altTrend = (reportData?.allSubjectsTrend || reportData?.top3SubjectsTrend || []).find((t: any) => matchSubject(t?.subject, subjectFilter));
+      const sTimeline = (sObj?.timeline && sObj.timeline.length > 0)
+        ? sObj.timeline
+        : ((altTrend?.timeline && altTrend.timeline.length > 0)
+          ? altTrend.timeline
+          : (sObj?.trend7Day || []));
+
+      const targetDates = new Set(activePts.map(pt => normalizeDateKey(pt.date || pt.day)).filter(Boolean));
       
       // If targetDates is empty (e.g. today's point isn't in monthlyHistory yet), fallback to today's date string
       if (targetDates.size === 0 && dateFilter === "today") {
-        const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' }).replace(/\//g, '/');
+        const d = new Date();
+        const todayStr = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
         targetDates.add(todayStr);
       }
       
-      const matchedPts = sTimeline.filter((pt: any) => targetDates.has(pt.day || pt.date));
+      let matchedPts = sTimeline.filter((pt: any) => {
+        const kDate = normalizeDateKey(pt.date);
+        const kDay = normalizeDateKey(pt.day);
+        return (kDate && targetDates.has(kDate)) || (kDay && targetDates.has(kDay));
+      });
+
+      // Fallback alignment by range if date keys did not directly intersect
+      if (matchedPts.length === 0 && sTimeline.length > 0) {
+        if (dateFilter === "today") matchedPts = sTimeline.slice(-1);
+        else if (dateFilter === "yesterday") matchedPts = sTimeline.slice(-2, -1);
+        else if (dateFilter === "this_week") matchedPts = sTimeline.slice(-7);
+        else if (dateFilter === "this_month") matchedPts = sTimeline.slice(-30);
+        else matchedPts = sTimeline;
+      }
       
       if (matchedPts.length > 0) {
-        displaySolved = matchedPts.reduce((acc, pt) => acc + (pt.total ?? 0), 0);
-        const activeDays = matchedPts.filter(pt => (pt.total ?? 0) > 0);
+        displaySolved = matchedPts.reduce((acc: number, pt: any) => acc + (pt.total ?? 0), 0);
+        const activeDays = matchedPts.filter((pt: any) => (pt.total ?? 0) > 0);
         if (displaySolved > 0 && activeDays.length > 0) {
-          const sumAcc = activeDays.reduce((acc, pt) => acc + (pt.score ?? pt.masteryScore ?? 0), 0);
-          displayAccuracy = Math.round(sumAcc / activeDays.length);
+          const sumAcc = activeDays.reduce((acc: number, pt: any) => acc + (pt.score ?? pt.masteryScore ?? sObj.accuracy ?? 0), 0);
+          displayAccuracy = Math.round(sumAcc / activeDays.length) || (sObj.accuracy ?? 0);
           const totalMinutes = matchedPts.reduce((acc: number, pt: any) => acc + (pt.timeMinutes || (pt.timeSeconds ? pt.timeSeconds / 60 : 0)), 0);
-          displayTime = totalMinutes > 0 ? Math.round(totalMinutes) : Math.max(1, Math.round(displaySolved * 0.5));
+          const avgSec = sObj.avgTimePerQuestion || 20;
+          displayTime = totalMinutes > 0 ? Math.round(totalMinutes) : Math.max(1, Math.round(displaySolved * (avgSec / 60)));
+        } else if (displaySolved > 0) {
+          displayAccuracy = sObj.accuracy ?? 0;
+          displayTime = Math.max(1, Math.round(displaySolved * 0.5));
+        } else {
+          // No practice inside targeted date range
+          displaySolved = 0;
+          displayAccuracy = 0;
+          displayTime = 0;
         }
       } else {
-        // No practice inside targeted date range
         displaySolved = 0;
         displayAccuracy = 0;
         displayTime = 0;
@@ -569,29 +622,57 @@ export default function ParentReportScreen() {
   }
 
   if (subjectFilter !== "all" && chartHistory.length > 0) {
-    const activeSubj = subjects.find(s => s?.subject && s.subject.toLowerCase() === subjectFilter.toLowerCase());
+    const activeSubj = subjects.find(s => matchSubject(s?.subject, subjectFilter));
+    const altTrend = (reportData?.allSubjectsTrend || reportData?.top3SubjectsTrend || []).find((t: any) => matchSubject(t?.subject, subjectFilter));
     const subjTimeline = (activeSubj?.timeline && activeSubj.timeline.length > 0) 
       ? activeSubj.timeline 
-      : ((activeSubj?.trend7Day && activeSubj.trend7Day.length > 0) ? activeSubj.trend7Day : []);
+      : ((altTrend?.timeline && altTrend.timeline.length > 0)
+        ? altTrend.timeline
+        : (activeSubj?.trend7Day && activeSubj.trend7Day.length > 0 ? activeSubj.trend7Day : []));
+
+    const subjAccuracy = typeof activeSubj?.accuracy === 'number' ? activeSubj.accuracy : 0;
 
     if (subjTimeline.length > 0) {
-      chartHistory = subjTimeline.map((pt: any) => {
-        const score = typeof pt.score === 'number' ? pt.score : (typeof pt.masteryScore === 'number' ? pt.masteryScore : 0);
+      const subjByDate = new Map<string, any>();
+      subjTimeline.forEach((pt: any) => {
+        const kDate = normalizeDateKey(pt.date);
+        const kDay = normalizeDateKey(pt.day);
+        if (kDate) subjByDate.set(kDate, pt);
+        if (kDay) subjByDate.set(kDay, pt);
+      });
+
+      chartHistory = chartHistory.map((basePt: any, idx: number) => {
+        const targetKey = normalizeDateKey(basePt.date || basePt.day);
+        let sPt = subjByDate.get(targetKey);
+        if (!sPt && subjTimeline.length === chartHistory.length) {
+          sPt = subjTimeline[idx];
+        }
+
+        const rawScore = sPt
+          ? (typeof sPt.score === 'number' ? sPt.score : (typeof sPt.masteryScore === 'number' ? sPt.masteryScore : null))
+          : null;
+        const total = sPt?.total ?? 0;
+        const score = (rawScore !== null && rawScore !== undefined) ? rawScore : 0;
+        const hasDayActivity = total > 0 || (rawScore !== null && rawScore > 0);
+
         return {
-          day: pt.day || pt.date,
-          date: pt.date || pt.day,
-          total: pt.total,
+          ...basePt,
+          date: basePt.date || normalizeDateKey(sPt?.date || sPt?.day),
+          day: basePt.day || sPt?.day || basePt.date,
+          total: total,
           masteryScore: score,
           weaknessScore: score > 0 ? Math.max(10, 100 - score - 15) : 0,
-          riskIndex: score > 0 ? Math.max(5, Math.round((100 - score) * 0.6)) : 0
+          riskIndex: score > 0 ? Math.max(5, Math.round((100 - score) * 0.6)) : 0,
+          hasDayActivity: hasDayActivity
         };
       });
     } else {
-      const acc = typeof activeSubj?.accuracy === 'number' ? activeSubj.accuracy : 0;
       chartHistory = chartHistory.map(pt => ({
         ...pt,
-        masteryScore: acc > 0 ? Math.round((pt.masteryScore || acc) * (acc / 100)) : 0,
-        weaknessScore: acc > 0 ? Math.round((pt.weaknessScore || (100 - acc)) * ((100 - acc) / 100)) : 0
+        total: 0,
+        masteryScore: subjAccuracy,
+        weaknessScore: subjAccuracy > 0 ? Math.max(10, 100 - subjAccuracy - 15) : 0,
+        riskIndex: subjAccuracy > 0 ? Math.max(5, Math.round((100 - subjAccuracy) * 0.6)) : 0
       }));
     }
   }
@@ -603,9 +684,25 @@ export default function ParentReportScreen() {
   let runningRisk = 0;
   let scoreEstablished = false;
 
+  // If a specific subject has prior established accuracy, seed it if the subject already has activity
+  if (subjectFilter !== "all") {
+    const activeSubj = subjects.find(s => matchSubject(s?.subject, subjectFilter));
+    const priorAcc = typeof activeSubj?.accuracy === 'number' ? activeSubj.accuracy : 0;
+    const hasAnyAttempts = (activeSubj?.correctAnswers ?? 0) + (activeSubj?.wrongAnswers ?? 0) > 0;
+    if (priorAcc > 0 && hasAnyAttempts) {
+      const hasChartActivity = chartHistory.some((pt: any) => (pt.total ?? 0) > 0 || (pt.masteryScore ?? 0) > 0);
+      if (!hasChartActivity) {
+        runningMastery = priorAcc;
+        runningWeakness = Math.max(10, 100 - priorAcc - 15);
+        runningRisk = Math.max(5, Math.round((100 - priorAcc) * 0.6));
+        scoreEstablished = true;
+      }
+    }
+  }
+
   chartHistory = chartHistory.map((pt: any) => {
     const rawM = typeof pt.masteryScore === 'number' && !isNaN(pt.masteryScore) ? pt.masteryScore : (typeof pt.score === 'number' ? pt.score : 0);
-    const hasActivity = (pt.total ?? 0) > 0 || rawM > 0;
+    const hasActivity = (pt.total ?? 0) > 0 || rawM > 0 || pt.hasDayActivity;
 
     if (hasActivity && rawM > 0) {
       runningMastery = rawM;

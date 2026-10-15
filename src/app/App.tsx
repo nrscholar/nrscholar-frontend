@@ -10,6 +10,7 @@ const ForgotPasswordScreen = lazy(() => import("../features/auth/pages/ForgotPas
 const LoginScreen = lazy(() => import("../features/auth/pages/LoginScreen"));
 const NotFoundScreen = lazy(() => import("./NotFoundScreen"));
 import { UniversalErrorBoundary } from "../components/UniversalErrorBoundary";
+import NavigationProgressBar from "../components/NavigationProgressBar";
 const ParentalGateScreen = lazy(() => import("../features/auth/pages/ParentalGateScreen"));
 const SignupStep1Screen = lazy(() => import("../features/auth/pages/SignupStep1"));
 const SignupStep2Screen = lazy(() => import("../features/auth/pages/SignupStep2"));
@@ -170,6 +171,7 @@ function PinGuard() {
 
   return (
     <BrowserRouter>
+      <NavigationProgressBar />
       <PinGuard />
       <ScrollToTop />
       <AuthHandler />

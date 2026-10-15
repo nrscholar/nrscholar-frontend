@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Zap, Coins, Flame, Users, HelpCircle, LogOut, Gift, ChevronRight, Trophy, GraduationCap, Cake, BookOpen, Bell } from "lucide-react";
 import { motion } from "framer-motion";
@@ -6,6 +6,7 @@ import { apiFetch, clearAuthSession } from "../../../api";
 import { useTranslation } from "react-i18next";
 import StreakModal from "../../../components/StreakModal";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
+import { startNavigationProgress } from "../../../components/NavigationProgressBar";
 
 // Math-aligned level thresholds matching backend
 function getLevelInfo(xp: number) {
@@ -32,7 +33,11 @@ function getLevelInfo(xp: number) {
 }
 
 export default function ProfileScreen() {
-  const navigate = useNavigate();
+  const rawNavigate = useNavigate();
+  const navigate = useCallback((to: any, options?: any) => {
+    startNavigationProgress();
+    rawNavigate(to, options);
+  }, [rawNavigate]);
   const { t, i18n } = useTranslation();
   const [loading] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -368,8 +373,11 @@ export default function ProfileScreen() {
               {t('achievements', 'ACHIEVEMENTS')}
             </span>
             <button 
-              onClick={() => navigate("/practice/inventory")}
-              className="text-xs font-bold text-[#141779] hover:underline"
+              onClick={() => {
+                startNavigationProgress();
+                navigate("/practice/inventory");
+              }}
+              className="text-xs font-bold text-[#141779] hover:underline touch-manipulation active:scale-95 transition-transform cursor-pointer"
             >
               <span>{t('view_all', 'View All')}</span>
               <span>→</span>
@@ -400,15 +408,18 @@ export default function ProfileScreen() {
         </section>
 
         {/* 5. ACCOUNT & SETTINGS SECTION */}
-        <section className="flex flex-col gap-2.5 pt-2 border-t border-slate-200/60">
+        <section className="flex flex-col gap-2.5 pt-2 border-t border-slate-200/60 select-none">
           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">
             {t('account_and_settings', 'ACCOUNT & SETTINGS')}
           </span>
 
           {/* Parental Controls */}
           <button 
-            onClick={() => navigate("/parent")}
-            className="w-full flex items-center justify-between bg-white rounded-2xl p-3 border border-slate-100 hover:border-slate-200 transition-all shadow-xs group"
+            onClick={() => {
+              startNavigationProgress();
+              navigate("/parent");
+            }}
+            className="w-full flex items-center justify-between bg-white rounded-2xl p-3 border border-slate-100 hover:border-slate-200 active:scale-[0.98] touch-manipulation transition-all shadow-xs group cursor-pointer"
           >
             <div className="flex items-center gap-3">
               {user.parentPhoto ? (
@@ -427,8 +438,11 @@ export default function ProfileScreen() {
 
           {/* Help Center */}
           <button 
-            onClick={() => navigate("/help")}
-            className="w-full flex items-center justify-between bg-white rounded-2xl p-3 border border-slate-100 hover:border-slate-200 transition-all shadow-xs group"
+            onClick={() => {
+              startNavigationProgress();
+              navigate("/help");
+            }}
+            className="w-full flex items-center justify-between bg-white rounded-2xl p-3 border border-slate-100 hover:border-slate-200 active:scale-[0.98] touch-manipulation transition-all shadow-xs group cursor-pointer"
           >
             <div className="flex items-center gap-3">
               <div className="w-7 h-7 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">

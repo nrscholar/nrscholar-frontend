@@ -312,22 +312,32 @@ export default function MissionMapScreen() {
 
             const savedAns = sessionStorage.getItem(`user_answers_${chapterId}_${m.seq}`);
             const savedPhase = sessionStorage.getItem(`mission_phase_${chapterId}_${m.seq}`);
+            const isReplayActive = sessionStorage.getItem(`is_replay_${chapterId}_${m.seq}`) === "true";
             
             let hasInProgressSession = false;
-            if (isUnlocked) {
-              if (savedPhase === "QUIZ" || savedPhase === "BOSS" || savedPhase === "MINI_REWARD") {
-                hasInProgressSession = true;
-              } else if (Boolean(m.hasDraft) && savedPhase !== "SUMMARY" && savedPhase !== "INTRO") {
-                hasInProgressSession = true;
-              } else if (savedAns && savedPhase !== "SUMMARY" && savedPhase !== "INTRO") {
+            if (isUnlocked && savedPhase !== "SUMMARY" && savedPhase !== "INTRO") {
+              const hasActivePhase = savedPhase === "QUIZ" || savedPhase === "BOSS" || savedPhase === "MINI_REWARD";
+              let hasAnswerProgress = false;
+              if (savedAns) {
                 try {
                   const arr = JSON.parse(savedAns);
-                  if (Array.isArray(arr) && arr.length > 0) hasInProgressSession = true;
+                  if (Array.isArray(arr) && arr.length > 0) hasAnswerProgress = true;
                 } catch (e) {}
               }
-            }
-            if (savedPhase === "SUMMARY") {
-              hasInProgressSession = false;
+
+              const hasActiveSessionData = hasActivePhase || (hasAnswerProgress && hasActivePhase) || Boolean(m.hasDraft);
+
+              if (isCompleted) {
+                // Completed missions ONLY show resume if this specific mission is actively being replayed or has a persistent draft
+                if ((isReplayActive || Boolean(m.hasDraft)) && hasActiveSessionData) {
+                  hasInProgressSession = true;
+                }
+              } else {
+                // Uncompleted / retest missions
+                if (hasActiveSessionData) {
+                  hasInProgressSession = true;
+                }
+              }
             }
 
             return (
@@ -435,18 +445,28 @@ export default function MissionMapScreen() {
                           if (hasInProgressSession) {
                             navigate(`/mission-play?chapterId=${chapterId}&missionSeq=${m.seq}`);
                           } else {
-                            const isReplaying = isCompleted || isRetest;
+                            const isReplaying = isCompleted;
+                            sessionStorage.removeItem(`user_answers_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`mission_phase_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`mission_timer_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`boss_damage_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`boss_wrong_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`boss_index_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`quiz_correct_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`xp_earned_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`coins_earned_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`completion_result_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`summary_step_${chapterId}_${m.seq}`);
                             if (isReplaying) {
-                              sessionStorage.removeItem(`user_answers_${chapterId}_${m.seq}`);
-                              sessionStorage.removeItem(`mission_phase_${chapterId}_${m.seq}`);
-                              sessionStorage.removeItem(`mission_timer_${chapterId}_${m.seq}`);
-                              sessionStorage.removeItem(`boss_damage_${chapterId}_${m.seq}`);
-                              sessionStorage.removeItem(`boss_wrong_${chapterId}_${m.seq}`);
-                              sessionStorage.removeItem(`boss_index_${chapterId}_${m.seq}`);
-                              sessionStorage.removeItem(`quiz_correct_${chapterId}_${m.seq}`);
-                              sessionStorage.removeItem(`xp_earned_${chapterId}_${m.seq}`);
-                              sessionStorage.removeItem(`coins_earned_${chapterId}_${m.seq}`);
+                              missions.forEach((otherM: any) => {
+                                if (otherM.seq !== m.seq) {
+                                  sessionStorage.removeItem(`is_replay_${chapterId}_${otherM.seq}`);
+                                }
+                              });
+                              sessionStorage.setItem(`is_replay_${chapterId}_${m.seq}`, "true");
                               apiFetch(`/api/practice/chapters/${chapterId}/missions/${m.seq}/draft`, { method: "DELETE" }).catch(() => {});
+                            } else {
+                              sessionStorage.removeItem(`is_replay_${chapterId}_${m.seq}`);
                             }
                             navigate(`/mission-play?chapterId=${chapterId}&missionSeq=${m.seq}${isReplaying ? "&replay=true" : ""}`);
                           }

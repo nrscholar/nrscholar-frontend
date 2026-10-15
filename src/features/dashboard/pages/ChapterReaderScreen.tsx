@@ -182,6 +182,20 @@ export default function ChapterReaderScreen() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ chapterId, currentQ: 0, score: 0, completed: false, readingCompleted: true }),
       });
+      try {
+        const chIdStr = String(chapterId);
+        const cachedProg = sessionStorage.getItem("cached_chapter_progress");
+        const progMap = cachedProg ? JSON.parse(cachedProg) : {};
+        const updatedDoc = {
+          ...(progMap[chIdStr] || {}),
+          chapterId: chIdStr,
+          readingCompleted: true
+        };
+        progMap[chIdStr] = updatedDoc;
+        progMap[chapterId] = updatedDoc;
+        sessionStorage.setItem("cached_chapter_progress", JSON.stringify(progMap));
+      } catch (_) {}
+      window.dispatchEvent(new Event("userDataUpdated"));
     } catch (_) { /* fall through */ }
     navigate(
       `/mission-roadmap?chapterId=${chapterId}&title=${encodeURIComponent(title)}&subjectName=${encodeURIComponent(subjectName)}`,

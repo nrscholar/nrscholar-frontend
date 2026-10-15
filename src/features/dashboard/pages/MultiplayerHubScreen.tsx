@@ -188,8 +188,8 @@ export default function MultiplayerHubScreen() {
         const completedIds = pData.data
           .filter((p: any) => {
             const mCount = Array.isArray(p.completedMissions) ? p.completedMissions.length : 0;
-            if (mCount > 0 && mCount < 4) return false;
-            return mCount >= 4 || p.chapterCompleted || p.bossCompleted || (p.completed && mCount !== 0);
+            if (mCount > 0) return mCount >= 5 && p.chapterCompleted !== false;
+            return Boolean(p.chapterCompleted && p.completed && p.questionsCompleted);
           })
           .map((p: any) => String(p.chapterId).replace(/_hard$/, ""));
         setCompletedChapterIds(completedIds);

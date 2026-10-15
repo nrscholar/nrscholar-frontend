@@ -64,17 +64,24 @@ function matchSubject(item: any, activeSub: any) {
 export default function ProgressScreen() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [loading, setLoading] = useState(true);
+  const cachedUserData = (() => {
+    try {
+      const raw = localStorage.getItem("userData");
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  })();
 
-  const [streakDays, setStreakDays] = useState(0);
-  const [xp, setXp] = useState(0);
-  const [coins, setCoins] = useState(0);
+  const [loading, setLoading] = useState(!cachedUserData);
+
+  const [streakDays, setStreakDays] = useState(cachedUserData?.streakDays || 0);
+  const [xp, setXp] = useState(cachedUserData?.xp || 0);
+  const [coins, setCoins] = useState(cachedUserData?.coins || 0);
   const [showStreakModal, setShowStreakModal] = useState(false);
-  const [userData, setUserData] = useState<any>(null);
-  const [username, setUsername] = useState("Explorer");
-  const [userPhoto, setUserPhoto] = useState("");
+  const [userData, setUserData] = useState<any>(cachedUserData);
+  const [username, setUsername] = useState(cachedUserData?.childName || cachedUserData?.name || "Explorer");
+  const [userPhoto, setUserPhoto] = useState(cachedUserData?.childPhoto || cachedUserData?.photo || "");
   const [unreadCount, setUnreadCount] = useState(0);
-  const [badges, setBadges] = useState<any[]>([]);
+  const [badges, setBadges] = useState<any[]>(cachedUserData?.badges || []);
 
   const [subjects, setSubjects] = useState<any[]>([]);
   const [activeSubject, setActiveSubject] = useState<any>(null);
@@ -95,7 +102,18 @@ export default function ProgressScreen() {
       const completedSet = new Set<string>();
       if (pData.success && pData.data) {
         pData.data.forEach((p: any) => {
-          if (p.chapterCompleted || p.completed) {
+          const mList = Array.isArray(p.completedMissions) ? p.completedMissions : [];
+          let isDone = false;
+          if (mList.length > 0) {
+            isDone = mList.length >= 5 && p.chapterCompleted !== false;
+          } else {
+            isDone = Boolean(
+              p.chapterCompleted === true &&
+              p.completed === true &&
+              p.questionsCompleted === true
+            );
+          }
+          if (isDone) {
             completedSet.add(String(p.chapterId));
             completedSet.add(`${p.chapterId}_hard`);
           }
@@ -255,8 +273,18 @@ export default function ProgressScreen() {
         }
         if (pData.success && pData.data) {
           completedChapterIds = pData.data
-            .filter((p: any) => p.chapterCompleted || p.completed)
-            .map((p: any) => p.chapterId);
+            .filter((p: any) => {
+              const mList = Array.isArray(p.completedMissions) ? p.completedMissions : [];
+              if (mList.length > 0) {
+                return mList.length >= 5 && p.chapterCompleted !== false;
+              }
+              return Boolean(
+                p.chapterCompleted === true &&
+                p.completed === true &&
+                p.questionsCompleted === true
+              );
+            })
+            .map((p: any) => String(p.chapterId));
         }
 
         if (chapters.length > 0) {

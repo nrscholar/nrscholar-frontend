@@ -119,10 +119,10 @@ export default function ChapterQuestionsScreen() {
                 currentQ: 0,
                 score: 0,
                 answers: [],
-                completed: true,
+                completed: false,
                 readingCompleted: true,
                 questionsCompleted: true,
-                chapterCompleted: true
+                chapterCompleted: false
               })
             });
           } catch (e) {}
@@ -307,7 +307,7 @@ export default function ChapterQuestionsScreen() {
         setConfirmed(false);
 
       } else {
-        // Save final completion for this tier
+        // Save question quiz completion (does NOT mark chapter complete)
         try {
           await apiFetch("/api/practice/chapter-progress", {
             method: "POST",
@@ -317,12 +317,30 @@ export default function ChapterQuestionsScreen() {
               currentQ: total,
               score: score,
               answers: userAnswers,
-              completed: true,
+              completed: false,
               readingCompleted: true,
-              questionsCompleted: true
+              questionsCompleted: true,
+              chapterCompleted: false
             })
           });
           await submitActivityLog(userAnswers);
+
+          try {
+            const cachedProg = sessionStorage.getItem("cached_chapter_progress");
+            const progMap = cachedProg ? JSON.parse(cachedProg) : {};
+            const chIdStr = String(chapterId);
+            const updatedDoc = {
+              ...(progMap[chIdStr] || {}),
+              chapterId: chIdStr,
+              readingCompleted: true,
+              questionsCompleted: true
+            };
+            progMap[chIdStr] = updatedDoc;
+            progMap[chapterId] = updatedDoc;
+            sessionStorage.setItem("cached_chapter_progress", JSON.stringify(progMap));
+          } catch (_) {}
+
+          window.dispatchEvent(new Event("userDataUpdated"));
         } catch (e) {
           console.error("Failed to save progress", e);
         }

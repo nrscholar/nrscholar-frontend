@@ -1,7 +1,18 @@
 import { useNavigate, useLocation, Navigate, Outlet } from "react-router-dom";
 import { Home, BarChart2, BookOpen, TrendingUp, Settings } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { startNavigationProgress } from "../../components/NavigationProgressBar";
+import RouteSkeletonLoader from "../../components/RouteSkeletonLoader";
+
+// Dynamic prefetchers for Parent Portal routes
+const parentRoutePreloaders: Record<string, () => Promise<any>> = {
+  "/parent/dashboard": () => import("../../features/dashboard/pages/ParentDashboardScreen"),
+  "/parent/reports": () => import("../../features/dashboard/pages/ParentReportScreen"),
+  "/parent/lessons": () => import("../../features/dashboard/pages/ParentLessonsScreen"),
+  "/parent/roadmap": () => import("../../features/dashboard/pages/ParentRoadmapScreen"),
+  "/parent/settings": () => import("../../features/dashboard/pages/ParentSettings"),
+};
 
 export default function ParentLayout() {
   const navigate = useNavigate();
@@ -18,6 +29,16 @@ export default function ParentLayout() {
     setActivePath(location.pathname);
   }, [location.pathname]);
 
+  // Proactively prefetch Parent route modules during idle time
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      Object.values(parentRoutePreloaders).forEach((loader) => {
+        try { loader(); } catch (e) {}
+      });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, []);
+
   if (!isPinVerified && !currentPath.startsWith("/parent/gate") && currentPath !== "/parent") {
     const returnTo = encodeURIComponent(currentPath + location.search);
     return <Navigate to={`/parent/gate?returnTo=${returnTo}`} replace />;
@@ -33,8 +54,26 @@ export default function ParentLayout() {
 
   const isLessonPlayer = currentPath.startsWith("/parent/lessons/player");
 
+  const preloadRoute = (path: string) => {
+    const loader = parentRoutePreloaders[path];
+    if (loader) {
+      try { loader(); } catch (e) {}
+    }
+  };
+
   const handleTabClick = (path: string) => {
+    if (activePath === path && location.pathname === path) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    // 1. Instant optimistic tab state update (0ms immediate feedback)
     setActivePath(path);
+
+    // 2. Trigger top glowing progress bar immediately
+    startNavigationProgress();
+
+    // 3. Instant synchronous route change (no waiting for background transitions)
     navigate(path);
   };
 
@@ -57,9 +96,11 @@ export default function ParentLayout() {
 
   return (
     <div className="min-h-screen bg-[#f7f9fb] flex flex-col">
-      {/* Content wrapper */}
+      {/* Content wrapper with Isolated Suspense boundary to prevent navbar unmounting */}
       <div className="flex-1 pb-24 relative">
-        <Outlet />
+        <Suspense fallback={<RouteSkeletonLoader />}>
+          <Outlet />
+        </Suspense>
       </div>
 
       {/* Floating Bottom Glassmorphic Navigation Bar */}
@@ -101,6 +142,8 @@ export default function ParentLayout() {
                   key={item.path}
                   type="button"
                   onClick={() => handleTabClick(item.path)}
+                  onMouseEnter={() => preloadRoute(item.path)}
+                  onPointerDown={() => preloadRoute(item.path)}
                   className="relative flex-1 flex flex-col items-center justify-center py-2 px-1 gap-1 rounded-xl select-none touch-none focus:outline-none transition-colors z-10"
                 >
                   <Icon

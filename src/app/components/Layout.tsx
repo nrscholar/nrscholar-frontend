@@ -1,7 +1,18 @@
 import { useNavigate, useLocation, Navigate, Outlet } from "react-router-dom";
 import { Home, MessageSquare, BookOpen, BarChart2, User } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { startNavigationProgress } from "../../components/NavigationProgressBar";
+import RouteSkeletonLoader from "../../components/RouteSkeletonLoader";
+
+// Dynamic prefetchers for 0ms instantaneous route transitions
+const routePreloaders: Record<string, () => Promise<any>> = {
+  "/home": () => import("../../features/dashboard/pages/HomeScreen"),
+  "/chat": () => import("../../features/dashboard/pages/ChatScreen"),
+  "/practice/chapters": () => import("../../features/dashboard/pages/ChaptersScreen"),
+  "/progress": () => import("../../features/dashboard/pages/ProgressScreen"),
+  "/profile": () => import("../../features/users/pages/ProfileScreen"),
+};
 
 export default function Layout() {
   const navigate = useNavigate();
@@ -37,6 +48,16 @@ export default function Layout() {
     setActivePath(location.pathname);
   }, [location.pathname]);
 
+  // Proactively preload tab chunks during browser idle time
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      Object.values(routePreloaders).forEach((loader) => {
+        try { loader(); } catch (e) {}
+      });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, []);
+
   const navItems = [
     { path: "/home", label: t('home', 'Home'), icon: Home },
     { path: "/chat", label: t('ai_chat_nav', 'AI Chat'), icon: MessageSquare },
@@ -45,8 +66,26 @@ export default function Layout() {
     { path: "/profile", label: t('profile', 'Profile'), icon: User },
   ];
 
+  const preloadRoute = (path: string) => {
+    const loader = routePreloaders[path];
+    if (loader) {
+      try { loader(); } catch (e) {}
+    }
+  };
+
   const handleTabClick = (path: string) => {
+    if (activePath === path && location.pathname === path) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    // 1. Instant optimistic tab state update (0ms immediate feedback)
     setActivePath(path);
+
+    // 2. Trigger top glowing progress bar immediately
+    startNavigationProgress();
+
+    // 3. Instant synchronous route change (no waiting for background transitions)
     navigate(path);
   };
 
@@ -56,9 +95,11 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-[#f7f9fb] flex flex-col">
-      {/* Main Content Area */}
+      {/* Main Content Area with Isolated Suspense boundary to prevent navbar unmounting */}
       <div className="flex-1 pb-24 relative">
-        <Outlet />
+        <Suspense fallback={<RouteSkeletonLoader />}>
+          <Outlet />
+        </Suspense>
       </div>
 
       {/* Floating Bottom Glassmorphic Navigation Bar with Horizontal Spring Pill */}
@@ -84,6 +125,8 @@ export default function Layout() {
                 key={item.path}
                 type="button"
                 onClick={() => handleTabClick(item.path)}
+                onMouseEnter={() => preloadRoute(item.path)}
+                onPointerDown={() => preloadRoute(item.path)}
                 className="relative flex-1 flex flex-col items-center justify-center py-2 px-1 gap-1 rounded-xl select-none touch-none focus:outline-none transition-colors z-10"
               >
                 <Icon
