@@ -34,17 +34,18 @@ const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-[rgba(0,0,0,0.5)] z-50 flex items-center justify-center p-6"
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6 select-none"
               onClick={() => setIsOpen(false)}
             >
               <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                className="w-full max-w-[320px] bg-white rounded-3xl p-6 max-h-[65vh] flex flex-col shadow-2xl"
+                initial={{ scale: 0.92, opacity: 0, y: 16 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.92, opacity: 0, y: 16 }}
+                transition={{ type: "spring", stiffness: 350, damping: 26 }}
+                className="w-full max-w-[360px] bg-white rounded-[32px] p-6 sm:p-7 max-h-[70vh] flex flex-col shadow-[0_20px_60px_rgba(20,23,121,0.18)] border border-slate-100 relative"
                 onClick={e => e.stopPropagation()}
               >
-                <h3 className="text-xl font-bold text-[#141779] mb-1 text-center">Select {label}</h3>
+                <h3 className="text-xl font-black text-[#141779] mb-1 text-center">Select {label}</h3>
                 {isBoard && (
                   <p className="text-[11px] font-semibold text-slate-400 text-center mb-3">
                     Only CBSE & GSEB are currently active

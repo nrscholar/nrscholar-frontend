@@ -34,20 +34,54 @@ function getLevelInfo(xp: number) {
   }
 }
 
+function getCanonicalSubject(s: string) {
+  if (!s) return "";
+  const str = s.toLowerCase();
+  if (str.includes("social") || str.includes("સમાજ") || str.includes("સામાજિક") || str.includes("सामाजिक")) return "social_science";
+  if (str.includes("sci") || str.includes("વિજ્ઞાન") || str.includes("विज्ञान")) return "science";
+  if (str.includes("math") || str.includes("ગણિત") || str.includes("गणित")) return "math";
+  if (str.includes("guj") || str.includes("ગુજરાત") || str.includes("गुजરા")) return "gujarati";
+  if (str.includes("eng") || str.includes("અંગ્રેજી") || str.includes("अंग्रे")) return "english";
+  if (str.includes("hin") || str.includes("હિન્દી") || str.includes("हिन्दी") || str.includes("हिंदी")) return "hindi";
+  return str.trim();
+}
+
+function matchSubject(item: any, activeSub: any) {
+  if (!item || !activeSub) return false;
+  if (item.subjectId && (item.subjectId === activeSub._id || item.subjectId === activeSub.id)) return true;
+  
+  const iCanonical = getCanonicalSubject(item.rawName || item.name || "");
+  const aCanonical = getCanonicalSubject(activeSub.name || activeSub.subject || "");
+  if (iCanonical && aCanonical) {
+    return iCanonical === aCanonical;
+  }
+  
+  const iName = (item.rawName || item.name || "").toLowerCase().trim();
+  const aName = (activeSub.name || activeSub.subject || "").toLowerCase().trim();
+  return iName === aName;
+}
+
 export default function ProgressScreen() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [loading, setLoading] = useState(true);
+  const cachedUserData = (() => {
+    try {
+      const raw = localStorage.getItem("userData");
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  })();
 
-  const [streakDays, setStreakDays] = useState(0);
-  const [xp, setXp] = useState(0);
-  const [coins, setCoins] = useState(0);
+  const [loading, setLoading] = useState(!cachedUserData);
+
+  const [streakDays, setStreakDays] = useState(cachedUserData?.streakDays || 0);
+  const [xp, setXp] = useState(cachedUserData?.xp || 0);
+  const [coins, setCoins] = useState(cachedUserData?.coins || 0);
   const [showStreakModal, setShowStreakModal] = useState(false);
-  const [userData, setUserData] = useState<any>(null);
-  const [username, setUsername] = useState("Explorer");
-  const [userPhoto, setUserPhoto] = useState("");
+  const [userData, setUserData] = useState<any>(cachedUserData);
+  const [username, setUsername] = useState(cachedUserData?.childName || cachedUserData?.name || "Explorer");
+  const [userPhoto, setUserPhoto] = useState(cachedUserData?.childPhoto || cachedUserData?.photo || "");
   const [unreadCount, setUnreadCount] = useState(0);
-  const [badges, setBadges] = useState<any[]>([]);
+  const [badges, setBadges] = useState<any[]>(cachedUserData?.badges || []);
 
   const [subjects, setSubjects] = useState<any[]>([]);
   const [activeSubject, setActiveSubject] = useState<any>(null);
@@ -68,7 +102,18 @@ export default function ProgressScreen() {
       const completedSet = new Set<string>();
       if (pData.success && pData.data) {
         pData.data.forEach((p: any) => {
-          if (p.chapterCompleted || p.completed) {
+          const mList = Array.isArray(p.completedMissions) ? p.completedMissions : [];
+          let isDone = false;
+          if (mList.length > 0) {
+            isDone = mList.length >= 5 && p.chapterCompleted !== false;
+          } else {
+            isDone = Boolean(
+              p.chapterCompleted === true &&
+              p.completed === true &&
+              p.questionsCompleted === true
+            );
+          }
+          if (isDone) {
             completedSet.add(String(p.chapterId));
             completedSet.add(`${p.chapterId}_hard`);
           }
@@ -143,22 +188,30 @@ export default function ProgressScreen() {
         } catch (e) {}
       })();
 
+      let loadedSubs: any[] = [];
+      let loadedGrowth: any[] = [];
+
       const subjectsPromise = (async () => {
         try {
           const subRes = await apiFetch("/api/practice/subjects");
           const subData = await subRes.json();
           if (subData.success && subData.data && subData.data.length > 0) {
-            setSubjects(subData.data);
-            const savedSubId = sessionStorage.getItem("activeSubjectId");
-            const found = (savedSubId && savedSubId !== "all") ? subData.data.find((s: any) => s._id === savedSubId) : null;
-            setActiveSubject(found || subData.data[0]);
-            // Run completion stats fetch asynchronously in background
-            setTimeout(() => fetchAllSubjectCompletion(subData.data), 0);
+            const validSubs = subData.data.filter((s: any) => 
+              (s.totalChapters === undefined || s.totalChapters > 0) && 
+              s.hasContent !== false && 
+              s.isactive !== 0
+            );
+            if (validSubs.length > 0) {
+              setSubjects(validSubs);
+              loadedSubs = validSubs;
+              // Run completion stats fetch asynchronously in background
+              setTimeout(() => fetchAllSubjectCompletion(validSubs), 0);
+            } else {
+              setSubjects([]);
+            }
           }
         } catch (e) {
           console.error("Failed to fetch subjects:", e);
-        } finally {
-          setLoading(false);
         }
       })();
 
@@ -168,6 +221,7 @@ export default function ProgressScreen() {
           const data = await res.json();
           if (data.success && data.data) {
             setWeeklyGrowth(data.data);
+            loadedGrowth = data.data;
           }
         } catch (e) {
           console.error("Failed to fetch weekly subject growth:", e);
@@ -178,6 +232,19 @@ export default function ProgressScreen() {
 
       await Promise.allSettled([mePromise, notifPromise, subjectsPromise, growthPromise]);
       setLoading(false);
+
+      if (loadedSubs.length > 0) {
+        const savedSubId = sessionStorage.getItem("activeSubjectId");
+        const found = (savedSubId && savedSubId !== "all") ? loadedSubs.find((s: any) => s._id === savedSubId) : null;
+        if (found) {
+          setActiveSubject(found);
+        } else {
+          // Smart selection: auto-pick the subject with recent quiz activity / non-zero accuracy
+          const activeGrowth = loadedGrowth.find((g: any) => g.thisWeekAccuracy > 0);
+          const activeSub = activeGrowth ? loadedSubs.find((s: any) => matchSubject(activeGrowth, s)) : null;
+          setActiveSubject(activeSub || loadedSubs[0]);
+        }
+      }
     };
     fetchProgress();
   }, []);
@@ -206,8 +273,18 @@ export default function ProgressScreen() {
         }
         if (pData.success && pData.data) {
           completedChapterIds = pData.data
-            .filter((p: any) => p.chapterCompleted || p.completed)
-            .map((p: any) => p.chapterId);
+            .filter((p: any) => {
+              const mList = Array.isArray(p.completedMissions) ? p.completedMissions : [];
+              if (mList.length > 0) {
+                return mList.length >= 5 && p.chapterCompleted !== false;
+              }
+              return Boolean(
+                p.chapterCompleted === true &&
+                p.completed === true &&
+                p.questionsCompleted === true
+              );
+            })
+            .map((p: any) => String(p.chapterId));
         }
 
         if (chapters.length > 0) {
@@ -266,38 +343,23 @@ export default function ProgressScreen() {
   const unlockedMilestonesCount = [hasMathAce, isStreakUnlocked, hasScienceProdigy, hasArenaMaster].filter(Boolean).length;
   const totalBadgesCount = Math.max(badges.length, unlockedMilestonesCount);
 
-  // Filter growth list based on active subject selection & ensure single graph display per selected subject
-  const matchSubject = (item: any, activeSub: any) => {
-    if (!item || !activeSub) return false;
-    if (item.subjectId && (item.subjectId === activeSub._id || item.subjectId === activeSub.id)) return true;
-    
-    const iName = (item.rawName || item.name || "").toLowerCase();
-    const aName = (activeSub.name || activeSub.subject || "").toLowerCase();
-    
-    if (iName === aName || iName.includes(aName) || aName.includes(iName)) return true;
-    
-    const isGuj = (s: string) => s.includes("guj") || s.includes("ગુજરાત") || s.includes("ગુજરાતી") || s.includes("गुजરા");
-    const isMath = (s: string) => s.includes("math") || s.includes("ગણિત") || s.includes("गणित");
-    const isSci = (s: string) => s.includes("sci") || s.includes("વિજ્ઞાન") || s.includes("विज्ञान");
-    const isEng = (s: string) => s.includes("eng") || s.includes("અંગ્રેજી") || s.includes("अंग्रेजी");
-    const isSoc = (s: string) => s.includes("soc") || s.includes("social") || s.includes("સમાજ") || s.includes("સામાજિક");
-
-    if (isGuj(iName) && isGuj(aName)) return true;
-    if (isMath(iName) && isMath(aName)) return true;
-    if (isSci(iName) && isSci(aName)) return true;
-    if (isEng(iName) && isEng(aName)) return true;
-    if (isSoc(iName) && isSoc(aName)) return true;
-    
-    return false;
-  };
-
   let filteredGrowth = activeSubject
     ? weeklyGrowth.filter((item: any) => matchSubject(item, activeSubject))
     : weeklyGrowth;
 
-  // Restrict to exactly 1 primary graph for the active subject, fallback to first item if filtered is empty
+  // Restrict to exactly 1 primary graph for the active subject; never bleed other subject's data!
   const displayedGrowth = activeSubject
-    ? (filteredGrowth.length > 0 ? [filteredGrowth[0]] : (weeklyGrowth.length > 0 ? [weeklyGrowth[0]] : []))
+    ? (filteredGrowth.length > 0
+        ? [filteredGrowth[0]]
+        : [{
+            subjectId: activeSubject._id,
+            name: activeSubject.name || activeSubject.subject || "Subject",
+            rawName: activeSubject.name || activeSubject.subject || "Subject",
+            icon: activeSubject.icon,
+            thisWeekAccuracy: 0,
+            lastWeekAccuracy: 0,
+            growthDelta: 0
+          }])
     : (weeklyGrowth.length > 0 ? [weeklyGrowth[0]] : []);
 
   return (
@@ -471,6 +533,18 @@ export default function ProgressScreen() {
             {subjects.map((sub) => {
               const isActive = activeSubject?._id === sub._id;
               const translatedSubName = t(sub.name.toLowerCase().replace(/ /g, '_'), { defaultValue: sub.name });
+              const growthItem = weeklyGrowth.find((g: any) => matchSubject(g, sub));
+              const tabEmoji = (() => {
+                const check = `${sub.icon || ''} ${sub.name || ''}`.toLowerCase();
+                if (check.includes("guj") || check.includes("ગુજરાતી")) return "📘";
+                if (check.includes("math") || check.includes("calculator") || check.includes("calc") || check.includes("ગણિત")) return "🧮";
+                if (check.includes("sci") || check.includes("flask") || check.includes("વિજ્ઞાન")) return "🔬";
+                if (check.includes("eng") || check.includes("અંગ્રેજી")) return "📖";
+                if (check.includes("hin") || check.includes("હિન્દી") || check.includes("hindi")) return "📙";
+                if (check.includes("soc") || check.includes("સામાજિક") || check.includes("social")) return "🏛️";
+                if (sub.icon && sub.icon.length <= 4 && !/^[a-z0-9_-]+$/i.test(sub.icon)) return sub.icon;
+                return "📚";
+              })();
               return (
                 <button
                   key={sub._id}
@@ -484,8 +558,15 @@ export default function ProgressScreen() {
                       : 'bg-white text-[#767683] border border-[#E0E3E5] hover:border-[#17177F]/40 shadow-2xs'
                   }`}
                 >
-                  <Compass size={14} className={isActive ? "text-white" : "text-[#767683]"} />
+                  <span className="text-sm shrink-0 leading-none">{tabEmoji}</span>
                   <span>{translatedSubName}</span>
+                  {growthItem && growthItem.thisWeekAccuracy > 0 && (
+                    <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                      isActive ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-700"
+                    }`}>
+                      {growthItem.thisWeekAccuracy}%
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -528,16 +609,19 @@ export default function ProgressScreen() {
                   const isPositive = delta >= 0;
                   const translatedSubName = t(item.name.toLowerCase().replace(/ /g, '_'), { defaultValue: item.name });
 
-                  const getIcon = (n: string) => {
-                    const lower = n.toLowerCase();
-                    if (lower.includes("guj")) return "📘";
-                    if (lower.includes("math")) return "🧮";
-                    if (lower.includes("sci")) return "🔬";
-                    if (lower.includes("eng")) return "📖";
-                    return "🌎";
+                  const getIcon = (iconStr?: string, nameStr?: string) => {
+                    const check = `${iconStr || ''} ${nameStr || ''}`.toLowerCase();
+                    if (check.includes("guj") || check.includes("ગુજરાતી")) return "📘";
+                    if (check.includes("math") || check.includes("calculator") || check.includes("calc") || check.includes("ગણિત")) return "🧮";
+                    if (check.includes("sci") || check.includes("flask") || check.includes("વિજ્ઞાન")) return "🔬";
+                    if (check.includes("eng") || check.includes("અંગ્રેજી")) return "📖";
+                    if (check.includes("hin") || check.includes("હિન્દી") || check.includes("hindi")) return "📙";
+                    if (check.includes("soc") || check.includes("સામાજિક") || check.includes("social")) return "🏛️";
+                    if (iconStr && iconStr.length <= 4 && !/^[a-z0-9_-]+$/i.test(iconStr)) return iconStr;
+                    return "📚";
                   };
 
-                  const icon = item.icon || getIcon(item.name);
+                  const icon = getIcon(item.icon, item.name);
 
                   const getPerfLabel = (acc: number) => {
                     if (acc >= 85) return t('excellent_progress', 'Excellent Progress');
@@ -562,21 +646,21 @@ export default function ProgressScreen() {
                       className="flex flex-col gap-5 text-left"
                     >
                       {/* 1. SUBJECT HEADER & ACCURACY SCORE */}
-                      <div className="flex items-start justify-between">
-                        <div className="flex flex-col gap-0.5 text-left">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xl">{icon}</span>
-                            <h3 className="text-[16px] font-bold text-[#17177F]">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex flex-col gap-0.5 text-left min-w-0 flex-1">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-xl shrink-0 leading-none">{icon}</span>
+                            <h3 className="text-[16px] font-bold text-[#17177F] truncate">
                               {translatedSubName}
                             </h3>
                           </div>
-                          <span className="text-[13px] font-medium text-[#767683]">
+                          <span className="text-[13px] font-medium text-[#767683] truncate">
                             {getPerfLabel(item.thisWeekAccuracy)}
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-3">
-                          <span className="text-[34px] font-black text-[#17177F] tracking-tight leading-none">
+                        <div className="flex items-center gap-2.5 shrink-0">
+                          <span className="text-[34px] font-black text-[#17177F] tracking-tight leading-none whitespace-nowrap">
                             {item.thisWeekAccuracy}%
                           </span>
 
@@ -584,7 +668,7 @@ export default function ProgressScreen() {
                             initial={{ opacity: 0, scale: 0.8 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ duration: 0.5, delay: idx * 0.1 + 0.2 }}
-                            className={`px-[10px] py-[5px] rounded-[100px] text-[13px] font-bold flex items-center gap-1 shadow-2xs ${
+                            className={`px-[10px] py-[5px] rounded-[100px] text-[13px] font-bold flex items-center gap-1 shadow-2xs whitespace-nowrap ${
                               isPositive
                                 ? "bg-[#DCFCE7] text-[#16A34A]"
                                 : "bg-[#FEE2E2] text-[#DC2626]"
@@ -602,10 +686,10 @@ export default function ProgressScreen() {
                         <div className="flex items-center justify-between">
                           <div className="flex flex-col text-left">
                             <span className="text-[13px] font-bold text-[#17177F] tracking-wide">
-                              {t('weekly_comparison', 'Weekly Comparison')}
+                              {t('weekly_quiz_accuracy', 'Quiz & Mission Accuracy Score')}
                             </span>
                             <span className="text-[11px] font-medium text-[#64748B]">
-                              {t('current_vs_previous', 'Current Week vs Previous Week')}
+                              {t('current_vs_previous_accuracy', 'Percentage of correct answers (Current Week vs Previous Week)')}
                             </span>
                           </div>
                         </div>
@@ -682,9 +766,12 @@ export default function ProgressScreen() {
                       </div>
             
                       {/* 3. AFTER THAT: CIRCLE PROGRESS GRAPH (Chapter / Syllabus Completion for Active Subject) */}
-                      <div className="flex flex-col items-center justify-center gap-2 pt-2">
+                      <div className="flex flex-col items-center justify-center gap-1 pt-2">
                         <span className="text-[11px] font-extrabold tracking-wider text-[#767683] uppercase">
-                          {t('chapter_completion', 'CHAPTER COMPLETION')}
+                          {t('chapter_completion', 'SYLLABUS & CHAPTER COMPLETION')}
+                        </span>
+                        <span className="text-[11px] text-[#64748B] font-medium text-center max-w-xs">
+                          {t('chapter_completion_sub', 'Tracks 100% finished chapters (complete all 5 missions with ≥65% mastery)')}
                         </span>
                         
                         <div className="relative w-36 h-36 flex items-center justify-center my-1">
@@ -742,13 +829,18 @@ export default function ProgressScreen() {
                           </div>
                         </div>
 
-                        <div className="text-center flex flex-col items-center">
+                        <div className="text-center flex flex-col items-center gap-1">
                           <span className="text-[12px] font-bold text-[#4D4BFF]">
                             {stats.total > 0 
                               ? `${stats.completed}/${stats.total} ${t('chapters', 'Chapters')} ${t('completed', 'Completed')}`
                               : `${stats.percent}% ${t('mastered', 'Mastered')}`
                             }
                           </span>
+                          {activeChapter && (
+                            <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-3 py-0.5 rounded-full">
+                              Active: <strong className="text-slate-700">{activeChapter.chapterName || activeChapter.name || activeChapter.title || "Chapter 1"}</strong>
+                            </span>
+                          )}
                         </div>
                       </div>
 

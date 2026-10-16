@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Gift, History, HelpCircle, Shield, Sparkles, Star } from "lucide-react";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
+import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 
 interface Reward {
   name: string;
@@ -44,6 +45,11 @@ export default function DailyRewardsScreen() {
   const [errorMessage, setErrorMessage] = useState("");
 
   const wheelRef = useRef<HTMLDivElement>(null);
+  const isSpinningRef = useRef(false);
+  const spinCompletedRef = useRef(false);
+  const fallbackTimerRef = useRef<any>(null);
+  const claimPromiseRef = useRef<Promise<any> | null>(null);
+  const pendingClaimDataRef = useRef<any>(null);
 
   // Default rewards fallback
   const defaultRewards: Reward[] = [
@@ -67,10 +73,15 @@ export default function DailyRewardsScreen() {
 
   useEffect(() => {
     fetchSpinStatus();
+    return () => {
+      if (fallbackTimerRef.current) {
+        clearTimeout(fallbackTimerRef.current);
+      }
+    };
   }, []);
 
   const handleOpenBuyConfirm = () => {
-    if (isSpinning || isBuying) return;
+    if (isSpinningRef.current || isSpinning || showModal || isBuying) return;
     setErrorMessage("");
 
     const cost = (spinType === "daily" || spinType === "boss_revival") ? 100 : 150;
@@ -92,7 +103,7 @@ export default function DailyRewardsScreen() {
   };
 
   const confirmAndBuySpin = async () => {
-    if (isSpinning || isBuying) return;
+    if (isSpinningRef.current || isSpinning || showModal || isBuying) return;
     setIsBuying(true);
     setErrorMessage("");
     try {
@@ -214,41 +225,90 @@ export default function DailyRewardsScreen() {
     return interleaveRewards(pool);
   };
 
-  const getSpinBalance = () => {
-    switch (spinType) {
+  const getBalanceKey = (type: string) => {
+    switch (type) {
       case "daily":
-        return balances.daily_spins_balance || 0;
+        return "daily_spins_balance";
       case "chapter":
-        return balances.chapter_spins_balance || 0;
+        return "chapter_spins_balance";
       case "boss_revival":
-        return balances.boss_revival_spins_balance || 0;
+        return "boss_revival_spins_balance";
       case "event":
-        return balances.event_spins_balance || 0;
+        return "event_spins_balance";
       case "parent":
-        return balances.parent_spins_balance || 0;
+        return "parent_spins_balance";
       default:
-        return 0;
+        return "daily_spins_balance";
     }
   };
 
+  const getSpinBalance = () => {
+    const key = getBalanceKey(spinType);
+    return balances[key] || 0;
+  };
+
   const handleBack = () => {
+    if (isSpinningRef.current || isSpinning) return;
     if (spinType === "boss_revival") {
-      navigate(-1);
+      const returnTo = searchParams.get("returnTo");
+      if (returnTo) {
+        navigate(decodeURIComponent(returnTo), { replace: true });
+      } else {
+        navigate(-1);
+      }
     } else {
       navigate("/home");
     }
   };
 
+  const handleSpinComplete = async () => {
+    if (spinCompletedRef.current) return;
+    spinCompletedRef.current = true;
+
+    if (fallbackTimerRef.current) {
+      clearTimeout(fallbackTimerRef.current);
+      fallbackTimerRef.current = null;
+    }
+
+    // Ensure parallel claim request has finished (if still in flight)
+    if (claimPromiseRef.current) {
+      try {
+        await claimPromiseRef.current;
+      } catch (err) {
+        console.error("Spin claim await error:", err);
+      }
+    }
+
+    // Immediately stop spinning and open the reward modal with zero delay!
+    setIsSpinning(false);
+    setShowModal(true);
+  };
+
   const startSpin = async () => {
-    if (isSpinning) return;
+    // 1. Immediate synchronous lock against double-clicks or mid-spin triggers
+    if (isSpinningRef.current || isSpinning || showModal || isBuying) return;
+
     setErrorMessage("");
 
-    const balance = getSpinBalance();
+    const balanceKey = getBalanceKey(spinType);
+    const balance = balances[balanceKey] || 0;
     if (balance <= 0) {
       setErrorMessage(`No ${spinType.replace("_", " ")} attempts remaining`);
       return;
     }
 
+    isSpinningRef.current = true;
+    spinCompletedRef.current = false;
+    pendingClaimDataRef.current = null;
+    claimPromiseRef.current = null;
+
+    // Immediately decrement attempt count in real-time as soon as user clicks Spin
+    setBalances((prev: any) => ({
+      ...prev,
+      [balanceKey]: Math.max(0, (prev[balanceKey] || 0) - 1)
+    }));
+
+    // Immediately update UI to spinning disabled state
     setIsSpinning(true);
 
     try {
@@ -291,11 +351,12 @@ export default function DailyRewardsScreen() {
       const targetOffset = 360 - (index * segmentAngle) - (segmentAngle / 2);
       const finalAngle = (currentSpins + spinsCount) * 360 + targetOffset;
 
-      setRotation(finalAngle);
       setWonReward(selectedReward);
+      // Trigger the 6.5s CSS rotation transition
+      setRotation(finalAngle);
 
       // Phase 2: Claim the reward in parallel while the wheel is spinning
-      const claimRes = await apiFetch("/api/retention/spin-wheel/claim", {
+      claimPromiseRef.current = apiFetch("/api/retention/spin-wheel/claim", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -303,46 +364,87 @@ export default function DailyRewardsScreen() {
           boss_id: searchParams.get("boss_id") || undefined,
           chapter_id: searchParams.get("chapter_id") || undefined
         })
-      });
-      const claimData = await claimRes.json();
+      })
+        .then(async (res) => {
+          if (!res.ok) {
+            const errJson = await res.json().catch(() => ({}));
+            throw new Error(errJson.detail || "Server failed to claim spin reward");
+          }
+          return res.json();
+        })
+        .then((claimData) => {
+          pendingClaimDataRef.current = claimData;
+          // Synchronize with server-authoritative balances as soon as received
+          if (claimData?.balances) {
+            setBalances(claimData.balances);
+          }
+          return claimData;
+        })
+        .catch((err) => {
+          console.error("Spin claim error:", err);
+          return null;
+        });
 
-      if (!claimRes.ok) {
-        throw new Error(claimData.detail || "Server failed to claim spin reward");
-      }
-
-      const finalBalances = claimData.balances;
-
-      if (claimData.user) {
-        const stored = localStorage.getItem("userData");
-        if (stored) {
-          const u = JSON.parse(stored);
-          u.coins = claimData.user.coins;
-          u.xp = claimData.user.xp;
-          u.level = claimData.user.level;
-          localStorage.setItem("userData", JSON.stringify(u));
-        }
-        window.dispatchEvent(new Event("userDataUpdated"));
-      }
-
-      setBalances(finalBalances);
-
-      // Animation duration: 6.5 seconds
-      setTimeout(() => {
-        setIsSpinning(false);
-        setShowModal(true);
-      }, 6500);
+      // Synchronized fallback timeout (6550ms = 6.5s animation + 50ms buffer)
+      // Guarantees modal opens immediately even if transitionend is missed
+      if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current);
+      fallbackTimerRef.current = setTimeout(() => {
+        handleSpinComplete();
+      }, 6550);
 
     } catch (e: any) {
+      // Rollback the immediate decrement if spin preview failed before spinning
+      setBalances((prev: any) => ({
+        ...prev,
+        [balanceKey]: (prev[balanceKey] || 0) + 1
+      }));
       setErrorMessage(e.message || "Something went wrong. Please check your connection.");
+      isSpinningRef.current = false;
       setIsSpinning(false);
     }
   };
 
   const handleClaim = () => {
     setShowModal(false);
+    isSpinningRef.current = false;
+
+    // Apply the final balances now that reward modal is closed and acknowledged
+    if (pendingClaimDataRef.current) {
+      const claimData = pendingClaimDataRef.current;
+      if (claimData.balances) {
+        setBalances(claimData.balances);
+      }
+      if (claimData.user) {
+        const stored = localStorage.getItem("userData");
+        if (stored) {
+          try {
+            const u = JSON.parse(stored);
+            u.coins = claimData.user.coins;
+            u.xp = claimData.user.xp;
+            u.level = claimData.user.level;
+            localStorage.setItem("userData", JSON.stringify(u));
+          } catch (e) {}
+        }
+        window.dispatchEvent(new Event("userDataUpdated"));
+      }
+      if (spinType === "boss_revival") {
+        const rewardToStore = claimData.reward || wonReward;
+        if (rewardToStore) {
+          sessionStorage.setItem("boss_revival_won_reward", JSON.stringify(rewardToStore));
+        }
+      }
+      pendingClaimDataRef.current = null;
+    } else if (spinType === "boss_revival" && wonReward) {
+      sessionStorage.setItem("boss_revival_won_reward", JSON.stringify(wonReward));
+    }
+
     if (spinType === "boss_revival") {
-      // Navigate back to resume boss battle
-      navigate(-1);
+      const returnTo = searchParams.get("returnTo");
+      if (returnTo) {
+        navigate(decodeURIComponent(returnTo), { replace: true });
+      } else {
+        navigate(-1);
+      }
     } else {
       fetchSpinStatus();
     }
@@ -403,7 +505,7 @@ export default function DailyRewardsScreen() {
               <button
                 key={tab.id}
                 onClick={() => {
-                  if (!isSpinning) {
+                  if (!isSpinning && !showModal) {
                     setSpinType(tab.id);
                     setErrorMessage("");
                   }
@@ -455,6 +557,11 @@ export default function DailyRewardsScreen() {
           {/* The Wheel */}
           <div 
             ref={wheelRef}
+            onTransitionEnd={(e) => {
+              if (e.target === wheelRef.current && e.propertyName === "transform" && isSpinningRef.current) {
+                handleSpinComplete();
+              }
+            }}
             style={{
               transform: `rotate(${rotation}deg)`,
               transition: isSpinning ? "transform 6.5s cubic-bezier(0.15, 0, 0.15, 1)" : "none"
@@ -544,17 +651,20 @@ export default function DailyRewardsScreen() {
 
         {/* Controls */}
         <div className="w-full space-y-3">
-          {getSpinBalance() > 0 ? (
+          {(isSpinning || showModal) ? (
+            <button
+              disabled={true}
+              className="w-full py-4 rounded-full font-black text-lg tracking-wider uppercase flex items-center justify-center gap-2 border bg-gradient-to-r from-violet-600 via-indigo-600 to-violet-600 text-white opacity-90 cursor-not-allowed border-violet-500/40 shadow-md"
+            >
+              {t('spinning', '🌀 Spinning...')}
+            </button>
+          ) : getSpinBalance() > 0 ? (
             <button
               onClick={startSpin}
-              disabled={isSpinning}
-              className={`w-full py-4 rounded-full font-black text-lg tracking-wider uppercase transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 border ${
-                isSpinning 
-                  ? "bg-gradient-to-r from-violet-600 via-indigo-600 to-violet-600 text-white opacity-90 cursor-not-allowed border-violet-500/40"
-                  : "bg-gradient-to-r from-violet-600 via-indigo-600 to-violet-600 hover:scale-[1.01] hover:shadow-[0_0_25px_rgba(124,58,237,0.6)] text-white border-violet-500/40 animate-pulse"
-              }`}
+              disabled={isSpinning || isBuying}
+              className="w-full py-4 rounded-full font-black text-lg tracking-wider uppercase transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 border bg-gradient-to-r from-violet-600 via-indigo-600 to-violet-600 hover:scale-[1.01] hover:shadow-[0_0_25px_rgba(124,58,237,0.6)] text-white border-violet-500/40 animate-pulse"
             >
-              {isSpinning ? t('spinning', '🌀 Spinning...') : t('spin', 'SPIN')}
+              {t('spin', 'SPIN')}
             </button>
           ) : (
             <button
@@ -576,70 +686,37 @@ export default function DailyRewardsScreen() {
       </main>
 
       {/* Buy Spin Confirmation Modal */}
-      <AnimatePresence>
-        {showBuyConfirmModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center px-6">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-slate-950/80 backdrop-blur-xs"
-              onClick={() => !isBuying && setShowBuyConfirmModal(false)}
-            />
-
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="relative bg-white w-full max-w-[360px] p-6 rounded-[32px] flex flex-col items-center text-center gap-5 border-2 border-amber-200 shadow-2xl overflow-hidden z-10 text-slate-950"
-            >
-              <div className="w-16 h-16 rounded-full bg-amber-100 border-2 border-amber-400 flex items-center justify-center shadow-inner">
-                <Gift className="w-8 h-8 text-amber-600" />
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="text-xl font-black text-slate-950">
-                  {t('confirm_spin_purchase', 'Buy Extra Spin?')}
-                </h3>
-                <p className="text-xs sm:text-sm font-semibold text-slate-600 leading-relaxed">
-                  {t('confirm_spin_purchase_desc', {
-                    cost: (spinType === "daily" || spinType === "boss_revival") ? 100 : 150,
-                    type: spinType.toUpperCase(),
-                    defaultValue: `Are you sure you want to spend ${(spinType === "daily" || spinType === "boss_revival") ? 100 : 150} coins to purchase 1 ${spinType.toUpperCase()} spin?`
-                  })}
-                </p>
-              </div>
-
-              <div className="w-full bg-amber-50 border border-amber-200 rounded-2xl p-3 flex justify-between items-center text-xs font-bold text-amber-900">
-                <span className="flex items-center gap-1.5">
-                  <span>🪙</span> {t('cost', 'Cost')}:
-                </span>
-                <span className="text-amber-700 font-extrabold text-sm">
-                  {(spinType === "daily" || spinType === "boss_revival") ? 100 : 150} Coins
-                </span>
-              </div>
-
-              <div className="w-full flex gap-3 pt-2">
-                <button
-                  onClick={() => setShowBuyConfirmModal(false)}
-                  disabled={isBuying}
-                  className="flex-1 py-3.5 rounded-full font-black text-sm uppercase tracking-wider text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all border border-slate-300"
-                >
-                  {t('cancel', 'Cancel')}
-                </button>
-                <button
-                  onClick={confirmAndBuySpin}
-                  disabled={isBuying}
-                  className="flex-1 py-3.5 rounded-full font-black text-sm uppercase tracking-wider text-white bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] hover:brightness-110 transition-all shadow-md border border-indigo-300/40 flex items-center justify-center gap-1.5"
-                >
-                  {isBuying ? t('purchasing', 'Buying...') : t('confirm', 'Confirm')}
-                </button>
-              </div>
-            </motion.div>
+      {/* Buy Spin Confirmation Modal */}
+      <UnifiedConfirmModal
+        isOpen={showBuyConfirmModal}
+        onClose={() => !isBuying && setShowBuyConfirmModal(false)}
+        onConfirm={confirmAndBuySpin}
+        title={t('confirm_spin_purchase', 'Buy Extra Spin?')}
+        message={
+          <div className="space-y-3">
+            <p className="text-xs sm:text-sm font-semibold text-slate-600 leading-relaxed">
+              {t('confirm_spin_purchase_desc', {
+                cost: (spinType === "daily" || spinType === "boss_revival") ? 100 : 150,
+                type: spinType.toUpperCase(),
+                defaultValue: `Are you sure you want to spend ${(spinType === "daily" || spinType === "boss_revival") ? 100 : 150} coins to purchase 1 ${spinType.toUpperCase()} spin?`
+              })}
+            </p>
+            <div className="w-full bg-amber-50 border border-amber-200 rounded-2xl p-3 flex justify-between items-center text-xs font-bold text-amber-900">
+              <span className="flex items-center gap-1.5">
+                <span>🪙</span> {t('cost', 'Cost')}:
+              </span>
+              <span className="text-amber-700 font-extrabold text-sm">
+                {(spinType === "daily" || spinType === "boss_revival") ? 100 : 150} Coins
+              </span>
+            </div>
           </div>
-        )}
-      </AnimatePresence>
+        }
+        confirmText={isBuying ? t('purchasing', 'Buying...') : t('confirm', 'Confirm')}
+        cancelText={t('cancel', 'Cancel')}
+        variant="primary"
+        loading={isBuying}
+        icon={<Gift className="w-8 h-8 text-[#141779]" />}
+      />
 
       {/* Winner Modal */}
       <AnimatePresence>

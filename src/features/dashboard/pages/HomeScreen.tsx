@@ -1,32 +1,41 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Bookmark, BookOpen, Brain, CheckCircle, ChevronRight, Clock, Gift, Map, Shield, Star, Bell, Crown, Gem, Swords, Trophy } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Bookmark, BookOpen, Brain, CheckCircle, ChevronRight, Clock, Gift, Map, Shield, Star, Bell, Crown, Gem, Swords, Trophy, Users, ChevronDown } from "lucide-react";
+import { useEffect, useState, useMemo, useCallback, lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { apiFetch } from "../../../api";
-import ChildSwitcherModal from "../../../components/ChildSwitcherModal";
 import AdventureHero from "../../../components/AdventureHero";
-import StreakModal from "../../../components/StreakModal";
+import { startNavigationProgress } from "../../../components/NavigationProgressBar";
+
+const ChildSwitcherModal = lazy(() => import("../../../components/ChildSwitcherModal"));
 
 export default function HomeScreen() {
-  const navigate = useNavigate();
+  const rawNavigate = useNavigate();
+  const navigate = useCallback((to: any, options?: any) => {
+    startNavigationProgress();
+    rawNavigate(to, options);
+  }, [rawNavigate]);
   const [searchParams] = useSearchParams();
   const { t } = useTranslation();
 
-  const [xp, setXp] = useState(0);
-  const [coins, setCoins] = useState(0);
-  const [childName, setChildName] = useState("Explorer");
-  const [childPhoto, setChildPhoto] = useState("");
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = useState<any>(() => {
+    try {
+      const raw = localStorage.getItem("userData");
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  });
+  const [xp, setXp] = useState<number>(() => userData?.xp || 0);
+  const [coins, setCoins] = useState<number>(() => userData?.coins || 0);
+  const [childName, setChildName] = useState<string>(() => userData?.childName || "Explorer");
+  const [childPhoto, setChildPhoto] = useState<string>(() => userData?.childPhoto || "");
+  const [userLevel, setUserLevel] = useState<number>(() => userData?.level || 1);
+  const [streakDays, setStreakDays] = useState<number>(() => userData?.streakDays || 0);
   const [showSwitcher, setShowSwitcher] = useState(false);
   const [showDailyMissionModal, setShowDailyMissionModal] = useState(false);
   const [questTab, setQuestTab] = useState<'all' | 'active' | 'completed'>('all');
 
-
   const [dailyLimitReached, setDailyLimitReached] = useState(false);
   const [todayCompletedCount, setTodayCompletedCount] = useState(0);
-  const [userLevel, setUserLevel] = useState(1);
-  const [streakDays, setStreakDays] = useState(0);
 
   const [missions, setMissions] = useState<any[]>([]);
   const [retentionStreak, setRetentionStreak] = useState<any>(null);
@@ -151,8 +160,14 @@ export default function HomeScreen() {
   };
 
   const [citiesData, setCitiesData] = useState<any[]>([]);
-  const [journeyData, setJourneyData] = useState<any>(null);
+  const [journeyData, setJourneyData] = useState<any>(() => {
+    try {
+      const raw = localStorage.getItem("cachedJourneyData");
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  });
   const [dailyHabitData, setDailyHabitData] = useState<any>(null);
+  const [isHabitLoading, setIsHabitLoading] = useState<boolean>(true);
 
   useEffect(() => {
     if (pendingSpinPopup) {
@@ -162,9 +177,17 @@ export default function HomeScreen() {
     }
   }, [pendingSpinPopup]);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (userDoc?: any) => {
     try {
-      const res = await apiFetch("/api/notifications");
+      const u = userDoc || userData || (() => {
+        try {
+          const stored = localStorage.getItem("userData");
+          return stored ? JSON.parse(stored) : null;
+        } catch (e) { return null; }
+      })();
+      const activeChildId = u?.activeChildId || u?.children?.[0]?.childId || u?.childId || "";
+      const notifUrl = `/api/notifications?role=child${activeChildId ? `&childId=${encodeURIComponent(activeChildId)}` : ""}`;
+      const res = await apiFetch(notifUrl);
       const json = await res.json();
       if (json.success && json.data) {
         setUnreadCount(json.data.filter((n: any) => !n.isRead).length);
@@ -226,118 +249,114 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
-    const cachedJ = localStorage.getItem("cachedJourneyData");
-    if (cachedJ) {
-      try {
-        setJourneyData(JSON.parse(cachedJ));
-      } catch (e) { }
-    }
-
-    const cached = localStorage.getItem("userData");
-    if (cached) {
-      try {
-        const u = JSON.parse(cached);
-        setUserData(u);
-        setXp(u.xp || 0);
-        setCoins(u.coins || 0);
-        setChildName(u.childName || "Explorer");
-        setChildPhoto(u.childPhoto || "");
-        setUserLevel(u.level || 1);
-        setStreakDays(u.streakDays || 0);
-        fetchJourneyData(u);
-      } catch (e) { }
-    }
+    let deferTimer: any = null;
 
     const loadAllDashboardData = async () => {
       const token = localStorage.getItem("userToken");
       if (!token) return;
 
+      // Stage 1 (Critical Above-The-Fold): Fetch profile, missions, and journey immediately
       const profilePromise = fetchProfile();
       const missionsPromise = fetchMissions();
-      const notificationsPromise = fetchNotifications();
-
-      const citiesPromise = (async () => {
-        try {
-          const cRes = await apiFetch("/api/practice/cities");
-          if (cRes.ok) {
-            const cData = await cRes.json();
-            if (cData.success && cData.data) {
-              setCitiesData(cData.data);
-            }
-          }
-        } catch (e) {
-          console.error("Failed to fetch cities", e);
-        }
-      })();
-
-      const spinWheelPromise = (async () => {
-        try {
-          const spinRes = await apiFetch("/api/retention/spin-wheel/status");
-          if (spinRes.ok) {
-            const spinData = await spinRes.json();
-            if (spinData && spinData.balances) {
-              const dailyCount = spinData.balances.daily_spins_balance || 0;
-              const hasSpin = dailyCount > 0 || (spinData.balances.event_spins_balance || 0) > 0;
-              setHasFreeSpin(hasSpin);
-
-              if (dailyCount > 0 && sessionStorage.getItem("dailySpinPopupShown") !== "true") {
-                setPendingSpinPopup(true);
-              }
-            }
-          }
-        } catch (e) {
-          console.error("Failed to fetch spin wheel status", e);
-        }
-      })();
-
-      const streakSequencePromise = (async () => {
-        try {
-          try {
-            const statusRes = await apiFetch("/api/retention/streak/status");
-            if (statusRes.ok) {
-              const sData = await statusRes.json();
-              if (sData.lostStreak) {
-                setStreakRevivalData(sData);
-                setShowRevivalModal(true);
-              }
-            }
-          } catch (e) { }
-
-          const stRes = await apiFetch("/api/retention/streak");
-          if (stRes.ok) {
-            const stData = await stRes.json();
-            setRetentionStreak(stData);
-          }
-        } catch (e) {
-          console.error("Failed to fetch streak info", e);
-        }
-      })();
-
       const journeyPromise = fetchJourneyData();
-      const dailyHabitPromise = (async () => {
-        try {
-          const res = await apiFetch("/api/practice/habits/daily");
-          if (res.ok) {
-            const json = await res.json();
-            if (json.success && json.data) {
-              setDailyHabitData(json.data);
-            }
-          }
-        } catch (e) {
-          console.error("Failed to fetch daily habit info", e);
-        }
-      })();
 
       await Promise.allSettled([
         profilePromise,
         missionsPromise,
-        notificationsPromise,
-        citiesPromise,
-        spinWheelPromise,
-        streakSequencePromise,
-        journeyPromise,
-        dailyHabitPromise
+        journeyPromise
       ]);
+
+      // Stage 2 (Deferred Background Work): Unblock the main thread to complete FCP & LCP paint
+      deferTimer = setTimeout(async () => {
+        try {
+          const notificationsPromise = fetchNotifications();
+
+          const citiesPromise = (async () => {
+            try {
+              const cRes = await apiFetch("/api/practice/cities");
+              if (cRes.ok) {
+                const cData = await cRes.json();
+                if (cData.success && cData.data) {
+                  setCitiesData(cData.data);
+                }
+              }
+            } catch (e) {
+              console.error("Failed to fetch cities", e);
+            }
+          })();
+
+          const spinWheelPromise = (async () => {
+            try {
+              const spinRes = await apiFetch("/api/retention/spin-wheel/status");
+              if (spinRes.ok) {
+                const spinData = await spinRes.json();
+                if (spinData && spinData.balances) {
+                  const dailyCount = spinData.balances.daily_spins_balance || 0;
+                  const hasSpin = dailyCount > 0 || (spinData.balances.event_spins_balance || 0) > 0;
+                  setHasFreeSpin(hasSpin);
+
+                  if (dailyCount > 0 && sessionStorage.getItem("dailySpinPopupShown") !== "true") {
+                    setPendingSpinPopup(true);
+                  }
+                }
+              }
+            } catch (e) {
+              console.error("Failed to fetch spin wheel status", e);
+            }
+          })();
+
+          const streakSequencePromise = (async () => {
+            try {
+              try {
+                const statusRes = await apiFetch("/api/retention/streak/status");
+                if (statusRes.ok) {
+                  const sData = await statusRes.json();
+                  if (sData.lostStreak) {
+                    setStreakRevivalData(sData);
+                    setShowRevivalModal(true);
+                  }
+                }
+              } catch (e) { }
+
+              const stRes = await apiFetch("/api/retention/streak");
+              if (stRes.ok) {
+                const stData = await stRes.json();
+                setRetentionStreak(stData);
+              }
+            } catch (e) {
+              console.error("Failed to fetch streak info", e);
+            }
+          })();
+
+          const dailyHabitPromise = (async () => {
+            try {
+              const res = await apiFetch("/api/practice/habits/daily");
+              if (res.ok) {
+                const json = await res.json();
+                if (json.success && json.data) {
+                  setDailyHabitData(json.data);
+                  return;
+                }
+              }
+              // Graceful fallback to Day 1 if response is not successful
+              setDailyHabitData((prev: any) => prev || { currentDay: 1, isCompletedToday: false });
+            } catch (e) {
+              console.error("Failed to fetch daily habit info", e);
+              setDailyHabitData((prev: any) => prev || { currentDay: 1, isCompletedToday: false });
+            } finally {
+              setIsHabitLoading(false);
+            }
+          })();
+
+          await Promise.allSettled([
+            notificationsPromise,
+            citiesPromise,
+            spinWheelPromise,
+            streakSequencePromise,
+            dailyHabitPromise
+          ]);
+        } catch (e) { }
+      }, 120);
     };
 
     loadAllDashboardData();
@@ -360,6 +379,8 @@ export default function HomeScreen() {
           setChildPhoto(u.childPhoto || "");
           setUserLevel(u.level || 1);
           setStreakDays(u.streakDays || 0);
+          fetchJourneyData(u);
+          fetchNotifications(u);
         } catch (e) {
           console.error("Failed to parse cached userData:", e);
         }
@@ -374,6 +395,7 @@ export default function HomeScreen() {
     const pollInterval = setInterval(fetchMissions, 10000);
 
     return () => {
+      if (deferTimer) clearTimeout(deferTimer);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('userDataUpdated', handleUserDataUpdated);
       clearInterval(pollInterval);
@@ -402,7 +424,59 @@ export default function HomeScreen() {
     }
   };
 
-  const activeMission = missions.find(m => m.status !== 'claimed') || missions[0];
+  const activeMission = useMemo(() => {
+    return missions.find(m => m.status !== 'claimed') || missions[0];
+  }, [missions]);
+
+  const displayMissions = useMemo(() => {
+    const rawList = (missions && missions.length > 0 ? missions : [
+      { seq: 1, id: "seq_1", title: t('answer_10_questions', 'Answer 10 Questions'), coin_reward: 10, xp_reward: 20, current_progress: 0, target_progress: 10, status: "pending", mission_type: "answer_questions" },
+      { seq: 2, id: "seq_2", title: t('win_1_boss_battle', 'Win 1 Boss Battle'), coin_reward: 15, xp_reward: 20, current_progress: 0, target_progress: 1, status: "pending", mission_type: "boss_win" },
+      { seq: 3, id: "seq_3", title: t('win_1_shadow_arena', 'Win 1 Shadow Arena Battle'), coin_reward: 50, xp_reward: 50, current_progress: 0, target_progress: 1, status: "pending", mission_type: "shadow_arena_win" }
+    ]);
+
+    const filteredList = rawList.filter((m) => {
+      const isDone = m.status === "completed";
+      if (questTab === 'completed') return isDone;
+      if (questTab === 'active') return !isDone;
+      return true;
+    });
+
+    const sortedList = [...filteredList].sort((a, b) => {
+      const isDoneA = a.status === "completed";
+      const isReadyA = a.status === "ready_to_claim" || (a.current_progress >= (a.target_progress || 1) && !isDoneA);
+      const isDoneB = b.status === "completed";
+      const isReadyB = b.status === "ready_to_claim" || (b.current_progress >= (b.target_progress || 1) && !isDoneB);
+
+      const orderA = isReadyA ? 0 : isDoneA ? 2 : 1;
+      const orderB = isReadyB ? 0 : isDoneB ? 2 : 1;
+      if (orderA !== orderB) return orderA - orderB;
+      return (a.seq || 0) - (b.seq || 0);
+    });
+
+    return sortedList.slice(0, 3);
+  }, [missions, questTab, t]);
+
+  const effectiveTheme = useMemo(() => {
+    const themeParam = searchParams.get("theme");
+    if (themeParam && ["dragon", "science", "social"].includes(themeParam)) return themeParam;
+    if (journeyData?.tierKey === "scientist") return "science";
+    if (journeyData?.tierKey === "social_proof") return "social";
+    if (journeyData?.tierKey === "dragon") return "dragon";
+
+    const childClassStr = userData?.childClass || "";
+    const match = childClassStr.match(/\d+/);
+    const classNum = match ? parseInt(match[0], 10) : 1;
+    if (classNum >= 8) return "social";
+    if (classNum >= 5) return "science";
+    return "dragon";
+  }, [searchParams, journeyData?.tierKey, userData?.childClass]);
+
+  const handleCtaClick = useCallback(() => {
+    startNavigationProgress();
+    navigate("/practice/journey-map");
+  }, [navigate]);
+  const handleMissionClick = useCallback(() => setShowDailyMissionModal(true), []);
 
   return (
     <div className="min-h-screen bg-[#f7f9fb] text-[#141779] font-sans relative overflow-x-hidden pb-3 max-w-md mx-auto">
@@ -410,106 +484,114 @@ export default function HomeScreen() {
       <div className="absolute bottom-[20%] -left-[25%] w-[320px] h-[320px] rounded-full bg-[rgba(20,23,121,0.05)] pointer-events-none" />
 
       {/* TOP HEADER */}
-      <header className="fixed top-0 left-0 right-0 max-w-md mx-auto flex items-center justify-between px-4 pt-3 pb-3 bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-2xl shadow-[0_4px_16px_rgba(20,23,121,0.05)] z-50 gap-2">
+      <header className="fixed top-0 left-0 right-0 max-w-md mx-auto flex items-center justify-between px-4 pt-3 pb-3 bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-2xl shadow-[0_4px_16px_rgba(20,23,121,0.05)] z-50 gap-2 select-none">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          <button
-            onClick={() => navigate("/profile")}
-            className="w-10 h-10 rounded-full border-2 border-indigo-100 overflow-hidden hover:opacity-90 transition-opacity shrink-0 bg-[#141779] shadow-xs"
-          >
-            {childPhoto ? (
-              <img
-                src={childPhoto}
-                alt="Avatar"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full bg-[#141779] text-white font-bold text-xs flex items-center justify-center">
-                {childName ? childName.slice(0, 2).toUpperCase() : "NR"}
-              </div>
-            )}
-          </button>
+          <div className="relative shrink-0">
+            <button
+              onClick={() => {
+                startNavigationProgress();
+                navigate("/profile");
+              }}
+              className="w-10 h-10 rounded-full border-2 border-indigo-100 overflow-hidden hover:opacity-90 active:scale-90 touch-manipulation transition-all shrink-0 bg-[#141779] shadow-xs block cursor-pointer"
+              aria-label="Profile Avatar"
+            >
+              {childPhoto ? (
+                <img
+                  src={childPhoto}
+                  alt="Avatar"
+                  width={40}
+                  height={40}
+                  loading="eager"
+                  decoding="async"
+                  // @ts-ignore fetchpriority for React 18
+                  fetchpriority="high"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-[#141779] text-white font-bold text-xs flex items-center justify-center">
+                  {childName ? childName.slice(0, 2).toUpperCase() : "NR"}
+                </div>
+              )}
+            </button>
+          </div>
           <div className="flex flex-col min-w-0 justify-center">
-            {/* Line 1: Child Name & Class Badge side-by-side on 1 line */}
-            <div className="flex items-center gap-1.5 min-w-0">
-              <h1 className="text-sm font-black text-slate-900 leading-tight truncate max-w-[130px]">{childName}</h1>
-              <span className="text-[10px] text-[#4f46e5] bg-[#eef2ff] font-black px-2 py-0.5 rounded-full border border-indigo-100 shrink-0 whitespace-nowrap">
+            {/* Line 1: Child Name (Full Width, No Truncation Cramming) */}
+            <div className="min-w-0">
+              <h1 className="text-sm font-black text-slate-900 leading-tight truncate">{childName}</h1>
+            </div>
+            {/* Line 2: Class Badge, Level & Switch Pill Button */}
+            <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+              <span className="text-[10px] text-[#4f46e5] bg-[#eef2ff] font-black px-1.5 py-0.5 rounded-full border border-indigo-100 shrink-0 whitespace-nowrap">
                 {userData?.childClass || t('class_10', { defaultValue: "Class 10" })}
               </span>
-            </div>
-            {/* Line 2: Explorer Level */}
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <span className="text-[11.5px] text-slate-400 font-extrabold whitespace-nowrap">
-                {t('explorer_level', { defaultValue: "Explorer Level" })} {userLevel}
+              <span className="text-[10.5px] text-slate-400 font-extrabold whitespace-nowrap">
+                Lvl {userLevel}
               </span>
+              {userData?.children && userData.children.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setShowSwitcher(true)}
+                  className="px-2 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-[#141779] rounded-full text-[9.5px] font-black border border-indigo-200/80 active:scale-95 transition-all shrink-0 cursor-pointer"
+                  title="Switch child profile"
+                >
+                  Switch
+                </button>
+              )}
             </div>
           </div>
         </div>
 
         {/* Currency & Streak Stats */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           <button
             onClick={() => setShowStreakModal(true)}
-            className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1.5 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
+            className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1 flex items-center justify-center hover:scale-105 active:scale-95 touch-manipulation transition-transform shadow-2xs cursor-pointer"
           >
-            <span className="text-[11px] font-black text-[#ea580c] leading-none">🔥 {retentionStreak?.currentStreak ?? streakDays ?? 0}</span>
+            <span className="text-[11px] font-black text-[#ea580c] leading-none whitespace-nowrap">🔥 {retentionStreak?.currentStreak ?? streakDays ?? 0}</span>
           </button>
           <button
-            onClick={() => navigate("/practice/inventory")}
-            className="bg-[#fffbeb] border border-amber-100/80 rounded-2xl px-2 py-1.5 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
+            onClick={() => {
+              startNavigationProgress();
+              navigate("/practice/inventory");
+            }}
+            className="bg-[#fffbeb] border border-amber-100/80 rounded-2xl px-2 py-1 flex items-center justify-center hover:scale-105 active:scale-90 touch-manipulation transition-transform shadow-2xs cursor-pointer"
           >
-            <span className="text-[11px] font-black text-[#b45309] leading-none">🪙 {coins || 0}</span>
+            <span className="text-[11px] font-black text-[#b45309] leading-none whitespace-nowrap">🪙 {coins || 0}</span>
           </button>
           <button
-            onClick={() => navigate("/notifications")}
-            className="w-9 h-9 rounded-2xl bg-slate-50 shadow-2xs flex items-center justify-center hover:bg-slate-100 transition-all shrink-0 border border-slate-100 relative"
+            onClick={() => {
+              startNavigationProgress();
+              navigate("/notifications");
+            }}
+            className="w-8 h-8 rounded-2xl bg-slate-50 shadow-2xs flex items-center justify-center hover:bg-slate-100 active:scale-90 touch-manipulation transition-all shrink-0 border border-slate-100 relative cursor-pointer"
           >
-            <Bell size={16} className="text-[#1c1970]" />
+            <Bell size={15} className="text-[#1c1970]" />
             {unreadCount > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border border-white pointer-events-none z-10">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
           </button>
-
         </div>
       </header>
 
       <main className="px-4 pt-[68px] flex flex-col gap-3.5 relative z-10">
         {/* 1. ADVENTURE HERO CARD */}
-        {(() => {
-          const effectiveTheme = (() => {
-            const themeParam = searchParams.get("theme");
-            if (themeParam && ["dragon", "science", "social"].includes(themeParam)) return themeParam;
-            if (journeyData?.tierKey === "scientist") return "science";
-            if (journeyData?.tierKey === "social_proof") return "social";
-            if (journeyData?.tierKey === "dragon") return "dragon";
-
-            const childClassStr = userData?.childClass || "";
-            const match = childClassStr.match(/\d+/);
-            const classNum = match ? parseInt(match[0], 10) : 1;
-            if (classNum >= 8) return "social";
-            if (classNum >= 5) return "science";
-            return "dragon";
-          })();
-
-          return (
-            <AdventureHero
-              themeKey={effectiveTheme}
-              xp={xp}
-              targetXp={1000}
-              currentLocationName={journeyData?.currentLocation || "Egg Village"}
-              destinationName={journeyData?.nextNodeName || "Forest Kingdom"}
-              journeyData={journeyData}
-              onCtaClick={() => navigate("/practice/journey-map")}
-              onMissionClick={() => setShowDailyMissionModal(true)}
-              missionTitle={activeMission?.title}
-              missionProgress={activeMission ? { current: activeMission.current_progress ?? activeMission.currentProgress ?? 0, total: activeMission.target_progress ?? activeMission.targetProgress ?? 10 } : undefined}
-              missionRewardText={activeMission ? `+${activeMission.xp_reward ?? activeMission.xpReward ?? 20} XP & ${activeMission.coin_reward ?? activeMission.coinReward ?? 10} Coins` : undefined}
-              missionXpReward={activeMission ? (activeMission.xp_reward ?? activeMission.xpReward ?? activeMission.xp) : undefined}
-              missionCoinReward={activeMission ? (activeMission.coin_reward ?? activeMission.coinReward ?? activeMission.coins) : undefined}
-            />
-          );
-        })()}
+        <AdventureHero
+          themeKey={effectiveTheme}
+          xp={xp}
+          targetXp={1000}
+          currentLocationName={journeyData?.currentLocation || "Egg Village"}
+          destinationName={journeyData?.nextNodeName || "Forest Kingdom"}
+          journeyData={journeyData}
+          onCtaClick={handleCtaClick}
+          onMissionClick={handleMissionClick}
+          missionTitle={activeMission?.title}
+          missionProgress={activeMission ? { current: activeMission.current_progress ?? activeMission.currentProgress ?? 0, total: activeMission.target_progress ?? activeMission.targetProgress ?? 10 } : undefined}
+          missionRewardText={activeMission ? `+${activeMission.xp_reward ?? activeMission.xpReward ?? 20} XP & ${activeMission.coin_reward ?? activeMission.coinReward ?? 10} Coins` : undefined}
+          missionXpReward={activeMission ? (activeMission.xp_reward ?? activeMission.xpReward ?? activeMission.xp) : undefined}
+          missionCoinReward={activeMission ? (activeMission.coin_reward ?? activeMission.coinReward ?? activeMission.coins) : undefined}
+        />
 
         {/* 2. SIX QUICK ACTION BENTO GRID (2x3 Cards with Continue Learning, Good Habits, Journey, My Collections, Brain Quest, Shadow Arena) */}
         <section className="grid grid-cols-2 gap-3">
@@ -540,7 +622,8 @@ export default function HomeScreen() {
 
           {/* Good Habits */}
           {(() => {
-            const currentHabitDay = dailyHabitData?.currentDay ?? 8;
+            const isLoading = isHabitLoading && !dailyHabitData;
+            const currentHabitDay = dailyHabitData?.currentDay || 1;
             const isCompletedToday = dailyHabitData?.isCompletedToday ?? false;
             const doneQuests = missions ? missions.filter((m: any) => m.status === 'completed' || m.status === 'claimed').length : (todayCompletedCount || 0);
             const totalQuests = missions?.length || 6;
@@ -565,78 +648,58 @@ export default function HomeScreen() {
                 <div className="mt-2">
                   <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('good_habits', 'Good Habits')}</h3>
                   <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-2 truncate">{t('daily_lessons_rewards', 'Daily lessons & rewards')}</p>
-                  <div className="space-y-1">
-                    <div className="text-[9.5px] font-extrabold text-slate-700 truncate">
-                      {habitsDoneText}
+                  {isLoading ? (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-orange-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse shrink-0" />
+                        <span className="animate-pulse truncate">{t('loading', 'Loading...')}</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-orange-100/80 rounded-full overflow-hidden">
+                        <div className="h-full bg-orange-300/60 rounded-full animate-pulse transition-all duration-500" style={{ width: '35%' }} />
+                      </div>
                     </div>
-                    <div className="w-full h-1.5 bg-orange-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-orange-400 rounded-full transition-all duration-500" style={{ width: `${habitsPct}%` }} />
+                  ) : (
+                    <div className="space-y-1">
+                      <div className="text-[9.5px] font-extrabold text-slate-700 truncate">
+                        {habitsDoneText}
+                      </div>
+                      <div className="w-full h-1.5 bg-orange-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-orange-400 rounded-full transition-all duration-500" style={{ width: `${habitsPct}%` }} />
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </button>
             );
           })()}
 
           {/* Journey */}
-          {(() => {
-            const nodesList = journeyData?.nodes || [];
-            const completedCount = nodesList.filter((n: any) => n.completed).length;
-            const totalStages = journeyData?.totalStages || (nodesList.length > 0 ? nodesList.length : 3);
-            const activeStageIndex = journeyData?.activeNodeIndex !== undefined
-              ? (journeyData.activeNodeIndex + 1)
-              : Math.min(completedCount + 1, totalStages);
-
-            const numDots = Math.min(Math.max(totalStages, 3), 6);
-            const dots = Array.from({ length: numDots }).map((_, idx) => {
-              if (nodesList.length > 0) {
-                return nodesList[idx]?.completed ?? (idx < completedCount);
-              }
-              return idx < completedCount;
-            });
-
-            const completedDots = dots.filter(Boolean).length;
-            const lineProgressPct = numDots > 1 ? (Math.min(completedDots, numDots - 1) / (numDots - 1)) * 100 : 0;
-
-            return (
-              <button
-                onClick={() => navigate("/practice/journey-map")}
-                className="bg-[#e6fbf7] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#b2f5ea]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group"
-              >
-                <div className="w-9 h-9 rounded-full bg-[#ccfbf1] flex items-center justify-center">
-                  <BookOpen size={18} className="text-[#0d9488]" />
-                </div>
-                <div className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
-                  <ChevronRight size={14} />
-                </div>
-                <div className="mt-2">
-                  <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('journey', 'Journey')}</h3>
-                  <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-1 truncate">{t('explorer_map', 'Explorer Map & Stages')}</p>
-
-                  <div className="relative flex items-center justify-between my-1 px-1">
-                    <div className="absolute left-2 right-2 top-1/2 -translate-y-1/2 h-1 bg-slate-200/90 rounded-full z-0" />
-                    <div
-                      className="absolute left-2 top-1/2 -translate-y-1/2 h-1 bg-[#10b981] rounded-full z-0 transition-all duration-500"
-                      style={{ width: `calc(${lineProgressPct}% * (100% - 16px) / 100)` }}
-                    />
-                    {dots.map((isDone, i) => (
-                      <span
-                        key={i}
-                        className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8.5px] font-black z-10 transition-colors shadow-2xs ${isDone ? "bg-[#10b981] text-white" : "bg-slate-300 text-white"
-                          }`}
-                      >
-                        {isDone ? "✓" : "?"}
-                      </span>
-                    ))}
-                  </div>
-
-                  <span className="text-[9.5px] font-black text-slate-500 block mt-0.5 truncate">
-                    {t('stage_progress', { stage: activeStageIndex, total: totalStages, defaultValue: `Stage ${activeStageIndex} of ${totalStages}` })}
+          <button
+            onClick={() => navigate("/practice/journey-map")}
+            className="bg-[#e6fbf7] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#b2f5ea]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group"
+          >
+            <div className="w-9 h-9 rounded-full bg-[#ccfbf1] flex items-center justify-center">
+              <BookOpen size={18} className="text-[#0d9488]" />
+            </div>
+            <div className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
+              <ChevronRight size={14} />
+            </div>
+            <div className="mt-2">
+              <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('journey', 'Journey')}</h3>
+              <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-2 truncate">{t('explorer_map', 'Explorer Map & Stages')}</p>
+              <div className="space-y-1">
+                <div className="text-[9.5px] font-extrabold text-[#0d9488] truncate flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#0d9488] shrink-0" />
+                  <span className="truncate">
+                    {t('adventure_quest_map', 'Adventure Quest Map')}
                   </span>
                 </div>
-              </button>
-            );
-          })()}
+                <div className="w-full h-1.5 bg-[#ccfbf1] rounded-full overflow-hidden">
+                  <div className="h-full bg-[#0d9488] rounded-full transition-all duration-500" style={{ width: '60%' }} />
+                </div>
+              </div>
+            </div>
+          </button>
 
           {/* My Collections */}
           <button
@@ -829,34 +892,7 @@ export default function HomeScreen() {
                   style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
                 >
                   {(() => {
-                    const rawList = (missions && missions.length > 0 ? missions : [
-                      { seq: 1, id: "seq_1", title: t('answer_10_questions', 'Answer 10 Questions'), coin_reward: 10, xp_reward: 20, current_progress: 0, target_progress: 10, status: "pending", mission_type: "answer_questions" },
-                      { seq: 2, id: "seq_2", title: t('win_1_boss_battle', 'Win 1 Boss Battle'), coin_reward: 15, xp_reward: 20, current_progress: 0, target_progress: 1, status: "pending", mission_type: "boss_win" },
-                      { seq: 3, id: "seq_3", title: t('win_1_shadow_arena', 'Win 1 Shadow Arena Battle'), coin_reward: 50, xp_reward: 50, current_progress: 0, target_progress: 1, status: "pending", mission_type: "shadow_arena_win" }
-                    ]);
-
-                    const filteredList = rawList.filter((m) => {
-                      const isDone = m.status === "completed";
-                      if (questTab === 'completed') return isDone;
-                      if (questTab === 'active') return !isDone;
-                      return true;
-                    });
-
-                    const sortedList = [...filteredList].sort((a, b) => {
-                      const isDoneA = a.status === "completed";
-                      const isReadyA = a.status === "ready_to_claim" || (a.current_progress >= (a.target_progress || 1) && !isDoneA);
-                      const isDoneB = b.status === "completed";
-                      const isReadyB = b.status === "ready_to_claim" || (b.current_progress >= (b.target_progress || 1) && !isDoneB);
-
-                      const orderA = isReadyA ? 0 : isDoneA ? 2 : 1;
-                      const orderB = isReadyB ? 0 : isDoneB ? 2 : 1;
-                      if (orderA !== orderB) return orderA - orderB;
-                      return (a.seq || 0) - (b.seq || 0);
-                    });
-
-                    const displayList = sortedList.slice(0, 3);
-
-                    if (displayList.length === 0) {
+                    if (displayMissions.length === 0) {
                       return (
                         <div className="py-8 text-center text-slate-500 font-bold text-sm">
                           {questTab === 'completed'
@@ -866,7 +902,7 @@ export default function HomeScreen() {
                       );
                     }
 
-                    return displayList.map((mission) => {
+                    return displayMissions.map((mission) => {
                       const isDone = mission.status === "completed";
                       const isReady = mission.status === "ready_to_claim" || (mission.current_progress >= (mission.target_progress || 1) && !isDone);
                       const cur = mission.current_progress || 0;
@@ -1051,13 +1087,6 @@ export default function HomeScreen() {
         )}
       </AnimatePresence>
 
-      <ChildSwitcherModal
-        isOpen={showSwitcher}
-        onClose={() => setShowSwitcher(false)}
-        user={userData}
-        onUserUpdated={(u) => setUserData(u)}
-      />
-
       <AnimatePresence>
         {showStreakModal && (() => {
           const currentStreakVal = Number(retentionStreak?.currentStreak ?? streakDays ?? 0);
@@ -1185,7 +1214,7 @@ export default function HomeScreen() {
               <button
                 onClick={handleOpenRevivalConfirm}
                 disabled={revivalLoading}
-                className="w-full py-3.5 px-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 active:scale-95 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg border border-amber-300/40 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                className="w-full py-3.5 px-4 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] hover:brightness-110 active:scale-95 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-[#141779]/20 border border-indigo-200/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
               >
                 <span>🔥 Pay {streakRevivalData.reviveCost} Coins to Revive</span>
               </button>
@@ -1195,7 +1224,7 @@ export default function HomeScreen() {
                 disabled={revivalLoading}
                 className="w-full py-3 px-4 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-600 font-bold text-xs rounded-2xl transition-all"
               >
-                Start Fresh 🔄
+                Start Fresh
               </button>
             </div>
           </div>
@@ -1219,9 +1248,9 @@ export default function HomeScreen() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="relative bg-white w-full max-w-[360px] p-6 rounded-[32px] flex flex-col items-center text-center gap-5 border-2 border-amber-300 shadow-2xl overflow-hidden z-10 text-slate-950"
+              className="relative bg-white w-full max-w-[360px] p-6 rounded-[32px] flex flex-col items-center text-center gap-5 border-2 border-indigo-100 shadow-2xl overflow-hidden z-10 text-slate-950"
             >
-              <div className="w-16 h-16 rounded-full bg-amber-100 border-2 border-amber-400 flex items-center justify-center text-3xl shadow-inner">
+              <div className="w-16 h-16 rounded-full bg-indigo-50 border-2 border-indigo-200 flex items-center justify-center text-3xl shadow-inner">
                 🔥
               </div>
 
@@ -1230,13 +1259,13 @@ export default function HomeScreen() {
                   Confirm Streak Revival
                 </h3>
                 <p className="text-xs sm:text-sm font-semibold text-slate-600 leading-relaxed">
-                  Spend <span className="font-extrabold text-amber-600">{streakRevivalData.reviveCost} Coins</span> to restore your <span className="font-extrabold text-slate-900">{streakRevivalData.previousStreak}-day streak</span>?
+                  Spend <span className="font-extrabold text-[#141779]">{streakRevivalData.reviveCost} Coins</span> to restore your <span className="font-extrabold text-slate-900">{streakRevivalData.previousStreak}-day streak</span>?
                 </p>
               </div>
 
-              <div className="w-full bg-amber-50 border border-amber-200 rounded-2xl p-3 flex justify-between items-center text-xs font-bold text-amber-900">
+              <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 flex justify-between items-center text-xs font-bold text-slate-900">
                 <span>🪙 Cost:</span>
-                <span className="text-amber-700 font-extrabold text-sm">{streakRevivalData.reviveCost} Coins</span>
+                <span className="text-[#141779] font-extrabold text-sm">{streakRevivalData.reviveCost} Coins</span>
               </div>
 
               <div className="w-full flex gap-3 pt-2">
@@ -1250,7 +1279,7 @@ export default function HomeScreen() {
                 <button
                   onClick={handleReviveStreak}
                   disabled={revivalLoading}
-                  className="flex-1 py-3.5 rounded-full font-black text-xs uppercase tracking-wider text-white bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 transition-all shadow-md border border-amber-300 flex items-center justify-center gap-1.5"
+                  className="flex-1 py-3.5 rounded-full font-black text-xs uppercase tracking-wider text-white bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] hover:brightness-110 transition-all shadow-md shadow-[#141779]/20 border border-indigo-300/40 flex items-center justify-center gap-1.5"
                 >
                   {revivalLoading ? "Reviving..." : "Confirm & Pay"}
                 </button>
@@ -1259,6 +1288,25 @@ export default function HomeScreen() {
           </div>
         )}
       </AnimatePresence>
+
+      {showSwitcher && (
+        <Suspense fallback={null}>
+          <ChildSwitcherModal
+            isOpen={showSwitcher}
+            onClose={() => setShowSwitcher(false)}
+            user={userData}
+            onUserUpdated={(updated) => {
+              setUserData(updated);
+              localStorage.setItem("userData", JSON.stringify(updated));
+              window.dispatchEvent(new Event("userDataUpdated"));
+            }}
+            onSwitched={() => {
+              fetchProfile();
+              fetchMissions();
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

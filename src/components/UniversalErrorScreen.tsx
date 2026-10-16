@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
 import {
   Rocket,
   ServerOff,
@@ -207,11 +206,8 @@ export default function UniversalErrorScreen({
       {/* Background Ambient Radial Glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#141779]/5 rounded-full blur-[100px] pointer-events-none" />
 
-      <motion.div
-        initial={{ opacity: 0, y: 15, scale: 0.96 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.3, ease: "easeOut" }}
-        className="relative z-10 flex flex-col items-center max-w-md w-full"
+      <div
+        className="relative z-10 flex flex-col items-center max-w-md w-full animate-in fade-in zoom-in-95 duration-300"
       >
         {/* Rounded Icon Housing Container matching image aesthetic */}
         <div className="w-24 h-24 bg-[#eceef0] rounded-full flex items-center justify-center mb-6 shadow-sm border border-[#e2e5e9] relative transition-transform duration-300 hover:scale-105">
@@ -252,52 +248,9 @@ export default function UniversalErrorScreen({
             </button>
           )}
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }
 
-/**
- * Universal React Error Boundary Component
- * Wraps any component tree to catch runtime errors and render the 500 UniversalErrorScreen state cleanly.
- */
-export class UniversalErrorBoundary extends React.Component<
-  { children: React.ReactNode; fallback?: React.ReactNode },
-  { hasError: boolean; error?: Error }
-> {
-  constructor(props: { children: React.ReactNode; fallback?: React.ReactNode }) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("UniversalErrorBoundary caught a runtime error:", error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      if (this.props.fallback) {
-        return this.props.fallback;
-      }
-      return (
-        <UniversalErrorScreen
-          statusCode={500}
-          onRetry={() => {
-            this.setState({ hasError: false, error: undefined });
-            window.location.reload();
-          }}
-          onHome={() => {
-            this.setState({ hasError: false, error: undefined });
-            window.location.href = "/home";
-          }}
-        />
-      );
-    }
-
-    return this.props.children;
-  }
-}
+export { UniversalErrorBoundary } from "./UniversalErrorBoundary";

@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { Menu, VolumeX, Heart, Star, ShieldCheck, Gift, Ear, Sparkles, BookOpen, Lock, TrendingUp, Settings, ArrowLeft, Flame } from "lucide-react";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
+import StreakModal from "../../../components/StreakModal";
+import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
+import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
 
 export default function ParentChallengesScreen() {
   const { t, i18n } = useTranslation();
@@ -19,6 +22,7 @@ export default function ParentChallengesScreen() {
   const [totalActive, setTotalActive] = useState(3);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showStreakModal, setShowStreakModal] = useState(false);
 
   const translateChalTitle = (title: string) => {
     if (!title) return "";
@@ -72,7 +76,7 @@ export default function ParentChallengesScreen() {
         const jsonUser = await resUser.json();
         if (jsonUser.success && jsonUser.data?.user) {
           setLevel(jsonUser.data.user.parentLevel || 1);
-          setStreak(jsonUser.data.user.parentStreak ?? jsonUser.data.user.streakDays ?? 0);
+          setStreak(jsonUser.data.user.parentStreak ?? 0);
           setTotalXP(jsonUser.data.user.parentXp || 0);
           setUsername(jsonUser.data.user.parentName || jsonUser.data.user.username || "Parent");
           setProfilePic(jsonUser.data.user.parentPhoto || "");
@@ -126,7 +130,13 @@ export default function ParentChallengesScreen() {
         setClaimState(prev => ({ ...prev, [id]: "claimed" }));
         setTotalXP(prev => prev + xp);
         
-        setToastMessage(t("xp_increased_count", { count: xp, defaultValue: `${xp} XP increased!` }));
+        const msg = t("xp_increased_count", { count: xp, defaultValue: `${xp} XP increased!` });
+        setToastMessage(msg);
+        showNotificationToast({
+          title: "Challenge Reward",
+          message: msg,
+          type: "gamification"
+        });
       } else {
         setClaimState(prev => ({ ...prev, [id]: "idle" }));
       }
@@ -215,48 +225,18 @@ export default function ParentChallengesScreen() {
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      {/* Reward Pop-up Modal */}
-      {toastMessage && (
-        <div className="fixed inset-0 bg-[#f7f9fb]/90 backdrop-blur-sm z-[9999] flex flex-col items-center justify-center p-6 text-center font-sans">
-          <div className="bg-[#141779] border border-[#1f239c] rounded-[32px] p-6 sm:p-8 max-w-sm w-full shadow-[0_20px_50px_rgba(20,23,121,0.3)] flex flex-col items-center relative overflow-hidden">
-            {/* Decorative ambient background glows */}
-            <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-amber-400/10 blur-2xl pointer-events-none" />
-            <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full bg-teal-400/10 blur-2xl pointer-events-none" />
-
-            {/* Icon Header */}
-            <div className="relative mb-4 z-10">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/10 border border-white/20 flex items-center justify-center shadow-lg backdrop-blur-xs">
-                <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 text-amber-400 animate-pulse" />
-              </div>
-              <span className="absolute -bottom-1 -right-1 text-lg sm:text-xl">🎉</span>
-            </div>
-
-            {/* Badge */}
-            <span className="px-3.5 py-1 bg-amber-400 text-[#141779] font-black text-[11px] rounded-full uppercase tracking-wider mb-3 shadow-sm z-10">
-              {t("reward_claimed_badge", "Reward Claimed! 🏆")}
-            </span>
-
-            {/* Title */}
-            <h1 className="text-white text-xl sm:text-2xl font-black mb-2 tracking-tight z-10">
-              {t("xp_increased_title", "XP Increased!")}
-            </h1>
-
-            {/* Description */}
-            <p className="text-blue-100/90 text-sm leading-relaxed mb-5 font-bold z-10">
-              {toastMessage}
-            </p>
-
-            <div className="w-full flex flex-col gap-2.5 z-10">
-              <button 
-                onClick={() => setToastMessage(null)} 
-                className="w-full bg-gradient-to-r from-[#007168] to-[#004e48] text-white py-3 rounded-2xl font-extrabold shadow-lg hover:scale-[1.02] active:scale-95 transition-all text-xs sm:text-sm flex items-center justify-center gap-2 border border-white/15"
-              >
-                <span>{t("awesome", "Awesome!")}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Unified Reward Pop-up Modal */}
+      <UnifiedConfirmModal
+        isOpen={Boolean(toastMessage)}
+        onClose={() => setToastMessage(null)}
+        onConfirm={() => setToastMessage(null)}
+        title={t("xp_increased_title", "XP Increased!")}
+        message={toastMessage || ""}
+        confirmText={t("awesome", "Awesome!")}
+        showCancel={false}
+        variant="success"
+        icon={<Sparkles size={30} className="text-emerald-600 animate-pulse" />}
+      />
 
       {/* Top App Bar */}
       <header className="w-full sticky top-0 z-50 bg-white/90 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex justify-between items-center px-6 py-3.5">
@@ -289,10 +269,13 @@ export default function ParentChallengesScreen() {
                 <p className="text-[#e0e0ff] text-xs font-bold tracking-widest uppercase">{t("level_explorer_upper", { level, defaultValue: `LEVEL ${level} EXPLORER` })}</p>
                 <h2 className="text-3xl font-bold">{totalXP} XP</h2>
               </div>
-              <div className="bg-white/20 backdrop-blur-md rounded-full px-3 py-1 flex items-center gap-2 border border-white/30">
+              <button 
+                onClick={() => setShowStreakModal(true)}
+                className="bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-full px-3 py-1 flex items-center gap-2 border border-white/30 cursor-pointer active:scale-95 transition-all"
+              >
                 <span className="text-orange-400">🔥</span>
                 <span className="font-bold text-sm">{t("day_streak", { days: streak, streak, count: streak, defaultValue: `${streak} Day Streak` })}</span>
-              </div>
+              </button>
             </div>
             
             {/* XP Progress Bar */}
@@ -503,6 +486,11 @@ export default function ParentChallengesScreen() {
         )}
       </main>
 
+      <StreakModal
+        isOpen={showStreakModal}
+        onClose={() => setShowStreakModal(false)}
+        streakDays={streak}
+      />
     </div>
   );
 }

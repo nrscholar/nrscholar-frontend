@@ -1,15 +1,21 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Rocket, Sun, Compass, Globe, Moon, CheckCircle, Lock, Bell, Sparkles, Trophy, ChevronRight } from "lucide-react";
+import { ArrowLeft, Rocket, Sun, Compass, Globe, Moon, CheckCircle, Lock, Bell, Sparkles, Trophy, ChevronRight, Crown } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
 import { prefetchPdf } from "../../../utils/pdfCache";
 import StreakModal from "../../../components/StreakModal";
 import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
+import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
+import { startNavigationProgress } from "../../../components/NavigationProgressBar";
 
 export default function ChaptersScreen() {
-  const navigate = useNavigate();
+  const rawNavigate = useNavigate();
+  const navigate = useCallback((to: any, options?: any) => {
+    startNavigationProgress();
+    rawNavigate(to, options);
+  }, [rawNavigate]);
   const { t } = useTranslation();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
@@ -18,7 +24,11 @@ export default function ChaptersScreen() {
   const getInitialSubjects = () => {
     try {
       const cached = sessionStorage.getItem("cached_practice_subjects");
-      return cached ? JSON.parse(cached) : [];
+      if (!cached) return [];
+      const parsed = JSON.parse(cached);
+      return Array.isArray(parsed)
+        ? parsed.filter((s: any) => (s.totalChapters === undefined || s.totalChapters > 0) && s.hasContent !== false && s.isactive !== 0)
+        : [];
     } catch (e) { return []; }
   };
 
@@ -37,16 +47,45 @@ export default function ChaptersScreen() {
     } catch (e) { return []; }
   };
 
+  const getInitialProgressMap = (): Record<string, any> => {
+    try {
+      const cached = sessionStorage.getItem("cached_chapter_progress");
+      return cached ? JSON.parse(cached) : {};
+    } catch (e) { return {}; }
+  };
+
+  const getInitialCompletedChapters = (): string[] => {
+    try {
+      const cached = sessionStorage.getItem("cached_completed_chapters");
+      const list: string[] = cached ? JSON.parse(cached) : [];
+      const cachedProg = sessionStorage.getItem("cached_chapter_progress");
+      const progMap = cachedProg ? JSON.parse(cachedProg) : null;
+      if (progMap && Array.isArray(list)) {
+        return list.filter(id => {
+          const rawId = id.replace(/_hard$/, "");
+          const p = progMap[rawId] || progMap[id];
+          if (p && Array.isArray(p.completedMissions) && p.completedMissions.length > 0) {
+            return p.completedMissions.length >= 5;
+          }
+          return true;
+        });
+      }
+      return list;
+    } catch (e) { return []; }
+  };
+
   const initialSubjects = getInitialSubjects();
   const initialActive = getInitialActiveSubject();
   const initialChapters = getInitialChapters(initialActive?._id);
+  const initialProgressMap = getInitialProgressMap();
+  const initialCompletedChapters = getInitialCompletedChapters();
 
   const [subjects, setSubjects] = useState<any[]>(initialSubjects);
   const [activeSubject, setActiveSubject] = useState<any>(initialActive);
   const [chapters, setChapters] = useState<any[]>(initialChapters);
   const [loading, setLoading] = useState(initialChapters.length === 0);
-  const [completedChapters, setCompletedChapters] = useState<string[]>([]);
-  const [chapterProgressMap, setChapterProgressMap] = useState<Record<string, any>>({});
+  const [completedChapters, setCompletedChapters] = useState<string[]>(initialCompletedChapters);
+  const [chapterProgressMap, setChapterProgressMap] = useState<Record<string, any>>(initialProgressMap);
   const [childName, setChildName] = useState("Kid");
   const [childPhoto, setChildPhoto] = useState("");
   const [childClass, setChildClass] = useState("");
@@ -59,6 +98,66 @@ export default function ChaptersScreen() {
   const [showStreakModal, setShowStreakModal] = useState(false);
 
   const activeSubjectRef = useRef<string | null>(initialActive?._id || null);
+
+  const processProgressData = useCallback((pList: any[]) => {
+    const progMap: Record<string, any> = {};
+    const completedIds: string[] = [];
+
+    if (Array.isArray(pList)) {
+      pList.forEach((p: any) => {
+        if (!p || !p.chapterId) return;
+        const chIdStr = String(p.chapterId);
+        const mList = Array.isArray(p.completedMissions) ? p.completedMissions : [];
+
+        // Strict Mission Logic: A chapter is ONLY complete when all 5 missions are finished
+        let isDone = false;
+        if (mList.length > 0) {
+          isDone = mList.length >= 5 && p.chapterCompleted !== false;
+        } else {
+          isDone = Boolean(
+            p.chapterCompleted === true &&
+            p.completed === true &&
+            p.questionsCompleted === true
+          );
+        }
+
+        const normalizedP = {
+          ...p,
+          chapterCompleted: isDone,
+          completed: isDone,
+          completedMissions: mList
+        };
+
+        progMap[chIdStr] = normalizedP;
+        progMap[p.chapterId] = normalizedP;
+
+        if (isDone) {
+          if (!completedIds.includes(chIdStr)) completedIds.push(chIdStr);
+          if (!completedIds.includes(`${chIdStr}_hard`)) completedIds.push(`${chIdStr}_hard`);
+        }
+      });
+    }
+
+    return { progMap, completedIds };
+  }, []);
+
+  const fetchChapterProgress = useCallback(async () => {
+    try {
+      const pRes = await apiFetch("/api/practice/chapter-progress").catch(() => null);
+      if (pRes?.ok) {
+        const pData = await pRes.json().catch(() => null);
+        if (pData?.success && Array.isArray(pData.data)) {
+          const { progMap, completedIds } = processProgressData(pData.data);
+          setChapterProgressMap(progMap);
+          setCompletedChapters(completedIds);
+          sessionStorage.setItem("cached_chapter_progress", JSON.stringify(progMap));
+          sessionStorage.setItem("cached_completed_chapters", JSON.stringify(completedIds));
+        }
+      }
+    } catch (e) {
+      console.error("Failed to fetch chapter progress", e);
+    }
+  }, [processProgressData]);
 
   const handleSelectSubject = (sub: any) => {
     if (!sub || sub._id === activeSubject?._id) return;
@@ -85,9 +184,111 @@ export default function ChaptersScreen() {
     });
   };
 
+  const fetchSubjects = useCallback(async () => {
+    // 1. Read cached user data instantly
+    const cachedUser = localStorage.getItem("userData");
+    if (cachedUser) {
+      try {
+        const u = JSON.parse(cachedUser);
+        setChildName(u.childName || u.name || "Kid");
+        setChildPhoto(u.childPhoto || u.photo || "");
+        setChildClass(u.childClass || u.class_name || u.className || "");
+        setStreakDays(u.streakDays || u.streak_days || u.streak || 0);
+        setCoins(u.coins || u.xp || 0);
+        setIsSubscribed(Boolean(u.is_subscribed || u.isSubscribed));
+      } catch (e) { }
+    }
+
+    // 2. Parallel background fetch for user, notifications, subjects, and controls
+    try {
+      const [meRes, notifRes, subRes, controlsRes] = await Promise.all([
+        apiFetch("/api/users/me").catch(() => null),
+        apiFetch("/api/notifications").catch(() => null),
+        apiFetch("/api/practice/subjects").catch(() => null),
+        apiFetch("/api/parent/controls").catch(() => null)
+      ]);
+
+      if (meRes?.ok) {
+        try {
+          const meJson = await meRes.json();
+          if (meJson.success && meJson.data?.user) {
+            const u = meJson.data.user;
+            localStorage.setItem("userData", JSON.stringify(u));
+            setChildName(u.childName || u.name || "Kid");
+            setChildPhoto(u.childPhoto || u.photo || "");
+            setChildClass(u.childClass || u.class_name || u.className || "");
+            setStreakDays(u.streakDays || u.streak_days || u.streak || 0);
+            setCoins(u.coins || u.xp || 0);
+            setIsSubscribed(Boolean(u.is_subscribed || u.isSubscribed));
+          }
+        } catch (e) { }
+      }
+
+      if (notifRes?.ok) {
+        try {
+          const notifData = await notifRes.json();
+          if (notifData.success && notifData.data) {
+            setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
+          }
+        } catch (e) { }
+      }
+
+      let subData: any = { success: false, data: [] };
+      if (subRes?.ok) {
+        try { subData = await subRes.json(); } catch (e) { }
+      }
+
+      let controlsData: any = { success: false };
+      if (controlsRes?.ok) {
+        try { controlsData = await controlsRes.json(); } catch (e) { }
+      }
+
+      let restricted: Record<string, boolean> = {};
+      if (controlsData?.success && controlsData.data?.parentControls?.restrictedSubjects) {
+        restricted = controlsData.data.parentControls.restrictedSubjects;
+      }
+
+      if (subData?.success && Array.isArray(subData.data) && subData.data.length > 0) {
+        const allowedSubjects = subData.data.filter((s: any) => {
+          if (restricted[s.name] || restricted[s.subject]) return false;
+          if (s.totalChapters !== undefined && s.totalChapters <= 0) return false;
+          if (s.hasContent === false) return false;
+          if (s.isactive === 0) return false;
+          return true;
+        });
+
+        if (allowedSubjects.length > 0) {
+          setSubjects(allowedSubjects);
+          sessionStorage.setItem("cached_practice_subjects", JSON.stringify(allowedSubjects));
+          const savedSubjectId = sessionStorage.getItem("activeSubjectId");
+          const found = allowedSubjects.find((s: any) => s._id === savedSubjectId) || allowedSubjects[0];
+          setActiveSubject((prev: any) => {
+            if (prev?._id === found._id) return prev;
+            return found;
+          });
+          activeSubjectRef.current = found._id;
+          sessionStorage.setItem("activeSubjectId", found._id);
+        } else {
+          setSubjects([]);
+          setLoading(false);
+        }
+      } else {
+        if (subjects.length === 0) {
+          setSubjects([]);
+          setLoading(false);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to fetch subjects", e);
+      setLoading(false);
+    }
+  }, [subjects.length]);
+
   useEffect(() => {
-    const fetchSubjects = async () => {
-      // 1. Read cached user data instantly
+    fetchSubjects();
+    fetchChapterProgress();
+
+    const handleUserDataUpdate = () => {
       const cachedUser = localStorage.getItem("userData");
       if (cachedUser) {
         try {
@@ -98,91 +299,28 @@ export default function ChaptersScreen() {
           setStreakDays(u.streakDays || u.streak_days || u.streak || 0);
           setCoins(u.coins || u.xp || 0);
           setIsSubscribed(Boolean(u.is_subscribed || u.isSubscribed));
-        } catch (e) { }
+        } catch (e) {}
       }
+      fetchSubjects();
+      fetchChapterProgress();
+    };
 
-      // 2. Parallel background fetch for user, notifications, subjects, and controls
-      try {
-        const [meRes, notifRes, subRes, controlsRes] = await Promise.all([
-          apiFetch("/api/users/me").catch(() => null),
-          apiFetch("/api/notifications").catch(() => null),
-          apiFetch("/api/practice/subjects").catch(() => null),
-          apiFetch("/api/parent/controls").catch(() => null)
-        ]);
-
-        if (meRes?.ok) {
-          try {
-            const meJson = await meRes.json();
-            if (meJson.success && meJson.data?.user) {
-              const u = meJson.data.user;
-              localStorage.setItem("userData", JSON.stringify(u));
-              setChildName(u.childName || u.name || "Kid");
-              setChildPhoto(u.childPhoto || u.photo || "");
-              setChildClass(u.childClass || u.class_name || u.className || "");
-              setStreakDays(u.streakDays || u.streak_days || u.streak || 0);
-              setCoins(u.coins || u.xp || 0);
-              setIsSubscribed(Boolean(u.is_subscribed || u.isSubscribed));
-            }
-          } catch (e) { }
-        }
-
-        if (notifRes?.ok) {
-          try {
-            const notifData = await notifRes.json();
-            if (notifData.success && notifData.data) {
-              setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
-            }
-          } catch (e) { }
-        }
-
-        let subData: any = { success: false, data: [] };
-        if (subRes?.ok) {
-          try { subData = await subRes.json(); } catch (e) { }
-        }
-
-        let controlsData: any = { success: false };
-        if (controlsRes?.ok) {
-          try { controlsData = await controlsRes.json(); } catch (e) { }
-        }
-
-        let restricted: Record<string, boolean> = {};
-        if (controlsData?.success && controlsData.data?.parentControls?.restrictedSubjects) {
-          restricted = controlsData.data.parentControls.restrictedSubjects;
-        }
-
-        if (subData?.success && Array.isArray(subData.data) && subData.data.length > 0) {
-          const allowedSubjects = subData.data.filter((s: any) => !restricted[s.name]);
-
-          if (allowedSubjects.length > 0) {
-            setSubjects(allowedSubjects);
-            sessionStorage.setItem("cached_practice_subjects", JSON.stringify(allowedSubjects));
-            const savedSubjectId = sessionStorage.getItem("activeSubjectId");
-            const found = allowedSubjects.find((s: any) => s._id === savedSubjectId);
-            if (found) {
-              setActiveSubject(found);
-              activeSubjectRef.current = found._id;
-            } else {
-              setActiveSubject(allowedSubjects[0]);
-              activeSubjectRef.current = allowedSubjects[0]._id;
-              sessionStorage.setItem("activeSubjectId", allowedSubjects[0]._id);
-            }
-          } else {
-            setSubjects([]);
-            setLoading(false);
-          }
-        } else {
-          if (subjects.length === 0) {
-            setSubjects([]);
-            setLoading(false);
-          }
-        }
-      } catch (e) {
-        console.error("Failed to fetch subjects", e);
-        setLoading(false);
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === "visible") {
+        fetchChapterProgress();
       }
     };
-    fetchSubjects();
-  }, []);
+
+    window.addEventListener("userDataUpdated", handleUserDataUpdate);
+    document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+    window.addEventListener("focus", handleVisibilityOrFocus);
+
+    return () => {
+      window.removeEventListener("userDataUpdated", handleUserDataUpdate);
+      document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+      window.removeEventListener("focus", handleVisibilityOrFocus);
+    };
+  }, [fetchSubjects, fetchChapterProgress]);
 
   useEffect(() => {
     if (!activeSubject) return;
@@ -206,6 +344,23 @@ export default function ChaptersScreen() {
           apiFetch(`/api/practice/chapter-progress`).catch(() => null)
         ]);
 
+        // Always update chapter progress across all subjects regardless of activeSubjectRef,
+        // because chapter-progress is global child progress!
+        if (pRes?.ok) {
+          try {
+            const pData = await pRes.json();
+            if (pData?.success && Array.isArray(pData.data)) {
+              const { progMap, completedIds } = processProgressData(pData.data);
+              setChapterProgressMap(progMap);
+              setCompletedChapters(completedIds);
+              sessionStorage.setItem("cached_chapter_progress", JSON.stringify(progMap));
+              sessionStorage.setItem("cached_completed_chapters", JSON.stringify(completedIds));
+            }
+          } catch (pe) {
+            console.error("Failed to parse progress data", pe);
+          }
+        }
+
         if (activeSubjectRef.current !== currentSubId) return;
 
         let chData: any = { success: false, data: [] };
@@ -213,46 +368,39 @@ export default function ChaptersScreen() {
           try { chData = await chRes.json(); } catch (e) { }
         }
 
-        let pData: any = { success: false, data: [] };
-        if (pRes?.ok) {
-          try { pData = await pRes.json(); } catch (e) { }
-        }
-
         if (activeSubjectRef.current !== currentSubId) return;
 
         if (chData?.success && Array.isArray(chData.data)) {
           setChapters(chData.data);
           sessionStorage.setItem(`cached_chapters_${currentSubId}`, JSON.stringify(chData.data));
-          // Prefetch first 3 chapter PDFs in the background
-          chData.data.slice(0, 3).forEach((c: any) => {
-            const cid = c._id || c.chapterId;
-            if (cid) prefetchPdf(cid);
-          });
+          if (chData.data.length === 0) {
+            // Subject has no active chapters seeded: prune from tabs to strictly hide empty subjects
+            setSubjects((prevSubjects) => {
+              const pruned = prevSubjects.filter((s) => s._id !== currentSubId);
+              sessionStorage.setItem("cached_practice_subjects", JSON.stringify(pruned));
+              if (pruned.length > 0) {
+                const nextSub = pruned[0];
+                setActiveSubject(nextSub);
+                activeSubjectRef.current = nextSub._id;
+                sessionStorage.setItem("activeSubjectId", nextSub._id);
+              } else {
+                setActiveSubject(null);
+                activeSubjectRef.current = null;
+              }
+              return pruned;
+            });
+          } else {
+            // Prefetch first 3 chapter PDFs in the background
+            chData.data.slice(0, 3).forEach((c: any) => {
+              const cid = c._id || c.chapterId;
+              if (cid) prefetchPdf(cid);
+            });
+          }
         } else {
           setChapters([]);
         }
-
-        if (pData?.success && Array.isArray(pData.data)) {
-          const progMap: Record<string, any> = {};
-          pData.data.forEach((p: any) => {
-            const mList = p.completedMissions || [];
-            if (mList.length > 0 && mList.length < 5) {
-              p.completed = false;
-              p.chapterCompleted = false;
-            } else if (p.completed && !p.chapterCompleted) {
-              p.chapterCompleted = true;
-            }
-            progMap[p.chapterId] = p;
-          });
-          setChapterProgressMap(progMap);
-
-          const completedIds = pData.data
-            .filter((p: any) => (p.chapterCompleted || p.completed) && (!p.completedMissions || p.completedMissions.length >= 5))
-            .map((p: any) => p.chapterId);
-          setCompletedChapters(completedIds);
-        }
       } catch (e) {
-        console.error("Failed to fetch chapters");
+        console.error("Failed to fetch chapters", e);
       } finally {
         if (activeSubjectRef.current === currentSubId) {
           setLoading(false);
@@ -260,10 +408,28 @@ export default function ChaptersScreen() {
       }
     };
     fetchChapters();
-  }, [activeSubject]);
+  }, [activeSubject?._id, processProgressData]);
 
   const totalChapters = chapters.length;
-  const isChapterCompleted = (chapterId: string) => completedChapters.includes(chapterId) || completedChapters.includes(`${chapterId}_hard`);
+  const isChapterCompleted = useCallback((chapterId: string) => {
+    if (!chapterId) return false;
+    const chIdStr = String(chapterId);
+    const p = chapterProgressMap[chIdStr] || chapterProgressMap[chapterId] || chapterProgressMap[`${chIdStr}_hard`];
+    if (p) {
+      const mList = Array.isArray(p.completedMissions) ? p.completedMissions : [];
+      if (mList.length > 0) {
+        return mList.length >= 5 && p.chapterCompleted !== false;
+      }
+      if (p.chapterCompleted === true && p.completed === true && p.questionsCompleted === true) {
+        return true;
+      }
+      return false;
+    }
+    if (completedChapters.includes(chIdStr) || completedChapters.includes(`${chIdStr}_hard`)) {
+      return true;
+    }
+    return false;
+  }, [completedChapters, chapterProgressMap]);
   const completedChaptersCount = chapters.filter(ch => isChapterCompleted(ch._id)).length;
 
   // Track Mission Progress for active subject (removing chapter duplication with Progress Screen)
@@ -315,6 +481,7 @@ export default function ChaptersScreen() {
       return;
     }
     const progress = chapterProgressMap[chapterId] || {};
+    startNavigationProgress();
     if (!progress.readingCompleted) {
       navigate(`/chapter-reader?chapterId=${chapterId}&title=${encodeURIComponent(chapterName)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}`);
     } else {
@@ -331,15 +498,28 @@ export default function ChaptersScreen() {
       </div>
 
       {/* TOP APP BAR / GAME HUD (Curved Sticky Design) */}
-      <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex flex-col bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-2xl shadow-xs gap-2 pb-2">
+      <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex flex-col bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-2xl shadow-xs gap-2 pb-2 select-none">
         <div className="flex items-center justify-between px-4 py-3 gap-2">
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <button
-              onClick={() => navigate("/profile")}
-              className="w-10 h-10 rounded-full border-2 border-indigo-100 overflow-hidden hover:opacity-90 transition-opacity shrink-0 bg-[#141779] shadow-xs"
+              onClick={() => {
+                startNavigationProgress();
+                navigate("/profile");
+              }}
+              className="w-10 h-10 rounded-full border-2 border-indigo-100 overflow-hidden hover:opacity-90 active:scale-90 touch-manipulation transition-all shrink-0 bg-[#141779] shadow-xs cursor-pointer"
             >
               {childPhoto ? (
-                <img src={childPhoto} alt="Avatar" className="w-full h-full object-cover" />
+                <img
+                  src={childPhoto}
+                  alt="Avatar"
+                  width={40}
+                  height={40}
+                  loading="eager"
+                  decoding="async"
+                  // @ts-ignore fetchpriority for React 18
+                  fetchpriority="high"
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <div className="w-full h-full bg-[#141779] text-white font-bold text-xs flex items-center justify-center">
                   {childName ? childName.slice(0, 2).toUpperCase() : "NR"}
@@ -367,19 +547,25 @@ export default function ChaptersScreen() {
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={() => setShowStreakModal(true)}
-              className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1.5 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
+              className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1.5 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 touch-manipulation transition-transform shadow-2xs cursor-pointer"
             >
               <span className="text-[11px] font-black text-[#ea580c] leading-none">🔥 {streakDays || 0}</span>
             </button>
             <button
-              onClick={() => navigate("/practice/inventory")}
-              className="bg-[#fffbeb] border border-amber-100/80 rounded-2xl px-2 py-1.5 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
+              onClick={() => {
+                startNavigationProgress();
+                navigate("/practice/inventory");
+              }}
+              className="bg-[#fffbeb] border border-amber-100/80 rounded-2xl px-2 py-1.5 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-90 touch-manipulation transition-transform shadow-2xs cursor-pointer"
             >
               <span className="text-[11px] font-black text-[#b45309] leading-none">🪙 {coins || 0}</span>
             </button>
             <button
-              onClick={() => navigate("/notifications")}
-              className="w-9 h-9 rounded-2xl bg-slate-50 shadow-2xs flex items-center justify-center hover:bg-slate-100 transition-all shrink-0 border border-slate-100 relative"
+              onClick={() => {
+                startNavigationProgress();
+                navigate("/notifications");
+              }}
+              className="w-9 h-9 rounded-2xl bg-slate-50 shadow-2xs flex items-center justify-center hover:bg-slate-100 active:scale-90 touch-manipulation transition-all shrink-0 border border-slate-100 relative cursor-pointer"
             >
               <Bell size={16} className="text-[#1c1970]" />
               {unreadCount > 0 && (
@@ -396,24 +582,26 @@ export default function ChaptersScreen() {
 
         {/* SUBJECT SELECTION TABS */}
         <div className="flex overflow-x-auto hide-scrollbar px-4 pb-2.5 gap-2 max-w-[430px] mx-auto w-full pr-6">
-          {subjects.length > 0 ? (
-            subjects.map((sub) => {
-              const isActive = activeSubject?._id === sub._id;
-              return (
-                <button
-                  key={sub._id}
-                  onClick={() => handleSelectSubject(sub)}
-                  className={`px-4 py-1.5 rounded-full font-black text-xs whitespace-nowrap transition-all uppercase tracking-wider flex items-center gap-1.5 shrink-0 ${
-                    isActive 
-                      ? 'bg-gradient-to-r from-[#5B5CFF] to-[#17157F] text-white shadow-md border border-[#5B5CFF]' 
-                      : 'bg-white text-[#767683] border border-[#E0E3E5] hover:border-[#5B5CFF]/60'
-                  }`}
-                >
-                  <Globe size={13} className={isActive ? "text-[#FFC83D]" : "text-[#767683]"} />
-                  <span>{t(sub.name.toLowerCase(), { defaultValue: sub.name })}</span>
-                </button>
-              );
-            })
+          {subjects.filter((s) => (s.totalChapters === undefined || s.totalChapters > 0) && s.hasContent !== false && s.isactive !== 0).length > 0 ? (
+            subjects
+              .filter((s) => (s.totalChapters === undefined || s.totalChapters > 0) && s.hasContent !== false && s.isactive !== 0)
+              .map((sub) => {
+                const isActive = activeSubject?._id === sub._id;
+                return (
+                  <button
+                    key={sub._id}
+                    onClick={() => handleSelectSubject(sub)}
+                    className={`px-4 py-1.5 rounded-full font-black text-xs whitespace-nowrap transition-all uppercase tracking-wider flex items-center gap-1.5 shrink-0 ${
+                      isActive 
+                        ? 'bg-gradient-to-r from-[#5B5CFF] to-[#17157F] text-white shadow-md border border-[#5B5CFF]' 
+                        : 'bg-white text-[#767683] border border-[#E0E3E5] hover:border-[#5B5CFF]/60'
+                    }`}
+                  >
+                    <Globe size={13} className={isActive ? "text-[#FFC83D]" : "text-[#767683]"} />
+                    <span>{t(sub.name.toLowerCase(), { defaultValue: sub.name })}</span>
+                  </button>
+                );
+              })
           ) : (
             <>
               <div className="h-7 w-24 rounded-full animate-skeleton shrink-0 border border-[#5B5CFF]/20" />
@@ -560,17 +748,6 @@ export default function ChaptersScreen() {
                           <span>{t('practice_mission_questions', '⚡ Practice Mission Questions')}</span>
                           <ChevronRight size={16} />
                         </button>
-
-                        <button 
-                          onClick={(e) => { 
-                            e.stopPropagation(); 
-                            navigate(`/boss-battle?worldId=w1&chapterId=${chap._id}&difficulty=easy&returnTo=/practice/journey-map&subjectName=${encodeURIComponent(activeSubject?.name || "")}&chapterName=${encodeURIComponent(displayTitle)}`); 
-                          }} 
-                          className="bg-[#FFC83D]/20 border border-[#FFC83D] text-[#17157F] px-3.5 py-2 rounded-xl font-bold text-xs hover:bg-[#FFC83D] transition-all flex items-center justify-between"
-                        >
-                          <span>{t('chapter_boss_round', '🏆 Chapter Boss Round')}</span>
-                          <ChevronRight size={16} />
-                        </button>
                       </motion.div>
                     )
                   );
@@ -715,41 +892,21 @@ export default function ChaptersScreen() {
         )}
       </main>
 
-      {/* SUBSCRIPTION LOCK MODAL */}
-      {showSubModal && (
-        <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-6 text-center">
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-white rounded-[32px] p-6 max-w-sm w-full border-2 border-indigo-200 shadow-2xl flex flex-col items-center gap-4"
-          >
-            <div className="w-16 h-16 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center text-3xl shadow-inner animate-bounce">
-              👑
-            </div>
-            <div>
-              <h3 className="text-xl font-black text-slate-900">{t('unlock_full_adventure', 'Unlock Full Adventure!')}</h3>
-              <p className="text-xs font-semibold text-slate-600 mt-1 leading-relaxed">
-                {t('chapter_1_free_desc', 'Chapter 1 is free for everyone. Access to Chapter 2 and beyond requires an active StudySaathy Subscription.')}
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                setShowSubModal(false);
-                navigate("/parent/subscription");
-              }}
-              className="w-full py-3.5 bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white font-black rounded-2xl shadow-lg active:scale-95 transition-all uppercase tracking-wider text-xs border border-[#5B5CFF]"
-            >
-              {t('upgrade_subscription', 'Upgrade Subscription →')}
-            </button>
-            <button
-              onClick={() => setShowSubModal(false)}
-              className="text-xs font-bold text-slate-400 hover:text-slate-600"
-            >
-              {t('maybe_later', 'Maybe Later')}
-            </button>
-          </motion.div>
-        </div>
-      )}
+      {/* UNIFIED SUBSCRIPTION LOCK MODAL */}
+      <UnifiedConfirmModal
+        isOpen={showSubModal}
+        onClose={() => setShowSubModal(false)}
+        onConfirm={() => {
+          setShowSubModal(false);
+          navigate("/parent/subscription");
+        }}
+        title={t('unlock_full_adventure', 'Unlock Full Adventure!')}
+        message={t('chapter_1_free_desc', 'Chapter 1 is free for everyone. Access to Chapter 2 and beyond requires an active StudySaathy Subscription.')}
+        confirmText={t('upgrade_subscription', 'Upgrade Subscription →')}
+        cancelText={t('maybe_later', 'Maybe Later')}
+        variant="primary"
+        icon={<Crown size={30} className="text-[#141779]" />}
+      />
 
       <StreakModal
         isOpen={showStreakModal}

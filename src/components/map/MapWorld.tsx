@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { WORLD_THEMES, MapWorldThemeConfig, MapStageConfig } from "./AdventureTheme";
 import LocationModalSheet from "./LocationModalSheet";
@@ -85,59 +85,73 @@ export default function MapWorld({
   const inferredActiveClass = activeClassLevel || (nodes?.find((n: any) => !n.isPriorClass && !n.isFutureClass)?.minClass) || userLevel || 1;
   const [activeNavClass, setActiveNavClass] = useState<number>(inferredActiveClass);
 
-  // Build full stage list from nodes or fallback defaults
-  const rawStages: (MapStageConfig & { minClass: number; nodeData?: any })[] = nodes && nodes.length > 0
-    ? nodes.map((n: any, idx: number) => {
-        const xpR = n.xpReward || Math.max(100, (n.requiredChapters || 0) * 50);
-        const coinR = n.coinReward || Math.max(50, (n.requiredChapters || 0) * 25);
-        const missionXp = Math.max(50, Math.round(xpR / 2));
-        const biomes: Array<"forest" | "cave" | "volcano" | "castle"> = ["forest", "cave", "volcano", "castle"];
-        const nodeCh = n.nodeChapters || 4;
-        const minClassNum = n.minClass || (idx < 3 ? 1 : idx < 6 ? 2 : idx < 9 ? 3 : 4);
-        return {
-          id: `node-${idx}`,
-          stageNumber: n.displayLevel || (idx + 1),
-          name: n.name,
-          subtitle: `Class ${minClassNum} • ${nodeCh} Chapters`,
-          emoji: n.emoji || "⭐",
-          storyQuote: `Complete Class ${minClassNum} chapter quests to unlock ${n.name}!`,
-          description: n.lockReason || `Class ${minClassNum} Realm`,
-          questsCount: nodeCh,
-          lessonsCount: Math.ceil(nodeCh / 2),
-          xpReward: xpR,
-          coinReward: coinR,
-          unlocked: Boolean(n.unlocked),
-          itemIcon: n.emoji || "⭐",
-          itemReward: `${nodeCh} Chapters`,
-          x: 50,
-          y: Math.max(10, 90 - idx * 20),
-          biomeType: biomes[idx % biomes.length],
-          minClass: minClassNum,
-          nodeData: n,
-          missions: [
-            { title: `${n.name} Reading Quest`, type: "reading", icon: "📖", xp: missionXp },
-            { title: `${n.name} Practice Challenge`, type: "practice", icon: "✍️", xp: missionXp }
-          ]
-        };
-      })
-    : [
-        { id: "node-0", stageNumber: 1, name: "Egg Village", subtitle: "Class 1 • Hatching Grounds", emoji: "🥚", storyQuote: "Hatch & Begin", description: "Hatch & Begin", questsCount: 4, lessonsCount: 2, xpReward: 500, coinReward: 200, itemReward: "4 Chapters", itemIcon: "🥚", unlocked: true, minClass: 1, x: 50, y: 90, biomeType: "forest", missions: [] },
-        { id: "node-1", stageNumber: 2, name: "Hatchling Haven", subtitle: "Class 1 • Nursery Realm", emoji: "🐣", storyQuote: "Nursery Realm", description: "Nursery Realm", questsCount: 4, lessonsCount: 2, xpReward: 500, coinReward: 200, itemReward: "4 Chapters", itemIcon: "🐣", unlocked: true, minClass: 1, x: 50, y: 70, biomeType: "forest", missions: [] },
-        { id: "node-2", stageNumber: 3, name: "Forest Kingdom", subtitle: "Class 1 • Enchanted Woods", emoji: "🐉", storyQuote: "Enchanted Woods", description: "Enchanted Woods", questsCount: 4, lessonsCount: 2, xpReward: 500, coinReward: 200, itemReward: "4 Chapters", itemIcon: "🐉", unlocked: false, minClass: 1, x: 50, y: 50, biomeType: "forest", missions: [] },
-        { id: "node-3", stageNumber: 4, name: "Magic Desert", subtitle: "Class 2 • Sun Sands", emoji: "🔥", storyQuote: "Sun Sands", description: "Sun Sands", questsCount: 4, lessonsCount: 2, xpReward: 800, coinReward: 350, itemReward: "4 Chapters", itemIcon: "🔥", unlocked: false, minClass: 2, x: 50, y: 40, biomeType: "cave", missions: [] },
-        { id: "node-4", stageNumber: 5, name: "Ice Kingdom", subtitle: "Class 2 • Frost Peak", emoji: "❄️", storyQuote: "Frost Peak", description: "Frost Peak", questsCount: 4, lessonsCount: 2, xpReward: 800, coinReward: 350, itemReward: "4 Chapters", itemIcon: "❄️", unlocked: false, minClass: 2, x: 50, y: 30, biomeType: "cave", missions: [] },
-        { id: "node-5", stageNumber: 6, name: "Dragon Mountain", subtitle: "Class 2 • Dragon Apex", emoji: "🏔️", storyQuote: "Dragon Apex", description: "Dragon Apex", questsCount: 4, lessonsCount: 2, xpReward: 800, coinReward: 350, itemReward: "4 Chapters", itemIcon: "🏔️", unlocked: false, minClass: 2, x: 50, y: 20, biomeType: "cave", missions: [] },
-        { id: "node-6", stageNumber: 7, name: "Cloud City", subtitle: "Class 3 • Sky Haven", emoji: "☁️", storyQuote: "Sky Haven", description: "Sky Haven", questsCount: 4, lessonsCount: 2, xpReward: 1200, coinReward: 500, itemReward: "4 Chapters", itemIcon: "☁️", unlocked: false, minClass: 3, x: 50, y: 10, biomeType: "volcano", missions: [] },
-        { id: "node-7", stageNumber: 8, name: "Crystal Caves", subtitle: "Class 3 • Gem Caverns", emoji: "💎", storyQuote: "Gem Caverns", description: "Gem Caverns", questsCount: 4, lessonsCount: 2, xpReward: 1200, coinReward: 500, itemReward: "4 Chapters", itemIcon: "💎", unlocked: false, minClass: 3, x: 50, y: 5, biomeType: "volcano", missions: [] },
-        { id: "node-8", stageNumber: 9, name: "Underworld", subtitle: "Class 3 • Deep Lair", emoji: "🌋", storyQuote: "Deep Lair", description: "Deep Lair", questsCount: 4, lessonsCount: 2, xpReward: 1200, coinReward: 500, itemReward: "4 Chapters", itemIcon: "🌋", unlocked: false, minClass: 3, x: 50, y: 0, biomeType: "volcano", missions: [] },
-        { id: "node-9", stageNumber: 10, name: "Galactic Core", subtitle: "Class 4 • Stellar Lair", emoji: "🌌", storyQuote: "Stellar Lair", description: "Stellar Lair", questsCount: 4, lessonsCount: 2, xpReward: 2000, coinReward: 800, itemReward: "4 Chapters", itemIcon: "🌌", unlocked: false, minClass: 4, x: 50, y: 0, biomeType: "castle", missions: [] },
-        { id: "node-10", stageNumber: 11, name: "Stone Age Hunter", subtitle: "Class 4 • Ancestral Lands", emoji: "🏹", storyQuote: "Ancestral Lands", description: "Ancestral Lands", questsCount: 4, lessonsCount: 2, xpReward: 2000, coinReward: 800, itemReward: "4 Chapters", itemIcon: "🏹", unlocked: false, minClass: 4, x: 50, y: 0, biomeType: "castle", missions: [] },
-        { id: "node-11", stageNumber: 12, name: "Bronze Craftsman", subtitle: "Class 4 • Forge Realm", emoji: "🔨", storyQuote: "Forge Realm", description: "Forge Realm", questsCount: 4, lessonsCount: 2, xpReward: 2000, coinReward: 800, itemReward: "4 Chapters", itemIcon: "🔨", unlocked: false, minClass: 4, x: 50, y: 0, biomeType: "castle", missions: [] },
-        { id: "node-12", stageNumber: 13, name: "Civilization Leader", subtitle: "Class 4 • Apex Throne", emoji: "👑", storyQuote: "Apex Throne", description: "Apex Throne", questsCount: 4, lessonsCount: 2, xpReward: 2000, coinReward: 800, itemReward: "4 Chapters", itemIcon: "👑", unlocked: false, minClass: 4, x: 50, y: 0, biomeType: "castle", missions: [] }
-      ];
+  // Build full stage list from nodes or fallback defaults (memoized)
+  const rawStages: (MapStageConfig & { minClass: number; nodeData?: any })[] = useMemo(() => {
+    return nodes && nodes.length > 0
+      ? nodes.map((n: any, idx: number) => {
+          const xpR = n.xpReward || Math.max(100, (n.requiredChapters || 0) * 50);
+          const coinR = n.coinReward || Math.max(50, (n.requiredChapters || 0) * 25);
+          const missionXp = Math.max(50, Math.round(xpR / 2));
+          const biomes: Array<"forest" | "cave" | "volcano" | "castle"> = ["forest", "cave", "volcano", "castle"];
+          const nodeCh = n.nodeChapters || 4;
+          const minClassNum = n.minClass || (idx < 3 ? 1 : idx < 6 ? 2 : idx < 9 ? 3 : 4);
+          return {
+            id: `node-${idx}`,
+            stageNumber: n.displayLevel || (idx + 1),
+            name: n.name,
+            subtitle: `Class ${minClassNum} • ${nodeCh} Chapters`,
+            emoji: n.emoji || "⭐",
+            storyQuote: `Complete Class ${minClassNum} chapter quests to unlock ${n.name}!`,
+            description: n.lockReason || `Class ${minClassNum} Realm`,
+            questsCount: nodeCh,
+            lessonsCount: Math.ceil(nodeCh / 2),
+            xpReward: xpR,
+            coinReward: coinR,
+            unlocked: Boolean(n.unlocked),
+            itemIcon: n.emoji || "⭐",
+            itemReward: `${nodeCh} Chapters`,
+            x: 50,
+            y: Math.max(10, 90 - idx * 20),
+            biomeType: biomes[idx % biomes.length],
+            minClass: minClassNum,
+            nodeData: n,
+            missions: [
+              { title: `${n.name} Reading Quest`, type: "reading", icon: "📖", xp: missionXp },
+              { title: `${n.name} Practice Challenge`, type: "practice", icon: "✍️", xp: missionXp }
+            ]
+          };
+        })
+      : [
+          { id: "node-0", stageNumber: 1, name: "Egg Village", subtitle: "Class 1 • Hatching Grounds", emoji: "🥚", storyQuote: "Hatch & Begin", description: "Hatch & Begin", questsCount: 4, lessonsCount: 2, xpReward: 500, coinReward: 200, itemReward: "4 Chapters", itemIcon: "🥚", unlocked: true, minClass: 1, x: 50, y: 90, biomeType: "forest", missions: [] },
+          { id: "node-1", stageNumber: 2, name: "Hatchling Haven", subtitle: "Class 1 • Nursery Realm", emoji: "🐣", storyQuote: "Nursery Realm", description: "Nursery Realm", questsCount: 4, lessonsCount: 2, xpReward: 500, coinReward: 200, itemReward: "4 Chapters", itemIcon: "🐣", unlocked: true, minClass: 1, x: 50, y: 70, biomeType: "forest", missions: [] },
+          { id: "node-2", stageNumber: 3, name: "Forest Kingdom", subtitle: "Class 1 • Enchanted Woods", emoji: "🐉", storyQuote: "Enchanted Woods", description: "Enchanted Woods", questsCount: 4, lessonsCount: 2, xpReward: 500, coinReward: 200, itemReward: "4 Chapters", itemIcon: "🐉", unlocked: false, minClass: 1, x: 50, y: 50, biomeType: "forest", missions: [] },
+          { id: "node-3", stageNumber: 4, name: "Magic Desert", subtitle: "Class 2 • Sun Sands", emoji: "🔥", storyQuote: "Sun Sands", description: "Sun Sands", questsCount: 4, lessonsCount: 2, xpReward: 800, coinReward: 350, itemReward: "4 Chapters", itemIcon: "🔥", unlocked: false, minClass: 2, x: 50, y: 40, biomeType: "cave", missions: [] },
+          { id: "node-4", stageNumber: 5, name: "Ice Kingdom", subtitle: "Class 2 • Frost Peak", emoji: "❄️", storyQuote: "Frost Peak", description: "Frost Peak", questsCount: 4, lessonsCount: 2, xpReward: 800, coinReward: 350, itemReward: "4 Chapters", itemIcon: "❄️", unlocked: false, minClass: 2, x: 50, y: 30, biomeType: "cave", missions: [] },
+          { id: "node-5", stageNumber: 6, name: "Dragon Mountain", subtitle: "Class 2 • Dragon Apex", emoji: "🏔️", storyQuote: "Dragon Apex", description: "Dragon Apex", questsCount: 4, lessonsCount: 2, xpReward: 800, coinReward: 350, itemReward: "4 Chapters", itemIcon: "🏔️", unlocked: false, minClass: 2, x: 50, y: 20, biomeType: "cave", missions: [] },
+          { id: "node-6", stageNumber: 7, name: "Cloud City", subtitle: "Class 3 • Sky Haven", emoji: "☁️", storyQuote: "Sky Haven", description: "Sky Haven", questsCount: 4, lessonsCount: 2, xpReward: 1200, coinReward: 500, itemReward: "4 Chapters", itemIcon: "☁️", unlocked: false, minClass: 3, x: 50, y: 10, biomeType: "volcano", missions: [] },
+          { id: "node-7", stageNumber: 8, name: "Crystal Caves", subtitle: "Class 3 • Gem Caverns", emoji: "💎", storyQuote: "Gem Caverns", description: "Gem Caverns", questsCount: 4, lessonsCount: 2, xpReward: 1200, coinReward: 500, itemReward: "4 Chapters", itemIcon: "💎", unlocked: false, minClass: 3, x: 50, y: 5, biomeType: "volcano", missions: [] },
+          { id: "node-8", stageNumber: 9, name: "Underworld", subtitle: "Class 3 • Deep Lair", emoji: "🌋", storyQuote: "Deep Lair", description: "Deep Lair", questsCount: 4, lessonsCount: 2, xpReward: 1200, coinReward: 500, itemReward: "4 Chapters", itemIcon: "🌋", unlocked: false, minClass: 3, x: 50, y: 0, biomeType: "volcano", missions: [] },
+          { id: "node-9", stageNumber: 10, name: "Galactic Core", subtitle: "Class 4 • Stellar Lair", emoji: "🌌", storyQuote: "Stellar Lair", description: "Stellar Lair", questsCount: 4, lessonsCount: 2, xpReward: 2000, coinReward: 800, itemReward: "4 Chapters", itemIcon: "🌌", unlocked: false, minClass: 4, x: 50, y: 0, biomeType: "castle", missions: [] },
+          { id: "node-10", stageNumber: 11, name: "Stone Age Hunter", subtitle: "Class 4 • Ancestral Lands", emoji: "🏹", storyQuote: "Ancestral Lands", description: "Ancestral Lands", questsCount: 4, lessonsCount: 2, xpReward: 2000, coinReward: 800, itemReward: "4 Chapters", itemIcon: "🏹", unlocked: false, minClass: 4, x: 50, y: 0, biomeType: "castle", missions: [] },
+          { id: "node-11", stageNumber: 12, name: "Bronze Craftsman", subtitle: "Class 4 • Forge Realm", emoji: "🔨", storyQuote: "Forge Realm", description: "Forge Realm", questsCount: 4, lessonsCount: 2, xpReward: 2000, coinReward: 800, itemReward: "4 Chapters", itemIcon: "🔨", unlocked: false, minClass: 4, x: 50, y: 0, biomeType: "castle", missions: [] },
+          { id: "node-12", stageNumber: 13, name: "Civilization Leader", subtitle: "Class 4 • Apex Throne", emoji: "👑", storyQuote: "Apex Throne", description: "Apex Throne", questsCount: 4, lessonsCount: 2, xpReward: 2000, coinReward: 800, itemReward: "4 Chapters", itemIcon: "👑", unlocked: false, minClass: 4, x: 50, y: 0, biomeType: "castle", missions: [] }
+        ];
+  }, [nodes]);
 
-  // Group stages by Class / Standard
-  const classNumbers = Array.from(new Set(rawStages.map(s => s.minClass))).sort((a, b) => a - b);
+  // Group stages by Class / Standard (memoized)
+  const classNumbers = useMemo(() => {
+    return Array.from(new Set(rawStages.map(s => s.minClass))).sort((a, b) => a - b);
+  }, [rawStages]);
+
+  const stagesByClass = useMemo(() => {
+    const map = new Map<number, (MapStageConfig & { minClass: number; nodeData?: any })[]>();
+    for (const s of rawStages) {
+      const list = map.get(s.minClass) || [];
+      list.push(s);
+      map.set(s.minClass, list);
+    }
+    return map;
+  }, [rawStages]);
 
   const getClassHeaderInfo = (cNum: number) => {
     const titles: Record<number, { title: string; subtitle: string; icon: string; gradient: string; badgeClass: string }> = {
@@ -242,6 +256,9 @@ export default function MapWorld({
             const isUserCurrentClass = cNum === inferredActiveClass;
             const isSelected = activeNavClass === cNum;
             const isPastClass = cNum < inferredActiveClass;
+            const classStages = rawStages.filter(s => s.minClass === cNum);
+            const isClassMastered = classStages.length > 0 && classStages.every(s => Boolean(s.nodeData?.completed));
+            const iconBadge = isUserCurrentClass ? "⚡" : isClassMastered ? "✓" : isPastClass ? "📖" : "🔒";
 
             return (
               <button
@@ -253,7 +270,7 @@ export default function MapWorld({
                     : "bg-white/80 text-slate-600 border border-slate-200/80 hover:bg-white hover:text-slate-900"
                 }`}
               >
-                <span className="text-[10px] shrink-0">{isUserCurrentClass ? "⚡" : isPastClass ? "✓" : "🔒"}</span>
+                <span className="text-[10px] shrink-0">{iconBadge}</span>
                 <span className="whitespace-nowrap">{`Class ${cNum}`}</span>
               </button>
             );
@@ -282,11 +299,12 @@ export default function MapWorld({
       {/* MULTI-STANDARD CLASS SECTIONS CONTAINER */}
       <div className="relative w-full max-w-[390px] mx-auto flex flex-col items-stretch px-3 pt-2">
         {classNumbers.map((cNum) => {
-          const classStages = rawStages.filter(s => s.minClass === cNum);
+          const classStages = stagesByClass.get(cNum) || [];
           const headerInfo = getClassHeaderInfo(cNum);
           const isCompletedClass = cNum < inferredActiveClass;
           const isCurrentClass = cNum === inferredActiveClass;
           const isLockedClass = cNum > inferredActiveClass;
+          const isAllStagesCompleted = classStages.length > 0 && classStages.every(s => Boolean(s.nodeData?.completed));
 
           return (
             <div key={cNum} id={`class-section-${cNum}`} className="w-full flex flex-col">
@@ -310,14 +328,19 @@ export default function MapWorld({
                       </div>
 
                       <div className="shrink-0 flex-shrink-0 ml-1">
-                        {isCompletedClass && (
-                          <span className="bg-white/20 border border-white/30 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1 shadow-xs whitespace-nowrap shrink-0">
-                            ✓ {t('completed_upper', 'COMPLETED')}
-                          </span>
-                        )}
                         {isCurrentClass && (
                           <span className={`${headerInfo.badgeClass} text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1 shadow-md animate-pulse whitespace-nowrap shrink-0`}>
                             ⚡ {t('current_class', 'CURRENT CLASS')}
+                          </span>
+                        )}
+                        {isCompletedClass && isAllStagesCompleted && (
+                          <span className="bg-emerald-500/30 border border-emerald-400 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1 shadow-xs whitespace-nowrap shrink-0">
+                            ✓ {t('completed_upper', 'COMPLETED')}
+                          </span>
+                        )}
+                        {isCompletedClass && !isAllStagesCompleted && (
+                          <span className="bg-white/20 border border-white/30 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1 shadow-xs whitespace-nowrap shrink-0">
+                            📚 CLASS {cNum}
                           </span>
                         )}
                         {isLockedClass && (
@@ -341,18 +364,22 @@ export default function MapWorld({
               {/* CLASS STAGE CARDS */}
               {classStages.map((stage) => {
                 const globalIndex = rawStages.findIndex(s => s.id === stage.id);
-                const state = getStageState(stage, globalIndex);
-                const isCompleted = state === "completed" || isCompletedClass;
-                const isCurrent = state === "current" && isCurrentClass;
-                const isUpcoming = state === "upcoming" || isLockedClass;
-
-                const stageProgress = isCompleted
-                  ? 100
-                  : isCurrent
-                  ? (stage.nodeData && stage.nodeData.nodeProgressPercentage !== undefined
-                      ? Math.round(stage.nodeData.nodeProgressPercentage)
-                      : Math.min(95, Math.round(((xp % 1000) / 1000) * 100)))
+                const isNodeCompleted = Boolean(stage.nodeData ? stage.nodeData.completed : false);
+                const stageProgPct = stage.nodeData?.nodeProgressPercentage !== undefined
+                  ? Math.round(stage.nodeData.nodeProgressPercentage)
                   : 0;
+
+                // Unlocked rule:
+                // - Current standard (cNum === inferredActiveClass): unlocked if stage is active/unlocked in current class
+                // - Prior/other standards (cNum < inferredActiveClass): unlocked ONLY IF progress > 0% or completed! If 0%, it stays locked.
+                // - Future standards (cNum > inferredActiveClass): locked.
+                const isNodeUnlocked = isCurrentClass
+                  ? Boolean(stage.nodeData ? stage.nodeData.unlocked : stage.unlocked)
+                  : (isNodeCompleted || stageProgPct > 0);
+
+                const isCompleted = isNodeCompleted;
+                const isCurrent = isNodeUnlocked && !isCompleted && (isCurrentClass || stageProgPct > 0);
+                const stageProgress = isCompleted ? 100 : (isNodeUnlocked ? stageProgPct : 0);
 
                 const left = isLeft(globalIndex);
 
@@ -363,12 +390,12 @@ export default function MapWorld({
                       border: isSpaceDark ? "border border-white/20" : "border border-[#141779]/20",
                       shadow: "shadow-md",
                       iconBgClass: "bg-[#141779]",
-                      barColor: "bg-[#141779]",
+                      barColor: "bg-emerald-500",
                       pill: isSpaceDark ? "bg-white/10 border-white/20 text-white/80" : "bg-indigo-50 border-indigo-200 text-[#141779]",
                       titleColor: isSpaceDark ? "text-white" : "text-[#141779]",
-                      labelColor: isSpaceDark ? "text-indigo-600" : "text-[#141779]",
+                      labelColor: isSpaceDark ? "text-emerald-400" : "text-emerald-600",
                     }
-                  : isCurrent
+                  : isNodeUnlocked
                   ? {
                       bg: isSpaceDark ? "bg-white/15 backdrop-blur-md" : "bg-white",
                       border: isSpaceDark ? "border-2 border-cyan-400/60" : "border-2 border-[#141779]",
@@ -411,11 +438,14 @@ export default function MapWorld({
                       transition={{ delay: globalIndex * 0.04, duration: 0.35, ease: "easeOut" }}
                     >
                       <motion.div
-                        whileHover={{ y: -3, scale: 1.015 }}
-                        whileTap={{ scale: 0.97 }}
+                        whileHover={isNodeUnlocked || isCompleted ? { y: -3, scale: 1.015 } : undefined}
+                        whileTap={isNodeUnlocked || isCompleted ? { scale: 0.97 } : undefined}
                         onClick={() => {
                           if (isLockedClass) {
                             setLockedNotice(`🔒 ${stage.name} unlocks when you reach Class ${cNum}!`);
+                            setTimeout(() => setLockedNotice(null), 3000);
+                          } else if (!isNodeUnlocked && !isCompleted) {
+                            setLockedNotice(`🔒 ${stage.name} is locked. Complete previous chapters in Class ${cNum} to unlock!`);
                             setTimeout(() => setLockedNotice(null), 3000);
                           } else {
                             setSelectedStage(stage);
@@ -423,8 +453,8 @@ export default function MapWorld({
                         }}
                         className={`
                           ${cardStyle.bg} ${cardStyle.border} ${cardStyle.shadow}
-                          rounded-3xl p-4 w-[80%] cursor-pointer transition-all relative overflow-hidden
-                          ${isLockedClass ? "opacity-60 bg-slate-50/60 grayscale-[0.2]" : ""}
+                          rounded-3xl p-4 w-[80%] transition-all relative overflow-hidden
+                          ${!isNodeUnlocked && !isCompleted ? "opacity-60 bg-slate-50/60 grayscale-[0.2] cursor-not-allowed" : "cursor-pointer"}
                         `}
                       >
                         {/* Glow accent for current node */}
@@ -441,8 +471,8 @@ export default function MapWorld({
                               ) : (
                                 <>
                                   {isCompleted && <Check size={20} color="white" strokeWidth={3} />}
-                                  {isCurrent && <Sparkles size={18} className="text-[#57fae9] animate-pulse" />}
-                                  {isUpcoming && <Lock size={16} color="white" />}
+                                  {isNodeUnlocked && <Sparkles size={18} className="text-[#57fae9] animate-pulse" />}
+                                  {!isNodeUnlocked && <Lock size={16} color="white" />}
                                 </>
                               )}
                               {/* Level Badge */}
@@ -458,7 +488,13 @@ export default function MapWorld({
                           {/* Content column */}
                           <div className="flex-1 min-w-0">
                             <span className={`text-[9px] font-black uppercase tracking-widest ${cardStyle.labelColor}`}>
-                              {isLockedClass ? `🔒 ${t('unlocks_at_class_short', { count: cNum, defaultValue: `Class ${cNum}` })}` : isCompleted ? `✓ ${t('unlocked_status', 'Unlocked')}` : isCurrent ? `▶ ${t('in_progress_status', 'In Progress')}` : `⏸ ${t('locked_status', 'Locked')}`}
+                              {isLockedClass
+                                ? `🔒 ${t('unlocks_at_class_short', { count: cNum, defaultValue: `Class ${cNum}` })}`
+                                : isCompleted
+                                ? `✓ ${t('completed', 'Completed')}`
+                                : isNodeUnlocked
+                                ? (stageProgPct > 0 ? `▶ ${t('in_progress_status', 'In Progress')}` : `✓ ${t('unlocked_status', 'Unlocked')}`)
+                                : `🔒 ${t('locked_status', 'Locked')}`}
                             </span>
                             <h3 className={`text-sm font-black leading-snug mt-0.5 ${cardStyle.titleColor}`}>
                               {t(stage.name.toLowerCase().replace(/ /g, '_'), { defaultValue: stage.name })}

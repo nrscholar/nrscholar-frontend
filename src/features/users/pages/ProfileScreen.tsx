@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Zap, Coins, Flame, Users, HelpCircle, LogOut, Gift, ChevronRight, Trophy, GraduationCap, Cake, BookOpen, Bell } from "lucide-react";
 import { motion } from "framer-motion";
 import { apiFetch, clearAuthSession } from "../../../api";
 import { useTranslation } from "react-i18next";
 import StreakModal from "../../../components/StreakModal";
+import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
+import { startNavigationProgress } from "../../../components/NavigationProgressBar";
 
 // Math-aligned level thresholds matching backend
 function getLevelInfo(xp: number) {
@@ -31,7 +33,11 @@ function getLevelInfo(xp: number) {
 }
 
 export default function ProfileScreen() {
-  const navigate = useNavigate();
+  const rawNavigate = useNavigate();
+  const navigate = useCallback((to: any, options?: any) => {
+    startNavigationProgress();
+    rawNavigate(to, options);
+  }, [rawNavigate]);
   const { t, i18n } = useTranslation();
   const [loading] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -76,7 +82,16 @@ export default function ProfileScreen() {
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const res = await apiFetch("/api/notifications");
+        const cached = localStorage.getItem("userData");
+        let activeChildId = "";
+        if (cached) {
+          try {
+            const u = JSON.parse(cached);
+            activeChildId = u.activeChildId || u.children?.[0]?.childId || u.childId || "";
+          } catch (e) {}
+        }
+        const notifUrl = `/api/notifications?role=child${activeChildId ? `&childId=${encodeURIComponent(activeChildId)}` : ""}`;
+        const res = await apiFetch(notifUrl);
         const json = await res.json();
         if (json.success && json.data) {
           setUnreadCount(json.data.filter((n: any) => !n.isRead).length);
@@ -84,6 +99,12 @@ export default function ProfileScreen() {
       } catch (e) {}
     };
     fetchNotifications();
+
+    const handleUserDataUpdate = () => {
+      fetchNotifications();
+    };
+    window.addEventListener("userDataUpdated", handleUserDataUpdate);
+    return () => window.removeEventListener("userDataUpdated", handleUserDataUpdate);
   }, []);
 
   useEffect(() => {
@@ -264,11 +285,9 @@ export default function ProfileScreen() {
             </div>
             {/* 3px Height Track Fill */}
             <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden p-0.5 shadow-2xs">
-              <motion.div 
-                initial={{ width: 0 }}
-                animate={{ width: `${levelInfo.percent}%` }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-                className="h-full bg-gradient-to-r from-[#141779] to-[#57fae9] rounded-full shadow-2xs"
+              <div 
+                style={{ width: `${levelInfo.percent}%` }}
+                className="h-full bg-gradient-to-r from-[#141779] to-[#57fae9] rounded-full shadow-2xs transition-all duration-700 ease-out"
               />
             </div>
             <p className="text-[10px] font-medium text-slate-400 mt-1.5 text-right tracking-tight">
@@ -354,10 +373,14 @@ export default function ProfileScreen() {
               {t('achievements', 'ACHIEVEMENTS')}
             </span>
             <button 
-              onClick={() => navigate("/practice/inventory")}
-              className="text-xs font-bold text-[#141779] hover:underline"
+              onClick={() => {
+                startNavigationProgress();
+                navigate("/practice/inventory");
+              }}
+              className="text-xs font-bold text-[#141779] hover:underline touch-manipulation active:scale-95 transition-transform cursor-pointer"
             >
-              {t('view_all', 'View All →')}
+              <span>{t('view_all', 'View All')}</span>
+              <span>→</span>
             </button>
           </div>
 
@@ -385,15 +408,18 @@ export default function ProfileScreen() {
         </section>
 
         {/* 5. ACCOUNT & SETTINGS SECTION */}
-        <section className="flex flex-col gap-2.5 pt-2 border-t border-slate-200/60">
+        <section className="flex flex-col gap-2.5 pt-2 border-t border-slate-200/60 select-none">
           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">
             {t('account_and_settings', 'ACCOUNT & SETTINGS')}
           </span>
 
           {/* Parental Controls */}
           <button 
-            onClick={() => navigate("/parent")}
-            className="w-full flex items-center justify-between bg-white rounded-2xl p-3 border border-slate-100 hover:border-slate-200 transition-all shadow-xs group"
+            onClick={() => {
+              startNavigationProgress();
+              navigate("/parent");
+            }}
+            className="w-full flex items-center justify-between bg-white rounded-2xl p-3 border border-slate-100 hover:border-slate-200 active:scale-[0.98] touch-manipulation transition-all shadow-xs group cursor-pointer"
           >
             <div className="flex items-center gap-3">
               {user.parentPhoto ? (
@@ -412,8 +438,11 @@ export default function ProfileScreen() {
 
           {/* Help Center */}
           <button 
-            onClick={() => navigate("/help")}
-            className="w-full flex items-center justify-between bg-white rounded-2xl p-3 border border-slate-100 hover:border-slate-200 transition-all shadow-xs group"
+            onClick={() => {
+              startNavigationProgress();
+              navigate("/help");
+            }}
+            className="w-full flex items-center justify-between bg-white rounded-2xl p-3 border border-slate-100 hover:border-slate-200 active:scale-[0.98] touch-manipulation transition-all shadow-xs group cursor-pointer"
           >
             <div className="flex items-center gap-3">
               <div className="w-7 h-7 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
@@ -469,33 +498,17 @@ export default function ProfileScreen() {
       </main>
 
       {/* Logout Confirmation Modal */}
-      {showLogoutModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-5">
-          <div className="bg-white w-full max-w-xs rounded-3xl p-6 shadow-xl border border-slate-100 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-3 border border-red-100">
-              <LogOut size={24} />
-            </div>
-            <h3 className="text-base font-bold text-slate-900 mb-1">{t('logout_device', 'Logout Device')}</h3>
-            <p className="text-xs text-slate-500 mb-5 leading-relaxed">
-              {t('logout_confirm_msg', 'Are you sure you want to log out from this device? You will need your credentials to sign back in.')}
-            </p>
-            <div className="flex flex-col gap-2">
-              <button 
-                onClick={handleLogout}
-                className="w-full py-2.5 bg-red-600 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-xs hover:bg-red-700 active:scale-[0.98] transition-all"
-              >
-                {t('yes_logout_device', 'Yes, Logout Device')}
-              </button>
-              <button 
-                onClick={() => setShowLogoutModal(false)}
-                className="w-full py-2.5 bg-slate-100 text-slate-700 rounded-xl font-semibold text-xs hover:bg-slate-200 active:scale-[0.98] transition-all"
-              >
-                {t('cancel', 'Cancel')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <UnifiedConfirmModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleLogout}
+        title={t('logout_device', 'Logout Device')}
+        message={t('logout_confirm_msg', 'Are you sure you want to log out from this device? You will need your credentials to sign back in.')}
+        confirmText={t('yes_logout_device', 'Yes, Logout Device')}
+        cancelText={t('cancel', 'Cancel')}
+        variant="danger"
+        icon={<LogOut size={28} className="text-rose-600" />}
+      />
 
       {/* Streak Modal */}
       <StreakModal

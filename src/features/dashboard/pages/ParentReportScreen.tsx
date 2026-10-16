@@ -9,14 +9,10 @@ import {
 } from "lucide-react";
 import { apiFetch } from "../../../api";
 import ChildSwitcherModal from "../../../components/ChildSwitcherModal";
+import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
+import { getSubjectChartColor, DISTINCT_SUBJECT_PALETTE } from "../../../utils/chartColors";
 
-const SUBJECT_COLORS = [
-  { bg: "bg-blue-50",   text: "text-blue-600",   bar: "bg-blue-500"   },
-  { bg: "bg-green-50",  text: "text-green-600",  bar: "bg-green-500"  },
-  { bg: "bg-purple-50", text: "text-purple-600", bar: "bg-purple-500" },
-  { bg: "bg-orange-50", text: "text-orange-600", bar: "bg-orange-500" },
-  { bg: "bg-rose-50",   text: "text-rose-600",   bar: "bg-rose-500"   },
-];
+const SUBJECT_COLORS = DISTINCT_SUBJECT_PALETTE;
 
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
@@ -87,9 +83,10 @@ export default function ParentReportScreen() {
   const [showSwitcher, setShowSwitcher] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   
+  const currentLang = i18n.language || localStorage.getItem("i18nextLng") || "en";
   const cachedReport = (() => {
     try {
-      const raw = sessionStorage.getItem("parent_report_cache");
+      const raw = sessionStorage.getItem(`parent_report_cache_${currentLang}`);
       return raw ? JSON.parse(raw) : null;
     } catch (e) { return null; }
   })();
@@ -107,6 +104,7 @@ export default function ParentReportScreen() {
   const [showSubjectSheet, setShowSubjectSheet] = useState(false);
   const [showCustomizeSheet, setShowCustomizeSheet] = useState(false);
   const [showExportSheet, setShowExportSheet] = useState(false);
+  const [alertModal, setAlertModal] = useState<{ show: boolean; title: string; message: string; variant: "primary" | "danger" | "success" } | null>(null);
   const getTodayString = () => {
     const d = new Date();
     const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -175,11 +173,12 @@ export default function ParentReportScreen() {
       else if (dateFilter === "custom") downloadFilter = "weekly";
       // "today" stays as "daily"
 
-      const url = `/api/parent/report/download?filter=${downloadFilter}&subject=${subjectFilter}&format=${format}&tz_offset_minutes=${offsetMinutes}`;
-      const response = await apiFetch(url);
+      const activeLang = i18n.language || localStorage.getItem("i18nextLng") || "en";
+      const url = `/api/parent/report/download?filter=${downloadFilter}&subject=${subjectFilter}&format=${format}&tz_offset_minutes=${offsetMinutes}&lang=${encodeURIComponent(activeLang)}`;
+      const response = await apiFetch(url, { headers: { "Accept-Language": activeLang } });
       
       if (!response.ok) {
-        alert("Failed to download report. Please try again.");
+        setAlertModal({ show: true, title: "Download Failed", message: "Failed to download report. Please try again.", variant: "danger" });
         return;
       }
       
@@ -204,7 +203,7 @@ export default function ParentReportScreen() {
       window.URL.revokeObjectURL(blobUrl);
     } catch (e) {
       console.error("Download error:", e);
-      alert("Something went wrong during report download.");
+      setAlertModal({ show: true, title: "Download Error", message: "Something went wrong during report download.", variant: "danger" });
     } finally {
       setIsDownloading(null);
     }
@@ -227,7 +226,7 @@ export default function ParentReportScreen() {
     } else {
       try {
         await navigator.clipboard.writeText(shareUrl);
-        alert("Report link copied to clipboard! You can share it now.");
+        setAlertModal({ show: true, title: "Link Copied!", message: "Report link copied to clipboard! You can share it now.", variant: "success" });
       } catch (err) {
         console.error("Failed to copy link:", err);
       }
@@ -287,7 +286,7 @@ export default function ParentReportScreen() {
   const dnaAxes = [
     { val: dna.accuracy,    ang: -90,  label: "Accuracy" },
     { val: dna.speed,       ang: -18,  label: "Speed" },
-    { val: dna.resilience,  ang:  54,  label: "Boss" },
+    { val: dna.resilience,  ang:  54,  label: "Resilience" },
     { val: dna.consistency, ang: 126,  label: "Consistency" },
     { val: dna.retention,   ang: 198,  label: "Retention" },
   ];
@@ -319,7 +318,7 @@ export default function ParentReportScreen() {
       .replace(/Continue daily practice to maintain your learning streak\./g,
         t("rec_continue_daily", "તમારી શીખવાની સ્ટ્રીક જાળવી રાખવા માટે રોજિંદી પ્રેક્ટિસ ચાલુ રાખો.")
       )
-      .replace(/Try a Boss Battle to test your mastery in completed chapters!/g,
+      .replace(/Practice chapter quizzes regularly to reinforce key concepts!/g,
         t("rec_try_boss_battle", "પૂર્ણ થયેલા પ્રકરણોમાં તમારી નિપુણતા ચકાસવા માટે બોસ બેટલ અજમાવો!")
       );
 
@@ -328,15 +327,22 @@ export default function ParentReportScreen() {
 
   const fetchReport = useCallback(async () => {
     try {
-      const lang = i18n.language || "en";
+      const lang = i18n.language || localStorage.getItem("i18nextLng") || "en";
+      const tzOffset = -new Date().getTimezoneOffset();
+      let activeCid = null;
+      try {
+        const stored = localStorage.getItem("userData");
+        if (stored) activeCid = JSON.parse(stored).activeChildId;
+      } catch (e) {}
+      const childParam = activeCid ? `&childId=${encodeURIComponent(activeCid)}` : "";
       const [reportRes, userRes] = await Promise.all([
-        apiFetch("/api/parent/report", { headers: { "Accept-Language": lang } }),
+        apiFetch(`/api/parent/report?lang=${encodeURIComponent(lang)}&tz_offset_minutes=${tzOffset}${childParam}`, { headers: { "Accept-Language": lang } }),
         apiFetch("/api/users/me").catch(() => null)
       ]);
       const json = await reportRes.json();
       if (json.success) {
         setReportData(json.data);
-        sessionStorage.setItem("parent_report_cache", JSON.stringify(json.data));
+        sessionStorage.setItem(`parent_report_cache_${lang}`, JSON.stringify(json.data));
       }
       if (userRes && userRes.ok) {
         const ujson = await userRes.json();
@@ -417,8 +423,6 @@ export default function ParentReportScreen() {
 
   const qA: any          = reportData?.questionAnalytics    || {};
   const rA: any          = reportData?.readingAnalytics     || {};
-  const bA: any          = reportData?.bossAnalytics        || {};
-  const bossHistory: any[] = reportData?.bossHistory        || [];
   const subjects: any[]  = reportData?.subjectBreakdown     || [];
   const chapters: any[]  = reportData?.chapterBreakdown     || [];
   const improvements: any[] = reportData?.improvementTracking || [];
@@ -432,6 +436,31 @@ export default function ParentReportScreen() {
   const hasWeaknesses = weaknesses.length > 0 && !weaknesses.some(w => w.toLowerCase().includes("not enough data") || w.toLowerCase().includes("no weakness"));
   const hasRisks = risks.length > 0 && !risks.some(r => r.toLowerCase().includes("not enough data") || r.toLowerCase().includes("no risk"));
 
+  // Subject matching helper
+  const matchSubject = (s1?: string, s2?: string): boolean => {
+    if (!s1 || !s2) return false;
+    const a = s1.trim().toLowerCase();
+    const b = s2.trim().toLowerCase();
+    if (a === b) return true;
+    if ((a === "math" || a === "maths" || a === "mathematics") && (b === "math" || b === "maths" || b === "mathematics")) return true;
+    return false;
+  };
+
+  // Date key normalizer: converts any "YYYY-MM-DD" or "DD/MM" string to standard "DD/MM"
+  const normalizeDateKey = (raw: any): string => {
+    if (!raw) return "";
+    const s = String(raw).trim();
+    const slashMatch = s.match(/^(\d{1,2})\/(\d{1,2})/);
+    if (slashMatch) {
+      return `${slashMatch[1].padStart(2, "0")}/${slashMatch[2].padStart(2, "0")}`;
+    }
+    const isoMatch = s.match(/^\d{4}-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+      return `${isoMatch[2]}/${isoMatch[1]}`;
+    }
+    return s;
+  };
+
   // 1. Identify overall timeline points based on dateFilter
   let activePts: any[] = [];
   if (dateFilter === "today") {
@@ -439,9 +468,9 @@ export default function ParentReportScreen() {
   } else if (dateFilter === "yesterday") {
     activePts = monthlyHistory.length >= 2 ? monthlyHistory.slice(-2, -1) : (dailyHistory.length >= 2 ? dailyHistory.slice(-2, -1) : []);
   } else if (dateFilter === "this_week") {
-    activePts = monthlyHistory.slice(-7);
+    activePts = monthlyHistory.length >= 7 ? monthlyHistory.slice(-7) : (dailyHistory.length > 0 ? dailyHistory : monthlyHistory);
   } else if (dateFilter === "this_month") {
-    activePts = monthlyHistory.slice(-30);
+    activePts = monthlyHistory.length > 0 ? monthlyHistory.slice(-30) : dailyHistory;
   } else if (dateFilter === "custom") {
     if (customStartDate && customEndDate) {
       const s = new Date(customStartDate);
@@ -456,7 +485,7 @@ export default function ParentReportScreen() {
         return true;
       });
     } else {
-      activePts = monthlyHistory;
+      activePts = monthlyHistory.length > 0 ? monthlyHistory : dailyHistory;
     }
   }
 
@@ -475,14 +504,14 @@ export default function ParentReportScreen() {
   // Compute filteredQA for the card
   let filteredQA = { ...qA };
   if (subjectFilter !== "all") {
-    const sObj = subjects.find(s => s?.subject && s.subject.toLowerCase() === subjectFilter.toLowerCase());
+    const sObj = subjects.find(s => matchSubject(s?.subject, subjectFilter));
     if (sObj) {
       filteredQA = {
         totalAttempted: (sObj.correctAnswers ?? 0) + (sObj.wrongAnswers ?? 0),
         accuracy: sObj.accuracy ?? 0,
         correct: sObj.correctAnswers ?? 0,
         wrong: sObj.wrongAnswers ?? 0,
-        avgTimePerQuestion: qA.avgTimePerQuestion
+        avgTimePerQuestion: sObj.avgTimePerQuestion || qA.avgTimePerQuestion
       };
     }
   }
@@ -499,34 +528,64 @@ export default function ParentReportScreen() {
       if (displaySolved > 0 && activeDays.length > 0) {
         const sumAcc = activeDays.reduce((acc, pt) => acc + (pt.masteryScore ?? pt.score ?? 0), 0);
         displayAccuracy = Math.round(sumAcc / activeDays.length);
-        displayTime = Math.max(1, Math.round(displaySolved * 1.5));
+        const totalMinutes = activePts.reduce((acc, pt) => acc + (pt.timeMinutes || (pt.timeSeconds ? pt.timeSeconds / 60 : 0)), 0);
+        displayTime = totalMinutes > 0 ? Math.round(totalMinutes) : Math.max(1, Math.round(displaySolved * 0.5));
       }
     }
   } else {
     // Subject-specific metrics
-    const sObj = subjects.find(s => s?.subject && s.subject.toLowerCase() === subjectFilter.toLowerCase());
+    const sObj = subjects.find(s => matchSubject(s?.subject, subjectFilter));
     if (sObj) {
-      const sTimeline = sObj.timeline || [];
-      const targetDates = new Set(activePts.map(pt => pt.date || pt.day).filter(Boolean));
+      const altTrend = (reportData?.allSubjectsTrend || reportData?.top3SubjectsTrend || []).find((t: any) => matchSubject(t?.subject, subjectFilter));
+      const sTimeline = (sObj?.timeline && sObj.timeline.length > 0)
+        ? sObj.timeline
+        : ((altTrend?.timeline && altTrend.timeline.length > 0)
+          ? altTrend.timeline
+          : (sObj?.trend7Day || []));
+
+      const targetDates = new Set(activePts.map(pt => normalizeDateKey(pt.date || pt.day)).filter(Boolean));
       
       // If targetDates is empty (e.g. today's point isn't in monthlyHistory yet), fallback to today's date string
       if (targetDates.size === 0 && dateFilter === "today") {
-        const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' }).replace(/\//g, '/');
+        const d = new Date();
+        const todayStr = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
         targetDates.add(todayStr);
       }
       
-      const matchedPts = sTimeline.filter((pt: any) => targetDates.has(pt.day || pt.date));
+      let matchedPts = sTimeline.filter((pt: any) => {
+        const kDate = normalizeDateKey(pt.date);
+        const kDay = normalizeDateKey(pt.day);
+        return (kDate && targetDates.has(kDate)) || (kDay && targetDates.has(kDay));
+      });
+
+      // Fallback alignment by range if date keys did not directly intersect
+      if (matchedPts.length === 0 && sTimeline.length > 0) {
+        if (dateFilter === "today") matchedPts = sTimeline.slice(-1);
+        else if (dateFilter === "yesterday") matchedPts = sTimeline.slice(-2, -1);
+        else if (dateFilter === "this_week") matchedPts = sTimeline.slice(-7);
+        else if (dateFilter === "this_month") matchedPts = sTimeline.slice(-30);
+        else matchedPts = sTimeline;
+      }
       
       if (matchedPts.length > 0) {
-        displaySolved = matchedPts.reduce((acc, pt) => acc + (pt.total ?? 0), 0);
-        const activeDays = matchedPts.filter(pt => (pt.total ?? 0) > 0);
+        displaySolved = matchedPts.reduce((acc: number, pt: any) => acc + (pt.total ?? 0), 0);
+        const activeDays = matchedPts.filter((pt: any) => (pt.total ?? 0) > 0);
         if (displaySolved > 0 && activeDays.length > 0) {
-          const sumAcc = activeDays.reduce((acc, pt) => acc + (pt.score ?? pt.masteryScore ?? 0), 0);
-          displayAccuracy = Math.round(sumAcc / activeDays.length);
-          displayTime = Math.max(1, Math.round(displaySolved * 1.5));
+          const sumAcc = activeDays.reduce((acc: number, pt: any) => acc + (pt.score ?? pt.masteryScore ?? sObj.accuracy ?? 0), 0);
+          displayAccuracy = Math.round(sumAcc / activeDays.length) || (sObj.accuracy ?? 0);
+          const totalMinutes = matchedPts.reduce((acc: number, pt: any) => acc + (pt.timeMinutes || (pt.timeSeconds ? pt.timeSeconds / 60 : 0)), 0);
+          const avgSec = sObj.avgTimePerQuestion || 20;
+          displayTime = totalMinutes > 0 ? Math.round(totalMinutes) : Math.max(1, Math.round(displaySolved * (avgSec / 60)));
+        } else if (displaySolved > 0) {
+          displayAccuracy = sObj.accuracy ?? 0;
+          displayTime = Math.max(1, Math.round(displaySolved * 0.5));
+        } else {
+          // No practice inside targeted date range
+          displaySolved = 0;
+          displayAccuracy = 0;
+          displayTime = 0;
         }
       } else {
-        // No practice inside targeted date range
         displaySolved = 0;
         displayAccuracy = 0;
         displayTime = 0;
@@ -563,26 +622,112 @@ export default function ParentReportScreen() {
   }
 
   if (subjectFilter !== "all" && chartHistory.length > 0) {
-    const activeSubj = subjects.find(s => s?.subject && s.subject.toLowerCase() === subjectFilter.toLowerCase());
-    if (activeSubj && activeSubj.timeline && activeSubj.timeline.length > 0) {
-      chartHistory = activeSubj.timeline.map((pt: any) => {
-        const score = pt.score ?? pt.masteryScore ?? 75;
+    const activeSubj = subjects.find(s => matchSubject(s?.subject, subjectFilter));
+    const altTrend = (reportData?.allSubjectsTrend || reportData?.top3SubjectsTrend || []).find((t: any) => matchSubject(t?.subject, subjectFilter));
+    const subjTimeline = (activeSubj?.timeline && activeSubj.timeline.length > 0) 
+      ? activeSubj.timeline 
+      : ((altTrend?.timeline && altTrend.timeline.length > 0)
+        ? altTrend.timeline
+        : (activeSubj?.trend7Day && activeSubj.trend7Day.length > 0 ? activeSubj.trend7Day : []));
+
+    const subjAccuracy = typeof activeSubj?.accuracy === 'number' ? activeSubj.accuracy : 0;
+
+    if (subjTimeline.length > 0) {
+      const subjByDate = new Map<string, any>();
+      subjTimeline.forEach((pt: any) => {
+        const kDate = normalizeDateKey(pt.date);
+        const kDay = normalizeDateKey(pt.day);
+        if (kDate) subjByDate.set(kDate, pt);
+        if (kDay) subjByDate.set(kDay, pt);
+      });
+
+      chartHistory = chartHistory.map((basePt: any, idx: number) => {
+        const targetKey = normalizeDateKey(basePt.date || basePt.day);
+        let sPt = subjByDate.get(targetKey);
+        if (!sPt && subjTimeline.length === chartHistory.length) {
+          sPt = subjTimeline[idx];
+        }
+
+        const rawScore = sPt
+          ? (typeof sPt.score === 'number' ? sPt.score : (typeof sPt.masteryScore === 'number' ? sPt.masteryScore : null))
+          : null;
+        const total = sPt?.total ?? 0;
+        const score = (rawScore !== null && rawScore !== undefined) ? rawScore : 0;
+        const hasDayActivity = total > 0 || (rawScore !== null && rawScore > 0);
+
         return {
-          day: pt.day || pt.date,
+          ...basePt,
+          date: basePt.date || normalizeDateKey(sPt?.date || sPt?.day),
+          day: basePt.day || sPt?.day || basePt.date,
+          total: total,
           masteryScore: score,
-          weaknessScore: Math.max(10, 100 - score - 15),
-          riskIndex: Math.max(5, Math.round((100 - score) * 0.6))
+          weaknessScore: score > 0 ? Math.max(10, 100 - score - 15) : 0,
+          riskIndex: score > 0 ? Math.max(5, Math.round((100 - score) * 0.6)) : 0,
+          hasDayActivity: hasDayActivity
         };
       });
     } else {
-      const acc = activeSubj?.accuracy ?? 75;
       chartHistory = chartHistory.map(pt => ({
         ...pt,
-        masteryScore: Math.round((pt.masteryScore || 70) * (acc / 75)),
-        weaknessScore: Math.round((pt.weaknessScore || 30) * ((100 - acc) / 25))
+        total: 0,
+        masteryScore: subjAccuracy,
+        weaknessScore: subjAccuracy > 0 ? Math.max(10, 100 - subjAccuracy - 15) : 0,
+        riskIndex: subjAccuracy > 0 ? Math.max(5, Math.round((100 - subjAccuracy) * 0.6)) : 0
       }));
     }
   }
+
+  // Carry forward last known score for unplayed days once a score is established;
+  // keep 0% baseline strictly for days prior to the first activity.
+  let runningMastery = 0;
+  let runningWeakness = 0;
+  let runningRisk = 0;
+  let scoreEstablished = false;
+
+  // If a specific subject has prior established accuracy, seed it if the subject already has activity
+  if (subjectFilter !== "all") {
+    const activeSubj = subjects.find(s => matchSubject(s?.subject, subjectFilter));
+    const priorAcc = typeof activeSubj?.accuracy === 'number' ? activeSubj.accuracy : 0;
+    const hasAnyAttempts = (activeSubj?.correctAnswers ?? 0) + (activeSubj?.wrongAnswers ?? 0) > 0;
+    if (priorAcc > 0 && hasAnyAttempts) {
+      const hasChartActivity = chartHistory.some((pt: any) => (pt.total ?? 0) > 0 || (pt.masteryScore ?? 0) > 0);
+      if (!hasChartActivity) {
+        runningMastery = priorAcc;
+        runningWeakness = Math.max(10, 100 - priorAcc - 15);
+        runningRisk = Math.max(5, Math.round((100 - priorAcc) * 0.6));
+        scoreEstablished = true;
+      }
+    }
+  }
+
+  chartHistory = chartHistory.map((pt: any) => {
+    const rawM = typeof pt.masteryScore === 'number' && !isNaN(pt.masteryScore) ? pt.masteryScore : (typeof pt.score === 'number' ? pt.score : 0);
+    const hasActivity = (pt.total ?? 0) > 0 || rawM > 0 || pt.hasDayActivity;
+
+    if (hasActivity && rawM > 0) {
+      runningMastery = rawM;
+      runningWeakness = typeof pt.weaknessScore === 'number' && !isNaN(pt.weaknessScore) && pt.weaknessScore > 0 ? pt.weaknessScore : Math.max(10, 100 - rawM - 15);
+      runningRisk = typeof pt.riskIndex === 'number' && !isNaN(pt.riskIndex) && pt.riskIndex > 0 ? pt.riskIndex : Math.max(5, Math.round((100 - rawM) * 0.6));
+      scoreEstablished = true;
+    }
+
+    if (scoreEstablished) {
+      return {
+        ...pt,
+        masteryScore: runningMastery,
+        weaknessScore: runningWeakness,
+        riskIndex: runningRisk
+      };
+    }
+
+    // Days prior to very first activity remain 0% baseline
+    return {
+      ...pt,
+      masteryScore: 0,
+      weaknessScore: 0,
+      riskIndex: 0
+    };
+  });
 
   const masteryPath = chartHistory.map((pt: any, i: number) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(pt.masteryScore)}`).join(' ');
   const weaknessPath = chartHistory.map((pt: any, i: number) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(pt.weaknessScore)}`).join(' ');
@@ -840,10 +985,10 @@ export default function ParentReportScreen() {
             <StatBox label={t("correct", "Correct")}         value={filteredQA.correct ?? 0} color="text-[#006a62]" />
             <StatBox label={t("wrong", "Wrong")}           value={filteredQA.wrong ?? 0} color="text-[#ba1a1a]" />
           </div>
-          {(filteredQA.avgTimePerQuestion ?? 0) > 0 && (
+          {(filteredQA.totalAttempted ?? 0) > 0 && (
             <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 flex justify-between items-center">
               <span className="text-xs font-bold text-indigo-700">{t("avg_time_per_question", "Avg. Time per Question")}</span>
-              <span className="text-sm font-black text-indigo-900">{filteredQA.avgTimePerQuestion}s</span>
+              <span className="text-sm font-black text-indigo-900">{filteredQA.avgTimePerQuestion || 15}s</span>
             </div>
           )}
         </Card>
@@ -852,15 +997,18 @@ export default function ParentReportScreen() {
         <Card>
           <SectionHeader icon={<BookOpen size={20} color="#141779" />} title={t("subject_performance", "Subject Performance")} subtitle={t("accuracy_by_subject", "Accuracy by subject")} />
           <div className="space-y-4 mt-2">
-            {subjects.map((s: any, idx: number) => (
-              <div key={idx} className="space-y-1.5">
-                <div className="flex justify-between items-center text-xs font-black text-slate-800">
-                  <span className="capitalize">{s.subject}</span>
-                  <span className="text-[#141779] font-black">{s.accuracy ?? 0}%</span>
+            {subjects.map((s: any, idx: number) => {
+              const colorInfo = getSubjectChartColor(s.subject, idx);
+              return (
+                <div key={idx} className="space-y-1.5">
+                  <div className="flex justify-between items-center text-xs font-black text-slate-800">
+                    <span className="capitalize">{s.subject}</span>
+                    <span className="text-[#141779] font-black">{s.accuracy ?? 0}%</span>
+                  </div>
+                  <ProgressBar value={s.accuracy ?? 0} color={colorInfo.bar} />
                 </div>
-                <ProgressBar value={s.accuracy ?? 0} color={SUBJECT_COLORS[idx % SUBJECT_COLORS.length].bar} />
-              </div>
-            ))}
+              );
+            })}
             {subjects.length === 0 && (
               <p className="text-xs text-[#767683] text-center py-2">{t("no_subject_activity_data", "No subject activity data available.")}</p>
             )}
@@ -879,81 +1027,27 @@ export default function ParentReportScreen() {
             <span className="text-xs font-bold text-[#006a62]">{t("total_reading_time", "Total Reading Time")}</span>
             <span className="text-sm font-black text-[#006a62]">{formatReadingTime(rA.totalReadingTime ?? 0)}</span>
           </div>
-        </Card>
 
-        {/* Boss Round Analytics Card */}
-        <Card>
-          <SectionHeader icon={<ShieldCheck size={20} color="#ba1a1a" />} title={t("boss_round_analytics", "Boss Round Analytics")} subtitle={t("battle_performance_history", "Battle performance history")} />
-          <div className="grid grid-cols-2 gap-2 mb-3">
-            <StatBox label={t("total_attempts", "Total Attempts")} value={bA.totalAttempts ?? 0} />
-            <StatBox label={t("pass_rate", "Pass Rate")} value={`${bA.passRate ?? 0}%`} color={(bA.passRate ?? 0) >= 60 ? "text-[#006a62]" : "text-[#ba1a1a]"} />
-            <StatBox label={t("wins", "Wins")}  value={bA.wins ?? 0}   color="text-[#006a62]" />
-            <StatBox label={t("losses", "Losses")} value={bA.losses ?? 0} color="text-[#ba1a1a]" />
-          </div>
-          <ProgressBar value={bA.passRate ?? 0} color={(bA.passRate ?? 0) >= 60 ? "bg-[#006a62]" : "bg-[#ba1a1a]"} />
-          
-          {bossHistory.length > 0 && (
-            <div className="mt-4 border-t border-slate-100 pt-4 space-y-2">
-              <h4 className="text-[10px] font-bold text-[#464652] uppercase tracking-wide">{t("recent_battles", "Recent Battles")}</h4>
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                {bossHistory.map((b: any, idx: number) => {
-                  const statusUpper = (b.status || "").toUpperCase();
-                  const isWon = statusUpper === "WON" || statusUpper === "VICTORY";
-                  const isLost = statusUpper === "LOST" || statusUpper === "DEFEAT";
-
-                  const statusText = isWon
-                    ? t("victory", "Victory")
-                    : (isLost ? t("defeat", "Defeat") : t("in_progress", "In Progress"));
-
-                  const statusBg = isWon 
-                    ? "bg-green-50 text-green-700 border-green-200" 
-                    : (isLost ? "bg-red-50 text-red-700 border-red-200" : "bg-amber-50 text-amber-700 border-amber-200");
-                  
-                  const diffLower = (b.difficulty || "").toLowerCase();
-                  const diffText = diffLower === "easy" ? t("easy", "Easy") : (diffLower === "medium" ? t("medium", "Medium") : (diffLower === "hard" ? t("hard", "Hard") : b.difficulty));
-
-                  let bossNameText = b.bossName || t("boss_round", "Boss Round");
-                  if (bossNameText.includes("Egg Thief")) {
-                    bossNameText = bossNameText.replace("Egg Thief", t("boss_egg_thief", "Egg Thief"));
-                  }
-                  bossNameText = bossNameText.replace(/\(Easy\)/gi, `(${t("easy", "Easy")})`)
-                    .replace(/\(Medium\)/gi, `(${t("medium", "Medium")})`)
-                    .replace(/\(Hard\)/gi, `(${t("hard", "Hard")})`);
-
-                  let formattedDate = "";
-                  try {
-                    if (b.date) {
-                      const d = new Date(b.date);
-                      formattedDate = d.toLocaleDateString(i18n.language === "gu" ? "gu-IN" : "en-US", {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit"
-                      });
-                    }
-                  } catch (e) {}
-
-                  return (
-                    <div key={idx} className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex justify-between items-center transition-all">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-bold text-slate-800 truncate">{bossNameText}</p>
-                        <p className="text-[10px] font-bold text-[#767683] mt-0.5">{formattedDate}</p>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-[9px] bg-slate-200/80 text-slate-700 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
-                          {diffText}
-                        </span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wide ${statusBg}`}>
-                          {statusText}
-                        </span>
-                      </div>
+          {(rA.readChaptersDetailed?.length > 0 || rA.readChaptersList?.length > 0) && (
+            <div className="mt-4 border-t border-slate-100 pt-3 space-y-2">
+              <h4 className="text-[10px] font-bold text-[#464652] uppercase tracking-wide">{t("read_chapters", "Read Chapters")}</h4>
+              <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                {(rA.readChaptersDetailed || (rA.readChaptersList || []).map((name: string) => ({ name }))).map((ch: any, idx: number) => (
+                  <div key={idx} className="bg-[#006a62]/5 border border-[#006a62]/15 rounded-xl px-3 py-2 flex justify-between items-center text-xs">
+                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                      <span className="text-slate-400">📖</span>
+                      <span className="font-bold text-[#006a62] truncate">{ch.name}</span>
                     </div>
-                  );
-                })}
+                    {ch.timeSpent > 0 && (
+                      <span className="text-[10px] font-black text-slate-500 shrink-0 ml-2">⏱️ {formatReadingTime(ch.timeSpent)}</span>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           )}
         </Card>
+
 
         {/* Daily Mastery & Risk Trend Chart */}
         <Card>
@@ -963,16 +1057,16 @@ export default function ParentReportScreen() {
           ) : (
             <div className="relative">
               <div className="flex items-center justify-center gap-4 mb-4 text-[10px] font-bold text-[#464652]">
-                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#00bbf9]" /><span>{t("mastery", "Mastery")}</span></div>
-                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#f39c12]" /><span>{t("focus", "Focus")}</span></div>
-                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#ba1a1a]" /><span>{t("risk", "Risk")}</span></div>
+                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#2563eb]" /><span>{t("mastery", "Mastery")}</span></div>
+                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#d97706]" /><span>{t("focus", "Focus")}</span></div>
+                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#dc2626]" /><span>{t("risk", "Risk")}</span></div>
               </div>
               <svg ref={svgRef} viewBox="0 0 500 220" className="w-full overflow-visible select-none cursor-pointer"
                 onMouseMove={handleMouseMove} onMouseLeave={() => setHoveredIndex(null)}>
                 <defs>
                   <linearGradient id="mGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#00bbf9" stopOpacity="0.2"/>
-                    <stop offset="100%" stopColor="#00bbf9" stopOpacity="0"/>
+                    <stop offset="0%" stopColor="#2563eb" stopOpacity="0.2"/>
+                    <stop offset="100%" stopColor="#2563eb" stopOpacity="0"/>
                   </linearGradient>
                 </defs>
                 {[0, 25, 50, 75, 100].map(v => (
@@ -984,16 +1078,16 @@ export default function ParentReportScreen() {
                 {chartHistory.length > 0 && (
                   <>
                     <path d={masteryAreaPath} fill="url(#mGrad)" />
-                    <path d={masteryPath} fill="none" stroke="#00bbf9" strokeWidth="3" strokeLinecap="round" />
-                    <path d={weaknessPath} fill="none" stroke="#f39c12" strokeWidth="2.5" strokeDasharray="4,4" />
-                    <path d={riskPath} fill="none" stroke="#ba1a1a" strokeWidth="2" />
+                    <path d={masteryPath} fill="none" stroke="#2563eb" strokeWidth="3" strokeLinecap="round" />
+                    <path d={weaknessPath} fill="none" stroke="#d97706" strokeWidth="2.5" strokeDasharray="4,4" />
+                    <path d={riskPath} fill="none" stroke="#dc2626" strokeWidth="2" />
                     {chartHistory.map((pt: any, i: number) => {
                       const isHovered = hoveredIndex === i;
                       return (
                         <g key={i}>
-                          <circle cx={getX(i)} cy={getY(pt.masteryScore)} r={isHovered ? 6 : 4} fill="#00bbf9" stroke="#fff" strokeWidth="1.5" />
-                          <circle cx={getX(i)} cy={getY(pt.weaknessScore)} r={isHovered ? 5 : 3.5} fill="#f39c12" stroke="#fff" strokeWidth="1.5" />
-                          <circle cx={getX(i)} cy={getY(pt.riskIndex)} r={isHovered ? 5 : 3.5} fill="#ba1a1a" stroke="#fff" strokeWidth="1" />
+                          <circle cx={getX(i)} cy={getY(pt.masteryScore)} r={isHovered ? 6 : 4} fill="#2563eb" stroke="#fff" strokeWidth="1.5" />
+                          <circle cx={getX(i)} cy={getY(pt.weaknessScore)} r={isHovered ? 5 : 3.5} fill="#d97706" stroke="#fff" strokeWidth="1.5" />
+                          <circle cx={getX(i)} cy={getY(pt.riskIndex)} r={isHovered ? 5 : 3.5} fill="#dc2626" stroke="#fff" strokeWidth="1" />
                         </g>
                       );
                     })}
@@ -1084,6 +1178,35 @@ export default function ParentReportScreen() {
                       </span>
                     )}
                   </div>
+
+                  {(m.selectedOption || m.correctAnswer) && (
+                    <div className="mt-2.5 pt-2 border-t border-slate-200/60 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      {m.selectedOption && (
+                        <div className="bg-red-50/80 border border-red-100 rounded-lg p-2 text-red-700">
+                          <span className="font-bold block text-[10px] uppercase tracking-wider text-red-500 mb-0.5">
+                            {t("your_answer", "Child's Answer")}:
+                          </span>
+                          <span className="font-semibold">{m.selectedOption}</span>
+                        </div>
+                      )}
+                      {m.correctAnswer && (
+                        <div className="bg-emerald-50/80 border border-emerald-100 rounded-lg p-2 text-emerald-800">
+                          <span className="font-bold block text-[10px] uppercase tracking-wider text-emerald-600 mb-0.5">
+                            {t("correct_answer", "Correct Answer")}:
+                          </span>
+                          <span className="font-semibold">{m.correctAnswer}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {m.explanation && (
+                    <div className="mt-2 p-2 bg-amber-50/60 border border-amber-100/70 rounded-lg text-xs text-amber-900">
+                      <span className="font-bold text-[10px] uppercase tracking-wider text-amber-700 block mb-0.5">
+                        💡 {t("explanation", "Explanation")}:
+                      </span>
+                      <p className="text-slate-600 font-medium">{m.explanation}</p>
+                    </div>
+                  )}
                 </div>
               ))}
 
@@ -1368,6 +1491,18 @@ export default function ParentReportScreen() {
           setLoading(true);
           setRefreshKey(k => k + 1);
         }}
+      />
+
+      {/* Unified Alert / Feedback Modal */}
+      <UnifiedConfirmModal
+        isOpen={!!alertModal?.show}
+        onClose={() => setAlertModal(null)}
+        onConfirm={() => setAlertModal(null)}
+        title={alertModal?.title || ""}
+        message={alertModal?.message || ""}
+        confirmText="Got It"
+        showCancel={false}
+        variant={alertModal?.variant || "primary"}
       />
     </div>
   );

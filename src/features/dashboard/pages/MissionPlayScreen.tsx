@@ -22,6 +22,8 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "../../../api";
 import { showInteractiveNotification } from "../../../services/pushNotificationService";
+import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
+import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 
 type StepPhase = "INTRO" | "QUIZ" | "MINI_REWARD" | "BOSS" | "SUMMARY";
 
@@ -207,18 +209,40 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   const [searchParams] = useSearchParams();
   const chapterId = searchParams.get("chapterId") || "ch1";
   const missionSeq = parseInt(searchParams.get("missionSeq") || "1", 10);
-  const [isReplay] = useState(() => searchParams.get("replay") === "true");
+  const isFreshReplay = searchParams.get("replay") === "true";
+  const [isReplay] = useState(() => {
+    const fromUrl = searchParams.get("replay") === "true";
+    const fromSession = sessionStorage.getItem(`is_replay_${chapterId}_${missionSeq}`) === "true";
+    const res = fromUrl || fromSession;
+    if (res) {
+      sessionStorage.setItem(`is_replay_${chapterId}_${missionSeq}`, "true");
+      for (let s = 1; s <= 5; s++) {
+        if (s !== missionSeq) {
+          sessionStorage.removeItem(`is_replay_${chapterId}_${s}`);
+        }
+      }
+    }
+    return res;
+  });
+
+  useEffect(() => {
+    if (searchParams.get("replay") === "true") {
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete("replay");
+      window.history.replaceState({}, "", newUrl.toString());
+    }
+  }, []);
 
   const [loading, setLoading] = useState(true);
   const [missionData, setMissionData] = useState<any>(null);
   // Check if an in-progress session exists in sessionStorage for this specific mission
   const savedPhase = sessionStorage.getItem(`mission_phase_${chapterId}_${missionSeq}`);
   const hasSavedSession = Boolean(
-    savedPhase && (savedPhase === "BOSS" || savedPhase === "QUIZ" || savedPhase === "MINI_REWARD" || savedPhase === "SUMMARY")
+    savedPhase && (savedPhase === "BOSS" || savedPhase === "QUIZ" || savedPhase === "MINI_REWARD")
   );
 
   const [phase, setPhase] = useState<StepPhase>(() => {
-    if (isReplay) {
+    if (isFreshReplay) {
       sessionStorage.removeItem(`mission_phase_${chapterId}_${missionSeq}`);
       sessionStorage.removeItem(`boss_damage_${chapterId}_${missionSeq}`);
       sessionStorage.removeItem(`boss_wrong_${chapterId}_${missionSeq}`);
@@ -229,7 +253,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       sessionStorage.removeItem(`xp_earned_${chapterId}_${missionSeq}`);
       sessionStorage.removeItem(`coins_earned_${chapterId}_${missionSeq}`);
       const queryPhase = searchParams.get("phase");
-      if (queryPhase === "BOSS" || queryPhase === "QUIZ" || queryPhase === "SUMMARY") {
+      if (queryPhase === "BOSS" || queryPhase === "QUIZ" || queryPhase === "MINI_REWARD") {
         return queryPhase as StepPhase;
       }
       return "INTRO";
@@ -238,7 +262,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       return savedPhase as StepPhase;
     }
     const queryPhase = searchParams.get("phase");
-    if (queryPhase === "BOSS" || queryPhase === "QUIZ" || queryPhase === "SUMMARY") {
+    if (queryPhase === "BOSS" || queryPhase === "QUIZ" || queryPhase === "MINI_REWARD") {
       return queryPhase as StepPhase;
     }
     return "INTRO";
@@ -246,7 +270,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
   // Quiz state
   const [currentQuizIndex, setCurrentQuizIndex] = useState(() => {
-    if (isReplay) return 0;
+    if (isFreshReplay) return 0;
     const savedAns = sessionStorage.getItem(`user_answers_${chapterId}_${missionSeq}`);
     if (savedAns) {
       try {
@@ -260,7 +284,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   });
   const [quizSelected, setQuizSelected] = useState<number | null>(null);
   const [quizCorrectCount, setQuizCorrectCount] = useState(() => {
-    if (isReplay) return 0;
+    if (isFreshReplay) return 0;
     const saved = sessionStorage.getItem(`quiz_correct_${chapterId}_${missionSeq}`);
     if (saved !== null) return parseInt(saved, 10) || 0;
     const savedAns = sessionStorage.getItem(`user_answers_${chapterId}_${missionSeq}`);
@@ -282,12 +306,12 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
   // Stats state
   const [xpEarned, setXpEarned] = useState(() => {
-    if (isReplay) return 0;
+    if (isFreshReplay) return 0;
     const saved = sessionStorage.getItem(`xp_earned_${chapterId}_${missionSeq}`);
     return saved ? (parseInt(saved, 10) || 0) : 0;
   });
   const [coinsEarned, setCoinsEarned] = useState(() => {
-    if (isReplay) return 0;
+    if (isFreshReplay) return 0;
     const saved = sessionStorage.getItem(`coins_earned_${chapterId}_${missionSeq}`);
     return saved ? (parseInt(saved, 10) || 0) : 0;
   });
@@ -298,25 +322,40 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   // Question Countdown Timer State (30s per question)
   const [questionTimeLeft, setQuestionTimeLeft] = useState(QUESTION_TIME_LIMIT);
   const [totalSessionSec, setTotalSessionSec] = useState(() => {
-    if (isReplay) return 0;
+    if (isFreshReplay) return 0;
     const saved = sessionStorage.getItem(`mission_timer_${chapterId}_${missionSeq}`);
     return saved ? (parseInt(saved, 10) || 0) : 0;
   });
 
   // Boss Battle state
   const [bossDamageCount, setBossDamageCount] = useState(() => {
-    if (isReplay) return 0;
+    if (isFreshReplay) return 0;
     const saved = sessionStorage.getItem(`boss_damage_${chapterId}_${missionSeq}`);
     return saved ? (parseInt(saved, 10) || 0) : 0;
   });
-  const [childDamageCount, setChildDamageCount] = useState(0); // tracks hearts lost (0-3)
+  const [childDamageCount, setChildDamageCount] = useState(() => {
+    const isReviving = sessionStorage.getItem("mission_boss_revival_active") || sessionStorage.getItem("boss_revival_won_reward");
+    if (isReviving) {
+      const wonRewardStr = sessionStorage.getItem("boss_revival_won_reward");
+      if (wonRewardStr) {
+        try {
+          const r = JSON.parse(wonRewardStr);
+          if (r.reward_type === "heart" && r.amount) {
+            return Math.max(0, 3 - r.amount);
+          }
+        } catch (e) {}
+      }
+      return 2; // 1 heart remaining (3 - 2 = 1)
+    }
+    return 0;
+  }); // tracks hearts lost (0-3)
   const [wrongAnswerCount, setWrongAnswerCount] = useState(() => {
-    if (isReplay) return 0;
+    if (isFreshReplay) return 0;
     const saved = sessionStorage.getItem(`boss_wrong_${chapterId}_${missionSeq}`);
     return saved ? (parseInt(saved, 10) || 0) : 0;
   });
   const [currentBossIndex, setCurrentBossIndex] = useState(() => {
-    if (isReplay) return 0;
+    if (isFreshReplay) return 0;
     const saved = sessionStorage.getItem(`boss_index_${chapterId}_${missionSeq}`);
     return saved ? (parseInt(saved, 10) || 0) : 0;
   });
@@ -329,19 +368,23 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
   // Revival State
   const [showReviveModal, setShowReviveModal] = useState(false);
+  const [showBuySpinConfirmModal, setShowBuySpinConfirmModal] = useState(false);
+  const [isBuyingRevivalSpin, setIsBuyingRevivalSpin] = useState(false);
   const [revivalSpins, setRevivalSpins] = useState(0);
   const [hasDoubleDamage, setHasDoubleDamage] = useState(false);
   const [lossOverlay, setLossOverlay] = useState<{ show: boolean; xpLoss: number }>({ show: false, xpLoss: 0 });
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const showToast = (message: string) => {
-    setToastMessage(message);
-    setTimeout(() => setToastMessage(null), 3000);
+  const showToast = (message: string, type: "gamification" | "error" | "success" | "warning" = "gamification") => {
+    showNotificationToast({
+      title: "Mission Update",
+      message,
+      type
+    });
   };
   const [userCoins, setUserCoins] = useState(0);
 
   // Duolingo Streak animations and steps
   const [summaryStep, setSummaryStep] = useState<"LESSON_COMPLETE" | "STREAK" | "REPORT">(() => {
-    if (isReplay) return "LESSON_COMPLETE";
+    if (isFreshReplay) return "LESSON_COMPLETE";
     const saved = sessionStorage.getItem(`summary_step_${chapterId}_${missionSeq}`);
     return (saved as any) || "LESSON_COMPLETE";
   });
@@ -351,6 +394,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
   const openReviveModal = async () => {
     setShowReviveModal(true);
+    setShowBuySpinConfirmModal(false);
     try {
       const res = await apiFetch("/api/users/me");
       const json = await res.json();
@@ -370,6 +414,110 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       console.error(e);
     }
   };
+
+  const handleGoToMissionSpinWheel = () => {
+    sessionStorage.setItem("mission_boss_revival_active", "true");
+    sessionStorage.setItem(`boss_damage_${chapterId}_${missionSeq}`, bossDamageCount.toString());
+    sessionStorage.setItem(`boss_wrong_${chapterId}_${missionSeq}`, wrongAnswerCount.toString());
+    sessionStorage.setItem(`boss_index_${chapterId}_${missionSeq}`, currentBossIndex.toString());
+    sessionStorage.setItem(`mission_phase_${chapterId}_${missionSeq}`, "BOSS");
+    sessionStorage.setItem(`user_answers_${chapterId}_${missionSeq}`, JSON.stringify(userAnswers));
+
+    setShowReviveModal(false);
+    setShowBuySpinConfirmModal(false);
+
+    const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+    navigate(`/daily-rewards?type=boss_revival&chapter_id=${chapterId}&mission_seq=${missionSeq}&returnTo=${returnUrl}`);
+  };
+
+  const handleConfirmBuyRevivalSpin = async () => {
+    if (userCoins < 100) {
+      showToast("Not enough coins! You need 100 coins.", "warning");
+      setShowBuySpinConfirmModal(false);
+      return;
+    }
+    setIsBuyingRevivalSpin(true);
+
+    try {
+      const res = await apiFetch("/api/retention/spin-wheel/buy-revival", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      const json = await res.json();
+      if (json.success) {
+        const newCoins = json.coins !== undefined ? json.coins : Math.max(0, userCoins - 100);
+        setUserCoins(newCoins);
+        setRevivalSpins(1);
+
+        try {
+          const uRes = await apiFetch("/api/users/me");
+          const uJson = await uRes.json();
+          if (uJson.success && uJson.data?.user) {
+            localStorage.setItem("userData", JSON.stringify(uJson.data.user));
+            window.dispatchEvent(new Event("userDataUpdated"));
+          }
+        } catch (ue) {}
+
+        sessionStorage.setItem("mission_boss_revival_active", "true");
+        sessionStorage.setItem(`boss_damage_${chapterId}_${missionSeq}`, bossDamageCount.toString());
+        sessionStorage.setItem(`boss_wrong_${chapterId}_${missionSeq}`, wrongAnswerCount.toString());
+        sessionStorage.setItem(`boss_index_${chapterId}_${missionSeq}`, currentBossIndex.toString());
+        sessionStorage.setItem(`mission_phase_${chapterId}_${missionSeq}`, "BOSS");
+        sessionStorage.setItem(`user_answers_${chapterId}_${missionSeq}`, JSON.stringify(userAnswers));
+
+        setShowBuySpinConfirmModal(false);
+        setShowReviveModal(false);
+
+        showToast("Purchased 1 Revival Spin! Heading to the wheel... 🎉", "success");
+
+        const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+        navigate(`/daily-rewards?type=boss_revival&chapter_id=${chapterId}&mission_seq=${missionSeq}&returnTo=${returnUrl}`);
+      } else {
+        showToast(json.message || "Purchase failed.", "error");
+        setShowBuySpinConfirmModal(false);
+        setShowReviveModal(true);
+      }
+    } catch (e) {
+      showToast("Purchase failed.", "error");
+      setShowBuySpinConfirmModal(false);
+      setShowReviveModal(true);
+    } finally {
+      setIsBuyingRevivalSpin(false);
+    }
+  };
+
+  // Check and apply revival bonus when returning from DailyRewardsScreen
+  useEffect(() => {
+    const isReviving = sessionStorage.getItem("mission_boss_revival_active") || sessionStorage.getItem("boss_revival_won_reward");
+    if (isReviving) {
+      const wonRewardStr = sessionStorage.getItem("boss_revival_won_reward");
+      let heartsRestored = 1;
+      if (wonRewardStr) {
+        try {
+          const r = JSON.parse(wonRewardStr);
+          if (r.reward_type === "heart" && r.amount) {
+            heartsRestored = r.amount;
+          } else if (r.reward_type === "double_damage") {
+            setHasDoubleDamage(true);
+          }
+        } catch (e) {}
+      }
+
+      setChildDamageCount(Math.max(0, 3 - heartsRestored));
+      setShowReviveModal(false);
+      setShowBuySpinConfirmModal(false);
+      setBossSelected(null);
+      setBossConfirmed(false);
+      setBossAngry(false);
+      setDragonCrying(false);
+      setQuestionTimeLeft(QUESTION_TIME_LIMIT);
+
+      sessionStorage.removeItem("mission_boss_revival_active");
+      sessionStorage.removeItem("boss_revival_won_reward");
+
+      showToast("Revived and ready! Your hearts have been restored. Defeat the boss! ❤️", "success");
+    }
+  }, []);
 
   useEffect(() => {
     sessionStorage.setItem(`boss_damage_${chapterId}_${missionSeq}`, bossDamageCount.toString());
@@ -397,7 +545,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
   // Final Summary state
   const [completionResult, setCompletionResult] = useState<any>(() => {
-    if (isReplay) return null;
+    if (isFreshReplay || phase !== "SUMMARY") return null;
     const saved = sessionStorage.getItem(`completion_result_${chapterId}_${missionSeq}`);
     if (saved) {
       try {
@@ -407,7 +555,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     return null;
   });
   const [userAnswers, setUserAnswers] = useState<any[]>(() => {
-    if (isReplay) return [];
+    if (isFreshReplay) return [];
     const saved = sessionStorage.getItem(`user_answers_${chapterId}_${missionSeq}`);
     return saved ? JSON.parse(saved) : [];
   });
@@ -424,18 +572,34 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   }, [phase, chapterId, missionSeq]);
 
   useEffect(() => {
+    sessionStorage.setItem(`quiz_correct_${chapterId}_${missionSeq}`, quizCorrectCount.toString());
+  }, [quizCorrectCount, chapterId, missionSeq]);
+
+  useEffect(() => {
+    sessionStorage.setItem(`xp_earned_${chapterId}_${missionSeq}`, xpEarned.toString());
+  }, [xpEarned, chapterId, missionSeq]);
+
+  useEffect(() => {
+    sessionStorage.setItem(`coins_earned_${chapterId}_${missionSeq}`, coinsEarned.toString());
+  }, [coinsEarned, chapterId, missionSeq]);
+
+  useEffect(() => {
+    sessionStorage.setItem(`boss_damage_${chapterId}_${missionSeq}`, bossDamageCount.toString());
+  }, [bossDamageCount, chapterId, missionSeq]);
+
+  useEffect(() => {
+    sessionStorage.setItem(`boss_wrong_${chapterId}_${missionSeq}`, wrongAnswerCount.toString());
+  }, [wrongAnswerCount, chapterId, missionSeq]);
+
+  useEffect(() => {
+    sessionStorage.setItem(`boss_index_${chapterId}_${missionSeq}`, currentBossIndex.toString());
+  }, [currentBossIndex, chapterId, missionSeq]);
+
+  useEffect(() => {
     if (phase === "SUMMARY") {
       sessionStorage.setItem(`summary_step_${chapterId}_${missionSeq}`, summaryStep);
     }
   }, [summaryStep, phase, chapterId, missionSeq]);
-
-  useEffect(() => {
-    if (searchParams.get("replay") === "true") {
-      const newParams = new URLSearchParams(searchParams);
-      newParams.delete("replay");
-      navigate(`?${newParams.toString()}`, { replace: true });
-    }
-  }, [searchParams, navigate]);
 
   const [isDraftRestored, setIsDraftRestored] = useState(false);
   const [isQuitting, setIsQuitting] = useState(false);
@@ -444,33 +608,54 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   useEffect(() => {
     async function fetchMission() {
       try {
-        if (isReplay) {
+        if (missionSeq > 5 || missionSeq < 1) {
+          navigate(`/mission-roadmap?chapterId=${chapterId}`, { replace: true });
+          return;
+        }
+        if (isFreshReplay) {
           apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, { method: "DELETE" }).catch(() => {});
         }
-        const res = await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}`);
+        const res = await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}${isFreshReplay ? "?replay=true" : ""}`);
         const json = await res.json();
         if (json.success && json.data) {
           setMissionData(json.data);
 
           // Restore draft from database if present (ignore when starting fresh replay)
-          const draft = isReplay ? null : json.data.activeDraft;
+          const draft = isFreshReplay ? null : json.data.activeDraft;
           if (draft) {
+            const savedAnswersRaw = sessionStorage.getItem(`user_answers_${chapterId}_${missionSeq}`);
+            let savedAnswers: any[] = [];
+            try { savedAnswers = savedAnswersRaw ? JSON.parse(savedAnswersRaw) : []; } catch (e) {}
+
+            const mergedAnswers = (Array.isArray(draft.userAnswers) && draft.userAnswers.length >= savedAnswers.length)
+              ? draft.userAnswers
+              : savedAnswers;
+
+            const savedWrong = parseInt(sessionStorage.getItem(`boss_wrong_${chapterId}_${missionSeq}`) || "0", 10);
+            const savedIndex = parseInt(sessionStorage.getItem(`boss_index_${chapterId}_${missionSeq}`) || "0", 10);
+
             if (typeof draft.currentQuizIndex === "number") setCurrentQuizIndex(draft.currentQuizIndex);
             if (draft.phase && draft.phase !== "INTRO") setPhase(draft.phase);
             if (typeof draft.quizCorrectCount === "number") setQuizCorrectCount(draft.quizCorrectCount);
-            if (Array.isArray(draft.userAnswers)) setUserAnswers(draft.userAnswers);
+            if (mergedAnswers.length > 0) setUserAnswers(mergedAnswers);
             if (typeof draft.xpEarned === "number") setXpEarned(draft.xpEarned);
             if (typeof draft.coinsEarned === "number") setCoinsEarned(draft.coinsEarned);
             if (typeof draft.bossDamageCount === "number") setBossDamageCount(draft.bossDamageCount);
-            if (typeof draft.wrongAnswerCount === "number") setWrongAnswerCount(draft.wrongAnswerCount);
-            if (typeof draft.currentBossIndex === "number") setCurrentBossIndex(draft.currentBossIndex);
+            setWrongAnswerCount(Math.max(draft.wrongAnswerCount || 0, savedWrong));
+            setCurrentBossIndex(Math.max(draft.currentBossIndex || 0, savedIndex));
             if (typeof draft.totalSessionSec === "number") setTotalSessionSec(draft.totalSessionSec);
           }
 
           if (json.data.doubleDamage !== undefined) {
             setHasDoubleDamage(json.data.doubleDamage);
           }
-          if (isReplay || !draft) {
+          if (isFreshReplay) {
+            setChildDamageCount(0);
+            setBossDamageCount(0);
+            setWrongAnswerCount(0);
+            setCurrentBossIndex(0);
+            sessionStorage.removeItem(`boss_wrong_${chapterId}_${missionSeq}`);
+          } else if (!draft && !hasSavedSession) {
             setChildDamageCount(0);
             setBossDamageCount(0);
             setWrongAnswerCount(0);
@@ -484,6 +669,9 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           } else {
             setChildDamageCount(0);
           }
+        } else {
+          // Mission does not exist or all missions completed
+          navigate(`/mission-roadmap?chapterId=${chapterId}`, { replace: true });
         }
       } catch (e) {
         console.error("Failed to load mission:", e);
@@ -493,11 +681,11 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       }
     }
     fetchMission();
-  }, [chapterId, missionSeq]);
+  }, [chapterId, missionSeq, navigate]);
 
   // Auto-sync active mission draft state to backend database (Solution 1)
   useEffect(() => {
-    if (!isDraftRestored || isQuitting || !phase || phase === "INTRO" || phase === "SUMMARY" || loading || childDamageCount >= 3) return;
+    if (!isDraftRestored || isQuitting || !phase || phase === "INTRO" || phase === "SUMMARY" || loading) return;
 
     const timeoutId = setTimeout(() => {
       apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, {
@@ -546,35 +734,24 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     { _id: "fq4", question: "What comes after the letter B in the alphabet?", options: ["C", "A", "D", "E"], answer: "C", type: "multiple_choice" }
   ];
 
-  const shuffleQuestionOptions = (questions: any[]) => {
-    return questions.map((q) => {
-      if (!q || !q.options || !Array.isArray(q.options) || q.options.length < 2) return q;
-      const opts = [...q.options];
-      for (let i = opts.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [opts[i], opts[j]] = [opts[j], opts[i]];
-      }
-      return { ...q, options: opts };
-    });
-  };
+  const quizQuestions = useMemo(() => {
+    return (missionData?.quizQuestions && missionData.quizQuestions.length > 0)
+      ? missionData.quizQuestions
+      : defaultQuiz;
+  }, [missionData?.quizQuestions]);
 
-  const rawQuiz = (missionData?.quizQuestions && missionData.quizQuestions.length > 0)
-    ? missionData.quizQuestions
-    : defaultQuiz;
-
-  const quizQuestions = useMemo(() => shuffleQuestionOptions(rawQuiz), [rawQuiz]);
-
-  const rawBoss = (missionData?.bossQuestions && missionData.bossQuestions.length > 0)
-    ? missionData.bossQuestions
-    : (() => {
-        const half = Math.ceil(quizQuestions.length / 2);
-        return [...quizQuestions.slice(half), ...quizQuestions.slice(0, half)];
-      })();
+  const defaultBoss = [
+    { _id: "fb1", question: "Chapter Boss Challenge: Which of the following best demonstrates this chapter's advanced concept?", options: ["Option A", "Option B", "Option C", "Option D"], answer: "Option A", type: "multiple_choice", difficulty: "Hard", isBoss: true },
+    { _id: "fb2", question: "Boss Guardian Strike: Identify the core mastery principle from this chapter.", options: ["Correct Statement", "Option 1", "Option 2", "Option 3"], answer: "Correct Statement", type: "multiple_choice", difficulty: "Hard", isBoss: true },
+    { _id: "fb3", question: "Final Boss Strike: Solve this chapter mastery challenge to defeat the boss.", options: ["Mastery Answer", "Option 1", "Option 2", "Option 3"], answer: "Mastery Answer", type: "multiple_choice", difficulty: "Hard", isBoss: true }
+  ];
 
   const bossQuestions = useMemo(() => {
-    const list = rawBoss.length > 0 ? rawBoss : (quizQuestions.length > 0 ? quizQuestions : defaultQuiz);
-    return shuffleQuestionOptions(list);
-  }, [rawBoss, quizQuestions]);
+    if (missionData?.bossQuestions && missionData.bossQuestions.length > 0) {
+      return missionData.bossQuestions;
+    }
+    return defaultBoss;
+  }, [missionData?.bossQuestions]);
 
   const bossMaxHp = 3;
   const bossHearts = Math.max(0, bossMaxHp - bossDamageCount);
@@ -600,30 +777,11 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   }, [currentBossIndex, activeBossQ?._id]);
 
   const activeBossOptions = useMemo(() => {
-    const rawOpts = (activeBossQ?.options && Array.isArray(activeBossQ.options) && activeBossQ.options.length > 0)
-      ? activeBossQ.options
-      : [activeBossQ?.answer || "Option 1", "Option 2", "Option 3", "Option 4"];
-
-    const opts = [...rawOpts];
-    // Seeded PRNG Fisher-Yates shuffle per question text/id
-    const seedStr = String(activeBossQ?._id || activeBossQ?.question || currentBossIndex);
-    let h = 2166136261;
-    for (let i = 0; i < seedStr.length; i++) {
-      h = Math.imul(h ^ seedStr.charCodeAt(i), 16777619);
+    if (activeBossQ?.options && Array.isArray(activeBossQ.options) && activeBossQ.options.length > 0) {
+      return activeBossQ.options;
     }
-    const rng = () => {
-      h += h << 13;
-      h ^= h >> 7;
-      h += h << 3;
-      h ^= h >> 17;
-      return ((h += h << 5) >>> 0) / 4294967296;
-    };
-    for (let i = opts.length - 1; i > 0; i--) {
-      const j = Math.floor(rng() * (i + 1));
-      [opts[i], opts[j]] = [opts[j], opts[i]];
-    }
-    return opts;
-  }, [activeBossQ?._id, activeBossQ?.question, activeBossQ?.options, currentBossIndex]);
+    return [activeBossQ?.answer || "Option 1", "Option 2", "Option 3", "Option 4"];
+  }, [activeBossQ?._id, activeBossQ?.options, activeBossQ?.answer]);
 
   const bossName = missionData?.bossName || "Boss Guardian";
   const missionTitle = missionData?.title || `Mission ${missionSeq}`;
@@ -714,7 +872,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           quizCorrect: quizCorrectCount,
           quizTotal: quizQuestions.length,
           bossCorrect: bossCorrect,
-          bossTotal: bossCorrect + wrongAnswerCount,
+          bossTotal: Math.max(bossCorrect + wrongAnswerCount, currentAnswers.length - quizQuestions.length),
           timeTakenSec: totalSessionSec,
           livesRemaining: Math.max(0, 3 - finalChildDamage),
           answers: currentAnswers
@@ -724,6 +882,51 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       if (json.success && json.data) {
         setCompletionResult(json.data);
         sessionStorage.setItem(`completion_result_${chapterId}_${missionSeq}`, JSON.stringify(json.data));
+
+        sessionStorage.removeItem(`is_replay_${chapterId}_${missionSeq}`);
+
+        try {
+          const chIdStr = String(chapterId);
+          const cachedCompleted = sessionStorage.getItem("cached_completed_chapters");
+          let completedList: string[] = cachedCompleted ? JSON.parse(cachedCompleted) : [];
+
+          const cachedProg = sessionStorage.getItem("cached_chapter_progress");
+          const progMap = cachedProg ? JSON.parse(cachedProg) : {};
+          const prevDoc = progMap[chIdStr] || {};
+
+          // A chapter once completed must NEVER revert to uncompleted on replay!
+          const wasAlreadyDone = Boolean(prevDoc.chapterCompleted || prevDoc.completed || completedList.includes(chIdStr));
+          const isChapDone = Boolean(json.data.chapterCompleted) || wasAlreadyDone;
+
+          if (isChapDone) {
+            if (!completedList.includes(chIdStr)) completedList.push(chIdStr);
+            if (!completedList.includes(`${chIdStr}_hard`)) completedList.push(`${chIdStr}_hard`);
+          } else {
+            // Strictly remove from completed list only if it was never completed
+            completedList = completedList.filter((id) => id !== chIdStr && id !== `${chIdStr}_hard`);
+          }
+          sessionStorage.setItem("cached_completed_chapters", JSON.stringify(completedList));
+
+          const prevMissions = Array.isArray(prevDoc.completedMissions) ? prevDoc.completedMissions : [];
+          const backendMissions = Array.isArray(json.data.completedMissions) ? json.data.completedMissions : [];
+          const updatedMissions = Array.from(new Set([...prevMissions, ...backendMissions]));
+          const totalMissions = Number(json.data.totalMissions || 5);
+          const allMissionsFinished = isChapDone || (updatedMissions.length >= totalMissions) || Boolean(prevDoc.chapterCompleted);
+
+          const updatedDoc = {
+            ...prevDoc,
+            chapterId: chIdStr,
+            chapterCompleted: allMissionsFinished,
+            completed: allMissionsFinished,
+            completedMissions: updatedMissions
+          };
+          progMap[chIdStr] = updatedDoc;
+          progMap[chapterId] = updatedDoc;
+          sessionStorage.setItem("cached_chapter_progress", JSON.stringify(progMap));
+        } catch (_) {}
+
+        window.dispatchEvent(new Event("userDataUpdated"));
+
         // Trigger Interactive Desktop Push Notification & Floating Banner Toast
         showInteractiveNotification(
           "🧩 MYSTERY SOLVED!",
@@ -745,12 +948,15 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           setDisplayedStreak(json.data.streak || 1);
         }
       } else {
+        const currentAcc = Math.round(((quizCorrectCount + finalBossDamage) / Math.max(1, quizQuestions.length + bossQuestions.length)) * 100);
         const fallbackRes = {
           xpEarned: xpEarned || 20,
           coinsEarned: coinsEarned || 50,
           earnedXp: xpEarned || 20,
           earnedCoins: coinsEarned || 50,
-          accuracy: 100,
+          accuracy: currentAcc,
+          runAccuracy: currentAcc,
+          bestAccuracy: currentAcc,
           totalQuestions: quizQuestions.length + bossQuestions.length,
           correctAnswers: quizCorrectCount + finalBossDamage,
           streak: streak || 1,
@@ -768,6 +974,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   };
 
   const handleBackToRoadmap = useCallback(async () => {
+    sessionStorage.removeItem(`is_replay_${chapterId}_${missionSeq}`);
     sessionStorage.removeItem(`user_answers_${chapterId}_${missionSeq}`);
     sessionStorage.removeItem(`mission_phase_${chapterId}_${missionSeq}`);
     sessionStorage.removeItem(`mission_timer_${chapterId}_${missionSeq}`);
@@ -784,10 +991,16 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, { method: "DELETE" });
     } catch (e) {}
 
-    navigate(`/mission-roadmap?chapterId=${chapterId}`);
+    navigate(`/mission-roadmap?chapterId=${chapterId}`, { replace: true });
   }, [chapterId, missionSeq, navigate]);
 
   const handleReplayMission = useCallback(async () => {
+    for (let s = 1; s <= 5; s++) {
+      if (s !== missionSeq) {
+        sessionStorage.removeItem(`is_replay_${chapterId}_${s}`);
+      }
+    }
+    sessionStorage.setItem(`is_replay_${chapterId}_${missionSeq}`, "true");
     sessionStorage.removeItem(`user_answers_${chapterId}_${missionSeq}`);
     sessionStorage.removeItem(`mission_phase_${chapterId}_${missionSeq}`);
     sessionStorage.removeItem(`mission_timer_${chapterId}_${missionSeq}`);
@@ -808,6 +1021,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   }, [chapterId, missionSeq]);
 
   const handleNextMission = useCallback(async () => {
+    if (missionSeq >= 5) {
+      handleBackToRoadmap();
+      return;
+    }
     const nextSeq = missionSeq + 1;
     sessionStorage.removeItem(`user_answers_${chapterId}_${nextSeq}`);
     sessionStorage.removeItem(`mission_phase_${chapterId}_${nextSeq}`);
@@ -826,7 +1043,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     } catch (e) {}
 
     window.location.href = `/mission-play?chapterId=${chapterId}&missionSeq=${nextSeq}`;
-  }, [chapterId, missionSeq]);
+  }, [chapterId, missionSeq, handleBackToRoadmap]);
 
   const handleGiveUp = async () => {
     setIsQuitting(true);
@@ -842,6 +1059,9 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     sessionStorage.removeItem(`quiz_correct_${chapterId}_${missionSeq}`);
     sessionStorage.removeItem(`xp_earned_${chapterId}_${missionSeq}`);
     sessionStorage.removeItem(`coins_earned_${chapterId}_${missionSeq}`);
+    sessionStorage.removeItem("mission_boss_revival_active");
+    sessionStorage.removeItem("boss_revival_won_reward");
+    sessionStorage.removeItem(`is_replay_${chapterId}_${missionSeq}`);
 
     try {
       // Call backend retreat endpoint to apply XP deduction & reset hearts
@@ -860,13 +1080,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       console.error("Failed to call retreat API:", e);
     }
 
-    // Show the defeat overlay with XP loss
-    setLossOverlay({ show: true, xpLoss: -30 });
-
-    // Navigate back to the previous screen (the roadmap) after 3 seconds
-    setTimeout(() => {
-      navigate(`/mission-roadmap?chapterId=${chapterId}`, { replace: true });
-    }, 3000);
+    // Immediately exit mission and redirect to Chapter Roadmap without lingering modals
+    navigate(`/mission-roadmap?chapterId=${chapterId}`, { replace: true });
   };
 
   // Boss Attack execution helper
@@ -907,11 +1122,33 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       const newChildDamage = Math.min(3, childDamageCount + 1);
       setChildDamageCount(newChildDamage);
 
-      // Sync updated lives to the backend immediately so that revival spin checks are accurate
+      const nextIndex = currentBossIndex + 1;
+      sessionStorage.setItem(`boss_wrong_${chapterId}_${missionSeq}`, newWrongCount.toString());
+      sessionStorage.setItem(`user_answers_${chapterId}_${missionSeq}`, JSON.stringify(currentAnswers));
+      sessionStorage.setItem(`boss_index_${chapterId}_${missionSeq}`, nextIndex.toString());
+
+      // Sync updated lives & draft to the backend immediately so that revival spin checks and question counts are preserved
       apiFetch(`/api/practice/chapters/${chapterId}/missions/hearts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ hearts: Math.max(0, 3 - newChildDamage) })
+      }).catch(console.error);
+
+      apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentQuizIndex,
+          phase,
+          quizCorrectCount,
+          userAnswers: currentAnswers,
+          xpEarned,
+          coinsEarned,
+          bossDamageCount,
+          wrongAnswerCount: newWrongCount,
+          currentBossIndex: nextIndex,
+          totalSessionSec
+        })
       }).catch(console.error);
 
       setTimeout(() => {
@@ -921,13 +1158,11 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       setTimeout(async () => {
         setBossSelected(null);
         setBossBasketCount(0);
-        const nextIndex = currentBossIndex + 1;
+        setCurrentBossIndex(nextIndex);
         if (newChildDamage >= 3) {
           openReviveModal();
         } else if (nextIndex >= bossQuestions.length) {
           await finalizeMission(bossDamageCount, newChildDamage, currentAnswers);
-        } else {
-          setCurrentBossIndex(nextIndex);
         }
       }, 1400);
     }
@@ -956,6 +1191,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
         : (quizSelected !== null ? String(currentQ?.options?.[quizSelected]) : "");
       const newAns = {
         questionId: currentQ?._id,
+        questionText: currentQ?.question || currentQ?.text || currentQ?.title || "",
         isCorrect: isCorrect,
         selectedAnswer: selectedValue,
         timeSpent: QUESTION_TIME_LIMIT - questionTimeLeft
@@ -999,6 +1235,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     const isCorrect = String(optionText).trim().toLowerCase() === String(activeBossQ?.answer).trim().toLowerCase();
     const newAns = {
       questionId: activeBossQ?._id,
+      questionText: activeBossQ?.question || activeBossQ?.text || activeBossQ?.title || "",
       isCorrect: isCorrect,
       selectedAnswer: optionText,
       timeSpent: QUESTION_TIME_LIMIT - questionTimeLeft
@@ -1019,6 +1256,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     }
     const newAns = {
       questionId: activeBossQ?._id,
+      questionText: activeBossQ?.question || activeBossQ?.text || activeBossQ?.title || "",
       isCorrect: isCorrect,
       selectedAnswer: isBossLanguageDrag ? String(selectedBossDragValue) : String(bossBasketCount),
       timeSpent: QUESTION_TIME_LIMIT - questionTimeLeft
@@ -1069,6 +1307,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
         const newAns = {
           questionId: currentQ?._id,
+          questionText: currentQ?.question || currentQ?.text || currentQ?.title || "",
           isCorrect: false,
           selectedAnswer: "TIMEOUT",
           timeSpent: QUESTION_TIME_LIMIT
@@ -1090,6 +1329,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
         const newAns = {
           questionId: activeBossQ?._id,
+          questionText: activeBossQ?.question || activeBossQ?.text || activeBossQ?.title || "",
           isCorrect: false,
           selectedAnswer: "TIMEOUT",
           timeSpent: QUESTION_TIME_LIMIT
@@ -1126,6 +1366,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           onClick={async () => {
             if (childDamageCount >= 3 || showReviveModal) {
               setIsQuitting(true);
+              sessionStorage.removeItem(`is_replay_${chapterId}_${missionSeq}`);
               sessionStorage.removeItem(`boss_damage_${chapterId}_${missionSeq}`);
               sessionStorage.removeItem(`boss_wrong_${chapterId}_${missionSeq}`);
               sessionStorage.removeItem(`boss_index_${chapterId}_${missionSeq}`);
@@ -1167,6 +1408,17 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
               } catch (e) {
                 console.error("Save draft on back button click failed:", e);
               }
+            } else if (phase === "INTRO") {
+              sessionStorage.removeItem(`is_replay_${chapterId}_${missionSeq}`);
+              sessionStorage.removeItem(`mission_phase_${chapterId}_${missionSeq}`);
+              sessionStorage.removeItem(`user_answers_${chapterId}_${missionSeq}`);
+              sessionStorage.removeItem(`mission_timer_${chapterId}_${missionSeq}`);
+              sessionStorage.removeItem(`boss_damage_${chapterId}_${missionSeq}`);
+              sessionStorage.removeItem(`boss_wrong_${chapterId}_${missionSeq}`);
+              sessionStorage.removeItem(`boss_index_${chapterId}_${missionSeq}`);
+              sessionStorage.removeItem(`quiz_correct_${chapterId}_${missionSeq}`);
+              sessionStorage.removeItem(`xp_earned_${chapterId}_${missionSeq}`);
+              sessionStorage.removeItem(`coins_earned_${chapterId}_${missionSeq}`);
             }
             navigate(`/mission-roadmap?chapterId=${chapterId}`, { replace: true });
           }}
@@ -1560,8 +1812,12 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
           {/* Question Box Card with Soft Floating Elevation */}
           <div className="my-3 bg-white border-2 border-[#E2E4FA] rounded-[28px] p-5 sm:p-6 shadow-[0_8px_25px_rgba(20,23,121,0.06)] relative">
-            <span className="text-xs font-black text-[#006a62] uppercase tracking-wider block mb-2 flex items-center gap-1.5">
+            <span className="text-xs font-black text-[#006a62] uppercase tracking-wider block mb-2 flex items-center gap-1.5 flex-wrap">
               <span>⚔️ BOSS STRIKE #{safeBossIndex + 1}</span>
+              <span>•</span>
+              <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-black uppercase tracking-wider shadow-2xs">
+                BOSS LEVEL HARD
+              </span>
               <span>•</span>
               <span>{isBossDrag ? "DRAG & DROP STRIKE" : "DIRECT STRIKE"}</span>
             </span>
@@ -1965,11 +2221,11 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                 <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
                   <div className="flex items-center gap-1 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 text-amber-800 font-bold text-xs shrink-0 whitespace-nowrap">
                     <Zap size={12} className="text-amber-500 fill-amber-400" />
-                    <span>{xpEarned} XP</span>
+                    <span>+{completionResult?.xpEarned ?? xpEarned} XP</span>
                   </div>
                   <div className="flex items-center gap-1 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200 text-teal-800 font-bold text-xs shrink-0 whitespace-nowrap">
                     <Award size={12} className="text-teal-600 fill-teal-500" />
-                    <span>{coinsEarned} Coins</span>
+                    <span>+{completionResult?.coinsEarned ?? coinsEarned} Coins</span>
                   </div>
                 </div>
 
@@ -1994,7 +2250,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                 </h2>
                 <p className="text-xs text-[#464652] font-semibold mb-4">{t('progression_report', 'Chapter Progression & Performance Report')}</p>
 
-                <div className="flex flex-col items-center gap-1.5 mb-5">
+                <div className="flex flex-col items-center gap-1.5 mb-4">
                   <div className="flex gap-2">
                     {[1, 2, 3].map((s) => (
                       <Star
@@ -2015,16 +2271,45 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                   )}
                 </div>
 
+                {/* Questions Breakdown Metric Card */}
+                <div className="w-full bg-white border border-gray-200 rounded-2xl p-3 mb-4 flex items-center justify-around shadow-xs text-xs font-black">
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] text-gray-400 uppercase tracking-wider">{t('total_questions', 'Questions')}</span>
+                    <span className="text-slate-800 text-sm mt-0.5">{quizQuestions.length + bossDamageCount + wrongAnswerCount}</span>
+                  </div>
+                  <div className="w-px h-6 bg-gray-200" />
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] text-emerald-600 uppercase tracking-wider">{t('correct', 'Correct')}</span>
+                    <span className="text-emerald-700 text-sm mt-0.5">✅ {quizCorrectCount + bossDamageCount}</span>
+                  </div>
+                  <div className="w-px h-6 bg-gray-200" />
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] text-rose-600 uppercase tracking-wider">{t('incorrect', 'Mistakes')}</span>
+                    <span className="text-rose-700 text-sm mt-0.5">❌ {Math.max(0, (quizQuestions.length - quizCorrectCount) + wrongAnswerCount)}</span>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 gap-3 w-full mb-4">
                   <div className="bg-white border border-gray-200 rounded-3xl p-4 flex flex-col items-center shadow-xs">
                     <span className="text-[10px] font-black text-[#767683] uppercase tracking-wider">{t('accuracy', 'Accuracy')}</span>
                     <span className="text-3xl font-black text-emerald-600 mt-1">
-                      {completionResult?.accuracy ?? Math.round((quizCorrectCount / Math.max(1, quizQuestions.length)) * 100)}%
+                      {completionResult?.bestAccuracy ?? completionResult?.accuracy ?? Math.round(((quizCorrectCount + bossDamageCount) / Math.max(1, quizQuestions.length + bossDamageCount + wrongAnswerCount)) * 100)}%
                     </span>
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full mt-1 border border-emerald-200">
+                    {completionResult?.runAccuracy !== undefined && completionResult?.bestAccuracy !== undefined && completionResult.runAccuracy < completionResult.bestAccuracy && (
+                      <span className="text-[9px] font-extrabold text-amber-800 bg-amber-100/90 px-2 py-0.5 rounded-full border border-amber-300 mt-1 shadow-2xs">
+                        🏆 {t('best_accuracy_retained', { best: completionResult.bestAccuracy, run: completionResult.runAccuracy, defaultValue: `Best record of ${completionResult.bestAccuracy}% preserved! (This run: ${completionResult.runAccuracy}%)` })}
+                      </span>
+                    )}
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full mt-1 border ${
+                      (completionResult?.accuracy ?? 100) >= 85
+                        ? "text-emerald-700 bg-emerald-50 border-emerald-200"
+                        : (completionResult?.accuracy ?? 100) >= 65
+                        ? "text-blue-700 bg-blue-50 border-blue-200"
+                        : "text-amber-700 bg-amber-50 border-amber-200"
+                    }`}>
                       {completionResult?.targetStatus 
                         ? t(String(completionResult.targetStatus || "").toLowerCase().replace(/ /g, '_'), { defaultValue: completionResult.targetStatus })
-                        : ((completionResult?.accuracy ?? 100) >= 85 ? t('target_exceeded', 'Target Exceeded') : t('target_met', 'Target Met'))}
+                        : ((completionResult?.accuracy ?? 100) >= 85 ? t('target_exceeded', 'Target Exceeded') : (completionResult?.accuracy ?? 100) >= 65 ? t('target_met', 'Target Met') : t('needs_practice', 'Needs Practice'))}
                     </span>
                   </div>
 
@@ -2153,11 +2438,14 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
               {(() => {
                 const finalAcc = completionResult?.accuracy ?? Math.round((quizCorrectCount / Math.max(1, quizQuestions.length)) * 100);
                 const hasPassedMission = finalAcc >= 65;
+                const totalMissions = completionResult?.totalMissions || 5;
+                const isLastMission = missionSeq >= totalMissions;
+                const hasNextMission = !isReplay && hasPassedMission && !isLastMission && !completionResult?.chapterCompleted && (completionResult?.nextMissionSeq !== null && completionResult?.nextMissionSeq !== undefined);
 
                 return (
                   <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-4 py-3 shadow-[0_-8px_30px_rgba(0,0,0,0.1)]">
                     <div className="max-w-md mx-auto w-full">
-                      {hasPassedMission ? (
+                      {hasNextMission ? (
                         <div className="grid grid-cols-2 gap-3 w-full">
                           <button
                             onClick={handleBackToRoadmap}
@@ -2172,6 +2460,27 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                             <span>{t('next_mission_btn', 'Next Mission 🚀')}</span>
                             <Play size={14} className="fill-white shrink-0" />
                           </button>
+                        </div>
+                      ) : hasPassedMission ? (
+                        <div className="flex flex-col gap-2 w-full">
+                          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-2 rounded-xl text-[11px] font-black text-center leading-tight flex items-center justify-center gap-1.5">
+                            <span>🏆</span>
+                            <span>{t('all_missions_complete', 'All 5 Chapter Missions Completed! Outstanding work!')}</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3 w-full">
+                            <button
+                              onClick={handleReplayMission}
+                              className="w-full h-12 rounded-2xl bg-white border-2 border-slate-200 text-slate-700 font-black text-xs hover:bg-slate-50 flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer shadow-2xs whitespace-nowrap uppercase tracking-wider box-border"
+                            >
+                              <span>{t('replay_mission_btn', 'Replay Mission 🔄')}</span>
+                            </button>
+                            <button
+                              onClick={handleBackToRoadmap}
+                              className="w-full h-12 rounded-2xl bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] border-2 border-transparent text-white font-black text-xs shadow-md hover:brightness-110 flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer whitespace-nowrap uppercase tracking-wider box-border"
+                            >
+                              <span>🗺️ {t('roadmap', 'Roadmap')}</span>
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         <div className="flex flex-col gap-1.5 w-full">
@@ -2204,67 +2513,53 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       )}
 
       {showReviveModal && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-900/40 backdrop-blur-md px-6 text-center">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 sm:p-6 text-center select-none">
           <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-white border-2 border-[#141779]/20 rounded-3xl p-8 max-w-sm w-full shadow-[0_20px_60px_rgba(20,23,121,0.15)] flex flex-col items-center gap-6"
+            initial={{ scale: 0.92, opacity: 0, y: 16 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            className="bg-white border border-slate-100 rounded-[32px] p-6 sm:p-7 max-w-[360px] w-full shadow-[0_20px_60px_rgba(20,23,121,0.18)] flex flex-col items-center relative text-center"
           >
-            <div className="w-20 h-20 rounded-full bg-teal-50 border-2 border-teal-200 flex items-center justify-center animate-pulse">
-              <Swords className="text-[#006a62] w-10 h-10 animate-bounce" />
+            <div className="w-16 h-16 rounded-full bg-teal-50 border border-teal-200 flex items-center justify-center mb-2 shadow-xs">
+              <Swords className="text-[#006a62] w-8 h-8" />
             </div>
             <div>
-              <h2 className="text-2xl font-black text-[#141779] uppercase tracking-widest">Final Chance!</h2>
-              <p className="text-xs font-semibold text-[#464652] mt-2 leading-relaxed">
+              <h2 className="text-xl font-black text-[#141779] leading-snug">Final Chance!</h2>
+              <p className="text-xs font-semibold text-slate-600 mt-1 leading-relaxed">
                 You ran out of hearts! Revive using the Revival Wheel to keep your current progress and fight on!
               </p>
             </div>
 
-            <div className="w-full bg-[#f8fafc] rounded-2xl p-4 border border-gray-200 flex justify-between items-center text-center shadow-xs">
+            <div className="w-full bg-slate-50 rounded-2xl p-3.5 border border-slate-200/80 flex justify-between items-center text-center shadow-xs my-4">
               <div className="flex-1">
-                <span className="text-[10px] text-[#767683] uppercase font-black tracking-widest block mb-1">Revival Spins</span>
-                <span className="text-2xl font-black text-teal-700">{revivalSpins}</span>
+                <span className="text-[10px] text-slate-500 uppercase font-black tracking-widest block mb-0.5">Revival Spins</span>
+                <span className="text-xl font-black text-teal-700">{revivalSpins}</span>
               </div>
-              <div className="w-px h-8 bg-gray-200" />
+              <div className="w-px h-8 bg-slate-200" />
               <div className="flex-1">
-                <span className="text-[10px] text-[#767683] uppercase font-black tracking-widest block mb-1">Your Coins</span>
-                <span className="text-2xl font-black text-amber-600">🪙 {Math.max(0, userCoins)}</span>
+                <span className="text-[10px] text-slate-500 uppercase font-black tracking-widest block mb-0.5">Your Coins</span>
+                <span className="text-xl font-black text-amber-600">🪙 {Math.max(0, userCoins)}</span>
               </div>
             </div>
 
             <div className="flex flex-col gap-2.5 w-full">
               {revivalSpins > 0 ? (
                 <button
-                  onClick={() => navigate(`/daily-rewards?type=boss_revival&chapter_id=${chapterId}`)}
-                  className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-black rounded-2xl hover:brightness-110 active:scale-95 transition-all uppercase tracking-wider text-sm flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20"
+                  onClick={handleGoToMissionSpinWheel}
+                  className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:brightness-110 active:scale-95 text-white font-black rounded-full uppercase tracking-wider text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
                 >
                   <span>🔥 Spin to Revive</span>
                 </button>
               ) : (
                 <button
-                  onClick={async () => {
+                  onClick={() => {
                     if (userCoins < 100) {
-                      showToast("Not enough coins! You need 100 coins.");
+                      showToast("Not enough coins! You need 100 coins.", "warning");
                       return;
                     }
-                    try {
-                      const res = await apiFetch("/api/retention/spin-wheel/buy-revival", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" }
-                      });
-                      const json = await res.json();
-                      if (json.success) {
-                        setRevivalSpins(json.balances.boss_revival_spins_balance || 1);
-                        setUserCoins(json.coins);
-                        showToast("Purchased 1 Revival Spin! 🎉");
-                      } else {
-                        showToast(json.message || "Purchase failed.");
-                      }
-                    } catch (e) {
-                      showToast("Purchase failed.");
-                    }
+                    setShowReviveModal(false);
+                    setShowBuySpinConfirmModal(true);
                   }}
-                  className="w-full py-4 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white font-black rounded-2xl hover:brightness-110 active:scale-95 transition-all uppercase tracking-wider text-sm flex items-center justify-center gap-2 shadow-md border border-indigo-300/40"
+                  className="w-full py-3.5 bg-[#141779] hover:bg-[#101362] active:scale-95 text-white font-black rounded-full uppercase tracking-wider text-xs flex items-center justify-center gap-2 shadow-md shadow-[#141779]/20 transition-all cursor-pointer"
                 >
                   <span>🛒 Buy Revival Spin (100 🪙)</span>
                 </button>
@@ -2272,7 +2567,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
               <button
                 onClick={handleGiveUp}
-                className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold rounded-2xl active:scale-95 transition-all text-xs border border-gray-200"
+                className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-full active:scale-95 transition-all text-xs cursor-pointer"
               >
                 Retreat & Lose XP
               </button>
@@ -2281,33 +2576,71 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
         </div>
       )}
 
+      {/* Buy Revival Spin Confirmation Modal */}
+      <UnifiedConfirmModal
+        isOpen={showBuySpinConfirmModal}
+        zIndex="z-[300]"
+        onClose={() => {
+          if (!isBuyingRevivalSpin) {
+            setShowBuySpinConfirmModal(false);
+            setShowReviveModal(true);
+          }
+        }}
+        onConfirm={handleConfirmBuyRevivalSpin}
+        title="Buy Revival Spin?"
+        message={
+          <div className="space-y-3">
+            <p className="text-xs sm:text-sm font-semibold text-slate-600 leading-relaxed">
+              Spend 100 coins to buy 1 Revival Spin? You can spin the Revival Wheel to recover hearts and keep fighting!
+            </p>
+            <div className="w-full bg-amber-50 border border-amber-200 rounded-2xl p-3 flex justify-between items-center text-xs font-bold text-amber-900">
+              <span className="flex items-center gap-1.5">
+                <span>🪙</span> Cost:
+              </span>
+              <span className="text-amber-700 font-black text-sm">
+                100 Coins
+              </span>
+            </div>
+            <div className="text-[11px] font-bold text-slate-500 text-left px-1 flex justify-between">
+              <span>Current Coins: <strong className="text-slate-800">{userCoins}</strong></span>
+              <span>Remaining: <strong className="text-slate-800">{Math.max(0, userCoins - 100)}</strong></span>
+            </div>
+          </div>
+        }
+        confirmText={isBuyingRevivalSpin ? "Buying..." : "Yes, Spend 100 Coins"}
+        cancelText="Cancel"
+        variant="primary"
+        loading={isBuyingRevivalSpin}
+        icon={<span className="text-3xl">🪙</span>}
+      />
+
       {/* Defeat/Retreat Overlay Animation */}
       {lossOverlay.show && (
-        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-900/40 backdrop-blur-md px-6 text-center">
+        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 sm:p-6 text-center select-none">
           <motion.div
-            initial={{ scale: 0.9, opacity: 0, y: 30 }}
+            initial={{ scale: 0.92, opacity: 0, y: 16 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            transition={{ type: "spring", duration: 0.5 }}
-            className="bg-white border-2 border-rose-200 rounded-3xl p-8 max-w-sm w-full shadow-[0_20px_60px_rgba(0,0,0,0.12)] flex flex-col items-center gap-6"
+            transition={{ type: "spring", stiffness: 350, damping: 26 }}
+            className="bg-white border border-slate-100 rounded-[32px] p-6 sm:p-7 max-w-[360px] w-full shadow-[0_20px_60px_rgba(20,23,121,0.18)] flex flex-col items-center relative text-center"
           >
-            {/* Spotlight Icon */}
-            <div className="w-20 h-20 rounded-full bg-rose-50 border-2 border-rose-200 flex items-center justify-center shadow-xs relative">
-              <ShieldAlert className="text-rose-600 w-10 h-10 animate-pulse" />
+            {/* Spotlight Icon Badge */}
+            <div className="w-16 h-16 rounded-full bg-rose-50 border border-rose-200 flex items-center justify-center mb-2 shadow-xs">
+              <ShieldAlert className="text-rose-600 w-8 h-8 animate-pulse" />
             </div>
 
             {/* Content */}
-            <div className="space-y-2">
-              <h2 className="text-2xl font-black text-[#141779] uppercase tracking-wider">
+            <div className="space-y-1 mb-2">
+              <h2 className="text-xl font-black text-[#141779] leading-snug">
                 Fall Back!
               </h2>
-              <p className="text-xs text-[#464652] leading-relaxed font-bold">
+              <p className="text-xs text-slate-600 leading-relaxed font-semibold">
                 You retreated from the mission. Rest up and try again!
               </p>
             </div>
 
             {/* Penalty Box */}
-            <div className="w-full bg-rose-50/70 rounded-2xl p-4 border border-rose-200 relative overflow-hidden">
-              <span className="text-[10px] text-rose-700 uppercase font-black tracking-widest block mb-1">
+            <div className="w-full bg-rose-50/80 rounded-2xl p-4 border border-rose-200 relative overflow-hidden my-2">
+              <span className="text-[10px] text-rose-700 uppercase font-black tracking-widest block mb-0.5">
                 XP Penalty
               </span>
               <span className="text-2xl font-black text-rose-600">
@@ -2315,15 +2648,6 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
               </span>
             </div>
           </motion.div>
-        </div>
-      )}
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div
-          className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white px-4.5 py-2.5 rounded-full shadow-[0_12px_30px_rgba(20,23,121,0.4)] border border-[#57fae9]/40 font-bold text-xs flex items-center justify-center gap-2.5 text-center max-w-[90vw] w-auto animate-in fade-in slide-in-from-top-4 duration-300"
-        >
-          <span className="text-sm shrink-0">✨</span>
-          <span className="truncate max-w-[280px] sm:max-w-[340px] line-clamp-1">{toastMessage}</span>
         </div>
       )}
 

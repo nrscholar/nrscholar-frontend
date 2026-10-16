@@ -17,7 +17,6 @@ import { practiceApi, QuestionData, authApi, parentApi } from "../services/api";
 import { notifyTestCleared } from "../services/notifications";
 import { DraggableOption } from "../components/DraggableOption";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useBossBattleStore } from "@/hooks/useBossBattleStore";
 import Reanimated, {
   useSharedValue,
   useAnimatedStyle,
@@ -50,7 +49,6 @@ export default function SessionScreen() {
   const { chapterId, chapterName, resumeFrom, totalCorrect: paramTotalCorrect, incorrectTracker: paramIncorrectTracker, subjectId, subjectName } = params;
   const insets = useSafeAreaInsets();
   
-  const [bossTriggeredState, setBossTriggeredState] = useState(false);
   const [questions, setQuestions] = useState<QuestionData[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -157,15 +155,7 @@ export default function SessionScreen() {
       }]);
     }
 
-    const { triggered } = useBossBattleStore.getState().recordAnswer(
-      String(chapterId || "mock"),
-      String(subjectName || params.subjectName || "Maths"),
-      isAnsCorrect
-    );
-    
-    if (triggered) {
-      setBossTriggeredState(true);
-    }
+
   };
 
   const handleNext = () => {
@@ -669,15 +659,7 @@ export default function SessionScreen() {
                   }]);
                 }
 
-                const { triggered } = useBossBattleStore.getState().recordAnswer(
-                  String(chapterId || "mock"),
-                  String(subjectName || params.subjectName || "Maths"),
-                  !!isDragCorrect
-                );
-                
-                if (triggered) {
-                  setBossTriggeredState(true);
-                }
+
               } else {
                 handleCheck();
               }
@@ -697,118 +679,11 @@ export default function SessionScreen() {
         )}
       </View>
 
-      {bossTriggeredState && (
-        <BossEntranceOverlay
-          subjectName={String(subjectName || params.subjectName || "Maths")}
-          onStartBattle={() => {
-            setBossTriggeredState(false);
-            router.replace({
-              pathname: "/practice/boss-battle",
-              params: {
-                chapterId: String(chapterId || "mock"),
-                chapterName: String(chapterName || "the chapter"),
-                subjectId: String(subjectId || ""),
-                subjectName: String(subjectName || params.subjectName || "Maths"),
-                resumeFrom: String(currentQ + 1),
-                totalCorrect: String(totalCorrect),
-                incorrectTracker: JSON.stringify(incorrectTracker),
-                hasShownReward5: hasShownReward5 ? "true" : "false",
-                hasShownReward10: hasShownReward10 ? "true" : "false",
-                hasShownReward15: hasShownReward15 ? "true" : "false",
-              } as any,
-            });
-          }}
-        />
-      )}
+
     </View>
   );
 }
 
-function BossEntranceOverlay({ subjectName, onStartBattle }: { subjectName: string; onStartBattle: () => void }) {
-  // Map subject to boss details
-  const subjectKey = subjectName.toLowerCase().replace(/\s+/g, "_");
-  let bossName = "Math Monster";
-  let bossIcon = "👹";
-  
-  if (subjectKey.includes("math")) {
-    bossName = "Math Monster";
-    bossIcon = "👹";
-  } else if (subjectKey.includes("english") || subjectKey.includes("grammar")) {
-    bossName = "Grammar Dragon";
-    bossIcon = "🐉";
-  } else if (subjectKey.includes("science")) {
-    bossName = "Science Beast";
-    bossIcon = "🦁";
-  } else if (subjectKey.includes("read")) {
-    bossName = "Book Guardian";
-    bossIcon = "🦉";
-  } else if (subjectKey.includes("moral") || subjectKey.includes("kind")) {
-    bossName = "Kindness Guardian";
-    bossIcon = "🦄";
-  }
-
-
-  // Animation values
-  const scale = useSharedValue(0.3);
-  const opacity = useSharedValue(0);
-  const shake = useSharedValue(0);
-
-  useEffect(() => {
-    scale.value = withTiming(1, { duration: 600 });
-    opacity.value = withTiming(1, { duration: 400 });
-    // Screen shake looping sequence
-    shake.value = withRepeat(
-      withSequence(
-        withTiming(-8, { duration: 40 }),
-        withTiming(8, { duration: 40 }),
-        withTiming(-8, { duration: 40 }),
-        withTiming(0, { duration: 40 })
-      ),
-      15, // Repeat 15 times
-      true
-    );
-  }, []);
-
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        { scale: scale.value },
-        { translateX: shake.value },
-      ],
-      opacity: opacity.value,
-    };
-  });
-
-  return (
-    <View style={StyleSheet.absoluteFillObject}>
-      <LinearGradient
-        colors={["#0c0e3d", "#1c0d35", "#30007f"]}
-        style={[styles.overlayContainer, { justifyContent: "center", alignItems: "center" }]}
-      >
-
-        <Reanimated.View style={[styles.bossEntranceCard, animatedStyle]}>
-          <Text style={styles.alertText}>🚨 ALERT! BOSS APPROACHING! 🚨</Text>
-          
-          <View style={styles.bossAvatarCircle}>
-            <Text style={styles.bossAvatarEmoji}>{bossIcon}</Text>
-          </View>
-
-          <Text style={styles.bossTitleText}>{bossName}</Text>
-          <Text style={styles.bossSubtitleText}>HAS APPEARED!</Text>
-
-          <View style={styles.bossHpMiniBar}>
-            <View style={styles.bossHpMiniFill} />
-          </View>
-          <Text style={styles.bossHpMiniText}>HP: 1000 / 1000</Text>
-
-          <TouchableOpacity style={styles.fightButton} activeOpacity={0.8} onPress={onStartBattle}>
-            <Text style={styles.fightButtonText}>START BATTLE ⚔️</Text>
-          </TouchableOpacity>
-        </Reanimated.View>
-      </LinearGradient>
-    </View>
-  );
-}
 
 import { LinearGradient } from "expo-linear-gradient";
 

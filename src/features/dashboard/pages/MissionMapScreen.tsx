@@ -28,31 +28,40 @@ export default function MissionMapScreen() {
 
   useEffect(() => {
     async function loadRoadmap() {
-      let activeClass = "Class 3";
       try {
-        const meRes = await apiFetch("/api/users/me");
-        const meJson = await meRes.json();
-        if (meJson.success && meJson.data?.user) {
-          setChildName(meJson.data.user.childName || "Explorer");
-          setChildPhoto(meJson.data.user.childPhoto || meJson.data.user.photo || "");
-          activeClass = meJson.data.user.childClass || "Class 3";
-          setUserClass(activeClass);
-        }
-      } catch (e) {}
+        const [meRes, notifRes, missionsRes] = await Promise.all([
+          apiFetch("/api/users/me").catch(() => null),
+          apiFetch("/api/notifications").catch(() => null),
+          apiFetch(`/api/practice/chapters/${chapterId}/missions`).catch(() => null)
+        ]);
 
-      try {
-        const notifRes = await apiFetch("/api/notifications");
-        const notifData = await notifRes.json();
-        if (notifData.success && notifData.data) {
-          setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
+        if (meRes && meRes.ok) {
+          try {
+            const meJson = await meRes.json();
+            if (meJson.success && meJson.data?.user) {
+              setChildName(meJson.data.user.childName || "Explorer");
+              setChildPhoto(meJson.data.user.childPhoto || meJson.data.user.photo || "");
+              setUserClass(meJson.data.user.childClass || "Class 3");
+            }
+          } catch (e) {}
         }
-      } catch (e) {}
 
-      try {
-        const res = await apiFetch(`/api/practice/chapters/${chapterId}/missions?classLevel=${encodeURIComponent(activeClass)}`);
-        const json = await res.json();
-        if (json.success && json.data) {
-          setChapterData(json.data);
+        if (notifRes && notifRes.ok) {
+          try {
+            const notifData = await notifRes.json();
+            if (notifData.success && notifData.data) {
+              setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
+            }
+          } catch (e) {}
+        }
+
+        if (missionsRes && missionsRes.ok) {
+          try {
+            const json = await missionsRes.json();
+            if (json.success && json.data) {
+              setChapterData(json.data);
+            }
+          } catch (e) {}
         }
       } catch (e) {
         console.error("Failed to load mission roadmap:", e);
@@ -186,7 +195,7 @@ export default function MissionMapScreen() {
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <button
             onClick={() => navigate("/practice/chapters")}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-200 hover:bg-slate-50 active:scale-95 transition-all shadow-xs shrink-0"
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-200 hover:bg-slate-50 active:scale-95 transition-all shadow-xs shrink-0 cursor-pointer"
           >
             <ArrowLeft size={20} className="text-[#141779]" />
           </button>
@@ -303,26 +312,32 @@ export default function MissionMapScreen() {
 
             const savedAns = sessionStorage.getItem(`user_answers_${chapterId}_${m.seq}`);
             const savedPhase = sessionStorage.getItem(`mission_phase_${chapterId}_${m.seq}`);
+            const isReplayActive = sessionStorage.getItem(`is_replay_${chapterId}_${m.seq}`) === "true";
             
             let hasInProgressSession = false;
-            if (isUnlocked && !isCompleted) {
-              if (Boolean(m.hasDraft)) hasInProgressSession = true;
+            if (isUnlocked && savedPhase !== "SUMMARY" && savedPhase !== "INTRO") {
+              const hasActivePhase = savedPhase === "QUIZ" || savedPhase === "BOSS" || savedPhase === "MINI_REWARD";
+              let hasAnswerProgress = false;
               if (savedAns) {
                 try {
                   const arr = JSON.parse(savedAns);
-                  if (Array.isArray(arr) && arr.length > 0) hasInProgressSession = true;
+                  if (Array.isArray(arr) && arr.length > 0) hasAnswerProgress = true;
                 } catch (e) {}
               }
-              if (savedPhase && savedPhase !== "SUMMARY" && savedPhase !== "INTRO") {
-                hasInProgressSession = true;
+
+              const hasActiveSessionData = hasActivePhase || (hasAnswerProgress && hasActivePhase) || Boolean(m.hasDraft);
+
+              if (isCompleted) {
+                // Completed missions ONLY show resume if this specific mission is actively being replayed or has a persistent draft
+                if ((isReplayActive || Boolean(m.hasDraft)) && hasActiveSessionData) {
+                  hasInProgressSession = true;
+                }
+              } else {
+                // Uncompleted / retest missions
+                if (hasActiveSessionData) {
+                  hasInProgressSession = true;
+                }
               }
-            } else if (isUnlocked && isCompleted) {
-              if (savedPhase === "QUIZ" || savedPhase === "BOSS") {
-                hasInProgressSession = true;
-              }
-            }
-            if (savedPhase === "SUMMARY") {
-              hasInProgressSession = false;
             }
 
             return (
@@ -386,9 +401,9 @@ export default function MissionMapScreen() {
                           {t(m.title.toLowerCase().replace(/ /g, '_'), { defaultValue: m.title })}
                         </h4>
                         <p className="text-xs text-[#767683] mt-0.5 font-medium flex items-center gap-2">
-                          <span className="flex items-center gap-1">🎯 {m.quizCount} {t('quiz', 'Quiz')}</span>
+                          <span className="flex items-center gap-1 whitespace-nowrap">🎯 {t('quiz', 'Quiz')}</span>
                           <span className="text-slate-300">|</span>
-                          <span className="flex items-center gap-1">👹 {t(m.bossName.toLowerCase().replace(/ /g, '_'), { defaultValue: m.bossName })}</span>
+                          <span className="flex items-center gap-1 truncate">👹 {t(m.bossName.toLowerCase().replace(/ /g, '_'), { defaultValue: m.bossName })}</span>
                         </p>
                       </div>
 
@@ -430,18 +445,28 @@ export default function MissionMapScreen() {
                           if (hasInProgressSession) {
                             navigate(`/mission-play?chapterId=${chapterId}&missionSeq=${m.seq}`);
                           } else {
-                            const isReplaying = isCompleted || isRetest;
+                            const isReplaying = isCompleted;
+                            sessionStorage.removeItem(`user_answers_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`mission_phase_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`mission_timer_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`boss_damage_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`boss_wrong_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`boss_index_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`quiz_correct_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`xp_earned_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`coins_earned_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`completion_result_${chapterId}_${m.seq}`);
+                            sessionStorage.removeItem(`summary_step_${chapterId}_${m.seq}`);
                             if (isReplaying) {
-                              sessionStorage.removeItem(`user_answers_${chapterId}_${m.seq}`);
-                              sessionStorage.removeItem(`mission_phase_${chapterId}_${m.seq}`);
-                              sessionStorage.removeItem(`mission_timer_${chapterId}_${m.seq}`);
-                              sessionStorage.removeItem(`boss_damage_${chapterId}_${m.seq}`);
-                              sessionStorage.removeItem(`boss_wrong_${chapterId}_${m.seq}`);
-                              sessionStorage.removeItem(`boss_index_${chapterId}_${m.seq}`);
-                              sessionStorage.removeItem(`quiz_correct_${chapterId}_${m.seq}`);
-                              sessionStorage.removeItem(`xp_earned_${chapterId}_${m.seq}`);
-                              sessionStorage.removeItem(`coins_earned_${chapterId}_${m.seq}`);
+                              missions.forEach((otherM: any) => {
+                                if (otherM.seq !== m.seq) {
+                                  sessionStorage.removeItem(`is_replay_${chapterId}_${otherM.seq}`);
+                                }
+                              });
+                              sessionStorage.setItem(`is_replay_${chapterId}_${m.seq}`, "true");
                               apiFetch(`/api/practice/chapters/${chapterId}/missions/${m.seq}/draft`, { method: "DELETE" }).catch(() => {});
+                            } else {
+                              sessionStorage.removeItem(`is_replay_${chapterId}_${m.seq}`);
                             }
                             navigate(`/mission-play?chapterId=${chapterId}&missionSeq=${m.seq}${isReplaying ? "&replay=true" : ""}`);
                           }

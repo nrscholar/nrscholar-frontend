@@ -1,11 +1,12 @@
-import Particles, { initParticlesEngine } from "@tsparticles/react";
-import { loadSlim } from "@tsparticles/slim";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, Check, X as XIcon, Bell } from "lucide-react";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import DragonCharacter from "../../../components/DragonCharacter";
+import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
+
+const SparkleParticles = lazy(() => import("../../../components/SparkleParticles"));
 
 const OPTION_LABELS = ["A", "B", "C", "D"];
 
@@ -25,17 +26,11 @@ export default function ChapterQuestionsScreen() {
   const [basketCount, setBasketCount] = useState(0);
   const [userAnswers, setUserAnswers] = useState<any[]>([]);
   const [answeredThisSession, setAnsweredThisSession] = useState(0);
-  const [particlesInit, setParticlesInit] = useState(false);
   const [showSparkle, setShowSparkle] = useState(false);
   const [childName, setChildName] = useState("Kid");
   const [childPhoto, setChildPhoto] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
-
-
-  useEffect(() => {
-    initParticlesEngine(async (engine) => { await loadSlim(engine); }).then(() => setParticlesInit(true));
-  }, []);
 
   const [questionsData, setQuestionsData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,38 +40,45 @@ export default function ChapterQuestionsScreen() {
       try {
         const cached = localStorage.getItem("userData");
         if (cached) {
-          try {
-            const u = JSON.parse(cached);
-            setChildName(u.childName || u.name || "Kid");
-            setChildPhoto(u.childPhoto || u.photo || "");
-          } catch(e) {}
-        }
-        const meRes = await apiFetch("/api/users/me");
-        const meJson = await meRes.json();
-        if (meJson.success && meJson.data?.user) {
-          setChildName(meJson.data.user.childName || meJson.data.user.name || "Kid");
-          setChildPhoto(meJson.data.user.childPhoto || meJson.data.user.photo || "");
+          const u = JSON.parse(cached);
+          setChildName(u.childName || u.name || "Kid");
+          setChildPhoto(u.childPhoto || u.photo || "");
         }
       } catch (e) {}
 
-      try {
-        const notifRes = await apiFetch("/api/notifications");
-        const notifData = await notifRes.json();
-        if (notifData.success && notifData.data) {
-          setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
-        }
-      } catch (e) {}
       if (!chapterId) {
         setLoading(false);
         return;
       }
       try {
-        const [qRes, pRes] = await Promise.all([
-          apiFetch(`/api/practice/questions/${chapterId}`),
-          apiFetch(`/api/practice/chapter-progress/${chapterId}`)
+        const [meRes, notifRes, qRes, pRes] = await Promise.all([
+          apiFetch("/api/users/me").catch(() => null),
+          apiFetch("/api/notifications").catch(() => null),
+          apiFetch(`/api/practice/questions/${chapterId}`).catch(() => null),
+          apiFetch(`/api/practice/chapter-progress/${chapterId}`).catch(() => null)
         ]);
-        const qJson = await qRes.json();
-        const pJson = await pRes.json();
+
+        if (meRes && meRes.ok) {
+          try {
+            const meJson = await meRes.json();
+            if (meJson.success && meJson.data?.user) {
+              setChildName(meJson.data.user.childName || meJson.data.user.name || "Kid");
+              setChildPhoto(meJson.data.user.childPhoto || meJson.data.user.photo || "");
+            }
+          } catch (e) {}
+        }
+
+        if (notifRes && notifRes.ok) {
+          try {
+            const notifData = await notifRes.json();
+            if (notifData.success && notifData.data) {
+              setUnreadCount(notifData.data.filter((n: any) => !n.isRead).length);
+            }
+          } catch (e) {}
+        }
+
+        const qJson = (qRes && qRes.ok) ? await qRes.json() : { success: false };
+        const pJson = (pRes && pRes.ok) ? await pRes.json() : { success: false };
         
         let filtered: any[] = [];
         if (qJson.success && qJson.data) {
@@ -117,11 +119,10 @@ export default function ChapterQuestionsScreen() {
                 currentQ: 0,
                 score: 0,
                 answers: [],
-                completed: true,
+                completed: false,
                 readingCompleted: true,
                 questionsCompleted: true,
-                bossCompleted: true,
-                chapterCompleted: true
+                chapterCompleted: false
               })
             });
           } catch (e) {}
@@ -137,16 +138,13 @@ export default function ChapterQuestionsScreen() {
           if (!pJson.data.questionsCompleted) {
             const savedQ = pJson.data.currentQ || 0;
             if (filtered.length > 0 && savedQ >= filtered.length) {
-              // User finished questions but didn't beat boss, take them straight to boss
-              const finalReturnUrl = encodeURIComponent(`/practice/chapters`);
+              // User finished questions, redirect directly to chapter roadmap
+              const roadmapUrl = `/mission-roadmap?chapterId=${chapterId}&title=${encodeURIComponent(searchParams.get("chapterName") || "")}&subjectName=${encodeURIComponent(searchParams.get("subjectName") || "")}`;
               
               sessionStorage.setItem("lastSessionAnswers", JSON.stringify(pJson.data.answers || []));
               await submitActivityLog(pJson.data.answers || []);
               
-              navigate(`/boss-battle?worldId=w1&chapterId=${chapterId}&difficulty=easy&returnTo=${finalReturnUrl}`, {
-                state: { userAnswers: pJson.data.answers || [] },
-                replace: true
-              });
+              navigate(roadmapUrl, { replace: true });
               return;
             } else {
               setCurrentQ(savedQ);
@@ -309,7 +307,7 @@ export default function ChapterQuestionsScreen() {
         setConfirmed(false);
 
       } else {
-        // Save final completion for this tier
+        // Save question quiz completion (does NOT mark chapter complete)
         try {
           await apiFetch("/api/practice/chapter-progress", {
             method: "POST",
@@ -319,12 +317,30 @@ export default function ChapterQuestionsScreen() {
               currentQ: total,
               score: score,
               answers: userAnswers,
-              completed: true,
+              completed: false,
               readingCompleted: true,
-              questionsCompleted: true
+              questionsCompleted: true,
+              chapterCompleted: false
             })
           });
           await submitActivityLog(userAnswers);
+
+          try {
+            const cachedProg = sessionStorage.getItem("cached_chapter_progress");
+            const progMap = cachedProg ? JSON.parse(cachedProg) : {};
+            const chIdStr = String(chapterId);
+            const updatedDoc = {
+              ...(progMap[chIdStr] || {}),
+              chapterId: chIdStr,
+              readingCompleted: true,
+              questionsCompleted: true
+            };
+            progMap[chIdStr] = updatedDoc;
+            progMap[chapterId] = updatedDoc;
+            sessionStorage.setItem("cached_chapter_progress", JSON.stringify(progMap));
+          } catch (_) {}
+
+          window.dispatchEvent(new Event("userDataUpdated"));
         } catch (e) {
           console.error("Failed to save progress", e);
         }
@@ -332,14 +348,10 @@ export default function ChapterQuestionsScreen() {
         // m1 (Complete 1 Lesson) is auto-completed server-side via /api/world/questions/submit
         // and /api/practice/chapter-progress — no need to call it here
         
-        const finalReturnUrl = encodeURIComponent(`/practice/chapters`);
-        
+        const roadmapUrl = `/mission-roadmap?chapterId=${chapterId}&title=${encodeURIComponent(searchParams.get("chapterName") || "")}&subjectName=${encodeURIComponent(searchParams.get("subjectName") || "")}`;
         sessionStorage.setItem("lastSessionAnswers", JSON.stringify(userAnswers));
         
-        navigate(`/boss-battle?worldId=w1&chapterId=${chapterId}&difficulty=easy&returnTo=${finalReturnUrl}&chapterName=${encodeURIComponent(searchParams.get("chapterName") || "")}&subjectName=${encodeURIComponent(searchParams.get("subjectName") || "")}`, {
-          state: { userAnswers },
-          replace: true
-        });
+        navigate(roadmapUrl, { replace: true });
       }
     }
   };
@@ -363,7 +375,10 @@ export default function ChapterQuestionsScreen() {
     }).catch(() => {});
     
     await submitActivityLog(userAnswers);
-    navigate("/practice/chapters", { replace: true });
+    const roadmapUrl = chapterId
+      ? `/mission-roadmap?chapterId=${chapterId}&title=${encodeURIComponent(searchParams.get("chapterName") || "")}&subjectName=${encodeURIComponent(searchParams.get("subjectName") || "")}`
+      : "/practice/chapters";
+    navigate(roadmapUrl, { replace: true });
   };
 
   if (loading) {
@@ -421,57 +436,25 @@ export default function ChapterQuestionsScreen() {
   return (
     <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col pb-24 relative overflow-hidden">
       
-      {/* ✨ Magic Sparkle Burst on Correct Answer */}
-      {showSparkle && particlesInit && (
-        <Particles
-          id="quiz-sparkle"
-          options={{
-            background: { color: { value: "transparent" } },
-            fpsLimit: 60,
-            emitters: { position: { x: 20, y: 80 }, rate: { quantity: 15, delay: 0 }, life: { count: 1 } },
-            particles: {
-              color: { value: ["#ffcc00", "#ff69b4", "#58cc02", "#00e5ff", "#e040fb"] },
-              move: { enable: true, speed: { min: 3, max: 8 }, direction: "top-right" as const, outModes: { default: "out" as const } },
-              number: { value: 0 },
-              opacity: { value: { min: 0.5, max: 1 }, animation: { enable: true, speed: 3, startValue: "max" as const, destroy: "min" as const } },
-              shape: { type: ["star", "circle"] },
-              size: { value: { min: 3, max: 8 } },
-              life: { duration: { value: 1.5 }, count: 1 },
-            },
-            detectRetina: true,
-          }}
-          className="absolute inset-0 z-[30] pointer-events-none"
-        />
+      {/* ✨ Magic Sparkle Burst on Correct Answer (Dynamically loaded) */}
+      {showSparkle && (
+        <Suspense fallback={null}>
+          <SparkleParticles />
+        </Suspense>
       )}
 
-      {/* Quit Modal Overlay */}
-      {showQuitModal && (
-        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center px-6 backdrop-blur-sm">
-          <div className="bg-white rounded-[24px] p-6 w-full max-w-[340px] shadow-2xl flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 bg-[#ffdad6] text-[#ba1a1a] rounded-full flex items-center justify-center mb-4">
-              <XIcon size={32} strokeWidth={3} />
-            </div>
-            <h3 className="text-2xl font-black text-[#141779] mb-2 tracking-tight">Quit Quiz?</h3>
-            <p className="text-[#464652] font-medium mb-8">
-              Are you sure you want to quit the quiz? Your progress will be saved.
-            </p>
-            <div className="flex w-full gap-3">
-              <button 
-                onClick={() => setShowQuitModal(false)}
-                className="flex-1 py-4 bg-[#f4efff] text-[#141779] font-bold rounded-xl hover:bg-[#e8ddff] transition-colors"
-              >
-                No, Stay
-              </button>
-              <button 
-                onClick={handleQuit}
-                className="flex-1 py-4 bg-[#ba1a1a] text-white font-bold rounded-xl shadow-md hover:bg-[#93000a] transition-colors"
-              >
-                Yes, Quit
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Unified Quit Modal */}
+      <UnifiedConfirmModal
+        isOpen={showQuitModal}
+        onClose={() => setShowQuitModal(false)}
+        onConfirm={handleQuit}
+        title="Quit Quiz?"
+        message="Are you sure you want to quit the quiz? Your progress will be saved."
+        confirmText="Yes, Quit"
+        cancelText="No, Stay"
+        variant="danger"
+        icon={<XIcon size={30} className="text-rose-600" />}
+      />
 
       {/* Header */}
       <header className="flex items-center justify-between px-5 py-4 bg-[#f4efff] sticky top-0 z-40">
@@ -725,8 +708,20 @@ export default function ChapterQuestionsScreen() {
               {confirmed ? 'CONTINUE' : 'CHECK'}
             </span>
           </button>
-      </div>
         </div>
+      </div>
+
+      {/* Quit Confirmation Modal */}
+      <UnifiedConfirmModal
+        isOpen={showQuitModal}
+        onClose={() => setShowQuitModal(false)}
+        onConfirm={handleQuit}
+        title="Leave Challenge?"
+        message="Your current progress has been saved. Are you sure you want to return to the roadmap?"
+        confirmText="Yes, Exit"
+        cancelText="Keep Playing"
+        variant="warning"
+      />
     </div>
   );
 }

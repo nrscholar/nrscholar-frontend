@@ -346,7 +346,7 @@ export default function KidsActivityScreen() {
       <Text style={styles.emptyTitle}>No Activities Yet</Text>
       <Text style={styles.emptyDesc}>
         Activities will appear here after your child completes practice sessions,
-        quizzes, or boss battles.
+        quizzes, or learning missions.
       </Text>
     </View>
   );
