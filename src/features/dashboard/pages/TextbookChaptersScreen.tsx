@@ -68,11 +68,11 @@ export default function TextbookChaptersScreen() {
   }, {});
 
   const unitColors = [
-    { bg: "bg-[#e5f9d7]", border: "border-[#58cc02]", text: "text-[#58cc02]" },
-    { bg: "bg-[#ffeed1]", border: "border-[#ff9600]", text: "text-[#ff9600]" },
-    { bg: "bg-[#e1f5fe]", border: "border-[#0288d1]", text: "text-[#0288d1]" },
-    { bg: "bg-[#f3e5f5]", border: "border-[#8e24aa]", text: "text-[#8e24aa]" },
-    { bg: "bg-[#ffdad6]", border: "border-[#ba1a1a]", text: "text-[#ba1a1a]" },
+    { bg: "bg-[#e0e0ff]/60", border: "border-[#141779]/20", text: "text-[#141779]" },
+    { bg: "bg-[#57fae9]/20", border: "border-[#006a62]/20", text: "text-[#006a62]" },
+    { bg: "bg-[#30007f]/10", border: "border-[#30007f]/20", text: "text-[#30007f]" },
+    { bg: "bg-[#ffdad6]/60", border: "border-[#ba1a1a]/20", text: "text-[#ba1a1a]" },
+    { bg: "bg-[#e0e0ff]/60", border: "border-[#141779]/20", text: "text-[#141779]" },
   ];
 
   let totalIndexCounter = 0;
@@ -144,7 +144,7 @@ export default function TextbookChaptersScreen() {
                           }}
                           className={`bg-white rounded-3xl p-4 border ${isLocked ? 'border-amber-300 bg-amber-50/30' : 'border-slate-200/80'} shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:shadow-md transition-all cursor-pointer flex items-center gap-4`}
                         >
-                          <div className={`w-12 h-12 ${isLocked ? 'bg-amber-100 border-amber-300 text-amber-800' : 'bg-indigo-50 border-indigo-100 text-[#141779]'} rounded-2xl flex items-center justify-center shrink-0 border`}>
+                          <div className={`w-12 h-12 ${isLocked ? 'bg-amber-100 border-amber-300 text-amber-800' : 'bg-[#e0e0ff]/60 border-[#141779]/20 text-[#141779]'} rounded-2xl flex items-center justify-center shrink-0 border`}>
                             <BookOpen size={22} />
                           </div>
                           <div className="flex-1 min-w-0">

@@ -41,17 +41,18 @@ export default function TextbookSubjectsScreen() {
   // Helper to get nice colors and icons for subjects
   const getSubjectConfig = (subjectName: string) => {
     const s = subjectName.toLowerCase();
-    if (s.includes("english")) return { bg: "bg-[#e1f5fe]", border: "border-[#0288d1]", text: "text-[#0288d1]", icon: Languages };
-    if (s.includes("math")) return { bg: "bg-[#ffeed1]", border: "border-[#ff9600]", text: "text-[#ff9600]", icon: Calculator };
+    if (s.includes("math")) return { bg: "bg-[#e0e0ff]/60", border: "border-[#141779]", text: "text-[#141779]", icon: Calculator };
+    if (s.includes("sci")) return { bg: "bg-[#57fae9]/20", border: "border-[#006a62]", text: "text-[#006a62]", icon: BookOpen };
+    if (s.includes("english")) return { bg: "bg-[#30007f]/10", border: "border-[#30007f]", text: "text-[#30007f]", icon: Languages };
     if (s.includes("hindi")) return { bg: "bg-[#ffdad6]", border: "border-[#ba1a1a]", text: "text-[#ba1a1a]", icon: Globe };
     // Default fallback
-    return { bg: "bg-[#e5f9d7]", border: "border-[#58cc02]", text: "text-[#58cc02]", icon: BookOpen };
+    return { bg: "bg-[#e0e0ff]/60", border: "border-[#141779]", text: "text-[#141779]", icon: BookOpen };
   };
 
   return (
-    <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col pb-24">
+    <div className="min-h-screen bg-[#f7f9fb] font-sans flex flex-col pb-24">
       {/* Header */}
-      <header className="flex items-center justify-between px-5 py-4 bg-[#f4efff] sticky top-0 z-40">
+      <header className="flex items-center justify-between px-5 py-4 bg-[#f7f9fb] sticky top-0 z-40">
         <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity">
           <ArrowLeft size={24} color="#141779" />
         </button>
@@ -68,7 +69,7 @@ export default function TextbookSubjectsScreen() {
         {loading ? (
           <div className="grid grid-cols-1 gap-5">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-[#f0edff]/90 rounded-[24px] p-5 border-2 border-indigo-100 shadow-sm flex items-center gap-5">
+              <div key={i} className="bg-white rounded-[24px] p-5 border-2 border-[#c7c5d4] shadow-sm flex items-center gap-5">
                 <div className="w-16 h-16 rounded-[18px] shrink-0 animate-skeleton" />
                 <div className="flex-1 space-y-2">
                   <div className="h-6 rounded w-1/2 animate-skeleton" />

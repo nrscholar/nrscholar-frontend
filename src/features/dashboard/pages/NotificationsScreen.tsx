@@ -139,9 +139,9 @@ export default function NotificationsScreen() {
               return (
                 <div key={notif._id || idx} className="flex items-start gap-4 z-10 relative">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-[0_2px_4px_rgba(0,0,0,0.1)] mt-1 ${
-                    isSpin ? "bg-purple-600 text-white" :
+                    isSpin ? "bg-[#30007f] text-white" :
                     isReward ? "bg-amber-500 text-white" :
-                    isPdf ? "bg-indigo-600 text-white" :
+                    isPdf ? "bg-[#e0e0ff] text-[#141779]" :
                     isLearning ? "bg-[#141779] text-white" :
                     isGamification ? "bg-[#57fae9] text-[#006a62]" :
                     "bg-[#e0e3e5] text-[#141779]"
@@ -157,7 +157,7 @@ export default function NotificationsScreen() {
                     <div className="absolute -left-[6px] top-5 w-4 h-4 bg-[rgba(255,255,255,0.7)] rotate-45 z-0" />
                     <div 
                       onClick={() => notif.screen && navigate(notif.screen)}
-                      className={`w-full text-left bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.5)] shadow-[0_1px_5px_rgba(0,0,0,0.05)] hover:bg-white transition-colors relative z-10 ${notif.screen ? 'cursor-pointer hover:border-indigo-300' : ''}`}
+                      className={`w-full text-left bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.5)] shadow-[0_1px_5px_rgba(0,0,0,0.05)] hover:bg-white transition-colors relative z-10 ${notif.screen ? 'cursor-pointer hover:border-[#141779]/40' : ''}`}
                     >
                       <div className="flex justify-between items-start mb-1">
                         <h3 className="text-sm font-semibold text-[#141779]">

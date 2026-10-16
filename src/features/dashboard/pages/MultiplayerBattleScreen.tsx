@@ -675,11 +675,11 @@ export default function MultiplayerBattleScreen() {
                 <>
                   <div className="w-full flex justify-center animate-bounce">
                     {effectiveSelectedOption !== null && effectiveSelectedOption === questions[currentQ]?.a ? (
-                      <span className="text-[#006a62] font-black text-sm bg-[#e0f2f1] px-5 py-2.5 rounded-full border border-[#006a62] shadow-md text-center max-w-full truncate">
+                      <span className="text-[#006a62] font-black text-sm bg-[#57fae9]/20 px-5 py-2.5 rounded-full border border-[#006a62] shadow-md text-center max-w-full truncate">
                         🎉 {t('correct_answer', 'Correct! +10 Pts')}
                       </span>
                     ) : (
-                      <span className="text-[#ba1a1a] font-black text-sm bg-[#ffebee] px-5 py-2.5 rounded-full border border-[#ba1a1a] shadow-md text-center max-w-full truncate">
+                      <span className="text-[#ba1a1a] font-black text-sm bg-[#ffdad6] px-5 py-2.5 rounded-full border border-[#ba1a1a] shadow-md text-center max-w-full truncate">
                         ❌ {t('incorrect_answer', 'Incorrect! -1 Life')}
                       </span>
                     )}
@@ -712,11 +712,11 @@ export default function MultiplayerBattleScreen() {
               </>
             ) : winnerId === "both_lost" ? (
               <>
-                <div className="w-24 h-24 mb-4 bg-red-100 rounded-full flex items-center justify-center border-4 border-red-500 shadow-md">
+                <div className="w-24 h-24 mb-4 bg-[#ffdad6] rounded-full flex items-center justify-center border-4 border-[#ba1a1a] shadow-md">
                   <span className="text-4xl">💥</span>
                 </div>
-                <h2 className="text-3xl font-black text-red-600 mb-1 uppercase">{t('double_elimination', 'DOUBLE ELIMINATION!')}</h2>
-                <p className="text-sm font-bold text-red-700 max-w-xs mb-4">
+                <h2 className="text-3xl font-black text-[#ba1a1a] mb-1 uppercase">{t('double_elimination', 'DOUBLE ELIMINATION!')}</h2>
+                <p className="text-sm font-bold text-[#ba1a1a] max-w-xs mb-4">
                   {t('double_elim_desc', 'Both players lost all 3 lives! No winner awarded — wagered coins forfeit.')}
                 </p>
               </>
@@ -737,7 +737,7 @@ export default function MultiplayerBattleScreen() {
               </>
             ) : (
               <>
-                <div className="w-24 h-24 mb-4 bg-[#ffebee] rounded-full flex items-center justify-center border-4 border-[#ba1a1a] shadow-sm">
+                <div className="w-24 h-24 mb-4 bg-[#ffdad6] rounded-full flex items-center justify-center border-4 border-[#ba1a1a] shadow-sm">
                   <X size={48} color="#ba1a1a" />
                 </div>
                 <h2 className="text-4xl font-black text-[#ba1a1a] mb-1">{t('battle_defeat', 'DEFEAT')}</h2>
@@ -786,7 +786,7 @@ export default function MultiplayerBattleScreen() {
                     return (
                       <div key={i} className="flex justify-between items-center text-sm font-bold border-b border-[#f0f0f0] pb-1.5 pt-1">
                         <span className="w-1/3 text-center text-[#767683]">Q{i + 1}</span>
-                        <span className={`w-1/3 text-center py-0.5 rounded ${iWonT ? 'text-[#006a62] bg-[#e0f2f1]/40 font-black' : 'text-[#464652]'}`}>
+                        <span className={`w-1/3 text-center py-0.5 rounded ${iWonT ? 'text-[#006a62] bg-[#57fae9]/20 font-black' : 'text-[#464652]'}`}>
                            {myC ? '✅' : '❌'} {myT}s
                         </span>
                         <span className={`w-1/3 text-center py-0.5 rounded ${oppWonT ? 'text-[#ff9f43] bg-[#ffeed1]/40 font-black' : 'text-[#464652]'}`}>
@@ -835,7 +835,7 @@ export default function MultiplayerBattleScreen() {
               <div className="w-20 h-20 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-4xl mb-3 shadow-xs">
                 🎁
               </div>
-              <span className="bg-indigo-50 border border-indigo-100 text-[#141779] px-3.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-2">
+              <span className="bg-[#e0e0ff]/60 border border-[#141779]/20 text-[#141779] px-3.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-2">
                 {t('25_wins_in_row', '25 WINS IN A ROW')}
               </span>
               <h2 className="text-2xl font-black text-[#141779] mb-1.5 uppercase leading-snug">{t('incredible', 'Incredible!')}</h2>
@@ -885,7 +885,7 @@ export default function MultiplayerBattleScreen() {
         confirmText={t('yes_quit', 'Yes, Quit')}
         cancelText={t('cancel', 'Cancel')}
         variant="danger"
-        icon={<X size={30} className="text-rose-600" />}
+        icon={<X size={30} className="text-[#ba1a1a]" />}
       />
 
       {/* UNIFIED OPPONENT QUIT MODAL */}

@@ -18,7 +18,7 @@ const renderSkillIcon = (iconName: string, category: any, size = 32) => {
   const catStr = typeof category === 'object' ? (category.en || '') : String(category || '');
   const catNorm = catStr.toLowerCase();
 
-  let gradient = "from-[#141779] via-[#4F46E5] to-[#7C3AED]";
+  let gradient = "from-[#141779] via-[#2d328f] to-[#30007f]";
   let ringColor = "ring-indigo-100 bg-indigo-50/50";
   let IconComponent = Brain;
 
@@ -637,8 +637,8 @@ export default function NeuroPlayScreen() {
                 <ArrowLeft size={18} />
               </button>
               <div className="flex items-center gap-2">
-                <Brain className="text-[#4F46E5]" size={22} />
-                <h1 className="text-lg font-black text-[#1E1B4B] tracking-tight">NeuroPlay</h1>
+                <Brain className="text-[#141779]" size={22} />
+                <h1 className="text-lg font-black text-[#141779] tracking-tight">NeuroPlay</h1>
               </div>
             </div>
 
@@ -647,7 +647,7 @@ export default function NeuroPlayScreen() {
               <button
                 onClick={() => setLang("en")}
                 className={`px-2.5 py-1 rounded-full text-[11px] font-black transition-all ${
-                  lang === "en" ? "bg-[#1E1B4B] text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
+                  lang === "en" ? "bg-[#141779] text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
                 }`}
               >
                 EN
@@ -655,7 +655,7 @@ export default function NeuroPlayScreen() {
               <button
                 onClick={() => setLang("hi")}
                 className={`px-2.5 py-1 rounded-full text-[11px] font-black transition-all ${
-                  lang === "hi" ? "bg-[#1E1B4B] text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
+                  lang === "hi" ? "bg-[#141779] text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
                 }`}
               >
                 HI
@@ -663,7 +663,7 @@ export default function NeuroPlayScreen() {
               <button
                 onClick={() => setLang("gu")}
                 className={`px-2.5 py-1 rounded-full text-[11px] font-black transition-all ${
-                  lang === "gu" ? "bg-[#1E1B4B] text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
+                  lang === "gu" ? "bg-[#141779] text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
                 }`}
               >
                 GU
@@ -688,13 +688,13 @@ export default function NeuroPlayScreen() {
                     Lvl {currentNeuroLevel}
                   </span>
                 </div>
-                <span className="text-xs font-black text-[#1E1B4B]">
+                <span className="text-xs font-black text-[#141779]">
                   {currentClassXp} / {targetClassXp} XP
                 </span>
               </div>
 
               <div className="flex items-center justify-between">
-                <h2 className="text-lg sm:text-xl font-black text-[#1E1B4B] tracking-tight">
+                <h2 className="text-lg sm:text-xl font-black text-[#141779] tracking-tight">
                   {lang === 'hi' ? `कक्षा ${studentClass} न्यूरोप्ले` : lang === 'gu' ? `ધોરણ ${studentClass} ન્યુરોપ્લે` : `Class ${studentClass} NeuroPlay`}
                 </h2>
               </div>
@@ -702,7 +702,7 @@ export default function NeuroPlayScreen() {
               {/* Progress Bar */}
               <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden shadow-inner mt-0.5">
                 <div 
-                  className="h-full rounded-full bg-gradient-to-r from-[#1E1B4B] to-[#4F46E5] transition-all duration-700 ease-out"
+                  className="h-full rounded-full bg-gradient-to-r from-[#141779] to-[#2d328f] transition-all duration-700 ease-out"
                   style={{ width: `${xpProgressPercent}%` }}
                 />
               </div>
@@ -715,7 +715,7 @@ export default function NeuroPlayScreen() {
                 onClick={() => setActiveTab("for_you")}
                 className={`px-4 py-2 rounded-full text-xs font-extrabold whitespace-nowrap transition-all shadow-2xs ${
                   activeTab === "for_you"
-                    ? "bg-[#1E1B4B] text-white scale-105 shadow-md"
+                    ? "bg-[#141779] text-white scale-105 shadow-md"
                     : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80"
                 }`}
               >
@@ -727,7 +727,7 @@ export default function NeuroPlayScreen() {
                 onClick={() => setActiveTab("completed")}
                 className={`px-4 py-2 rounded-full text-xs font-extrabold whitespace-nowrap transition-all shadow-2xs ${
                   activeTab === "completed"
-                    ? "bg-[#1E1B4B] text-white scale-105 shadow-md"
+                    ? "bg-[#141779] text-white scale-105 shadow-md"
                     : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80"
                 }`}
               >
@@ -741,7 +741,7 @@ export default function NeuroPlayScreen() {
                   onClick={() => setActiveTab(clsNum)}
                   className={`px-4 py-2 rounded-full text-xs font-extrabold whitespace-nowrap transition-all shadow-2xs ${
                     activeTab === clsNum
-                      ? "bg-[#1E1B4B] text-white scale-105 shadow-md"
+                      ? "bg-[#141779] text-white scale-105 shadow-md"
                       : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80"
                   }`}
                 >
@@ -752,14 +752,14 @@ export default function NeuroPlayScreen() {
 
             {/* 3. SECTION TITLE */}
             <div className="flex items-center justify-between pt-2">
-              <h3 className="text-lg font-black text-[#1E1B4B] tracking-tight">
+              <h3 className="text-lg font-black text-[#141779] tracking-tight">
                 {activeTab === "for_you"
                   ? (lang === 'hi' ? 'अनुशंसित स्किल्स' : lang === 'gu' ? 'ભલામણ કરેલ સ્કીલ્સ' : 'Recommended for You')
                   : activeTab === "completed"
                   ? (lang === 'hi' ? 'पूर्ण किए गए स्किल्स' : lang === 'gu' ? 'પૂર્ણ થયેલ સ્કીલ્સ' : 'Completed Skills')
                   : (lang === 'hi' ? `कक्षा ${activeTab} स्किल्स` : lang === 'gu' ? `ધોરણ ${activeTab} સ્કીલ્સ` : `Class ${activeTab} Skills`)}
               </h3>
-              <span className="text-xs font-extrabold text-[#4F46E5]">
+              <span className="text-xs font-extrabold text-[#141779]">
                 {filteredSkills.length} {lang === 'hi' ? 'स्किल्स' : lang === 'gu' ? 'સ્કીલ્સ' : 'Skills'}
               </span>
             </div>
@@ -767,10 +767,10 @@ export default function NeuroPlayScreen() {
             {/* 4. PARENT ACADEMY PHOTO-STYLE SKILL CARDS GRID */}
             {filteredSkills.length === 0 ? (
               <div className="bg-white rounded-[24px] p-8 text-center border border-slate-100 shadow-[0_4px_20px_rgba(30,27,75,0.04)] my-4 space-y-3">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center mx-auto">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 text-[#141779] flex items-center justify-center mx-auto">
                   <Brain size={24} />
                 </div>
-                <h4 className="text-sm font-black text-[#1E1B4B]">
+                <h4 className="text-sm font-black text-[#141779]">
                   {activeTab === "completed"
                     ? (lang === 'hi' ? 'कोई पूर्ण किया गया स्किल नहीं है' : lang === 'gu' ? 'કોઈ પૂર્ણ થયેલ સ્કીલ નથી' : 'No Completed Skills Yet')
                     : (lang === 'hi' ? 'कोई नया स्किल उपलब्ध नहीं है' : lang === 'gu' ? 'કોઈ નવું સ્કીલ ઉપલબ્ધ નથી' : 'No skills added yet')}
@@ -874,7 +874,7 @@ export default function NeuroPlayScreen() {
           
           {/* Ambient Background Glows matching application */}
           <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-            <div className="absolute -top-24 -left-24 w-72 h-72 bg-[#4F46E5]/10 rounded-full blur-[90px]"></div>
+            <div className="absolute -top-24 -left-24 w-72 h-72 bg-[#141779]/10 rounded-full blur-[90px]"></div>
             <div className="absolute top-1/2 -right-32 w-80 h-80 bg-[#006a62]/10 rounded-full blur-[100px]"></div>
             <div className="absolute -bottom-24 left-1/4 w-96 h-96 bg-[#7C3AED]/10 rounded-full blur-[120px]"></div>
           </div>
@@ -893,13 +893,13 @@ export default function NeuroPlayScreen() {
             <div className="flex-1 mx-3 sm:mx-4 flex flex-col items-center gap-1 min-w-0">
               <div className="flex items-center justify-between w-full text-[11px] font-extrabold text-[#141779]">
                 <span className="truncate max-w-[170px] sm:max-w-[220px] font-black">{getText(selectedSkill.title)}</span>
-                <span className="text-[#4F46E5] bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100 shrink-0 font-black text-[10px]">
+                <span className="text-[#141779] bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100 shrink-0 font-black text-[10px]">
                   {activeCardIndex + 1} / {totalCards}
                 </span>
               </div>
               <div className="bg-slate-200/80 rounded-full h-1.5 w-full overflow-hidden shadow-inner">
                 <div 
-                  className="bg-gradient-to-r from-[#141779] via-[#4F46E5] to-[#7C3AED] h-full rounded-full transition-all duration-500 ease-out shadow-sm"
+                  className="bg-gradient-to-r from-[#141779] via-[#2d328f] to-[#30007f] h-full rounded-full transition-all duration-500 ease-out shadow-sm"
                   style={{ width: `${((activeCardIndex + 1) / totalCards) * 100}%` }}
                 />
               </div>
@@ -969,7 +969,7 @@ export default function NeuroPlayScreen() {
 
                     <div className="text-center">
                       <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-indigo-50 border border-indigo-200/80 text-[#141779] font-extrabold text-[10px] tracking-wider uppercase mb-2 shadow-2xs">
-                        <Sparkles size={12} className="text-[#4F46E5]" />
+                        <Sparkles size={12} className="text-[#141779]" />
                         <span>{getText(selectedSkill.category)} • Step 1</span>
                       </span>
                       <h2 className="text-xl sm:text-2xl font-black text-[#141779] leading-tight mb-3">
@@ -994,7 +994,7 @@ export default function NeuroPlayScreen() {
                     </p>
 
                     {/* Key Takeaway Highlight Banner */}
-                    <div className="bg-gradient-to-r from-[#141779] via-[#1e1b4b] to-[#312e81] text-white rounded-2xl p-4 shadow-md flex items-center gap-3 border border-indigo-300/20">
+                    <div className="bg-gradient-to-r from-[#141779] via-[#2d328f] to-[#141779] text-white rounded-2xl p-4 shadow-md flex items-center gap-3 border border-indigo-300/20">
                       <Sparkles size={22} className="text-[#57fae9] shrink-0 animate-pulse" />
                       <p className="text-xs sm:text-sm font-extrabold leading-snug text-white">
                         {formatRichText(getText(currentCard.key_takeaway))}
@@ -1199,7 +1199,7 @@ export default function NeuroPlayScreen() {
 
                     <div className="text-center">
                       <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-indigo-50 border border-indigo-200/80 text-[#141779] font-extrabold text-[10px] tracking-wider uppercase mb-2 shadow-2xs">
-                        <Zap size={12} className="text-[#4F46E5]" />
+                        <Zap size={12} className="text-[#141779]" />
                         <span>Step 5 • Strategy Formula</span>
                       </span>
                       <h2 className="text-xl sm:text-2xl font-black text-[#141779] leading-tight mb-2">

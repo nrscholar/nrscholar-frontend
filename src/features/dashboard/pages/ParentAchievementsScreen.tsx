@@ -262,7 +262,7 @@ export default function ParentAchievementsScreen() {
               </h2>
               <p className="text-xs text-slate-600 font-bold leading-snug mt-0.5">{t("nurturing_curiosity_sub", "Nurturing curiosity & celebrating key learning milestones.")}</p>
             </div>
-            <div className="flex items-center justify-center bg-indigo-50 border border-indigo-100 w-12 h-12 rounded-2xl text-[#141779] shadow-xs shrink-0">
+            <div className="flex items-center justify-center bg-[#e0e0ff]/60 border border-[#141779]/20 w-12 h-12 rounded-2xl text-[#141779] shadow-xs shrink-0">
               <Trophy size={24} />
             </div>
           </div>
@@ -282,10 +282,10 @@ export default function ParentAchievementsScreen() {
           </div>
 
           {/* Bento Box 3: Global Rank Box */}
-          <div className="col-span-1 bento-card rounded-[24px] p-5 flex flex-col justify-between h-[125px] bg-white border border-indigo-200/80">
+          <div className="col-span-1 bento-card rounded-[24px] p-5 flex flex-col justify-between h-[125px] bg-white border border-[#30007f]/20">
             <div className="flex items-center justify-between">
               <span className="text-xs font-black text-[#30007f] uppercase tracking-wider">{t("rank", "Rank")}</span>
-              <div className="p-2 bg-indigo-50 rounded-xl text-[#30007f]">
+              <div className="p-2 bg-[#e0e0ff]/60 rounded-xl text-[#30007f]">
                 <Globe size={18} />
               </div>
             </div>
@@ -312,7 +312,7 @@ export default function ParentAchievementsScreen() {
               </div>
               
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779] shrink-0">
+                <div className="w-10 h-10 rounded-2xl bg-[#e0e0ff]/60 border border-[#141779]/20 flex items-center justify-center text-[#141779] shrink-0">
                   {React.createElement(ICON_MAP[nextMilestone.icon] || Lock, { size: 20 })}
                 </div>
                 <div className="flex-1 min-w-0">

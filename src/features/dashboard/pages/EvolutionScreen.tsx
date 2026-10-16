@@ -102,14 +102,14 @@ export default function EvolutionScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-on-surface flex flex-col items-center">
-      <div className="w-full max-w-[430px] flex-1 bg-surface-bright flex flex-col shadow-2xl relative overflow-hidden">
+    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] flex flex-col items-center">
+      <div className="w-full max-w-[430px] flex-1 bg-[#f7f9fb] flex flex-col shadow-2xl relative overflow-hidden">
         
         {/* Header */}
-        <header className="px-6 pt-10 pb-4 flex items-center sticky top-0 z-50 bg-surface-bright border-b border-surface-variant/20 shadow-sm">
+        <header className="px-6 pt-10 pb-4 flex items-center sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-[#c7c5d4]/40 shadow-sm">
           <button 
             onClick={() => returnTo ? navigate(returnTo) : navigate(-1)} 
-            className="p-1 -ml-2 rounded-full hover:bg-surface-container-highest transition-colors"
+            className="p-1 -ml-2 rounded-full hover:bg-slate-100 transition-colors"
           >
             <ArrowLeft size={24} className="text-[#141779]" />
           </button>
@@ -118,8 +118,8 @@ export default function EvolutionScreen() {
 
         <main className="flex-1 flex flex-col items-center justify-center p-6 relative">
           <div className="text-center mb-10 z-10">
-            <h2 className="text-3xl font-black text-primary mb-2 tracking-tight">{stageName}</h2>
-            <p className="text-on-surface-variant font-medium text-sm">Level {stage} Companion</p>
+            <h2 className="text-3xl font-black text-[#141779] mb-2 tracking-tight">{stageName}</h2>
+            <p className="text-[#767683] font-medium text-sm">Level {stage} Companion</p>
           </div>
 
           {/* Avatar Container */}
@@ -137,27 +137,27 @@ export default function EvolutionScreen() {
             </div>
             
             {stage >= 3 && (
-              <div className="absolute -inset-4 border-2 border-dashed border-primary/20 rounded-full animate-[spin_10s_linear_infinite]" />
+              <div className="absolute -inset-4 border-2 border-dashed border-[#141779]/20 rounded-full animate-[spin_10s_linear_infinite]" />
             )}
           </div>
 
           {/* Progress Section */}
-          <div className="w-full mt-16 bg-white p-6 rounded-3xl shadow-lg border border-outline-variant/20 z-10">
+          <div className="w-full mt-16 bg-white p-6 rounded-3xl shadow-lg border border-[#c7c5d4]/60 z-10">
             <div className="flex justify-between items-center mb-3">
-              <span className="text-label-md font-bold text-on-surface-variant">Evolution Progress</span>
-              <span className="text-label-md font-bold text-primary">{Math.round(percentage)}%</span>
+              <span className="text-xs font-bold text-[#767683]">Evolution Progress</span>
+              <span className="text-xs font-bold text-[#141779]">{Math.round(percentage)}%</span>
             </div>
             
-            <div className="w-full h-4 bg-surface-container rounded-full overflow-hidden mb-4 shadow-inner">
+            <div className="w-full h-4 bg-slate-100 rounded-full overflow-hidden mb-4 shadow-inner">
               <div 
-                className="h-full bg-gradient-to-r from-primary to-secondary-fixed transition-all duration-1000 ease-out relative"
+                className="h-full bg-gradient-to-r from-[#141779] to-[#57fae9] transition-all duration-1000 ease-out relative"
                 style={{ width: `${percentage}%` }}
               >
                 <div className="absolute inset-0 bg-white/20 animate-[pulse_2s_ease-in-out_infinite]" />
               </div>
             </div>
 
-            <div className="flex justify-between items-center text-xs text-outline font-medium">
+            <div className="flex justify-between items-center text-xs text-[#767683] font-medium">
               <span>{xp} XP Earned</span>
               <span>{stage === 10 ? "Max Stage Reached!" : `${evoData?.nextStageXp?.toLocaleString() || 50000} XP for Next Stage`}</span>
             </div>
@@ -168,7 +168,7 @@ export default function EvolutionScreen() {
               if (returnTo) navigate(returnTo, { state: location.state });
               else navigate('/home');
             }}
-            className="mt-8 bg-primary text-on-primary w-full py-4 rounded-full font-bold text-lg shadow-[0_8px_20px_rgba(20,23,121,0.3)] hover:opacity-90 active:scale-95 transition-all z-10 flex items-center justify-center gap-2"
+            className="mt-8 bg-[#141779] text-white w-full py-4 rounded-full font-bold text-lg shadow-[0_8px_20px_rgba(20,23,121,0.3)] hover:opacity-90 active:scale-95 transition-all z-10 flex items-center justify-center gap-2"
           >
             <Sparkles size={20} />
             Keep Learning to Grow!
@@ -176,8 +176,8 @@ export default function EvolutionScreen() {
         </main>
         
         {/* Background decorative elements */}
-        <div className="absolute top-20 -left-10 w-40 h-40 bg-primary-fixed rounded-full blur-[80px] opacity-50 pointer-events-none" />
-        <div className="absolute bottom-20 -right-10 w-40 h-40 bg-secondary-fixed rounded-full blur-[80px] opacity-30 pointer-events-none" />
+        <div className="absolute top-20 -left-10 w-40 h-40 bg-[#e0e0ff] rounded-full blur-[80px] opacity-50 pointer-events-none" />
+        <div className="absolute bottom-20 -right-10 w-40 h-40 bg-[#57fae9] rounded-full blur-[80px] opacity-30 pointer-events-none" />
       </div>
     </div>
   );

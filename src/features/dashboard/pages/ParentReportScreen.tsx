@@ -834,7 +834,7 @@ export default function ParentReportScreen() {
                   className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 font-bold text-sm shrink-0 transition-all ${
                     isActive
                       ? "border-[#141779] bg-[#141779] text-white shadow-md"
-                      : "border-slate-200 bg-white text-[#141779] hover:border-[#141779] hover:bg-indigo-50"
+                      : "border-slate-200 bg-white text-[#141779] hover:border-[#141779] hover:bg-[#e0e0ff]/50"
                   }`}
                 >
                   <span className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-black overflow-hidden shrink-0">
@@ -849,7 +849,7 @@ export default function ParentReportScreen() {
             })}
             <button
               onClick={() => setShowSwitcher(true)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-full border-2 border-dashed border-indigo-200 text-[#141779] text-xs font-bold shrink-0 hover:bg-indigo-50 transition-all"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-full border-2 border-dashed border-[#c7c5d4] text-[#141779] text-xs font-bold shrink-0 hover:bg-[#e0e0ff]/50 transition-all"
             >
               {t("add_manage_child", "+ Add / Manage")}
             </button>
@@ -858,14 +858,14 @@ export default function ParentReportScreen() {
 
         {/* 1. Large compact date/time selector */}
         {dateFilter === "custom" ? (
-          <div className="w-full bg-white border-2 border-indigo-200 p-4 rounded-[24px] shadow-xs space-y-3">
+          <div className="w-full bg-white border-2 border-[#c7c5d4] p-4 rounded-[24px] shadow-xs space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-black text-[#141779] flex items-center gap-1.5">
                 📅 {t("custom_date_range", "Custom Date Range")}
               </span>
               <button 
                 onClick={() => setShowDateSheet(true)}
-                className="text-xs font-black text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-0.5"
+                className="text-xs font-black text-[#141779] hover:text-[#2d328f] transition-colors flex items-center gap-0.5"
               >
                 {t("change_period", "Change Period")} <ChevronDown size={14} />
               </button>
@@ -915,7 +915,7 @@ export default function ParentReportScreen() {
             onClick={() => setShowSubjectSheet(true)}
             className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-black border-2 shadow-xs active:scale-[0.98] transition-all ${
               subjectFilter !== "all"
-                ? "border-[#141779] text-[#141779] bg-indigo-50"
+                ? "border-[#141779] text-[#141779] bg-[#e0e0ff]/60"
                 : "bg-white border-slate-100 text-slate-700 hover:border-slate-200"
             }`}
           >
@@ -938,7 +938,7 @@ export default function ParentReportScreen() {
         {/* Sub-filters row 2: Export */}
         <button
           onClick={() => setShowExportSheet(true)}
-          className="w-full flex items-center justify-center gap-2 bg-white border-2 border-slate-100 py-3 px-4 rounded-xl text-xs font-black text-slate-700 shadow-xs hover:border-indigo-200 hover:bg-indigo-50 active:scale-[0.98] transition-all"
+          className="w-full flex items-center justify-center gap-2 bg-white border-2 border-slate-100 py-3 px-4 rounded-xl text-xs font-black text-slate-700 shadow-xs hover:border-[#c7c5d4] hover:bg-[#e0e0ff]/50 active:scale-[0.98] transition-all"
         >
           <span>↓</span>
           <span>{t('export_report_data', 'Export Report Data')}</span>
@@ -965,7 +965,7 @@ export default function ParentReportScreen() {
               const prev = prevHistory[prevHistory.length - 2]?.masteryScore ?? displayAccuracy;
               const delta = curr - prev;
               const deltaStr = delta >= 0 ? `↑ ${delta}%` : `↓ ${Math.abs(delta)}%`;
-              const color = delta >= 0 ? "text-emerald-600" : "text-red-600";
+              const color = delta >= 0 ? "text-[#006a62]" : "text-[#ba1a1a]";
               return (
                 <div className={`mt-3 text-xs font-black ${color} flex items-center gap-1.5`}>
                   <span>{deltaStr} {t("vs_previous_period", "vs previous period")}</span>
@@ -986,9 +986,9 @@ export default function ParentReportScreen() {
             <StatBox label={t("wrong", "Wrong")}           value={filteredQA.wrong ?? 0} color="text-[#ba1a1a]" />
           </div>
           {(filteredQA.totalAttempted ?? 0) > 0 && (
-            <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 flex justify-between items-center">
-              <span className="text-xs font-bold text-indigo-700">{t("avg_time_per_question", "Avg. Time per Question")}</span>
-              <span className="text-sm font-black text-indigo-900">{filteredQA.avgTimePerQuestion || 15}s</span>
+            <div className="bg-[#e0e0ff]/40 border border-[#c7c5d4]/60 rounded-xl p-3 flex justify-between items-center">
+              <span className="text-xs font-bold text-[#141779]">{t("avg_time_per_question", "Avg. Time per Question")}</span>
+              <span className="text-sm font-black text-[#141779]">{filteredQA.avgTimePerQuestion || 15}s</span>
             </div>
           )}
         </Card>
@@ -1057,16 +1057,16 @@ export default function ParentReportScreen() {
           ) : (
             <div className="relative">
               <div className="flex items-center justify-center gap-4 mb-4 text-[10px] font-bold text-[#464652]">
-                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#2563eb]" /><span>{t("mastery", "Mastery")}</span></div>
-                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#d97706]" /><span>{t("focus", "Focus")}</span></div>
-                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#dc2626]" /><span>{t("risk", "Risk")}</span></div>
+                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#141779]" /><span>{t("mastery", "Mastery")}</span></div>
+                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#006a62]" /><span>{t("focus", "Focus")}</span></div>
+                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#ba1a1a]" /><span>{t("risk", "Risk")}</span></div>
               </div>
               <svg ref={svgRef} viewBox="0 0 500 220" className="w-full overflow-visible select-none cursor-pointer"
                 onMouseMove={handleMouseMove} onMouseLeave={() => setHoveredIndex(null)}>
                 <defs>
                   <linearGradient id="mGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#2563eb" stopOpacity="0.2"/>
-                    <stop offset="100%" stopColor="#2563eb" stopOpacity="0"/>
+                    <stop offset="0%" stopColor="#141779" stopOpacity="0.2"/>
+                    <stop offset="100%" stopColor="#141779" stopOpacity="0"/>
                   </linearGradient>
                 </defs>
                 {[0, 25, 50, 75, 100].map(v => (
@@ -1078,16 +1078,16 @@ export default function ParentReportScreen() {
                 {chartHistory.length > 0 && (
                   <>
                     <path d={masteryAreaPath} fill="url(#mGrad)" />
-                    <path d={masteryPath} fill="none" stroke="#2563eb" strokeWidth="3" strokeLinecap="round" />
-                    <path d={weaknessPath} fill="none" stroke="#d97706" strokeWidth="2.5" strokeDasharray="4,4" />
-                    <path d={riskPath} fill="none" stroke="#dc2626" strokeWidth="2" />
+                    <path d={masteryPath} fill="none" stroke="#141779" strokeWidth="3" strokeLinecap="round" />
+                    <path d={weaknessPath} fill="none" stroke="#006a62" strokeWidth="2.5" strokeDasharray="4,4" />
+                    <path d={riskPath} fill="none" stroke="#ba1a1a" strokeWidth="2" />
                     {chartHistory.map((pt: any, i: number) => {
                       const isHovered = hoveredIndex === i;
                       return (
                         <g key={i}>
-                          <circle cx={getX(i)} cy={getY(pt.masteryScore)} r={isHovered ? 6 : 4} fill="#2563eb" stroke="#fff" strokeWidth="1.5" />
-                          <circle cx={getX(i)} cy={getY(pt.weaknessScore)} r={isHovered ? 5 : 3.5} fill="#d97706" stroke="#fff" strokeWidth="1.5" />
-                          <circle cx={getX(i)} cy={getY(pt.riskIndex)} r={isHovered ? 5 : 3.5} fill="#dc2626" stroke="#fff" strokeWidth="1" />
+                          <circle cx={getX(i)} cy={getY(pt.masteryScore)} r={isHovered ? 6 : 4} fill="#141779" stroke="#fff" strokeWidth="1.5" />
+                          <circle cx={getX(i)} cy={getY(pt.weaknessScore)} r={isHovered ? 5 : 3.5} fill="#006a62" stroke="#fff" strokeWidth="1.5" />
+                          <circle cx={getX(i)} cy={getY(pt.riskIndex)} r={isHovered ? 5 : 3.5} fill="#ba1a1a" stroke="#fff" strokeWidth="1" />
                         </g>
                       );
                     })}
@@ -1099,17 +1099,17 @@ export default function ParentReportScreen() {
               </svg>
               {hoveredIndex !== null && chartHistory[hoveredIndex] && (
                 <div className="mt-3 p-3 bg-white border border-gray-100 rounded-xl shadow-sm grid grid-cols-3 gap-2 text-center">
-                  <div className="bg-blue-50 p-1.5 rounded-lg">
-                    <p className="text-[9px] font-bold text-blue-700 uppercase">{t("mastery", "Mastery")}</p>
-                    <p className="text-sm font-bold text-blue-900">{chartHistory[hoveredIndex].masteryScore}%</p>
+                  <div className="bg-[#e0e0ff]/60 p-1.5 rounded-lg">
+                    <p className="text-[9px] font-bold text-[#141779] uppercase">{t("mastery", "Mastery")}</p>
+                    <p className="text-sm font-bold text-[#141779]">{chartHistory[hoveredIndex].masteryScore}%</p>
                   </div>
-                  <div className="bg-amber-50 p-1.5 rounded-lg">
-                    <p className="text-[9px] font-bold text-amber-700 uppercase">{t("focus", "Focus")}</p>
-                    <p className="text-sm font-bold text-amber-900">{chartHistory[hoveredIndex].weaknessScore}%</p>
+                  <div className="bg-[#57fae9]/20 p-1.5 rounded-lg">
+                    <p className="text-[9px] font-bold text-[#006a62] uppercase">{t("focus", "Focus")}</p>
+                    <p className="text-sm font-bold text-[#006a62]">{chartHistory[hoveredIndex].weaknessScore}%</p>
                   </div>
-                  <div className="bg-red-50 p-1.5 rounded-lg">
-                    <p className="text-[9px] font-bold text-red-700 uppercase">{t("risk", "Risk")}</p>
-                    <p className={`text-sm font-bold ${chartHistory[hoveredIndex].riskIndex >= 50 ? "text-red-700" : "text-green-600"}`}>{chartHistory[hoveredIndex].riskIndex}%</p>
+                  <div className="bg-[#ffdad6]/60 p-1.5 rounded-lg">
+                    <p className="text-[9px] font-bold text-[#ba1a1a] uppercase">{t("risk", "Risk")}</p>
+                    <p className={`text-sm font-bold ${chartHistory[hoveredIndex].riskIndex >= 50 ? "text-[#ba1a1a]" : "text-[#006a62]"}`}>{chartHistory[hoveredIndex].riskIndex}%</p>
                   </div>
                 </div>
               )}
@@ -1166,7 +1166,7 @@ export default function ParentReportScreen() {
                   <p className="text-[14px] font-bold text-slate-800 mb-2.5 leading-snug">{m.questionText}</p>
                   
                   <div className="flex flex-wrap items-center gap-2 text-[10px] font-black">
-                    <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md capitalize">
+                    <span className="bg-[#e0e0ff]/60 text-[#141779] px-2 py-0.5 rounded-md capitalize">
                       📚 {m.subject === "General" ? t("general", "General") : m.subject}
                     </span>
                     <span className="bg-slate-200/70 text-slate-700 px-2 py-0.5 rounded-md">
@@ -1182,16 +1182,16 @@ export default function ParentReportScreen() {
                   {(m.selectedOption || m.correctAnswer) && (
                     <div className="mt-2.5 pt-2 border-t border-slate-200/60 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                       {m.selectedOption && (
-                        <div className="bg-red-50/80 border border-red-100 rounded-lg p-2 text-red-700">
-                          <span className="font-bold block text-[10px] uppercase tracking-wider text-red-500 mb-0.5">
+                        <div className="bg-[#ffdad6]/60 border border-[#ba1a1a]/20 rounded-lg p-2 text-[#ba1a1a]">
+                          <span className="font-bold block text-[10px] uppercase tracking-wider text-[#ba1a1a] mb-0.5">
                             {t("your_answer", "Child's Answer")}:
                           </span>
                           <span className="font-semibold">{m.selectedOption}</span>
                         </div>
                       )}
                       {m.correctAnswer && (
-                        <div className="bg-emerald-50/80 border border-emerald-100 rounded-lg p-2 text-emerald-800">
-                          <span className="font-bold block text-[10px] uppercase tracking-wider text-emerald-600 mb-0.5">
+                        <div className="bg-[#57fae9]/20 border border-[#006a62]/20 rounded-lg p-2 text-[#006a62]">
+                          <span className="font-bold block text-[10px] uppercase tracking-wider text-[#006a62] mb-0.5">
                             {t("correct_answer", "Correct Answer")}:
                           </span>
                           <span className="font-semibold">{m.correctAnswer}</span>
@@ -1232,9 +1232,9 @@ export default function ParentReportScreen() {
             <SectionHeader icon={<AlertTriangle size={20} color="#ba1a1a" />} title={t("risk_alerts", "Risk Alerts")} subtitle={t("automatically_detected_warnings", "Automatically detected warnings")} />
             <div className="flex flex-col gap-2">
               {risks.map((r: string, i: number) => (
-                <div key={i} className="bg-red-50 border border-red-100 rounded-xl p-3 flex gap-2 items-start">
-                  <AlertTriangle size={15} className="text-red-600 shrink-0 mt-0.5" />
-                  <p className="text-xs text-red-700 font-semibold">{r}</p>
+                <div key={i} className="bg-[#ffdad6]/60 border border-[#ba1a1a]/20 rounded-xl p-3 flex gap-2 items-start">
+                  <AlertTriangle size={15} className="text-[#ba1a1a] shrink-0 mt-0.5" />
+                  <p className="text-xs text-[#ba1a1a] font-semibold">{r}</p>
                 </div>
               ))}
             </div>
@@ -1269,12 +1269,12 @@ export default function ParentReportScreen() {
               }}
               className={`w-full py-3.5 px-4 rounded-2xl text-sm font-black text-left capitalize transition-colors flex justify-between items-center ${
                 dateFilter === opt
-                  ? "bg-indigo-50 text-[#141779] border-2 border-indigo-200"
+                  ? "bg-[#e0e0ff]/60 text-[#141779] border-2 border-[#141779]"
                   : "bg-slate-50 text-slate-800 border-2 border-slate-100 hover:bg-slate-100"
               }`}
             >
               <span>{t(opt, opt.replace("_", " "))}</span>
-              {dateFilter === opt && <span className="text-indigo-600 text-xs">✓ {t("active", "Active")}</span>}
+              {dateFilter === opt && <span className="text-[#141779] text-xs">✓ {t("active", "Active")}</span>}
             </button>
           ))}
           {dateFilter === "custom" && (
@@ -1321,12 +1321,12 @@ export default function ParentReportScreen() {
             }}
             className={`w-full py-3.5 px-4 rounded-2xl text-sm font-black text-left transition-colors flex justify-between items-center ${
               subjectFilter === "all"
-                ? "bg-indigo-50 text-[#141779] border-2 border-indigo-200"
+                ? "bg-[#e0e0ff]/60 text-[#141779] border-2 border-[#141779]"
                 : "bg-slate-50 text-slate-800 border-2 border-slate-100 hover:bg-slate-100"
             }`}
           >
             <span>{t("all_subjects", "All Subjects")}</span>
-            {subjectFilter === "all" && <span className="text-indigo-600 text-xs">✓ {t("active", "Active")}</span>}
+            {subjectFilter === "all" && <span className="text-[#141779] text-xs">✓ {t("active", "Active")}</span>}
           </button>
           {subjects.map((s: any) => (
             <button
@@ -1337,12 +1337,12 @@ export default function ParentReportScreen() {
               }}
               className={`w-full py-3.5 px-4 rounded-2xl text-sm font-black text-left transition-colors flex justify-between items-center ${
                 subjectFilter === s.subject
-                  ? "bg-indigo-50 text-[#141779] border-2 border-indigo-200"
+                  ? "bg-[#e0e0ff]/60 text-[#141779] border-2 border-[#141779]"
                   : "bg-slate-50 text-slate-800 border-2 border-slate-100 hover:bg-slate-100"
               }`}
             >
               <span className="capitalize">{getTranslatedSubject(s.subject)}</span>
-              {subjectFilter === s.subject && <span className="text-indigo-600 text-xs">✓ {t("active", "Active")}</span>}
+              {subjectFilter === s.subject && <span className="text-[#141779] text-xs">✓ {t("active", "Active")}</span>}
             </button>
           ))}
         </div>

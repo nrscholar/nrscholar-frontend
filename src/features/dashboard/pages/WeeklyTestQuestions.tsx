@@ -110,8 +110,8 @@ export default function WeeklyTestQuestionsScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col pb-24 relative overflow-hidden">
-        <header className="flex items-center justify-between px-5 py-4 bg-[#f4efff] sticky top-0 z-40 animate-pulse">
+      <div className="min-h-screen bg-[#f7f9fb] font-sans flex flex-col pb-24 relative overflow-hidden">
+        <header className="flex items-center justify-between px-5 py-4 bg-[#f7f9fb] sticky top-0 z-40 animate-pulse">
           <div className="flex items-center gap-3 w-full">
             <div className="w-8 h-8 bg-gray-200 rounded-full shrink-0" />
             <div className="w-10 h-10 bg-gray-200 rounded-full shrink-0" />
@@ -152,9 +152,9 @@ export default function WeeklyTestQuestionsScreen() {
     : "SEE RESULTS 🏆";
 
   return (
-    <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col pb-24">
+    <div className="min-h-screen bg-[#f7f9fb] font-sans flex flex-col pb-24">
       {/* Header */}
-      <header className="flex items-center justify-between px-5 py-4 bg-[#f4efff] sticky top-0 z-40">
+      <header className="flex items-center justify-between px-5 py-4 bg-[#f7f9fb] sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity">
             <ArrowLeft size={24} color="#141779" />
@@ -199,10 +199,10 @@ export default function WeeklyTestQuestionsScreen() {
         <div className="mb-6">
           <div className="flex justify-between items-center mb-3 px-0.5">
             <span className="text-xl font-bold text-[#141779]">
-              Question {currentQ + 1} <span className="text-[17px] font-medium text-[#827656]">/ {total}</span>
+              Question {currentQ + 1} <span className="text-[17px] font-medium text-[#767683]">/ {total}</span>
             </span>
-            <div className="bg-[#e8ddff] px-3.5 py-1.5 rounded-full">
-              <span className="text-xs font-bold text-[#1d0052] tracking-[0.5px]">KEEP GOING!</span>
+            <div className="bg-[#e0e0ff] px-3.5 py-1.5 rounded-full">
+              <span className="text-xs font-bold text-[#30007f] tracking-[0.5px]">KEEP GOING!</span>
             </div>
           </div>
           <div className="h-6 bg-[#e6e6e6] rounded-full overflow-hidden p-[5px]">
@@ -241,9 +241,9 @@ export default function WeeklyTestQuestionsScreen() {
 
             if (confirmed) {
               if (idx === q.correct) {
-                btnClass = "bg-[#e8ddff] border-[#30007f]";
+                btnClass = "bg-[#e0e0ff] border-[#30007f]";
                 labelClass = "bg-[#30007f] text-white";
-                textClass = "text-[#1d0052]";
+                textClass = "text-[#30007f]";
               } else if (idx === selected) {
                 btnClass = "bg-[#ffdad6] border-[#ba1a1a]";
                 labelClass = "bg-[#ba1a1a] text-white";
@@ -252,7 +252,7 @@ export default function WeeklyTestQuestionsScreen() {
                 btnClass = "bg-white border-transparent opacity-45";
               }
             } else if (selected === idx) {
-              btnClass = "bg-[rgba(224,224,255,0.4)] border-[#c2e8ff]";
+              btnClass = "bg-[#e0e0ff]/40 border-[#c7c5d4]";
               textClass = "text-[#141779]";
             }
 
@@ -263,7 +263,7 @@ export default function WeeklyTestQuestionsScreen() {
                 className={`rounded-[18px] py-[18px] px-3 flex flex-col items-center justify-center relative shadow-[0_10px_20px_rgba(25,28,30,0.05)] transition-all ${btnClass}`}
               >
                 <div className={`absolute top-2.5 left-2.5 w-8 h-8 rounded-full flex items-center justify-center ${labelClass}`}>
-                  <span className={`text-[13px] font-bold ${confirmed && (idx === q.correct || idx === selected) ? 'text-white' : 'text-[#827656]'}`}>
+                  <span className={`text-[13px] font-bold ${confirmed && (idx === q.correct || idx === selected) ? 'text-white' : 'text-[#767683]'}`}>
                     {OPTION_LABELS[idx]}
                   </span>
                 </div>
@@ -293,7 +293,7 @@ export default function WeeklyTestQuestionsScreen() {
       </main>
 
       {/* Fixed Confirm Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#f4efff] via-[#f4efff] to-transparent pointer-events-none">
+      <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#f7f9fb] via-[#f7f9fb] to-transparent pointer-events-none">
         <button
           disabled={selected === null && !confirmed}
           onClick={handleConfirm}

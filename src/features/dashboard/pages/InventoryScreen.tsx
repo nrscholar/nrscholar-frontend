@@ -14,7 +14,7 @@ const MysteryBoxHeroSVG = ({ type }: { type?: string }) => {
   const glowColor = isEpic ? "#C084FC" : isRare ? "#38BDF8" : "#94A3B8";
 
   return (
-    <svg viewBox="0 0 160 160" className="w-28 h-28 sm:w-32 sm:h-32 drop-shadow-[0_0_25px_rgba(108,77,255,0.5)]">
+    <svg viewBox="0 0 160 160" className="w-28 h-28 sm:w-32 sm:h-32 drop-shadow-[0_0_25px_rgba(20,23,121,0.5)]">
       <defs>
         <linearGradient id="epicBoxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#E879F9" />
@@ -520,12 +520,12 @@ export default function InventoryScreen() {
   const currentCity = cities.find(c => c.isCurrent) || cities.find(c => c.isUnlocked) || cities[0];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#F4EFF7] via-[#F9F6FF] to-[#FFFFFF] text-[#141779] font-sans pb-24 relative selection:bg-[#6C4DFF] selection:text-white overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-[#F4EFF7] via-[#F9F6FF] to-[#FFFFFF] text-[#141779] font-sans pb-24 relative selection:bg-[#141779] selection:text-white overflow-x-hidden">
       {/* Background Soft Glow Accents */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[35%] rounded-full bg-[#6C4DFF]/10 blur-[80px]" />
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[35%] rounded-full bg-[#141779]/10 blur-[80px]" />
         <div className="absolute top-[35%] right-[-10%] w-[50%] h-[40%] rounded-full bg-[#F4C95D]/15 blur-[90px]" />
-        <div className="absolute bottom-[-10%] left-[20%] w-[50%] h-[30%] rounded-full bg-[#3520A8]/5 blur-[70px]" />
+        <div className="absolute bottom-[-10%] left-[20%] w-[50%] h-[30%] rounded-full bg-[#2d328f]/5 blur-[70px]" />
       </div>
 
       {/* HEADER: MY COLLECTION */}
@@ -540,7 +540,7 @@ export default function InventoryScreen() {
           </button>
           
           <div className="flex items-center  gap-1.5">
-            <Sparkles size={16} className="text-[#6C4DFF] animate-pulse" />
+            <Sparkles size={16} className="text-[#141779] animate-pulse" />
             <h1 className="text-[16px] font-black tracking-widest uppercase text-[#141779]">
               {t('my_treasure_vault', 'MY TREASURE VAULT')}
             </h1>
@@ -569,13 +569,13 @@ export default function InventoryScreen() {
               </div>
 
               {/* XP HUD */}
-              <div className="flex-1 bg-[#F0F9FF] border border-[#0EA5E9]/40 rounded-xl px-3 py-2.5 flex items-center gap-2.5 shadow-sm">
-                <div className="w-8 h-8 rounded-lg bg-[#0EA5E9]/20 border border-[#0EA5E9]/50 flex items-center justify-center shrink-0">
-                  <Zap size={18} className="text-[#0284C7]" />
+              <div className="flex-1 bg-[#006a62]/10 border border-[#006a62]/30 rounded-xl px-3 py-2.5 flex items-center gap-2.5 shadow-sm">
+                <div className="w-8 h-8 rounded-lg bg-[#57fae9]/30 border border-[#006a62]/40 flex items-center justify-center shrink-0">
+                  <Zap size={18} className="text-[#006a62]" />
                 </div>
                 <div className="flex items-baseline gap-1.5 min-w-0">
                   <span className="text-base font-black text-[#141779] leading-none">{xp.toLocaleString()}</span>
-                  <span className="text-[12px] font-extrabold text-[#0284C7] tracking-wider uppercase leading-none">{t('xp_upper', 'XP')}</span>
+                  <span className="text-[12px] font-extrabold text-[#006a62] tracking-wider uppercase leading-none">{t('xp_upper', 'XP')}</span>
                 </div>
               </div>
             </div>
@@ -584,10 +584,10 @@ export default function InventoryScreen() {
             <div className="bg-[#F4EFF7] border border-[#E5DBFB] rounded-xl p-2.5">
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[11px] font-black uppercase tracking-wider text-[#141779] flex items-center gap-1.5">
-                  <Compass size={13} className="text-[#6C4DFF]" />
+                  <Compass size={13} className="text-[#141779]" />
                   {t('collection_progress', 'COLLECTION PROGRESS')}
                 </span>
-                <span className="text-[11px] font-black text-[#6C4DFF]">
+                <span className="text-[11px] font-black text-[#141779]">
                   {t('vault_power', { score: collectionScore, defaultValue: `${collectionScore}% VAULT POWER` })}
                 </span>
               </div>
@@ -597,7 +597,7 @@ export default function InventoryScreen() {
                   initial={{ width: 0 }}
                   animate={{ width: `${collectionScore}%` }}
                   transition={{ duration: 1, ease: "easeOut" }}
-                  className="h-full bg-gradient-to-r from-[#6C4DFF] via-[#512BE2] to-[#3520A8] rounded-full shadow-sm"
+                  className="h-full bg-gradient-to-r from-[#141779] to-[#2d328f] rounded-full shadow-sm"
                 />
               </div>
             </div>
@@ -621,7 +621,7 @@ export default function InventoryScreen() {
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl text-[10px] font-black transition-all duration-200 uppercase tracking-tight ${
                     isActive
-                      ? "bg-gradient-to-r from-[#6C4DFF] to-[#3520A8] text-white shadow-md border border-[#9C7CFF]/50 scale-[1.02]"
+                      ? "bg-gradient-to-r from-[#141779] to-[#2d328f] text-white shadow-md border border-white/20 scale-[1.02]"
                       : "text-[#6D28D9] hover:bg-white/50 hover:text-[#141779]"
                   }`}
                 >
@@ -637,8 +637,8 @@ export default function InventoryScreen() {
         {activeTab === "Mystery Boxes" && (
           <section className="flex flex-col gap-4">
             {/* Featured Box Vault Hero Banner */}
-            <div className="bg-gradient-to-b from-[#180C4F] to-[#2B1778] rounded-2xl p-4 border-2 border-[#6C4DFF]/40 text-center relative overflow-hidden shadow-lg">
-              <div className="absolute top-2 left-3 bg-[#6C4DFF] border border-[#9C7CFF] px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider text-white shadow-sm">
+            <div className="bg-gradient-to-b from-[#180C4F] to-[#2B1778] rounded-2xl p-4 border-2 border-[#141779]/40 text-center relative overflow-hidden shadow-lg">
+              <div className="absolute top-2 left-3 bg-[#141779] border border-[#2d328f] px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider text-white shadow-sm">
                 {t('featured_vault', '✨ FEATURED VAULT')}
               </div>
 
@@ -711,7 +711,7 @@ export default function InventoryScreen() {
                       disabled={count === 0 || openingBox !== null}
                       className={`w-full py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
                         count > 0 && openingBox !== item.type
-                          ? "bg-gradient-to-r from-[#6C4DFF] to-[#3520A8] text-white shadow-md hover:brightness-110 active:scale-95 border border-[#9C7CFF]/40"
+                          ? "bg-gradient-to-r from-[#141779] to-[#2d328f] text-white shadow-md hover:brightness-110 active:scale-95 border border-white/20"
                           : "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
                       }`}
                     >
@@ -748,7 +748,7 @@ export default function InventoryScreen() {
                 onClick={() => setSubTab("Journey")}
                 className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
                   subTab === "Journey"
-                    ? "bg-gradient-to-r from-[#6C4DFF] to-[#3520A8] text-white shadow-md border border-[#9C7CFF]/40"
+                    ? "bg-gradient-to-r from-[#141779] to-[#2d328f] text-white shadow-md border border-white/20"
                     : "text-[#6D28D9] hover:text-[#141779]"
                 }`}
               >
@@ -758,7 +758,7 @@ export default function InventoryScreen() {
                 onClick={() => setSubTab("Lab")}
                 className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
                   subTab === "Lab"
-                    ? "bg-gradient-to-r from-[#6C4DFF] to-[#3520A8] text-white shadow-md border border-[#9C7CFF]/40"
+                    ? "bg-gradient-to-r from-[#141779] to-[#2d328f] text-white shadow-md border border-white/20"
                     : "text-[#6D28D9] hover:text-[#141779]"
                 }`}
               >
@@ -791,7 +791,7 @@ export default function InventoryScreen() {
                           key={d.id || index} 
                           animate={{ y: [-3, 3, -3] }}
                           transition={{ repeat: Infinity, duration: 2.5 + Math.random(), ease: "easeInOut" }}
-                          className="bg-white border-2 border-[#E5DBFB] hover:border-[#6C4DFF] rounded-2xl p-3.5 flex flex-col items-center relative overflow-hidden shadow-sm transition-all"
+                          className="bg-white border-2 border-[#E5DBFB] hover:border-[#141779] rounded-2xl p-3.5 flex flex-col items-center relative overflow-hidden shadow-sm transition-all"
                         >
                           {isNew && (
                             <span className="absolute top-2 right-2 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 text-[8px] font-black px-1.5 py-0.5 rounded-full border border-amber-300 shadow-xs animate-pulse uppercase tracking-wider">
@@ -802,7 +802,7 @@ export default function InventoryScreen() {
                             <span className="text-3xl">🐉</span>
                           </div>
                           <h3 className="text-xs font-black text-[#141779] text-center uppercase tracking-tight">{t(d.name.toLowerCase().replace(/ /g, '_'), { defaultValue: d.name })}</h3>
-                          <p className="text-[10px] font-bold text-[#6C4DFF] mt-0.5">{t('level_label', 'Level')} {d.level} • {t((d.rarity || 'EPIC').toLowerCase(), d.rarity || 'EPIC')}</p>
+                          <p className="text-[10px] font-bold text-[#141779] mt-0.5">{t('level_label', 'Level')} {d.level} • {t((d.rarity || 'EPIC').toLowerCase(), d.rarity || 'EPIC')}</p>
                         </motion.div>
                       );
                     })}
@@ -816,7 +816,7 @@ export default function InventoryScreen() {
               <div>
                 <div className="flex items-center justify-between mb-2.5 px-1">
                   <span className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1.5">
-                    <Sparkles size={14} className="text-[#6C4DFF]" />
+                    <Sparkles size={14} className="text-[#141779]" />
                     {t('dragon_fragments', 'DRAGON FRAGMENTS')}
                   </span>
                 </div>
@@ -904,7 +904,7 @@ export default function InventoryScreen() {
             {/* Gamified Hero Expedition Card */}
             <div className="bg-gradient-to-r from-[#140C40] via-[#241468] to-[#3B1879] rounded-2xl p-4 border border-[#FFD45A]/40 text-white relative overflow-hidden shadow-lg">
               {/* Background Glow */}
-              <div className="absolute top-0 right-0 w-36 h-36 bg-[#6C4DFF]/25 rounded-full blur-2xl pointer-events-none" />
+              <div className="absolute top-0 right-0 w-36 h-36 bg-[#141779]/25 rounded-full blur-2xl pointer-events-none" />
               <div className="absolute bottom-0 left-10 w-24 h-24 bg-[#FFD45A]/15 rounded-full blur-xl pointer-events-none" />
 
               <div className="relative z-10 flex flex-col gap-2.5">
@@ -935,7 +935,7 @@ export default function InventoryScreen() {
 
                   <button
                     onClick={() => navigate("/practice/journey-map", { state: { scrollTo: currentCity?.id } })}
-                    className="bg-gradient-to-r from-[#6C4DFF] to-[#4F27E9] text-white text-[11px] font-black px-3 py-2 rounded-xl border border-indigo-300/40 shadow-md hover:brightness-110 active:scale-95 transition-all flex items-center gap-1 shrink-0 cursor-pointer"
+                    className="bg-gradient-to-r from-[#141779] to-[#2d328f] text-white text-[11px] font-black px-3 py-2 rounded-xl border border-white/20 shadow-md hover:brightness-110 active:scale-95 transition-all flex items-center gap-1 shrink-0 cursor-pointer"
                   >
                     <span>OPEN MAP</span>
                     <ChevronRight size={14} />
@@ -958,29 +958,29 @@ export default function InventoryScreen() {
                   1: {
                     title: "Class 1 • Hatchling Realm",
                     icon: "🥚",
-                    border: isCurrentClass ? "border-[#6C4DFF] ring-2 ring-[#6C4DFF]/20" : isAllCompleted ? "border-emerald-300" : "border-[#E5DBFB]"
+                    border: isCurrentClass ? "border-[#141779] ring-2 ring-[#141779]/20" : isAllCompleted ? "border-emerald-300" : "border-[#E5DBFB]"
                   },
                   2: {
                     title: "Class 2 • Desert Realm",
                     icon: "🔥",
-                    border: isCurrentClass ? "border-[#6C4DFF] ring-2 ring-[#6C4DFF]/20" : isAllCompleted ? "border-emerald-300" : "border-[#E5DBFB]"
+                    border: isCurrentClass ? "border-[#141779] ring-2 ring-[#141779]/20" : isAllCompleted ? "border-emerald-300" : "border-[#E5DBFB]"
                   },
                   3: {
                     title: "Class 3 • Cloud Realm",
                     icon: "☁️",
-                    border: isCurrentClass ? "border-[#6C4DFF] ring-2 ring-[#6C4DFF]/20 shadow-md" : isAllCompleted ? "border-emerald-300" : "border-[#E5DBFB]"
+                    border: isCurrentClass ? "border-[#141779] ring-2 ring-[#141779]/20 shadow-md" : isAllCompleted ? "border-emerald-300" : "border-[#E5DBFB]"
                   },
                   4: {
                     title: "Class 4 • Cosmos Realm",
                     icon: "🌌",
-                    border: isCurrentClass ? "border-[#6C4DFF] ring-2 ring-[#6C4DFF]/20" : isAllCompleted ? "border-emerald-300" : "border-[#E5DBFB]"
+                    border: isCurrentClass ? "border-[#141779] ring-2 ring-[#141779]/20" : isAllCompleted ? "border-emerald-300" : "border-[#E5DBFB]"
                   }
                 };
 
                 const theme = classThemes[cNum] || {
                   title: `Class ${cNum} • Mystery Realm`,
                   icon: "💎",
-                  border: isCurrentClass ? "border-[#6C4DFF] ring-2 ring-[#6C4DFF]/20" : "border-[#E5DBFB]"
+                  border: isCurrentClass ? "border-[#141779] ring-2 ring-[#141779]/20" : "border-[#E5DBFB]"
                 };
 
                 return (
@@ -998,7 +998,7 @@ export default function InventoryScreen() {
 
                       <span className={`text-[9.5px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 whitespace-nowrap flex items-center gap-1 ${
                         isCurrentClass 
-                          ? "bg-[#6C4DFF] text-white shadow-xs" 
+                          ? "bg-[#141779] text-white shadow-xs" 
                           : isAllCompleted 
                           ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
                           : hasAnyProgress
@@ -1033,18 +1033,18 @@ export default function InventoryScreen() {
                             onClick={isUnlocked ? () => navigate("/practice/journey-map", { state: { scrollTo: item.id } }) : undefined}
                             className={`rounded-xl p-3 flex items-center justify-between border transition-all ${
                               isCurrent 
-                                ? 'bg-gradient-to-r from-[#F4EFFF] via-[#FAF7FF] to-white border-2 border-[#6C4DFF] shadow-sm cursor-pointer hover:border-[#5835F5] active:scale-[0.99]' 
+                                ? 'bg-gradient-to-r from-[#F4EFFF] via-[#FAF7FF] to-white border-2 border-[#141779] shadow-sm cursor-pointer hover:border-[#2d328f] active:scale-[0.99]' 
                                 : isCompleted 
                                 ? 'bg-emerald-50/25 border border-emerald-200/80 hover:border-emerald-400 shadow-2xs cursor-pointer active:scale-[0.99]' 
                                 : isUnlocked 
-                                ? 'bg-white border border-[#E5DBFB] hover:border-[#6C4DFF] shadow-2xs cursor-pointer active:scale-[0.99]' 
+                                ? 'bg-white border border-[#E5DBFB] hover:border-[#141779] shadow-2xs cursor-pointer active:scale-[0.99]' 
                                 : 'bg-slate-50/70 border border-slate-200/80 opacity-50 cursor-not-allowed pointer-events-none select-none'
                             }`}
                           >
                             <div className="flex items-center gap-3 min-w-0 flex-1">
                               <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
                                 isCurrent 
-                                  ? 'bg-gradient-to-tr from-[#6C4DFF] to-[#8C6DFF] text-white border-[#6C4DFF] shadow-xs relative' 
+                                  ? 'bg-gradient-to-tr from-[#141779] to-[#2d328f] text-white border-[#141779] shadow-xs relative' 
                                   : isCompleted 
                                   ? 'bg-emerald-600 text-white border-emerald-500 shadow-2xs' 
                                   : isUnlocked 
@@ -1073,7 +1073,7 @@ export default function InventoryScreen() {
                                   {t(item.name.toLowerCase().trim().replace(/\s+/g, '_'), { defaultValue: item.name })}
                                 </h4>
                                 <p className={`text-[9.5px] font-black uppercase tracking-wider mt-0.5 ${
-                                  isCurrent ? 'text-[#6C4DFF]' : isCompleted ? 'text-emerald-600' : isUnlocked ? 'text-indigo-600' : 'text-slate-400'
+                                  isCurrent ? 'text-[#141779]' : isCompleted ? 'text-[#006a62]' : isUnlocked ? 'text-[#141779]' : 'text-slate-400'
                                 }`}>
                                   {item.status}
                                 </p>
@@ -1082,7 +1082,7 @@ export default function InventoryScreen() {
 
                             <div className="shrink-0 flex items-center gap-1.5 ml-2">
                               {isCurrent ? (
-                                <span className="text-[10px] font-black bg-[#6C4DFF] text-white px-2.5 py-1 rounded-lg uppercase tracking-wider flex items-center gap-1 shadow-xs">
+                                <span className="text-[10px] font-black bg-[#141779] text-white px-2.5 py-1 rounded-lg uppercase tracking-wider flex items-center gap-1 shadow-xs">
                                   Current
                                   <ChevronRight size={13} />
                                 </span>
@@ -1091,7 +1091,7 @@ export default function InventoryScreen() {
                                   ✓ Done
                                 </span>
                               ) : isUnlocked ? (
-                                <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-lg border border-indigo-200 flex items-center gap-0.5">
+                                <span className="text-[10px] font-bold text-[#141779] bg-[#e0e0ff] px-2.5 py-0.5 rounded-lg border border-[#c7c5d4] flex items-center gap-0.5">
                                   Play
                                   <ChevronRight size={13} />
                                 </span>
@@ -1207,7 +1207,7 @@ export default function InventoryScreen() {
               
               <button 
                 onClick={() => setRewardData(null)}
-                className="w-full bg-gradient-to-r from-[#6C4DFF] to-[#3520A8] text-white font-black py-3 rounded-xl hover:brightness-110 active:scale-95 transition-all text-sm uppercase tracking-wider shadow-md border border-[#9C7CFF]/40"
+                className="w-full bg-gradient-to-r from-[#141779] to-[#2d328f] text-white font-black py-3 rounded-xl hover:brightness-110 active:scale-95 transition-all text-sm uppercase tracking-wider shadow-md border border-white/20"
               >
                 {t('awesome', 'AWESOME!')}
               </button>

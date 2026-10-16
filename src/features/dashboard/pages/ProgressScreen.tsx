@@ -363,11 +363,11 @@ export default function ProgressScreen() {
     : (weeklyGrowth.length > 0 ? [weeklyGrowth[0]] : []);
 
   return (
-    <div className="min-h-screen bg-[#F7F9FB] text-[#17177F] font-sans pb-28 max-w-lg mx-auto relative selection:bg-[#4D4BFF] selection:text-white overflow-x-hidden">
+    <div className="min-h-screen bg-[#F7F9FB] text-[#141779] font-sans pb-28 max-w-lg mx-auto relative selection:bg-[#141779] selection:text-white overflow-x-hidden">
       {/* Background Soft Glow Accents */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[55%] h-[40%] rounded-full bg-[#17177F]/8 blur-[100px]" />
-        <div className="absolute top-[40%] right-[-10%] w-[55%] h-[40%] rounded-full bg-[#4D4BFF]/8 blur-[100px]" />
+        <div className="absolute top-[-10%] left-[-10%] w-[55%] h-[40%] rounded-full bg-[#141779]/8 blur-[100px]" />
+        <div className="absolute top-[40%] right-[-10%] w-[55%] h-[40%] rounded-full bg-[#2d328f]/8 blur-[100px]" />
       </div>
 
       {/* TOP APP BAR / GAME HUD (Curved Sticky Design) */}
@@ -375,7 +375,7 @@ export default function ProgressScreen() {
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <button
             onClick={() => navigate("/profile")}
-            className="w-10 h-10 rounded-full border-2 border-indigo-100 overflow-hidden hover:opacity-90 transition-opacity shrink-0 bg-[#141779] shadow-xs"
+            className="w-10 h-10 rounded-full border-2 border-[#c7c5d4] overflow-hidden hover:opacity-90 transition-opacity shrink-0 bg-[#141779] shadow-xs"
           >
             {userPhoto ? (
               <img src={userPhoto} alt="Avatar" className="w-full h-full object-cover" />
@@ -389,7 +389,7 @@ export default function ProgressScreen() {
             {/* Line 1: Name + Class on same line */}
             <div className="flex items-center gap-1.5 min-w-0">
               <h1 className="text-sm font-black text-slate-900 leading-tight truncate max-w-[130px]">{username || "Explorer"}</h1>
-              <span className="text-[10px] text-[#4f46e5] bg-[#eef2ff] font-black px-2 py-0.5 rounded-full border border-indigo-100 shrink-0 whitespace-nowrap">
+              <span className="text-[10px] text-[#141779] bg-[#e0e0ff] font-black px-2 py-0.5 rounded-full border border-[#c7c5d4] shrink-0 whitespace-nowrap">
                 {userData?.childClass || t('class_10', { defaultValue: "Class 10" })}
               </span>
             </div>
@@ -432,7 +432,7 @@ export default function ProgressScreen() {
 
       <main className="px-4 pt-3.5 sm:pt-5 flex flex-col gap-4 relative z-10">
         {/* 1. TOP XP HERO CARD */}
-        <section className="bg-gradient-to-br from-[#17177F] via-[#141779] to-[#0D0E4C] rounded-[24px] p-4 sm:p-5 text-white shadow-[0_10px_35px_-8px_rgba(23,23,127,0.35)] relative overflow-hidden">
+        <section className="bg-gradient-to-br from-[#141779] via-[#2d328f] to-[#30007f] rounded-[24px] p-4 sm:p-5 text-white shadow-[0_10px_35px_-8px_rgba(20,23,121,0.35)] relative overflow-hidden">
           <div className="w-48 h-48 rounded-full bg-white/5 blur-2xl absolute -right-6 -bottom-6 pointer-events-none" />
           <div className="w-32 h-32 rounded-full bg-white/5 blur-xl absolute -left-6 -top-6 pointer-events-none" />
 
@@ -467,7 +467,7 @@ export default function ProgressScreen() {
                 initial={{ width: 0 }}
                 animate={{ width: `${progressPercent}%` }}
                 transition={{ duration: 0.8, ease: "easeOut" }}
-                className="h-full bg-gradient-to-r from-[#38E4D4] via-[#40C98A] to-[#FFC83D] rounded-full shadow-[0_0_12px_rgba(255,255,255,0.4)]"
+                className="h-full bg-gradient-to-r from-[#141779] to-[#57fae9] rounded-full shadow-[0_0_12px_rgba(255,255,255,0.4)]"
               />
             </div>
 
@@ -483,11 +483,11 @@ export default function ProgressScreen() {
         {/* 2. STAT CARDS GRID */}
         <section className="grid grid-cols-4 gap-2 sm:gap-3">
           <div className="bg-white rounded-[16px] sm:rounded-[20px] p-2.5 sm:p-4 text-center shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-[#E0E3E5]/60 flex flex-col items-center justify-center gap-1.5 sm:gap-2 hover:shadow-[0_8px_25px_rgba(0,0,0,0.06)] transition-all overflow-hidden">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#EEF1FF] flex items-center justify-center text-[#17177F] shadow-2xs shrink-0">
-              <Zap size={16} className="fill-[#17177F]" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#EEF1FF] flex items-center justify-center text-[#141779] shadow-2xs shrink-0">
+              <Zap size={16} className="fill-[#141779]" />
             </div>
             <div className="w-full">
-              <p className="text-[15px] sm:text-[22px] font-black text-[#17177F] leading-tight truncate">{xp.toLocaleString()}</p>
+              <p className="text-[15px] sm:text-[22px] font-black text-[#141779] leading-tight truncate">{xp.toLocaleString()}</p>
               <p className="text-[10px] sm:text-[12px] font-medium text-[#767683] mt-0.5 truncate">{t('xp_power', 'XP Power')}</p>
             </div>
           </div>
@@ -500,27 +500,27 @@ export default function ProgressScreen() {
               <Flame size={16} className="fill-[#D97706]" />
             </div>
             <div className="w-full">
-              <p className="text-[15px] sm:text-[22px] font-black text-[#17177F] leading-tight truncate">{streakDays}</p>
+              <p className="text-[15px] sm:text-[22px] font-black text-[#141779] leading-tight truncate">{streakDays}</p>
               <p className="text-[10px] sm:text-[12px] font-medium text-[#767683] mt-0.5 truncate">{t('streak', 'Streak 🔥')}</p>
             </div>
           </div>
 
           <div className="bg-white rounded-[16px] sm:rounded-[20px] p-2.5 sm:p-4 text-center shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-[#E0E3E5]/60 flex flex-col items-center justify-center gap-1.5 sm:gap-2 hover:shadow-[0_8px_25px_rgba(0,0,0,0.06)] transition-all overflow-hidden">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#38E4D4]/20 flex items-center justify-center text-[#006A62] shadow-2xs shrink-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#57fae9]/20 flex items-center justify-center text-[#006A62] shadow-2xs shrink-0">
               <Award size={16} />
             </div>
             <div className="w-full">
-              <p className="text-[15px] sm:text-[22px] font-black text-[#17177F] leading-tight truncate">{totalBadgesCount}</p>
+              <p className="text-[15px] sm:text-[22px] font-black text-[#141779] leading-tight truncate">{totalBadgesCount}</p>
               <p className="text-[10px] sm:text-[12px] font-medium text-[#767683] mt-0.5 truncate">{t('badges', 'Badges')}</p>
             </div>
           </div>
 
           <div className="bg-white rounded-[16px] sm:rounded-[20px] p-2.5 sm:p-4 text-center shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-[#E0E3E5]/60 flex flex-col items-center justify-center gap-1.5 sm:gap-2 hover:shadow-[0_8px_25px_rgba(0,0,0,0.06)] transition-all overflow-hidden">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#17177F]/10 flex items-center justify-center text-[#17177F] shadow-2xs shrink-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#141779]/10 flex items-center justify-center text-[#141779] shadow-2xs shrink-0">
               <Trophy size={16} />
             </div>
             <div className="w-full">
-              <p className="text-[15px] sm:text-[22px] font-black text-[#17177F] leading-tight truncate">Lvl {level}</p>
+              <p className="text-[15px] sm:text-[22px] font-black text-[#141779] leading-tight truncate">Lvl {level}</p>
               <p className="text-[10px] sm:text-[12px] font-medium text-[#767683] mt-0.5 truncate">{t('level', 'Level')}</p>
             </div>
           </div>
@@ -554,8 +554,8 @@ export default function ProgressScreen() {
                   }}
                   className={`px-4 py-2 rounded-full font-semibold text-[13px] whitespace-nowrap transition-all shrink-0 flex items-center gap-2 ${
                     isActive 
-                      ? 'bg-gradient-to-r from-[#17177F] to-[#141779] text-white shadow-md shadow-[#17177F]/25 border border-[#17177F]' 
-                      : 'bg-white text-[#767683] border border-[#E0E3E5] hover:border-[#17177F]/40 shadow-2xs'
+                      ? 'bg-gradient-to-r from-[#141779] to-[#2d328f] text-white shadow-md shadow-[#141779]/25 border border-[#141779]' 
+                      : 'bg-white text-[#767683] border border-[#E0E3E5] hover:border-[#141779]/40 shadow-2xs'
                   }`}
                 >
                   <span className="text-sm shrink-0 leading-none">{tabEmoji}</span>
@@ -574,7 +574,7 @@ export default function ProgressScreen() {
 
           <div className="bg-white rounded-[24px] p-5 sm:p-6 shadow-[0_10px_35px_-8px_rgba(0,0,0,0.06)] border border-[#E0E3E5]/60 flex flex-col gap-5">
             <div className="flex flex-col gap-1 text-left">
-              <h2 className="text-[20px] font-bold text-[#17177F] tracking-tight leading-snug">
+              <h2 className="text-[20px] font-bold text-[#141779] tracking-tight leading-snug">
                 {t('weekly_subject_growth_title', 'Subject Analytics & Growth')}
               </h2>
               <p className="text-[14px] font-medium text-[#767683]">
@@ -583,8 +583,8 @@ export default function ProgressScreen() {
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="bg-[#EEF1FF] border border-[#4D4BFF]/20 text-[#17177F] px-3.5 py-1 rounded-full text-[13px] font-medium flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#4D4BFF]" />
+              <div className="bg-[#e0e0ff]/60 border border-[#141779]/20 text-[#141779] px-3.5 py-1 rounded-full text-[13px] font-medium flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#141779]" />
                 <span>{t('current_week', 'Current Week')}</span>
               </div>
               <div className="bg-[#CBD5E1]/30 border border-[#CBD5E1]/50 text-[#64748B] px-3.5 py-1 rounded-full text-[13px] font-medium flex items-center gap-2">
@@ -595,7 +595,7 @@ export default function ProgressScreen() {
 
             {loadingGrowth ? (
               <div className="flex flex-col items-center py-10">
-                <div className="w-8 h-8 border-3 border-[#17177F] border-t-transparent rounded-full animate-spin mb-3" />
+                <div className="w-8 h-8 border-3 border-[#141779] border-t-transparent rounded-full animate-spin mb-3" />
                 <p className="text-[13px] font-medium text-[#767683] animate-pulse">{t('loading_analytics', 'Loading subject growth analytics...')}</p>
               </div>
             ) : displayedGrowth.length === 0 ? (
@@ -650,7 +650,7 @@ export default function ProgressScreen() {
                         <div className="flex flex-col gap-0.5 text-left min-w-0 flex-1">
                           <div className="flex items-center gap-2 min-w-0">
                             <span className="text-xl shrink-0 leading-none">{icon}</span>
-                            <h3 className="text-[16px] font-bold text-[#17177F] truncate">
+                            <h3 className="text-[16px] font-bold text-[#141779] truncate">
                               {translatedSubName}
                             </h3>
                           </div>
@@ -660,7 +660,7 @@ export default function ProgressScreen() {
                         </div>
 
                         <div className="flex items-center gap-2.5 shrink-0">
-                          <span className="text-[34px] font-black text-[#17177F] tracking-tight leading-none whitespace-nowrap">
+                          <span className="text-[34px] font-black text-[#141779] tracking-tight leading-none whitespace-nowrap">
                             {item.thisWeekAccuracy}%
                           </span>
 
@@ -685,7 +685,7 @@ export default function ProgressScreen() {
                         {/* Chart Header */}
                         <div className="flex items-center justify-between">
                           <div className="flex flex-col text-left">
-                            <span className="text-[13px] font-bold text-[#17177F] tracking-wide">
+                            <span className="text-[13px] font-bold text-[#141779] tracking-wide">
                               {t('weekly_quiz_accuracy', 'Quiz & Mission Accuracy Score')}
                             </span>
                             <span className="text-[11px] font-medium text-[#64748B]">
@@ -706,7 +706,7 @@ export default function ProgressScreen() {
                           <div className="relative z-10 flex items-end justify-center gap-12 sm:gap-16 h-44 pt-4">
                             {/* Current Week Bar Group */}
                             <div className="flex flex-col items-center group cursor-pointer">
-                              <span className="text-[16px] font-semibold text-[#17177F] mb-3 leading-none">
+                              <span className="text-[16px] font-semibold text-[#141779] mb-3 leading-none">
                                 {item.thisWeekAccuracy}%
                               </span>
                               <div className="h-32 flex items-end">
@@ -714,7 +714,7 @@ export default function ProgressScreen() {
                                   initial={{ height: 0 }}
                                   animate={{ height: item.thisWeekAccuracy > 0 ? `${Math.max(8, (item.thisWeekAccuracy / 100) * 120)}px` : '4px' }}
                                   transition={{ duration: 0.7, ease: "easeOut" }}
-                                  className="w-12 sm:w-14 rounded-t-[16px] rounded-b-[4px] bg-gradient-to-t from-[#4F46E5] to-[#7C6CFF] shadow-[0_6px_16px_rgba(79,70,229,0.25)] hover:scale-[1.03] transition-transform duration-200 overflow-hidden relative"
+                                  className="w-12 sm:w-14 rounded-t-[16px] rounded-b-[4px] bg-gradient-to-t from-[#141779] to-[#2d328f] shadow-[0_6px_16px_rgba(20,23,121,0.25)] hover:scale-[1.03] transition-transform duration-200 overflow-hidden relative"
                                 >
                                   {/* Subtle top highlight cap */}
                                   <div className="w-full h-[2px] bg-white/40 rounded-t-[16px]" />
@@ -779,10 +779,8 @@ export default function ProgressScreen() {
                             <defs>
                               {/* Radium Cyan-Green Gradient matching top XP card 100% */}
                               <linearGradient id={`radium-grad-${item.subjectId || idx}`} x1="60" y1="12" x2="60" y2="108" gradientUnits="userSpaceOnUse">
-                                <stop offset="0%" stopColor="#20E2D7" />
-                                <stop offset="25%" stopColor="#38E4D4" />
-                                <stop offset="60%" stopColor="#40C98A" />
-                                <stop offset="100%" stopColor="#FFC83D" />
+                                <stop offset="0%" stopColor="#141779" />
+                                <stop offset="100%" stopColor="#57fae9" />
                               </linearGradient>
 
                               {/* Subtle Radium Glow Effect */}
@@ -823,14 +821,14 @@ export default function ProgressScreen() {
                           </svg>
                           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                             <span className="text-2xl mb-0.5">{icon}</span>
-                            <span className="text-[24px] font-black text-[#17177F] leading-none tracking-tight">
+                            <span className="text-[24px] font-black text-[#141779] leading-none tracking-tight">
                               {stats.percent}%
                             </span>
                           </div>
                         </div>
 
                         <div className="text-center flex flex-col items-center gap-1">
-                          <span className="text-[12px] font-bold text-[#4D4BFF]">
+                          <span className="text-[12px] font-bold text-[#141779]">
                             {stats.total > 0 
                               ? `${stats.completed}/${stats.total} ${t('chapters', 'Chapters')} ${t('completed', 'Completed')}`
                               : `${stats.percent}% ${t('mastered', 'Mastered')}`
@@ -845,12 +843,12 @@ export default function ProgressScreen() {
                       </div>
 
                       {/* 4. AFTER THAT: APPRECIATION PARAGRAPH / INSIGHT BOX */}
-                      <div className="bg-[#EEF1FF] rounded-[18px] p-[16px] flex items-start gap-3 border border-[#4D4BFF]/20 text-left">
-                        <div className="w-8 h-8 rounded-full bg-[#4D4BFF]/15 flex items-center justify-center text-base shrink-0 mt-0.5 text-[#17177F]">
+                      <div className="bg-[#e0e0ff]/50 rounded-[18px] p-[16px] flex items-start gap-3 border border-[#141779]/20 text-left">
+                        <div className="w-8 h-8 rounded-full bg-[#141779]/15 flex items-center justify-center text-base shrink-0 mt-0.5 text-[#141779]">
                           💡
                         </div>
                         <div className="flex flex-col gap-0.5 text-left">
-                          <h4 className="text-[14px] font-bold text-[#17177F]">
+                          <h4 className="text-[14px] font-bold text-[#141779]">
                             {t('great_progress_title', '💡 Great Progress!')}
                           </h4>
                           <p className="text-[13px] font-medium text-[#767683] leading-relaxed">
@@ -873,20 +871,20 @@ export default function ProgressScreen() {
         {/* 5. ACHIEVEMENTS SHOWCASE */}
         <section className="flex flex-col gap-3 text-left">
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-[18px] font-semibold text-[#17177F] flex items-center gap-2">
-              <Award size={18} className="text-[#4D4BFF]" />
+            <h2 className="text-[18px] font-semibold text-[#141779] flex items-center gap-2">
+              <Award size={18} className="text-[#141779]" />
               <span>🏆 {t('recent_achievements', 'Recent Achievements')}</span>
             </h2>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className={`rounded-[24px] p-5 border flex flex-col items-center gap-2.5 transition-all ${
-              hasMathAce ? 'bg-white border-[#4D4BFF]/40 shadow-[0_4px_20px_rgba(0,0,0,0.03)]' : 'bg-gray-50 border-gray-200 opacity-60 grayscale-[0.6]'
+              hasMathAce ? 'bg-white border-[#141779]/40 shadow-[0_4px_20px_rgba(0,0,0,0.03)]' : 'bg-gray-50 border-gray-200 opacity-60 grayscale-[0.6]'
             }`}>
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${hasMathAce ? 'bg-[#EEF1FF]' : 'bg-gray-200'}`}>
-                <Award size={24} className={hasMathAce ? 'text-[#4D4BFF]' : 'text-gray-400'} />
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${hasMathAce ? 'bg-[#e0e0ff]/60' : 'bg-gray-200'}`}>
+                <Award size={24} className={hasMathAce ? 'text-[#141779]' : 'text-gray-400'} />
               </div>
-              <span className="text-[14px] font-semibold text-[#17177F] text-center leading-tight">
+              <span className="text-[14px] font-semibold text-[#141779] text-center leading-tight">
                 {t('math_ace', 'Math Ace')} {hasMathAce ? '🏆' : '🔒'}
               </span>
             </div>
@@ -897,18 +895,18 @@ export default function ProgressScreen() {
               <div className={`w-12 h-12 rounded-full flex items-center justify-center ${isStreakUnlocked ? 'bg-[#FFC83D]/20' : 'bg-gray-200'}`}>
                 <Flame size={24} className={isStreakUnlocked ? 'text-[#D97706]' : 'text-gray-400'} />
               </div>
-              <span className="text-[14px] font-semibold text-[#17177F] text-center leading-tight">
+              <span className="text-[14px] font-semibold text-[#141779] text-center leading-tight">
                 {t('day_streak', { days: streakDays, streak: streakDays, count: streakDays, defaultValue: `Streak: ${streakDays} Days` })} {isStreakUnlocked ? '🔥' : '🔒'}
               </span>
             </div>
 
             <div className={`rounded-[24px] p-5 border flex flex-col items-center gap-2.5 transition-all ${
-              hasScienceProdigy ? 'bg-white border-[#38E4D4]/60 shadow-[0_4px_20px_rgba(0,0,0,0.03)]' : 'bg-gray-50 border-gray-200 opacity-60 grayscale-[0.6]'
+              hasScienceProdigy ? 'bg-white border-[#57fae9]/60 shadow-[0_4px_20px_rgba(0,0,0,0.03)]' : 'bg-gray-50 border-gray-200 opacity-60 grayscale-[0.6]'
             }`}>
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${hasScienceProdigy ? 'bg-[#38E4D4]/20' : 'bg-gray-200'}`}>
-                <Atom size={24} className={hasScienceProdigy ? 'text-[#0284C7]' : 'text-gray-400'} />
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${hasScienceProdigy ? 'bg-[#57fae9]/20' : 'bg-gray-200'}`}>
+                <Atom size={24} className={hasScienceProdigy ? 'text-[#006a62]' : 'text-gray-400'} />
               </div>
-              <span className="text-[14px] font-semibold text-[#17177F] text-center leading-tight">
+              <span className="text-[14px] font-semibold text-[#141779] text-center leading-tight">
                 {t('science_prodigy', 'Science Prodigy')} {hasScienceProdigy ? '⚛️' : '🔒'}
               </span>
             </div>
@@ -919,7 +917,7 @@ export default function ProgressScreen() {
               <div className={`w-12 h-12 rounded-full flex items-center justify-center ${hasArenaMaster ? 'bg-purple-100' : 'bg-gray-200'}`}>
                 <ShieldCheck size={24} className={hasArenaMaster ? 'text-purple-700' : 'text-gray-400'} />
               </div>
-              <span className="text-[14px] font-semibold text-[#17177F] text-center leading-tight">
+              <span className="text-[14px] font-semibold text-[#141779] text-center leading-tight">
                 {t('arena_master', 'Arena Master')} {hasArenaMaster ? '🛡️' : '🔒'}
               </span>
             </div>

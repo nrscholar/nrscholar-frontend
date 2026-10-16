@@ -276,7 +276,7 @@ export const RISK_AMBER_SHADES: ChartColorEntry[] = [
 export const WEAKNESS_RED_SHADES: ChartColorEntry[] = [
   {
     name: "Crimson Red",
-    color: "#dc2626",
+    color: "#ba1a1a",
     bg: "bg-red-50 text-red-950 border-red-300",
     border: "#fca5a5",
     bar: "bg-red-600"

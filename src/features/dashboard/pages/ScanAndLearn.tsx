@@ -92,16 +92,16 @@ export default function ScanAndLearn() {
   };
 
   return (
-    <div className="min-h-screen bg-[#fbfaee] font-sans">
+    <div className="min-h-screen bg-[#f7f9fb] font-sans">
       {/* Header */}
-      <header className="flex items-center justify-between px-5 py-3.5 bg-[#fffde7] rounded-b-[20px] shadow-[0_2px_8px_rgba(0,0,0,0.06)] relative z-50">
+      <header className="flex items-center justify-between px-5 py-3.5 bg-white rounded-b-[20px] shadow-[0_2px_8px_rgba(0,0,0,0.06)] relative z-50">
         <button onClick={() => navigate(-1)} className="flex items-center gap-1 hover:opacity-80">
-          <ArrowLeft size={20} color="#735c00" />
-          <span className="text-[15px] font-semibold text-[#735c00]">Back</span>
+          <ArrowLeft size={20} color="#141779" />
+          <span className="text-[15px] font-semibold text-[#141779]">Back</span>
         </button>
         <h1 className="text-lg font-extrabold text-[#1b1c15]">🔬 Scan & Learn</h1>
         <button onClick={() => navigate('/scan-history')} className="hover:opacity-80">
-          <Clock size={22} color="#735c00" />
+          <Clock size={22} color="#141779" />
         </button>
       </header>
 
@@ -115,15 +115,15 @@ export default function ScanAndLearn() {
                 Point your camera at any object — plant, book, food, gadget — and AI will teach you about it!
               </p>
 
-              <label className="flex items-center justify-center gap-2.5 bg-[#735c00] py-4 rounded-[18px] mb-3 shadow-[0_6px_10px_rgba(115,92,0,0.3)] cursor-pointer hover:opacity-90 transition-opacity">
+              <label className="flex items-center justify-center gap-2.5 bg-[#141779] py-4 rounded-[18px] mb-3 shadow-[0_6px_10px_rgba(20,23,121,0.25)] cursor-pointer hover:opacity-90 transition-opacity">
                 <Camera size={20} color="white" />
                 <span className="text-base font-bold text-white">Open Camera & Scan</span>
                 <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleCameraScan} />
               </label>
 
-              <label className="flex items-center justify-center gap-2.5 border-2 border-[#735c00] py-3 rounded-[18px] cursor-pointer hover:bg-gray-50 transition-colors">
-                <Upload size={18} color="#735c00" />
-                <span className="text-[15px] font-bold text-[#735c00]">Pick Image from Gallery</span>
+              <label className="flex items-center justify-center gap-2.5 border-2 border-[#141779] py-3 rounded-[18px] cursor-pointer hover:bg-gray-50 transition-colors">
+                <Upload size={18} color="#141779" />
+                <span className="text-[15px] font-bold text-[#141779]">Pick Image from Gallery</span>
                 <input type="file" accept="image/*" className="hidden" onChange={handleCameraScan} />
               </label>
             </div>
@@ -143,12 +143,12 @@ export default function ScanAndLearn() {
                 value={textInput}
                 onChange={(e) => setTextInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleTextLearn()}
-                className="flex-1 bg-white rounded-[14px] px-4 py-3 text-sm text-[#1b1c15] border-[1.5px] border-[#ddd] outline-none focus:border-[#735c00]"
+                className="flex-1 bg-white rounded-[14px] px-4 py-3 text-sm text-[#1b1c15] border-[1.5px] border-[#ddd] outline-none focus:border-[#141779]"
               />
               <button
                 onClick={() => handleTextLearn()}
                 disabled={!textInput.trim()}
-                className={`rounded-[14px] px-4.5 flex items-center justify-center transition-colors ${textInput.trim() ? 'bg-[#735c00]' : 'bg-[#ccc]'}`}
+                className={`rounded-[14px] px-4.5 flex items-center justify-center transition-colors ${textInput.trim() ? 'bg-[#141779]' : 'bg-[#ccc]'}`}
               >
                 <span className="text-white font-extrabold text-[15px]">Go</span>
               </button>
@@ -184,15 +184,15 @@ export default function ScanAndLearn() {
             </motion.div>
             
             <div className="relative w-[55vw] max-w-[200px] h-[188px] mb-5">
-              <div className="absolute top-0 left-0 w-6 h-6 border-t-3 border-l-3 border-[#735c00] rounded-tl-md" />
-              <div className="absolute top-0 right-0 w-6 h-6 border-t-3 border-r-3 border-[#735c00] rounded-tr-md" />
-              <div className="absolute bottom-0 left-0 w-6 h-6 border-b-3 border-l-3 border-[#735c00] rounded-bl-md" />
-              <div className="absolute bottom-0 right-0 w-6 h-6 border-b-3 border-r-3 border-[#735c00] rounded-br-md" />
+              <div className="absolute top-0 left-0 w-6 h-6 border-t-3 border-l-3 border-[#141779] rounded-tl-md" />
+              <div className="absolute top-0 right-0 w-6 h-6 border-t-3 border-r-3 border-[#141779] rounded-tr-md" />
+              <div className="absolute bottom-0 left-0 w-6 h-6 border-b-3 border-l-3 border-[#141779] rounded-bl-md" />
+              <div className="absolute bottom-0 right-0 w-6 h-6 border-b-3 border-r-3 border-[#141779] rounded-br-md" />
               
               <motion.div
                 animate={{ y: [0, 170, 0] }}
                 transition={{ repeat: Infinity, duration: 2.4, ease: "linear" }}
-                className="absolute left-0 right-0 h-0.5 bg-[#f57f17] shadow-[0_0_6px_#f57f17]"
+                className="absolute left-0 right-0 h-0.5 bg-[#57fae9] shadow-[0_0_6px_#57fae9]"
               />
             </div>
 
@@ -245,13 +245,13 @@ export default function ScanAndLearn() {
               </>
             )}
 
-            <div className="bg-[#fffde7] rounded-xl p-3.5 mb-3.5">
-              <p className="text-[13px] font-bold text-[#735c00] mb-1.5">🤩 Fun Fact</p>
+            <div className="bg-[#e0e0ff]/50 rounded-xl p-3.5 mb-3.5">
+              <p className="text-[13px] font-bold text-[#141779] mb-1.5">🤩 Fun Fact</p>
               <p className="text-sm text-[#50462a] leading-[22px]">{aiData.funFact}</p>
             </div>
 
-            <button onClick={() => setState('idle')} className="w-full bg-[#f5f4e8] rounded-2xl py-3.5 flex justify-center hover:bg-[#e8e7da]">
-              <span className="text-[15px] font-bold text-[#50462a]">📸 Scan/Type Another Topic</span>
+            <button onClick={() => setState('idle')} className="w-full bg-[#f2f4f6] rounded-2xl py-3.5 flex justify-center hover:bg-[#e0e0ff]/30">
+              <span className="text-[15px] font-bold text-[#141779]">📸 Scan/Type Another Topic</span>
             </button>
           </motion.div>
         )}
@@ -263,7 +263,7 @@ export default function ScanAndLearn() {
             <p className="text-sm text-[#64748b] text-center mb-6 max-w-[280px]">
               We couldn't analyze the topic or image. Please make sure your network is active and try again.
             </p>
-            <button onClick={() => setState('idle')} className="bg-[#735c00] text-white px-6 py-3 rounded-full font-bold shadow-md hover:opacity-90">
+            <button onClick={() => setState('idle')} className="bg-[#141779] text-white px-6 py-3 rounded-full font-bold shadow-md hover:opacity-90">
               Try Again
             </button>
           </div>

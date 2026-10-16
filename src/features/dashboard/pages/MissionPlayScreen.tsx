@@ -1443,19 +1443,19 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             <button
               onClick={handleReplayMission}
               title={t('replay_mission_btn', 'Replay Mission 🔄')}
-              className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full bg-[#141779] text-white hover:bg-[#101362] active:scale-95 transition-all shadow-md shrink-0 cursor-pointer border border-indigo-200"
+              className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full bg-[#141779] text-white hover:bg-[#101362] active:scale-95 transition-all shadow-md shrink-0 cursor-pointer border border-[#141779]/20"
             >
               <RotateCcw size={16} className="text-white" />
             </button>
           )}
 
           <div className={`flex items-center gap-1 sm:gap-1.5 border px-2 sm:px-3.5 py-1 rounded-full font-mono font-extrabold text-[10px] sm:text-xs shadow-2xs transition-all shrink-0 whitespace-nowrap ${(phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5
-              ? "bg-rose-50 border-rose-300 text-rose-700 animate-pulse ring-2 ring-rose-400/40"
+              ? "bg-[#ffdad6] border-[#ba1a1a]/30 text-[#ba1a1a] animate-pulse ring-2 ring-[#ba1a1a]/40"
               : "bg-slate-100/90 border-slate-200 text-slate-800"
             }`}>
             <div className="relative flex items-center justify-center">
-              <Clock size={12} className={(phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5 ? "text-rose-600 animate-bounce" : "text-indigo-600"} />
-              <span className={`absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ${(phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5 ? "bg-rose-500 animate-ping" : "bg-emerald-500 animate-ping"
+              <Clock size={12} className={(phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5 ? "text-[#ba1a1a] animate-bounce" : "text-[#141779]"} />
+              <span className={`absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ${(phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5 ? "bg-[#ba1a1a] animate-ping" : "bg-[#006a62] animate-ping"
                 }`} />
             </div>
             <span>
@@ -1493,7 +1493,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           <div className="w-full bg-white border border-gray-200 rounded-3xl p-5 mb-8 text-left flex flex-col gap-3 shadow-[0_4px_20px_rgba(0,0,0,0.05)]">
             <h4 className="text-xs font-bold uppercase text-[#767683] tracking-wider">{t('mission_objectives', 'Mission Objectives')}</h4>
             <div className="flex items-center gap-3 text-sm font-semibold text-[#141779]">
-              <CheckCircle2 size={18} className="text-emerald-500" />
+              <CheckCircle2 size={18} className="text-[#006a62]" />
               <span>{t('complete_practice_questions', { count: quizQuestions.length, defaultValue: `Complete ${quizQuestions.length} Practice Questions` })}</span>
             </div>
             <div className="flex items-center gap-3 text-sm font-semibold text-[#141779]">
@@ -1545,8 +1545,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
               <div
                 className={`w-full min-h-[140px] rounded-2xl border-4 border-dashed p-4 flex flex-wrap gap-2 items-center justify-center transition-colors ${quizConfirmed
                     ? quizIsCorrect
-                      ? "border-emerald-500 bg-emerald-50"
-                      : "border-red-500 bg-red-50"
+                      ? "border-[#006a62] bg-[#57fae9]/20"
+                      : "border-[#ba1a1a] bg-[#ffdad6]"
                     : "border-gray-300 bg-white cursor-pointer hover:bg-gray-50"
                   }`}
                 onClick={() => {
@@ -1566,7 +1566,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                       {t('tap_option_spelling', 'Tap an option below to complete the spelling!')}
                     </span>
                   ) : (
-                    <span className="text-5xl font-black text-indigo-700 bg-indigo-50 border-2 border-indigo-300 px-6 py-4 rounded-2xl shadow-inner animate-in zoom-in-50 duration-200">
+                    <span className="text-5xl font-black text-[#141779] bg-[#e0e0ff]/60 border-2 border-[#141779]/30 px-6 py-4 rounded-2xl shadow-inner animate-in zoom-in-50 duration-200">
                       {selectedDragValue}
                     </span>
                   )
@@ -1603,7 +1603,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                         className={`px-5 py-3 rounded-xl border text-xl font-bold transition-all ${
                           isSelected
                             ? "bg-[#141779] border-[#141779] text-white scale-105 shadow-md animate-pulse"
-                            : "bg-gray-50 border-gray-200 text-slate-700 hover:border-indigo-400 active:scale-95"
+                            : "bg-gray-50 border-gray-200 text-slate-700 hover:border-[#141779]/40 active:scale-95"
                         }`}
                       >
                         {opt}
@@ -1646,12 +1646,12 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                   if (isTimeout) {
                     style = "bg-white border-gray-200 text-[#191c1e] opacity-60";
                   } else if (isCorrect) {
-                    style = "bg-emerald-500 border-emerald-600 text-white font-bold";
+                    style = "bg-[#006a62] border-[#006a62] text-white font-bold";
                   } else if (isSelected) {
-                    style = "bg-red-500 border-red-600 text-white font-bold";
+                    style = "bg-[#ba1a1a] border-[#ba1a1a] text-white font-bold";
                   }
                 } else if (isSelected) {
-                  style = "bg-indigo-50 border-[#141779] text-[#141779] font-bold ring-2 ring-[#141779]/20";
+                  style = "bg-[#e0e0ff]/60 border-[#141779] text-[#141779] font-bold ring-2 ring-[#141779]/20";
                 }
 
                 return (
@@ -1680,8 +1680,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                   : !quizConfirmed
                     ? "bg-[#141779] text-white hover:bg-[#101362]"
                     : quizIsCorrect
-                      ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                      : "bg-red-600 text-white hover:bg-red-700"
+                      ? "bg-[#006a62] text-white hover:bg-[#00514a]"
+                      : "bg-[#ba1a1a] text-white hover:bg-[#93000a]"
                 }`}
             >
               <span>{quizConfirmed ? t('continue_btn', 'CONTINUE →') : t('check_answer', 'CHECK ANSWER')}</span>
@@ -1696,7 +1696,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1.1 }}
-              className="w-24 h-24 rounded-full flex items-center justify-center text-4xl mb-6 shadow-lg border-4 bg-emerald-100 border-emerald-400"
+              className="w-24 h-24 rounded-full flex items-center justify-center text-4xl mb-6 shadow-lg border-4 bg-[#57fae9]/30 border-[#57fae9]"
             >
               🌟
             </motion.div>
@@ -1735,13 +1735,13 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       {phase === "BOSS" && (
         <main className="px-3 sm:px-6 py-4 sm:py-6 flex-1 flex flex-col justify-between max-w-md mx-auto w-full">
           {/* Top Outer Indigo/Lavender Boss Stage Header Card with Premium Visual Aesthetics */}
-          <div className="bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] rounded-[28px] sm:rounded-[32px] p-3 sm:p-5 pt-4 pb-3.5 mb-4 shadow-[0_10px_30px_rgba(20,23,121,0.08)] border-2 border-indigo-200/80 relative backdrop-blur-md overflow-hidden">
+          <div className="bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] rounded-[28px] sm:rounded-[32px] p-3 sm:p-5 pt-4 pb-3.5 mb-4 shadow-[0_10px_30px_rgba(20,23,121,0.08)] border-2 border-[#141779]/20 relative backdrop-blur-md overflow-hidden">
             
             {/* Top Bar: Hero vs Boss Header */}
             <div className="flex items-center justify-between mb-3 relative z-10 px-0.5 gap-1">
 
               {/* Left: Dragon Hero in Pill Container */}
-              <div className="flex flex-col items-start shrink-0 bg-white/95 backdrop-blur-xs px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl border border-indigo-100/80 shadow-2xs">
+              <div className="flex flex-col items-start shrink-0 bg-white/95 backdrop-blur-xs px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl border border-[#141779]/20 shadow-2xs">
                 <span className="text-[9px] xs:text-[10px] sm:text-[11px] font-black uppercase text-[#141779] tracking-wider block leading-tight whitespace-nowrap">
                   DRAGON HERO
                 </span>
@@ -1763,7 +1763,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
               </div>
 
               {/* Right: Boss Name / Chapter Stage in Pill Container */}
-              <div className="flex flex-col items-end shrink-0 bg-white/95 backdrop-blur-xs px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl border border-indigo-100/80 shadow-2xs min-w-0">
+              <div className="flex flex-col items-end shrink-0 bg-white/95 backdrop-blur-xs px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl border border-[#141779]/20 shadow-2xs min-w-0">
                 <span className="text-[9px] xs:text-[10px] sm:text-[11px] font-black uppercase text-[#141779] tracking-wider block leading-tight text-right whitespace-nowrap max-w-[110px] xs:max-w-none truncate">
                   {bossName ? bossName.toUpperCase() : 'BOSS'}
                 </span>
@@ -1781,7 +1781,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             </div>
 
             {/* Inner White Boss Card with Soft Depth & Breathing Animation */}
-            <div className="relative p-3.5 sm:p-4 rounded-[24px] bg-white border-2 border-indigo-100/80 flex items-center justify-between shadow-xs">
+            <div className="relative p-3.5 sm:p-4 rounded-[24px] bg-white border-2 border-[#141779]/20 flex items-center justify-between shadow-xs">
               <motion.div
                 animate={{
                   y: bossAngry ? [0, -8, 0] : [0, -4, 0],
@@ -1791,19 +1791,19 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                 transition={bossAngry ? { duration: 0.5, repeat: 2 } : { duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
                 className="relative z-10 flex items-center gap-3"
               >
-                <div className={`w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-indigo-50/80 border-2 border-indigo-200 flex items-center justify-center text-2xl sm:text-3xl shrink-0 shadow-xs relative ${bossAngry ? "ring-4 ring-rose-500/80 animate-pulse" : ""}`}>
+                <div className={`w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-[#e0e0ff]/60 border-2 border-[#141779]/20 flex items-center justify-center text-2xl sm:text-3xl shrink-0 shadow-xs relative ${bossAngry ? "ring-4 ring-[#ba1a1a]/80 animate-pulse" : ""}`}>
                   <span>🐉</span>
                 </div>
                 <div>
                   <h4 className="text-base sm:text-lg font-black text-[#141779] leading-tight drop-shadow-2xs">{bossName}</h4>
-                  <span className={`text-xs font-bold ${bossAngry ? "text-rose-600 animate-pulse" : "text-indigo-600"}`}>
+                  <span className={`text-xs font-bold ${bossAngry ? "text-[#ba1a1a] animate-pulse" : "text-[#141779]"}`}>
                     {bossState.status}
                   </span>
                 </div>
               </motion.div>
 
               <div className="relative z-10 flex flex-col items-end gap-1.5 shrink-0">
-                <span className="text-xs font-black bg-indigo-50/80 border border-indigo-100 px-3.5 py-1.5 rounded-full text-[#141779] shadow-2xs whitespace-nowrap">
+                <span className="text-xs font-black bg-[#e0e0ff]/60 border border-[#141779]/20 px-3.5 py-1.5 rounded-full text-[#141779] shadow-2xs whitespace-nowrap">
                   {bossHearts} / {bossMaxHp} HP
                 </span>
               </div>
@@ -1815,7 +1815,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             <span className="text-xs font-black text-[#006a62] uppercase tracking-wider block mb-2 flex items-center gap-1.5 flex-wrap">
               <span>⚔️ BOSS STRIKE #{safeBossIndex + 1}</span>
               <span>•</span>
-              <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-black uppercase tracking-wider shadow-2xs">
+              <span className="px-2 py-0.5 rounded-full bg-[#ffdad6] text-[#ba1a1a] border border-[#ba1a1a]/20 text-[10px] font-black uppercase tracking-wider shadow-2xs">
                 BOSS LEVEL HARD
               </span>
               <span>•</span>
@@ -1830,7 +1830,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           {isBossDrag ? (
             <div className="flex flex-col gap-4 mb-4">
               <div
-                className="w-full min-h-[120px] rounded-2xl border-2 border-dashed border-[#141779]/30 bg-indigo-50/60 p-4 flex flex-wrap gap-2 items-center justify-center cursor-pointer shadow-inner"
+                className="w-full min-h-[120px] rounded-2xl border-2 border-dashed border-[#141779]/30 bg-[#e0e0ff]/60 p-4 flex flex-wrap gap-2 items-center justify-center cursor-pointer shadow-inner"
                 onClick={() => {
                   if (!bossConfirmed) {
                     if (isBossLanguageDrag) {
@@ -1848,7 +1848,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                       {t('tap_boss_slot', 'Tap an option below to fill the boss weapon slot!')}
                     </span>
                   ) : (
-                    <span className="text-4xl font-black text-indigo-700 bg-white border-2 border-indigo-300 px-5 py-3 rounded-xl shadow-sm animate-in zoom-in-50 duration-200">
+                    <span className="text-4xl font-black text-[#141779] bg-white border-2 border-[#141779]/30 px-5 py-3 rounded-xl shadow-sm animate-in zoom-in-50 duration-200">
                       {selectedBossDragValue}
                     </span>
                   )
@@ -1885,7 +1885,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                         className={`px-4 py-2.5 rounded-lg border text-lg font-bold transition-all ${
                           isSelected
                             ? "bg-[#141779] border-[#141779] text-white scale-105 shadow-md animate-pulse"
-                            : "bg-gray-50 border-gray-200 text-slate-700 hover:border-indigo-400 active:scale-95"
+                            : "bg-gray-50 border-gray-200 text-slate-700 hover:border-[#141779]/40 active:scale-95"
                         }`}
                       >
                         {opt}
@@ -1931,24 +1931,24 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                   if (bossConfirmed) {
                     if (isTimeout) {
                       if (isCorrect) {
-                        style = "bg-gradient-to-r from-emerald-500 to-green-600 border-2 border-emerald-600 text-white font-black shadow-md shadow-emerald-500/20";
+                        style = "bg-[#006a62] border-2 border-[#006a62] text-white font-black shadow-md shadow-[#006a62]/20";
                       } else {
                         style = "bg-white border-2 border-gray-200 text-[#141779] opacity-60";
                       }
                     } else {
                       if (isCorrect) {
                         // Correct answer ALWAYS highlights green with ✓ icon
-                        style = "bg-gradient-to-r from-emerald-500 to-green-600 border-2 border-emerald-600 text-white font-black shadow-md shadow-emerald-500/20 animate-pulse";
+                        style = "bg-[#006a62] border-2 border-[#006a62] text-white font-black shadow-md shadow-[#006a62]/20 animate-pulse";
                       } else if (isSelected) {
                         // Selected wrong answer highlights red with ✗ icon
-                        style = "bg-gradient-to-r from-rose-500 to-red-600 border-2 border-rose-600 text-white font-black shadow-md shadow-rose-500/20";
+                        style = "bg-[#ba1a1a] border-2 border-[#ba1a1a] text-white font-black shadow-md shadow-[#ba1a1a]/20";
                       } else {
                         style = "bg-white border-2 border-gray-200 text-[#141779] opacity-40";
                       }
                     }
                   } else {
                     if (isSelected) {
-                      style = "bg-indigo-50/90 border-2 border-[#141779] text-[#141779] ring-2 ring-[#141779]/20 font-black shadow-sm scale-[1.01]";
+                      style = "bg-[#e0e0ff]/60 border-2 border-[#141779] text-[#141779] ring-2 ring-[#141779]/20 font-black shadow-sm scale-[1.01]";
                     }
                   }
 
@@ -2036,11 +2036,11 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                     initial={{ y: 15, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.2 }}
-                    className="flex flex-col items-center p-3 rounded-2xl bg-emerald-50/70 border-2 border-emerald-100/60 shadow-xs relative overflow-hidden"
+                    className="flex flex-col items-center p-3 rounded-2xl bg-[#57fae9]/20 border-2 border-[#57fae9]/40 shadow-xs relative overflow-hidden"
                   >
                     <div className="text-2xl">🎯</div>
-                    <span className="text-[10px] font-black text-emerald-700 uppercase tracking-wider mt-1.5">{t('accuracy', 'Accuracy')}</span>
-                    <span className="text-base font-black text-emerald-900 mt-0.5">{completionResult?.accuracy ?? 100}%</span>
+                    <span className="text-[10px] font-black text-[#006a62] uppercase tracking-wider mt-1.5">{t('accuracy', 'Accuracy')}</span>
+                    <span className="text-base font-black text-[#006a62] mt-0.5">{completionResult?.accuracy ?? 100}%</span>
                   </motion.div>
 
                   {/* Coin Card */}
@@ -2092,7 +2092,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                     setSummaryStep("REPORT");
                   }
                 }}
-                className="w-full py-4 rounded-2xl bg-[#141779] hover:bg-[#101362] text-white font-black text-base shadow-lg shadow-indigo-900/20 uppercase tracking-wider active:scale-95 transition-all mt-auto"
+                className="w-full py-4 rounded-2xl bg-[#141779] hover:bg-[#101362] text-white font-black text-base shadow-lg shadow-[#141779]/20 uppercase tracking-wider active:scale-95 transition-all mt-auto"
               >
                 {t('continue_btn', 'Continue')}
               </button>
@@ -2201,7 +2201,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
               {/* Continue to stats button - Primary color */}
               <button
                 onClick={() => setSummaryStep("REPORT")}
-                className="w-full py-4 rounded-2xl bg-[#141779] hover:bg-[#101362] text-white font-black text-base shadow-lg shadow-indigo-900/20 uppercase tracking-wider active:scale-95 transition-all mt-auto"
+                className="w-full py-4 rounded-2xl bg-[#141779] hover:bg-[#101362] text-white font-black text-base shadow-lg shadow-[#141779]/20 uppercase tracking-wider active:scale-95 transition-all mt-auto"
               >
                 {t('continue_btn', 'Continue')}
               </button>
@@ -2241,7 +2241,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                   {missionIcon}
                 </motion.div>
 
-                <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold text-xs uppercase tracking-widest border border-emerald-300 mb-2">
+                <span className="px-3 py-1 bg-[#57fae9]/30 text-[#006a62] rounded-full font-bold text-xs uppercase tracking-widest border border-[#57fae9] mb-2">
                   {t('mission_accomplished', { seq: missionSeq, defaultValue: `Mission ${missionSeq} Accomplished!` })}
                 </span>
 
@@ -2279,20 +2279,20 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                   </div>
                   <div className="w-px h-6 bg-gray-200" />
                   <div className="flex flex-col items-center">
-                    <span className="text-[10px] text-emerald-600 uppercase tracking-wider">{t('correct', 'Correct')}</span>
-                    <span className="text-emerald-700 text-sm mt-0.5">✅ {quizCorrectCount + bossDamageCount}</span>
+                    <span className="text-[10px] text-[#006a62] uppercase tracking-wider">{t('correct', 'Correct')}</span>
+                    <span className="text-[#006a62] text-sm mt-0.5">✅ {quizCorrectCount + bossDamageCount}</span>
                   </div>
                   <div className="w-px h-6 bg-gray-200" />
                   <div className="flex flex-col items-center">
-                    <span className="text-[10px] text-rose-600 uppercase tracking-wider">{t('incorrect', 'Mistakes')}</span>
-                    <span className="text-rose-700 text-sm mt-0.5">❌ {Math.max(0, (quizQuestions.length - quizCorrectCount) + wrongAnswerCount)}</span>
+                    <span className="text-[10px] text-[#ba1a1a] uppercase tracking-wider">{t('incorrect', 'Mistakes')}</span>
+                    <span className="text-[#ba1a1a] text-sm mt-0.5">❌ {Math.max(0, (quizQuestions.length - quizCorrectCount) + wrongAnswerCount)}</span>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 w-full mb-4">
                   <div className="bg-white border border-gray-200 rounded-3xl p-4 flex flex-col items-center shadow-xs">
                     <span className="text-[10px] font-black text-[#767683] uppercase tracking-wider">{t('accuracy', 'Accuracy')}</span>
-                    <span className="text-3xl font-black text-emerald-600 mt-1">
+                    <span className="text-3xl font-black text-[#006a62] mt-1">
                       {completionResult?.bestAccuracy ?? completionResult?.accuracy ?? Math.round(((quizCorrectCount + bossDamageCount) / Math.max(1, quizQuestions.length + bossDamageCount + wrongAnswerCount)) * 100)}%
                     </span>
                     {completionResult?.runAccuracy !== undefined && completionResult?.bestAccuracy !== undefined && completionResult.runAccuracy < completionResult.bestAccuracy && (
@@ -2302,9 +2302,9 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                     )}
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full mt-1 border ${
                       (completionResult?.accuracy ?? 100) >= 85
-                        ? "text-emerald-700 bg-emerald-50 border-emerald-200"
+                        ? "text-[#006a62] bg-[#57fae9]/20 border-[#57fae9]/40"
                         : (completionResult?.accuracy ?? 100) >= 65
-                        ? "text-blue-700 bg-blue-50 border-blue-200"
+                        ? "text-[#141779] bg-[#e0e0ff]/60 border-[#141779]/20"
                         : "text-amber-700 bg-amber-50 border-amber-200"
                     }`}>
                       {completionResult?.targetStatus 
@@ -2320,7 +2320,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                     </span>
                     <div className="w-full h-2 bg-gray-200 rounded-full mt-2 overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-amber-400 to-emerald-500 rounded-full"
+                        className="h-full bg-gradient-to-r from-[#141779] to-[#57fae9] rounded-full"
                         style={{ width: `${completionResult?.confidenceScore || 90}%` }}
                       />
                     </div>
@@ -2337,7 +2337,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                           </h4>
                           <span className="text-[11px] text-gray-500 font-semibold">{t('short_term_retention', 'Short-term retention trend')}</span>
                         </div>
-                        <span className="text-base font-black text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-xl border border-indigo-200">
+                        <span className="text-base font-black text-[#141779] bg-[#e0e0ff]/60 px-2.5 py-1 rounded-xl border border-[#141779]/20">
                           {completionResult?.threeDayAvg ?? 0}%
                         </span>
                       </div>
@@ -2355,7 +2355,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                                 initial={{ height: 0 }}
                                 animate={{ height: `${d.accuracy}%` }}
                                 transition={{ duration: 0.8, delay: idx * 0.15 }}
-                                className="w-full bg-gradient-to-t from-indigo-600 to-teal-400 rounded-lg"
+                                className="w-full bg-gradient-to-t from-[#141779] to-[#57fae9] rounded-lg"
                               />
                             </div>
                             <span className="text-[10px] font-bold text-gray-500">{t(String(d?.day || "").toLowerCase().replace(/ /g, '_'), { defaultValue: d?.day })}</span>
@@ -2365,7 +2365,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                     </>
                   ) : (
                     <div className="flex flex-col items-center justify-center py-6 px-4 text-center">
-                      <div className="w-12 h-12 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 mb-3 shadow-2xs">
+                      <div className="w-12 h-12 rounded-full bg-[#e0e0ff]/60 border border-[#141779]/20 flex items-center justify-center text-[#141779] mb-3 shadow-2xs">
                         <Clock size={20} className="animate-pulse" />
                       </div>
                       <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1 mb-1.5">
@@ -2388,7 +2388,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                           </h4>
                           <span className="text-[11px] text-gray-500 font-semibold">{t('weekly_consistency', 'Weekly consistency overview')}</span>
                         </div>
-                        <span className="text-base font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200">
+                        <span className="text-base font-black text-[#006a62] bg-[#57fae9]/20 px-2.5 py-1 rounded-xl border border-[#57fae9]/40">
                           {completionResult?.sevenDayAvg ?? 0}%
                         </span>
                       </div>
@@ -2410,7 +2410,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                                 initial={{ height: 0 }}
                                 animate={{ height: `${d.accuracy}%` }}
                                 transition={{ duration: 0.8, delay: idx * 0.08 }}
-                                className="w-full bg-gradient-to-t from-teal-600 to-emerald-400 rounded-md"
+                                className="w-full bg-gradient-to-t from-[#006a62] to-[#2addcd] rounded-md"
                               />
                             </div>
                             <span className="text-[9px] font-extrabold text-gray-600">{t(String(d?.day || "").toLowerCase(), { defaultValue: d?.day })}</span>
@@ -2420,7 +2420,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                     </>
                   ) : (
                     <div className="flex flex-col items-center justify-center py-6 px-4 text-center">
-                      <div className="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 mb-3 shadow-2xs">
+                      <div className="w-12 h-12 rounded-full bg-[#57fae9]/20 border border-[#57fae9]/40 flex items-center justify-center text-[#006a62] mb-3 shadow-2xs">
                         <Clock size={20} className="animate-pulse" />
                       </div>
                       <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1 mb-1.5">
@@ -2463,7 +2463,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                         </div>
                       ) : hasPassedMission ? (
                         <div className="flex flex-col gap-2 w-full">
-                          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-2 rounded-xl text-[11px] font-black text-center leading-tight flex items-center justify-center gap-1.5">
+                          <div className="bg-[#57fae9]/20 border border-[#57fae9]/40 text-[#006a62] p-2 rounded-xl text-[11px] font-black text-center leading-tight flex items-center justify-center gap-1.5">
                             <span>🏆</span>
                             <span>{t('all_missions_complete', 'All 5 Chapter Missions Completed! Outstanding work!')}</span>
                           </div>
@@ -2545,7 +2545,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
               {revivalSpins > 0 ? (
                 <button
                   onClick={handleGoToMissionSpinWheel}
-                  className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:brightness-110 active:scale-95 text-white font-black rounded-full uppercase tracking-wider text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
+                  className="w-full py-3.5 bg-gradient-to-r from-[#006a62] to-[#2addcd] hover:brightness-110 active:scale-95 text-white font-black rounded-full uppercase tracking-wider text-xs flex items-center justify-center gap-2 shadow-md shadow-[#006a62]/20 transition-all cursor-pointer"
                 >
                   <span>🔥 Spin to Revive</span>
                 </button>
@@ -2624,8 +2624,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             className="bg-white border border-slate-100 rounded-[32px] p-6 sm:p-7 max-w-[360px] w-full shadow-[0_20px_60px_rgba(20,23,121,0.18)] flex flex-col items-center relative text-center"
           >
             {/* Spotlight Icon Badge */}
-            <div className="w-16 h-16 rounded-full bg-rose-50 border border-rose-200 flex items-center justify-center mb-2 shadow-xs">
-              <ShieldAlert className="text-rose-600 w-8 h-8 animate-pulse" />
+            <div className="w-16 h-16 rounded-full bg-[#ffdad6] border border-[#ba1a1a]/20 flex items-center justify-center mb-2 shadow-xs">
+              <ShieldAlert className="text-[#ba1a1a] w-8 h-8 animate-pulse" />
             </div>
 
             {/* Content */}
@@ -2639,11 +2639,11 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             </div>
 
             {/* Penalty Box */}
-            <div className="w-full bg-rose-50/80 rounded-2xl p-4 border border-rose-200 relative overflow-hidden my-2">
-              <span className="text-[10px] text-rose-700 uppercase font-black tracking-widest block mb-0.5">
+            <div className="w-full bg-[#ffdad6]/80 rounded-2xl p-4 border border-[#ba1a1a]/20 relative overflow-hidden my-2">
+              <span className="text-[10px] text-[#ba1a1a] uppercase font-black tracking-widest block mb-0.5">
                 XP Penalty
               </span>
-              <span className="text-2xl font-black text-rose-600">
+              <span className="text-2xl font-black text-[#ba1a1a]">
                 {lossOverlay.xpLoss} XP
               </span>
             </div>

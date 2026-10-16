@@ -13,7 +13,7 @@ const getSubjectStyle = (name: string) => {
   if (n.includes("sci")) return { icon: Microscope, color: "text-[#0284C7]", bg: "bg-[#F0F9FF]", border: "border-[#0EA5E9]", activeBg: "bg-[#E0F2FE]", glow: "shadow-[0_4px_16px_rgba(14,165,233,0.25)]" };
   if (n.includes("eng") || n.includes("hind")) return { icon: Book, color: "text-[#6D28D9]", bg: "bg-[#F5F3FF]", border: "border-[#8B5CF6]", activeBg: "bg-[#EDE9FE]", glow: "shadow-[0_4px_16px_rgba(139,92,246,0.25)]" };
   if (n.includes("soc") || n.includes("env")) return { icon: Globe, color: "text-[#DC2626]", bg: "bg-[#FEF2F2]", border: "border-[#EF4444]", activeBg: "bg-[#FEE2E2]", glow: "shadow-[0_4px_16px_rgba(239,68,68,0.25)]" };
-  return { icon: BookOpen, color: "text-[#3520A8]", bg: "bg-[#F4EFF7]", border: "border-[#6C4DFF]", activeBg: "bg-[#EAE2FB]", glow: "shadow-[0_4px_16px_rgba(108,77,255,0.25)]" };
+  return { icon: BookOpen, color: "text-[#141779]", bg: "bg-[#e0e0ff]/40", border: "border-[#141779]/40", activeBg: "bg-[#e0e0ff]", glow: "shadow-[0_4px_16px_rgba(20,23,121,0.25)]" };
 };
 
 export default function MultiplayerHubScreen() {
@@ -379,23 +379,23 @@ export default function MultiplayerHubScreen() {
     <div className="h-screen bg-gradient-to-b from-[#F4EFF7] via-[#F9F6FF] to-[#FFFFFF] text-[#141779] font-sans flex flex-col justify-between overflow-hidden relative">
       {/* Background Soft Glow Accents */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[35%] rounded-full bg-[#6C4DFF]/10 blur-[80px]" />
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[35%] rounded-full bg-[#141779]/10 blur-[80px]" />
         <div className="absolute top-[40%] right-[-10%] w-[50%] h-[40%] rounded-full bg-[#F4C95D]/15 blur-[90px]" />
-        <div className="absolute bottom-[-10%] left-[20%] w-[50%] h-[30%] rounded-full bg-[#3520A8]/5 blur-[70px]" />
+        <div className="absolute bottom-[-10%] left-[20%] w-[50%] h-[30%] rounded-full bg-[#30007f]/5 blur-[70px]" />
       </div>
 
       {/* TOP NAVIGATION HUD BAR */}
-      <header className="flex items-center justify-between px-4 py-2.5 bg-white/80 backdrop-blur-md border-b border-[#E5DBFB] sticky top-0 z-40 shrink-0 shadow-sm">
+      <header className="flex items-center justify-between px-4 py-2.5 bg-white/80 backdrop-blur-md border-b border-[#c7c5d4] sticky top-0 z-40 shrink-0 shadow-sm">
         <button 
           onClick={() => setShowLeaveModal(true)} 
-          className="w-9 h-9 rounded-full bg-[#F4EFF7] border border-[#E5DBFB] hover:bg-[#EAE2FB] flex items-center justify-center transition-all active:scale-95"
+          className="w-9 h-9 rounded-full bg-slate-50 border border-[#c7c5d4] hover:bg-slate-100 flex items-center justify-center transition-all active:scale-95"
           aria-label="Back"
         >
           <ArrowLeft size={18} className="text-[#141779]" />
         </button>
 
         <div className="flex items-center gap-1.5">
-          <Sparkles size={16} className="text-[#6C4DFF] animate-pulse" />
+          <Sparkles size={16} className="text-[#141779] animate-pulse" />
           <h1 className="text-[16px] font-black tracking-widest uppercase text-[#141779]">
             {t('shadow_arena_title', 'SHADOW ARENA')}
           </h1>
@@ -446,13 +446,13 @@ export default function MultiplayerHubScreen() {
         </section>
 
         {/* TAB SWITCHER: CREATE BATTLE vs JOIN ROOM */}
-        <section className="flex bg-[#EAE2FB] p-1 rounded-xl border border-[#E5DBFB] shrink-0 my-1">
+        <section className="flex bg-[#e0e0ff]/60 p-1 rounded-xl border border-[#c7c5d4] shrink-0 my-1">
           <button
             onClick={() => setActiveTab("create")}
             className={`flex-1 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
               activeTab === "create"
-                ? "bg-gradient-to-r from-[#6C4DFF] to-[#3520A8] text-white shadow-md border border-[#9C7CFF]/50"
-                : "text-[#6D28D9] hover:text-[#141779]"
+                ? "bg-gradient-to-r from-[#141779] to-[#2d328f] text-white shadow-md border border-[#e0e0ff]/50"
+                : "text-[#30007f] hover:text-[#141779]"
             }`}
           >
             <Swords size={14} />
@@ -463,8 +463,8 @@ export default function MultiplayerHubScreen() {
             onClick={() => setActiveTab("join")}
             className={`flex-1 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
               activeTab === "join"
-                ? "bg-gradient-to-r from-[#6C4DFF] to-[#3520A8] text-white shadow-md border border-[#9C7CFF]/50"
-                : "text-[#6D28D9] hover:text-[#141779]"
+                ? "bg-gradient-to-r from-[#141779] to-[#2d328f] text-white shadow-md border border-[#e0e0ff]/50"
+                : "text-[#30007f] hover:text-[#141779]"
             }`}
           >
             <Key size={14} />
@@ -502,7 +502,7 @@ export default function MultiplayerHubScreen() {
                       className={`relative flex items-center gap-2.5 p-2.5 rounded-xl border-2 transition-all duration-200 text-left ${
                         isSelected 
                           ? `${style.activeBg} ${style.border} ${style.glow} scale-[1.02] z-10` 
-                          : 'bg-white border-[#E5DBFB] hover:border-[#6C4DFF]/40 text-[#464652]'
+                          : 'bg-white border-[#c7c5d4] hover:border-[#141779]/40 text-[#464652]'
                       }`}
                     >
                       <div className={`p-2 rounded-lg ${style.bg} shrink-0`}>
@@ -516,7 +516,7 @@ export default function MultiplayerHubScreen() {
                       </div>
 
                       {isSelected && (
-                        <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-[#6C4DFF] text-white flex items-center justify-center shadow-sm">
+                        <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-[#141779] text-white flex items-center justify-center shadow-sm">
                           <Check size={10} strokeWidth={3} />
                         </div>
                       )}
@@ -535,10 +535,10 @@ export default function MultiplayerHubScreen() {
 
                 <button
                   onClick={() => setIsChapterDropdownOpen(!isChapterDropdownOpen)}
-                  className="w-full flex items-center justify-between bg-white border-2 border-[#E5DBFB] hover:border-[#6C4DFF] rounded-xl py-2.5 px-3.5 text-xs font-bold text-[#141779] focus:outline-none transition-all shadow-sm"
+                  className="w-full flex items-center justify-between bg-white border-2 border-[#c7c5d4] hover:border-[#141779] rounded-xl py-2.5 px-3.5 text-xs font-bold text-[#141779] focus:outline-none transition-all shadow-sm"
                 >
                   <div className="flex items-center gap-2 truncate pr-2">
-                    <Swords size={14} className="text-[#6C4DFF] shrink-0" />
+                    <Swords size={14} className="text-[#141779] shrink-0" />
                     <span className="truncate">
                       {selectedChaptersList.length > 0 
                         ? (selectedChaptersList.length === 1 
@@ -594,30 +594,30 @@ export default function MultiplayerHubScreen() {
                                 }
                               }
                             }}
-                            className={`px-3.5 py-2.5 text-xs font-bold cursor-pointer transition-colors border-b border-[#F0EBFB] last:border-0 flex items-center justify-between ${
+                            className={`px-3.5 py-2.5 text-xs font-bold cursor-pointer transition-colors border-b border-slate-100 last:border-0 flex items-center justify-between ${
                               !unlocked ? 'bg-gray-100/70 text-gray-400 opacity-75' :
-                              isSelected ? 'bg-[#6C4DFF]/15 text-[#3520A8]' : 'text-[#464652] hover:bg-[#F4EFF7]'
+                              isSelected ? 'bg-[#e0e0ff] text-[#141779]' : 'text-[#464652] hover:bg-slate-50'
                             }`}
                           >
                             <span className="truncate pr-2">{translatedChapter}</span>
                             {!unlocked ? (
-                              <div className="flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-md border border-amber-300 shrink-0">
-                                <Lock size={11} className="text-amber-700 shrink-0" />
-                                <span>Locked</span>
+                              <div className="flex items-center gap-1 text-[10px] font-bold text-[#767683] bg-slate-100 px-1.5 py-0.5 rounded-md border border-[#c7c5d4] shrink-0">
+                                <Lock size={11} className="text-[#767683] shrink-0" />
+                                <span>{t('locked', 'Locked')}</span>
                               </div>
                             ) : (
-                              isSelected && <Check size={14} className="text-[#6C4DFF]" />
+                              isSelected && <Check size={14} className="text-[#006a62]" />
                             )}
                           </div>
                         );
                       })}
                     </div>
                     {selectedChaptersList.length > 0 && (
-                      <div className="bg-[#F4EFF7] px-3 py-2 flex items-center justify-between border-t border-[#E5DBFB]">
-                        <span className="text-[11px] font-bold text-[#3520A8]">{selectedChaptersList.length} Selected</span>
+                      <div className="bg-slate-50 px-3 py-2 flex items-center justify-between border-t border-[#c7c5d4]">
+                        <span className="text-[11px] font-bold text-[#141779]">{selectedChaptersList.length} Selected</span>
                         <button 
                           onClick={() => setIsChapterDropdownOpen(false)}
-                          className="bg-[#3520A8] text-white px-3 py-1 rounded-lg text-[11px] font-bold"
+                          className="bg-[#141779] text-white px-3 py-1 rounded-lg text-[11px] font-bold"
                         >
                           Done
                         </button>
@@ -632,7 +632,7 @@ export default function MultiplayerHubScreen() {
             <button
               onClick={handleCreateRoom}
               disabled={loading}
-              className="w-full bg-gradient-to-r from-[#6C4DFF] via-[#512BE2] to-[#3520A8] hover:from-[#7C5DFF] hover:to-[#4529C8] text-white py-3 rounded-xl shadow-[0_4px_16px_rgba(108,77,255,0.35)] active:scale-[0.98] transition-all flex flex-col items-center justify-center border border-[#9C7CFF]/40 relative overflow-hidden group shrink-0 mt-1"
+              className="w-full bg-gradient-to-r from-[#141779] via-[#2d328f] to-[#30007f] hover:from-[#171b8c] hover:to-[#380094] text-white py-3 rounded-xl shadow-[0_4px_16px_rgba(20,23,121,0.35)] active:scale-[0.98] transition-all flex flex-col items-center justify-center border border-[#e0e0ff]/40 relative overflow-hidden group shrink-0 mt-1"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
               
@@ -668,7 +668,7 @@ export default function MultiplayerHubScreen() {
                 value={joinCode}
                 onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                 maxLength={6}
-                className="w-full bg-[#F4EFF7] border-2 border-[#E5DBFB] focus:border-[#6C4DFF] focus:ring-2 focus:ring-[#6C4DFF]/20 rounded-xl py-3 px-4 text-center text-2xl font-black text-[#141779] tracking-[8px] focus:outline-none transition-all uppercase placeholder:text-gray-400 placeholder:tracking-normal placeholder:font-bold placeholder:text-xs"
+                className="w-full bg-slate-50 border-2 border-[#c7c5d4] focus:border-[#141779] focus:ring-2 focus:ring-[#141779]/20 rounded-xl py-3 px-4 text-center text-2xl font-black text-[#141779] tracking-[8px] focus:outline-none transition-all uppercase placeholder:text-gray-400 placeholder:tracking-normal placeholder:font-bold placeholder:text-xs"
               />
 
               <button
@@ -676,7 +676,7 @@ export default function MultiplayerHubScreen() {
                 disabled={loading || joinCode.length < 6}
                 className={`w-full py-3 rounded-xl flex flex-col items-center justify-center transition-all border ${
                   joinCode.length === 6 
-                    ? 'bg-gradient-to-r from-[#6C4DFF] via-[#512BE2] to-[#3520A8] hover:from-[#7C5DFF] hover:to-[#4529C8] text-white border-[#9C7CFF]/40 shadow-[0_4px_16px_rgba(108,77,255,0.35)] active:scale-[0.98]' 
+                    ? 'bg-gradient-to-r from-[#141779] via-[#2d328f] to-[#30007f] hover:from-[#171b8c] hover:to-[#380094] text-white border-[#e0e0ff]/40 shadow-[0_4px_16px_rgba(20,23,121,0.35)] active:scale-[0.98]' 
                     : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
                 }`}
               >

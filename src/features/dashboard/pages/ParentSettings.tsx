@@ -1097,7 +1097,7 @@ export default function ParentSettings() {
               className="bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center justify-between group relative overflow-hidden"
             >
               <div className="flex items-center gap-4 relative z-10">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779]">
+                <div className="w-12 h-12 rounded-2xl bg-[#e0e0ff]/60 border border-[#141779]/20 flex items-center justify-center text-[#141779]">
                   <UserRound size={24} />
                 </div>
                 <div>
@@ -1164,7 +1164,7 @@ export default function ParentSettings() {
             {/* Subject Restrictions */}
             <motion.div variants={itemVariants} className="bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md flex flex-col gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#30007f]">
+                <div className="w-12 h-12 rounded-2xl bg-[#30007f]/10 border border-[#30007f]/20 flex items-center justify-center text-[#30007f]">
                   <BookOpen size={24} />
                 </div>
                 <div>
@@ -1200,7 +1200,7 @@ export default function ParentSettings() {
             {/* Language Settings */}
             <motion.div variants={itemVariants} className="bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md flex flex-col gap-4 relative z-20">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779]">
+                <div className="w-12 h-12 rounded-2xl bg-[#e0e0ff]/60 border border-[#141779]/20 flex items-center justify-center text-[#141779]">
                   <Globe size={24} />
                 </div>
                 <div>
@@ -1398,7 +1398,7 @@ export default function ParentSettings() {
                       <button
                         type="button"
                         onClick={() => requestRegenCode("child_1")}
-                        className="px-3 py-1.5 rounded-full text-xs font-black bg-indigo-50 text-[#141779] border border-indigo-100 hover:bg-indigo-100 transition-colors"
+                        className="px-3 py-1.5 rounded-full text-xs font-black bg-[#e0e0ff]/60 text-[#141779] border border-[#141779]/20 hover:bg-[#e0e0ff] transition-colors"
                       >
                         {t("regenerate", "Regenerate")}
                       </button>
@@ -1505,7 +1505,7 @@ export default function ParentSettings() {
                         <button
                           type="button"
                           onClick={() => requestRegenCode("child_2")}
-                          className="px-3 py-1.5 rounded-full text-xs font-black bg-indigo-50 text-[#141779] border border-indigo-100 hover:bg-indigo-100 transition-colors"
+                          className="px-3 py-1.5 rounded-full text-xs font-black bg-[#e0e0ff]/60 text-[#141779] border border-[#141779]/20 hover:bg-[#e0e0ff] transition-colors"
                         >
                           Regenerate
                         </button>
@@ -1558,7 +1558,7 @@ export default function ParentSettings() {
             <motion.div variants={itemVariants} className="bg-white rounded-[24px] p-5 sm:p-6 border border-slate-200/80 shadow-md flex flex-col gap-3.5">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779] shrink-0">
+                  <div className="w-10 h-10 rounded-2xl bg-[#e0e0ff]/60 border border-[#141779]/20 flex items-center justify-center text-[#141779] shrink-0">
                     <Users size={20} />
                   </div>
                   <div className="min-w-0">
@@ -1607,13 +1607,13 @@ export default function ParentSettings() {
                   {secondaryParents.map((sp: any) => (
                     <div key={sp.parentId} className="p-3 bg-slate-50/80 hover:bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between gap-3 transition-colors">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-9 h-9 rounded-xl bg-indigo-100 text-[#141779] flex items-center justify-center font-black text-xs shrink-0">
+                        <div className="w-9 h-9 rounded-xl bg-[#e0e0ff] text-[#141779] flex items-center justify-center font-black text-xs shrink-0">
                           {sp.fullName ? sp.fullName.slice(0, 1).toUpperCase() : "P"}
                         </div>
                         <div className="flex flex-col min-w-0">
                           <div className="flex items-center gap-1.5 min-w-0">
                             <span className="text-xs font-black text-slate-900 truncate">{sp.fullName}</span>
-                            <span className="text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-[#141779] px-1.5 py-0.5 rounded-full border border-indigo-100 shrink-0">
+                            <span className="text-[9px] font-black uppercase tracking-wider bg-[#e0e0ff]/60 text-[#141779] px-1.5 py-0.5 rounded-full border border-[#141779]/20 shrink-0">
                               {sp.relationship}
                             </span>
                           </div>
@@ -1815,7 +1815,7 @@ export default function ParentSettings() {
                 {/* Header */}
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779] shrink-0 text-base">
+                    <div className="w-8 h-8 rounded-xl bg-[#e0e0ff]/60 border border-[#141779]/20 flex items-center justify-center text-[#141779] shrink-0 text-base">
                       👨‍👩‍👧
                     </div>
                     <div>
@@ -1872,7 +1872,7 @@ export default function ParentSettings() {
                             onClick={() => setCoParentRel(rel.id)}
                             className={`py-1.5 px-1 rounded-lg text-xs font-bold transition-all cursor-pointer text-center ${isSelected
                                 ? "bg-[#141779] text-white shadow-2xs"
-                                : "bg-slate-100 text-slate-600 hover:bg-indigo-50 hover:text-[#141779]"
+                                : "bg-slate-100 text-slate-600 hover:bg-[#e0e0ff]/60 hover:text-[#141779]"
                               }`}
                           >
                             {rel.label}
@@ -1907,7 +1907,7 @@ export default function ParentSettings() {
                         Mobile Number
                       </label>
                       {cleanInputM.length > 0 && (
-                        <span className={`font-bold ${isDuplicateNumber ? "text-amber-600" : isPhoneValid ? "text-emerald-600" : "text-slate-400"}`}>
+                        <span className={`font-bold ${isDuplicateNumber ? "text-amber-600" : isPhoneValid ? "text-[#006a62]" : "text-slate-400"}`}>
                           {cleanInputM.length}/10
                         </span>
                       )}
@@ -1928,7 +1928,7 @@ export default function ParentSettings() {
                         className={`w-full h-9 bg-slate-50 rounded-xl pl-10 pr-8 text-xs font-bold text-slate-900 border transition-colors outline-none focus:bg-white ${isDuplicateNumber
                             ? "border-amber-400 bg-amber-50/30 focus:border-amber-500"
                             : cleanInputM.length === 10 && /^[6-9]/.test(cleanInputM) && !isCheckingCoParentMobile
-                              ? "border-emerald-300 focus:border-emerald-500"
+                              ? "border-[#006a62]/40 focus:border-[#006a62]"
                               : "border-slate-200 focus:border-[#141779]"
                           }`}
                         required
@@ -2008,32 +2008,32 @@ export default function ParentSettings() {
                   <div className="flex flex-col gap-1.5 pt-1 pb-1 bg-slate-50/60 rounded-xl p-2.5 border border-slate-100">
                     <div className="flex items-center gap-2">
                       {isMinLength ? (
-                        <CheckCircle2 size={16} color="#007168" className="fill-transparent shrink-0" />
+                        <CheckCircle2 size={16} color="#006a62" className="fill-transparent shrink-0" />
                       ) : (
                         <Circle size={16} color="#c7c5d4" className="shrink-0" />
                       )}
-                      <span className={`text-[11px] font-bold ${isMinLength ? "text-emerald-700" : "text-[#767683]"}`}>
+                      <span className={`text-[11px] font-bold ${isMinLength ? "text-[#006a62]" : "text-[#767683]"}`}>
                         At least 8 characters
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
                       {hasSpecialChar ? (
-                        <CheckCircle2 size={16} color="#007168" className="fill-transparent shrink-0" />
+                        <CheckCircle2 size={16} color="#006a62" className="fill-transparent shrink-0" />
                       ) : (
                         <Circle size={16} color="#c7c5d4" className="shrink-0" />
                       )}
-                      <span className={`text-[11px] font-bold ${hasSpecialChar ? "text-emerald-700" : "text-[#767683]"}`}>
+                      <span className={`text-[11px] font-bold ${hasSpecialChar ? "text-[#006a62]" : "text-[#767683]"}`}>
                         Include a special symbol
                       </span>
                     </div>
                     {coParentConfirmPassword.length > 0 && (
                       <div className="flex items-center gap-2">
                         {passwordsMatch ? (
-                          <CheckCircle2 size={16} color="#007168" className="fill-transparent shrink-0" />
+                          <CheckCircle2 size={16} color="#006a62" className="fill-transparent shrink-0" />
                         ) : (
-                          <Circle size={16} color="#ef4444" className="shrink-0" />
+                          <Circle size={16} color="#ba1a1a" className="shrink-0" />
                         )}
-                        <span className={`text-[11px] font-bold ${passwordsMatch ? "text-emerald-700" : "text-rose-600"}`}>
+                        <span className={`text-[11px] font-bold ${passwordsMatch ? "text-[#006a62]" : "text-[#ba1a1a]"}`}>
                           {passwordsMatch ? "Passwords match" : "Passwords do not match"}
                         </span>
                       </div>
@@ -2077,7 +2077,7 @@ export default function ParentSettings() {
             {/* Header */}
             <div className="flex justify-between items-center p-5 sm:p-6 border-b border-slate-200/80 bg-white">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779]">
+                <div className="w-9 h-9 rounded-full bg-[#e0e0ff]/60 border border-[#141779]/20 flex items-center justify-center text-[#141779]">
                   <Bell size={18} />
                 </div>
                 <h2 className="text-xl font-black text-[#141779]">
@@ -2097,7 +2097,7 @@ export default function ParentSettings() {
             <div className="flex-1 overflow-y-auto p-4 space-y-3.5">
               {notifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center py-16 px-4">
-                  <div className="w-16 h-16 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779] mb-3 shadow-xs">
+                  <div className="w-16 h-16 rounded-full bg-[#e0e0ff]/60 border border-[#141779]/20 flex items-center justify-center text-[#141779] mb-3 shadow-xs">
                     <Bell size={28} className="opacity-70" />
                   </div>
                   <p className="text-base font-bold text-[#141779]">
@@ -2110,29 +2110,29 @@ export default function ParentSettings() {
               ) : (
                 notifications.map((notif, idx) => {
                   let iconBadge = <Bell size={18} />;
-                  let badgeStyle = "bg-indigo-50 text-[#141779] border-indigo-100";
+                  let badgeStyle = "bg-[#e0e0ff]/60 text-[#141779] border-[#141779]/20";
 
                   if (notif.type === "gamification") {
                     iconBadge = <Sparkles size={18} />;
-                    badgeStyle = "bg-teal-50 text-teal-700 border-teal-200";
+                    badgeStyle = "bg-[#57fae9]/20 text-[#006a62] border-[#57fae9]/40";
                   } else if (notif.type === "habit") {
                     iconBadge = <Flame size={18} />;
-                    badgeStyle = "bg-amber-50 text-amber-700 border-amber-200";
+                    badgeStyle = "bg-[#faedd8] text-[#b07b00] border-[#faedd8]";
                   } else if (notif.type === "learning") {
                     iconBadge = <BookOpen size={18} />;
-                    badgeStyle = "bg-indigo-50 text-[#141779] border-indigo-200";
+                    badgeStyle = "bg-[#e0e0ff]/60 text-[#141779] border-[#141779]/20";
                   } else if (notif.type === "reward" || notif.type === "spin") {
                     iconBadge = <Trophy size={18} />;
-                    badgeStyle = "bg-purple-50 text-purple-700 border-purple-200";
+                    badgeStyle = "bg-[#30007f]/10 text-[#30007f] border-[#30007f]/20";
                   } else if (notif.type === "warning" || notif.type === "risk") {
                     iconBadge = <AlertTriangle size={18} />;
-                    badgeStyle = "bg-rose-50 text-rose-700 border-rose-200";
+                    badgeStyle = "bg-[#ffdad6] text-[#ba1a1a] border-[#ba1a1a]/20";
                   }
 
                   return (
                     <div
                       key={notif._id || idx}
-                      className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-[0_2px_8px_rgba(20,23,121,0.04)] hover:shadow-md hover:border-indigo-200/80 transition-all flex items-start gap-3.5 text-left"
+                      className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-[0_2px_8px_rgba(20,23,121,0.04)] hover:shadow-md hover:border-[#141779]/30 transition-all flex items-start gap-3.5 text-left"
                     >
                       <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs mt-0.5 ${badgeStyle}`}>
                         {iconBadge}

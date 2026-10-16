@@ -43,7 +43,7 @@ export default function JourneyMapScreen() {
     { name: "Cloud City", emoji: "☁️", fallbackXp: 15000, reward: "Sky Dragon", rewardColor: "text-sky-500" },
     { name: "Crystal Caves", emoji: "💎", fallbackXp: 20000, reward: "Crystal Dragon", rewardColor: "text-teal-400" },
     { name: "Underworld", emoji: "🌋", fallbackXp: 30000, reward: "Shadow Dragon", rewardColor: "text-red-600" },
-    { name: "Galactic Core", emoji: "🌌", fallbackXp: 50000, reward: "Cosmic Dragon", rewardColor: "text-indigo-500" },
+    { name: "Galactic Core", emoji: "🌌", fallbackXp: 50000, reward: "Cosmic Dragon", rewardColor: "text-[#141779]" },
     { name: "Stone Age Hunter", emoji: "🏹", fallbackXp: 65000, reward: "Hunter Dragon", rewardColor: "text-amber-700" },
     { name: "Bronze Craftsman", emoji: "🔨", fallbackXp: 80000, reward: "Bronze Dragon", rewardColor: "text-amber-600" },
     { name: "Civilization Leader", emoji: "👑", fallbackXp: 100000, reward: "Apex Dragon", rewardColor: "text-yellow-500" },
@@ -155,7 +155,7 @@ export default function JourneyMapScreen() {
           <header className="shrink-0 w-full z-50 flex items-center justify-between px-3 py-2.5 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-xs">
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <div className="w-8 h-8 rounded-full bg-slate-200 shrink-0" />
-              <div className="w-8 h-8 rounded-full bg-indigo-200 shrink-0" />
+              <div className="w-8 h-8 rounded-full bg-[#e0e0ff] shrink-0" />
               <div className="flex flex-col gap-1 min-w-0 flex-1">
                 <div className="w-20 h-3 rounded-md bg-slate-200" />
                 <div className="w-14 h-2 rounded-md bg-slate-200" />
@@ -163,7 +163,7 @@ export default function JourneyMapScreen() {
             </div>
             <div className="flex items-center gap-1 shrink-0">
               <div className="w-14 h-6 rounded-full bg-teal-100/70" />
-              <div className="w-14 h-6 rounded-full bg-indigo-100/70" />
+              <div className="w-14 h-6 rounded-full bg-[#e0e0ff]/70" />
               <div className="w-12 h-6 rounded-full bg-amber-100/70" />
             </div>
           </header>
@@ -171,7 +171,7 @@ export default function JourneyMapScreen() {
           {/* Map Body Skeleton */}
           <main className="flex-1 w-full p-4 overflow-hidden relative flex flex-col items-center pt-8">
             {/* Vertical dashed line skeleton */}
-            <div className="absolute top-12 bottom-20 w-1 bg-indigo-200/50 rounded-full" />
+            <div className="absolute top-12 bottom-20 w-1 bg-[#c7c5d4]/50 rounded-full" />
 
             {/* Node Cards Skeleton */}
             <div className="w-full flex flex-col gap-8 relative z-10">
@@ -191,9 +191,9 @@ export default function JourneyMapScreen() {
               {/* Card 2 (Right aligned) */}
               <div className="flex justify-end w-full">
                 <div className="w-[78%] bg-white/90 border border-slate-200 rounded-3xl p-4 shadow-sm flex gap-3 items-start">
-                  <div className="w-11 h-11 rounded-2xl bg-indigo-200/80 shrink-0" />
+                  <div className="w-11 h-11 rounded-2xl bg-[#e0e0ff]/80 shrink-0" />
                   <div className="flex-1 flex flex-col gap-2">
-                    <div className="w-16 h-3 rounded bg-indigo-200/60" />
+                    <div className="w-16 h-3 rounded bg-[#e0e0ff]/60" />
                     <div className="w-32 h-4 rounded bg-slate-200" />
                     <div className="w-full h-2 rounded-full bg-slate-200 mt-1" />
                     <div className="w-20 h-5 rounded-full bg-slate-100" />
@@ -216,7 +216,7 @@ export default function JourneyMapScreen() {
             </div>
 
             {/* Floating Action Button Skeleton */}
-            <div className="absolute bottom-6 right-6 w-14 h-14 rounded-full bg-indigo-400/80 shadow-lg" />
+            <div className="absolute bottom-6 right-6 w-14 h-14 rounded-full bg-[#141779]/80 shadow-lg" />
           </main>
         </div>
       </div>
@@ -345,7 +345,7 @@ export default function JourneyMapScreen() {
             {/* User Profile Photo / Avatar */}
             <button
               onClick={() => navigate("/profile")}
-              className="w-8 h-8 rounded-full border-2 border-indigo-100 overflow-hidden hover:opacity-90 active:scale-95 transition-all shrink-0 bg-[#141779] shadow-xs flex items-center justify-center cursor-pointer"
+              className="w-8 h-8 rounded-full border-2 border-[#e0e0ff] overflow-hidden hover:opacity-90 active:scale-95 transition-all shrink-0 bg-[#141779] shadow-xs flex items-center justify-center cursor-pointer"
               aria-label="View Profile"
             >
               {childPhoto ? (
@@ -381,20 +381,20 @@ export default function JourneyMapScreen() {
             </div>
 
             {/* XP Badge */}
-            <div className="flex items-center gap-1 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full text-[10px] font-black text-[#141779] shadow-2xs shrink-0">
+            <div className="flex items-center gap-1 bg-[#e0e0ff]/60 border border-[#141779]/20 px-2 py-0.5 rounded-full text-[10px] font-black text-[#141779] shadow-2xs shrink-0">
               <span className="text-[11px] leading-none">⭐</span>
               <span>{xp} XP</span>
             </div>
 
             {/* Coins Badge */}
-            <div className="flex items-center gap-1 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-full text-[10px] font-black text-[#b45309] shadow-2xs shrink-0">
+            <div className="flex items-center gap-1 bg-amber-50 border border-[#c7c5d4] px-2 py-0.5 rounded-full text-[10px] font-black text-[#b45309] shadow-2xs shrink-0">
               <span className="text-[11px] leading-none">🪙</span>
               <span>{coins}</span>
             </div>
 
             {/* Streak Badge (if streak > 0) */}
             {streak > 0 && (
-              <div className="flex items-center gap-1 bg-orange-50 border border-orange-200/80 px-1.5 py-0.5 rounded-full text-[10px] font-black text-[#ea580c] shadow-2xs shrink-0">
+              <div className="flex items-center gap-1 bg-orange-50 border border-[#c7c5d4] px-1.5 py-0.5 rounded-full text-[10px] font-black text-[#ea580c] shadow-2xs shrink-0">
                 <span className="text-[11px] leading-none">🔥</span>
                 <span>{streak}</span>
               </div>
@@ -404,7 +404,7 @@ export default function JourneyMapScreen() {
 
         {/* Evolving Character Alert Banner */}
         {journeyData?.isEvolved && (
-          <div className="shrink-0 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white px-4 py-2 text-center text-xs font-black uppercase tracking-wider shadow-md animate-pulse border-b border-indigo-300/40">
+          <div className="shrink-0 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white px-4 py-2 text-center text-xs font-black uppercase tracking-wider shadow-md animate-pulse border-b border-[#c7c5d4]/40">
             ✨ DRAGON EVOLVED INTO SCIENTIST! 🔬
           </div>
         )}

@@ -550,8 +550,8 @@ export default function DailyRewardsScreen() {
 
           {/* The Needle indicator */}
           <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center">
-            <div className="w-1.5 h-10 bg-[#ff9f43] rounded-full shadow-[0_0_10px_#ff9f43]" />
-            <div className="w-4 h-4 bg-[#ff9f43] rotate-45 -mt-2 shadow-[0_0_10px_#ff9f43]" />
+            <div className="w-1.5 h-10 bg-[#57fae9] rounded-full shadow-[0_0_10px_#57fae9]" />
+            <div className="w-4 h-4 bg-[#57fae9] rotate-45 -mt-2 shadow-[0_0_10px_#57fae9]" />
           </div>
 
           {/* The Wheel */}

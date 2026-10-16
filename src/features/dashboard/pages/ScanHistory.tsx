@@ -60,13 +60,13 @@ export default function ScanHistory() {
   };
 
   return (
-    <div className="min-h-screen bg-[#fbfaee] font-sans pb-10">
+    <div className="min-h-screen bg-[#f7f9fb] font-sans pb-10">
       {/* Header */}
-      <header className="flex items-center justify-between px-5 py-4 bg-[#fffde7] border-b border-[rgba(0,0,0,0.06)] sticky top-0 z-40">
+      <header className="flex items-center justify-between px-5 py-4 bg-white border-b border-[rgba(0,0,0,0.06)] sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity flex items-center gap-1.5">
-            <ArrowLeft size={20} color="#735c00" />
-            <span className="text-[#735c00] font-semibold">Back</span>
+            <ArrowLeft size={20} color="#141779" />
+            <span className="text-[#141779] font-semibold">Back</span>
           </button>
         </div>
         <h1 className="text-xl font-extrabold text-[#1b1c15] absolute left-1/2 -translate-x-1/2">
@@ -108,7 +108,7 @@ export default function ScanHistory() {
                     className="flex items-center cursor-pointer"
                     onClick={() => setExpandedId(isExpanded ? null : item.id)}
                   >
-                    <div className="w-12 h-12 rounded-[14px] bg-[#fffde7] flex items-center justify-center shrink-0 mr-3.5">
+                    <div className="w-12 h-12 rounded-[14px] bg-[#e0e0ff]/40 flex items-center justify-center shrink-0 mr-3.5">
                       <span className="text-2xl">{item.emoji || '📸'}</span>
                     </div>
                     <div className="flex flex-col flex-1">
@@ -129,13 +129,13 @@ export default function ScanHistory() {
                   {isExpanded && item.facts && (
                     <div className="mt-3.5 bg-[#f8f9fa] rounded-xl p-3.5">
                       <div className="flex items-center gap-1.5 mb-2.5">
-                        <BookOpen size={16} color="#735c00" />
-                        <span className="text-[13px] font-bold text-[#735c00]">Saved Facts:</span>
+                        <BookOpen size={16} color="#141779" />
+                        <span className="text-[13px] font-bold text-[#141779]">Saved Facts:</span>
                       </div>
                       <div className="flex flex-col gap-2">
                         {item.facts.map((fact, idx) => (
                           <div key={idx} className="flex items-start gap-2 pr-2">
-                            <span className="text-sm font-bold text-[#735c00] mt-0.5">•</span>
+                            <span className="text-sm font-bold text-[#141779] mt-0.5">•</span>
                             <span className="text-[13px] text-[#374151] leading-5 flex-1">{fact}</span>
                           </div>
                         ))}
@@ -154,7 +154,7 @@ export default function ScanHistory() {
               </p>
               <button
                 onClick={() => navigate("/scan-and-learn")}
-                className="bg-[#735c00] py-3.5 px-7 rounded-[20px] hover:bg-[#8a6e00] transition-colors"
+                className="bg-[#141779] py-3.5 px-7 rounded-[20px] hover:bg-[#2d328f] transition-colors"
               >
                 <span className="text-white text-[15px] font-bold">📸 Start Scanning</span>
               </button>

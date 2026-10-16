@@ -321,19 +321,19 @@ export default function ParentLearningDNAScreen() {
                 <path d="M50 20 C65 20, 75 30, 75 45 C75 55, 70 65, 60 70 C58 71, 56 73, 56 75 C56 78, 54 80, 50 80" stroke="url(#brainGradientRight)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" className="animate-pulse" />
                 <circle cx="40" cy="35" r="4.5" fill="#ab47bc" />
                 <circle cx="60" cy="35" r="4.5" fill="#ab47bc" />
-                <circle cx="34" cy="48" r="5" fill="#3cd6c4" />
-                <circle cx="66" cy="48" r="5" fill="#3cd6c4" />
+                <circle cx="34" cy="48" r="5" fill="#2addcd" />
+                <circle cx="66" cy="48" r="5" fill="#2addcd" />
                 <circle cx="44" cy="62" r="4" fill="#ffb300" />
                 <circle cx="56" cy="62" r="4" fill="#ffb300" />
                 <line x1="40" y1="35" x2="34" y2="48" stroke="#7b1fa2" strokeWidth="1.5" opacity="0.4" />
                 <line x1="60" y1="35" x2="66" y2="48" stroke="#7b1fa2" strokeWidth="1.5" opacity="0.4" />
-                <line x1="34" y1="48" x2="44" y2="62" stroke="#3cd6c4" strokeWidth="1.5" opacity="0.4" />
-                <line x1="66" y1="48" x2="56" y2="62" stroke="#3cd6c4" strokeWidth="1.5" opacity="0.4" />
+                <line x1="34" y1="48" x2="44" y2="62" stroke="#2addcd" strokeWidth="1.5" opacity="0.4" />
+                <line x1="66" y1="48" x2="56" y2="62" stroke="#2addcd" strokeWidth="1.5" opacity="0.4" />
                 <line x1="50" y1="20" x2="50" y2="80" stroke="#7b1fa2" strokeWidth="2" strokeDasharray="3 3" opacity="0.2" />
                 <defs>
                   <linearGradient id="brainGradientLeft" x1="25" y1="20" x2="50" y2="80" gradientUnits="userSpaceOnUse">
                     <stop offset="0%" stopColor="#ab47bc" />
-                    <stop offset="100%" stopColor="#3cd6c4" />
+                    <stop offset="100%" stopColor="#2addcd" />
                   </linearGradient>
                   <linearGradient id="brainGradientRight" x1="75" y1="20" x2="50" y2="80" gradientUnits="userSpaceOnUse">
                     <stop offset="0%" stopColor="#ab47bc" />
@@ -361,13 +361,13 @@ export default function ParentLearningDNAScreen() {
               <div className="flex flex-col gap-1">
                 <div className="flex justify-between items-center text-[14px]">
                   <span className="font-extrabold text-[#1e1e24] flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#8b35c5]"></span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#30007f]"></span>
                     {t("visual_modality", "Visual modality")}
                   </span>
-                  <span className="font-extrabold text-[#8b35c5]">{visualPct}%</span>
+                  <span className="font-extrabold text-[#30007f]">{visualPct}%</span>
                 </div>
                 <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-[#8b35c5] to-[#a85ee3] rounded-full transition-all duration-500" style={{ width: `${visualPct}%` }}></div>
+                  <div className="h-full bg-gradient-to-r from-[#30007f] to-[#471ba5] rounded-full transition-all duration-500" style={{ width: `${visualPct}%` }}></div>
                 </div>
               </div>
 
@@ -375,13 +375,13 @@ export default function ParentLearningDNAScreen() {
               <div className="flex flex-col gap-1">
                 <div className="flex justify-between items-center text-[14px]">
                   <span className="font-extrabold text-[#1e1e24] flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#008272]"></span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#006a62]"></span>
                     {t("handson_modality", "Hands-on modality")}
                   </span>
-                  <span className="font-extrabold text-[#008272]">{kinestheticPct}%</span>
+                  <span className="font-extrabold text-[#006a62]">{kinestheticPct}%</span>
                 </div>
                 <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-[#008272] to-[#3cd6c4] rounded-full transition-all duration-500" style={{ width: `${kinestheticPct}%` }}></div>
+                  <div className="h-full bg-gradient-to-r from-[#006a62] to-[#2addcd] rounded-full transition-all duration-500" style={{ width: `${kinestheticPct}%` }}></div>
                 </div>
               </div>
 
@@ -418,11 +418,11 @@ export default function ParentLearningDNAScreen() {
 
               {/* Confidence Card */}
               <div className="bg-gradient-to-b from-white to-[#f9fafe] border border-gray-100 rounded-[22px] p-4 text-center shadow-[0_4px_16px_rgba(0,0,0,0.01)] flex flex-col items-center">
-                <div className="w-10 h-10 rounded-full bg-[#dcf5f2] flex items-center justify-center text-[#008272] mb-2 shrink-0">
+                <div className="w-10 h-10 rounded-full bg-[#57fae9]/20 flex items-center justify-center text-[#006a62] mb-2 shrink-0">
                   <Activity size={18} />
                 </div>
                 <span className="text-[11px] font-extrabold text-[#7c7d8a] mb-1">{t("confidence", "Confidence")}</span>
-                <span className="text-lg font-black text-[#008272]">{confidenceVal}%</span>
+                <span className="text-lg font-black text-[#006a62]">{confidenceVal}%</span>
               </div>
 
               {/* Consistency Card */}
@@ -457,9 +457,9 @@ export default function ParentLearningDNAScreen() {
                 <span className="text-sm font-extrabold text-[#1e1e24]">{t("resilience", "Resilience")}</span>
                 <div className="flex items-center gap-2">
                   <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-[#8b35c5] rounded-full" style={{ width: `${resilienceVal}%` }} />
+                    <div className="h-full bg-[#30007f] rounded-full" style={{ width: `${resilienceVal}%` }} />
                   </div>
-                  <span className="text-xs font-black text-[#8b35c5] w-8 text-right">{resilienceVal}%</span>
+                  <span className="text-xs font-black text-[#30007f] w-8 text-right">{resilienceVal}%</span>
                 </div>
               </div>
 
@@ -575,10 +575,10 @@ export default function ParentLearningDNAScreen() {
                   {/* Curious Mind */}
                   <div className={`border rounded-[22px] p-4 text-center flex flex-col items-center gap-1.5 transition-all ${
                     curiosityVal >= 65 && (dnaData?.totalAttempts ?? 0) >= 5
-                      ? "bg-[#dcf5f2] border-[#008272]/20 opacity-100" 
+                      ? "bg-[#57fae9]/20 border-[#006a62]/20 opacity-100" 
                       : "bg-gray-50/50 border-dashed border-gray-200 opacity-50"
                   }`}>
-                    <Compass size={20} className={curiosityVal >= 65 && (dnaData?.totalAttempts ?? 0) >= 5 ? "text-[#008272]" : "text-gray-400"} />
+                    <Compass size={20} className={curiosityVal >= 65 && (dnaData?.totalAttempts ?? 0) >= 5 ? "text-[#006a62]" : "text-gray-400"} />
                     <h4 className="text-[13px] font-extrabold text-[#191c1e]">{t("badge_curious_mind", "Curious Mind")}</h4>
                     <span className="text-[9px] font-bold text-[#7c7d8a]">{curiosityVal >= 65 && (dnaData?.totalAttempts ?? 0) >= 5 ? t("unlocked", "Unlocked") : t("locked", "Locked")}</span>
                   </div>

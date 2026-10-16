@@ -679,7 +679,7 @@ export default function HomeScreen() {
             className="bg-[#e6fbf7] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#b2f5ea]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group"
           >
             <div className="w-9 h-9 rounded-full bg-[#ccfbf1] flex items-center justify-center">
-              <BookOpen size={18} className="text-[#0d9488]" />
+              <BookOpen size={18} className="text-[#006a62]" />
             </div>
             <div className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
               <ChevronRight size={14} />
@@ -688,14 +688,14 @@ export default function HomeScreen() {
               <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('journey', 'Journey')}</h3>
               <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-2 truncate">{t('explorer_map', 'Explorer Map & Stages')}</p>
               <div className="space-y-1">
-                <div className="text-[9.5px] font-extrabold text-[#0d9488] truncate flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#0d9488] shrink-0" />
+                <div className="text-[9.5px] font-extrabold text-[#006a62] truncate flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#006a62] shrink-0" />
                   <span className="truncate">
                     {t('adventure_quest_map', 'Adventure Quest Map')}
                   </span>
                 </div>
-                <div className="w-full h-1.5 bg-[#ccfbf1] rounded-full overflow-hidden">
-                  <div className="h-full bg-[#0d9488] rounded-full transition-all duration-500" style={{ width: '60%' }} />
+                <div className="w-full h-1.5 bg-[#57fae9]/30 rounded-full overflow-hidden">
+                  <div className="h-full bg-[#006a62] rounded-full transition-all duration-500" style={{ width: '60%' }} />
                 </div>
               </div>
             </div>
@@ -764,7 +764,7 @@ export default function HomeScreen() {
             className="bg-[#e8fdf5] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#b7f4d8]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group"
           >
             <div className="w-9 h-9 rounded-full bg-[#d1fae5] flex items-center justify-center">
-              <Swords size={18} className="text-[#059669]" />
+              <Swords size={18} className="text-[#006a62]" />
             </div>
             <div className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
               <ChevronRight size={14} />
@@ -773,12 +773,12 @@ export default function HomeScreen() {
               <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('shadow_arena', 'Shadow Arena')}</h3>
               <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-2 truncate">{t('challenge_friends_short', 'Challenge friends in real...')}</p>
               <div className="space-y-1">
-                <div className="text-[9.5px] font-extrabold text-[#059669] truncate flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] shrink-0" />
+                <div className="text-[9.5px] font-extrabold text-[#006a62] truncate flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#006a62] shrink-0" />
                   <span className="truncate">{t('1v1_battle_arena', '1v1 Battle Arena')}</span>
                 </div>
-                <div className="w-full h-1.5 bg-[#d1fae5] rounded-full overflow-hidden">
-                  <div className="h-full bg-[#10b981] rounded-full transition-all duration-500" style={{ width: '70%' }} />
+                <div className="w-full h-1.5 bg-[#57fae9]/30 rounded-full overflow-hidden">
+                  <div className="h-full bg-[#57fae9] rounded-full transition-all duration-500" style={{ width: '70%' }} />
                 </div>
               </div>
             </div>

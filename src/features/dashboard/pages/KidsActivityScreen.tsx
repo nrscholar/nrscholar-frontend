@@ -123,10 +123,10 @@ export default function KidsActivityScreen() {
   const getIconData = (type: string) => {
     switch (type) {
       case "quiz": return { icon: <CheckCircle2 className="text-[#006a62]" size={20} />, bgColor: "bg-teal-100" };
-      case "scan": return { icon: <Search className="text-[#141779]" size={20} />, bgColor: "bg-indigo-100" };
+      case "scan": return { icon: <Search className="text-[#141779]" size={20} />, bgColor: "bg-[#e0e0ff]" };
       case "milestone": return { icon: <Star className="text-amber-600" size={20} />, bgColor: "bg-amber-100" };
       case "struggle": return { icon: <ShieldAlert className="text-red-600" size={20} />, bgColor: "bg-red-100" };
-      case "chapter": return { icon: <FileText className="text-[#30007f]" size={20} />, bgColor: "bg-indigo-100" };
+      case "chapter": return { icon: <FileText className="text-[#30007f]" size={20} />, bgColor: "bg-[#e0e0ff]" };
       case "reading": return { icon: <BookOpen className="text-[#006a62]" size={20} />, bgColor: "bg-teal-100" };
       default: return { icon: <Activity className="text-slate-500" size={20} />, bgColor: "bg-slate-100" };
     }
@@ -179,7 +179,7 @@ export default function KidsActivityScreen() {
                   className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 font-bold text-sm shrink-0 transition-all ${
                     isActive
                       ? "border-[#141779] bg-[#141779] text-white shadow-md"
-                      : "border-slate-200 bg-white text-[#141779] hover:border-[#141779] hover:bg-indigo-50"
+                      : "border-slate-200 bg-white text-[#141779] hover:border-[#141779] hover:bg-[#e0e0ff]/50"
                   }`}
                 >
                   <span className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-black overflow-hidden shrink-0">
@@ -246,7 +246,7 @@ export default function KidsActivityScreen() {
                 )}
               </div>
             </div>
-              <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779] shadow-xs">
+              <div className="w-14 h-14 rounded-2xl bg-[#e0e0ff]/60 border border-[#141779]/20 flex items-center justify-center text-[#141779] shadow-xs">
                 <Clock size={28} />
               </div>
             </div>
@@ -315,7 +315,7 @@ export default function KidsActivityScreen() {
                     </div>
                     <div className="flex items-center gap-3">
                       {group.totalTime > 0 && (
-                        <div className="flex items-center gap-1.5 px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-full text-[#141779]">
+                        <div className="flex items-center gap-1.5 px-3 py-1 bg-[#e0e0ff]/60 border border-[#141779]/20 rounded-full text-[#141779]">
                           <Clock size={14} />
                           <span className="text-xs font-black">{formatTime(group.totalTime)}</span>
                         </div>
@@ -380,7 +380,7 @@ export default function KidsActivityScreen() {
                                   )}
                                   
                                   {activity.timeTaken !== undefined && (
-                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-[#141779]">
+                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#e0e0ff]/60 border border-[#141779]/20 text-[#141779]">
                                       <Clock size={12} />
                                       <span className="text-xs font-black tracking-wide">
                                         {formatTime(activity.timeTaken)}

@@ -490,10 +490,10 @@ export default function ChaptersScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#17157F] font-sans pb-44 relative selection:bg-[#5B5CFF] selection:text-white overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#141779] font-sans pb-44 relative selection:bg-[#141779] selection:text-white overflow-x-hidden">
       {/* Background World Glow Accents */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[35%] rounded-full bg-[#5B5CFF]/10 blur-[90px]" />
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[35%] rounded-full bg-[#141779]/10 blur-[90px]" />
         <div className="absolute top-[40%] right-[-10%] w-[50%] h-[40%] rounded-full bg-[#FFC83D]/15 blur-[90px]" />
       </div>
 
@@ -547,7 +547,7 @@ export default function ChaptersScreen() {
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={() => setShowStreakModal(true)}
-              className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1.5 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 touch-manipulation transition-transform shadow-2xs cursor-pointer"
+              className="bg-[#fff7ed] border border-[#c7c5d4] rounded-2xl px-2 py-1.5 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 touch-manipulation transition-transform shadow-2xs cursor-pointer"
             >
               <span className="text-[11px] font-black text-[#ea580c] leading-none">🔥 {streakDays || 0}</span>
             </button>
@@ -556,7 +556,7 @@ export default function ChaptersScreen() {
                 startNavigationProgress();
                 navigate("/practice/inventory");
               }}
-              className="bg-[#fffbeb] border border-amber-100/80 rounded-2xl px-2 py-1.5 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-90 touch-manipulation transition-transform shadow-2xs cursor-pointer"
+              className="bg-[#fffbeb] border border-[#c7c5d4] rounded-2xl px-2 py-1.5 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-90 touch-manipulation transition-transform shadow-2xs cursor-pointer"
             >
               <span className="text-[11px] font-black text-[#b45309] leading-none">🪙 {coins || 0}</span>
             </button>
@@ -567,7 +567,7 @@ export default function ChaptersScreen() {
               }}
               className="w-9 h-9 rounded-2xl bg-slate-50 shadow-2xs flex items-center justify-center hover:bg-slate-100 active:scale-90 touch-manipulation transition-all shrink-0 border border-slate-100 relative cursor-pointer"
             >
-              <Bell size={16} className="text-[#1c1970]" />
+              <Bell size={16} className="text-[#141779]" />
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border border-white pointer-events-none z-10">
                   {unreadCount > 9 ? '9+' : unreadCount}
@@ -593,8 +593,8 @@ export default function ChaptersScreen() {
                     onClick={() => handleSelectSubject(sub)}
                     className={`px-4 py-1.5 rounded-full font-black text-xs whitespace-nowrap transition-all uppercase tracking-wider flex items-center gap-1.5 shrink-0 ${
                       isActive 
-                        ? 'bg-gradient-to-r from-[#5B5CFF] to-[#17157F] text-white shadow-md border border-[#5B5CFF]' 
-                        : 'bg-white text-[#767683] border border-[#E0E3E5] hover:border-[#5B5CFF]/60'
+                        ? 'bg-gradient-to-r from-[#141779] to-[#2d328f] text-white shadow-md border border-[#141779]' 
+                        : 'bg-white text-[#767683] border border-[#E0E3E5] hover:border-[#141779]/60'
                     }`}
                   >
                     <Globe size={13} className={isActive ? "text-[#FFC83D]" : "text-[#767683]"} />
@@ -604,9 +604,9 @@ export default function ChaptersScreen() {
               })
           ) : (
             <>
-              <div className="h-7 w-24 rounded-full animate-skeleton shrink-0 border border-[#5B5CFF]/20" />
-              <div className="h-7 w-28 rounded-full animate-skeleton shrink-0 border border-[#5B5CFF]/20" />
-              <div className="h-7 w-24 rounded-full animate-skeleton shrink-0 border border-[#5B5CFF]/20" />
+              <div className="h-7 w-24 rounded-full animate-skeleton shrink-0 border border-[#141779]/20" />
+              <div className="h-7 w-28 rounded-full animate-skeleton shrink-0 border border-[#141779]/20" />
+              <div className="h-7 w-24 rounded-full animate-skeleton shrink-0 border border-[#141779]/20" />
             </>
           )}
         </div>
@@ -617,7 +617,7 @@ export default function ChaptersScreen() {
         {loading ? (
           <div className="flex flex-col gap-5 animate-in fade-in duration-300">
             {/* MISSION PROGRESS HERO CARD SKELETON */}
-            <div className="bg-[#EEF1FF]/90 border-2 border-[#5B5CFF]/30 rounded-2xl p-4 shadow-md backdrop-blur-sm space-y-3 relative overflow-hidden">
+            <div className="bg-[#EEF1FF]/90 border-2 border-[#141779]/30 rounded-2xl p-4 shadow-md backdrop-blur-sm space-y-3 relative overflow-hidden">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
                   <div className="w-5 h-5 rounded-full animate-skeleton shrink-0" />
@@ -636,14 +636,14 @@ export default function ChaptersScreen() {
             {/* CHAPTER TIMELINE SKELETON (4 Cards matching 1:1 layout) */}
             <div className="relative flex flex-col gap-4">
               {/* Timeline Axis Background Line */}
-              <div className="absolute left-[28px] top-6 bottom-6 w-1 -translate-x-1/2 bg-[#5B5CFF]/20 rounded-full" />
+              <div className="absolute left-[28px] top-6 bottom-6 w-1 -translate-x-1/2 bg-[#141779]/20 rounded-full" />
 
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="flex items-start gap-3 w-full">
                   <div className="w-14 shrink-0 flex items-center justify-center pt-1">
                     <div className="w-11 h-11 rounded-full animate-skeleton border-4 border-white shadow-md shrink-0" />
                   </div>
-                  <div className="flex-1 bg-[#EEF1FF]/80 border-2 border-[#5B5CFF]/20 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+                  <div className="flex-1 bg-[#EEF1FF]/80 border-2 border-[#141779]/20 rounded-2xl p-4 shadow-sm flex items-center justify-between">
                     <div className="space-y-2.5 flex-1 pr-2">
                       <div className="h-3.5 w-24 rounded-full animate-skeleton" />
                       <div className="h-5 w-3/4 rounded-md animate-skeleton" />
@@ -661,7 +661,7 @@ export default function ChaptersScreen() {
             <section className="bg-white border-2 border-[#E0E3E5] rounded-2xl p-4 shadow-sm relative overflow-hidden">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-black uppercase tracking-wider text-[#17157F]">
+                  <span className="text-xs font-black uppercase tracking-wider text-[#141779]">
                     {t('your_journey', '🚀 YOUR JOURNEY')}
                   </span>
                 </div>
@@ -671,7 +671,7 @@ export default function ChaptersScreen() {
               </div>
 
               <div className="mb-2.5">
-                <h2 className="text-base font-black text-[#17157F] leading-tight">
+                <h2 className="text-base font-black text-[#141779] leading-tight">
                   {activeCurrentChapter ? getChapterTitle(activeCurrentChapter, currentChapterIndex >= 0 ? currentChapterIndex : 0) : t('journey_completed', 'Journey Completed!')}
                 </h2>
               </div>
@@ -683,15 +683,15 @@ export default function ChaptersScreen() {
                     initial={{ width: 0 }}
                     animate={{ width: `${progressPercent}%` }}
                     transition={{ duration: 1, ease: "easeOut" }}
-                    className="h-full bg-gradient-to-r from-[#5B5CFF] via-[#35E5D4] to-[#45D483] rounded-full shadow-sm"
+                    className="h-full bg-gradient-to-r from-[#141779] via-[#006a62] to-[#57fae9] rounded-full shadow-sm"
                   />
                 </div>
-                <span className="text-xs font-black text-[#17157F] shrink-0">
+                <span className="text-xs font-black text-[#141779] shrink-0">
                   {progressPercent}%
                 </span>
               </div>
 
-              <p className="text-[10px] font-bold text-[#5B5CFF] mt-2 italic">
+              <p className="text-[10px] font-bold text-[#141779] mt-2 italic">
                 {completedMissionsCount === totalMissions && totalMissions > 0
                   ? t('mastered_learning_world', '🎉 You mastered this entire learning world!')
                   : t('next_mission_waiting', 'Keep going! Your next mission is waiting.')}
@@ -701,12 +701,12 @@ export default function ChaptersScreen() {
             {/* VERTICAL LEARNING ADVENTURE MAP WITH FIXED TIMELINE AXIS */}
             <section className="relative py-2 flex flex-col gap-5">
               {/* Continuous Vertical Timeline Axis Line (Centered on 28px inside 56px Timeline Column) */}
-              <div className="absolute left-[28px] top-6 bottom-14 w-1 -translate-x-1/2 bg-gradient-to-b from-[#45D483] via-[#5B5CFF] to-[#B9BBC8]/40 -z-10 rounded-full" />
+              <div className="absolute left-[28px] top-6 bottom-14 w-1 -translate-x-1/2 bg-gradient-to-b from-[#006a62] via-[#141779] to-[#c7c5d4]/40 -z-10 rounded-full" />
 
               {chapters.length === 0 ? (
                 <div className="flex flex-col items-center justify-center bg-white rounded-2xl p-8 border-2 border-[#E0E3E5] border-dashed text-center my-4">
-                  <Rocket size={40} className="text-[#5B5CFF] mb-2" />
-                  <p className="text-sm font-bold text-[#17157F]">{t('new_missions_soon', 'New Missions Launching Soon!')}</p>
+                  <Rocket size={40} className="text-[#141779] mb-2" />
+                  <p className="text-sm font-bold text-[#141779]">{t('new_missions_soon', 'New Missions Launching Soon!')}</p>
                   <p className="text-xs text-[#767683] mt-1">{t('check_back_shortly', { subject: activeSubject?.name, defaultValue: `Check back shortly for new adventures in ${activeSubject?.name}.` })}</p>
                 </div>
               ) : (
@@ -732,7 +732,7 @@ export default function ChaptersScreen() {
                             e.stopPropagation(); 
                             navigate(`/chapter-reader?chapterId=${chap._id}&title=${encodeURIComponent(displayTitle)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}`); 
                           }} 
-                          className="bg-[#EEF1FF] border border-[#5B5CFF]/30 text-[#17157F] px-3.5 py-2 rounded-xl font-bold text-xs hover:bg-[#5B5CFF] hover:text-white transition-all flex items-center justify-between"
+                          className="bg-[#EEF1FF] border border-[#141779]/30 text-[#141779] px-3.5 py-2 rounded-xl font-bold text-xs hover:bg-[#141779] hover:text-white transition-all flex items-center justify-between"
                         >
                           <span>{t('read_chapter_pdf', '📖 Read Chapter PDF')}</span>
                           <ChevronRight size={16} />
@@ -743,7 +743,7 @@ export default function ChaptersScreen() {
                             e.stopPropagation(); 
                             navigate(`/mission-roadmap?chapterId=${chap._id}&title=${encodeURIComponent(displayTitle)}&subjectName=${encodeURIComponent(activeSubject?.name || "")}`); 
                           }} 
-                          className="bg-[#EEF1FF] border border-[#5B5CFF]/30 text-[#17157F] px-3.5 py-2 rounded-xl font-bold text-xs hover:bg-[#5B5CFF] hover:text-white transition-all flex items-center justify-between"
+                          className="bg-[#EEF1FF] border border-[#141779]/30 text-[#141779] px-3.5 py-2 rounded-xl font-bold text-xs hover:bg-[#141779] hover:text-white transition-all flex items-center justify-between"
                         >
                           <span>{t('practice_mission_questions', '⚡ Practice Mission Questions')}</span>
                           <ChevronRight size={16} />
@@ -763,7 +763,7 @@ export default function ChaptersScreen() {
                         )}
                         {status === "current" && (
                           <div className="w-11 h-11 rounded-full bg-white relative flex items-center justify-center shrink-0">
-                            <div className="w-full h-full rounded-full bg-[#5B5CFF] border-4 border-white text-white flex items-center justify-center shadow-[0_0_16px_rgba(91,92,255,0.6)] animate-pulse">
+                            <div className="w-full h-full rounded-full bg-[#141779] border-4 border-white text-white flex items-center justify-center shadow-[0_0_16px_rgba(20,23,121,0.6)] animate-pulse">
                               <Rocket size={20} className="text-[#FFC83D]" />
                             </div>
                           </div>
@@ -800,7 +800,7 @@ export default function ChaptersScreen() {
                               </div>
 
                               <div className="flex items-center justify-between w-full gap-2 mt-0.5">
-                                <h3 className="text-sm font-black text-[#17157F] leading-tight truncate">
+                                <h3 className="text-sm font-black text-[#141779] leading-tight truncate">
                                   {displayTitle}
                                 </h3>
                                 <span className="text-[10.5px] font-black uppercase tracking-wider text-white bg-gradient-to-r from-[#141779] to-[#25218c] px-3 py-1 rounded-full shrink-0 shadow-xs hover:brightness-110 active:scale-95 transition-all">
@@ -813,17 +813,17 @@ export default function ChaptersScreen() {
                         )}
 
                         {status === "current" && (
-                          <div className={`flex-1 ${isSubLocked ? 'bg-amber-50 border-amber-300' : 'bg-gradient-to-br from-white to-[#EEF1FF] border-2 border-[#5B5CFF] shadow-[0_4px_16px_rgba(91,92,255,0.2)]'} rounded-2xl p-4 relative overflow-hidden transition-all text-left`}>
+                          <div className={`flex-1 ${isSubLocked ? 'bg-amber-50 border-amber-300' : 'bg-gradient-to-br from-white to-[#EEF1FF] border-2 border-[#141779] shadow-[0_4px_16px_rgba(20,23,121,0.2)]'} rounded-2xl p-4 relative overflow-hidden transition-all text-left`}>
                             <div className="flex items-center justify-between mb-1">
-                              <p className="text-[11px] font-bold text-[#5B5CFF]">
+                              <p className="text-[11px] font-bold text-[#141779]">
                                 {t('chapter', 'Chapter')} {index + 1}
                               </p>
-                              <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border shrink-0 ${isSubLocked ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-[#5B5CFF] text-white border-[#5B5CFF]'}`}>
+                              <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border shrink-0 ${isSubLocked ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-[#141779] text-white border-[#141779]'}`}>
                                 {isSubLocked ? t('premium_mission_badge', '👑 PREMIUM MISSION 🔒') : t('current_mission_badge', '🚀 CURRENT MISSION')}
                               </span>
                             </div>
 
-                            <h3 className="text-base font-black text-[#17157F] leading-tight mb-2.5">
+                            <h3 className="text-base font-black text-[#141779] leading-tight mb-2.5">
                               {displayTitle}
                             </h3>
 
@@ -846,7 +846,7 @@ export default function ChaptersScreen() {
                                     className={`w-full py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
                                       isSubLocked
                                         ? 'bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white shadow-md active:scale-95 border border-indigo-300/40'
-                                        : 'bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white shadow-[0_4px_14px_rgba(91,92,255,0.4)] hover:brightness-110 active:scale-95 border border-[#5B5CFF]'
+                                        : 'bg-gradient-to-r from-[#141779] via-[#2d328f] to-[#141779] text-white shadow-[0_4px_14px_rgba(20,23,121,0.4)] hover:brightness-110 active:scale-95 border border-[#141779]'
                                     }`}
                                   >
                                     <span>{isSubLocked ? t('unlock_premium_mission', 'UNLOCK PREMIUM MISSION') : isChapInProgress ? t('continue_mission_btn', 'CONTINUE MISSION →') : t('start_mission_btn', 'START MISSION →')}</span>

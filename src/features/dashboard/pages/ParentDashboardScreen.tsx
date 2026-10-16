@@ -467,11 +467,11 @@ export default function ParentDashboardScreen() {
   const startScore = chart.points.length > 0 ? chart.points[0].score : 0;
   const diff = chart.points.length > 0 ? currentScore - startScore : 0;
   const diffStr = chart.points.length > 0 ? (diff >= 0 ? `+${diff}% ${t("this_week", "this week")}` : `${diff}% ${t("this_week", "this week")}`) : "";
-  const chartColor = modalType === "weaknesses" ? "#dc2626" : modalType === "risks" ? "#d97706" : "#006a62";
+  const chartColor = modalType === "weaknesses" ? "#ba1a1a" : modalType === "risks" ? "#d97706" : "#006a62";
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f4f7fb] font-sans relative pb-28 overflow-hidden">
+      <div className="min-h-screen bg-[#f7f9fb] font-sans relative pb-28 overflow-hidden">
         {/* Top App Bar Skeleton */}
         <header className="fixed top-0 left-0 right-0 flex items-center justify-between px-4 sm:px-6 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/80 z-50 shadow-xs">
           <div className="flex items-center gap-2.5">
@@ -669,7 +669,7 @@ export default function ParentDashboardScreen() {
               {t("performance_last_7_days", "Performance over the last 7 active days")}
             </p>
           </div>
-          <div className="bg-indigo-50/90 border border-indigo-100/90 px-2.5 py-1 rounded-xl flex items-center justify-center shrink-0">
+          <div className="bg-[#e0e0ff]/60 border border-[#141779]/20 px-2.5 py-1 rounded-xl flex items-center justify-center shrink-0">
             <span className="text-[10px] font-extrabold text-[#141779] leading-none">7-DAY TREND</span>
           </div>
         </div>
@@ -808,7 +808,7 @@ export default function ParentDashboardScreen() {
     if (mode === "strengths" && actualStrengthSubjects.length === 0) {
       return (
         <div className="bg-white rounded-[24px] p-8 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-slate-100 flex flex-col items-center justify-center text-center gap-3 font-sans my-2 min-h-[200px]">
-          <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-2xl shadow-inner border border-emerald-100">
+          <div className="w-14 h-14 rounded-2xl bg-[#57fae9]/20 flex items-center justify-center text-2xl shadow-inner border border-[#57fae9]/40">
             💪
           </div>
           <div>
@@ -826,14 +826,14 @@ export default function ParentDashboardScreen() {
     if (mode === "weaknesses" && actualWeakSubjects.length === 0) {
       return (
         <div className="bg-white rounded-[24px] p-8 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-slate-100 flex flex-col items-center justify-center text-center gap-3 font-sans my-2 min-h-[200px]">
-          <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-2xl shadow-inner border border-emerald-100">
+          <div className="w-14 h-14 rounded-2xl bg-[#57fae9]/20 flex items-center justify-center text-2xl shadow-inner border border-[#57fae9]/40">
             🎉
           </div>
           <div>
-            <h4 className="text-sm font-black text-emerald-900 uppercase tracking-wider">
+            <h4 className="text-sm font-black text-[#006a62] uppercase tracking-wider">
               {t("no_weaknesses_title", "No Weaknesses Detected")}
             </h4>
-            <p className="text-xs text-emerald-700 font-semibold mt-1 max-w-[280px] leading-relaxed">
+            <p className="text-xs text-[#006a62] font-semibold mt-1 max-w-[280px] leading-relaxed">
               {t("no_weaknesses_desc", "Great job! All active subjects are performing consistently at or above 70%.")}
             </p>
           </div>
@@ -844,14 +844,14 @@ export default function ParentDashboardScreen() {
     if (mode === "risks" && actualRiskSubjects.length === 0) {
       return (
         <div className="bg-white rounded-[24px] p-8 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-slate-100 flex flex-col items-center justify-center text-center gap-3 font-sans my-2 min-h-[200px]">
-          <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-2xl shadow-inner border border-emerald-100">
+          <div className="w-14 h-14 rounded-2xl bg-[#57fae9]/20 flex items-center justify-center text-2xl shadow-inner border border-[#57fae9]/40">
             ✅
           </div>
           <div>
-            <h4 className="text-sm font-black text-emerald-900 uppercase tracking-wider">
+            <h4 className="text-sm font-black text-[#006a62] uppercase tracking-wider">
               {t("no_risk_alerts", "No Risk Alerts")}
             </h4>
-            <p className="text-xs text-emerald-700 font-semibold mt-1 max-w-[280px] leading-relaxed">
+            <p className="text-xs text-[#006a62] font-semibold mt-1 max-w-[280px] leading-relaxed">
               {t("no_risk_alerts_desc", { name: cleanChildName, defaultValue: `All clear! ${cleanChildName} has no subjects below 70% right now.` })}
             </p>
           </div>
@@ -889,12 +889,12 @@ export default function ParentDashboardScreen() {
 
     // 1. Color Scheme & Mode Setup:
     // Risk = Warning Yellow/Amber (#d97706)
-    // Weakness = Critical Red (#dc2626)
+    // Weakness = Critical Red (#ba1a1a)
     // Strength = Emerald Green (#006a62)
     let activeSubjects: any[] = [];
     let badgeText = "";
     let themeColor = "#006a62";
-    let badgeBg = "bg-[#e6f4ea] text-[#137333] border-[#ceead6]";
+    let badgeBg = "bg-[#57fae9]/20 text-[#006a62] border-[#57fae9]/40";
     let fillGradientId = "dashboardFillGrad";
     let categoryPalette: string[] = [];
 
@@ -903,7 +903,7 @@ export default function ParentDashboardScreen() {
         ? [actualStrengthSubjects[0]]
         : [{ subject: highestSubject || "Overall", accuracy: highestAcc ?? 80 }];
       themeColor = "#006a62";
-      badgeBg = "bg-[#e6f4ea] text-[#137333] border-[#ceead6]";
+      badgeBg = "bg-[#57fae9]/20 text-[#006a62] border-[#57fae9]/40";
       fillGradientId = "dashboardFillGrad";
       categoryPalette = ["#006a62"];
       badgeText = "+0% this week";
@@ -912,7 +912,7 @@ export default function ParentDashboardScreen() {
         ? actualStrengthSubjects
         : [{ subject: highestSubject || "Overall", accuracy: highestAcc ?? 100 }];
       themeColor = "#006a62";
-      badgeBg = "bg-[#e6f4ea] text-[#006a62] border-[#ceead6]";
+      badgeBg = "bg-[#57fae9]/20 text-[#006a62] border-[#57fae9]/40";
       fillGradientId = "strengthFillGrad";
       categoryPalette = STRENGTH_GREEN_SHADES.map(s => s.color);
       badgeText = t("top_performing_badge", "Top Performing (≥70%)");
@@ -920,8 +920,8 @@ export default function ParentDashboardScreen() {
       activeSubjects = actualWeakSubjects.length > 0
         ? actualWeakSubjects
         : [{ subject: lowestSubject || "Overall", accuracy: lowestAcc ?? 65 }];
-      themeColor = "#dc2626"; // Critical Red Theme
-      badgeBg = "bg-rose-50 text-[#dc2626] border-rose-200";
+      themeColor = "#ba1a1a"; // Critical Red Theme
+      badgeBg = "bg-[#ffdad6] text-[#ba1a1a] border-[#ba1a1a]/20";
       fillGradientId = "weaknessFillGrad";
       categoryPalette = WEAKNESS_RED_SHADES.map(s => s.color);
       badgeText = t("needs_focus_badge", "Needs Focus (<70% for 2+ Days)");
@@ -931,7 +931,7 @@ export default function ParentDashboardScreen() {
         ? actualRiskSubjects
         : [{ subject: lowestSubject || "Overall", accuracy: lowestAcc ?? 52 }];
       themeColor = "#d97706"; // Warning Yellow/Amber Theme
-      badgeBg = "bg-amber-50 text-[#b45309] border-amber-200";
+      badgeBg = "bg-[#ffdad6] text-[#ba1a1a] border-[#ba1a1a]/20";
       fillGradientId = "riskFillGrad";
       categoryPalette = RISK_AMBER_SHADES.map(s => s.color);
       badgeText = t("at_risk_day1_badge", "At Risk (Day 1 <70%)");
@@ -1128,7 +1128,7 @@ export default function ParentDashboardScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f7fb] font-sans relative pb-28">
+    <div className="min-h-screen bg-[#f7f9fb] font-sans relative pb-28">
 
       {/* Top App Bar */}
       <header className="fixed top-0 left-0 right-0 flex items-center justify-between px-4 sm:px-6 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/80 z-50 shadow-[0_2px_12px_rgba(20,23,121,0.04)]">
@@ -1166,13 +1166,13 @@ export default function ParentDashboardScreen() {
             </div>
             <button
               onClick={() => setShowSwitcher(true)}
-              className="flex items-center gap-1 text-[11px] font-bold text-indigo-700 hover:text-indigo-900 group cursor-pointer transition-colors text-left"
+              className="flex items-center gap-1 text-[11px] font-bold text-[#141779] hover:text-[#2d328f] group cursor-pointer transition-colors text-left"
               title={t("switch_child_profile", "Switch Student Profile")}
             >
-              <Users size={11} className="text-indigo-600 shrink-0" />
+              <Users size={11} className="text-[#141779] shrink-0" />
               <span className="truncate max-w-[100px] sm:max-w-[140px]">{cleanChildName}</span>
-              <span className="text-[10px] text-slate-400 group-hover:text-indigo-600 font-semibold">• {t("switch", "Switch")}</span>
-              <ChevronDown size={11} className="text-slate-400 group-hover:text-indigo-600 shrink-0 transition-transform" />
+              <span className="text-[10px] text-slate-400 group-hover:text-[#141779] font-semibold">• {t("switch", "Switch")}</span>
+              <ChevronDown size={11} className="text-slate-400 group-hover:text-[#141779] shrink-0 transition-transform" />
             </button>
           </div>
         </div>
@@ -1198,7 +1198,7 @@ export default function ParentDashboardScreen() {
         {!isCoParent && (
           <button
             onClick={() => navigate("/home")}
-            className="w-full bg-gradient-to-r from-indigo-50/90 via-sky-50/50 to-indigo-50/80 hover:from-indigo-100 hover:to-sky-100 p-3 sm:p-3.5 rounded-2xl sm:rounded-3xl border border-indigo-200/80 hover:border-indigo-300 shadow-[0_4px_20px_rgba(20,23,121,0.04)] flex items-center justify-between group cursor-pointer transition-all active:scale-[0.99] text-left"
+            className="w-full bg-gradient-to-r from-[#e0e0ff]/80 via-white to-[#e0e0ff]/60 hover:from-[#e0e0ff] hover:to-[#e0e0ff]/90 p-3 sm:p-3.5 rounded-2xl sm:rounded-3xl border border-[#141779]/20 hover:border-[#141779]/40 shadow-[0_4px_20px_rgba(20,23,121,0.04)] flex items-center justify-between group cursor-pointer transition-all active:scale-[0.99] text-left"
             title={t("kids_space", "Kids Space")}
           >
             <div className="flex items-center gap-3 min-w-0">
@@ -1210,16 +1210,16 @@ export default function ParentDashboardScreen() {
                   <span className="text-sm sm:text-base font-black text-[#141779] leading-tight">
                     {t("kids_space", "Kids Space")}
                   </span>
-                  <span className="px-2 py-0.5 rounded-full bg-indigo-100/90 text-[#141779] text-[10px] font-extrabold uppercase tracking-wider">
+                  <span className="px-2 py-0.5 rounded-full bg-[#e0e0ff] text-[#141779] text-[10px] font-extrabold uppercase tracking-wider">
                     {t("kids_mode", "Kids Mode")}
                   </span>
                 </div>
-                <p className="text-[11px] sm:text-xs text-indigo-700/80 font-medium truncate mt-0.5">
+                <p className="text-[11px] sm:text-xs text-[#141779]/80 font-medium truncate mt-0.5">
                   {t("kids_space_sub", "Return directly to student learning dashboard")}
                 </p>
               </div>
             </div>
-            <div className="w-8 h-8 rounded-full bg-white/80 border border-indigo-200/70 text-[#141779] flex items-center justify-center shrink-0 group-hover:translate-x-1 transition-all shadow-2xs ml-2">
+            <div className="w-8 h-8 rounded-full bg-white/80 border border-[#141779]/20 text-[#141779] flex items-center justify-center shrink-0 group-hover:translate-x-1 transition-all shadow-2xs ml-2">
               <ChevronRight size={16} />
             </div>
           </button>
@@ -1243,7 +1243,7 @@ export default function ParentDashboardScreen() {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <h2 className="text-base sm:text-lg font-black text-[#141779] leading-tight truncate group-hover:text-indigo-800 transition-colors">
+                  <h2 className="text-base sm:text-lg font-black text-[#141779] leading-tight truncate group-hover:text-[#2d328f] transition-colors">
                     {childName}'s {t("journey", "Journey")}
                   </h2>
                   <ChevronDown size={15} className="text-slate-400 group-hover:text-[#141779] shrink-0 transition-colors" />
@@ -1253,7 +1253,7 @@ export default function ParentDashboardScreen() {
                     {t('lvl_explorer', { level: userLevel, defaultValue: `Lvl ${userLevel}` })}
                   </span>
                   {childClass && (
-                    <span className="text-[10px] sm:text-xs font-bold text-[#141779] bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full shrink-0">
+                    <span className="text-[10px] sm:text-xs font-bold text-[#141779] bg-[#e0e0ff]/60 border border-[#141779]/20 px-2 py-0.5 rounded-full shrink-0">
                       {childClass}
                     </span>
                   )}
@@ -1263,8 +1263,8 @@ export default function ParentDashboardScreen() {
 
             {/* Active profile status badge */}
             <div className="flex items-center gap-1.5 shrink-0">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[10px] sm:text-xs font-extrabold shadow-2xs">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#57fae9]/20 text-[#006a62] border border-[#57fae9]/40 text-[10px] sm:text-xs font-extrabold shadow-2xs">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#006a62] animate-pulse" />
                 <span>{t("active_profile", "Active")}</span>
               </span>
             </div>
@@ -1300,7 +1300,7 @@ export default function ParentDashboardScreen() {
                 </span>
                 <button
                   onClick={openBreakdown}
-                  className="text-[10px] font-bold text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded-full transition-colors flex items-center gap-0.5 cursor-pointer"
+                  className="text-[10px] font-bold text-[#141779] hover:text-[#2d328f] bg-[#e0e0ff]/60 hover:bg-[#e0e0ff] px-2 py-0.5 rounded-full transition-colors flex items-center gap-0.5 cursor-pointer"
                 >
                   <span>{t('details', 'Details')}</span>
                   <span>→</span>
@@ -1316,7 +1316,7 @@ export default function ParentDashboardScreen() {
             </div>
             <p 
               onClick={openBreakdown}
-              className="text-[10px] sm:text-[11px] text-slate-500 font-medium cursor-pointer hover:text-indigo-900 transition-colors truncate"
+              className="text-[10px] sm:text-[11px] text-slate-500 font-medium cursor-pointer hover:text-[#141779] transition-colors truncate"
             >
               {t('confidence_score_sub', { attempts: solvedToday, defaultValue: `Based on today's correct answers (${solvedToday} attempts) • Tap for details` })}
             </p>
@@ -1335,12 +1335,12 @@ export default function ParentDashboardScreen() {
             {/* Strengths Card */}
             <button
               onClick={() => handleOpenModal("strengths")}
-              className="w-full bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col justify-between text-left hover:border-teal-300 hover:shadow-sm transition-all group cursor-pointer"
+              className="w-full bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col justify-between text-left hover:border-[#006a62]/30 hover:shadow-sm transition-all group cursor-pointer"
             >
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-teal-50 border border-teal-100/80 flex items-center justify-center text-sm">
+                    <div className="w-7 h-7 rounded-lg bg-[#57fae9]/20 border border-[#57fae9]/40 flex items-center justify-center text-sm">
                       💪
                     </div>
                     <h4 className="text-sm font-black text-[#006a62]">{t('strengths', 'Strengths')}</h4>
@@ -1368,7 +1368,7 @@ export default function ParentDashboardScreen() {
                   </div>
                 )}
               </div>
-              <span className="text-[10px] text-teal-700 font-extrabold uppercase tracking-wider mt-2.5">
+              <span className="text-[10px] text-[#006a62] font-extrabold uppercase tracking-wider mt-2.5">
                 {t('fast_processor', 'Fast Processor')}
               </span>
             </button>
@@ -1376,12 +1376,12 @@ export default function ParentDashboardScreen() {
             {/* Areas for Review (Weaknesses) Card */}
             <button
               onClick={() => handleOpenModal("weaknesses")}
-              className="w-full bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col justify-between text-left hover:border-rose-300 hover:shadow-sm transition-all group cursor-pointer"
+              className="w-full bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col justify-between text-left hover:border-[#ba1a1a]/30 hover:shadow-sm transition-all group cursor-pointer"
             >
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-rose-50 border border-rose-100/80 flex items-center justify-center text-sm">
+                    <div className="w-7 h-7 rounded-lg bg-[#ffdad6] border border-[#ba1a1a]/20 flex items-center justify-center text-sm">
                       ⚠️
                     </div>
                     <h4 className="text-sm font-black text-[#ba1a1a]">{t('weaknesses', 'Areas to Improve')}</h4>
@@ -1393,7 +1393,7 @@ export default function ParentDashboardScreen() {
                     {t('no_data_available', 'No data available')}
                   </span>
                 ) : actualWeakSubjects.length === 0 ? (
-                  <span className="inline-block text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
+                  <span className="inline-block text-[11px] font-semibold text-[#006a62] bg-[#57fae9]/20 px-2.5 py-0.5 rounded-full border border-[#57fae9]/40">
                     {t('all_subjects_top_level', 'No weaknesses detected 🎉')}
                   </span>
                 ) : (
@@ -1409,7 +1409,7 @@ export default function ParentDashboardScreen() {
                   </div>
                 )}
               </div>
-              <span className="text-[10px] text-rose-700 font-extrabold uppercase tracking-wider mt-2.5">
+              <span className="text-[10px] text-[#ba1a1a] font-extrabold uppercase tracking-wider mt-2.5">
                 {t('review_needed', 'Review Needed')}
               </span>
             </button>
@@ -1434,7 +1434,7 @@ export default function ParentDashboardScreen() {
                     {t('no_data_available', 'No data available')}
                   </span>
                 ) : actualRiskSubjects.length === 0 ? (
-                  <span className="inline-block text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
+                  <span className="inline-block text-[11px] font-semibold text-[#006a62] bg-[#57fae9]/20 px-2.5 py-0.5 rounded-full border border-[#57fae9]/40">
                     {t('no_risk_alerts_badge', '✅ No Risk Alerts')}
                   </span>
                 ) : (
@@ -1468,7 +1468,7 @@ export default function ParentDashboardScreen() {
             </h3>
             <button
               onClick={() => navigate('/parent/kids-activity')}
-              className="text-[11px] font-bold text-indigo-700 hover:text-indigo-900 transition-colors cursor-pointer flex items-center gap-1 group"
+              className="text-[11px] font-bold text-[#141779] hover:text-[#2d328f] transition-colors cursor-pointer flex items-center gap-1 group"
             >
               <span>{t("view_all", "View All").replace(/[-–—]?\s*[>→›»]/g, "").replace(/->/g, "").trim()}</span>
               <ChevronRight size={13} className="group-hover:translate-x-0.5 transition-transform shrink-0" />
@@ -1480,7 +1480,7 @@ export default function ParentDashboardScreen() {
             className="w-full bg-white rounded-2xl p-3 border border-slate-200/70 shadow-xs flex justify-between items-center hover:bg-slate-50 hover:shadow-sm transition-all group gap-3 cursor-pointer text-left"
           >
             <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-[#e0e0ff]/60 border border-[#141779]/20 flex items-center justify-center shrink-0">
                 <Clock size={17} className="text-[#141779]" />
               </div>
               <div className="min-w-0 flex-1">
@@ -1490,10 +1490,10 @@ export default function ParentDashboardScreen() {
                   </h4>
                   {lastActivityDetails && (
                     <span className={`px-1.5 py-0.2 rounded-md text-[8px] font-black uppercase tracking-wider ${
-                      lastActivityDetails.type === "reading" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
-                      lastActivityDetails.type === "battle" ? "bg-rose-50 text-rose-700 border border-rose-200" :
-                      lastActivityDetails.type === "multiplayer" ? "bg-purple-50 text-purple-700 border border-purple-200" :
-                      "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                      lastActivityDetails.type === "reading" ? "bg-[#57fae9]/20 text-[#006a62] border border-[#57fae9]/40" :
+                      lastActivityDetails.type === "battle" ? "bg-[#ffdad6] text-[#ba1a1a] border border-[#ba1a1a]/20" :
+                      lastActivityDetails.type === "multiplayer" ? "bg-[#30007f]/10 text-[#30007f] border border-[#30007f]/20" :
+                      "bg-[#e0e0ff]/60 text-[#141779] border border-[#141779]/20"
                     }`}>
                       {lastActivityDetails.type === "reading" ? `📖 ${t("reading", "Reading")}` :
                        lastActivityDetails.type === "battle" ? `🐉 ${t("boss", "Boss")}` :
@@ -1508,7 +1508,7 @@ export default function ParentDashboardScreen() {
                   )}
                   {lastActivityDetails?.timeTaken > 0 && lastActivityDetails?.totalQuestions > 0 && <span>•</span>}
                   {lastActivityDetails?.totalQuestions > 0 && (
-                    <span className="text-indigo-600 font-bold">
+                    <span className="text-[#141779] font-bold">
                       🎯 {lastActivityDetails.correctQuestions}/{lastActivityDetails.totalQuestions} {t("correct", "Correct")}
                     </span>
                   )}
@@ -1533,18 +1533,18 @@ export default function ParentDashboardScreen() {
             {/* Daily Tip */}
             <button
               onClick={() => navigate('/parent/daily-tip')}
-              className="bg-white hover:bg-teal-50/30 rounded-2xl p-2.5 sm:p-3 border border-slate-200/80 hover:border-teal-300 shadow-2xs hover:shadow-xs transition-all text-left flex flex-col justify-start group cursor-pointer min-w-0 w-full"
+              className="bg-white hover:bg-[#57fae9]/10 rounded-2xl p-2.5 sm:p-3 border border-slate-200/80 hover:border-[#006a62]/30 shadow-2xs hover:shadow-xs transition-all text-left flex flex-col justify-start group cursor-pointer min-w-0 w-full"
             >
               <div className="flex items-center justify-between w-full mb-2">
-                <div className="w-7 h-7 rounded-lg bg-teal-50 border border-teal-100 text-[#006a62] flex items-center justify-center shrink-0">
+                <div className="w-7 h-7 rounded-lg bg-[#57fae9]/20 border border-[#57fae9]/40 text-[#006a62] flex items-center justify-center shrink-0">
                   <BrainCircuit size={15} />
                 </div>
-                <span className="bg-teal-50 text-teal-700 border border-teal-200/80 text-[8px] font-black uppercase px-2 py-0.5 rounded-full tracking-wider shrink-0">
+                <span className="bg-[#57fae9]/20 text-[#006a62] border border-[#57fae9]/40 text-[8px] font-black uppercase px-2 py-0.5 rounded-full tracking-wider shrink-0">
                   {t("hot", "Hot")}
                 </span>
               </div>
               <div className="w-full min-w-0">
-                <h4 className="text-xs font-black text-[#141779] group-hover:text-teal-700 transition-colors leading-tight truncate">
+                <h4 className="text-xs font-black text-[#141779] group-hover:text-[#006a62] transition-colors leading-tight truncate">
                   {t("daily_tip", "Daily Tip")}
                 </h4>
                 <p 
@@ -1559,18 +1559,18 @@ export default function ParentDashboardScreen() {
             {/* Lessons */}
             <button
               onClick={() => navigate('/parent/lessons')}
-              className="bg-white hover:bg-indigo-50/30 rounded-2xl p-2.5 sm:p-3 border border-slate-200/80 hover:border-indigo-300 shadow-2xs hover:shadow-xs transition-all text-left flex flex-col justify-start group cursor-pointer min-w-0 w-full"
+              className="bg-white hover:bg-[#e0e0ff]/30 rounded-2xl p-2.5 sm:p-3 border border-slate-200/80 hover:border-[#141779]/30 shadow-2xs hover:shadow-xs transition-all text-left flex flex-col justify-start group cursor-pointer min-w-0 w-full"
             >
               <div className="flex items-center justify-between w-full mb-2">
-                <div className="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-100 text-[#141779] flex items-center justify-center shrink-0">
+                <div className="w-7 h-7 rounded-lg bg-[#e0e0ff]/60 border border-[#141779]/20 text-[#141779] flex items-center justify-center shrink-0">
                   <BookOpen size={15} />
                 </div>
-                <span className="bg-indigo-50 text-indigo-700 border border-indigo-200/80 text-[8px] font-black uppercase px-2 py-0.5 rounded-full tracking-wider shrink-0">
+                <span className="bg-[#e0e0ff]/60 text-[#141779] border border-[#141779]/20 text-[8px] font-black uppercase px-2 py-0.5 rounded-full tracking-wider shrink-0">
                   {t("new", "New")}
                 </span>
               </div>
               <div className="w-full min-w-0">
-                <h4 className="text-xs font-black text-[#141779] group-hover:text-indigo-700 transition-colors leading-tight truncate">
+                <h4 className="text-xs font-black text-[#141779] group-hover:text-[#2d328f] transition-colors leading-tight truncate">
                   {t("lessons", "Lessons")}
                 </h4>
                 <p className="text-[10px] text-slate-500 font-medium truncate mt-0.5 leading-tight" title={t("lessons_sub", "Bite-sized parent growth.")}>
@@ -1582,18 +1582,18 @@ export default function ParentDashboardScreen() {
             {/* Challenges */}
             <button
               onClick={() => navigate('/parent/challenges')}
-              className="bg-white hover:bg-purple-50/30 rounded-2xl p-2.5 sm:p-3 border border-slate-200/80 hover:border-purple-300 shadow-2xs hover:shadow-xs transition-all text-left flex flex-col justify-start group cursor-pointer min-w-0 w-full"
+              className="bg-white hover:bg-[#30007f]/5 rounded-2xl p-2.5 sm:p-3 border border-slate-200/80 hover:border-[#30007f]/30 shadow-2xs hover:shadow-xs transition-all text-left flex flex-col justify-start group cursor-pointer min-w-0 w-full"
             >
               <div className="flex items-center justify-between w-full mb-2">
-                <div className="w-7 h-7 rounded-lg bg-purple-50 border border-purple-100 text-[#30007f] flex items-center justify-center shrink-0">
+                <div className="w-7 h-7 rounded-lg bg-[#30007f]/10 border border-[#30007f]/20 text-[#30007f] flex items-center justify-center shrink-0">
                   <Target size={15} />
                 </div>
-                <span className="bg-purple-50 text-purple-700 border border-purple-200/80 text-[8px] font-black uppercase px-2 py-0.5 rounded-full tracking-wider shrink-0">
+                <span className="bg-[#30007f]/10 text-[#30007f] border border-[#30007f]/20 text-[8px] font-black uppercase px-2 py-0.5 rounded-full tracking-wider shrink-0">
                   {t("live", "Live")}
                 </span>
               </div>
               <div className="w-full min-w-0">
-                <h4 className="text-xs font-black text-[#141779] group-hover:text-purple-700 transition-colors leading-tight truncate">
+                <h4 className="text-xs font-black text-[#141779] group-hover:text-[#30007f] transition-colors leading-tight truncate">
                   {t("challenges", "Challenges")}
                 </h4>
                 <p className="text-[10px] text-slate-500 font-medium truncate mt-0.5 leading-tight" title={t("challenges_sub", "Build strong daily habits.")}>
@@ -1605,18 +1605,18 @@ export default function ParentDashboardScreen() {
             {/* Rewards */}
             <button
               onClick={() => navigate('/parent/achievements')}
-              className="bg-white hover:bg-emerald-50/30 rounded-2xl p-2.5 sm:p-3 border border-slate-200/80 hover:border-emerald-300 shadow-2xs hover:shadow-xs transition-all text-left flex flex-col justify-start group cursor-pointer min-w-0 w-full"
+              className="bg-white hover:bg-[#57fae9]/10 rounded-2xl p-2.5 sm:p-3 border border-slate-200/80 hover:border-[#006a62]/30 shadow-2xs hover:shadow-xs transition-all text-left flex flex-col justify-start group cursor-pointer min-w-0 w-full"
             >
               <div className="flex items-center justify-between w-full mb-2">
-                <div className="w-7 h-7 rounded-lg bg-emerald-50 border border-emerald-100 text-[#007168] flex items-center justify-center shrink-0">
+                <div className="w-7 h-7 rounded-lg bg-[#57fae9]/20 border border-[#57fae9]/40 text-[#006a62] flex items-center justify-center shrink-0">
                   <Award size={15} />
                 </div>
-                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[8px] font-black uppercase px-2 py-0.5 rounded-full tracking-wider shrink-0">
+                <span className="bg-[#57fae9]/20 text-[#006a62] border border-[#57fae9]/40 text-[8px] font-black uppercase px-2 py-0.5 rounded-full tracking-wider shrink-0">
                   {t("badges", "Badges")}
                 </span>
               </div>
               <div className="w-full min-w-0">
-                <h4 className="text-xs font-black text-[#141779] group-hover:text-emerald-700 transition-colors leading-tight truncate">
+                <h4 className="text-xs font-black text-[#141779] group-hover:text-[#006a62] transition-colors leading-tight truncate">
                   {t("rewards", "Rewards")}
                 </h4>
                 <p className="text-[10px] text-slate-500 font-medium truncate mt-0.5 leading-tight" title={t("rewards_sub", "View your milestones.")}>
@@ -1691,18 +1691,18 @@ export default function ParentDashboardScreen() {
                   </p>
                 </div>
               ) : modalType === "risks" && actualRiskSubjects.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-8 bg-emerald-50 border border-emerald-200 rounded-2xl text-center my-4">
+                <div className="flex flex-col items-center justify-center p-8 bg-[#57fae9]/20 border border-[#57fae9]/40 rounded-2xl text-center my-4">
                   <span className="text-4xl mb-2">✅</span>
-                  <h4 className="text-sm font-black text-emerald-900 uppercase tracking-wider">{t("no_risk_alerts", "No Risk Alerts")}</h4>
-                  <p className="text-xs text-emerald-700 font-bold mt-2 leading-relaxed">
+                  <h4 className="text-sm font-black text-[#006a62] uppercase tracking-wider">{t("no_risk_alerts", "No Risk Alerts")}</h4>
+                  <p className="text-xs text-[#006a62] font-bold mt-2 leading-relaxed">
                     {t("no_risk_alerts_desc", { name: cleanChildName, defaultValue: `All clear! ${cleanChildName} has no subjects below 70% right now.` })}
                   </p>
                 </div>
               ) : modalType === "weaknesses" && actualWeakSubjects.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-8 bg-emerald-50 border border-emerald-200 rounded-2xl text-center my-4">
+                <div className="flex flex-col items-center justify-center p-8 bg-[#57fae9]/20 border border-[#57fae9]/40 rounded-2xl text-center my-4">
                   <span className="text-4xl mb-2">🎉</span>
-                  <h4 className="text-sm font-black text-emerald-900 uppercase tracking-wider">{t("no_weaknesses_title", "No Weaknesses Detected")}</h4>
-                  <p className="text-xs text-emerald-700 font-bold mt-2 leading-relaxed">
+                  <h4 className="text-sm font-black text-[#006a62] uppercase tracking-wider">{t("no_weaknesses_title", "No Weaknesses Detected")}</h4>
+                  <p className="text-xs text-[#006a62] font-bold mt-2 leading-relaxed">
                     {t("no_weaknesses_desc", {
                       name: cleanChildName,
                       defaultValue: `Great job! ${cleanChildName} has all active subjects performing consistently at or above 70%.`
@@ -1769,7 +1769,7 @@ export default function ParentDashboardScreen() {
                           return (
                             <div
                               key={idx}
-                              className="bg-white rounded-2xl p-4 border border-rose-200/90 shadow-xs space-y-2.5"
+                              className="bg-white rounded-2xl p-4 border border-[#ba1a1a]/20 shadow-xs space-y-2.5"
                             >
                               <div className="flex justify-between items-center">
                                 <h4 className="text-sm font-black text-slate-800 flex items-center gap-1.5">
@@ -1782,18 +1782,18 @@ export default function ParentDashboardScreen() {
                                   <span>{subjName}</span>
                                   <span className="text-xs">⚠️</span>
                                 </h4>
-                                <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-50 text-[#dc2626] border border-rose-200 flex items-center gap-1">
+                                <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-[#ffdad6] text-[#ba1a1a] border border-[#ba1a1a]/20 flex items-center gap-1">
                                   <span className="text-[8px]">●</span>
                                   <span>{t("status_needs_improvement", "Needs Improvement (2+ Days)")}</span>
                                 </span>
                               </div>
 
                               <div className="flex justify-between items-center text-xs font-bold">
-                                <span className="text-[#dc2626] font-bold">
+                                <span className="text-[#ba1a1a] font-bold">
                                   {`${subjName} needs improvement with ${sb.accuracy}% accuracy.`}
                                 </span>
                                 {improvementNeeded > 0 && (
-                                  <span className="text-[11px] text-[#dc2626] font-bold bg-rose-50/70 px-2 py-0.5 rounded-md">
+                                  <span className="text-[11px] text-[#ba1a1a] font-bold bg-[#ffdad6]/70 px-2 py-0.5 rounded-md">
                                     {t("improvement_needed_gap", {
                                       gap: improvementNeeded,
                                       defaultValue: `+${improvementNeeded}% to match top subject`
@@ -1802,12 +1802,12 @@ export default function ParentDashboardScreen() {
                                 )}
                               </div>
 
-                              <div className="h-2.5 w-full bg-rose-100/70 rounded-full overflow-hidden">
+                              <div className="h-2.5 w-full bg-[#ffdad6] rounded-full overflow-hidden">
                                 <div
                                   className="h-full rounded-full transition-all duration-700"
                                   style={{ 
                                     width: `${Math.min(100, Math.max(5, sb.accuracy))}%`,
-                                    backgroundColor: actualWeakSubjects.length > 1 ? getCategorySubjectChartColor("weaknesses", idx).color : "#dc2626"
+                                    backgroundColor: actualWeakSubjects.length > 1 ? getCategorySubjectChartColor("weaknesses", idx).color : "#ba1a1a"
                                   }}
                                 />
                               </div>
@@ -1820,14 +1820,14 @@ export default function ParentDashboardScreen() {
                                   {sb.wrongAnswers > 0 && (
                                     <>
                                       <span>•</span>
-                                      <span className="text-[#dc2626]">{t("mistakes_count", { count: sb.wrongAnswers, defaultValue: `${sb.wrongAnswers} mistakes` })}</span>
+                                      <span className="text-[#ba1a1a]">{t("mistakes_count", { count: sb.wrongAnswers, defaultValue: `${sb.wrongAnswers} mistakes` })}</span>
                                     </>
                                   )}
                                 </div>
                               )}
 
-                              <div className="bg-rose-50/60 rounded-xl p-2.5 border border-rose-100/80 text-[11px] leading-relaxed">
-                                <span className="font-extrabold text-[#dc2626]">
+                              <div className="bg-[#ffdad6]/40 rounded-xl p-2.5 border border-[#ba1a1a]/20 text-[11px] leading-relaxed">
+                                <span className="font-extrabold text-[#ba1a1a]">
                                   {t("actionable_insight_label", "Actionable Insight")}:{" "}
                                 </span>
                                 <span className="font-semibold text-slate-700">{insightText}</span>
@@ -1925,7 +1925,7 @@ export default function ParentDashboardScreen() {
                           return (
                             <div
                               key={idx}
-                              className="bg-white rounded-2xl p-4 border border-emerald-200/90 shadow-xs space-y-2.5"
+                              className="bg-white rounded-2xl p-4 border border-[#006a62]/20 shadow-xs space-y-2.5"
                             >
                               <div className="flex justify-between items-center">
                                 <h4 className="text-sm font-black text-[#006a62] flex items-center gap-1.5">
@@ -1938,7 +1938,7 @@ export default function ParentDashboardScreen() {
                                   <span>{subjName}</span>
                                   <span className="text-xs">🏆</span>
                                 </h4>
-                                <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#006a62] border border-emerald-200 flex items-center gap-1">
+                                <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-[#57fae9]/20 text-[#006a62] border border-[#57fae9]/40 flex items-center gap-1">
                                   <span className="text-[8px]">●</span>
                                   <span>{t("top_performing_badge", "Top Performing (≥70%)")}</span>
                                 </span>
@@ -1950,7 +1950,7 @@ export default function ParentDashboardScreen() {
                                 </span>
                               </div>
 
-                              <div className="h-2.5 w-full bg-emerald-100/70 rounded-full overflow-hidden">
+                              <div className="h-2.5 w-full bg-[#57fae9]/30 rounded-full overflow-hidden">
                                 <div
                                   className="h-full rounded-full transition-all duration-700"
                                   style={{ 
@@ -1982,7 +1982,7 @@ export default function ParentDashboardScreen() {
 
                   {/* General Insight Box (kept for strengths, risks, or other non-weakness views) */}
                   {modalType !== "weaknesses" && (
-                    <div className="bg-indigo-50 p-4 rounded-xl shadow-sm border border-indigo-100">
+                    <div className="bg-[#e0e0ff]/60 p-4 rounded-xl shadow-sm border border-[#141779]/20">
                       <p className="text-xs text-[#141779] leading-relaxed">
                         <span className="font-bold text-[#141779]">{t("actionable_insight", "Actionable Insight: ")} </span>
                         {modalType === "risks" ? (
@@ -2041,7 +2041,7 @@ export default function ParentDashboardScreen() {
             {/* Header */}
             <div className="flex justify-between items-center p-5 sm:p-6 border-b border-slate-200/80 bg-white">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779]">
+                <div className="w-9 h-9 rounded-full bg-[#e0e0ff]/60 border border-[#141779]/20 flex items-center justify-center text-[#141779]">
                   <Bell size={18} />
                 </div>
                 <h2 className="text-xl font-black text-[#141779]">
@@ -2061,7 +2061,7 @@ export default function ParentDashboardScreen() {
             <div className="flex-1 overflow-y-auto p-4 space-y-3.5">
               {notifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center py-16 px-4">
-                  <div className="w-16 h-16 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779] mb-3 shadow-xs">
+                  <div className="w-16 h-16 rounded-full bg-[#e0e0ff]/60 border border-[#141779]/20 flex items-center justify-center text-[#141779] mb-3 shadow-xs">
                     <Bell size={28} className="opacity-70" />
                   </div>
                   <p className="text-base font-bold text-[#141779]">
@@ -2074,29 +2074,29 @@ export default function ParentDashboardScreen() {
               ) : (
                 notifications.map((notif, idx) => {
                   let iconBadge = <Bell size={18} />;
-                  let badgeStyle = "bg-indigo-50 text-[#141779] border-indigo-100";
+                  let badgeStyle = "bg-[#e0e0ff]/60 text-[#141779] border-[#141779]/20";
                   
                   if (notif.type === "gamification") {
                     iconBadge = <Sparkles size={18} />;
-                    badgeStyle = "bg-teal-50 text-teal-700 border-teal-200";
+                    badgeStyle = "bg-[#57fae9]/20 text-[#006a62] border-[#57fae9]/40";
                   } else if (notif.type === "habit") {
                     iconBadge = <Flame size={18} />;
-                    badgeStyle = "bg-amber-50 text-amber-700 border-amber-200";
+                    badgeStyle = "bg-[#faedd8] text-[#b07b00] border-[#faedd8]";
                   } else if (notif.type === "learning") {
                     iconBadge = <BookOpen size={18} />;
-                    badgeStyle = "bg-indigo-50 text-[#141779] border-indigo-200";
+                    badgeStyle = "bg-[#e0e0ff]/60 text-[#141779] border-[#141779]/20";
                   } else if (notif.type === "reward" || notif.type === "spin") {
                     iconBadge = <Trophy size={18} />;
-                    badgeStyle = "bg-purple-50 text-purple-700 border-purple-200";
+                    badgeStyle = "bg-[#30007f]/10 text-[#30007f] border-[#30007f]/20";
                   } else if (notif.type === "warning" || notif.type === "risk") {
                     iconBadge = <AlertTriangle size={18} />;
-                    badgeStyle = "bg-rose-50 text-rose-700 border-rose-200";
+                    badgeStyle = "bg-[#ffdad6] text-[#ba1a1a] border-[#ba1a1a]/20";
                   }
                   
                   return (
                     <div 
                       key={notif._id || idx} 
-                      className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-[0_2px_8px_rgba(20,23,121,0.04)] hover:shadow-md hover:border-indigo-200/80 transition-all flex items-start gap-3.5 text-left"
+                      className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-[0_2px_8px_rgba(20,23,121,0.04)] hover:shadow-md hover:border-[#141779]/30 transition-all flex items-start gap-3.5 text-left"
                     >
                       <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs mt-0.5 ${badgeStyle}`}>
                         {iconBadge}
@@ -2164,20 +2164,20 @@ export default function ParentDashboardScreen() {
                 
                 {/* 3 Summary Stats */}
                 <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                  <div className="bg-emerald-50/80 border border-emerald-200/80 p-3 rounded-2xl text-center">
-                    <span className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider block">{t("total_time", "Total Time")}</span>
-                    <span className="text-lg sm:text-xl font-black text-emerald-700">{formatTimeFormatted(breakdownData?.totalTimeFormatted || "0m")}</span>
+                  <div className="bg-[#57fae9]/20 border border-[#57fae9]/40 p-3 rounded-2xl text-center">
+                    <span className="text-[10px] font-extrabold text-[#006a62] uppercase tracking-wider block">{t("total_time", "Total Time")}</span>
+                    <span className="text-lg sm:text-xl font-black text-[#006a62]">{formatTimeFormatted(breakdownData?.totalTimeFormatted || "0m")}</span>
                   </div>
 
-                  <div className="bg-indigo-50/80 border border-indigo-200/80 p-3 rounded-2xl text-center">
-                    <span className="text-[10px] font-extrabold text-indigo-800 uppercase tracking-wider block">{t("questions", "Questions")}</span>
+                  <div className="bg-[#e0e0ff]/60 border border-[#141779]/20 p-3 rounded-2xl text-center">
+                    <span className="text-[10px] font-extrabold text-[#141779] uppercase tracking-wider block">{t("questions", "Questions")}</span>
                     <span className="text-lg sm:text-xl font-black text-[#141779]">{breakdownData?.totalSolved || 0}</span>
-                    <span className="text-[10px] text-indigo-600 font-bold block">{t("num_correct", { count: breakdownData?.totalCorrect || 0, defaultValue: `${breakdownData?.totalCorrect || 0} correct!` })}</span>
+                    <span className="text-[10px] text-[#141779] font-bold block">{t("num_correct", { count: breakdownData?.totalCorrect || 0, defaultValue: `${breakdownData?.totalCorrect || 0} correct!` })}</span>
                   </div>
 
-                  <div className="bg-purple-50/80 border border-purple-200/80 p-3 rounded-2xl text-center">
-                    <span className="text-[10px] font-extrabold text-purple-800 uppercase tracking-wider block">{t("confidence", "Confidence")}</span>
-                    <span className="text-lg sm:text-xl font-black text-purple-700">{breakdownData?.confidenceScore || 0}%</span>
+                  <div className="bg-[#30007f]/10 border border-[#30007f]/20 p-3 rounded-2xl text-center">
+                    <span className="text-[10px] font-extrabold text-[#30007f] uppercase tracking-wider block">{t("confidence", "Confidence")}</span>
+                    <span className="text-lg sm:text-xl font-black text-[#30007f]">{breakdownData?.confidenceScore || 0}%</span>
                   </div>
                 </div>
 
@@ -2238,8 +2238,8 @@ export default function ParentDashboardScreen() {
                             </span>
                             <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full border ${
                               att.isCorrect 
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
-                                : "bg-rose-50 text-rose-700 border-rose-200"
+                                ? "bg-[#57fae9]/20 text-[#006a62] border-[#57fae9]/40" 
+                                : "bg-[#ffdad6] text-[#ba1a1a] border-[#ba1a1a]/20"
                             }`}>
                               {att.isCorrect ? t("correct_check", "Correct ✓") : t("incorrect_cross", "Incorrect ✕")}
                             </span>
@@ -2251,9 +2251,9 @@ export default function ParentDashboardScreen() {
                 </div>
 
                 {/* Calculation Summary Box */}
-                <div className="bg-indigo-50/80 border border-indigo-100 p-3 rounded-2xl text-xs text-[#141779] font-bold flex items-center justify-between">
+                <div className="bg-[#e0e0ff]/60 border border-[#141779]/20 p-3 rounded-2xl text-xs text-[#141779] font-bold flex items-center justify-between">
                   <span>{t("total_calculated_time", "Total Calculated Time:")}</span>
-                  <span className="text-sm font-black text-[#141779] bg-white px-3 py-1 rounded-xl border border-indigo-200 shadow-2xs">
+                  <span className="text-sm font-black text-[#141779] bg-white px-3 py-1 rounded-xl border border-[#141779]/20 shadow-2xs">
                     {formatTimeFormatted(breakdownData?.totalTimeFormatted || "0m")} ({breakdownData?.totalSolved || 0} {t("attempts", "attempts")})
                   </span>
                 </div>

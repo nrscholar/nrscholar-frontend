@@ -74,11 +74,11 @@ export default function MissionMapScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#17157F] font-sans pb-28 relative overflow-x-hidden">
+      <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#141779] font-sans pb-28 relative overflow-x-hidden">
         {/* Background Glow Accents */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[35%] rounded-full bg-[#5B5CFF]/10 blur-[90px]" />
-          <div className="absolute top-[40%] right-[-10%] w-[50%] h-[40%] rounded-full bg-[#35E5D4]/15 blur-[90px]" />
+          <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[35%] rounded-full bg-[#141779]/10 blur-[90px]" />
+          <div className="absolute top-[40%] right-[-10%] w-[50%] h-[40%] rounded-full bg-[#57fae9]/15 blur-[90px]" />
         </div>
 
         {/* Top Header Bar Skeleton */}
@@ -97,7 +97,7 @@ export default function MissionMapScreen() {
         <div className="px-4 pt-4 pb-1 max-w-[430px] mx-auto w-full relative z-10">
           <div className="bg-white/90 border-2 border-indigo-100 rounded-2xl p-4 shadow-sm space-y-3">
             <div className="flex justify-between items-center">
-              <div className="w-24 h-5 bg-[#35E5D4]/20 border border-[#35E5D4]/40 animate-pulse rounded-full" />
+              <div className="w-24 h-5 bg-[#57fae9]/20 border border-[#57fae9]/40 animate-pulse rounded-full" />
               <div className="w-24 h-7 bg-indigo-100/80 border border-indigo-200/50 animate-pulse rounded-xl" />
             </div>
             <div className="w-3/4 h-5 bg-indigo-200/60 animate-pulse rounded-lg mt-2" />
@@ -110,12 +110,12 @@ export default function MissionMapScreen() {
         <main className="px-4 pt-4 max-w-[430px] mx-auto w-full relative z-10 flex flex-col gap-4">
           <div className="flex justify-between items-center px-1">
             <div className="w-36 h-3.5 bg-indigo-100/80 animate-pulse rounded-md" />
-            <div className="w-24 h-5 bg-[#35E5D4]/20 border border-[#35E5D4]/40 animate-pulse rounded-full" />
+            <div className="w-24 h-5 bg-[#57fae9]/20 border border-[#57fae9]/40 animate-pulse rounded-full" />
           </div>
 
           <div className="relative py-2 flex flex-col gap-5">
             {/* Connecting Vertical Timeline Line */}
-            <div className="absolute left-[28px] top-6 bottom-14 w-1 -translate-x-1/2 bg-gradient-to-b from-[#5B5CFF]/30 to-[#B9BBC8]/20 -z-10 rounded-full" />
+            <div className="absolute left-[28px] top-6 bottom-14 w-1 -translate-x-1/2 bg-gradient-to-b from-[#141779]/30 to-[#B9BBC8]/20 -z-10 rounded-full" />
 
             {/* 4 Skeleton Mission Nodes matching theme */}
             {Array.from({ length: 4 }).map((_, i) => (
@@ -183,11 +183,11 @@ export default function MissionMapScreen() {
   const themeMeta = getThemeHeader();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#17157F] font-sans pb-44 relative selection:bg-[#5B5CFF] selection:text-white overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#141779] font-sans pb-44 relative selection:bg-[#141779] selection:text-white overflow-x-hidden">
       {/* Background World Glow Accents */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[35%] rounded-full bg-[#5B5CFF]/10 blur-[90px]" />
-        <div className="absolute top-[40%] right-[-10%] w-[50%] h-[40%] rounded-full bg-[#35E5D4]/15 blur-[90px]" />
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[35%] rounded-full bg-[#141779]/10 blur-[90px]" />
+        <div className="absolute top-[40%] right-[-10%] w-[50%] h-[40%] rounded-full bg-[#57fae9]/15 blur-[90px]" />
       </div>
 
       {/* Top Header Bar */}
@@ -227,7 +227,7 @@ export default function MissionMapScreen() {
         <div className="bg-white border-2 border-[#E0E3E5] rounded-2xl p-4 shadow-sm relative overflow-hidden">
           <div className="relative z-10">
             <div className="flex justify-between items-start gap-2">
-              <span className="text-[10px] font-black uppercase tracking-wider text-[#006a62] bg-[#35E5D4]/20 px-2 py-0.5 rounded-full border border-[#35E5D4]/50 shrink-0">
+              <span className="text-[10px] font-black uppercase tracking-wider text-[#006a62] bg-[#57fae9]/20 px-2 py-0.5 rounded-full border border-[#57fae9]/50 shrink-0">
                 {themeMeta.badge}
               </span>
               <button
@@ -236,12 +236,12 @@ export default function MissionMapScreen() {
                     `/chapter-reader?chapterId=${chapterId}&title=${encodeURIComponent(chapterTitle)}`
                   )
                 }
-                className="px-3 py-1.5 bg-[#EEF1FF] hover:bg-[#5B5CFF] hover:text-white text-[#17157F] border border-[#5B5CFF]/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shrink-0"
+                className="px-3 py-1.5 bg-[#EEF1FF] hover:bg-[#141779] hover:text-white text-[#141779] border border-[#141779]/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shrink-0"
               >
                 <span>{t('read_pdf', '📖 Read PDF')}</span>
               </button>
             </div>
-            <h2 className="text-base font-black mt-2 text-[#17157F] leading-tight pr-6">{themeMeta.subtitle}</h2>
+            <h2 className="text-base font-black mt-2 text-[#141779] leading-tight pr-6">{themeMeta.subtitle}</h2>
             <p className="text-xs text-[#767683] mt-1 font-medium leading-relaxed pr-6">
               {t('read_summary_first', 'Read the textbook summary first, then complete small achievements & battle bosses!')}
             </p>
@@ -252,9 +252,9 @@ export default function MissionMapScreen() {
 
       {/* 65% Unlock Requirement Tip Banner */}
       <div className="px-4 pt-2 pb-0 max-w-[430px] mx-auto w-full relative z-10">
-        <div className="bg-gradient-to-r from-[#EEF1FF] via-[#F0F3FF] to-[#E0E7FF] border border-[#5B5CFF]/30 rounded-2xl px-3.5 py-2.5 shadow-2xs flex items-center gap-2.5">
+        <div className="bg-gradient-to-r from-[#EEF1FF] via-[#F0F3FF] to-[#E0E7FF] border border-[#141779]/30 rounded-2xl px-3.5 py-2.5 shadow-2xs flex items-center gap-2.5">
           <span className="text-base shrink-0">🎯</span>
-          <p className="text-xs font-bold text-[#17157F] leading-snug">
+          <p className="text-xs font-bold text-[#141779] leading-snug">
             {t('unlock_requirement_banner', 'Achieve at least 65% accuracy on a mission to unlock the next mission!')}
           </p>
         </div>
@@ -270,10 +270,10 @@ export default function MissionMapScreen() {
           return (
             <div className="flex flex-col gap-2.5 px-1">
               <div className="flex justify-between items-center">
-                <h3 className="text-xs font-black tracking-wider text-[#17157F] uppercase">
+                <h3 className="text-xs font-black tracking-wider text-[#141779] uppercase">
                   {t('chapter_missions_roadmap', 'CHAPTER MISSIONS ROADMAP')}
                 </h3>
-                <span className="text-[10px] font-black text-[#006a62] bg-[#35E5D4]/20 px-2.5 py-0.5 rounded-full border border-[#35E5D4]/50">
+                <span className="text-[10px] font-black text-[#006a62] bg-[#57fae9]/20 px-2.5 py-0.5 rounded-full border border-[#57fae9]/50">
                   {t('missions_completed_count', { completed: completedMissionsCount, total: totalMissionsCount, defaultValue: `${completedMissionsCount} / ${totalMissionsCount} Completed` })}
                 </span>
               </div>
@@ -295,7 +295,7 @@ export default function MissionMapScreen() {
                     );
                   })}
                 </div>
-                <span className="text-xs font-black text-[#17157F] shrink-0 min-w-[32px] text-right">
+                <span className="text-xs font-black text-[#141779] shrink-0 min-w-[32px] text-right">
                   {overallProgressPct}%
                 </span>
               </div>
@@ -364,7 +364,7 @@ export default function MissionMapScreen() {
                       <Check size={18} strokeWidth={3.5} className="text-white" />
                     </div>
                   ) : isUnlocked ? (
-                    <div className="w-9 h-9 rounded-full bg-[#5B5CFF] border-[3.5px] border-white text-white flex items-center justify-center shadow-md animate-pulse">
+                    <div className="w-9 h-9 rounded-full bg-[#141779] border-[3.5px] border-white text-white flex items-center justify-center shadow-md animate-pulse">
                       <span className="text-xs">{m.icon || "⚡"}</span>
                     </div>
                   ) : (
@@ -381,7 +381,7 @@ export default function MissionMapScreen() {
                       isCompleted
                         ? "shadow-sm"
                         : isUnlocked
-                        ? "shadow-[0_4px_16px_rgba(91,92,255,0.12)]"
+                        ? "shadow-[0_4px_16px_rgba(20,23,121,0.12)]"
                         : "opacity-75 shadow-2xs"
                     }`}
                   >
@@ -392,12 +392,12 @@ export default function MissionMapScreen() {
                             {t('mission', 'MISSION')} {m.seq}
                           </p>
                           {isCompleted && (
-                            <span className="text-[9px] font-black uppercase tracking-wider text-[#006a62] bg-[#35E5D4]/20 px-2 py-0.5 rounded-full border border-[#35E5D4]/50 shrink-0">
+                            <span className="text-[9px] font-black uppercase tracking-wider text-[#006a62] bg-[#57fae9]/20 px-2 py-0.5 rounded-full border border-[#57fae9]/50 shrink-0">
                               {t('done', 'COMPLETED')}
                             </span>
                           )}
                         </div>
-                        <h4 className="text-sm sm:text-base font-black text-[#17157F] leading-snug truncate">
+                        <h4 className="text-sm sm:text-base font-black text-[#141779] leading-snug truncate">
                           {t(m.title.toLowerCase().replace(/ /g, '_'), { defaultValue: m.title })}
                         </h4>
                         <p className="text-xs text-[#767683] mt-0.5 font-medium flex items-center gap-2">
@@ -408,7 +408,7 @@ export default function MissionMapScreen() {
                       </div>
 
                       {(isCompleted || isRetest || (m.accuracy !== undefined && m.accuracy > 0)) && (
-                        <div className="shrink-0 flex items-center gap-1 bg-[#EEF1FF] text-[#17157F] px-2.5 py-1 rounded-xl border border-[#5B5CFF]/30 shadow-2xs ml-2">
+                        <div className="shrink-0 flex items-center gap-1 bg-[#EEF1FF] text-[#141779] px-2.5 py-1 rounded-xl border border-[#141779]/30 shadow-2xs ml-2">
                           <span className="text-xs">🎯</span>
                           <span className="text-xs font-black">{m.accuracy ?? 0}%</span>
                         </div>
@@ -473,13 +473,13 @@ export default function MissionMapScreen() {
                         }}
                         className={`px-3.5 py-1.5 rounded-xl font-black text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm ${
                           hasInProgressSession
-                            ? "bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white border border-[#5B5CFF]"
+                            ? "bg-gradient-to-r from-[#141779] via-[#2d328f] to-[#141779] text-white border border-[#141779]"
                             : isCompleted
                             ? "bg-[#45D483] hover:bg-[#34c774] text-white border border-[#45D483]"
                             : isRetest
-                            ? "bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white border border-[#5B5CFF]"
+                            ? "bg-gradient-to-r from-[#141779] via-[#2d328f] to-[#141779] text-white border border-[#141779]"
                             : isUnlocked
-                            ? "bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white shadow-[0_4px_14px_rgba(91,92,255,0.4)] hover:brightness-110 border border-[#5B5CFF]"
+                            ? "bg-gradient-to-r from-[#141779] via-[#2d328f] to-[#141779] text-white shadow-[0_4px_14px_rgba(20,23,121,0.4)] hover:brightness-110 border border-[#141779]"
                             : "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
                         }`}
                       >

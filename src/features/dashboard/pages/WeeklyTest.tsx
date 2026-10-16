@@ -63,9 +63,9 @@ export default function WeeklyTestScreen() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#f4efff] font-sans pb-10">
+    <div className="min-h-screen bg-[#f7f9fb] font-sans pb-10">
       {/* Header */}
-      <header className="flex items-center justify-between px-5 py-4 bg-[#f4efff] sticky top-0 z-40">
+      <header className="flex items-center justify-between px-5 py-4 bg-[#f7f9fb] sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity">
             <ArrowLeft size={24} color="#141779" />
@@ -149,7 +149,7 @@ export default function WeeklyTestScreen() {
           >
             <span className="text-white text-[22px] font-extrabold tracking-[0.2px]">Start Test  ▶</span>
           </button>
-          <span className="text-[11px] font-bold text-[#827656] tracking-[2px] uppercase">READY WHEN YOU ARE!</span>
+          <span className="text-[11px] font-bold text-[#767683] tracking-[2px] uppercase">READY WHEN YOU ARE!</span>
         </div>
 
         {/* Buddy Quote Card */}

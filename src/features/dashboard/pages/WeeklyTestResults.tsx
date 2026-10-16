@@ -77,9 +77,9 @@ export default function WeeklyTestResultsScreen() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#f4efff] font-sans pb-10">
+    <div className="min-h-screen bg-[#f7f9fb] font-sans pb-10">
       {/* Header */}
-      <header className="flex items-center justify-between px-5 py-4 bg-[#f4efff] sticky top-0 z-40">
+      <header className="flex items-center justify-between px-5 py-4 bg-[#f7f9fb] sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity">
             <ArrowLeft size={24} color="#141779" />
@@ -132,7 +132,7 @@ export default function WeeklyTestResultsScreen() {
               initial={{ scale: 0.8, rotate: -10 }}
               animate={{ scale: 1, rotate: 3 }}
               transition={{ type: "spring", stiffness: 200, damping: 20 }}
-              className="w-40 h-40 bg-[#e8ddff] rounded-3xl flex items-center justify-center shadow-[0_16px_30px_rgba(25,28,30,0.07)]"
+              className="w-40 h-40 bg-[#e0e0ff] rounded-3xl flex items-center justify-center shadow-[0_16px_30px_rgba(25,28,30,0.07)]"
             >
               <img
                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuCyUvebv2BdvNRiuk9vxbhiA77xkXBAyqSvwsKAAoxwbT-gqMrPXi73brPL5k6cPw_7mv2oty2chuipoFdgHSiXYFEGNyEu2_NRmQlwi90ury6qcxq9biyOky6-LwYC-9Ma_6TdWG4z6llSm67s3jKHqL7KHjxaOR0T4Euhw7xkCK2vzL2eD5_SjEZFSSY5qhahz7XVATTQXbi3ut_RdWV2PRzXe-c6adNP8eqJ4RiigQYMG0Nn3KV99T0mcERtlbew55Eeu5O-oA"
@@ -155,18 +155,18 @@ export default function WeeklyTestResultsScreen() {
           <div className="flex gap-3.5 w-full mb-7">
             {/* Score Card */}
             <div className="flex-1 bg-white rounded-2xl p-6 flex flex-col items-center justify-center border-b-4 border-[rgba(211,202,188,0.2)] shadow-[0_12px_24px_rgba(25,28,30,0.05)]">
-              <span className="text-[10px] font-bold text-[#64748b] tracking-[1.5px] mb-2">YOUR SCORE</span>
+              <span className="text-[10px] font-bold text-[#767683] tracking-[1.5px] mb-2">YOUR SCORE</span>
               <div className="flex items-baseline gap-1">
                 <span className="text-6xl font-black text-[#141779] leading-[72px]">{score}</span>
-                <span className="text-2xl font-bold text-[#94a3b8]">/ {total}</span>
+                <span className="text-2xl font-bold text-[#767683]">/ {total}</span>
               </div>
             </div>
 
             {/* Stars Card */}
             <div className="flex-1 bg-[#e0e0ff] rounded-2xl p-6 flex flex-col items-center justify-center border-b-4 border-[rgba(20,23,121,0.2)] shadow-[0_12px_24px_rgba(25,28,30,0.05)] -rotate-2">
-              <span className="text-[10px] font-bold text-[#0a0c45] tracking-[1.5px] mb-2">STARS EARNED</span>
+              <span className="text-[10px] font-bold text-[#141779] tracking-[1.5px] mb-2">STARS EARNED</span>
               <div className="flex items-center gap-2">
-                <span className="text-6xl font-black text-[#0a0c45] leading-[72px]">{starsEarned}</span>
+                <span className="text-6xl font-black text-[#141779] leading-[72px]">{starsEarned}</span>
                 <span className="text-[40px]">⭐</span>
               </div>
             </div>

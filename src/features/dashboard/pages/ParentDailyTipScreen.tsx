@@ -124,7 +124,7 @@ export default function ParentDailyTipScreen() {
       subtitle: totalTests >= 5 ? t("dedicated_learning_partner", "Dedicated learning partner!") : t("lessons_to_go", { count: Math.max(1, 5 - totalTests), defaultValue: `${Math.max(1, 5 - totalTests)} more lessons to go` }),
       completed: totalTests >= 5,
       progress: Math.min(100, Math.round((totalTests / 5) * 100)),
-      iconBg: "bg-indigo-100",
+      iconBg: "bg-[#e0e0ff]",
       iconColor: "text-[#141779]",
     },
     {
@@ -146,8 +146,8 @@ export default function ParentDailyTipScreen() {
         : t("awaiting_first_mission", "Complete 1st quest to calculate cognitive accuracy"),
       completed: hasRealData && accuracy >= 70,
       progress: hasRealData ? Math.min(100, accuracy) : 0,
-      iconBg: "bg-emerald-100",
-      iconColor: "text-emerald-700",
+      iconBg: "bg-[#57fae9]/20",
+      iconColor: "text-[#006a62]",
     },
   ];
 
@@ -359,7 +359,7 @@ export default function ParentDailyTipScreen() {
         <div className="flex items-center gap-1.5 shrink-0">
           <button
             onClick={() => navigate("/parent/roadmap")}
-            className="bg-[#eef2ff] hover:bg-indigo-100 border border-indigo-100/90 rounded-2xl px-2.5 py-1.5 flex items-center justify-center gap-1 hover:scale-105 active:scale-95 transition-transform shadow-2xs cursor-pointer"
+            className="bg-[#e0e0ff]/60 hover:bg-[#e0e0ff] border border-[#141779]/20 rounded-2xl px-2.5 py-1.5 flex items-center justify-center gap-1 hover:scale-105 active:scale-95 transition-transform shadow-2xs cursor-pointer"
             title={t("view_roadmap", "View Roadmap & XP")}
             aria-label={t("xp_count", { xp, defaultValue: `${xp.toLocaleString()} XP` })}
           >
@@ -419,7 +419,7 @@ export default function ParentDailyTipScreen() {
           ) : tip ? (
             <>
               {tip.subject && (
-                <div className="flex items-center gap-1.5 self-start bg-indigo-50/80 text-[#141779] border border-indigo-200/70 px-2.5 py-0.5 rounded-full text-[11px] font-black">
+                <div className="flex items-center gap-1.5 self-start bg-[#e0e0ff]/60 text-[#141779] border border-[#141779]/20 px-2.5 py-0.5 rounded-full text-[11px] font-black">
                   <span>🎯 {t("focus_subject", "Subject Focus")}: {tip.subject}</span>
                 </div>
               )}
@@ -437,7 +437,7 @@ export default function ParentDailyTipScreen() {
                   </div>
                 </div>
               ) : (
-                <div className="bg-gradient-to-br from-indigo-50/80 via-white to-teal-50/40 rounded-2xl p-4 border border-indigo-100/80 shadow-2xs">
+                <div className="bg-gradient-to-br from-[#e0e0ff]/40 via-white to-[#57fae9]/20 rounded-2xl p-4 border border-[#c7c5d4]/60 shadow-2xs">
                   {tip.title && <h3 className="text-[#141779] font-black text-sm sm:text-base mb-1.5">💡 {translateTipField(tip.title)}</h3>}
                   <p className="text-slate-800 font-semibold text-xs sm:text-sm leading-relaxed">{translateTipField(tip.description)}</p>
                 </div>
@@ -445,13 +445,13 @@ export default function ParentDailyTipScreen() {
 
               {/* Suggested Action Step */}
               {tip.actionStep && (
-                <div className="flex items-start gap-2.5 text-indigo-950 bg-indigo-50/70 p-3 rounded-2xl border border-indigo-100/90 shadow-2xs">
-                  <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 mt-0.5">
+                <div className="flex items-start gap-2.5 text-[#141779] bg-[#e0e0ff]/40 p-3 rounded-2xl border border-[#141779]/20 shadow-2xs">
+                  <div className="w-7 h-7 rounded-lg bg-[#e0e0ff] text-[#141779] flex items-center justify-center shrink-0 mt-0.5">
                     <Target size={15} />
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600 leading-tight">{t("action_step", "Action Step")}</span>
-                    <p className="text-xs font-bold text-indigo-950 leading-snug mt-0.5">{translateTipField(tip.actionStep)}</p>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-[#141779] leading-tight">{t("action_step", "Action Step")}</span>
+                    <p className="text-xs font-bold text-[#191c1e] leading-snug mt-0.5">{translateTipField(tip.actionStep)}</p>
                   </div>
                 </div>
               )}
@@ -536,7 +536,7 @@ export default function ParentDailyTipScreen() {
                 <span className="text-xs font-black text-[#141779] uppercase tracking-wider">
                   {t("growth_score", "Growth Score")}
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-100 text-[#141779] text-[10px] font-black">
+                <span className="px-2 py-0.5 rounded-full bg-[#e0e0ff]/60 border border-[#141779]/20 text-[#141779] text-[10px] font-black">
                   {stageName}
                 </span>
               </div>
@@ -584,7 +584,7 @@ export default function ParentDailyTipScreen() {
         <section className="w-full bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 border border-slate-200/80 shadow-[0_4px_20px_rgba(20,23,121,0.04)] flex items-center justify-between gap-3">
           {/* Parent Info */}
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-indigo-50 border border-indigo-200/80 flex items-center justify-center text-base shrink-0 shadow-2xs">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#e0e0ff]/60 border border-[#141779]/20 flex items-center justify-center text-base shrink-0 shadow-2xs">
               👨‍👩‍👦
             </div>
             <div className="min-w-0 flex-1">
@@ -619,9 +619,9 @@ export default function ParentDailyTipScreen() {
                 <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-[#006a62] block truncate">
                   {t("child", "Child")} · Lvl {childLevel}
                 </span>
-                <span className="text-[9px] text-slate-400 group-hover:text-indigo-600 font-bold">▾</span>
+                <span className="text-[9px] text-slate-400 group-hover:text-[#141779] font-bold">▾</span>
               </div>
-              <p className="text-xs sm:text-sm font-black text-slate-800 truncate leading-tight group-hover:text-indigo-900 transition-colors">
+              <p className="text-xs sm:text-sm font-black text-slate-800 truncate leading-tight group-hover:text-[#141779] transition-colors">
                 {childName}
               </p>
               <span className="text-[10px] font-bold text-slate-400 truncate block mt-0.5">

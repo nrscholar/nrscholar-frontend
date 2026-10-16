@@ -502,10 +502,10 @@ export default function ChapterQuestionsScreen() {
         <div className="mb-6">
           <div className="flex justify-between items-center mb-3 px-0.5">
             <span className="text-xl font-bold text-[#141779]">
-              Question {currentQ + 1} <span className="text-[17px] font-medium text-[#827656]">/ {total}</span>
+              Question {currentQ + 1} <span className="text-[17px] font-medium text-[#767683]">/ {total}</span>
             </span>
-            <div className="bg-[#e8ddff] px-3.5 py-1.5 rounded-full">
-              <span className="text-xs font-bold text-[#1d0052] tracking-[0.5px]">KEEP GOING!</span>
+            <div className="bg-[#e0e0ff] px-3.5 py-1.5 rounded-full">
+              <span className="text-xs font-bold text-[#30007f] tracking-[0.5px]">KEEP GOING!</span>
             </div>
           </div>
           <div className="h-6 bg-[#e6e6e6] rounded-full overflow-hidden p-[5px]">
@@ -562,8 +562,8 @@ export default function ChapterQuestionsScreen() {
 
                 if (confirmed) {
                   if (idx === correctIndex) {
-                    btnClass = "bg-[#e8ddff] border-2 border-[#30007f] border-b-[4px]";
-                    textClass = "text-[#1d0052]";
+                    btnClass = "bg-[#e0e0ff] border-2 border-[#30007f] border-b-[4px]";
+                    textClass = "text-[#30007f]";
                   } else if (idx === selected) {
                     btnClass = "bg-[#ffdad6] border-2 border-[#ba1a1a] border-b-[4px]";
                     textClass = "text-[#ba1a1a]";
@@ -606,13 +606,13 @@ export default function ChapterQuestionsScreen() {
                 disabled={confirmed}
                 placeholder="Type your answer here..."
                 className={`w-full p-4 rounded-2xl border-2 font-bold text-lg outline-none transition-all ${
-                  confirmed ? (isCorrect ? 'bg-[#e8ddff] border-[#30007f] text-[#1d0052]' : 'bg-[#ffdad6] border-[#ba1a1a] text-[#ba1a1a]')
+                  confirmed ? (isCorrect ? 'bg-[#e0e0ff] border-[#30007f] text-[#30007f]' : 'bg-[#ffdad6] border-[#ba1a1a] text-[#ba1a1a]')
                   : 'bg-white border-gray-200 text-[#4b4b4b] focus:border-[#141779] shadow-sm'
                 }`}
               />
               {confirmed && !isCorrect && (
                 <div className="w-full p-4 rounded-xl bg-white border-2 border-[#ba1a1a] text-[#ba1a1a] font-bold text-center flex items-center justify-center gap-2 shadow-sm animate-in fade-in slide-in-from-top-2">
-                  <span className="text-[#58cc02]">✓</span>
+                  <span className="text-[#006a62]">✓</span>
                   <span>Correct Answer: {correctAnswer}</span>
                 </div>
               )}
@@ -700,7 +700,7 @@ export default function ChapterQuestionsScreen() {
             className={`w-full py-[16px] rounded-2xl flex items-center justify-center transition-all ${
               (!confirmed && interactionType === "mcq" && !isTextInput && selected === null) || (!confirmed && isTextInput && textAnswer.trim() === "") ? 'bg-[#e5e5e5] text-[#afafaf]' :
               !confirmed ? 'bg-[#141779] text-white shadow-[0_4px_0_#0b0d4d] hover:bg-[#1a1e9e] active:translate-y-[4px] active:shadow-none active:mt-1' :
-              isCorrect ? 'bg-[#30007f] text-white shadow-[0_4px_0_#1d0052] hover:bg-[#3f00a8] active:translate-y-[4px] active:shadow-none active:mt-1' :
+              isCorrect ? 'bg-[#30007f] text-white shadow-[0_4px_0_#30007f] hover:bg-[#3f00a8] active:translate-y-[4px] active:shadow-none active:mt-1' :
               'bg-[#ba1a1a] text-white shadow-[0_4px_0_#93000a] hover:bg-[#d92222] active:translate-y-[4px] active:shadow-none active:mt-1'
             }`}
           >
