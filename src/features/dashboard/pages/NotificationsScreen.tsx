@@ -177,20 +177,6 @@ export default function NotificationsScreen() {
             })}
           </div>
         )}
-
-        {/* Visual Anchor */}
-        <div className="mt-8 relative w-full h-48 flex items-center justify-center">
-          <motion.div
-            animate={{ scale: [1, 1.1, 1] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute inset-0 bg-[rgba(0,106,98,0.05)] rounded-full"
-          />
-          <img
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDcg9JTfpWdNOXpWuO22pAh-SmdrVfI0_D7ceGxeDxO3gO-tl8MfHIl2U2sOBoSOnMQxjKkQkUwK6nFeC7BJX9w_D87zfkhtbhlEtizN4c-C_BFnGPHsqutVbgyi8mzN5DIvrn9JnnMETaWneQo-LPHZ1mcXJ_KjTaLb2iDH6eQKZAhFWejwLoV_BrYdrbu2oYvv2-pxHMPTpNHeQbcPAC-aaCDkttqKHBsgbkXzDtN4wyNlmZnXrR4_vboBBJMBA5cEybt9xqJnA"
-            alt="Buddy"
-            className="w-32 h-32 object-contain relative z-10"
-          />
-        </div>
       </main>
 
       {/* Floating Scroll To Top Button */}
