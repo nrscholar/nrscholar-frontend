@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 import ShadowArenaDuelStage, { ShadowArenaTheme } from "../../../components/ShadowArenaDuelStage";
+import { getScopedItem } from "../../../utils/sessionCache";
 
 const getSubjectStyle = (name: string) => {
   const n = name.toLowerCase();
@@ -67,7 +68,7 @@ export default function MultiplayerHubScreen() {
 
     let cachedTier: string | undefined;
     try {
-      const cachedJ = localStorage.getItem("cachedJourneyData");
+      const cachedJ = getScopedItem("cachedJourneyData") || localStorage.getItem("cachedJourneyData");
       if (cachedJ) {
         const parsed = JSON.parse(cachedJ);
         cachedTier = parsed.tierKey;

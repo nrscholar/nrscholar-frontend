@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
+import { getScopedItem, setScopedItem, removeScopedItem, getActiveUserContext } from "../../../utils/sessionCache";
 
 // Helper to render dynamic Lucide icons returned by backend API
 const renderIcon = (iconName: string, size = 18, className = "") => {
@@ -30,7 +31,7 @@ export default function ParentLearningDNAScreen() {
   
   const cachedDna = (() => {
     try {
-      const raw = sessionStorage.getItem("parent_learning_dna_cache");
+      const raw = getScopedItem("parent_learning_dna_cache");
       return raw ? JSON.parse(raw) : null;
     } catch (e) { return null; }
   })();
@@ -40,27 +41,55 @@ export default function ParentLearningDNAScreen() {
   const [profilePic, setProfilePic] = useState("");
   const [username, setUsername] = useState("Parent");
 
+  const [userData, setUserData] = useState<any>(() => {
+    try {
+      const raw = localStorage.getItem("userData");
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  });
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    const handleUserDataUpdated = () => {
+      try {
+        const raw = localStorage.getItem("userData");
+        if (raw) {
+          setUserData(JSON.parse(raw));
+        }
+      } catch (_) {}
+      setRefreshKey(k => k + 1);
+    };
+    window.addEventListener("userDataUpdated", handleUserDataUpdated);
+    return () => window.removeEventListener("userDataUpdated", handleUserDataUpdated);
+  }, []);
+
   useEffect(() => {
     (async () => {
       try {
+        setLoading(true);
+        const ctx = getActiveUserContext();
+        const childParam = ctx.childId ? `childId=${encodeURIComponent(ctx.childId)}` : "";
+        const classParam = ctx.classLevel ? `classLevel=${encodeURIComponent(ctx.classLevel)}` : "";
+        const qParams = [childParam, classParam].filter(Boolean).join("&");
         const [resUser, resDna] = await Promise.all([
           apiFetch("/api/users/me").catch(() => null),
-          apiFetch("/api/parent/learning-dna").catch(() => null)
+          apiFetch(`/api/parent/learning-dna${qParams ? `?${qParams}` : ""}`).catch(() => null)
         ]);
 
         if (resUser) {
-          const jsonUser = await resUser.json();
-          if (jsonUser.success && jsonUser.data?.user) {
+          const jsonUser = await resUser.json().catch(() => null);
+          if (jsonUser?.success && jsonUser?.data?.user) {
+            setUserData(jsonUser.data.user);
             setUsername(jsonUser.data.user.parentName || jsonUser.data.user.username || "Parent");
             setProfilePic(jsonUser.data.user.parentPhoto || "");
           }
         }
 
         if (resDna) {
-          const json = await resDna.json();
-          if (json.success) {
+          const json = await resDna.json().catch(() => null);
+          if (json?.success) {
             setDnaData(json.data);
-            sessionStorage.setItem("parent_learning_dna_cache", JSON.stringify(json.data));
+            setScopedItem("parent_learning_dna_cache", JSON.stringify(json.data));
           }
         }
       } catch (err) {
@@ -69,7 +98,7 @@ export default function ParentLearningDNAScreen() {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [refreshKey]);
 
   if (loading) {
     return (
@@ -289,6 +318,52 @@ export default function ParentLearningDNAScreen() {
             : t("learning_dna", "Learning DNA")}
         </h1>
       </header>
+
+      {/* Child Selector Pills — instant switch with cross-tab/screen sync */}
+      {userData?.children && userData.children.length > 1 && (
+        <div className="max-w-lg mx-auto px-6 pt-3 pb-1 flex gap-2 overflow-x-auto scrollbar-hide">
+          {userData.children.map((c: any) => {
+            const isActive = (userData.activeChildId || "child_1") === c.childId;
+            return (
+              <button
+                key={c.childId}
+                onClick={async () => {
+                  if (isActive) return;
+                  try {
+                    const res = await apiFetch("/api/users/active-child", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ childId: c.childId })
+                    });
+                    const json = await res.json();
+                    if (json.success && json.data?.user) {
+                      localStorage.setItem("userData", JSON.stringify(json.data.user));
+                      window.dispatchEvent(new Event("userDataUpdated"));
+                      removeScopedItem("parent_learning_dna_cache");
+                      setUserData(json.data.user);
+                      setLoading(true);
+                      setRefreshKey(k => k + 1);
+                    }
+                  } catch (e) { console.error("Switch failed", e); }
+                }}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border-2 font-bold text-xs shrink-0 transition-all cursor-pointer ${
+                  isActive
+                    ? "border-[#141779] bg-[#141779] text-white shadow-xs"
+                    : "border-slate-200 bg-white text-[#141779] hover:border-[#141779] hover:bg-indigo-50"
+                }`}
+              >
+                <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-black overflow-hidden shrink-0">
+                  {c.childPhoto
+                    ? <img src={c.childPhoto} alt={c.childName} className="w-full h-full object-cover rounded-full" />
+                    : c.childName?.charAt(0).toUpperCase()}
+                </span>
+                <span>{c.childName}</span>
+                {isActive && <span className="text-[10px] opacity-80">✓</span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {!hasData ? (
         <main className="px-5 pt-12 max-w-lg mx-auto flex flex-col gap-6 items-center justify-center text-center">

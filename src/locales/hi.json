@@ -850,6 +850,7 @@
     "chapters_read": "पढ़े गए अध्याय",
     "completion_rate": "पूर्णता दर",
     "total_reading_time": "कुल पठन समय",
+    "no_reading_activity_data": "अभी तक कोई अध्याय पठन गतिविधि दर्ज नहीं की गई है।",
     "boss_round_analytics": "चैप्टर बॉस फाइट विश्लेषण",
     "chapter_boss_fight_analytics": "चैप्टर बॉस फाइट विश्लेषण",
     "recent_chapter_boss_fights": "हाल की चैप्टर बॉस फाइट्स",

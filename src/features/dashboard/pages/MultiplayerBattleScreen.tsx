@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
+import { getScopedItem } from "../../../utils/sessionCache";
 
 // Hardcoded rapid fire questions for MVP multiplayer
 const BATTLE_QUESTIONS = [
@@ -160,7 +161,7 @@ export default function MultiplayerBattleScreen() {
   const [battleTheme, setBattleTheme] = useState<"dragon" | "science" | "social">(() => {
     let cachedTier: string | undefined;
     try {
-      const cachedJ = localStorage.getItem("cachedJourneyData");
+      const cachedJ = getScopedItem("cachedJourneyData") || localStorage.getItem("cachedJourneyData");
       if (cachedJ) {
         const parsed = JSON.parse(cachedJ);
         cachedTier = parsed.tierKey;

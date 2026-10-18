@@ -4,6 +4,7 @@ import { Menu, Rocket, Sun, CheckCircle, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { apiFetch } from "../../../api";
+import { getScopedItem } from "../../../utils/sessionCache";
 
 const CONFETTI_COLORS = ['#57fae9', '#141779', '#bfc2ff', '#006a62', '#ffdad6'];
 const NUM_CONFETTI = 40;
@@ -43,7 +44,7 @@ export default function AssessmentSummary() {
   let initialAnswers = location.state?.userAnswers;
   if (!initialAnswers || initialAnswers.length === 0) {
     try {
-      const stored = sessionStorage.getItem("lastSessionAnswers");
+      const stored = getScopedItem("lastSessionAnswers");
       if (stored) {
         initialAnswers = JSON.parse(stored);
       }

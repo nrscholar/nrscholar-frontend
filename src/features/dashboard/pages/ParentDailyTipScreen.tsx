@@ -5,6 +5,7 @@ import {
   Brain, CheckCircle, CheckCircle2, Star, Zap, ArrowLeft, Trophy, Target, Bell
 } from "lucide-react";
 import { apiFetch } from "../../../api";
+import { getActiveUserContext } from "../../../utils/sessionCache";
 import { useTranslation } from "react-i18next";
 import ChildSwitcherModal from "../../../components/ChildSwitcherModal";
 
@@ -156,8 +157,12 @@ export default function ParentDailyTipScreen() {
     window.scrollTo(0, 0);
     async function fetchAll() {
       const nextCache: any = cachedTip ? { ...cachedTip } : {};
+      const ctx = getActiveUserContext();
+      const childParam = ctx.childId ? `childId=${encodeURIComponent(ctx.childId)}` : "";
+      const classParam = ctx.classLevel ? `classLevel=${encodeURIComponent(ctx.classLevel)}` : "";
+      const qParams = [childParam, classParam].filter(Boolean).join("&");
 
-      const tipPromise = apiFetch("/api/parent/daily-tip")
+      const tipPromise = apiFetch(`/api/parent/daily-tip${qParams ? `?${qParams}` : ""}`)
         .then(res => res.json())
         .then(tJson => {
           if (tJson.success && tJson.data) {

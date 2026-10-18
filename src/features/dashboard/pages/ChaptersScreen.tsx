@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
 import { prefetchPdf } from "../../../utils/pdfCache";
+import { getScopedItem, setScopedItem, getActiveUserContext } from "../../../utils/sessionCache";
 import StreakModal from "../../../components/StreakModal";
 import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
@@ -23,7 +24,7 @@ export default function ChaptersScreen() {
   // Synchronous cache initialization for 0ms instant display
   const getInitialSubjects = () => {
     try {
-      const cached = sessionStorage.getItem("cached_practice_subjects");
+      const cached = getScopedItem("cached_practice_subjects");
       if (!cached) return [];
       const parsed = JSON.parse(cached);
       return Array.isArray(parsed)
@@ -35,30 +36,30 @@ export default function ChaptersScreen() {
   const getInitialActiveSubject = () => {
     const initialSubs = getInitialSubjects();
     if (initialSubs.length === 0) return null;
-    const savedId = sessionStorage.getItem("activeSubjectId");
+    const savedId = getScopedItem("activeSubjectId");
     return initialSubs.find((s: any) => s._id === savedId) || initialSubs[0];
   };
 
   const getInitialChapters = (subjectId?: string) => {
     if (!subjectId) return [];
     try {
-      const cached = sessionStorage.getItem(`cached_chapters_${subjectId}`);
+      const cached = getScopedItem(`cached_chapters_${subjectId}`);
       return cached ? JSON.parse(cached) : [];
     } catch (e) { return []; }
   };
 
   const getInitialProgressMap = (): Record<string, any> => {
     try {
-      const cached = sessionStorage.getItem("cached_chapter_progress");
+      const cached = getScopedItem("cached_chapter_progress");
       return cached ? JSON.parse(cached) : {};
     } catch (e) { return {}; }
   };
 
   const getInitialCompletedChapters = (): string[] => {
     try {
-      const cached = sessionStorage.getItem("cached_completed_chapters");
+      const cached = getScopedItem("cached_completed_chapters");
       const list: string[] = cached ? JSON.parse(cached) : [];
-      const cachedProg = sessionStorage.getItem("cached_chapter_progress");
+      const cachedProg = getScopedItem("cached_chapter_progress");
       const progMap = cachedProg ? JSON.parse(cachedProg) : null;
       if (progMap && Array.isArray(list)) {
         return list.filter(id => {
@@ -143,15 +144,16 @@ export default function ChaptersScreen() {
 
   const fetchChapterProgress = useCallback(async () => {
     try {
-      const pRes = await apiFetch("/api/practice/chapter-progress").catch(() => null);
+      const { classLevel } = getActiveUserContext();
+      const pRes = await apiFetch(`/api/practice/chapter-progress?classLevel=${encodeURIComponent(classLevel)}`).catch(() => null);
       if (pRes?.ok) {
         const pData = await pRes.json().catch(() => null);
         if (pData?.success && Array.isArray(pData.data)) {
           const { progMap, completedIds } = processProgressData(pData.data);
           setChapterProgressMap(progMap);
           setCompletedChapters(completedIds);
-          sessionStorage.setItem("cached_chapter_progress", JSON.stringify(progMap));
-          sessionStorage.setItem("cached_completed_chapters", JSON.stringify(completedIds));
+          setScopedItem("cached_chapter_progress", JSON.stringify(progMap));
+          setScopedItem("cached_completed_chapters", JSON.stringify(completedIds));
         }
       }
     } catch (e) {
@@ -163,7 +165,7 @@ export default function ChaptersScreen() {
     if (!sub || sub._id === activeSubject?._id) return;
     activeSubjectRef.current = sub._id;
     setActiveSubject(sub);
-    sessionStorage.setItem("activeSubjectId", sub._id);
+    setScopedItem("activeSubjectId", sub._id);
 
     // Instant 0ms synchronous chapter swap / skeleton loader
     const cachedChs = getInitialChapters(sub._id);
@@ -201,10 +203,11 @@ export default function ChaptersScreen() {
 
     // 2. Parallel background fetch for user, notifications, subjects, and controls
     try {
+      const { classLevel } = getActiveUserContext();
       const [meRes, notifRes, subRes, controlsRes] = await Promise.all([
         apiFetch("/api/users/me").catch(() => null),
         apiFetch("/api/notifications").catch(() => null),
-        apiFetch("/api/practice/subjects").catch(() => null),
+        apiFetch(`/api/practice/subjects?classLevel=${encodeURIComponent(classLevel)}`).catch(() => null),
         apiFetch("/api/parent/controls").catch(() => null)
       ]);
 
@@ -259,15 +262,15 @@ export default function ChaptersScreen() {
 
         if (allowedSubjects.length > 0) {
           setSubjects(allowedSubjects);
-          sessionStorage.setItem("cached_practice_subjects", JSON.stringify(allowedSubjects));
-          const savedSubjectId = sessionStorage.getItem("activeSubjectId");
+          setScopedItem("cached_practice_subjects", JSON.stringify(allowedSubjects));
+          const savedSubjectId = getScopedItem("activeSubjectId");
           const found = allowedSubjects.find((s: any) => s._id === savedSubjectId) || allowedSubjects[0];
           setActiveSubject((prev: any) => {
             if (prev?._id === found._id) return prev;
             return found;
           });
           activeSubjectRef.current = found._id;
-          sessionStorage.setItem("activeSubjectId", found._id);
+          setScopedItem("activeSubjectId", found._id);
         } else {
           setSubjects([]);
           setLoading(false);
@@ -339,9 +342,10 @@ export default function ChaptersScreen() {
       }
 
       try {
+        const { classLevel } = getActiveUserContext();
         const [chRes, pRes] = await Promise.all([
-          apiFetch(`/api/practice/chapters/${currentSubId}`).catch(() => null),
-          apiFetch(`/api/practice/chapter-progress`).catch(() => null)
+          apiFetch(`/api/practice/chapters/${currentSubId}?classLevel=${encodeURIComponent(classLevel)}`).catch(() => null),
+          apiFetch(`/api/practice/chapter-progress?classLevel=${encodeURIComponent(classLevel)}`).catch(() => null)
         ]);
 
         // Always update chapter progress across all subjects regardless of activeSubjectRef,
@@ -353,8 +357,8 @@ export default function ChaptersScreen() {
               const { progMap, completedIds } = processProgressData(pData.data);
               setChapterProgressMap(progMap);
               setCompletedChapters(completedIds);
-              sessionStorage.setItem("cached_chapter_progress", JSON.stringify(progMap));
-              sessionStorage.setItem("cached_completed_chapters", JSON.stringify(completedIds));
+              setScopedItem("cached_chapter_progress", JSON.stringify(progMap));
+              setScopedItem("cached_completed_chapters", JSON.stringify(completedIds));
             }
           } catch (pe) {
             console.error("Failed to parse progress data", pe);
@@ -372,17 +376,17 @@ export default function ChaptersScreen() {
 
         if (chData?.success && Array.isArray(chData.data)) {
           setChapters(chData.data);
-          sessionStorage.setItem(`cached_chapters_${currentSubId}`, JSON.stringify(chData.data));
+          setScopedItem(`cached_chapters_${currentSubId}`, JSON.stringify(chData.data));
           if (chData.data.length === 0) {
             // Subject has no active chapters seeded: prune from tabs to strictly hide empty subjects
             setSubjects((prevSubjects) => {
               const pruned = prevSubjects.filter((s) => s._id !== currentSubId);
-              sessionStorage.setItem("cached_practice_subjects", JSON.stringify(pruned));
+              setScopedItem("cached_practice_subjects", JSON.stringify(pruned));
               if (pruned.length > 0) {
                 const nextSub = pruned[0];
                 setActiveSubject(nextSub);
                 activeSubjectRef.current = nextSub._id;
-                sessionStorage.setItem("activeSubjectId", nextSub._id);
+                setScopedItem("activeSubjectId", nextSub._id);
               } else {
                 setActiveSubject(null);
                 activeSubjectRef.current = null;
@@ -828,8 +832,8 @@ export default function ChaptersScreen() {
                             </h3>
 
                             {(() => {
-                              const savedAns = sessionStorage.getItem(`user_answers_${chap._id}_1`);
-                              const savedPhase = sessionStorage.getItem(`mission_phase_${chap._id}_1`);
+                              const savedAns = getScopedItem(`user_answers_${chap._id}_1`);
+                              const savedPhase = getScopedItem(`mission_phase_${chap._id}_1`);
                               let isChapInProgress = false;
                               if (savedAns) {
                                 try {

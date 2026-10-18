@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "../../../api";
+import { getScopedItem, setScopedItem, removeScopedItem, getActiveUserContext } from "../../../utils/sessionCache";
 import { showInteractiveNotification } from "../../../services/pushNotificationService";
 import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
@@ -28,18 +29,9 @@ import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 type StepPhase = "INTRO" | "QUIZ" | "MINI_REWARD" | "BOSS" | "SUMMARY";
 
 const getUserClassNumber = (): number => {
-  const cached = localStorage.getItem("userData");
-  if (cached) {
-    try {
-      const u = JSON.parse(cached);
-      const className = u.childClass || "Class 3";
-      const num = parseInt(className.replace(/\D/g, ""), 10);
-      return isNaN(num) ? 3 : num;
-    } catch (e) {
-      return 3;
-    }
-  }
-  return 3;
+  const { classLevel } = getActiveUserContext();
+  const num = parseInt(classLevel.replace(/\D/g, ""), 10);
+  return isNaN(num) ? 3 : num;
 };
 
 const RenderClassIllustration = ({ classNum }: { classNum: number }) => {
@@ -203,6 +195,20 @@ const RenderClassIllustration = ({ classNum }: { classNum: number }) => {
   }
 };
 
+const DEFAULT_QUIZ = [
+  { _id: "fq1", question: "Which of the following is a synonym for 'happy'?", options: ["Joyful", "Sad", "Angry", "Tired"], answer: "Joyful", type: "multiple_choice" },
+  { _id: "fq2", question: "Which of these is a primary color?", options: ["Red", "Green", "Purple", "Orange"], answer: "Red", type: "multiple_choice" },
+  { _id: "fq3", question: "What is the capital city of France?", options: ["Paris", "London", "Berlin", "Rome"], answer: "Paris", type: "multiple_choice" },
+  { _id: "fq4", question: "What comes after the letter B in the alphabet?", options: ["C", "A", "D", "E"], answer: "C", type: "multiple_choice" },
+  { _id: "fq5", question: "Which geometric shape has three sides?", options: ["Triangle", "Square", "Circle", "Rectangle"], answer: "Triangle", type: "multiple_choice" }
+];
+
+const DEFAULT_BOSS = [
+  { _id: "fb1", question: "Chapter Boss Challenge: Which of the following best demonstrates this chapter's advanced concept?", options: ["Option A", "Option B", "Option C", "Option D"], answer: "Option A", type: "multiple_choice", difficulty: "Hard", isBoss: true },
+  { _id: "fb2", question: "Boss Guardian Strike: Identify the core mastery principle from this chapter.", options: ["Correct Statement", "Option 1", "Option 2", "Option 3"], answer: "Correct Statement", type: "multiple_choice", difficulty: "Hard", isBoss: true },
+  { _id: "fb3", question: "Final Boss Strike: Solve this chapter mastery challenge to defeat the boss.", options: ["Mastery Answer", "Option 1", "Option 2", "Option 3"], answer: "Mastery Answer", type: "multiple_choice", difficulty: "Hard", isBoss: true }
+];
+
 export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scholar Mission Play Engine (Updated)
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -212,13 +218,13 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   const isFreshReplay = searchParams.get("replay") === "true";
   const [isReplay] = useState(() => {
     const fromUrl = searchParams.get("replay") === "true";
-    const fromSession = sessionStorage.getItem(`is_replay_${chapterId}_${missionSeq}`) === "true";
+    const fromSession = getScopedItem(`is_replay_${chapterId}_${missionSeq}`) === "true";
     const res = fromUrl || fromSession;
     if (res) {
-      sessionStorage.setItem(`is_replay_${chapterId}_${missionSeq}`, "true");
+      setScopedItem(`is_replay_${chapterId}_${missionSeq}`, "true");
       for (let s = 1; s <= 5; s++) {
         if (s !== missionSeq) {
-          sessionStorage.removeItem(`is_replay_${chapterId}_${s}`);
+          removeScopedItem(`is_replay_${chapterId}_${s}`);
         }
       }
     }
@@ -236,22 +242,22 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   const [loading, setLoading] = useState(true);
   const [missionData, setMissionData] = useState<any>(null);
   // Check if an in-progress session exists in sessionStorage for this specific mission
-  const savedPhase = sessionStorage.getItem(`mission_phase_${chapterId}_${missionSeq}`);
+  const savedPhase = getScopedItem(`mission_phase_${chapterId}_${missionSeq}`);
   const hasSavedSession = Boolean(
     savedPhase && (savedPhase === "BOSS" || savedPhase === "QUIZ" || savedPhase === "MINI_REWARD")
   );
 
   const [phase, setPhase] = useState<StepPhase>(() => {
     if (isFreshReplay) {
-      sessionStorage.removeItem(`mission_phase_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`boss_damage_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`boss_wrong_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`boss_index_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`mission_timer_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`user_answers_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`quiz_correct_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`xp_earned_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`coins_earned_${chapterId}_${missionSeq}`);
+      removeScopedItem(`mission_phase_${chapterId}_${missionSeq}`);
+      removeScopedItem(`boss_damage_${chapterId}_${missionSeq}`);
+      removeScopedItem(`boss_wrong_${chapterId}_${missionSeq}`);
+      removeScopedItem(`boss_index_${chapterId}_${missionSeq}`);
+      removeScopedItem(`mission_timer_${chapterId}_${missionSeq}`);
+      removeScopedItem(`user_answers_${chapterId}_${missionSeq}`);
+      removeScopedItem(`quiz_correct_${chapterId}_${missionSeq}`);
+      removeScopedItem(`xp_earned_${chapterId}_${missionSeq}`);
+      removeScopedItem(`coins_earned_${chapterId}_${missionSeq}`);
       const queryPhase = searchParams.get("phase");
       if (queryPhase === "BOSS" || queryPhase === "QUIZ" || queryPhase === "MINI_REWARD") {
         return queryPhase as StepPhase;
@@ -271,7 +277,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   // Quiz state
   const [currentQuizIndex, setCurrentQuizIndex] = useState(() => {
     if (isFreshReplay) return 0;
-    const savedAns = sessionStorage.getItem(`user_answers_${chapterId}_${missionSeq}`);
+    const savedAns = getScopedItem(`user_answers_${chapterId}_${missionSeq}`);
     if (savedAns) {
       try {
         const arr = JSON.parse(savedAns);
@@ -285,9 +291,9 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   const [quizSelected, setQuizSelected] = useState<number | null>(null);
   const [quizCorrectCount, setQuizCorrectCount] = useState(() => {
     if (isFreshReplay) return 0;
-    const saved = sessionStorage.getItem(`quiz_correct_${chapterId}_${missionSeq}`);
+    const saved = getScopedItem(`quiz_correct_${chapterId}_${missionSeq}`);
     if (saved !== null) return parseInt(saved, 10) || 0;
-    const savedAns = sessionStorage.getItem(`user_answers_${chapterId}_${missionSeq}`);
+    const savedAns = getScopedItem(`user_answers_${chapterId}_${missionSeq}`);
     if (savedAns) {
       try {
         const arr = JSON.parse(savedAns);
@@ -307,12 +313,12 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   // Stats state
   const [xpEarned, setXpEarned] = useState(() => {
     if (isFreshReplay) return 0;
-    const saved = sessionStorage.getItem(`xp_earned_${chapterId}_${missionSeq}`);
+    const saved = getScopedItem(`xp_earned_${chapterId}_${missionSeq}`);
     return saved ? (parseInt(saved, 10) || 0) : 0;
   });
   const [coinsEarned, setCoinsEarned] = useState(() => {
     if (isFreshReplay) return 0;
-    const saved = sessionStorage.getItem(`coins_earned_${chapterId}_${missionSeq}`);
+    const saved = getScopedItem(`coins_earned_${chapterId}_${missionSeq}`);
     return saved ? (parseInt(saved, 10) || 0) : 0;
   });
   const [streak, setStreak] = useState(1);
@@ -323,20 +329,20 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   const [questionTimeLeft, setQuestionTimeLeft] = useState(QUESTION_TIME_LIMIT);
   const [totalSessionSec, setTotalSessionSec] = useState(() => {
     if (isFreshReplay) return 0;
-    const saved = sessionStorage.getItem(`mission_timer_${chapterId}_${missionSeq}`);
+    const saved = getScopedItem(`mission_timer_${chapterId}_${missionSeq}`);
     return saved ? (parseInt(saved, 10) || 0) : 0;
   });
 
   // Boss Battle state
   const [bossDamageCount, setBossDamageCount] = useState(() => {
     if (isFreshReplay) return 0;
-    const saved = sessionStorage.getItem(`boss_damage_${chapterId}_${missionSeq}`);
+    const saved = getScopedItem(`boss_damage_${chapterId}_${missionSeq}`);
     return saved ? (parseInt(saved, 10) || 0) : 0;
   });
   const [childDamageCount, setChildDamageCount] = useState(() => {
-    const isReviving = sessionStorage.getItem("mission_boss_revival_active") || sessionStorage.getItem("boss_revival_won_reward");
+    const isReviving = getScopedItem("mission_boss_revival_active") || getScopedItem("boss_revival_won_reward");
     if (isReviving) {
-      const wonRewardStr = sessionStorage.getItem("boss_revival_won_reward");
+      const wonRewardStr = getScopedItem("boss_revival_won_reward");
       if (wonRewardStr) {
         try {
           const r = JSON.parse(wonRewardStr);
@@ -351,12 +357,12 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   }); // tracks hearts lost (0-3)
   const [wrongAnswerCount, setWrongAnswerCount] = useState(() => {
     if (isFreshReplay) return 0;
-    const saved = sessionStorage.getItem(`boss_wrong_${chapterId}_${missionSeq}`);
+    const saved = getScopedItem(`boss_wrong_${chapterId}_${missionSeq}`);
     return saved ? (parseInt(saved, 10) || 0) : 0;
   });
   const [currentBossIndex, setCurrentBossIndex] = useState(() => {
     if (isFreshReplay) return 0;
-    const saved = sessionStorage.getItem(`boss_index_${chapterId}_${missionSeq}`);
+    const saved = getScopedItem(`boss_index_${chapterId}_${missionSeq}`);
     return saved ? (parseInt(saved, 10) || 0) : 0;
   });
   const [bossSelected, setBossSelected] = useState<number | null>(null);
@@ -385,7 +391,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   // Duolingo Streak animations and steps
   const [summaryStep, setSummaryStep] = useState<"LESSON_COMPLETE" | "STREAK" | "REPORT">(() => {
     if (isFreshReplay) return "LESSON_COMPLETE";
-    const saved = sessionStorage.getItem(`summary_step_${chapterId}_${missionSeq}`);
+    const saved = getScopedItem(`summary_step_${chapterId}_${missionSeq}`);
     return (saved as any) || "LESSON_COMPLETE";
   });
   const [displayedStreak, setDisplayedStreak] = useState(0);
@@ -416,12 +422,12 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   };
 
   const handleGoToMissionSpinWheel = () => {
-    sessionStorage.setItem("mission_boss_revival_active", "true");
-    sessionStorage.setItem(`boss_damage_${chapterId}_${missionSeq}`, bossDamageCount.toString());
-    sessionStorage.setItem(`boss_wrong_${chapterId}_${missionSeq}`, wrongAnswerCount.toString());
-    sessionStorage.setItem(`boss_index_${chapterId}_${missionSeq}`, currentBossIndex.toString());
-    sessionStorage.setItem(`mission_phase_${chapterId}_${missionSeq}`, "BOSS");
-    sessionStorage.setItem(`user_answers_${chapterId}_${missionSeq}`, JSON.stringify(userAnswers));
+    setScopedItem("mission_boss_revival_active", "true");
+    setScopedItem(`boss_damage_${chapterId}_${missionSeq}`, bossDamageCount.toString());
+    setScopedItem(`boss_wrong_${chapterId}_${missionSeq}`, wrongAnswerCount.toString());
+    setScopedItem(`boss_index_${chapterId}_${missionSeq}`, currentBossIndex.toString());
+    setScopedItem(`mission_phase_${chapterId}_${missionSeq}`, "BOSS");
+    setScopedItem(`user_answers_${chapterId}_${missionSeq}`, JSON.stringify(userAnswers));
 
     setShowReviveModal(false);
     setShowBuySpinConfirmModal(false);
@@ -458,12 +464,12 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           }
         } catch (ue) {}
 
-        sessionStorage.setItem("mission_boss_revival_active", "true");
-        sessionStorage.setItem(`boss_damage_${chapterId}_${missionSeq}`, bossDamageCount.toString());
-        sessionStorage.setItem(`boss_wrong_${chapterId}_${missionSeq}`, wrongAnswerCount.toString());
-        sessionStorage.setItem(`boss_index_${chapterId}_${missionSeq}`, currentBossIndex.toString());
-        sessionStorage.setItem(`mission_phase_${chapterId}_${missionSeq}`, "BOSS");
-        sessionStorage.setItem(`user_answers_${chapterId}_${missionSeq}`, JSON.stringify(userAnswers));
+        setScopedItem("mission_boss_revival_active", "true");
+        setScopedItem(`boss_damage_${chapterId}_${missionSeq}`, bossDamageCount.toString());
+        setScopedItem(`boss_wrong_${chapterId}_${missionSeq}`, wrongAnswerCount.toString());
+        setScopedItem(`boss_index_${chapterId}_${missionSeq}`, currentBossIndex.toString());
+        setScopedItem(`mission_phase_${chapterId}_${missionSeq}`, "BOSS");
+        setScopedItem(`user_answers_${chapterId}_${missionSeq}`, JSON.stringify(userAnswers));
 
         setShowBuySpinConfirmModal(false);
         setShowReviveModal(false);
@@ -488,9 +494,9 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
   // Check and apply revival bonus when returning from DailyRewardsScreen
   useEffect(() => {
-    const isReviving = sessionStorage.getItem("mission_boss_revival_active") || sessionStorage.getItem("boss_revival_won_reward");
+    const isReviving = getScopedItem("mission_boss_revival_active") || getScopedItem("boss_revival_won_reward");
     if (isReviving) {
-      const wonRewardStr = sessionStorage.getItem("boss_revival_won_reward");
+      const wonRewardStr = getScopedItem("boss_revival_won_reward");
       let heartsRestored = 1;
       if (wonRewardStr) {
         try {
@@ -512,41 +518,41 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       setDragonCrying(false);
       setQuestionTimeLeft(QUESTION_TIME_LIMIT);
 
-      sessionStorage.removeItem("mission_boss_revival_active");
-      sessionStorage.removeItem("boss_revival_won_reward");
+      removeScopedItem("mission_boss_revival_active");
+      removeScopedItem("boss_revival_won_reward");
 
       showToast("Revived and ready! Your hearts have been restored. Defeat the boss! ❤️", "success");
     }
   }, []);
 
   useEffect(() => {
-    sessionStorage.setItem(`boss_damage_${chapterId}_${missionSeq}`, bossDamageCount.toString());
+    setScopedItem(`boss_damage_${chapterId}_${missionSeq}`, bossDamageCount.toString());
   }, [bossDamageCount, chapterId, missionSeq]);
 
   useEffect(() => {
-    sessionStorage.setItem(`boss_wrong_${chapterId}_${missionSeq}`, wrongAnswerCount.toString());
+    setScopedItem(`boss_wrong_${chapterId}_${missionSeq}`, wrongAnswerCount.toString());
   }, [wrongAnswerCount, chapterId, missionSeq]);
 
   useEffect(() => {
-    sessionStorage.setItem(`boss_index_${chapterId}_${missionSeq}`, currentBossIndex.toString());
+    setScopedItem(`boss_index_${chapterId}_${missionSeq}`, currentBossIndex.toString());
   }, [currentBossIndex, chapterId, missionSeq]);
 
   useEffect(() => {
-    sessionStorage.setItem(`quiz_correct_${chapterId}_${missionSeq}`, quizCorrectCount.toString());
+    setScopedItem(`quiz_correct_${chapterId}_${missionSeq}`, quizCorrectCount.toString());
   }, [quizCorrectCount, chapterId, missionSeq]);
 
   useEffect(() => {
-    sessionStorage.setItem(`xp_earned_${chapterId}_${missionSeq}`, xpEarned.toString());
+    setScopedItem(`xp_earned_${chapterId}_${missionSeq}`, xpEarned.toString());
   }, [xpEarned, chapterId, missionSeq]);
 
   useEffect(() => {
-    sessionStorage.setItem(`coins_earned_${chapterId}_${missionSeq}`, coinsEarned.toString());
+    setScopedItem(`coins_earned_${chapterId}_${missionSeq}`, coinsEarned.toString());
   }, [coinsEarned, chapterId, missionSeq]);
 
   // Final Summary state
   const [completionResult, setCompletionResult] = useState<any>(() => {
     if (isFreshReplay || phase !== "SUMMARY") return null;
-    const saved = sessionStorage.getItem(`completion_result_${chapterId}_${missionSeq}`);
+    const saved = getScopedItem(`completion_result_${chapterId}_${missionSeq}`);
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -556,48 +562,48 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   });
   const [userAnswers, setUserAnswers] = useState<any[]>(() => {
     if (isFreshReplay) return [];
-    const saved = sessionStorage.getItem(`user_answers_${chapterId}_${missionSeq}`);
+    const saved = getScopedItem(`user_answers_${chapterId}_${missionSeq}`);
     return saved ? JSON.parse(saved) : [];
   });
   const [isCompleting, setIsCompleting] = useState(false);
 
   useEffect(() => {
-    sessionStorage.setItem(`user_answers_${chapterId}_${missionSeq}`, JSON.stringify(userAnswers));
+    setScopedItem(`user_answers_${chapterId}_${missionSeq}`, JSON.stringify(userAnswers));
   }, [userAnswers, chapterId, missionSeq]);
 
   useEffect(() => {
     if (phase && phase !== "INTRO") {
-      sessionStorage.setItem(`mission_phase_${chapterId}_${missionSeq}`, phase);
+      setScopedItem(`mission_phase_${chapterId}_${missionSeq}`, phase);
     }
   }, [phase, chapterId, missionSeq]);
 
   useEffect(() => {
-    sessionStorage.setItem(`quiz_correct_${chapterId}_${missionSeq}`, quizCorrectCount.toString());
+    setScopedItem(`quiz_correct_${chapterId}_${missionSeq}`, quizCorrectCount.toString());
   }, [quizCorrectCount, chapterId, missionSeq]);
 
   useEffect(() => {
-    sessionStorage.setItem(`xp_earned_${chapterId}_${missionSeq}`, xpEarned.toString());
+    setScopedItem(`xp_earned_${chapterId}_${missionSeq}`, xpEarned.toString());
   }, [xpEarned, chapterId, missionSeq]);
 
   useEffect(() => {
-    sessionStorage.setItem(`coins_earned_${chapterId}_${missionSeq}`, coinsEarned.toString());
+    setScopedItem(`coins_earned_${chapterId}_${missionSeq}`, coinsEarned.toString());
   }, [coinsEarned, chapterId, missionSeq]);
 
   useEffect(() => {
-    sessionStorage.setItem(`boss_damage_${chapterId}_${missionSeq}`, bossDamageCount.toString());
+    setScopedItem(`boss_damage_${chapterId}_${missionSeq}`, bossDamageCount.toString());
   }, [bossDamageCount, chapterId, missionSeq]);
 
   useEffect(() => {
-    sessionStorage.setItem(`boss_wrong_${chapterId}_${missionSeq}`, wrongAnswerCount.toString());
+    setScopedItem(`boss_wrong_${chapterId}_${missionSeq}`, wrongAnswerCount.toString());
   }, [wrongAnswerCount, chapterId, missionSeq]);
 
   useEffect(() => {
-    sessionStorage.setItem(`boss_index_${chapterId}_${missionSeq}`, currentBossIndex.toString());
+    setScopedItem(`boss_index_${chapterId}_${missionSeq}`, currentBossIndex.toString());
   }, [currentBossIndex, chapterId, missionSeq]);
 
   useEffect(() => {
     if (phase === "SUMMARY") {
-      sessionStorage.setItem(`summary_step_${chapterId}_${missionSeq}`, summaryStep);
+      setScopedItem(`summary_step_${chapterId}_${missionSeq}`, summaryStep);
     }
   }, [summaryStep, phase, chapterId, missionSeq]);
 
@@ -615,15 +621,16 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
         if (isFreshReplay) {
           apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, { method: "DELETE" }).catch(() => {});
         }
-        const res = await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}${isFreshReplay ? "?replay=true" : ""}`);
-        const json = await res.json();
-        if (json.success && json.data) {
+        const activeCtx = getActiveUserContext();
+        const res = await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}?classLevel=${encodeURIComponent(activeCtx.classLevel)}${isFreshReplay ? "&replay=true" : ""}`);
+        const json = await res.json().catch(() => null);
+        if (json?.success && json?.data) {
           setMissionData(json.data);
 
           // Restore draft from database if present (ignore when starting fresh replay)
           const draft = isFreshReplay ? null : json.data.activeDraft;
           if (draft) {
-            const savedAnswersRaw = sessionStorage.getItem(`user_answers_${chapterId}_${missionSeq}`);
+            const savedAnswersRaw = getScopedItem(`user_answers_${chapterId}_${missionSeq}`);
             let savedAnswers: any[] = [];
             try { savedAnswers = savedAnswersRaw ? JSON.parse(savedAnswersRaw) : []; } catch (e) {}
 
@@ -631,10 +638,16 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
               ? draft.userAnswers
               : savedAnswers;
 
-            const savedWrong = parseInt(sessionStorage.getItem(`boss_wrong_${chapterId}_${missionSeq}`) || "0", 10);
-            const savedIndex = parseInt(sessionStorage.getItem(`boss_index_${chapterId}_${missionSeq}`) || "0", 10);
+            const savedWrong = parseInt(getScopedItem(`boss_wrong_${chapterId}_${missionSeq}`) || "0", 10);
+            const savedIndex = parseInt(getScopedItem(`boss_index_${chapterId}_${missionSeq}`) || "0", 10);
 
-            if (typeof draft.currentQuizIndex === "number") setCurrentQuizIndex(draft.currentQuizIndex);
+            const totalQuizQ = Array.isArray(json.data.quizQuestions) && json.data.quizQuestions.length > 0
+              ? json.data.quizQuestions.length
+              : DEFAULT_QUIZ.length;
+
+            if (typeof draft.currentQuizIndex === "number") {
+              setCurrentQuizIndex(Math.max(0, Math.min(draft.currentQuizIndex, totalQuizQ - 1)));
+            }
             if (draft.phase && draft.phase !== "INTRO") setPhase(draft.phase);
             if (typeof draft.quizCorrectCount === "number") setQuizCorrectCount(draft.quizCorrectCount);
             if (mergedAnswers.length > 0) setUserAnswers(mergedAnswers);
@@ -654,13 +667,13 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             setBossDamageCount(0);
             setWrongAnswerCount(0);
             setCurrentBossIndex(0);
-            sessionStorage.removeItem(`boss_wrong_${chapterId}_${missionSeq}`);
+            removeScopedItem(`boss_wrong_${chapterId}_${missionSeq}`);
           } else if (!draft && !hasSavedSession) {
             setChildDamageCount(0);
             setBossDamageCount(0);
             setWrongAnswerCount(0);
             setCurrentBossIndex(0);
-            sessionStorage.removeItem(`boss_wrong_${chapterId}_${missionSeq}`);
+            removeScopedItem(`boss_wrong_${chapterId}_${missionSeq}`);
           } else if (json.data.childHearts !== undefined && draft?.phase === "BOSS") {
             setChildDamageCount(Math.max(0, 3 - json.data.childHearts));
             if (json.data.childHearts === 0) {
@@ -670,11 +683,38 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             setChildDamageCount(0);
           }
         } else {
-          // Mission does not exist or all missions completed
-          navigate(`/mission-roadmap?chapterId=${chapterId}`, { replace: true });
+          // Mission data unavailable or empty pool: Fallback to standard mission questions instead of silent redirect
+          showNotificationToast({ message: "Loaded practice mission with standard challenge questions", type: "info" });
+          setMissionData({
+            missionSeq,
+            title: `Mission ${missionSeq}`,
+            icon: "🎯",
+            bossName: "Boss Guardian",
+            quizQuestions: DEFAULT_QUIZ,
+            bossQuestions: DEFAULT_BOSS,
+            bossHearts: 3,
+            childHearts: 3,
+            doubleDamage: false,
+            quizCompleted: false,
+            activeDraft: null
+          });
         }
       } catch (e) {
         console.error("Failed to load mission:", e);
+        showNotificationToast({ message: "Loaded practice mission with standard challenge questions", type: "info" });
+        setMissionData({
+          missionSeq,
+          title: `Mission ${missionSeq}`,
+          icon: "🎯",
+          bossName: "Boss Guardian",
+          quizQuestions: DEFAULT_QUIZ,
+          bossQuestions: DEFAULT_BOSS,
+          bossHearts: 3,
+          childHearts: 3,
+          doubleDamage: false,
+          quizCompleted: false,
+          activeDraft: null
+        });
       } finally {
         setLoading(false);
         setIsDraftRestored(true);
@@ -701,7 +741,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           bossDamageCount,
           wrongAnswerCount,
           currentBossIndex,
-          totalSessionSec
+          totalSessionSec,
+          classLevel: getActiveUserContext().classLevel
         })
       }).catch((err) => console.error("Failed to sync draft to server:", err));
     }, 500);
@@ -727,30 +768,17 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     loading
   ]);
 
-  const defaultQuiz = [
-    { _id: "fq1", question: "Which of the following is a synonym for 'happy'?", options: ["Joyful", "Sad", "Angry", "Tired"], answer: "Joyful", type: "multiple_choice" },
-    { _id: "fq2", question: "Which of these is a primary color?", options: ["Red", "Green", "Purple", "Orange"], answer: "Red", type: "multiple_choice" },
-    { _id: "fq3", question: "What is the capital city of France?", options: ["Paris", "London", "Berlin", "Rome"], answer: "Paris", type: "multiple_choice" },
-    { _id: "fq4", question: "What comes after the letter B in the alphabet?", options: ["C", "A", "D", "E"], answer: "C", type: "multiple_choice" }
-  ];
-
   const quizQuestions = useMemo(() => {
     return (missionData?.quizQuestions && missionData.quizQuestions.length > 0)
       ? missionData.quizQuestions
-      : defaultQuiz;
+      : DEFAULT_QUIZ;
   }, [missionData?.quizQuestions]);
-
-  const defaultBoss = [
-    { _id: "fb1", question: "Chapter Boss Challenge: Which of the following best demonstrates this chapter's advanced concept?", options: ["Option A", "Option B", "Option C", "Option D"], answer: "Option A", type: "multiple_choice", difficulty: "Hard", isBoss: true },
-    { _id: "fb2", question: "Boss Guardian Strike: Identify the core mastery principle from this chapter.", options: ["Correct Statement", "Option 1", "Option 2", "Option 3"], answer: "Correct Statement", type: "multiple_choice", difficulty: "Hard", isBoss: true },
-    { _id: "fb3", question: "Final Boss Strike: Solve this chapter mastery challenge to defeat the boss.", options: ["Mastery Answer", "Option 1", "Option 2", "Option 3"], answer: "Mastery Answer", type: "multiple_choice", difficulty: "Hard", isBoss: true }
-  ];
 
   const bossQuestions = useMemo(() => {
     if (missionData?.bossQuestions && missionData.bossQuestions.length > 0) {
       return missionData.bossQuestions;
     }
-    return defaultBoss;
+    return DEFAULT_BOSS;
   }, [missionData?.bossQuestions]);
 
   const bossMaxHp = 3;
@@ -854,15 +882,15 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     setIsCompleting(true);
     try {
       // Clear boss & quiz session state
-      sessionStorage.removeItem(`boss_damage_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`boss_wrong_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`boss_index_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`mission_phase_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`mission_timer_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`user_answers_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`quiz_correct_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`xp_earned_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`coins_earned_${chapterId}_${missionSeq}`);
+      removeScopedItem(`boss_damage_${chapterId}_${missionSeq}`);
+      removeScopedItem(`boss_wrong_${chapterId}_${missionSeq}`);
+      removeScopedItem(`boss_index_${chapterId}_${missionSeq}`);
+      removeScopedItem(`mission_phase_${chapterId}_${missionSeq}`);
+      removeScopedItem(`mission_timer_${chapterId}_${missionSeq}`);
+      removeScopedItem(`user_answers_${chapterId}_${missionSeq}`);
+      removeScopedItem(`quiz_correct_${chapterId}_${missionSeq}`);
+      removeScopedItem(`xp_earned_${chapterId}_${missionSeq}`);
+      removeScopedItem(`coins_earned_${chapterId}_${missionSeq}`);
 
       const bossCorrect = finalBossDamage;
       const res = await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/complete`, {
@@ -875,22 +903,23 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           bossTotal: Math.max(bossCorrect + wrongAnswerCount, currentAnswers.length - quizQuestions.length),
           timeTakenSec: totalSessionSec,
           livesRemaining: Math.max(0, 3 - finalChildDamage),
-          answers: currentAnswers
+          answers: currentAnswers,
+          classLevel: getActiveUserContext().classLevel
         })
       });
       const json = await res.json();
       if (json.success && json.data) {
         setCompletionResult(json.data);
-        sessionStorage.setItem(`completion_result_${chapterId}_${missionSeq}`, JSON.stringify(json.data));
+        setScopedItem(`completion_result_${chapterId}_${missionSeq}`, JSON.stringify(json.data));
 
-        sessionStorage.removeItem(`is_replay_${chapterId}_${missionSeq}`);
+        removeScopedItem(`is_replay_${chapterId}_${missionSeq}`);
 
         try {
           const chIdStr = String(chapterId);
-          const cachedCompleted = sessionStorage.getItem("cached_completed_chapters");
+          const cachedCompleted = getScopedItem("cached_completed_chapters");
           let completedList: string[] = cachedCompleted ? JSON.parse(cachedCompleted) : [];
 
-          const cachedProg = sessionStorage.getItem("cached_chapter_progress");
+          const cachedProg = getScopedItem("cached_chapter_progress");
           const progMap = cachedProg ? JSON.parse(cachedProg) : {};
           const prevDoc = progMap[chIdStr] || {};
 
@@ -905,7 +934,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             // Strictly remove from completed list only if it was never completed
             completedList = completedList.filter((id) => id !== chIdStr && id !== `${chIdStr}_hard`);
           }
-          sessionStorage.setItem("cached_completed_chapters", JSON.stringify(completedList));
+          setScopedItem("cached_completed_chapters", JSON.stringify(completedList));
 
           const prevMissions = Array.isArray(prevDoc.completedMissions) ? prevDoc.completedMissions : [];
           const backendMissions = Array.isArray(json.data.completedMissions) ? json.data.completedMissions : [];
@@ -922,7 +951,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           };
           progMap[chIdStr] = updatedDoc;
           progMap[chapterId] = updatedDoc;
-          sessionStorage.setItem("cached_chapter_progress", JSON.stringify(progMap));
+          setScopedItem("cached_chapter_progress", JSON.stringify(progMap));
         } catch (_) {}
 
         window.dispatchEvent(new Event("userDataUpdated"));
@@ -963,7 +992,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           todayLessonsCount: 1
         };
         setCompletionResult(fallbackRes);
-        sessionStorage.setItem(`completion_result_${chapterId}_${missionSeq}`, JSON.stringify(fallbackRes));
+        setScopedItem(`completion_result_${chapterId}_${missionSeq}`, JSON.stringify(fallbackRes));
       }
     } catch (e) {
       console.error("Failed to complete mission:", e);
@@ -974,18 +1003,18 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   };
 
   const handleBackToRoadmap = useCallback(async () => {
-    sessionStorage.removeItem(`is_replay_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`user_answers_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`mission_phase_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`mission_timer_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`boss_damage_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`boss_wrong_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`boss_index_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`quiz_correct_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`xp_earned_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`coins_earned_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`completion_result_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`summary_step_${chapterId}_${missionSeq}`);
+    removeScopedItem(`is_replay_${chapterId}_${missionSeq}`);
+    removeScopedItem(`user_answers_${chapterId}_${missionSeq}`);
+    removeScopedItem(`mission_phase_${chapterId}_${missionSeq}`);
+    removeScopedItem(`mission_timer_${chapterId}_${missionSeq}`);
+    removeScopedItem(`boss_damage_${chapterId}_${missionSeq}`);
+    removeScopedItem(`boss_wrong_${chapterId}_${missionSeq}`);
+    removeScopedItem(`boss_index_${chapterId}_${missionSeq}`);
+    removeScopedItem(`quiz_correct_${chapterId}_${missionSeq}`);
+    removeScopedItem(`xp_earned_${chapterId}_${missionSeq}`);
+    removeScopedItem(`coins_earned_${chapterId}_${missionSeq}`);
+    removeScopedItem(`completion_result_${chapterId}_${missionSeq}`);
+    removeScopedItem(`summary_step_${chapterId}_${missionSeq}`);
 
     try {
       await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, { method: "DELETE" });
@@ -997,21 +1026,21 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   const handleReplayMission = useCallback(async () => {
     for (let s = 1; s <= 5; s++) {
       if (s !== missionSeq) {
-        sessionStorage.removeItem(`is_replay_${chapterId}_${s}`);
+        removeScopedItem(`is_replay_${chapterId}_${s}`);
       }
     }
-    sessionStorage.setItem(`is_replay_${chapterId}_${missionSeq}`, "true");
-    sessionStorage.removeItem(`user_answers_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`mission_phase_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`mission_timer_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`boss_damage_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`boss_wrong_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`boss_index_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`quiz_correct_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`xp_earned_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`coins_earned_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`completion_result_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`summary_step_${chapterId}_${missionSeq}`);
+    setScopedItem(`is_replay_${chapterId}_${missionSeq}`, "true");
+    removeScopedItem(`user_answers_${chapterId}_${missionSeq}`);
+    removeScopedItem(`mission_phase_${chapterId}_${missionSeq}`);
+    removeScopedItem(`mission_timer_${chapterId}_${missionSeq}`);
+    removeScopedItem(`boss_damage_${chapterId}_${missionSeq}`);
+    removeScopedItem(`boss_wrong_${chapterId}_${missionSeq}`);
+    removeScopedItem(`boss_index_${chapterId}_${missionSeq}`);
+    removeScopedItem(`quiz_correct_${chapterId}_${missionSeq}`);
+    removeScopedItem(`xp_earned_${chapterId}_${missionSeq}`);
+    removeScopedItem(`coins_earned_${chapterId}_${missionSeq}`);
+    removeScopedItem(`completion_result_${chapterId}_${missionSeq}`);
+    removeScopedItem(`summary_step_${chapterId}_${missionSeq}`);
 
     try {
       await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, { method: "DELETE" });
@@ -1026,17 +1055,17 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       return;
     }
     const nextSeq = missionSeq + 1;
-    sessionStorage.removeItem(`user_answers_${chapterId}_${nextSeq}`);
-    sessionStorage.removeItem(`mission_phase_${chapterId}_${nextSeq}`);
-    sessionStorage.removeItem(`mission_timer_${chapterId}_${nextSeq}`);
-    sessionStorage.removeItem(`boss_damage_${chapterId}_${nextSeq}`);
-    sessionStorage.removeItem(`boss_wrong_${chapterId}_${nextSeq}`);
-    sessionStorage.removeItem(`boss_index_${chapterId}_${nextSeq}`);
-    sessionStorage.removeItem(`quiz_correct_${chapterId}_${nextSeq}`);
-    sessionStorage.removeItem(`xp_earned_${chapterId}_${nextSeq}`);
-    sessionStorage.removeItem(`coins_earned_${chapterId}_${nextSeq}`);
-    sessionStorage.removeItem(`completion_result_${chapterId}_${nextSeq}`);
-    sessionStorage.removeItem(`summary_step_${chapterId}_${nextSeq}`);
+    removeScopedItem(`user_answers_${chapterId}_${nextSeq}`);
+    removeScopedItem(`mission_phase_${chapterId}_${nextSeq}`);
+    removeScopedItem(`mission_timer_${chapterId}_${nextSeq}`);
+    removeScopedItem(`boss_damage_${chapterId}_${nextSeq}`);
+    removeScopedItem(`boss_wrong_${chapterId}_${nextSeq}`);
+    removeScopedItem(`boss_index_${chapterId}_${nextSeq}`);
+    removeScopedItem(`quiz_correct_${chapterId}_${nextSeq}`);
+    removeScopedItem(`xp_earned_${chapterId}_${nextSeq}`);
+    removeScopedItem(`coins_earned_${chapterId}_${nextSeq}`);
+    removeScopedItem(`completion_result_${chapterId}_${nextSeq}`);
+    removeScopedItem(`summary_step_${chapterId}_${nextSeq}`);
 
     try {
       await apiFetch(`/api/practice/chapters/${chapterId}/missions/${nextSeq}/draft`, { method: "DELETE" });
@@ -1050,18 +1079,18 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     setShowReviveModal(false);
 
     // Clear all session storage keys for this mission
-    sessionStorage.removeItem(`boss_damage_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`boss_wrong_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`boss_index_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`mission_phase_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`mission_timer_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`user_answers_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`quiz_correct_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`xp_earned_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`coins_earned_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem("mission_boss_revival_active");
-    sessionStorage.removeItem("boss_revival_won_reward");
-    sessionStorage.removeItem(`is_replay_${chapterId}_${missionSeq}`);
+    removeScopedItem(`boss_damage_${chapterId}_${missionSeq}`);
+    removeScopedItem(`boss_wrong_${chapterId}_${missionSeq}`);
+    removeScopedItem(`boss_index_${chapterId}_${missionSeq}`);
+    removeScopedItem(`mission_phase_${chapterId}_${missionSeq}`);
+    removeScopedItem(`mission_timer_${chapterId}_${missionSeq}`);
+    removeScopedItem(`user_answers_${chapterId}_${missionSeq}`);
+    removeScopedItem(`quiz_correct_${chapterId}_${missionSeq}`);
+    removeScopedItem(`xp_earned_${chapterId}_${missionSeq}`);
+    removeScopedItem(`coins_earned_${chapterId}_${missionSeq}`);
+    removeScopedItem("mission_boss_revival_active");
+    removeScopedItem("boss_revival_won_reward");
+    removeScopedItem(`is_replay_${chapterId}_${missionSeq}`);
 
     try {
       // Call backend retreat endpoint to apply XP deduction & reset hearts
@@ -1123,9 +1152,9 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       setChildDamageCount(newChildDamage);
 
       const nextIndex = currentBossIndex + 1;
-      sessionStorage.setItem(`boss_wrong_${chapterId}_${missionSeq}`, newWrongCount.toString());
-      sessionStorage.setItem(`user_answers_${chapterId}_${missionSeq}`, JSON.stringify(currentAnswers));
-      sessionStorage.setItem(`boss_index_${chapterId}_${missionSeq}`, nextIndex.toString());
+      setScopedItem(`boss_wrong_${chapterId}_${missionSeq}`, newWrongCount.toString());
+      setScopedItem(`user_answers_${chapterId}_${missionSeq}`, JSON.stringify(currentAnswers));
+      setScopedItem(`boss_index_${chapterId}_${missionSeq}`, nextIndex.toString());
 
       // Sync updated lives & draft to the backend immediately so that revival spin checks and question counts are preserved
       apiFetch(`/api/practice/chapters/${chapterId}/missions/hearts`, {
@@ -1147,7 +1176,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           bossDamageCount,
           wrongAnswerCount: newWrongCount,
           currentBossIndex: nextIndex,
-          totalSessionSec
+          totalSessionSec,
+          classLevel: getActiveUserContext().classLevel
         })
       }).catch(console.error);
 
@@ -1268,7 +1298,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
   useEffect(() => {
     if (phase && phase !== "INTRO") {
-      sessionStorage.setItem(`mission_phase_${chapterId}_${missionSeq}`, phase);
+      setScopedItem(`mission_phase_${chapterId}_${missionSeq}`, phase);
     }
   }, [phase, chapterId, missionSeq]);
 
@@ -1279,7 +1309,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       if (isCompleting) return;
       setTotalSessionSec((prev) => {
         const next = prev + 1;
-        sessionStorage.setItem(`mission_timer_${chapterId}_${missionSeq}`, next.toString());
+        setScopedItem(`mission_timer_${chapterId}_${missionSeq}`, next.toString());
         return next;
       });
     }, 1000);
@@ -1366,16 +1396,16 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           onClick={async () => {
             if (childDamageCount >= 3 || showReviveModal) {
               setIsQuitting(true);
-              sessionStorage.removeItem(`is_replay_${chapterId}_${missionSeq}`);
-              sessionStorage.removeItem(`boss_damage_${chapterId}_${missionSeq}`);
-              sessionStorage.removeItem(`boss_wrong_${chapterId}_${missionSeq}`);
-              sessionStorage.removeItem(`boss_index_${chapterId}_${missionSeq}`);
-              sessionStorage.removeItem(`mission_phase_${chapterId}_${missionSeq}`);
-              sessionStorage.removeItem(`mission_timer_${chapterId}_${missionSeq}`);
-              sessionStorage.removeItem(`user_answers_${chapterId}_${missionSeq}`);
-              sessionStorage.removeItem(`quiz_correct_${chapterId}_${missionSeq}`);
-              sessionStorage.removeItem(`xp_earned_${chapterId}_${missionSeq}`);
-              sessionStorage.removeItem(`coins_earned_${chapterId}_${missionSeq}`);
+              removeScopedItem(`is_replay_${chapterId}_${missionSeq}`);
+              removeScopedItem(`boss_damage_${chapterId}_${missionSeq}`);
+              removeScopedItem(`boss_wrong_${chapterId}_${missionSeq}`);
+              removeScopedItem(`boss_index_${chapterId}_${missionSeq}`);
+              removeScopedItem(`mission_phase_${chapterId}_${missionSeq}`);
+              removeScopedItem(`mission_timer_${chapterId}_${missionSeq}`);
+              removeScopedItem(`user_answers_${chapterId}_${missionSeq}`);
+              removeScopedItem(`quiz_correct_${chapterId}_${missionSeq}`);
+              removeScopedItem(`xp_earned_${chapterId}_${missionSeq}`);
+              removeScopedItem(`coins_earned_${chapterId}_${missionSeq}`);
 
               try {
                 await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/retreat`, {
@@ -1402,23 +1432,24 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                     bossDamageCount,
                     wrongAnswerCount,
                     currentBossIndex,
-                    totalSessionSec
+                    totalSessionSec,
+                    classLevel: getActiveUserContext().classLevel
                   })
                 });
               } catch (e) {
                 console.error("Save draft on back button click failed:", e);
               }
             } else if (phase === "INTRO") {
-              sessionStorage.removeItem(`is_replay_${chapterId}_${missionSeq}`);
-              sessionStorage.removeItem(`mission_phase_${chapterId}_${missionSeq}`);
-              sessionStorage.removeItem(`user_answers_${chapterId}_${missionSeq}`);
-              sessionStorage.removeItem(`mission_timer_${chapterId}_${missionSeq}`);
-              sessionStorage.removeItem(`boss_damage_${chapterId}_${missionSeq}`);
-              sessionStorage.removeItem(`boss_wrong_${chapterId}_${missionSeq}`);
-              sessionStorage.removeItem(`boss_index_${chapterId}_${missionSeq}`);
-              sessionStorage.removeItem(`quiz_correct_${chapterId}_${missionSeq}`);
-              sessionStorage.removeItem(`xp_earned_${chapterId}_${missionSeq}`);
-              sessionStorage.removeItem(`coins_earned_${chapterId}_${missionSeq}`);
+              removeScopedItem(`is_replay_${chapterId}_${missionSeq}`);
+              removeScopedItem(`mission_phase_${chapterId}_${missionSeq}`);
+              removeScopedItem(`user_answers_${chapterId}_${missionSeq}`);
+              removeScopedItem(`mission_timer_${chapterId}_${missionSeq}`);
+              removeScopedItem(`boss_damage_${chapterId}_${missionSeq}`);
+              removeScopedItem(`boss_wrong_${chapterId}_${missionSeq}`);
+              removeScopedItem(`boss_index_${chapterId}_${missionSeq}`);
+              removeScopedItem(`quiz_correct_${chapterId}_${missionSeq}`);
+              removeScopedItem(`xp_earned_${chapterId}_${missionSeq}`);
+              removeScopedItem(`coins_earned_${chapterId}_${missionSeq}`);
             }
             navigate(`/mission-roadmap?chapterId=${chapterId}`, { replace: true });
           }}

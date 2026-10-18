@@ -6,6 +6,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import AdventureHero from "../../../components/AdventureHero";
 import { startNavigationProgress } from "../../../components/NavigationProgressBar";
+import { getScopedItem, setScopedItem, getActiveUserContext } from "../../../utils/sessionCache";
 
 const ChildSwitcherModal = lazy(() => import("../../../components/ChildSwitcherModal"));
 
@@ -162,7 +163,7 @@ export default function HomeScreen() {
   const [citiesData, setCitiesData] = useState<any[]>([]);
   const [journeyData, setJourneyData] = useState<any>(() => {
     try {
-      const raw = localStorage.getItem("cachedJourneyData");
+      const raw = getScopedItem("cachedJourneyData") || localStorage.getItem("cachedJourneyData");
       return raw ? JSON.parse(raw) : null;
     } catch { return null; }
   });
@@ -198,17 +199,16 @@ export default function HomeScreen() {
   const fetchJourneyData = async (userDoc?: any) => {
     try {
       const u = userDoc || userData;
+      const ctx = getActiveUserContext();
       let url = "/api/journey/progress";
-      if (u) {
-        const params = new URLSearchParams();
-        if (u.childClass) params.append("classLevel", u.childClass);
-        if (u.childBoard) params.append("board", u.childBoard);
-        if (u.activeChildId) params.append("child_id", u.activeChildId);
+      const params = new URLSearchParams();
+      if (ctx.classLevel) params.append("classLevel", ctx.classLevel);
+      if (u?.childBoard) params.append("board", u.childBoard);
+      if (ctx.childId) params.append("child_id", ctx.childId);
 
-        const q = params.toString();
-        if (q) {
-          url += `?${q}`;
-        }
+      const q = params.toString();
+      if (q) {
+        url += `?${q}`;
       }
       const res = await apiFetch(url);
       if (res.ok) {
@@ -216,7 +216,7 @@ export default function HomeScreen() {
         if (json.success && json.data) {
           setJourneyData(json.data);
           try {
-            localStorage.setItem("cachedJourneyData", JSON.stringify(json.data));
+            setScopedItem("cachedJourneyData", JSON.stringify(json.data));
           } catch (e) { }
         }
       }

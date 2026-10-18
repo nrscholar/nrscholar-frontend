@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Bell, BookOpen, Clock, Heart, ShieldAlert, Sparkles, TrendingUp, Trophy, Zap, ChevronRight, ChevronDown, Download, Share2, Award, Calendar, CheckCircle, CheckCircle2, Target, BarChart2, Flame, UserCheck, RefreshCw, X, AlertTriangle, Users, BrainCircuit, Activity, Settings } from "lucide-react";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
+import { getActiveUserContext } from "../../../utils/sessionCache";
 import ChildSwitcherModal from "../../../components/ChildSwitcherModal";
 import { translateNotificationTitle, translateNotificationMessage } from "../../../utils/notificationTranslator";
 import { 
@@ -100,7 +101,10 @@ export default function ParentDashboardScreen() {
     setLoadingBreakdown(true);
     try {
       const tzOffset = -new Date().getTimezoneOffset();
-      const res = await apiFetch(`/api/parent/today-breakdown?tz_offset_minutes=${tzOffset}`);
+      const activeCtx = getActiveUserContext();
+      const classParam = activeCtx.classLevel ? `&classLevel=${encodeURIComponent(activeCtx.classLevel)}` : "";
+      const childParam = userData?.activeChildId ? `&childId=${encodeURIComponent(userData.activeChildId)}` : "";
+      const res = await apiFetch(`/api/parent/today-breakdown?tz_offset_minutes=${tzOffset}${childParam}${classParam}`);
       const json = await res.json();
       if (json.success && json.data) {
         setBreakdownData(json.data);
@@ -145,12 +149,16 @@ export default function ParentDashboardScreen() {
         } catch (e) {}
       }
 
-      const childParam = currentChildId ? `&childId=${currentChildId}` : "";
+      const activeCtx = getActiveUserContext();
+      const activeClass = activeCtx.classLevel;
+      const classParam = activeClass ? `&classLevel=${encodeURIComponent(activeClass)}` : "";
+      const childParam = currentChildId ? `&childId=${encodeURIComponent(currentChildId)}` : "";
       
+      const tipParam = [childParam.replace("&", ""), classParam.replace("&", "")].filter(Boolean).join("&");
       const [reportRes, notifRes, tipRes] = await Promise.all([
-        apiFetch(`/api/parent/report?tz_offset_minutes=${tzOffset}${childParam}`).catch(() => null),
-        apiFetch(`/api/notifications?role=parent${childParam}`).catch(() => null),
-        apiFetch("/api/parent/daily-tip").catch(() => null)
+        apiFetch(`/api/parent/report?tz_offset_minutes=${tzOffset}${childParam}${classParam}`).catch(() => null),
+        apiFetch(`/api/notifications?role=parent${childParam}${classParam}`).catch(() => null),
+        apiFetch(`/api/parent/daily-tip${tipParam ? `?${tipParam}` : ""}`).catch(() => null)
       ]);
 
       if (tipRes && tipRes.ok) {

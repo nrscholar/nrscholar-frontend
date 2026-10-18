@@ -847,6 +847,7 @@
     "chapters_read": "Chapters Read",
     "completion_rate": "Completion Rate",
     "total_reading_time": "Total Reading Time",
+    "no_reading_activity_data": "No chapter reading activity recorded yet.",
     "boss_round_analytics": "Chapter Boss Fight Analytics",
     "chapter_boss_fight_analytics": "Chapter Boss Fight Analytics",
     "recent_chapter_boss_fights": "Recent Chapter Boss Fights",

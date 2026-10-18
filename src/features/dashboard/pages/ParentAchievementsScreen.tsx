@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
+import { getActiveUserContext } from "../../../utils/sessionCache";
 
 export default function ParentAchievementsScreen() {
   const { t } = useTranslation();
@@ -34,9 +35,14 @@ export default function ParentAchievementsScreen() {
           } catch (e) {}
         })();
 
+        const ctx = getActiveUserContext();
+        const childParam = ctx.childId ? `childId=${encodeURIComponent(ctx.childId)}` : "";
+        const classParam = ctx.classLevel ? `classLevel=${encodeURIComponent(ctx.classLevel)}` : "";
+        const q = [childParam, classParam].filter(Boolean).join("&");
+
         const rankPromise = (async () => {
           try {
-            const rankRes = await apiFetch("/api/parent/rank");
+            const rankRes = await apiFetch(`/api/parent/rank${q ? `?${q}` : ""}`);
             const rankJson = await rankRes.json();
             if (rankJson.success && rankJson.data) {
               setGlobalRank(rankJson.data.rank);
@@ -46,7 +52,7 @@ export default function ParentAchievementsScreen() {
 
         const achPromise = (async () => {
           try {
-            const achRes = await apiFetch("/api/parent/achievements");
+            const achRes = await apiFetch(`/api/parent/achievements${q ? `?${q}` : ""}`);
             const achJson = await achRes.json();
             if (achJson.success && achJson.data) {
               setAchievements(achJson.data.achievements);

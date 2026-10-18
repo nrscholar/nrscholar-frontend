@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Rocket, Star, Check, Sparkles, Brain, Lock, Trophy, BookOpen, TrendingUp, Users, Settings, Play, ArrowLeft, Home, BarChart2 } from "lucide-react";
 import { apiFetch } from "../../../api";
+import { getActiveUserContext } from "../../../utils/sessionCache";
 import { useTranslation } from "react-i18next";
 
 const IconMap: Record<string, any> = {
@@ -36,9 +37,13 @@ export default function ParentRoadmapScreen() {
   useEffect(() => {
     async function fetchRoadmap() {
       try {
+        const ctx = getActiveUserContext();
+        const childParam = ctx.childId ? `childId=${encodeURIComponent(ctx.childId)}` : "";
+        const classParam = ctx.classLevel ? `classLevel=${encodeURIComponent(ctx.classLevel)}` : "";
+        const qParams = [childParam, classParam].filter(Boolean).join("&");
         const [resUser, resRoadmap] = await Promise.all([
           apiFetch("/api/users/me").catch(() => null),
-          apiFetch("/api/parent/roadmap").catch(() => null)
+          apiFetch(`/api/parent/roadmap${qParams ? `?${qParams}` : ""}`).catch(() => null)
         ]);
 
         if (resUser) {

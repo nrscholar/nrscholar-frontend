@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Clock, CheckCircle2, ShieldAlert, Star, TrendingUp, Search, Calendar, FileText, Activity, X, ChevronDown, ChevronUp, BookOpen, Layers, ChevronRight } from "lucide-react";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
+import { getScopedItem, setScopedItem, removeScopedItem, getActiveUserContext } from "../../../utils/sessionCache";
 
 export default function KidsActivityScreen() {
   const { t } = useTranslation();
@@ -10,7 +11,7 @@ export default function KidsActivityScreen() {
 
   const cached = (() => {
     try {
-      const raw = sessionStorage.getItem("kids_activities_cache");
+      const raw = getScopedItem("kids_activities_cache");
       return raw ? JSON.parse(raw) : null;
     } catch (e) { return null; }
   })();
@@ -88,8 +89,11 @@ export default function KidsActivityScreen() {
       try {
         if (!cached) setLoading(true);
         const tzOffset = -new Date().getTimezoneOffset();
+        const ctx = getActiveUserContext();
+        const childParam = ctx.childId ? `&childId=${encodeURIComponent(ctx.childId)}` : "";
+        const classParam = ctx.classLevel ? `&classLevel=${encodeURIComponent(ctx.classLevel)}` : "";
         const [res, userRes] = await Promise.all([
-          apiFetch(`/api/parent/activities?tz_offset_minutes=${tzOffset}`),
+          apiFetch(`/api/parent/activities?tz_offset_minutes=${tzOffset}${childParam}${classParam}`),
           apiFetch("/api/users/me").catch(() => null)
         ]);
 
@@ -99,7 +103,7 @@ export default function KidsActivityScreen() {
             setActivities(json.data.activities || []);
             setEngagementHours(json.data.engagementHours || "0");
             setEngagementTrend(json.data.engagementTrend !== undefined ? json.data.engagementTrend : null);
-            sessionStorage.setItem("kids_activities_cache", JSON.stringify({
+            setScopedItem("kids_activities_cache", JSON.stringify({
               activities: json.data.activities || [],
               engagementHours: json.data.engagementHours || "0",
               engagementTrend: json.data.engagementTrend !== undefined ? json.data.engagementTrend : null
@@ -169,7 +173,7 @@ export default function KidsActivityScreen() {
                       const json = await res.json();
                       if (json.success && json.data?.user) {
                         localStorage.setItem("userData", JSON.stringify(json.data.user));
-                        sessionStorage.removeItem("kids_activities_cache");
+                        removeScopedItem("kids_activities_cache");
                         setUserData(json.data.user);
                         setLoading(true);
                         setRefreshKey(k => k + 1);

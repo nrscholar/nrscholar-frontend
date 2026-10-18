@@ -11,6 +11,7 @@ import { apiFetch } from "../../../api";
 import ChildSwitcherModal from "../../../components/ChildSwitcherModal";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 import { getSubjectChartColor, DISTINCT_SUBJECT_PALETTE } from "../../../utils/chartColors";
+import { getScopedItem, setScopedItem, removeScopedItem, getActiveUserContext } from "../../../utils/sessionCache";
 
 const SUBJECT_COLORS = DISTINCT_SUBJECT_PALETTE;
 
@@ -86,7 +87,7 @@ export default function ParentReportScreen() {
   const currentLang = i18n.language || localStorage.getItem("i18nextLng") || "en";
   const cachedReport = (() => {
     try {
-      const raw = sessionStorage.getItem(`parent_report_cache_${currentLang}`);
+      const raw = getScopedItem(`parent_report_cache_${currentLang}`);
       return raw ? JSON.parse(raw) : null;
     } catch (e) { return null; }
   })();
@@ -174,7 +175,10 @@ export default function ParentReportScreen() {
       // "today" stays as "daily"
 
       const activeLang = i18n.language || localStorage.getItem("i18nextLng") || "en";
-      const url = `/api/parent/report/download?filter=${downloadFilter}&subject=${subjectFilter}&format=${format}&tz_offset_minutes=${offsetMinutes}&lang=${encodeURIComponent(activeLang)}`;
+      const ctx = getActiveUserContext();
+      const childParam = ctx.childId ? `&childId=${encodeURIComponent(ctx.childId)}` : "";
+      const classParam = ctx.classLevel ? `&classLevel=${encodeURIComponent(ctx.classLevel)}` : "";
+      const url = `/api/parent/report/download?filter=${downloadFilter}&subject=${subjectFilter}&format=${format}&tz_offset_minutes=${offsetMinutes}&lang=${encodeURIComponent(activeLang)}${childParam}${classParam}`;
       const response = await apiFetch(url, { headers: { "Accept-Language": activeLang } });
       
       if (!response.ok) {
@@ -329,20 +333,19 @@ export default function ParentReportScreen() {
     try {
       const lang = i18n.language || localStorage.getItem("i18nextLng") || "en";
       const tzOffset = -new Date().getTimezoneOffset();
-      let activeCid = null;
-      try {
-        const stored = localStorage.getItem("userData");
-        if (stored) activeCid = JSON.parse(stored).activeChildId;
-      } catch (e) {}
+      const ctx = getActiveUserContext();
+      const activeCid = ctx.childId;
+      const activeClass = ctx.classLevel;
       const childParam = activeCid ? `&childId=${encodeURIComponent(activeCid)}` : "";
+      const classParam = activeClass ? `&classLevel=${encodeURIComponent(activeClass)}` : "";
       const [reportRes, userRes] = await Promise.all([
-        apiFetch(`/api/parent/report?lang=${encodeURIComponent(lang)}&tz_offset_minutes=${tzOffset}${childParam}`, { headers: { "Accept-Language": lang } }),
+        apiFetch(`/api/parent/report?lang=${encodeURIComponent(lang)}&tz_offset_minutes=${tzOffset}${childParam}${classParam}`, { headers: { "Accept-Language": lang } }),
         apiFetch("/api/users/me").catch(() => null)
       ]);
       const json = await reportRes.json();
       if (json.success) {
         setReportData(json.data);
-        sessionStorage.setItem(`parent_report_cache_${lang}`, JSON.stringify(json.data));
+        setScopedItem(`parent_report_cache_${lang}`, JSON.stringify(json.data));
       }
       if (userRes && userRes.ok) {
         const ujson = await userRes.json();
@@ -824,7 +827,8 @@ export default function ParentReportScreen() {
                       const json = await res.json();
                       if (json.success && json.data?.user) {
                         localStorage.setItem("userData", JSON.stringify(json.data.user));
-                        sessionStorage.removeItem("parent_report_cache");
+                        window.dispatchEvent(new Event("userDataUpdated"));
+                        removeScopedItem(`parent_report_cache_${currentLang}`);
                         setUserData(json.data.user);
                         setLoading(true);
                         setRefreshKey(k => k + 1);
@@ -1028,7 +1032,7 @@ export default function ParentReportScreen() {
             <span className="text-sm font-black text-[#006a62]">{formatReadingTime(rA.totalReadingTime ?? 0)}</span>
           </div>
 
-          {(rA.readChaptersDetailed?.length > 0 || rA.readChaptersList?.length > 0) && (
+          {(rA.readChaptersDetailed?.length > 0 || rA.readChaptersList?.length > 0) ? (
             <div className="mt-4 border-t border-slate-100 pt-3 space-y-2">
               <h4 className="text-[10px] font-bold text-[#464652] uppercase tracking-wide">{t("read_chapters", "Read Chapters")}</h4>
               <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
@@ -1044,6 +1048,10 @@ export default function ParentReportScreen() {
                   </div>
                 ))}
               </div>
+            </div>
+          ) : (
+            <div className="mt-4 border-t border-slate-100 pt-3 text-center py-2">
+              <p className="text-xs text-[#767683]">{t("no_reading_activity_data", "No chapter reading activity recorded yet.")}</p>
             </div>
           )}
         </Card>

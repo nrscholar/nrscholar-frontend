@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import { Document, Page, pdfjs } from 'react-pdf';
 import { getOrFetchPdfUrl, getCachedPdfUrl } from "../../../utils/pdfCache";
+import { getScopedItem, setScopedItem, getActiveUserContext } from "../../../utils/sessionCache";
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
@@ -118,12 +119,17 @@ export default function ChapterReaderScreen() {
           chapter: title || undefined,
           subject: subjectName || undefined,
           chapterId: chapterId || undefined,
+          classLevel: getActiveUserContext().classLevel,
         }),
       });
     } catch (e) { console.error("Failed to log reading activity", e); }
   };
 
-  useEffect(() => { return () => { logReadingTime(); }; }, []);
+  useEffect(() => {
+    return () => {
+      logReadingTime();
+    };
+  }, []);
 
   const loadPdf = async () => {
     if (!chapterId) {
@@ -172,19 +178,26 @@ export default function ChapterReaderScreen() {
     }
   };
 
-  const handleReadingComplete = async () => {
+  const saveChapterProgress = async () => {
     if (!chapterId) return;
-    setMarkingComplete(true);
     await logReadingTime();
+    const activeCtx = getActiveUserContext();
     try {
       await apiFetch("/api/practice/chapter-progress", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chapterId, currentQ: 0, score: 0, completed: false, readingCompleted: true }),
+        body: JSON.stringify({ 
+          chapterId, 
+          currentQ: 0, 
+          score: 0, 
+          completed: false, 
+          readingCompleted: true,
+          classLevel: activeCtx.classLevel 
+        }),
       });
       try {
         const chIdStr = String(chapterId);
-        const cachedProg = sessionStorage.getItem("cached_chapter_progress");
+        const cachedProg = getScopedItem("cached_chapter_progress");
         const progMap = cachedProg ? JSON.parse(cachedProg) : {};
         const updatedDoc = {
           ...(progMap[chIdStr] || {}),
@@ -193,10 +206,16 @@ export default function ChapterReaderScreen() {
         };
         progMap[chIdStr] = updatedDoc;
         progMap[chapterId] = updatedDoc;
-        sessionStorage.setItem("cached_chapter_progress", JSON.stringify(progMap));
+        setScopedItem("cached_chapter_progress", JSON.stringify(progMap));
       } catch (_) {}
       window.dispatchEvent(new Event("userDataUpdated"));
     } catch (_) { /* fall through */ }
+  };
+
+  const handleReadingComplete = async () => {
+    if (!chapterId) return;
+    setMarkingComplete(true);
+    await saveChapterProgress();
     navigate(
       `/mission-roadmap?chapterId=${chapterId}&title=${encodeURIComponent(title)}&subjectName=${encodeURIComponent(subjectName)}`,
       { replace: true }
@@ -460,15 +479,19 @@ export default function ChapterReaderScreen() {
       {!isFullscreen && (
         <header className="flex items-center justify-between px-5 py-3.5 bg-white shrink-0 shadow-sm z-20 relative border-b border-slate-100">
           <button
-            onClick={async () => { await logReadingTime(); navigate(-1); }}
+            onClick={async () => {
+              await logReadingTime();
+              navigate(-1);
+            }}
             className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-all"
+            title="Go Back"
           >
             <ArrowLeft size={24} color="#141779" />
           </button>
           <h1 className="text-[18px] font-extrabold text-[#141779] truncate px-2 text-center max-w-[200px]">
             {title}
           </h1>
-          <button onClick={toggleFullscreen} className="p-2 -mr-2 hover:bg-gray-100 rounded-full transition-all">
+          <button onClick={toggleFullscreen} className="p-2 -mr-2 hover:bg-gray-100 rounded-full transition-all" title="Toggle Fullscreen">
             <Maximize2 size={22} color="#141779" />
           </button>
         </header>
