@@ -192,7 +192,10 @@ export default function ParentSettings() {
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
 
   const formatNotifTitle = (title: string) => translateNotificationTitle(title, t);
-  const formatNotifMsg = (msg: string) => translateNotificationMessage(msg, t);
+  const formatNotifMsg = (msg: string) => {
+    const activeC = (user?.children || []).find((c: any) => c.childId === user?.activeChildId);
+    return translateNotificationMessage(msg, t, activeC?.childName || user?.childName);
+  };
 
   const fetchNotifications = async (targetChildId?: string) => {
     try {

@@ -117,8 +117,8 @@ export default function ParentLearningDNAScreen() {
     );
   }
 
-  // Derive dynamic properties from data
-  const hasData = dnaData?.hasData !== false;
+  // Derive dynamic properties from data - requires real question attempts in this class
+  const hasData = Boolean(dnaData?.hasData) && (dnaData?.totalAttempts ?? 0) > 0;
   
   // Resolve modal percentages
   const visualPct = dnaData?.visualPercentage ?? 0;
@@ -553,7 +553,7 @@ export default function ParentLearningDNAScreen() {
           </div>
 
           {/* Section 4: AI Coach — only shown when real data available */}
-          {firstTip && (
+          {firstTip && hasData && (
           <div className="bg-gradient-to-r from-[#141779] to-[#3b1580] rounded-[28px] p-6 text-white shadow-lg relative overflow-hidden">
             <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full blur-2xl"></div>
             <div className="flex items-center gap-2 mb-3">

@@ -395,7 +395,7 @@ export default function ParentDashboardScreen() {
   };
 
   const formatNotifTitle = (title: string) => translateNotificationTitle(title, t);
-  const formatNotifMsg = (msg: string) => translateNotificationMessage(msg, t);
+  const formatNotifMsg = (msg: string) => translateNotificationMessage(msg, t, activeChild?.childName || userData?.childName);
 
   let highestSubject: string | null = null;
   let lowestSubject: string | null = null;
