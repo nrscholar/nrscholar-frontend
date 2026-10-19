@@ -77,7 +77,7 @@ export default function ParentDashboardScreen() {
     timeline?: any[];
     trend7Day?: any[];
   }[]>([]);
-  const [lastActivity, setLastActivity] = useState<string>("Exploring new quests...");
+  const [lastActivity, setLastActivity] = useState<string>("");
   const [lastActivityDetails, setLastActivityDetails] = useState<any>(null);
   const [top3SubjectsTrend, setTop3SubjectsTrend] = useState<any[]>([]);
   const [allSubjectsTrend, setAllSubjectsTrend] = useState<any[]>([]);
@@ -1469,66 +1469,104 @@ export default function ParentDashboardScreen() {
         {renderTop3SubjectsGraphCard()}
 
         {/* 3. Recent Kids Activity (Child's immediate activity directly following subject trends) */}
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center justify-between px-1">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-500">
-              {t("recent_activity", "Recent Activity")}
-            </h3>
-            <button
-              onClick={() => navigate('/parent/kids-activity')}
-              className="text-[11px] font-bold text-indigo-700 hover:text-indigo-900 transition-colors cursor-pointer flex items-center gap-1 group"
-            >
-              <span>{t("view_all", "View All").replace(/[-–—]?\s*[>→›»]/g, "").replace(/->/g, "").trim()}</span>
-              <ChevronRight size={13} className="group-hover:translate-x-0.5 transition-transform shrink-0" />
-            </button>
-          </div>
+        {(() => {
+          const actType = (lastActivityDetails?.type || "").toLowerCase();
+          const actTitle = (lastActivityDetails?.title || "").trim();
+          const lowerTitle = actTitle.toLowerCase();
+          const isMockTitle = !actTitle ||
+            lowerTitle.includes("exploring new quests") ||
+            lowerTitle === "activity logged" ||
+            lowerTitle === "no recent activity" ||
+            lowerTitle === "activity";
 
-          <button
-            onClick={() => navigate('/parent/kids-activity')}
-            className="w-full bg-white rounded-2xl p-3 border border-slate-200/70 shadow-xs flex justify-between items-center hover:bg-slate-50 hover:shadow-sm transition-all group gap-3 cursor-pointer text-left"
-          >
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
-                <Clock size={17} className="text-[#141779]" />
+          const isReadingType = actType === "reading" || actType === "chapter";
+          const isValidLastActivity = Boolean(
+            lastActivityDetails &&
+            !isMockTitle &&
+            (
+              (isReadingType && (lastActivityDetails.timeTaken >= 15 || lastActivityDetails.completed)) ||
+              (!isReadingType && (lastActivityDetails.totalQuestions > 0 || lastActivityDetails.timeTaken >= 15 || lastActivityDetails.completed))
+            )
+          );
+
+          return (
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between px-1">
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-500">
+                  {t("recent_activity", "Recent Activity")}
+                </h3>
+                {isValidLastActivity && (
+                  <button
+                    onClick={() => navigate('/parent/kids-activity')}
+                    className="text-[11px] font-bold text-indigo-700 hover:text-indigo-900 transition-colors cursor-pointer flex items-center gap-1 group"
+                  >
+                    <span>{t("view_all", "View All").replace(/[-–—]?\s*[>→›»]/g, "").replace(/->/g, "").trim()}</span>
+                    <ChevronRight size={13} className="group-hover:translate-x-0.5 transition-transform shrink-0" />
+                  </button>
+                )}
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
-                  <h4 className="text-xs font-black text-[#141779] leading-tight truncate">
-                    {translateActivityTitle(lastActivityDetails?.title || lastActivity)}
-                  </h4>
-                  {lastActivityDetails && (
-                    <span className={`px-1.5 py-0.2 rounded-md text-[8px] font-black uppercase tracking-wider ${
-                      lastActivityDetails.type === "reading" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
-                      lastActivityDetails.type === "battle" ? "bg-rose-50 text-rose-700 border border-rose-200" :
-                      lastActivityDetails.type === "multiplayer" ? "bg-purple-50 text-purple-700 border border-purple-200" :
-                      "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                    }`}>
-                      {lastActivityDetails.type === "reading" ? `📖 ${t("reading", "Reading")}` :
-                       lastActivityDetails.type === "battle" ? `🐉 ${t("boss", "Boss")}` :
-                       lastActivityDetails.type === "multiplayer" ? `⚔️ ${t("arena", "Arena")}` :
-                       `🎯 ${t("quiz", "Quiz")}`}
-                    </span>
-                  )}
+
+              {isValidLastActivity ? (
+                <button
+                  onClick={() => navigate('/parent/kids-activity')}
+                  className="w-full bg-white rounded-2xl p-3 border border-slate-200/70 shadow-xs flex justify-between items-center hover:bg-slate-50 hover:shadow-sm transition-all group gap-3 cursor-pointer text-left"
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
+                      <Clock size={17} className="text-[#141779]" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                        <h4 className="text-xs font-black text-[#141779] leading-tight truncate">
+                          {translateActivityTitle(lastActivityDetails.title)}
+                        </h4>
+                        <span className={`px-1.5 py-0.2 rounded-md text-[8px] font-black uppercase tracking-wider ${
+                          lastActivityDetails.type === "reading" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
+                          lastActivityDetails.type === "battle" ? "bg-rose-50 text-rose-700 border border-rose-200" :
+                          lastActivityDetails.type === "multiplayer" ? "bg-purple-50 text-purple-700 border border-purple-200" :
+                          "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                        }`}>
+                          {lastActivityDetails.type === "reading" ? `📖 ${t("reading", "Reading")}` :
+                           lastActivityDetails.type === "battle" ? `🐉 ${t("boss", "Boss")}` :
+                           lastActivityDetails.type === "multiplayer" ? `⚔️ ${t("arena", "Arena")}` :
+                           `🎯 ${t("quiz", "Quiz")}`}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[10px] font-medium text-slate-500">
+                        {lastActivityDetails.timeTaken > 0 && (
+                          <span>⏱️ {Math.round(lastActivityDetails.timeTaken / 60) || 1}m</span>
+                        )}
+                        {lastActivityDetails?.timeTaken > 0 && lastActivityDetails?.totalQuestions > 0 && <span>•</span>}
+                        {lastActivityDetails?.totalQuestions > 0 && (
+                          <span className="text-indigo-600 font-bold">
+                            🎯 {lastActivityDetails.correctQuestions}/{lastActivityDetails.totalQuestions} {t("correct", "Correct")}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight size={16} className="text-[#141779] group-hover:translate-x-0.5 transition-transform shrink-0" />
+                </button>
+              ) : (
+                <div className="w-full bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex items-center justify-between text-left">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center shrink-0 text-slate-400">
+                      <Activity size={18} />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-600 leading-tight">
+                        {t("no_recent_activity_title", "No recent activity")}
+                      </h4>
+                      <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                        {t("child_hasnt_completed_activities", "Your child hasn't completed any activities yet.")}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-[10px] font-medium text-slate-500">
-                  {lastActivityDetails?.timeTaken > 0 && (
-                    <span>⏱️ {Math.round(lastActivityDetails.timeTaken / 60) || 1}m</span>
-                  )}
-                  {lastActivityDetails?.timeTaken > 0 && lastActivityDetails?.totalQuestions > 0 && <span>•</span>}
-                  {lastActivityDetails?.totalQuestions > 0 && (
-                    <span className="text-indigo-600 font-bold">
-                      🎯 {lastActivityDetails.correctQuestions}/{lastActivityDetails.totalQuestions} {t("correct", "Correct")}
-                    </span>
-                  )}
-                  {!lastActivityDetails && (
-                    <span className="text-slate-400">{t("recent_activity_logged", "Activity logged")}</span>
-                  )}
-                </div>
-              </div>
+              )}
             </div>
-            <ChevronRight size={16} className="text-[#141779] group-hover:translate-x-0.5 transition-transform shrink-0" />
-          </button>
-        </div>
+          );
+        })()}
 
         {/* 4. Parent Learning Section — Compact & Polished */}
         <div className="flex flex-col gap-1.5 w-full">

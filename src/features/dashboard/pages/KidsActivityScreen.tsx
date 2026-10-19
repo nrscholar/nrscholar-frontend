@@ -16,8 +16,38 @@ export default function KidsActivityScreen() {
     } catch (e) { return null; }
   })();
 
+  const isActivityValid = (act: any) => {
+    if (!act) return false;
+    const title = (act.title || "").trim();
+    const lowerTitle = title.toLowerCase();
+    if (
+      !title ||
+      lowerTitle.includes("exploring new quests") ||
+      lowerTitle === "activity logged" ||
+      lowerTitle === "no recent activity" ||
+      lowerTitle === "activity"
+    ) {
+      return false;
+    }
+
+    const actType = (act.type || act.activityType || "").toLowerCase();
+    const time = act.timeTaken || 0;
+    const tq = act.totalQuestions || 0;
+    const hasDetails = Array.isArray(act.details) && act.details.length > 0;
+    const isCompleted = Boolean(act.completed || act.readingCompleted);
+    if (actType === "reading" || actType === "chapter") {
+      return time >= 15 || isCompleted;
+    }
+    if (actType === "quiz" || actType === "practice" || actType === "battle" || actType === "mission") {
+      return tq > 0 || hasDetails || time >= 15 || isCompleted;
+    }
+    return isCompleted || time >= 15 || tq > 0 || hasDetails;
+  };
+
   const [loading, setLoading] = useState(!cached);
-  const [activities, setActivities] = useState<any[]>(cached?.activities || []);
+  const [activities, setActivities] = useState<any[]>(
+    cached?.activities ? cached.activities.filter(isActivityValid) : []
+  );
   const [engagementHours, setEngagementHours] = useState(cached?.engagementHours || "0");
   const [engagementTrend, setEngagementTrend] = useState<number | null>(cached?.engagementTrend !== undefined ? cached.engagementTrend : null);
   const [selectedActivity, setSelectedActivity] = useState<any>(null);
@@ -100,11 +130,12 @@ export default function KidsActivityScreen() {
         if (res.ok) {
           const json = await res.json();
           if (json.success && json.data) {
-            setActivities(json.data.activities || []);
+            const validActs = (json.data.activities || []).filter(isActivityValid);
+            setActivities(validActs);
             setEngagementHours(json.data.engagementHours || "0");
             setEngagementTrend(json.data.engagementTrend !== undefined ? json.data.engagementTrend : null);
             setScopedItem("kids_activities_cache", JSON.stringify({
-              activities: json.data.activities || [],
+              activities: validActs,
               engagementHours: json.data.engagementHours || "0",
               engagementTrend: json.data.engagementTrend !== undefined ? json.data.engagementTrend : null
             }));

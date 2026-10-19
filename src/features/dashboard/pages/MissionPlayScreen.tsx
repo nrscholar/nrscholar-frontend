@@ -388,6 +388,41 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   };
   const [userCoins, setUserCoins] = useState(0);
 
+  // Active Child Name for Hero Badge
+  const [activeChildName, setActiveChildName] = useState<string>(() => {
+    try {
+      const raw = localStorage.getItem("userData") || localStorage.getItem("user");
+      if (raw) {
+        const data = JSON.parse(raw);
+        const childId = data?.activeChildId || data?.childId || "child_1";
+        const activeChild = Array.isArray(data?.children)
+          ? data.children.find((c: any) => c?.childId === childId)
+          : null;
+        return activeChild?.childName || data?.childName || data?.name || data?.fullName || "Hero";
+      }
+    } catch (e) {}
+    return "Hero";
+  });
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await apiFetch("/api/users/me");
+        const json = await res.json();
+        if (json.success && json.data?.user) {
+          const u = json.data.user;
+          const childId = u.activeChildId || u.childId || "child_1";
+          const activeChild = Array.isArray(u.children)
+            ? u.children.find((c: any) => c?.childId === childId)
+            : null;
+          const name = activeChild?.childName || u.childName || u.name || u.fullName || "Hero";
+          if (name) setActiveChildName(name);
+        }
+      } catch (e) {}
+    };
+    fetchUser();
+  }, []);
+
   // Duolingo Streak animations and steps
   const [summaryStep, setSummaryStep] = useState<"LESSON_COMPLETE" | "STREAK" | "REPORT">(() => {
     if (isFreshReplay) return "LESSON_COMPLETE";
@@ -1771,10 +1806,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             {/* Top Bar: Hero vs Boss Header */}
             <div className="flex items-center justify-between mb-3 relative z-10 px-0.5 gap-1">
 
-              {/* Left: Dragon Hero in Pill Container */}
-              <div className="flex flex-col items-start shrink-0 bg-white/95 backdrop-blur-xs px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl border border-indigo-100/80 shadow-2xs">
-                <span className="text-[9px] xs:text-[10px] sm:text-[11px] font-black uppercase text-[#141779] tracking-wider block leading-tight whitespace-nowrap">
-                  DRAGON HERO
+              {/* Left: Active Child in Pill Container */}
+              <div className="flex flex-col items-start shrink-0 bg-white/95 backdrop-blur-xs px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl sm:rounded-2xl border-2 border-indigo-100/90 shadow-2xs">
+                <span className="text-[9px] xs:text-[10px] sm:text-[11px] font-black uppercase text-[#141779] tracking-wider block leading-tight whitespace-nowrap max-w-[100px] xs:max-w-[130px] truncate">
+                  {activeChildName ? activeChildName.toUpperCase() : "HERO"}
                 </span>
                 <div className="flex gap-0.5 sm:gap-1 mt-1">
                   {[1, 2, 3].map((h) => (
@@ -1842,16 +1877,15 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           </div>
 
           {/* Question Box Card with Soft Floating Elevation */}
-          <div className="my-3 bg-white border-2 border-[#E2E4FA] rounded-[28px] p-5 sm:p-6 shadow-[0_8px_25px_rgba(20,23,121,0.06)] relative">
-            <span className="text-xs font-black text-[#006a62] uppercase tracking-wider block mb-2 flex items-center gap-1.5 flex-wrap">
-              <span>⚔️ BOSS STRIKE #{safeBossIndex + 1}</span>
-              <span>•</span>
-              <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-black uppercase tracking-wider shadow-2xs">
+          <div className="my-3 bg-white border-2 border-[#E2E4FA] rounded-[24px] sm:rounded-[28px] p-5 sm:p-6 shadow-[0_8px_25px_rgba(20,23,121,0.06)] relative">
+            <div className="flex items-center gap-2 mb-2.5 flex-wrap">
+              <span className="text-[10px] font-black text-[#006a62] uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-teal-50 border border-teal-200/80 shadow-2xs">
+                ⚔️ BOSS STRIKE #{safeBossIndex + 1}
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-black uppercase tracking-wider shadow-2xs">
                 BOSS LEVEL HARD
               </span>
-              <span>•</span>
-              <span>{isBossDrag ? "DRAG & DROP STRIKE" : "DIRECT STRIKE"}</span>
-            </span>
+            </div>
             <h3 className="text-base sm:text-lg font-black text-[#141779] leading-snug">
               {activeBossQ?.question?.replace(/^(Boss\s+)?(Challenge|Question)(\s*#\d+)?(\s*\([^)]+\))?:\s*/i, "").trim().replace(/^\w/, c => c.toUpperCase()).normalize("NFD").replace(/[\u0300-\u036f]/g, "")}
             </h3>
