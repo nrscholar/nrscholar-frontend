@@ -139,6 +139,30 @@ export const authApi = {
 
   updateStats: (data: { coins?: number; fuel?: number; level?: number }) =>
     apiRequest("/api/users/stats", { method: "PUT", auth: true, body: data }),
+
+  forgotPassword: (mobile: string) =>
+    apiRequest("/api/auth/forgot-password", {
+      method: "POST",
+      body: { mobile },
+    }),
+
+  verifyOtp: (mobile: string, otp: string) =>
+    apiRequest<{ resetToken: string }>("/api/auth/verify-otp", {
+      method: "POST",
+      body: { mobile, otp },
+    }),
+
+  resendOtp: (mobile: string) =>
+    apiRequest("/api/auth/resend-otp", {
+      method: "POST",
+      body: { mobile },
+    }),
+
+  resetPassword: (data: { resetToken?: string; mobile?: string; otp?: string; newPassword: string; confirmPassword?: string }) =>
+    apiRequest("/api/auth/reset-password", {
+      method: "POST",
+      body: data,
+    }),
 };
 
 // ── Dashboard API ─────────────────────────────────────────────────────────────
