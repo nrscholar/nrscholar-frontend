@@ -11,6 +11,9 @@ import { showNotificationToast } from "../../../components/GlobalNotificationBan
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 import { startNavigationProgress } from "../../../components/NavigationProgressBar";
 
+// In-memory runtime cache for parsed chapter arrays to ensure 0ms instantaneous tab switching
+const runtimeChapterCache = new Map<string, any[]>();
+
 export default function ChaptersScreen() {
   const rawNavigate = useNavigate();
   const navigate = useCallback((to: any, options?: any) => {
@@ -42,9 +45,19 @@ export default function ChaptersScreen() {
 
   const getInitialChapters = (subjectId?: string) => {
     if (!subjectId) return [];
+    if (runtimeChapterCache.has(subjectId)) {
+      return runtimeChapterCache.get(subjectId)!;
+    }
     try {
       const cached = getScopedItem(`cached_chapters_${subjectId}`);
-      return cached ? JSON.parse(cached) : [];
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          runtimeChapterCache.set(subjectId, parsed);
+          return parsed;
+        }
+      }
+      return [];
     } catch (e) { return []; }
   };
 
@@ -271,6 +284,22 @@ export default function ChaptersScreen() {
           });
           activeSubjectRef.current = found._id;
           setScopedItem("activeSubjectId", found._id);
+
+          // Fast background prefetch for remaining subjects so user tab switches are instant (0ms)
+          allowedSubjects.forEach((sub: any) => {
+            const sid = sub._id;
+            if (sid !== found._id && !runtimeChapterCache.has(sid) && !getScopedItem(`cached_chapters_${sid}`)) {
+              apiFetch(`/api/practice/chapters/${sid}?classLevel=${encodeURIComponent(classLevel)}`)
+                .then(r => r?.ok ? r.json() : null)
+                .then(d => {
+                  if (d?.success && Array.isArray(d.data)) {
+                    runtimeChapterCache.set(sid, d.data);
+                    setScopedItem(`cached_chapters_${sid}`, JSON.stringify(d.data));
+                  }
+                })
+                .catch(() => {});
+            }
+          });
         } else {
           setSubjects([]);
           setLoading(false);
@@ -343,10 +372,13 @@ export default function ChaptersScreen() {
 
       try {
         const { classLevel } = getActiveUserContext();
-        const [chRes, pRes] = await Promise.all([
-          apiFetch(`/api/practice/chapters/${currentSubId}?classLevel=${encodeURIComponent(classLevel)}`).catch(() => null),
-          apiFetch(`/api/practice/chapter-progress?classLevel=${encodeURIComponent(classLevel)}`).catch(() => null)
-        ]);
+        const fetchTasks: Promise<any>[] = [
+          apiFetch(`/api/practice/chapters/${currentSubId}?classLevel=${encodeURIComponent(classLevel)}`).catch(() => null)
+        ];
+        if (completedChapters.length === 0) {
+          fetchTasks.push(apiFetch(`/api/practice/chapter-progress?classLevel=${encodeURIComponent(classLevel)}`).catch(() => null));
+        }
+        const [chRes, pRes] = await Promise.all(fetchTasks);
 
         // Always update chapter progress across all subjects regardless of activeSubjectRef,
         // because chapter-progress is global child progress!
@@ -375,6 +407,7 @@ export default function ChaptersScreen() {
         if (activeSubjectRef.current !== currentSubId) return;
 
         if (chData?.success && Array.isArray(chData.data)) {
+          runtimeChapterCache.set(currentSubId, chData.data);
           setChapters(chData.data);
           setScopedItem(`cached_chapters_${currentSubId}`, JSON.stringify(chData.data));
           if (chData.data.length === 0) {

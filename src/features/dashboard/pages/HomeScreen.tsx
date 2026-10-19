@@ -6,7 +6,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import AdventureHero from "../../../components/AdventureHero";
 import { startNavigationProgress } from "../../../components/NavigationProgressBar";
-import { getScopedItem, setScopedItem, getActiveUserContext } from "../../../utils/sessionCache";
+import { getScopedItem, setScopedItem, getActiveUserContext, normalizeClassLevel } from "../../../utils/sessionCache";
 import { loadClassSkills } from "../../../data/neuroplay/skillsLoader";
 
 const ChildSwitcherModal = lazy(() => import("../../../components/ChildSwitcherModal"));
@@ -197,7 +197,13 @@ export default function HomeScreen() {
   const [shadowArenaProgress, setShadowArenaProgress] = useState<{ completed: number; total: number; percent: number }>(() => {
     try {
       const cached = getScopedItem("cached_shadow_arena_progress");
-      if (cached) return JSON.parse(cached);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        const completed = Number(parsed.completed ?? 0);
+        const total = 100;
+        const percent = Math.min(100, Math.max(0, Math.round((completed / total) * 100)));
+        return { completed, total, percent };
+      }
     } catch (e) { }
     return { completed: 0, total: 100, percent: 0 };
   });
@@ -275,10 +281,13 @@ export default function HomeScreen() {
           totalChapters = jData.data.totalCurrentClassChapters || jData.data.totalTierChapters || 0;
         }
       }
-      if (!totalChapters && subRes?.ok) {
+      if (subRes?.ok) {
         const subData = await subRes.json().catch(() => null);
         if (subData?.success && Array.isArray(subData.data)) {
-          totalChapters = subData.data.reduce((sum: number, s: any) => sum + (Number(s.totalChapters) || 0), 0);
+          setScopedItem("cached_practice_subjects", JSON.stringify(subData.data));
+          if (!totalChapters) {
+            totalChapters = subData.data.reduce((sum: number, s: any) => sum + (Number(s.totalChapters) || 0), 0);
+          }
         }
       }
 
@@ -357,16 +366,16 @@ export default function HomeScreen() {
     try {
       const u = userDoc || userData;
       const ctx = getActiveUserContext();
-      const rawClass = ctx.classLevel || u?.childClass || u?.studentClass || u?.grade || "Class 1";
+      const normClass = normalizeClassLevel(ctx.classLevel || u?.childClass || u?.studentClass || u?.grade || "Class 1");
       const childId = ctx.childId || u?.activeChildId || "child_1";
 
-      const res = await apiFetch(`/api/multiplayer/progress?classLevel=${encodeURIComponent(rawClass)}&childId=${encodeURIComponent(childId)}`);
+      const res = await apiFetch(`/api/multiplayer/progress?classLevel=${encodeURIComponent(normClass)}&childId=${encodeURIComponent(childId)}`);
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data) {
-          const completed = json.data.completedFights ?? 0;
-          const total = json.data.totalFights ?? json.data.targetFights ?? 100;
-          const percent = json.data.progressPercentage ?? (total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : 0);
+          const completed = Number(json.data.completedFights ?? 0);
+          const total = 100;
+          const percent = Math.min(100, Math.max(0, Math.round((completed / total) * 100)));
           const progressObj = { completed, total, percent };
           setShadowArenaProgress(progressObj);
           try {
@@ -376,10 +385,11 @@ export default function HomeScreen() {
         }
       }
 
-      const activeChild = Array.isArray(u?.children) ? u.children.find((c: any) => c.childId === ctx.childId) : null;
-      const completed = activeChild?.multiplayerFights ?? u?.multiplayerFights ?? 0;
+      const activeChild = Array.isArray(u?.children) ? u.children.find((c: any) => c.childId === childId) : null;
+      const fbc = activeChild?.multiplayerFightsByClass || u?.multiplayerFightsByClass || {};
+      const completed = Number(fbc[normClass] ?? fbc[ctx.classLevel] ?? 0);
       const total = 100;
-      const percent = Math.min(100, Math.round((completed / total) * 100));
+      const percent = Math.min(100, Math.max(0, Math.round((completed / total) * 100)));
       const progressObj = { completed, total, percent };
       setShadowArenaProgress(progressObj);
       try {
@@ -562,6 +572,17 @@ export default function HomeScreen() {
           fetchContinueLearningProgress(u);
           fetchNeuroPlayProgress(u);
           fetchNotifications(u);
+          const cachedSA = getScopedItem("cached_shadow_arena_progress");
+          if (cachedSA) {
+            try {
+              const parsed = JSON.parse(cachedSA);
+              const completed = Number(parsed.completed ?? 0);
+              const total = 100;
+              const percent = Math.min(100, Math.max(0, Math.round((completed / total) * 100)));
+              setShadowArenaProgress({ completed, total, percent });
+            } catch (e) {}
+          }
+          fetchShadowArenaProgress(u);
         } catch (e) {
           console.error("Failed to parse cached userData:", e);
         }
@@ -1007,9 +1028,9 @@ export default function HomeScreen() {
 
           {/* Shadow Arena */}
           {(() => {
-            const fightsCompleted = shadowArenaProgress.completed;
-            const targetFights = shadowArenaProgress.total || 100;
-            const fightsPct = shadowArenaProgress.percent;
+            const fightsCompleted = Number(shadowArenaProgress.completed || 0);
+            const targetFights = 100;
+            const fightsPct = Math.min(100, Math.max(0, Math.round((fightsCompleted / targetFights) * 100)));
             const fightsBarWidth = fightsCompleted > 0 ? Math.max(1, fightsPct) : 0;
 
             const fightsText = t('fights_completed_ratio', {

@@ -286,16 +286,10 @@ export default function MultiplayerHubScreen() {
   const entryFee = 100;
 
   const handleCreateRoom = async () => {
-    const unlockedChapters = isSubscribed ? chaptersList : (chaptersList.length > 0 ? [chaptersList[0]] : ["Chapter 1"]);
-    const effectiveSelectedChapters = selectedChaptersList.length > 0 ? selectedChaptersList : unlockedChapters;
-
     // Verify chapter completion for creator prior to checking coin balance
-    const chaptersToCheck = selectedChaptersList.length > 0 
-      ? selectedChaptersList 
-      : (isSubscribed ? chaptersList : (chaptersList.length > 0 ? [chaptersList[0]] : []));
-    
-    if (chaptersToCheck.length > 0) {
-      for (const ch of chaptersToCheck) {
+    if (selectedChaptersList.length > 0) {
+      // Explicit chapters chosen: verify each chosen chapter is completed
+      for (const ch of selectedChaptersList) {
         const idx = chaptersList.indexOf(ch);
         const isDone = isChapterCompleted(ch, idx);
         if (!isDone) {
@@ -307,13 +301,18 @@ export default function MultiplayerHubScreen() {
           return;
         }
       }
-    } else if (completedChapterIds.length === 0) {
+    } else {
+      // "All Chapters" / "Mix Chapters" chosen: ensure user has completed at least Chapter 1 / one available chapter
       const fallbackChap = chaptersList[0] || "Chapter 1";
-      showNotice(t('must_complete_specific_chapter', { 
-        chapter: fallbackChap, 
-        defaultValue: `You must complete ${fallbackChap} in ${activeSubject?.name || "this subject"} first before playing it in Shadow Arena!` 
-      }));
-      return;
+      const hasCompletedAtLeastOne = isChapterCompleted(fallbackChap, 0) || completedChapterIds.length > 0;
+      if (!hasCompletedAtLeastOne) {
+        const formattedChapName = fallbackChap.includes(":") ? fallbackChap : `${fallbackChap}`;
+        showNotice(t('must_complete_specific_chapter', { 
+          chapter: formattedChapName, 
+          defaultValue: `You must complete ${formattedChapName} in ${activeSubject?.name || "this subject"} first before playing it in Shadow Arena!` 
+        }));
+        return;
+      }
     }
 
     if (myCoins < entryFee) {
@@ -698,7 +697,16 @@ export default function MultiplayerHubScreen() {
         onClose={() => setShowLeaveModal(false)}
         onConfirm={() => {
           setShowLeaveModal(false);
-          navigate("/home");
+          if ((window as any).ReactNativeWebView?.postMessage) {
+            try {
+              (window as any).ReactNativeWebView.postMessage(JSON.stringify({ type: "EXIT_TO_APP" }));
+            } catch (e) {}
+          }
+          if (window.history.length > 1) {
+            navigate(-1);
+          } else {
+            navigate("/home", { replace: true });
+          }
         }}
         title={t('leave_shadow_arena_q', 'Leave Shadow Arena?')}
         message={t('exit_lobby_confirm_desc', 'Are you sure you want to exit the battle lobby?')}
