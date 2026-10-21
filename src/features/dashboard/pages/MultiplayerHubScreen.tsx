@@ -421,26 +421,28 @@ export default function MultiplayerHubScreen() {
         </section>
 
         {/* BATTLE STATUS & STREAK REWARD BADGE */}
-        <section className="my-1.5 shrink-0">
-          <div className="bg-white border-2 border-[#E5DBFB] rounded-xl px-3 py-1.5 flex items-center justify-between shadow-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-[#FEF3C7] border border-[#F59E0B]/40 flex items-center justify-center shrink-0">
-                <Trophy size={14} className="text-[#D97706]" />
+        <section className="my-2.5 sm:my-3 shrink-0 w-full">
+          <div className="bg-white/95 backdrop-blur-sm border-2 border-[#E5DBFB] hover:border-[#D1C2F9] rounded-2xl px-4 py-3 sm:px-4.5 sm:py-3.5 flex items-center justify-between shadow-[0_2px_12px_rgba(108,77,255,0.06)] transition-all">
+            <div className="flex items-center gap-3 min-w-0 pr-2">
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-[#FEF3C7] to-[#FDE68A] border border-[#F59E0B]/35 flex items-center justify-center shrink-0 shadow-xs">
+                <Trophy size={20} className="text-[#D97706]" />
               </div>
-              <div className="text-left">
-                <p className="text-[10px] font-black text-[#141779] uppercase tracking-wider leading-none">
+              <div className="text-left min-w-0">
+                <p className="text-xs sm:text-[13px] font-black text-[#141779] uppercase tracking-wide leading-tight truncate">
                   {t('win_streak_challenge', '25 WIN STREAK CHALLENGE')}
                 </p>
-                <p className="text-[9px] font-bold text-[#6D28D9] mt-0.5 leading-none">
+                <p className="text-[11px] sm:text-xs font-bold text-[#6D28D9] mt-1 leading-normal truncate">
                   {myStreak > 0 ? t('current_streak_wins', { streak: myStreak, defaultValue: `Current Streak: ${myStreak} Wins 🏆` }) : t('win_25_matches_prize', 'Win 25 matches for physical prize!')}
                 </p>
               </div>
             </div>
 
             {/* Streak Progress Indicator */}
-            <div className="flex items-center gap-1 bg-[#F4EFF7] border border-[#E5DBFB] px-2 py-1 rounded-lg">
-              <span className="text-xs">🔥</span>
-              <span className="text-xs font-black text-[#141779]">{myStreak}/25</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 bg-gradient-to-r from-[#FAF5FF] to-[#F3E8FF] border border-[#DDD6FE] px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl shrink-0 shadow-xs">
+              <span className="text-base sm:text-lg select-none leading-none">🔥</span>
+              <span className="text-xs sm:text-sm font-black text-[#141779] tracking-wide">
+                {myStreak}<span className="text-[#7C3AED]/70 font-bold text-[11px] sm:text-xs">/25</span>
+              </span>
             </div>
           </div>
         </section>
@@ -666,9 +668,14 @@ export default function MultiplayerHubScreen() {
                 type="text"
                 placeholder={t('enter_6digit_code', 'ENTER 6-DIGIT CODE')}
                 value={joinCode}
-                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 6);
+                  setJoinCode(val);
+                }}
                 maxLength={6}
-                className="w-full bg-[#F4EFF7] border-2 border-[#E5DBFB] focus:border-[#6C4DFF] focus:ring-2 focus:ring-[#6C4DFF]/20 rounded-xl py-3 px-4 text-center text-2xl font-black text-[#141779] tracking-[8px] focus:outline-none transition-all uppercase placeholder:text-gray-400 placeholder:tracking-normal placeholder:font-bold placeholder:text-xs"
+                className={`w-full bg-[#F4EFF7] border-2 border-[#E5DBFB] focus:border-[#6C4DFF] focus:ring-2 focus:ring-[#6C4DFF]/20 rounded-xl py-3 px-4 text-center font-black text-[#141779] focus:outline-none transition-all uppercase placeholder:text-center placeholder:text-gray-400 placeholder:font-bold placeholder:text-xs placeholder:tracking-normal ${
+                  joinCode ? 'text-2xl tracking-[8px] pl-[12px]' : 'text-sm tracking-normal'
+                }`}
               />
 
               <button
@@ -683,7 +690,11 @@ export default function MultiplayerHubScreen() {
                 <span className="text-sm font-black tracking-wider uppercase">
                   {loading ? t('joining_battle', 'JOINING BATTLE...') : t('join_battle_match', 'JOIN BATTLE MATCH')}
                 </span>
-                <span className="text-[10px] font-bold text-white/80">{t('battle_cost_sub', { cost: 100, defaultValue: 'Cost: 100 Coins' })}</span>
+                <span className={`text-[10px] font-bold mt-0.5 ${
+                  joinCode.length === 6 ? 'text-[#F4C95D]' : 'text-slate-600 font-extrabold'
+                }`}>
+                  {t('battle_cost_sub', { cost: 100, defaultValue: 'Cost: 100 Coins' })}
+                </span>
               </button>
             </div>
           </div>

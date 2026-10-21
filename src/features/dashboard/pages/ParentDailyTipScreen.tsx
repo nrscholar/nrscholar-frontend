@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Lightbulb, Flame, ShieldCheck,
-  Brain, CheckCircle, CheckCircle2, Star, Zap, ArrowLeft, Trophy, Target, Bell
+  Brain, CheckCircle, CheckCircle2, Star, Zap, ArrowLeft, Trophy, Target, Bell, Settings
 } from "lucide-react";
 import { apiFetch } from "../../../api";
 import { getActiveUserContext } from "../../../utils/sessionCache";
@@ -339,49 +339,46 @@ export default function ParentDailyTipScreen() {
   return (
     <div className="bg-[#f7f9fb] text-[#141779] flex flex-col min-h-screen w-full relative overflow-x-hidden font-sans max-w-md mx-auto">
 
-      {/* ── Top Header matching Child Space Header exactly ── */}
-      <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex items-center justify-between px-4 pt-3 pb-3 bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-2xl shadow-[0_4px_16px_rgba(20,23,121,0.05)] gap-2 w-full">
+      {/* ── Top Header matching Parent Space Header exactly ── */}
+      <header className="sticky top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 h-16 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] w-full">
         {/* Left Side: Back button + Title */}
-        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
           <button 
             onClick={() => navigate(-1)} 
-            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
             aria-label={t("back", "Back")}
           >
             <ArrowLeft size={19} />
           </button>
           <div className="flex flex-col min-w-0 justify-center">
-            <h1 className="text-sm sm:text-base font-black text-slate-900 leading-tight truncate">
+            <h1 className="text-base sm:text-lg font-black text-[#141779] leading-tight truncate">
               {t("daily_parenting_tip", "Daily Parenting Tip")}
             </h1>
-            <span className="text-[10.5px] sm:text-xs text-slate-400 font-extrabold truncate mt-0.5">
+            <span className="text-xs sm:text-[13px] text-slate-500 font-semibold truncate mt-0.5">
               {childName ? `${childName} • ` : ""}{t("parent_guidance", "Parent Guidance")}
             </span>
           </div>
         </div>
 
-        {/* Right Side: Currency / XP & Notification Indicators */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        {/* Right Side: Settings & Notification Indicators */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <button
-            onClick={() => navigate("/parent/roadmap")}
-            className="bg-[#eef2ff] hover:bg-indigo-100 border border-indigo-100/90 rounded-2xl px-2.5 py-1.5 flex items-center justify-center gap-1 hover:scale-105 active:scale-95 transition-transform shadow-2xs cursor-pointer"
-            title={t("view_roadmap", "View Roadmap & XP")}
-            aria-label={t("xp_count", { xp, defaultValue: `${xp.toLocaleString()} XP` })}
+            onClick={() => navigate('/parent/settings')}
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("settings", "Settings")}
+            title={t("settings", "Settings")}
           >
-            <span className="text-xs text-amber-500 leading-none">⭐</span>
-            <span className="text-[11px] font-black text-[#141779] leading-none whitespace-nowrap">
-              {xp.toLocaleString()} XP
-            </span>
+            <Settings size={18} />
           </button>
-          
           <button
             onClick={() => navigate("/notifications")}
-            className="w-9 h-9 rounded-2xl bg-slate-50 shadow-2xs flex items-center justify-center hover:bg-slate-100 active:scale-95 transition-all shrink-0 border border-slate-100 relative cursor-pointer"
+            className="relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
             aria-label={t("notifications", "Notifications")}
+            title={t("notifications", "Notifications")}
           >
-            <Bell size={16} className="text-[#1c1970]" />
+            <Bell size={18} />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border border-white pointer-events-none z-10">
+              <span className="absolute top-1 right-1 w-4 h-4 bg-[#ba1a1a] rounded-full border-2 border-white flex items-center justify-center text-[9px] font-bold text-white">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
@@ -390,7 +387,7 @@ export default function ParentDailyTipScreen() {
       </header>
 
       {/* ── Main Content Container with Clearance for Bottom Navigation ── */}
-      <main className="flex-1 px-4 pt-3.5 pb-32 sm:pb-36 flex flex-col gap-3.5 relative z-10 max-w-md mx-auto w-full">
+      <main className="flex-1 px-4 pt-3.5 pb-4 flex flex-col gap-3.5 relative z-10 max-w-md mx-auto w-full">
 
         {/* ── 1. Today's Parenting Tip Card (Primary Focus) ── */}
         <section className="w-full bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-[0_4px_20px_rgba(20,23,121,0.04)] flex flex-col gap-3.5">
@@ -405,11 +402,11 @@ export default function ParentDailyTipScreen() {
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
               {tip?.category && (
-                <span className="text-[10px] font-black text-[#006a62] bg-teal-50 border border-teal-200/80 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                <span className="text-xs sm:text-[13px] font-black text-[#006a62] bg-teal-50 border border-teal-200/80 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                   {tip.category}
                 </span>
               )}
-              <span className="text-[10px] sm:text-[11px] font-black text-slate-500 bg-slate-100 border border-slate-200/60 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+              <span className="text-xs sm:text-[13px] font-black text-slate-500 bg-slate-100 border border-slate-200/60 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                 {t("day_num", { day: streak > 0 ? streak : 1, defaultValue: streak > 0 ? `Day ${streak}` : "Day 1" })}
               </span>
             </div>
@@ -424,7 +421,7 @@ export default function ParentDailyTipScreen() {
           ) : tip ? (
             <>
               {tip.subject && (
-                <div className="flex items-center gap-1.5 self-start bg-indigo-50/80 text-[#141779] border border-indigo-200/70 px-2.5 py-0.5 rounded-full text-[11px] font-black">
+                <div className="flex items-center gap-1.5 self-start bg-indigo-50/80 text-[#141779] border border-indigo-200/70 px-2.5 py-0.5 rounded-full text-xs font-black">
                   <span>🎯 {t("focus_subject", "Subject Focus")}: {tip.subject}</span>
                 </div>
               )}
@@ -432,12 +429,12 @@ export default function ParentDailyTipScreen() {
               {tip.instead ? (
                 <div className="bg-slate-50/90 rounded-2xl p-3.5 flex flex-col gap-2.5 border border-slate-200/70">
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-[9.5px] font-black text-slate-400 uppercase tracking-wider">{t("instead_of", "Instead of:")}</span>
+                    <span className="text-xs font-black text-slate-500 uppercase tracking-wider">{t("instead_of", "Instead of:")}</span>
                     <p className="text-slate-600 font-semibold italic text-xs sm:text-sm leading-relaxed">{translateTipField(tip.instead)}</p>
                   </div>
                   <div className="h-[1px] w-full bg-slate-200/80" />
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-[9.5px] font-black text-[#006a62] uppercase tracking-wider">{t("try_this", "Try:")}</span>
+                    <span className="text-xs font-black text-[#006a62] uppercase tracking-wider">{t("try_this", "Try:")}</span>
                     <p className="text-[#141779] font-bold text-xs sm:text-sm leading-relaxed">{translateTipField(tip.try)}</p>
                   </div>
                 </div>
@@ -455,7 +452,7 @@ export default function ParentDailyTipScreen() {
                     <Target size={15} />
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600 leading-tight">{t("action_step", "Action Step")}</span>
+                    <span className="text-xs font-black uppercase tracking-wider text-indigo-600 leading-tight">{t("action_step", "Action Step")}</span>
                     <p className="text-xs font-bold text-indigo-950 leading-snug mt-0.5">{translateTipField(tip.actionStep)}</p>
                   </div>
                 </div>
@@ -468,7 +465,7 @@ export default function ParentDailyTipScreen() {
                     <CheckCircle2 size={15} />
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-[#006a62] leading-tight">{t("why_it_matters", "Why It Matters")}</span>
+                    <span className="text-xs font-black uppercase tracking-wider text-[#006a62] leading-tight">{t("why_it_matters", "Why It Matters")}</span>
                     <p className="text-xs font-extrabold text-[#006a62] leading-snug mt-0.5">{translateTipField(tip.benefit)}</p>
                   </div>
                 </div>
@@ -524,7 +521,7 @@ export default function ParentDailyTipScreen() {
                   <span className="text-[#006a62] font-black text-lg sm:text-xl leading-none">
                     {growthScore}%
                   </span>
-                  <span className="text-[8px] font-black uppercase text-slate-400 tracking-wider mt-0.5">
+                  <span className="text-[10px] sm:text-xs font-black uppercase text-slate-400 tracking-wider mt-0.5">
                     {t("growth_score", "Score")}
                   </span>
                 </div>
@@ -532,20 +529,20 @@ export default function ParentDailyTipScreen() {
             ) : (
               <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl border-2 border-dashed border-teal-300 flex flex-col items-center justify-center bg-teal-50/50 shrink-0">
                 <span className="text-xl">🌱</span>
-                <span className="text-[9px] font-black text-[#006a62] uppercase tracking-wider mt-0.5">Day 1</span>
+                <span className="text-xs font-black text-[#006a62] uppercase tracking-wider mt-0.5">Day 1</span>
               </div>
             )}
 
             <div className="min-w-0 flex-1 flex flex-col gap-1">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-xs font-black text-[#141779] uppercase tracking-wider">
+                <span className="text-xs sm:text-sm font-black text-[#141779] uppercase tracking-wider">
                   {t("growth_score", "Growth Score")}
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-100 text-[#141779] text-[10px] font-black">
+                <span className="px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-100 text-[#141779] text-xs font-black">
                   {stageName}
                 </span>
               </div>
-              <p className="text-slate-700 font-bold text-xs sm:text-[13px] leading-snug">
+              <p className="text-slate-700 font-bold text-xs sm:text-sm leading-snug">
                 {growthMessage}
               </p>
             </div>
@@ -562,7 +559,7 @@ export default function ParentDailyTipScreen() {
                 <h4 className="text-xs sm:text-sm font-black text-[#141779] truncate leading-tight">
                   {streak > 0 ? t("day_streak_fire", { streak, defaultValue: `${streak} Day Streak 🔥` }) : t("no_active_streak", "0 Day Streak")}
                 </h4>
-                <p className="text-[10px] text-slate-500 font-semibold truncate mt-0.5">
+                <p className="text-xs text-slate-500 font-semibold truncate mt-0.5">
                   {streak === 0 ? t("log_in_daily_streak", "Start today") : t("active_days", { streak, defaultValue: `${streak} active days` })}
                 </p>
               </div>
@@ -577,7 +574,7 @@ export default function ParentDailyTipScreen() {
                 <h4 className="text-xs sm:text-sm font-black text-[#141779] truncate leading-tight">
                   P{parentLevel}+C{childLevel}
                 </h4>
-                <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider truncate mt-0.5">
+                <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider truncate mt-0.5">
                   {t("combo_level", "Combo Level")}
                 </p>
               </div>
@@ -593,7 +590,7 @@ export default function ParentDailyTipScreen() {
               👨‍👩‍👦
             </div>
             <div className="min-w-0 flex-1">
-              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-[#141779] block">
+              <span className="text-xs font-black uppercase tracking-wider text-[#141779] block">
                 {t("parent", "Parent")} · Lvl {parentLevel}
               </span>
               <p className="text-xs sm:text-sm font-black text-slate-800 truncate leading-tight">
@@ -621,15 +618,15 @@ export default function ParentDailyTipScreen() {
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1">
-                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-[#006a62] block truncate">
+                <span className="text-xs font-black uppercase tracking-wider text-[#006a62] block truncate">
                   {t("child", "Child")} · Lvl {childLevel}
                 </span>
-                <span className="text-[9px] text-slate-400 group-hover:text-indigo-600 font-bold">▾</span>
+                <span className="text-xs text-slate-400 group-hover:text-indigo-600 font-bold">▾</span>
               </div>
               <p className="text-xs sm:text-sm font-black text-slate-800 truncate leading-tight group-hover:text-indigo-900 transition-colors">
                 {childName}
               </p>
-              <span className="text-[10px] font-bold text-slate-400 truncate block mt-0.5">
+              <span className="text-xs font-bold text-slate-400 truncate block mt-0.5">
                 📍 {childCity}
               </span>
             </div>
@@ -637,12 +634,12 @@ export default function ParentDailyTipScreen() {
         </section>
 
         {/* ── 4. Family Milestones Section ── */}
-        <section className="w-full flex flex-col gap-2.5 pb-6">
+        <section className="w-full flex flex-col gap-2.5 pb-2">
           <div className="flex items-center justify-between px-1">
             <h2 className="text-[#141779] font-black text-sm sm:text-base tracking-tight">
               {t("family_milestones", "Family Milestones")}
             </h2>
-            <span className="text-[10px] font-black text-[#006a62] bg-teal-50 border border-teal-200/80 px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-2xs">
+            <span className="text-xs font-black text-[#006a62] bg-teal-50 border border-teal-200/80 px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-2xs">
               {milestones.filter(m => m.completed).length}/{milestones.length} {t("done", "Done")}
             </span>
           </div>
@@ -664,16 +661,16 @@ export default function ParentDailyTipScreen() {
                   <div className="flex items-center justify-between gap-2">
                     <h5 className="text-[#141779] font-black text-xs sm:text-sm truncate">{m.title}</h5>
                     {m.completed ? (
-                      <span className="px-2 py-0.5 rounded-full bg-teal-50 text-[#006a62] border border-teal-200 text-[9px] sm:text-[10px] font-black shrink-0">
+                      <span className="px-2.5 py-0.5 rounded-full bg-teal-50 text-[#006a62] border border-teal-200 text-xs font-black shrink-0">
                         ✓ {t("completed", "Completed")}
                       </span>
                     ) : (
-                      <span className="text-[10px] font-bold text-slate-400 shrink-0">
+                      <span className="text-xs font-bold text-slate-400 shrink-0">
                         {m.progress}%
                       </span>
                     )}
                   </div>
-                  <p className="text-slate-500 font-semibold text-[10px] sm:text-[11px] mt-0.5 leading-snug">{m.subtitle}</p>
+                  <p className="text-slate-500 font-semibold text-xs sm:text-[13px] mt-0.5 leading-snug">{m.subtitle}</p>
                   {!m.completed && m.progress !== undefined && (
                     <div className="w-full bg-slate-100 h-1.5 sm:h-2 rounded-full overflow-hidden mt-1.5 border border-slate-200/60">
                       <div

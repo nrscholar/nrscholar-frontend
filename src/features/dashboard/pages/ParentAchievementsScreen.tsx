@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   Globe, BookOpen, Flame, Lock, GraduationCap, Users, X, 
-  Settings, ArrowLeft, Trophy, Sparkles, CheckCircle2 
+  Settings, ArrowLeft, Trophy, Sparkles, CheckCircle2, Bell
 } from "lucide-react";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
@@ -157,7 +157,7 @@ export default function ParentAchievementsScreen() {
         </header>
 
         {/* Bento Grid Skeleton */}
-        <main className="w-full max-w-lg mx-auto pt-20 pb-32 px-5 flex flex-col items-center relative gap-4">
+        <main className="w-full max-w-lg mx-auto pt-3 sm:pt-4 pb-4 px-4 sm:px-5 flex flex-col items-center relative gap-3.5">
           <div className="w-full bg-white/70 backdrop-blur-xl rounded-[28px] p-6 border-2 border-white/50 shadow-sm space-y-4">
             <div className="flex justify-between items-center">
               <div className="space-y-2">
@@ -231,79 +231,95 @@ export default function ParentAchievementsScreen() {
       `}</style>
 
       {/* Top Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex items-center justify-between px-6 h-16">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 hover:bg-slate-100 active:scale-95 transition-all">
-            <ArrowLeft size={20} className="text-[#141779]" />
+      <header className="sticky top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex items-center justify-between px-4 sm:px-6 h-16 w-full">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+          <button 
+            onClick={() => navigate(-1)} 
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("back", "Back")}
+          >
+            <ArrowLeft size={19} />
           </button>
-          <div className="w-9 h-9 rounded-full overflow-hidden border border-[#141779]/20 shadow-xs">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-slate-200/80 overflow-hidden bg-white shrink-0 shadow-2xs">
             <img 
               alt="Parent Profile" 
               className="w-full h-full object-cover"
               src={parentPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=141779&color=ffffff&bold=true`}
             />
           </div>
-          <span className="text-xl font-black text-[#141779] tracking-tight">{t("achievements", "Achievements")}</span>
+          <span className="text-base sm:text-lg font-black text-[#141779] tracking-tight truncate leading-tight">{t("achievements", "Achievements")}</span>
         </div>
-        <button 
-          onClick={() => navigate('/parent/settings')}
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 hover:bg-slate-100 text-[#141779] transition-all"
-        >
-          <Settings size={20} />
-        </button>
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <button 
+            onClick={() => navigate('/parent/settings')}
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("settings", "Settings")}
+            title={t("settings", "Settings")}
+          >
+            <Settings size={18} />
+          </button>
+          <button
+            onClick={() => navigate('/notifications')}
+            className="relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("notifications", "Notifications")}
+            title={t("notifications", "Notifications")}
+          >
+            <Bell size={18} />
+          </button>
+        </div>
       </header>
 
       {/* Main Bento Layout Container */}
-      <main className="w-full max-w-lg mx-auto pt-20 pb-32 px-5 flex flex-col items-center overflow-y-auto no-scrollbar relative gap-4">
+      <main className="w-full max-w-lg mx-auto pt-3 sm:pt-4 pb-4 px-4 sm:px-5 flex flex-col items-center overflow-y-auto no-scrollbar relative gap-3.5">
         
         {/* Bento Grid */}
-        <div className="w-full grid grid-cols-2 gap-4 mt-2">
+        <div className="w-full grid grid-cols-2 gap-3 sm:gap-3.5 mt-0.5">
           
           {/* Bento Box 1: Welcome & Profile Info */}
-          <div className="col-span-2 bento-card rounded-[24px] p-5 flex items-center justify-between relative overflow-hidden bg-white">
+          <div className="col-span-2 bento-card rounded-2xl p-4 sm:p-5 flex items-center justify-between relative overflow-hidden bg-white">
             <div className="flex flex-col gap-1 z-10">
-              <span className="text-[11px] font-black text-slate-500 tracking-wider uppercase">{t("parent_dashboard_upper", "PARENT DASHBOARD")}</span>
-              <h2 className="text-xl font-black text-[#141779] flex items-center gap-1.5">
-                {t("hi_user", { name: username, defaultValue: `Hi, ${username}` })} <Sparkles className="text-amber-500 animate-pulse" size={20} />
+              <span className="text-xs font-black text-slate-500 tracking-wider uppercase">{t("parent_dashboard_upper", "PARENT DASHBOARD")}</span>
+              <h2 className="text-lg sm:text-xl font-black text-[#141779] flex items-center gap-1.5">
+                {t("hi_user", { name: username, defaultValue: `Hi, ${username}` })} <Sparkles className="text-amber-500 animate-pulse" size={18} />
               </h2>
               <p className="text-xs text-slate-600 font-bold leading-snug mt-0.5">{t("nurturing_curiosity_sub", "Nurturing curiosity & celebrating key learning milestones.")}</p>
             </div>
-            <div className="flex items-center justify-center bg-indigo-50 border border-indigo-100 w-12 h-12 rounded-2xl text-[#141779] shadow-xs shrink-0">
-              <Trophy size={24} />
+            <div className="flex items-center justify-center bg-indigo-50 border border-indigo-100 w-11 h-11 sm:w-12 sm:h-12 rounded-xl text-[#141779] shadow-2xs shrink-0">
+              <Trophy size={22} />
             </div>
           </div>
 
           {/* Bento Box 2: Total Badges Box */}
-          <div className="col-span-1 bento-card rounded-[24px] p-5 flex flex-col justify-between h-[125px] bg-white border border-teal-200/80">
+          <div className="col-span-1 bento-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between h-[115px] sm:h-[120px] bg-white border border-teal-200/80">
             <div className="flex items-center justify-between">
               <span className="text-xs font-black text-[#006a62] uppercase tracking-wider">{t("badges", "Badges")}</span>
-              <div className="p-2 bg-teal-50 rounded-xl text-[#006a62]">
-                <GraduationCap size={18} />
+              <div className="p-1.5 bg-teal-50 rounded-lg text-[#006a62]">
+                <GraduationCap size={16} />
               </div>
             </div>
             <div>
-              <div className="text-3xl font-black text-[#141779] tracking-tight">{badgesEarned}</div>
-              <span className="text-[11px] text-slate-600 font-extrabold">{t("unlocked_medals", "Unlocked Medals")}</span>
+              <div className="text-2xl sm:text-3xl font-black text-[#141779] tracking-tight">{badgesEarned}</div>
+              <span className="text-xs text-slate-600 font-black">{t("unlocked_medals", "Unlocked Medals")}</span>
             </div>
           </div>
 
           {/* Bento Box 3: Global Rank Box */}
-          <div className="col-span-1 bento-card rounded-[24px] p-5 flex flex-col justify-between h-[125px] bg-white border border-indigo-200/80">
+          <div className="col-span-1 bento-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between h-[115px] sm:h-[120px] bg-white border border-indigo-200/80">
             <div className="flex items-center justify-between">
               <span className="text-xs font-black text-[#30007f] uppercase tracking-wider">{t("rank", "Rank")}</span>
-              <div className="p-2 bg-indigo-50 rounded-xl text-[#30007f]">
-                <Globe size={18} />
+              <div className="p-1.5 bg-indigo-50 rounded-lg text-[#30007f]">
+                <Globe size={16} />
               </div>
             </div>
             <div>
-              <div className="text-3xl font-black text-[#141779] tracking-tight">#{globalRank}</div>
-              <span className="text-[11px] text-slate-600 font-extrabold">{t("worldwide_position", "Worldwide Position")}</span>
+              <div className="text-2xl sm:text-3xl font-black text-[#141779] tracking-tight">#{globalRank}</div>
+              <span className="text-xs text-slate-600 font-black">{t("worldwide_position", "Worldwide Position")}</span>
             </div>
           </div>
 
           {/* Bento Box 4: Next Milestone */}
           {nextMilestone && (
-            <div className="col-span-2 bento-card rounded-[24px] p-5 flex flex-col gap-3 bg-white">
+            <div className="col-span-2 bento-card rounded-2xl p-4 sm:p-5 flex flex-col gap-2.5 bg-white">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="relative flex h-2.5 w-2.5">
@@ -312,14 +328,14 @@ export default function ParentAchievementsScreen() {
                   </span>
                   <span className="text-xs font-black text-[#141779]">{t("next_milestone_target", "Next Milestone Target")}</span>
                 </div>
-                <span className="text-[11px] font-black text-[#006a62] bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full">
+                <span className="text-xs font-black text-[#006a62] bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full">
                   {Math.round((nextMilestone.currentProgress / nextMilestone.totalRequired) * 100)}% {t("complete_caps", "Complete")}
                 </span>
               </div>
               
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779] shrink-0">
-                  {React.createElement(ICON_MAP[nextMilestone.icon] || Lock, { size: 20 })}
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779] shrink-0">
+                  {React.createElement(ICON_MAP[nextMilestone.icon] || Lock, { size: 18 })}
                 </div>
                 <div className="flex-1 min-w-0">
                   <h4 className="text-sm font-black text-[#141779] truncate">{translateAchText(nextMilestone.title)}</h4>
@@ -328,13 +344,13 @@ export default function ParentAchievementsScreen() {
               </div>
 
               <div className="w-full">
-                <div className="flex justify-between items-center text-xs text-slate-700 font-bold mb-1.5">
+                <div className="flex justify-between items-center text-xs text-slate-700 font-bold mb-1">
                   <span>{t("current_progress_label", "Current Progress")}</span>
                   <span className="font-black text-[#141779]">
                     {nextMilestone.currentProgress} / {nextMilestone.totalRequired} {nextMilestone.progressUnit || ""}
                   </span>
                 </div>
-                <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
                   <div 
                     className="h-full bg-gradient-to-r from-[#006a62] to-[#57fae9] rounded-full transition-all duration-1000 ease-out" 
                     style={{ width: `${Math.min(100, (nextMilestone.currentProgress / nextMilestone.totalRequired) * 100)}%` }}
@@ -345,24 +361,24 @@ export default function ParentAchievementsScreen() {
           )}
 
           {/* Filters Bar */}
-          <div className="col-span-2 flex items-center justify-between mt-2 mb-1 px-1">
+          <div className="col-span-2 flex items-center justify-between mt-1 mb-0.5 px-0.5">
             <span className="text-base font-black text-[#141779]">{t("achievement_wall", "Achievement Wall")}</span>
-            <div className="flex bg-slate-200/80 p-1 rounded-2xl border border-slate-300/60">
+            <div className="flex bg-slate-200/80 p-1 rounded-xl border border-slate-300/60">
               <button 
                 onClick={() => setFilter("all")} 
-                className={`text-xs font-black px-3.5 py-1.5 rounded-xl transition-all ${filter === "all" ? "bg-[#141779] text-white shadow-xs" : "text-slate-700 hover:text-[#141779]"}`}
+                className={`text-xs font-black px-3 py-1 rounded-lg transition-all ${filter === "all" ? "bg-[#141779] text-white shadow-2xs" : "text-slate-700 hover:text-[#141779]"}`}
               >
                 {t("all", "All")}
               </button>
               <button 
                 onClick={() => setFilter("unlocked")} 
-                className={`text-xs font-black px-3.5 py-1.5 rounded-xl transition-all ${filter === "unlocked" ? "bg-[#141779] text-white shadow-xs" : "text-slate-700 hover:text-[#141779]"}`}
+                className={`text-xs font-black px-3 py-1 rounded-lg transition-all ${filter === "unlocked" ? "bg-[#141779] text-white shadow-2xs" : "text-slate-700 hover:text-[#141779]"}`}
               >
                 {t("unlocked", "Unlocked")}
               </button>
               <button 
                 onClick={() => setFilter("locked")} 
-                className={`text-xs font-black px-3.5 py-1.5 rounded-xl transition-all ${filter === "locked" ? "bg-[#141779] text-white shadow-xs" : "text-slate-700 hover:text-[#141779]"}`}
+                className={`text-xs font-black px-3 py-1 rounded-lg transition-all ${filter === "locked" ? "bg-[#141779] text-white shadow-2xs" : "text-slate-700 hover:text-[#141779]"}`}
               >
                 {t("locked", "Locked")}
               </button>
@@ -379,16 +395,16 @@ export default function ParentAchievementsScreen() {
               <div 
                 key={ach.id} 
                 onClick={() => showDetails(ach)}
-                className={`col-span-1 bento-card rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] cursor-pointer relative overflow-hidden ${isSelected ? "bento-card-active border-[#141779]" : ""}`}
+                className={`col-span-1 bento-card rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between min-h-[135px] cursor-pointer relative overflow-hidden ${isSelected ? "bento-card-active border-[#141779]" : ""}`}
               >
                 {/* Badge Icon Slot */}
                 <div className="flex items-start justify-between">
-                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-xs ${
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shadow-2xs ${
                     isUnlocked 
                       ? "bg-gradient-to-br from-[#141779] to-[#30007f] text-white" 
                       : "bg-slate-100 text-slate-400 border border-slate-200"
                   }`}>
-                    <IconComponent size={20} />
+                    <IconComponent size={18} />
                   </div>
                   
                   {isUnlocked ? (
@@ -414,7 +430,7 @@ export default function ParentAchievementsScreen() {
 
                 {/* Progress Mini Bar */}
                 <div className="mt-3">
-                  <div className="flex justify-between items-center text-[10px] text-slate-600 font-extrabold mb-1">
+                  <div className="flex justify-between items-center text-xs text-slate-600 font-black mb-1">
                     <span>{t("progress", "Progress")}</span>
                     <span className="font-black text-[#141779]">
                       {Math.min(ach.totalRequired, ach.currentProgress)}/{ach.totalRequired}
@@ -454,7 +470,7 @@ export default function ParentAchievementsScreen() {
                   </div>
                   <div>
                     <h3 className="text-base font-black text-[#141779]">{translateAchText(activeAchievement.title)}</h3>
-                    <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-full ${
+                    <span className={`text-xs font-black px-2.5 py-0.5 rounded-full ${
                       activeAchievement.currentProgress >= activeAchievement.totalRequired
                         ? "bg-teal-50 text-[#006a62] border border-teal-200"
                         : "bg-slate-100 text-slate-600 border border-slate-200"
@@ -472,7 +488,7 @@ export default function ParentAchievementsScreen() {
               </div>
 
               <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200">
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">{t("target_requirement", "Target Requirement")}</span>
+                <span className="text-xs font-black text-slate-500 uppercase tracking-wider block mb-1">{t("target_requirement", "Target Requirement")}</span>
                 <p className="text-xs text-slate-800 font-bold leading-relaxed">{translateAchText(activeAchievement.desc)}</p>
               </div>
 

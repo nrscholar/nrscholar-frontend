@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Bell, BookOpen, Clock, Heart, ShieldAlert, Sparkles, TrendingUp, Trophy, Zap, ChevronRight, ChevronDown, Download, Share2, Award, Calendar, CheckCircle, CheckCircle2, Target, BarChart2, Flame, UserCheck, RefreshCw, X, AlertTriangle, Users, BrainCircuit, Activity, Settings } from "lucide-react";
 import { apiFetch } from "../../../api";
@@ -97,6 +97,7 @@ export default function ParentDashboardScreen() {
   const [loadingBreakdown, setLoadingBreakdown] = useState(false);
 
   const openBreakdown = async () => {
+    window.history.pushState({ parentBreakdownModal: true }, "");
     setShowBreakdownModal(true);
     setLoadingBreakdown(true);
     try {
@@ -113,6 +114,14 @@ export default function ParentDashboardScreen() {
       console.error("Failed to load breakdown", err);
     } finally {
       setLoadingBreakdown(false);
+    }
+  };
+
+  const closeBreakdown = () => {
+    if (window.history.state && window.history.state.parentBreakdownModal) {
+      window.history.back();
+    } else {
+      setShowBreakdownModal(false);
     }
   };
 
@@ -228,9 +237,43 @@ export default function ParentDashboardScreen() {
     return () => window.removeEventListener("userDataUpdated", handleUserDataUpdate);
   }, [loadData]);
 
+  const modalTypeRef = useRef(modalType);
+  useEffect(() => {
+    modalTypeRef.current = modalType;
+  }, [modalType]);
+
+  const showBreakdownModalRef = useRef(showBreakdownModal);
+  useEffect(() => {
+    showBreakdownModalRef.current = showBreakdownModal;
+  }, [showBreakdownModal]);
+
+  // Handle hardware / browser phone back button while modal is open to dismiss modal without leaving dashboard
+  useEffect(() => {
+    const handlePopState = () => {
+      if (modalTypeRef.current) {
+        setModalType(null);
+      } else if (showBreakdownModalRef.current) {
+        setShowBreakdownModal(false);
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
+
   const handleOpenModal = (type: "strengths" | "weaknesses" | "risks") => {
+    window.history.pushState({ parentModal: type }, "");
     setModalType(type);
-    loadData();
+  };
+
+  const handleCloseModal = () => {
+    if (window.history.state && window.history.state.parentModal) {
+      window.history.back();
+    } else {
+      setModalType(null);
+    }
   };
 
   const markAllRead = async () => {
@@ -479,22 +522,22 @@ export default function ParentDashboardScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f4f7fb] font-sans relative pb-28 overflow-hidden">
+      <div className="min-h-screen bg-[#f4f7fb] font-sans relative pb-4 overflow-hidden">
         {/* Top App Bar Skeleton */}
-        <header className="fixed top-0 left-0 right-0 flex items-center justify-between px-4 sm:px-6 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/80 z-50 shadow-xs">
+        <header className="sticky top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 h-16 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] w-full">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full animate-skeleton shrink-0" />
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full animate-skeleton shrink-0" />
             <div className="h-5 w-28 rounded-md animate-skeleton" />
           </div>
-          <div className="flex items-center gap-2">
-            <div className="h-9 w-20 rounded-full animate-skeleton hidden sm:block" />
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full animate-skeleton" />
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full animate-skeleton shrink-0" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full animate-skeleton shrink-0" />
           </div>
         </header>
 
         {/* Main Content Skeleton */}
-        <div className="px-4 pt-20 max-w-lg mx-auto flex flex-col gap-4">
+        <div className="px-4 pt-4 max-w-lg mx-auto flex flex-col gap-4">
           {/* Profile Card Skeleton */}
           <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs space-y-2.5">
             <div className="flex justify-between items-center">
@@ -667,18 +710,18 @@ export default function ParentDashboardScreen() {
         {/* Header Title & Badge */}
         <div className="flex items-start justify-between">
           <div className="flex flex-col">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 leading-none">
+            <span className="text-xs font-black uppercase tracking-wider text-slate-500 leading-none">
               {t("subject_performance_label", "SUBJECT PERFORMANCE")}
             </span>
-            <h3 className="text-sm sm:text-base font-extrabold text-[#141779] tracking-tight mt-1">
+            <h3 className="text-base sm:text-lg font-extrabold text-[#141779] tracking-tight mt-1">
               {t("top_subjects_daily_trend", "Top Subjects Daily Trend")}
             </h3>
-            <p className="text-[11px] text-slate-400 font-semibold mt-0.5">
+            <p className="text-xs text-slate-500 font-semibold mt-0.5">
               {t("performance_last_7_days", "Performance over the last 7 active days")}
             </p>
           </div>
-          <div className="bg-indigo-50/90 border border-indigo-100/90 px-2.5 py-1 rounded-xl flex items-center justify-center shrink-0">
-            <span className="text-[10px] font-extrabold text-[#141779] leading-none">7-DAY TREND</span>
+          <div className="bg-indigo-50/90 border border-indigo-100/90 px-3 py-1.5 rounded-xl flex items-center justify-center shrink-0">
+            <span className="text-xs font-extrabold text-[#141779] leading-none">7-DAY TREND</span>
           </div>
         </div>
 
@@ -777,7 +820,7 @@ export default function ParentDashboardScreen() {
           </svg>
 
           {/* All 7 Days Date Labels */}
-          <div className="flex justify-between text-[11px] font-bold text-slate-400 pt-2" style={{ paddingLeft: `${startX}px`, paddingRight: `${320 - endX}px` }}>
+          <div className="flex justify-between text-xs font-bold text-slate-500 pt-2" style={{ paddingLeft: `${startX}px`, paddingRight: `${320 - endX}px` }}>
             {dayLabels.map((day, i) => (
               <span key={i} className={i === dayLabels.length - 1 ? "font-extrabold text-[#141779]" : ""}>
                 {day}
@@ -1023,7 +1066,7 @@ export default function ParentDashboardScreen() {
       <div className="bg-white rounded-[24px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-slate-100 flex flex-col gap-3 font-sans">
         
         {/* Subtitle Header */}
-        <span className="text-[11px] font-extrabold text-slate-400 tracking-wider uppercase">
+        <span className="text-xs font-black text-slate-500 tracking-wider uppercase">
           {upperSubject} TREND (7-DAY PERFORMANCE TREND)
         </span>
 
@@ -1122,7 +1165,7 @@ export default function ParentDashboardScreen() {
           </svg>
 
           {/* All 7 Days Date Labels Spaced Across Bottom */}
-          <div className="flex justify-between text-[11px] font-bold text-slate-400 pt-2" style={{ paddingLeft: `${startX}px`, paddingRight: `${320 - endX}px` }}>
+          <div className="flex justify-between text-xs font-bold text-slate-500 pt-2" style={{ paddingLeft: `${startX}px`, paddingRight: `${320 - endX}px` }}>
             {dayLabels.map((day, i) => (
               <span key={i} className={i === dayLabels.length - 1 ? "font-extrabold text-[#141779]" : ""}>
                 {day}
@@ -1136,10 +1179,10 @@ export default function ParentDashboardScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f7fb] font-sans relative pb-28">
+    <div className="min-h-screen bg-[#f4f7fb] font-sans relative pb-4">
 
       {/* Top App Bar */}
-      <header className="fixed top-0 left-0 right-0 flex items-center justify-between px-4 sm:px-6 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/80 z-50 shadow-[0_2px_12px_rgba(20,23,121,0.04)]">
+      <header className="sticky top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 h-16 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] w-full">
         <div className="flex items-center gap-2.5 min-w-0">
           {!isCoParent && (
             <button 
@@ -1167,40 +1210,49 @@ export default function ParentDashboardScreen() {
                 {t("parent_space") || "Parent Space"}
               </h1>
               {isCoParent && (
-                <span className="text-[9px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-200 shrink-0">
+                <span className="text-xs uppercase tracking-wider font-black px-2.5 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-200 shrink-0">
                   Co-Parent
                 </span>
               )}
             </div>
             <button
               onClick={() => setShowSwitcher(true)}
-              className="flex items-center gap-1 text-[11px] font-bold text-indigo-700 hover:text-indigo-900 group cursor-pointer transition-colors text-left"
+              className="flex items-center gap-1 text-xs sm:text-[13px] font-bold text-indigo-700 hover:text-indigo-900 group cursor-pointer transition-colors text-left"
               title={t("switch_child_profile", "Switch Student Profile")}
             >
-              <Users size={11} className="text-indigo-600 shrink-0" />
+              <Users size={12} className="text-indigo-600 shrink-0" />
               <span className="truncate max-w-[100px] sm:max-w-[140px]">{cleanChildName}</span>
-              <span className="text-[10px] text-slate-400 group-hover:text-indigo-600 font-semibold">• {t("switch", "Switch")}</span>
-              <ChevronDown size={11} className="text-slate-400 group-hover:text-indigo-600 shrink-0 transition-transform" />
+              <span className="text-xs text-slate-500 group-hover:text-indigo-600 font-bold">• {t("switch", "Switch")}</span>
+              <ChevronDown size={12} className="text-slate-400 group-hover:text-indigo-600 shrink-0 transition-transform" />
             </button>
           </div>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <button
+            onClick={() => navigate('/parent/settings')}
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("settings", "Settings")}
+            title={t("settings", "Settings")}
+          >
+            <Settings size={18} />
+          </button>
           <button 
             onClick={() => { setShowNotifications(true); markAllRead(); }} 
-            className="relative w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            className="relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
             aria-label="Notifications"
+            title={t("notifications", "Notifications")}
           >
             <Bell size={18} />
             {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-[#ba1a1a] rounded-full border-2 border-white flex items-center justify-center text-[7px] font-bold text-white">
-                {unreadCount}
+              <span className="absolute top-1 right-1 w-4 h-4 bg-[#ba1a1a] rounded-full border-2 border-white flex items-center justify-center text-[9px] font-bold text-white">
+                {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
           </button>
         </div>
       </header>
 
-      <main className="px-4 pt-20 max-w-lg mx-auto flex flex-col gap-3.5">
+      <main className="px-4 pt-4 max-w-lg mx-auto flex flex-col gap-3.5">
 
         {/* Full-width Kids Space Launcher Box (Primary Parent Only - Hidden for Co-Parents) */}
         {!isCoParent && (
@@ -1218,11 +1270,11 @@ export default function ParentDashboardScreen() {
                   <span className="text-sm sm:text-base font-black text-[#141779] leading-tight">
                     {t("kids_space", "Kids Space")}
                   </span>
-                  <span className="px-2 py-0.5 rounded-full bg-indigo-100/90 text-[#141779] text-[10px] font-extrabold uppercase tracking-wider">
+                  <span className="px-2.5 py-0.5 rounded-full bg-indigo-100/90 text-[#141779] text-xs font-black uppercase tracking-wider">
                     {t("kids_mode", "Kids Mode")}
                   </span>
                 </div>
-                <p className="text-[11px] sm:text-xs text-indigo-700/80 font-medium truncate mt-0.5">
+                <p className="text-xs sm:text-[13px] text-indigo-700/80 font-medium truncate mt-0.5">
                   {t("kids_space_sub", "Return directly to student learning dashboard")}
                 </p>
               </div>
@@ -1257,11 +1309,11 @@ export default function ParentDashboardScreen() {
                   <ChevronDown size={15} className="text-slate-400 group-hover:text-[#141779] shrink-0 transition-colors" />
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                  <span className="text-[10px] sm:text-xs font-black text-white bg-[#141779] px-2.5 py-0.5 rounded-full shrink-0 shadow-2xs">
+                  <span className="text-xs sm:text-[13px] font-black text-white bg-[#141779] px-3 py-1 rounded-full shrink-0 shadow-2xs">
                     {t('lvl_explorer', { level: userLevel, defaultValue: `Lvl ${userLevel}` })}
                   </span>
                   {childClass && (
-                    <span className="text-[10px] sm:text-xs font-bold text-[#141779] bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full shrink-0">
+                    <span className="text-xs sm:text-[13px] font-bold text-[#141779] bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full shrink-0">
                       {childClass}
                     </span>
                   )}
@@ -1271,7 +1323,7 @@ export default function ParentDashboardScreen() {
 
             {/* Active profile status badge */}
             <div className="flex items-center gap-1.5 shrink-0">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[10px] sm:text-xs font-extrabold shadow-2xs">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-xs sm:text-[13px] font-black shadow-2xs">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 <span>{t("active_profile", "Active")}</span>
               </span>
@@ -1284,7 +1336,7 @@ export default function ParentDashboardScreen() {
               <span className="text-2xl sm:text-3xl font-black text-[#006a62] leading-none mb-1">
                 {todayTime}<span className="text-sm sm:text-base font-bold ml-0.5">m</span>
               </span>
-              <span className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-wider text-center">
+              <span className="text-xs font-black text-slate-600 uppercase tracking-wider text-center">
                 {t('todays_time', "TODAY'S TIME")}
               </span>
             </div>
@@ -1293,7 +1345,7 @@ export default function ParentDashboardScreen() {
               <span className="text-2xl sm:text-3xl font-black text-[#30007f] leading-none mb-1">
                 {solvedToday}
               </span>
-              <span className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-wider text-center">
+              <span className="text-xs font-black text-slate-600 uppercase tracking-wider text-center">
                 {t('solved_today', 'SOLVED TODAY')}
               </span>
             </div>
@@ -1303,15 +1355,15 @@ export default function ParentDashboardScreen() {
           <div className="w-full pt-1">
             <div className="flex justify-between items-center mb-1.5">
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-black text-[#141779] tracking-wider uppercase">
+                <span className="text-xs sm:text-[13px] font-black text-[#141779] tracking-wider uppercase">
                   {t('daily_confidence_score', 'DAILY CONFIDENCE SCORE')}
                 </span>
                 <button
                   onClick={openBreakdown}
-                  className="text-[10px] font-bold text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded-full transition-colors flex items-center gap-0.5 cursor-pointer"
+                  className="text-xs font-bold text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-full transition-colors flex items-center gap-0.5 cursor-pointer"
                 >
                   <span>{t('details', 'Details')}</span>
-                  <span>→</span>
+
                 </button>
               </div>
               <span className="text-xs sm:text-sm font-black text-[#141779]">{todayConfidenceScore}%</span>
@@ -1324,7 +1376,7 @@ export default function ParentDashboardScreen() {
             </div>
             <p 
               onClick={openBreakdown}
-              className="text-[10px] sm:text-[11px] text-slate-500 font-medium cursor-pointer hover:text-indigo-900 transition-colors truncate"
+              className="text-xs sm:text-[13px] text-slate-500 font-medium cursor-pointer hover:text-indigo-900 transition-colors truncate"
             >
               {t('confidence_score_sub', { attempts: solvedToday, defaultValue: `Based on today's correct answers (${solvedToday} attempts) • Tap for details` })}
             </p>
@@ -1334,7 +1386,7 @@ export default function ParentDashboardScreen() {
         {/* 2. Cognitive Strengths, Weaknesses, and Risk Alerts (Screenshot 2 content) */}
         <div id="dna-section" className="flex flex-col gap-2.5">
           <div className="flex items-center justify-between px-1">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-500">
+            <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-600">
               {t('cognitive_strengths_weaknesses', 'Cognitive Strengths & Weaknesses')}
             </h3>
           </div>
@@ -1343,7 +1395,7 @@ export default function ParentDashboardScreen() {
             {/* Strengths Card */}
             <button
               onClick={() => handleOpenModal("strengths")}
-              className="w-full bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col justify-between text-left hover:border-teal-300 hover:shadow-sm transition-all group cursor-pointer"
+              className="w-full bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col text-left hover:border-teal-300 hover:shadow-sm transition-all group cursor-pointer"
             >
               <div>
                 <div className="flex justify-between items-center mb-2">
@@ -1351,40 +1403,37 @@ export default function ParentDashboardScreen() {
                     <div className="w-7 h-7 rounded-lg bg-teal-50 border border-teal-100/80 flex items-center justify-center text-sm">
                       💪
                     </div>
-                    <h4 className="text-sm font-black text-[#006a62]">{t('strengths', 'Strengths')}</h4>
+                    <h4 className="text-sm sm:text-base font-black text-[#006a62]">{t('strengths', 'Strengths')}</h4>
                   </div>
-                  <ChevronRight size={16} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                  <ChevronRight size={16} className="text-slate-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
                 </div>
                 {!hasEnoughData || subjectBreakdown.length === 0 ? (
-                  <span className="inline-block text-[11px] font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                  <span className="inline-block text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full whitespace-nowrap">
                     {t('no_data_available', 'No data available')}
                   </span>
                 ) : actualStrengthSubjects.length === 0 ? (
-                  <span className="inline-block text-[11px] font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                  <span className="inline-block text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full whitespace-nowrap">
                     {t('no_strengths_yet', 'No strength for now.')}
                   </span>
                 ) : (
-                  <div className="space-y-1">
+                  <div className="space-y-1.5 mt-0.5">
                     {actualStrengthSubjects.map((ss, i) => (
-                      <div key={i} className="flex items-start gap-1.5 text-xs font-bold text-[#006a62]">
-                        <CheckCircle size={13} className="text-[#006a62] shrink-0 mt-0.5" />
-                        <span className="leading-snug">
-                          {translateSubjectName(ss.subject)} is currently high performing with {ss.accuracy}% accuracy.
+                      <div key={i} className="flex items-center gap-1.5 text-xs font-bold text-[#006a62] min-w-0 overflow-hidden">
+                        <CheckCircle size={13} className="text-[#006a62] shrink-0" />
+                        <span className="leading-snug truncate whitespace-nowrap">
+                          {translateInsightText(`${translateSubjectName(ss.subject)} is currently high performing with ${ss.accuracy}% accuracy.`)}
                         </span>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
-              <span className="text-[10px] text-teal-700 font-extrabold uppercase tracking-wider mt-2.5">
-                {t('fast_processor', 'Fast Processor')}
-              </span>
             </button>
 
             {/* Areas for Review (Weaknesses) Card */}
             <button
               onClick={() => handleOpenModal("weaknesses")}
-              className="w-full bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col justify-between text-left hover:border-rose-300 hover:shadow-sm transition-all group cursor-pointer"
+              className="w-full bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col text-left hover:border-rose-300 hover:shadow-sm transition-all group cursor-pointer"
             >
               <div>
                 <div className="flex justify-between items-center mb-2">
@@ -1392,40 +1441,37 @@ export default function ParentDashboardScreen() {
                     <div className="w-7 h-7 rounded-lg bg-rose-50 border border-rose-100/80 flex items-center justify-center text-sm">
                       ⚠️
                     </div>
-                    <h4 className="text-sm font-black text-[#ba1a1a]">{t('weaknesses', 'Areas to Improve')}</h4>
+                    <h4 className="text-sm sm:text-base font-black text-[#ba1a1a]">{t('weaknesses', 'Areas to Improve')}</h4>
                   </div>
-                  <ChevronRight size={16} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                  <ChevronRight size={16} className="text-slate-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
                 </div>
                 {!hasEnoughData || subjectBreakdown.length === 0 ? (
-                  <span className="inline-block text-[11px] font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                  <span className="inline-block text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full whitespace-nowrap">
                     {t('no_data_available', 'No data available')}
                   </span>
                 ) : actualWeakSubjects.length === 0 ? (
-                  <span className="inline-block text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
+                  <span className="inline-block text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100 whitespace-nowrap">
                     {t('all_subjects_top_level', 'No weaknesses detected 🎉')}
                   </span>
                 ) : (
-                  <div className="space-y-1">
+                  <div className="space-y-1.5 mt-0.5">
                     {actualWeakSubjects.map((ws, i) => (
-                      <div key={i} className="flex items-start gap-1.5 text-xs font-bold text-[#ba1a1a]">
-                        <AlertTriangle size={13} className="text-[#ba1a1a] shrink-0 mt-0.5" />
-                        <span className="leading-snug">
-                          {translateSubjectName(ws.subject)} needs improvement with {ws.accuracy}% accuracy.
+                      <div key={i} className="flex items-center gap-1.5 text-xs font-bold text-[#ba1a1a] min-w-0 overflow-hidden">
+                        <AlertTriangle size={13} className="text-[#ba1a1a] shrink-0" />
+                        <span className="leading-snug truncate whitespace-nowrap">
+                          {translateInsightText(`${translateSubjectName(ws.subject)} needs improvement with ${ws.accuracy}% accuracy.`)}
                         </span>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
-              <span className="text-[10px] text-rose-700 font-extrabold uppercase tracking-wider mt-2.5">
-                {t('review_needed', 'Review Needed')}
-              </span>
             </button>
 
             {/* Risk Alerts Card */}
             <button
               onClick={() => handleOpenModal("risks")}
-              className="w-full bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col justify-between text-left hover:border-amber-300 hover:shadow-sm transition-all group cursor-pointer"
+              className="w-full bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col text-left hover:border-amber-300 hover:shadow-sm transition-all group cursor-pointer"
             >
               <div>
                 <div className="flex justify-between items-center mb-2">
@@ -1433,34 +1479,31 @@ export default function ParentDashboardScreen() {
                     <div className="w-7 h-7 rounded-lg bg-amber-50 border border-amber-100/80 flex items-center justify-center text-sm">
                       🔔
                     </div>
-                    <h4 className="text-sm font-black text-[#d97706]">{t('risk_alerts', 'Risk Alerts')}</h4>
+                    <h4 className="text-sm sm:text-base font-black text-[#d97706]">{t('risk_alerts', 'Risk Alerts')}</h4>
                   </div>
-                  <ChevronRight size={16} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                  <ChevronRight size={16} className="text-slate-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
                 </div>
                 {!hasEnoughData || subjectBreakdown.length === 0 ? (
-                  <span className="inline-block text-[11px] font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                  <span className="inline-block text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full whitespace-nowrap">
                     {t('no_data_available', 'No data available')}
                   </span>
                 ) : actualRiskSubjects.length === 0 ? (
-                  <span className="inline-block text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
+                  <span className="inline-block text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100 whitespace-nowrap">
                     {t('no_risk_alerts_badge', '✅ No Risk Alerts')}
                   </span>
                 ) : (
-                  <div className="space-y-1">
+                  <div className="space-y-1.5 mt-0.5">
                     {actualRiskSubjects.map((rs, i) => (
-                      <div key={i} className="flex items-start gap-1.5 text-xs font-semibold text-amber-800">
-                        <AlertTriangle size={13} className="text-amber-600 shrink-0 mt-0.5" />
-                        <span className="leading-snug">
-                          {translateSubjectName(rs.subject)} needs attention with {rs.accuracy}% accuracy.
+                      <div key={i} className="flex items-center gap-1.5 text-xs font-semibold text-amber-800 min-w-0 overflow-hidden">
+                        <AlertTriangle size={13} className="text-amber-600 shrink-0" />
+                        <span className="leading-snug truncate whitespace-nowrap">
+                          {translateInsightText(`${translateSubjectName(rs.subject)} needs attention with ${rs.accuracy}% accuracy.`)}
                         </span>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
-              <span className="text-[10px] text-amber-700 font-extrabold uppercase tracking-wider mt-2.5">
-                {t('three_day_alerts', '3-Day Alerts')}
-              </span>
             </button>
           </div>
         </div>
@@ -1492,13 +1535,13 @@ export default function ParentDashboardScreen() {
           return (
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between px-1">
-                <h3 className="text-xs font-black uppercase tracking-wider text-slate-500">
+                <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-600">
                   {t("recent_activity", "Recent Activity")}
                 </h3>
                 {isValidLastActivity && (
                   <button
                     onClick={() => navigate('/parent/kids-activity')}
-                    className="text-[11px] font-bold text-indigo-700 hover:text-indigo-900 transition-colors cursor-pointer flex items-center gap-1 group"
+                    className="text-xs sm:text-[13px] font-bold text-indigo-700 hover:text-indigo-900 transition-colors cursor-pointer flex items-center gap-1 group"
                   >
                     <span>{t("view_all", "View All").replace(/[-–—]?\s*[>→›»]/g, "").replace(/->/g, "").trim()}</span>
                     <ChevronRight size={13} className="group-hover:translate-x-0.5 transition-transform shrink-0" />
@@ -1516,11 +1559,11 @@ export default function ParentDashboardScreen() {
                       <Clock size={17} className="text-[#141779]" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
-                        <h4 className="text-xs font-black text-[#141779] leading-tight truncate">
-                          {translateActivityTitle(lastActivityDetails.title)}
-                        </h4>
-                        <span className={`px-1.5 py-0.2 rounded-md text-[8px] font-black uppercase tracking-wider ${
+                      <h4 className="text-sm font-black text-[#141779] leading-tight truncate mb-1">
+                        {translateActivityTitle(lastActivityDetails.title)}
+                      </h4>
+                      <div className="flex items-center gap-2 text-xs font-medium text-slate-500 flex-nowrap overflow-hidden">
+                        <span className={`px-2 py-0.5 rounded-md text-[11px] font-black uppercase tracking-wider shrink-0 whitespace-nowrap ${
                           lastActivityDetails.type === "reading" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
                           lastActivityDetails.type === "battle" ? "bg-rose-50 text-rose-700 border border-rose-200" :
                           lastActivityDetails.type === "multiplayer" ? "bg-purple-50 text-purple-700 border border-purple-200" :
@@ -1531,14 +1574,12 @@ export default function ParentDashboardScreen() {
                            lastActivityDetails.type === "multiplayer" ? `⚔️ ${t("arena", "Arena")}` :
                            `🎯 ${t("quiz", "Quiz")}`}
                         </span>
-                      </div>
-                      <div className="flex items-center gap-2 text-[10px] font-medium text-slate-500">
                         {lastActivityDetails.timeTaken > 0 && (
-                          <span>⏱️ {Math.round(lastActivityDetails.timeTaken / 60) || 1}m</span>
+                          <span className="shrink-0 whitespace-nowrap">⏱️ {Math.round(lastActivityDetails.timeTaken / 60) || 1}m</span>
                         )}
-                        {lastActivityDetails?.timeTaken > 0 && lastActivityDetails?.totalQuestions > 0 && <span>•</span>}
+                        {lastActivityDetails?.timeTaken > 0 && lastActivityDetails?.totalQuestions > 0 && <span className="shrink-0 text-slate-400">•</span>}
                         {lastActivityDetails?.totalQuestions > 0 && (
-                          <span className="text-indigo-600 font-bold">
+                          <span className="text-indigo-600 font-bold shrink-0 whitespace-nowrap">
                             🎯 {lastActivityDetails.correctQuestions}/{lastActivityDetails.totalQuestions} {t("correct", "Correct")}
                           </span>
                         )}
@@ -1554,10 +1595,10 @@ export default function ParentDashboardScreen() {
                       <Activity size={18} />
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-slate-600 leading-tight">
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-600 leading-tight">
                         {t("no_recent_activity_title", "No recent activity")}
                       </h4>
-                      <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                      <p className="text-xs text-slate-500 font-medium mt-0.5">
                         {t("child_hasnt_completed_activities", "Your child hasn't completed any activities yet.")}
                       </p>
                     </div>
@@ -1571,7 +1612,7 @@ export default function ParentDashboardScreen() {
         {/* 4. Parent Learning Section — Compact & Polished */}
         <div className="flex flex-col gap-1.5 w-full">
           <div className="flex items-center justify-between px-1">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-500">
+            <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-600">
               {t("parent_learning", "Parent Learning")}
             </h3>
           </div>
@@ -1585,16 +1626,16 @@ export default function ParentDashboardScreen() {
                 <div className="w-7 h-7 rounded-lg bg-teal-50 border border-teal-100 text-[#006a62] flex items-center justify-center shrink-0">
                   <BrainCircuit size={15} />
                 </div>
-                <span className="bg-teal-50 text-teal-700 border border-teal-200/80 text-[8px] font-black uppercase px-2 py-0.5 rounded-full tracking-wider shrink-0">
+                <span className="bg-teal-50 text-teal-700 border border-teal-200/80 text-xs font-black uppercase px-2.5 py-0.5 rounded-full tracking-wider shrink-0">
                   {t("hot", "Hot")}
                 </span>
               </div>
               <div className="w-full min-w-0">
-                <h4 className="text-xs font-black text-[#141779] group-hover:text-teal-700 transition-colors leading-tight truncate">
+                <h4 className="text-xs sm:text-sm font-black text-[#141779] group-hover:text-teal-700 transition-colors leading-tight truncate">
                   {t("daily_tip", "Daily Tip")}
                 </h4>
                 <p 
-                  className="text-[10px] text-slate-500 font-medium truncate mt-0.5 leading-tight"
+                  className="text-xs sm:text-[13px] text-slate-500 font-medium truncate mt-0.5 leading-tight"
                   title={dailyTipTitle || t("daily_tip_sub", "Quick family harmony ideas.")}
                 >
                   {dailyTipTitle || t("daily_tip_sub", "Quick family harmony ideas.")}
@@ -1611,15 +1652,15 @@ export default function ParentDashboardScreen() {
                 <div className="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-100 text-[#141779] flex items-center justify-center shrink-0">
                   <BookOpen size={15} />
                 </div>
-                <span className="bg-indigo-50 text-indigo-700 border border-indigo-200/80 text-[8px] font-black uppercase px-2 py-0.5 rounded-full tracking-wider shrink-0">
+                <span className="bg-indigo-50 text-indigo-700 border border-indigo-200/80 text-xs font-black uppercase px-2.5 py-0.5 rounded-full tracking-wider shrink-0">
                   {t("new", "New")}
                 </span>
               </div>
               <div className="w-full min-w-0">
-                <h4 className="text-xs font-black text-[#141779] group-hover:text-indigo-700 transition-colors leading-tight truncate">
+                <h4 className="text-xs sm:text-sm font-black text-[#141779] group-hover:text-indigo-700 transition-colors leading-tight truncate">
                   {t("lessons", "Lessons")}
                 </h4>
-                <p className="text-[10px] text-slate-500 font-medium truncate mt-0.5 leading-tight" title={t("lessons_sub", "Bite-sized parent growth.")}>
+                <p className="text-xs sm:text-[13px] text-slate-500 font-medium truncate mt-0.5 leading-tight" title={t("lessons_sub", "Bite-sized parent growth.")}>
                   {t("lessons_sub", "Bite-sized parent growth.")}
                 </p>
               </div>
@@ -1634,15 +1675,15 @@ export default function ParentDashboardScreen() {
                 <div className="w-7 h-7 rounded-lg bg-purple-50 border border-purple-100 text-[#30007f] flex items-center justify-center shrink-0">
                   <Target size={15} />
                 </div>
-                <span className="bg-purple-50 text-purple-700 border border-purple-200/80 text-[8px] font-black uppercase px-2 py-0.5 rounded-full tracking-wider shrink-0">
+                <span className="bg-purple-50 text-purple-700 border border-purple-200/80 text-xs font-black uppercase px-2.5 py-0.5 rounded-full tracking-wider shrink-0">
                   {t("live", "Live")}
                 </span>
               </div>
               <div className="w-full min-w-0">
-                <h4 className="text-xs font-black text-[#141779] group-hover:text-purple-700 transition-colors leading-tight truncate">
+                <h4 className="text-xs sm:text-sm font-black text-[#141779] group-hover:text-purple-700 transition-colors leading-tight truncate">
                   {t("challenges", "Challenges")}
                 </h4>
-                <p className="text-[10px] text-slate-500 font-medium truncate mt-0.5 leading-tight" title={t("challenges_sub", "Build strong daily habits.")}>
+                <p className="text-xs sm:text-[13px] text-slate-500 font-medium truncate mt-0.5 leading-tight" title={t("challenges_sub", "Build strong daily habits.")}>
                   {t("challenges_sub", "Build strong daily habits.")}
                 </p>
               </div>
@@ -1657,15 +1698,15 @@ export default function ParentDashboardScreen() {
                 <div className="w-7 h-7 rounded-lg bg-emerald-50 border border-emerald-100 text-[#007168] flex items-center justify-center shrink-0">
                   <Award size={15} />
                 </div>
-                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[8px] font-black uppercase px-2 py-0.5 rounded-full tracking-wider shrink-0">
+                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-xs font-black uppercase px-2.5 py-0.5 rounded-full tracking-wider shrink-0">
                   {t("badges", "Badges")}
                 </span>
               </div>
               <div className="w-full min-w-0">
-                <h4 className="text-xs font-black text-[#141779] group-hover:text-emerald-700 transition-colors leading-tight truncate">
+                <h4 className="text-xs sm:text-sm font-black text-[#141779] group-hover:text-emerald-700 transition-colors leading-tight truncate">
                   {t("rewards", "Rewards")}
                 </h4>
-                <p className="text-[10px] text-slate-500 font-medium truncate mt-0.5 leading-tight" title={t("rewards_sub", "View your milestones.")}>
+                <p className="text-xs sm:text-[13px] text-slate-500 font-medium truncate mt-0.5 leading-tight" title={t("rewards_sub", "View your milestones.")}>
                   {t("rewards_sub", "View your milestones.")}
                 </p>
               </div>
@@ -1683,7 +1724,7 @@ export default function ParentDashboardScreen() {
               <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
                 <Settings size={15} className="text-slate-700" />
               </div>
-              <span className="text-xs font-black text-[#141779] truncate">{t("settings", "Settings")}</span>
+              <span className="text-xs sm:text-sm font-black text-[#141779] truncate">{t("settings", "Settings")}</span>
             </div>
             <ChevronRight size={15} className="text-slate-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
           </button>
@@ -1696,7 +1737,7 @@ export default function ParentDashboardScreen() {
               <div className="w-7 h-7 rounded-lg bg-teal-50 border border-teal-100/80 flex items-center justify-center shrink-0">
                 <BrainCircuit size={15} className="text-[#006a62]" />
               </div>
-              <span className="text-xs font-black text-[#141779] truncate">{t("dna", "DNA")}</span>
+              <span className="text-xs sm:text-sm font-black text-[#141779] truncate">{t("dna", "DNA")}</span>
             </div>
             <ChevronRight size={15} className="text-slate-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
           </button>
@@ -1708,11 +1749,21 @@ export default function ParentDashboardScreen() {
 
       {/* Graph Modal */}
       {modalType && (
-        <div className="fixed inset-0 bg-black/40 z-[100] flex justify-center items-end sm:items-center p-0 sm:p-5 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-[#f7f9fb] w-full sm:w-[400px] max-w-full rounded-t-3xl sm:rounded-3xl max-h-[90vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-10 duration-300">
+        <div 
+          onClick={handleCloseModal}
+          className="fixed inset-0 bg-black/40 z-[100] flex justify-center items-end sm:items-center p-0 sm:p-5 backdrop-blur-sm animate-in fade-in duration-300"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-[#f7f9fb] w-full sm:w-[400px] max-w-full rounded-t-3xl sm:rounded-3xl max-h-[90vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-10 duration-300"
+          >
             <div className="flex justify-between items-center p-5 border-b border-gray-100 shrink-0">
               <div className="flex items-center gap-3">
-                <button onClick={() => setModalType(null)} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors">
+                <button 
+                  onClick={handleCloseModal} 
+                  className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors cursor-pointer"
+                  aria-label="Back"
+                >
                   <ArrowLeft size={20} color="#141779" />
                 </button>
                 <h2 className="text-lg font-bold text-[#141779]">
@@ -1722,7 +1773,11 @@ export default function ParentDashboardScreen() {
                       t("cognitive_profile_graph", "Cognitive Profile Graph")}
                 </h2>
               </div>
-              <button onClick={() => setModalType(null)} className="p-2 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">
+              <button 
+                onClick={handleCloseModal} 
+                className="p-2 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors cursor-pointer"
+                aria-label="Close"
+              >
                 <X size={20} color="#464652" />
               </button>
             </div>
@@ -1828,8 +1883,8 @@ export default function ParentDashboardScreen() {
                                   <span>{subjName}</span>
                                   <span className="text-xs">⚠️</span>
                                 </h4>
-                                <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-50 text-[#dc2626] border border-rose-200 flex items-center gap-1">
-                                  <span className="text-[8px]">●</span>
+                                <span className="text-xs font-black px-2.5 py-1 rounded-full bg-rose-50 text-[#dc2626] border border-rose-200 flex items-center gap-1">
+                                  <span className="text-[10px]">●</span>
                                   <span>{t("status_needs_improvement", "Needs Improvement (2+ Days)")}</span>
                                 </span>
                               </div>
@@ -1839,7 +1894,7 @@ export default function ParentDashboardScreen() {
                                   {`${subjName} needs improvement with ${sb.accuracy}% accuracy.`}
                                 </span>
                                 {improvementNeeded > 0 && (
-                                  <span className="text-[11px] text-[#dc2626] font-bold bg-rose-50/70 px-2 py-0.5 rounded-md">
+                                  <span className="text-xs text-[#dc2626] font-bold bg-rose-50/70 px-2 py-0.5 rounded-md">
                                     {t("improvement_needed_gap", {
                                       gap: improvementNeeded,
                                       defaultValue: `+${improvementNeeded}% to match top subject`
@@ -1859,7 +1914,7 @@ export default function ParentDashboardScreen() {
                               </div>
 
                               {(sb.wrongAnswers !== undefined && sb.correctAnswers !== undefined && (sb.correctAnswers + sb.wrongAnswers > 0)) && (
-                                <div className="flex items-center gap-3 text-[11px] text-slate-500 font-semibold pt-0.5">
+                                <div className="flex items-center gap-3 text-xs text-slate-500 font-semibold pt-0.5">
                                   <span>{t("accuracy_label", "Accuracy")}: {sb.accuracy}%</span>
                                   <span>•</span>
                                   <span className="text-slate-600">{t("solved_count", { correct: sb.correctAnswers, total: sb.correctAnswers + sb.wrongAnswers, defaultValue: `${sb.correctAnswers}/${sb.correctAnswers + sb.wrongAnswers} correct` })}</span>
@@ -1872,7 +1927,7 @@ export default function ParentDashboardScreen() {
                                 </div>
                               )}
 
-                              <div className="bg-rose-50/60 rounded-xl p-2.5 border border-rose-100/80 text-[11px] leading-relaxed">
+                              <div className="bg-rose-50/60 rounded-xl p-2.5 border border-rose-100/80 text-xs leading-relaxed">
                                 <span className="font-extrabold text-[#dc2626]">
                                   {t("actionable_insight_label", "Actionable Insight")}:{" "}
                                 </span>
@@ -1912,8 +1967,8 @@ export default function ParentDashboardScreen() {
                                   <span>{subjName}</span>
                                   <span className="text-xs">🔔</span>
                                 </h4>
-                                <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-50 text-[#b45309] border border-amber-200 flex items-center gap-1">
-                                  <span className="text-[8px]">●</span>
+                                <span className="text-xs font-black px-2.5 py-1 rounded-full bg-amber-50 text-[#b45309] border border-amber-200 flex items-center gap-1">
+                                  <span className="text-[10px]">●</span>
                                   <span>{t("status_risk_day1", "At Risk (Day 1 <70%)")}</span>
                                 </span>
                               </div>
@@ -1935,14 +1990,14 @@ export default function ParentDashboardScreen() {
                               </div>
 
                               {(sb.wrongAnswers !== undefined && sb.correctAnswers !== undefined && (sb.correctAnswers + sb.wrongAnswers > 0)) && (
-                                <div className="flex items-center gap-3 text-[11px] text-slate-500 font-semibold pt-0.5">
+                                <div className="flex items-center gap-3 text-xs text-slate-500 font-semibold pt-0.5">
                                   <span>{t("accuracy_label", "Accuracy")}: {sb.accuracy}%</span>
                                   <span>•</span>
                                   <span className="text-slate-600">{t("solved_count", { correct: sb.correctAnswers, total: sb.correctAnswers + sb.wrongAnswers, defaultValue: `${sb.correctAnswers}/${sb.correctAnswers + sb.wrongAnswers} correct` })}</span>
                                 </div>
                               )}
 
-                              <div className="bg-amber-50/60 rounded-xl p-2.5 border border-amber-100/80 text-[11px] leading-relaxed">
+                              <div className="bg-amber-50/60 rounded-xl p-2.5 border border-amber-100/80 text-xs leading-relaxed">
                                 <span className="font-extrabold text-[#b45309]">
                                   {t("recovery_tip_label", "Recovery Tip")}:{" "}
                                 </span>
@@ -1984,8 +2039,8 @@ export default function ParentDashboardScreen() {
                                   <span>{subjName}</span>
                                   <span className="text-xs">🏆</span>
                                 </h4>
-                                <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#006a62] border border-emerald-200 flex items-center gap-1">
-                                  <span className="text-[8px]">●</span>
+                                <span className="text-xs font-black px-2.5 py-1 rounded-full bg-emerald-50 text-[#006a62] border border-emerald-200 flex items-center gap-1">
+                                  <span className="text-[10px]">●</span>
                                   <span>{t("top_performing_badge", "Top Performing (≥70%)")}</span>
                                 </span>
                               </div>
@@ -2007,7 +2062,7 @@ export default function ParentDashboardScreen() {
                               </div>
 
                               {(sb.correctAnswers !== undefined && sb.wrongAnswers !== undefined && (sb.correctAnswers + sb.wrongAnswers > 0)) && (
-                                <div className="flex items-center gap-3 text-[11px] text-slate-500 font-semibold pt-0.5">
+                                <div className="flex items-center gap-3 text-xs text-slate-500 font-semibold pt-0.5">
                                   <span>{t("accuracy_label", "Accuracy")}: {sb.accuracy}%</span>
                                   <span>•</span>
                                   <span className="text-slate-600">{t("solved_count", { correct: sb.correctAnswers, total: sb.correctAnswers + sb.wrongAnswers, defaultValue: `${sb.correctAnswers}/${sb.correctAnswers + sb.wrongAnswers} correct` })}</span>
@@ -2178,8 +2233,14 @@ export default function ParentDashboardScreen() {
 
       {/* Today's Time & Attempt Breakdown Modal */}
       {showBreakdownModal && (
-        <div className="fixed inset-0 bg-[#0f114a]/75 backdrop-blur-md z-[99999] flex items-center justify-center p-3 sm:p-4 font-sans animate-in fade-in duration-200">
-          <div className="bg-white rounded-[24px] sm:rounded-[32px] max-w-lg w-full max-h-[90vh] flex flex-col p-5 sm:p-6 shadow-2xl relative border border-white/60">
+        <div 
+          onClick={closeBreakdown}
+          className="fixed inset-0 bg-[#0f114a]/75 backdrop-blur-md z-[99999] flex items-center justify-center p-3 sm:p-4 font-sans animate-in fade-in duration-200"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-[24px] sm:rounded-[32px] max-w-lg w-full max-h-[90vh] flex flex-col p-5 sm:p-6 shadow-2xl relative border border-white/60"
+          >
             
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-3 border-b border-gray-100 shrink-0 mb-4">
@@ -2188,13 +2249,14 @@ export default function ParentDashboardScreen() {
                   <span>⏱️</span>
                   <span>{t("todays_time_breakdown_title", "Today's Time Breakdown")}</span>
                 </h3>
-                <p className="text-[11px] sm:text-xs text-slate-500 font-bold mt-0.5">
+                <p className="text-xs sm:text-[13px] text-slate-500 font-bold mt-0.5">
                   {t("detailed_calc_for", { name: childName, defaultValue: `Detailed calculation for ${childName}` })}
                 </p>
               </div>
               <button 
-                onClick={() => setShowBreakdownModal(false)}
-                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors shrink-0"
+                onClick={closeBreakdown}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors shrink-0 cursor-pointer"
+                aria-label="Close"
               >
                 <X size={18} />
               </button>
@@ -2211,25 +2273,25 @@ export default function ParentDashboardScreen() {
                 {/* 3 Summary Stats */}
                 <div className="grid grid-cols-3 gap-2 sm:gap-3">
                   <div className="bg-emerald-50/80 border border-emerald-200/80 p-3 rounded-2xl text-center">
-                    <span className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider block">{t("total_time", "Total Time")}</span>
+                    <span className="text-xs font-black text-emerald-800 uppercase tracking-wider block">{t("total_time", "Total Time")}</span>
                     <span className="text-lg sm:text-xl font-black text-emerald-700">{formatTimeFormatted(breakdownData?.totalTimeFormatted || "0m")}</span>
                   </div>
 
                   <div className="bg-indigo-50/80 border border-indigo-200/80 p-3 rounded-2xl text-center">
-                    <span className="text-[10px] font-extrabold text-indigo-800 uppercase tracking-wider block">{t("questions", "Questions")}</span>
+                    <span className="text-xs font-black text-indigo-800 uppercase tracking-wider block">{t("questions", "Questions")}</span>
                     <span className="text-lg sm:text-xl font-black text-[#141779]">{breakdownData?.totalSolved || 0}</span>
-                    <span className="text-[10px] text-indigo-600 font-bold block">{t("num_correct", { count: breakdownData?.totalCorrect || 0, defaultValue: `${breakdownData?.totalCorrect || 0} correct!` })}</span>
+                    <span className="text-xs text-indigo-600 font-bold block">{t("num_correct", { count: breakdownData?.totalCorrect || 0, defaultValue: `${breakdownData?.totalCorrect || 0} correct!` })}</span>
                   </div>
 
                   <div className="bg-purple-50/80 border border-purple-200/80 p-3 rounded-2xl text-center">
-                    <span className="text-[10px] font-extrabold text-purple-800 uppercase tracking-wider block">{t("confidence", "Confidence")}</span>
+                    <span className="text-xs font-black text-purple-800 uppercase tracking-wider block">{t("confidence", "Confidence")}</span>
                     <span className="text-lg sm:text-xl font-black text-purple-700">{breakdownData?.confidenceScore || 0}%</span>
                   </div>
                 </div>
 
                 {/* Mode Breakdown Cards */}
                 <div>
-                  <h4 className="text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2">{t("time_spent_by_mode", "Time Spent by Mode")}</h4>
+                  <h4 className="text-xs sm:text-sm font-black text-slate-700 uppercase tracking-wider mb-2">{t("time_spent_by_mode", "Time Spent by Mode")}</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     {breakdownData?.modeBreakdown && Object.entries(breakdownData.modeBreakdown).map(([key, m]: [string, any]) => (
                       <div key={key} className="bg-slate-50 border border-slate-200/80 p-3 rounded-xl flex items-center justify-between gap-2">
@@ -2238,7 +2300,7 @@ export default function ParentDashboardScreen() {
                             <span>{m.icon}</span>
                             <span className="truncate">{translateModeName(m.name.split('/')[0])}</span>
                           </p>
-                          <p className="text-[10px] text-slate-500 font-bold">{m.count} {t("questions", "questions")}</p>
+                          <p className="text-xs text-slate-500 font-bold">{m.count} {t("questions", "questions")}</p>
                         </div>
                         <span className="text-xs font-black text-[#141779] bg-white px-2 py-1 rounded-lg border border-slate-200 shrink-0">
                           {Math.floor(m.timeSec / 60)}{t("min_short", "m")} {m.timeSec % 60}{t("sec_short", "s")}
@@ -2250,15 +2312,15 @@ export default function ParentDashboardScreen() {
 
                 {/* Itemized Question & Answer List */}
                 <div>
-                  <h4 className="text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2 flex items-center justify-between">
+                  <h4 className="text-xs sm:text-sm font-black text-slate-700 uppercase tracking-wider mb-2 flex items-center justify-between">
                     <span>{t("todays_question_attempts", "Today's Question Attempts")}</span>
-                    <span className="text-[10px] font-bold text-slate-500">({breakdownData?.attempts?.length || 0} {t("items_upper", "ITEMS")})</span>
+                    <span className="text-xs font-bold text-slate-500">({breakdownData?.attempts?.length || 0} {t("items_upper", "ITEMS")})</span>
                   </h4>
 
                   {(!breakdownData?.attempts || breakdownData.attempts.length === 0) ? (
                     <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 text-center">
                       <p className="text-xs font-bold text-slate-500">{t("no_question_attempts_logged", "No question attempts logged today yet.")}</p>
-                      <p className="text-[11px] text-slate-400 mt-1">{t("play_quiz_shadow_arena", "Play a Quiz, Shadow Arena battle, or AI quest to record live time!")}</p>
+                      <p className="text-xs text-slate-400 mt-1">{t("play_quiz_shadow_arena", "Play a Quiz, Shadow Arena battle, or AI quest to record live time!")}</p>
                     </div>
                   ) : (
                     <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
@@ -2270,10 +2332,10 @@ export default function ParentDashboardScreen() {
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5 mb-1">
                               <span className="text-xs">{att.modeIcon}</span>
-                              <span className="text-[10px] font-bold text-slate-600 bg-white px-2 py-0.5 rounded-full border border-slate-200">
+                              <span className="text-xs font-bold text-slate-600 bg-white px-2 py-0.5 rounded-full border border-slate-200">
                                 {translateModeName(att.mode)}
                               </span>
-                              <span className="text-[10px] text-slate-400 font-bold ml-auto">{att.timestamp}</span>
+                              <span className="text-xs text-slate-400 font-bold ml-auto">{att.timestamp}</span>
                             </div>
                             <p className="text-xs font-bold text-slate-800 truncate">{att.questionText}</p>
                           </div>
@@ -2282,7 +2344,7 @@ export default function ParentDashboardScreen() {
                             <span className="text-xs font-mono font-extrabold text-slate-600 bg-slate-200/60 px-2 py-1 rounded-lg">
                               ⏱️ {formatTimeFormatted(att.timeFormatted)}
                             </span>
-                            <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full border ${
+                            <span className={`text-xs font-black px-2.5 py-1 rounded-full border ${
                               att.isCorrect 
                                 ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
                                 : "bg-rose-50 text-rose-700 border-rose-200"

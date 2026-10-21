@@ -287,16 +287,21 @@ export default function ParentLessonPlayerScreen() {
 
   return (
     <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans flex flex-col">
-      <header className="px-6 py-4 flex items-center justify-between z-50 sticky top-0 bg-[rgba(247,249,251,0.9)] backdrop-blur-md">
-        <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-[rgba(20,23,121,0.05)] transition-colors">
-          <X size={24} className="text-[#141779]" />
+      <header className="sticky top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex items-center justify-between px-4 sm:px-6 h-16 w-full">
+        <button 
+          onClick={() => navigate(-1)} 
+          className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+          aria-label="Close"
+        >
+          <X size={19} />
         </button>
-        <div className="flex-1 mx-4 bg-[#e0e3e5] rounded-full h-1.5 overflow-hidden">
+        <div className="flex-1 mx-4 bg-slate-200 rounded-full h-2 overflow-hidden">
           <div 
             className="bg-[#141779] h-full rounded-full transition-all duration-500 ease-out"
             style={{ width: `${progress}%` }}
           ></div>
         </div>
+        <div className="w-9 sm:w-10 shrink-0" />
       </header>
 
       <main className="flex-1 px-6 pb-32 flex flex-col justify-center relative z-10">

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Clock, CheckCircle2, ShieldAlert, Star, TrendingUp, Search, Calendar, FileText, Activity, X, ChevronDown, ChevronUp, BookOpen, Layers, ChevronRight } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle2, ShieldAlert, Star, TrendingUp, Search, Calendar, FileText, Activity, X, ChevronDown, ChevronUp, BookOpen, Layers, ChevronRight, Settings, Bell } from "lucide-react";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
 import { getScopedItem, setScopedItem, removeScopedItem, getActiveUserContext } from "../../../utils/sessionCache";
@@ -171,19 +171,40 @@ export default function KidsActivityScreen() {
     <div className="bg-gradient-to-b from-[#f0f4f8] to-[#e6eef5] text-[#141779] flex flex-col min-h-screen w-full relative overflow-x-hidden font-sans">
       
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs flex items-center px-6 h-16 gap-3">
-        <button 
-          onClick={() => navigate(-1)} 
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 hover:bg-slate-100 active:scale-95 transition-all"
-        >
-          <ArrowLeft size={20} className="text-[#141779]" />
-        </button>
-        <h1 className="text-xl font-black text-[#141779] tracking-tight">
-          {t("recent_activity", "Recent Activity")}
-        </h1>
+      <header className="sticky top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex items-center justify-between px-4 sm:px-6 h-16 w-full">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+          <button 
+            onClick={() => navigate(-1)} 
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("back", "Back")}
+          >
+            <ArrowLeft size={19} />
+          </button>
+          <h1 className="text-base sm:text-lg font-black text-[#141779] tracking-tight truncate leading-tight">
+            {t("recent_activity", "Recent Activity")}
+          </h1>
+        </div>
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <button 
+            onClick={() => navigate('/parent/settings')}
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("settings", "Settings")}
+            title={t("settings", "Settings")}
+          >
+            <Settings size={18} />
+          </button>
+          <button
+            onClick={() => navigate('/notifications')}
+            className="relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("notifications", "Notifications")}
+            title={t("notifications", "Notifications")}
+          >
+            <Bell size={18} />
+          </button>
+        </div>
       </header>
 
-      <main className="w-full max-w-lg mx-auto pt-20 pb-32 px-5 relative z-10">
+      <main className="w-full max-w-lg mx-auto pt-4 pb-4 px-5 relative z-10">
         
         {/* Child Selector Pills — instant switch without reload */}
         {userData?.children && userData.children.length > 1 && (
@@ -223,7 +244,7 @@ export default function KidsActivityScreen() {
                       : c.childName?.charAt(0).toUpperCase()}
                   </span>
                   {c.childName}
-                  {isActive && <span className="text-[10px] opacity-70">✓</span>}
+                  {isActive && <span className="text-xs opacity-70">✓</span>}
                 </button>
               );
             })}
@@ -380,55 +401,50 @@ export default function KidsActivityScreen() {
                               {/* Content Card */}
                               <div 
                                 onClick={() => setSelectedActivity(activity)}
-                                className="ml-6 bg-white rounded-[20px] p-4 border border-slate-200/80 shadow-xs hover:shadow-md transition-all cursor-pointer hover:scale-[1.01]"
+                                className="ml-5 sm:ml-6 bg-white rounded-[20px] p-3.5 sm:p-4 border border-slate-200/80 shadow-xs hover:shadow-md transition-all cursor-pointer hover:scale-[1.01]"
                               >
-                                <div className="flex justify-between items-start mb-1.5">
-                                  <div className="flex items-center gap-2 flex-wrap pr-3">
-                                    <h3 className="text-sm font-black text-[#141779] leading-tight">{activityTitle}</h3>
-                                    {activity.attemptNumber && (
-                                      <span className="text-[10px] font-black text-amber-800 bg-amber-100/90 border border-amber-300 px-2 py-0.5 rounded-full shrink-0">
-                                        {t("attempt_number", { num: activity.attemptNumber, defaultValue: `Attempt #${activity.attemptNumber}` })}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="flex flex-col items-end gap-1 shrink-0">
-                                    <span className="text-[10px] font-black text-slate-500 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                                      <Clock size={10} /> {activity.time || (activity.createdAt ? new Date(activity.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : t("just_now", "Just now"))}
-                                    </span>
-                                  </div>
+                                <div className="flex justify-between items-start gap-2 mb-1.5">
+                                  <h3 className="text-sm font-black text-[#141779] leading-tight min-w-0 flex-1">{activityTitle}</h3>
+                                  <span className="text-[11px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0 whitespace-nowrap">
+                                    <Clock size={11} /> {activity.time || (activity.createdAt ? new Date(activity.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : t("just_now", "Just now"))}
+                                  </span>
                                 </div>
 
                                 {activity.description && (
-                                  <p className="text-xs text-slate-700 font-bold leading-snug mb-2">
+                                  <p className="text-xs text-slate-700 font-bold leading-snug mb-1.5">
                                     {activity.description}
                                   </p>
                                 )}
                                 
-                                <div className="flex flex-wrap items-center gap-2 mt-2">
+                                <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                                  {activity.attemptNumber && (
+                                    <span className="text-[11px] font-black text-amber-800 bg-amber-100/90 border border-amber-300 px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">
+                                      {t("attempt_number", { num: activity.attemptNumber, defaultValue: `Attempt #${activity.attemptNumber}` })}
+                                    </span>
+                                  )}
+
                                   {Boolean(activity.totalQuestions && activity.totalQuestions > 0) && (
-                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-teal-50 border border-teal-200 text-[#006a62]">
-                                      <CheckCircle2 size={12} />
-                                      <span className="text-xs font-black tracking-wide">
+                                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-[#006a62] shrink-0 whitespace-nowrap">
+                                      <CheckCircle2 size={11} />
+                                      <span className="text-[11px] font-black tracking-wide">
                                         {activity.correctQuestions || 0}/{activity.totalQuestions}
                                       </span>
                                     </div>
                                   )}
                                   
                                   {activity.timeTaken !== undefined && (
-                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-[#141779]">
-                                      <Clock size={12} />
-                                      <span className="text-xs font-black tracking-wide">
+                                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-[#141779] shrink-0 whitespace-nowrap">
+                                      <Clock size={11} />
+                                      <span className="text-[11px] font-black tracking-wide">
                                         {formatTime(activity.timeTaken)}
                                       </span>
                                     </div>
                                   )}
                                   
                                   {activity.subject && (
-                                    <div className="ml-auto flex items-center gap-2">
-                                      <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700">
-                                        <Layers size={10} />
-                                        <span className="text-[10px] font-black uppercase tracking-wide truncate max-w-[100px]">{translateSubjectName(activity.subject)}</span>
-                                      </div>
+                                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 shrink-0 whitespace-nowrap ml-auto">
+                                      <Layers size={10} />
+                                      <span className="text-[11px] font-black uppercase tracking-wide truncate max-w-[120px]">{translateSubjectName(activity.subject)}</span>
                                     </div>
                                   )}
                                 </div>
@@ -476,22 +492,29 @@ export default function KidsActivityScreen() {
             
             {/* Modal Header */}
             <div className="px-6 py-5 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white z-10 rounded-t-[32px] sm:rounded-[24px]">
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-lg font-black text-[#141779]">{translateActivityTitle(selectedActivity.title)}</h2>
+              <div className="min-w-0 flex-1 pr-3">
+                <h2 className="text-lg font-black text-[#141779] leading-tight">{translateActivityTitle(selectedActivity.title)}</h2>
+                <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
                   {selectedActivity.attemptNumber && (
-                    <span className="text-xs font-black text-amber-800 bg-amber-100/90 border border-amber-300 px-2.5 py-0.5 rounded-full">
+                    <span className="text-xs font-black text-amber-800 bg-amber-100/90 border border-amber-300 px-2.5 py-0.5 rounded-full shrink-0 whitespace-nowrap">
                       {t("attempt_number", { num: selectedActivity.attemptNumber, defaultValue: `Attempt #${selectedActivity.attemptNumber}` })}
                     </span>
                   )}
-                </div>
-                <div className="flex gap-3 mt-1">
-                  <span className="text-xs font-black text-[#006a62] flex items-center gap-1">
-                    <CheckCircle2 size={14} /> {selectedActivity.correctQuestions}/{selectedActivity.totalQuestions}
-                  </span>
-                  <span className="text-xs font-black text-[#141779] flex items-center gap-1">
-                    <Clock size={14} /> {formatTime(selectedActivity.timeTaken)}
-                  </span>
+                  {Boolean(selectedActivity.totalQuestions && selectedActivity.totalQuestions > 0) && (
+                    <span className="text-xs font-black text-[#006a62] bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full flex items-center gap-1 shrink-0 whitespace-nowrap">
+                      <CheckCircle2 size={13} /> {selectedActivity.correctQuestions}/{selectedActivity.totalQuestions}
+                    </span>
+                  )}
+                  {selectedActivity.timeTaken !== undefined && (
+                    <span className="text-xs font-black text-[#141779] bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full flex items-center gap-1 shrink-0 whitespace-nowrap">
+                      <Clock size={13} /> {formatTime(selectedActivity.timeTaken)}
+                    </span>
+                  )}
+                  {selectedActivity.subject && (
+                    <span className="text-xs font-black text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-full flex items-center gap-1 shrink-0 uppercase whitespace-nowrap">
+                      <Layers size={11} /> {translateSubjectName(selectedActivity.subject)}
+                    </span>
+                  )}
                 </div>
               </div>
               <button 

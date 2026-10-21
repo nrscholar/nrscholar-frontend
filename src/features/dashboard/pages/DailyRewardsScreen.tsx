@@ -775,11 +775,7 @@ export default function DailyRewardsScreen() {
 
               <button
                 onClick={handleClaim}
-                className="w-full py-4 rounded-full font-black text-base tracking-wider uppercase transition-all duration-300 transform active:scale-95 text-white"
-                style={{
-                  backgroundColor: wonReward.color,
-                  boxShadow: `0 4px 15px ${wonReward.color}40`
-                }}
+                className="w-full py-4 rounded-full font-black text-base tracking-wider uppercase transition-all duration-300 transform active:scale-95 text-white bg-[#141779] hover:bg-[#101362] shadow-[0_4px_16px_rgba(20,23,121,0.35)]"
               >
                 {t('claim_reward', 'Claim Reward')}
               </button>

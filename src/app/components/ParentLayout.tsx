@@ -154,8 +154,8 @@ export default function ParentLayout() {
                     }`}
                   />
                   <span
-                    className={`text-[10px] tracking-wide whitespace-nowrap leading-none transition-colors duration-150 ${
-                      isActive ? "text-white font-extrabold" : "text-[#5c5f73] font-medium"
+                    className={`text-[11px] sm:text-xs tracking-tight whitespace-nowrap leading-none transition-colors duration-150 ${
+                      isActive ? "text-white font-black" : "text-[#5c5f73] font-bold"
                     }`}
                   >
                     {item.label}

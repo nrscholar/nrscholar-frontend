@@ -23,15 +23,75 @@ export function clearParentReportCache() {
 }
 
 export function clearAuthSession() {
-  localStorage.removeItem("userToken");
-  localStorage.removeItem("refreshToken");
-  localStorage.removeItem("userData");
-  sessionStorage.clear();
-  clearUserMeCache();
-  clearParentReportCache();
+  try {
+    localStorage.removeItem("userToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("userData");
+    localStorage.removeItem("user");
+    localStorage.removeItem("isParentPinSet");
+    localStorage.removeItem("userPhoto");
+    localStorage.removeItem("scanHistory");
+
+    // Clean up scoped session keys and cached reports/skills while preserving user preferences (like language)
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith("nrs_") || key.startsWith("neuroplay_") || key.startsWith("parentReportCache"))) {
+        localStorage.removeItem(key);
+      }
+    }
+
+    sessionStorage.clear();
+    clearUserMeCache();
+    clearParentReportCache();
+  } catch (e) {
+    console.error("Error clearing auth session:", e);
+  }
 }
 
-function redirectToLogin() {
+/**
+ * Optimizes the logout flow:
+ * 1. Asynchronously attempts backend session invalidation bounded by a 600ms timeout
+ *    so network latency or offline status never stalls the user interface.
+ * 2. Purges all tokens, user sessions, reports, and scoped data cleanly.
+ * 3. Immediately transitions to the login screen.
+ */
+export async function logoutUser(navigate?: (path: string, options?: any) => void): Promise<void> {
+  const token = localStorage.getItem("userToken");
+
+  if (token) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 600);
+      const API_BASE = import.meta.env.VITE_API_URL || "";
+      const requestUrl = (API_BASE ? `${API_BASE}/api/users/logout` : "/api/users/logout");
+
+      await fetch(requestUrl, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        signal: controller.signal
+      }).catch(() => {});
+
+      clearTimeout(timeoutId);
+    } catch {
+      // Backend error or timeout should never block client logout
+    }
+  }
+
+  // Guaranteed clean local auth state purge
+  clearAuthSession();
+
+  // Instant navigation to /login without history clutter
+  if (navigate) {
+    navigate("/login", { replace: true });
+  } else {
+    window.dispatchEvent(new Event("force-logout"));
+  }
+}
+
+export function redirectToLogin() {
   clearAuthSession();
   window.dispatchEvent(new Event("force-logout"));
 }

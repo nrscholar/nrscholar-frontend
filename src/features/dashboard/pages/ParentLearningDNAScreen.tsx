@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   ArrowLeft, BrainCircuit, Target, Zap, Activity, 
-  Flame, Sparkles, Compass, Trophy, Star, BookOpen, Heart 
+  Flame, Sparkles, Compass, Trophy, Star, BookOpen, Heart, Settings, Bell
 } from "lucide-react";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
@@ -102,17 +102,23 @@ export default function ParentLearningDNAScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f9fb] px-5 pt-[104px] flex flex-col gap-6 max-w-lg mx-auto">
-        <header className="fixed top-0 left-0 right-0 max-w-lg mx-auto flex items-center justify-between px-6 h-20 bg-white/60 backdrop-blur-xl border-b border-gray-100 z-50">
-          <div className="flex items-center gap-3 w-full">
-            <div className="w-10 h-10 bg-gray-200 animate-pulse rounded-full"></div>
-            <div className="w-10 h-10 bg-gray-200 animate-pulse rounded-full"></div>
-            <div className="h-6 w-32 bg-gray-200 animate-pulse rounded"></div>
+      <div className="min-h-screen bg-[#f7f9fb] font-sans">
+        <header className="sticky top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 h-16 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] w-full">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full animate-skeleton shrink-0"></div>
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full animate-skeleton shrink-0"></div>
+            <div className="h-6 w-32 rounded-md animate-skeleton"></div>
+          </div>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full animate-skeleton shrink-0"></div>
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full animate-skeleton shrink-0"></div>
           </div>
         </header>
-        <div className="bg-gray-200 animate-pulse rounded-[24px] h-48 w-full mt-4"></div>
-        <div className="bg-gray-200 animate-pulse rounded-[24px] h-60 w-full"></div>
-        <div className="bg-gray-200 animate-pulse rounded-[24px] h-40 w-full"></div>
+        <div className="px-5 pt-4 flex flex-col gap-6 max-w-lg mx-auto">
+          <div className="bg-gray-200 animate-pulse rounded-[24px] h-48 w-full mt-4"></div>
+          <div className="bg-gray-200 animate-pulse rounded-[24px] h-60 w-full"></div>
+          <div className="bg-gray-200 animate-pulse rounded-[24px] h-40 w-full"></div>
+        </div>
       </div>
     );
   }
@@ -298,25 +304,49 @@ export default function ParentLearningDNAScreen() {
     chartPoints.slice(1).map(p => `L ${p.x} ${p.y}`).join(" ");
 
   return (
-    <div className="min-h-screen bg-[#f3f5f9] text-[#1e1e24] font-sans pb-24 relative selection:bg-[#57fae9]/30">
+    <div className="min-h-screen bg-[#f3f5f9] text-[#1e1e24] font-sans relative selection:bg-[#57fae9]/30">
       
       {/* Header */}
-      <header className="flex items-center gap-4 px-6 h-20 bg-white/60 backdrop-blur-xl border-b border-gray-100 sticky top-0 z-50 max-w-lg mx-auto shadow-sm">
-        <button onClick={() => navigate(-1)} className="w-11 h-11 flex items-center justify-center rounded-full bg-white shadow-sm hover:scale-105 active:scale-95 transition-all border border-gray-100">
-          <ArrowLeft size={20} className="text-[#141779]" />
-        </button>
-        <div className="w-9 h-9 rounded-full border border-gray-100 overflow-hidden bg-white shrink-0">
-          <img 
-            alt="User Profile" 
-            className="w-full h-full object-cover"
-            src={dnaData?.childPhoto || profilePic || `https://ui-avatars.com/api/?name=${encodeURIComponent(dnaData?.childName || username)}&background=141779&color=fff`}
-          />
+      <header className="sticky top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 h-16 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] w-full">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+          <button 
+            onClick={() => navigate(-1)} 
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("back", "Back")}
+          >
+            <ArrowLeft size={19} />
+          </button>
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-slate-200/80 overflow-hidden bg-white shrink-0 shadow-2xs">
+            <img 
+              alt="User Profile" 
+              className="w-full h-full object-cover"
+              src={dnaData?.childPhoto || profilePic || `https://ui-avatars.com/api/?name=${encodeURIComponent(dnaData?.childName || username)}&background=141779&color=fff`}
+            />
+          </div>
+          <h1 className="text-base sm:text-lg font-black text-[#141779] truncate leading-tight">
+            {dnaData?.childName
+              ? t("child_learning_dna", { name: dnaData.childName, defaultValue: `${dnaData.childName}'s Learning DNA` })
+              : t("learning_dna", "Learning DNA")}
+          </h1>
         </div>
-        <h1 className="text-xl font-extrabold text-[#141779] truncate">
-          {dnaData?.childName
-            ? t("child_learning_dna", { name: dnaData.childName, defaultValue: `${dnaData.childName}'s Learning DNA` })
-            : t("learning_dna", "Learning DNA")}
-        </h1>
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <button 
+            onClick={() => navigate('/parent/settings')}
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("settings", "Settings")}
+            title={t("settings", "Settings")}
+          >
+            <Settings size={18} />
+          </button>
+          <button
+            onClick={() => navigate('/notifications')}
+            className="relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("notifications", "Notifications")}
+            title={t("notifications", "Notifications")}
+          >
+            <Bell size={18} />
+          </button>
+        </div>
       </header>
 
       {/* Child Selector Pills — instant switch with cross-tab/screen sync */}
@@ -352,13 +382,13 @@ export default function ParentLearningDNAScreen() {
                     : "border-slate-200 bg-white text-[#141779] hover:border-[#141779] hover:bg-indigo-50"
                 }`}
               >
-                <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-black overflow-hidden shrink-0">
+                <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs font-black overflow-hidden shrink-0">
                   {c.childPhoto
                     ? <img src={c.childPhoto} alt={c.childName} className="w-full h-full object-cover rounded-full" />
                     : c.childName?.charAt(0).toUpperCase()}
                 </span>
                 <span>{c.childName}</span>
-                {isActive && <span className="text-[10px] opacity-80">✓</span>}
+                {isActive && <span className="text-xs opacity-80">✓</span>}
               </button>
             );
           })}
@@ -382,15 +412,15 @@ export default function ParentLearningDNAScreen() {
           </button>
         </main>
       ) : (
-        <main className="px-5 pt-6 max-w-lg mx-auto flex flex-col gap-6">
+        <main className="px-4 sm:px-5 pt-3 sm:pt-4 pb-4 max-w-lg mx-auto flex flex-col gap-3.5">
           
           {/* Hero Section */}
-          <div className="bg-white border border-gray-100 rounded-[28px] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.02)] relative overflow-hidden flex flex-col items-center text-center">
+          <div className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-5 shadow-xs relative overflow-hidden flex flex-col items-center text-center">
             <div className="absolute top-0 right-0 w-32 h-32 bg-[#ab47bc]/5 rounded-full blur-3xl pointer-events-none"></div>
             <div className="absolute bottom-0 left-0 w-32 h-32 bg-[#57fae9]/5 rounded-full blur-3xl pointer-events-none"></div>
             
             {/* Pulsing Brain SVG */}
-            <div className="w-24 h-24 mb-4 flex items-center justify-center relative">
+            <div className="w-20 h-20 mb-3 flex items-center justify-center relative">
               <svg className="w-full h-full text-[#7b1fa2]" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M50 20 C35 20, 25 30, 25 45 C25 55, 30 65, 40 70 C42 71, 44 73, 44 75 C44 78, 46 80, 50 80" stroke="url(#brainGradientLeft)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" className="animate-pulse" />
                 <path d="M50 20 C65 20, 75 30, 75 45 C75 55, 70 65, 60 70 C58 71, 56 73, 56 75 C56 78, 54 80, 50 80" stroke="url(#brainGradientRight)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" className="animate-pulse" />
@@ -418,58 +448,58 @@ export default function ParentLearningDNAScreen() {
               </svg>
             </div>
 
-            <span className="bg-[#e9e8ff] text-[#4d40b3] text-[11px] font-extrabold tracking-wider px-3 py-1 rounded-full mb-1 border border-[#4d40b3]/10">
+            <span className="bg-[#e9e8ff] text-[#4d40b3] text-xs font-black tracking-wider px-3.5 py-1 rounded-full mb-1 border border-[#4d40b3]/10">
               {translateIdentityBadge(dnaData?.identityBadge || identityBadge)}
             </span>
-            <h2 className="text-2xl font-black text-[#141779] mb-3">{translateLearnerIdentity(dnaData?.learnerIdentity || learnerIdentity)}</h2>
-            <p className="text-[14px] text-[#555562] leading-relaxed max-w-[340px]">
+            <h2 className="text-xl sm:text-2xl font-black text-[#141779] mb-2">{translateLearnerIdentity(dnaData?.learnerIdentity || learnerIdentity)}</h2>
+            <p className="text-xs sm:text-[13px] text-[#555562] leading-relaxed max-w-[340px]">
               {translateDnaDescription(dnaData?.description || "")}
             </p>
           </div>
 
           {/* Section 1: Learning Style */}
-          <div className="bg-white border border-gray-100 rounded-[28px] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.02)]">
-            <h3 className="text-sm font-extrabold text-[#7c7d8a] tracking-wider uppercase mb-5">{t("learning_modality_style", "Learning Modality Style")}</h3>
-            <div className="flex flex-col gap-5">
+          <div className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-5 shadow-xs">
+            <h3 className="text-xs sm:text-sm font-extrabold text-[#7c7d8a] tracking-wider uppercase mb-3.5">{t("learning_modality_style", "Learning Modality Style")}</h3>
+            <div className="flex flex-col gap-3.5">
               
               {/* Visual Modality */}
               <div className="flex flex-col gap-1">
-                <div className="flex justify-between items-center text-[14px]">
+                <div className="flex justify-between items-center text-xs sm:text-sm">
                   <span className="font-extrabold text-[#1e1e24] flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-[#8b35c5]"></span>
                     {t("visual_modality", "Visual modality")}
                   </span>
                   <span className="font-extrabold text-[#8b35c5]">{visualPct}%</span>
                 </div>
-                <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+                <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
                   <div className="h-full bg-gradient-to-r from-[#8b35c5] to-[#a85ee3] rounded-full transition-all duration-500" style={{ width: `${visualPct}%` }}></div>
                 </div>
               </div>
 
               {/* Hands-on Modality */}
               <div className="flex flex-col gap-1">
-                <div className="flex justify-between items-center text-[14px]">
+                <div className="flex justify-between items-center text-xs sm:text-sm">
                   <span className="font-extrabold text-[#1e1e24] flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-[#008272]"></span>
                     {t("handson_modality", "Hands-on modality")}
                   </span>
                   <span className="font-extrabold text-[#008272]">{kinestheticPct}%</span>
                 </div>
-                <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+                <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
                   <div className="h-full bg-gradient-to-r from-[#008272] to-[#3cd6c4] rounded-full transition-all duration-500" style={{ width: `${kinestheticPct}%` }}></div>
                 </div>
               </div>
 
               {/* Reading Modality */}
               <div className="flex flex-col gap-1">
-                <div className="flex justify-between items-center text-[14px]">
+                <div className="flex justify-between items-center text-xs sm:text-sm">
                   <span className="font-extrabold text-[#1e1e24] flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-[#b07b00]"></span>
                     {t("reading_writing_modality", "Reading & Writing")}
                   </span>
                   <span className="font-extrabold text-[#b07b00]">{readingPct}%</span>
                 </div>
-                <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+                <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
                   <div className="h-full bg-gradient-to-r from-[#b07b00] to-[#ffd066] rounded-full transition-all duration-500" style={{ width: `${readingPct}%` }}></div>
                 </div>
               </div>
@@ -479,46 +509,46 @@ export default function ParentLearningDNAScreen() {
 
           {/* Section 2: Learning Power */}
           <div>
-            <h3 className="text-sm font-extrabold text-[#7c7d8a] tracking-wider uppercase mb-3 px-1">{t("learning_power", "Learning Power")}</h3>
-            <div className="grid grid-cols-3 gap-3">
+            <h3 className="text-xs sm:text-sm font-extrabold text-[#7c7d8a] tracking-wider uppercase mb-2.5 px-1">{t("learning_power", "Learning Power")}</h3>
+            <div className="grid grid-cols-3 gap-2.5">
               
               {/* Focus Card */}
-              <div className="bg-gradient-to-b from-white to-[#f9fafe] border border-gray-100 rounded-[22px] p-4 text-center shadow-[0_4px_16px_rgba(0,0,0,0.01)] flex flex-col items-center">
-                <div className="w-10 h-10 rounded-full bg-[#e8e9fc] flex items-center justify-center text-[#141779] mb-2 shrink-0">
-                  <Target size={18} />
+              <div className="bg-gradient-to-b from-white to-[#f9fafe] border border-gray-100 rounded-xl sm:rounded-2xl p-3 sm:p-3.5 text-center shadow-xs flex flex-col items-center">
+                <div className="w-9 h-9 rounded-full bg-[#e8e9fc] flex items-center justify-center text-[#141779] mb-1.5 shrink-0">
+                  <Target size={17} />
                 </div>
-                <span className="text-[11px] font-extrabold text-[#7c7d8a] mb-1">{t("focus", "Focus")}</span>
-                <span className="text-lg font-black text-[#141779]">{focusVal}%</span>
+                <span className="text-[11px] font-black text-[#7c7d8a] uppercase tracking-wider mb-0.5">{t("focus", "Focus")}</span>
+                <span className="text-base sm:text-lg font-black text-[#141779]">{focusVal}%</span>
               </div>
 
               {/* Confidence Card */}
-              <div className="bg-gradient-to-b from-white to-[#f9fafe] border border-gray-100 rounded-[22px] p-4 text-center shadow-[0_4px_16px_rgba(0,0,0,0.01)] flex flex-col items-center">
-                <div className="w-10 h-10 rounded-full bg-[#dcf5f2] flex items-center justify-center text-[#008272] mb-2 shrink-0">
-                  <Activity size={18} />
+              <div className="bg-gradient-to-b from-white to-[#f9fafe] border border-gray-100 rounded-xl sm:rounded-2xl p-3 sm:p-3.5 text-center shadow-xs flex flex-col items-center">
+                <div className="w-9 h-9 rounded-full bg-[#dcf5f2] flex items-center justify-center text-[#008272] mb-1.5 shrink-0">
+                  <Activity size={17} />
                 </div>
-                <span className="text-[11px] font-extrabold text-[#7c7d8a] mb-1">{t("confidence", "Confidence")}</span>
-                <span className="text-lg font-black text-[#008272]">{confidenceVal}%</span>
+                <span className="text-[11px] font-black text-[#7c7d8a] uppercase tracking-wider mb-0.5">{t("confidence", "Confidence")}</span>
+                <span className="text-base sm:text-lg font-black text-[#008272]">{confidenceVal}%</span>
               </div>
 
               {/* Consistency Card */}
-              <div className="bg-gradient-to-b from-white to-[#f9fafe] border border-gray-100 rounded-[22px] p-4 text-center shadow-[0_4px_16px_rgba(0,0,0,0.01)] flex flex-col items-center">
-                <div className="w-10 h-10 rounded-full bg-[#faedd8] flex items-center justify-center text-[#b07b00] mb-2 shrink-0">
-                  <Flame size={18} />
+              <div className="bg-gradient-to-b from-white to-[#f9fafe] border border-gray-100 rounded-xl sm:rounded-2xl p-3 sm:p-3.5 text-center shadow-xs flex flex-col items-center">
+                <div className="w-9 h-9 rounded-full bg-[#faedd8] flex items-center justify-center text-[#b07b00] mb-1.5 shrink-0">
+                  <Flame size={17} />
                 </div>
-                <span className="text-[11px] font-extrabold text-[#7c7d8a] mb-1">{t("consistency", "Consistency")}</span>
-                <span className="text-lg font-black text-[#b07b00]">{consistencyVal}%</span>
+                <span className="text-[11px] font-black text-[#7c7d8a] uppercase tracking-wider mb-0.5">{t("consistency", "Consistency")}</span>
+                <span className="text-base sm:text-lg font-black text-[#b07b00]">{consistencyVal}%</span>
               </div>
             </div>
           </div>
 
           {/* Section 3: Growth Mindset */}
-          <div className="bg-white border border-gray-100 rounded-[28px] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.02)]">
-            <h3 className="text-sm font-extrabold text-[#7c7d8a] tracking-wider uppercase mb-5">{t("growth_mindset_profiling", "Growth Mindset Profiling")}</h3>
-            <div className="flex flex-col gap-4">
+          <div className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-5 shadow-xs">
+            <h3 className="text-xs sm:text-sm font-extrabold text-[#7c7d8a] tracking-wider uppercase mb-3.5">{t("growth_mindset_profiling", "Growth Mindset Profiling")}</h3>
+            <div className="flex flex-col gap-3">
               
               {/* Curiosity */}
               <div className="flex items-center justify-between">
-                <span className="text-sm font-extrabold text-[#1e1e24]">{t("curiosity", "Curiosity")}</span>
+                <span className="text-xs sm:text-sm font-extrabold text-[#1e1e24]">{t("curiosity", "Curiosity")}</span>
                 <div className="flex items-center gap-2">
                   <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div className="h-full bg-[#2f61d5] rounded-full" style={{ width: `${curiosityVal}%` }} />
@@ -529,7 +559,7 @@ export default function ParentLearningDNAScreen() {
 
               {/* Resilience */}
               <div className="flex items-center justify-between">
-                <span className="text-sm font-extrabold text-[#1e1e24]">{t("resilience", "Resilience")}</span>
+                <span className="text-xs sm:text-sm font-extrabold text-[#1e1e24]">{t("resilience", "Resilience")}</span>
                 <div className="flex items-center gap-2">
                   <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div className="h-full bg-[#8b35c5] rounded-full" style={{ width: `${resilienceVal}%` }} />
@@ -540,7 +570,7 @@ export default function ParentLearningDNAScreen() {
 
               {/* Creativity */}
               <div className="flex items-center justify-between">
-                <span className="text-sm font-extrabold text-[#1e1e24]">{t("creativity", "Creativity")}</span>
+                <span className="text-xs sm:text-sm font-extrabold text-[#1e1e24]">{t("creativity", "Creativity")}</span>
                 <div className="flex items-center gap-2">
                   <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div className="h-full bg-[#1a874b] rounded-full" style={{ width: `${creativityVal}%` }} />
@@ -554,35 +584,35 @@ export default function ParentLearningDNAScreen() {
 
           {/* Section 4: AI Coach — only shown when real data available */}
           {firstTip && hasData && (
-          <div className="bg-gradient-to-r from-[#141779] to-[#3b1580] rounded-[28px] p-6 text-white shadow-lg relative overflow-hidden">
+          <div className="bg-gradient-to-r from-[#141779] to-[#3b1580] rounded-2xl p-4 sm:p-5 text-white shadow-md relative overflow-hidden">
             <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full blur-2xl"></div>
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-2">
               <Sparkles size={16} className="text-[#57fae9]" />
               <span className="text-xs font-extrabold uppercase tracking-widest text-[#57fae9]">{t("todays_ai_coach", "TODAY'S AI COACH")}</span>
             </div>
-            <h4 className="text-lg font-black mb-2">{translateCoachTitle(firstTip.title)}</h4>
-            <p className="text-xs text-white/80 leading-relaxed mb-4">
+            <h4 className="text-base sm:text-lg font-black mb-1.5">{translateCoachTitle(firstTip.title)}</h4>
+            <p className="text-xs text-white/80 leading-relaxed mb-3">
               {translateCoachDesc(firstTip.desc)}
             </p>
-            <div className="bg-white/10 rounded-xl px-4 py-2 border border-white/10 flex items-center justify-between w-max gap-8">
-              <span className="text-[11px] font-extrabold text-white/70">{t("efficiency_boost", "Efficiency Boost")}</span>
-              <span className="text-sm font-black text-[#57fae9]">+{Math.round(confidenceVal * 0.2 + 10)}% {t("boost", "boost")}</span>
+            <div className="bg-white/10 rounded-xl px-3.5 py-1.5 border border-white/10 flex items-center justify-between w-max gap-6">
+              <span className="text-xs font-black text-white/80">{t("efficiency_boost", "Efficiency Boost")}</span>
+              <span className="text-xs sm:text-sm font-black text-[#57fae9]">+{Math.round(confidenceVal * 0.2 + 10)}% {t("boost", "boost")}</span>
             </div>
           </div>
           )}
 
           {/* Section 5: Recommended Activities */}
           <div>
-            <h3 className="text-sm font-extrabold text-[#7c7d8a] tracking-wider uppercase mb-3 px-1">{t("recommended_activities", "RECOMMENDED ACTIVITIES")}</h3>
-            <div className="grid grid-cols-2 gap-3">
+            <h3 className="text-xs sm:text-sm font-extrabold text-[#7c7d8a] tracking-wider uppercase mb-2.5 px-1">{t("recommended_activities", "RECOMMENDED ACTIVITIES")}</h3>
+            <div className="grid grid-cols-2 gap-2.5">
               {activities.slice(0, 4).map((act: any, index: number) => {
                 return (
-                  <div key={index} className="bg-white border border-gray-100 rounded-[22px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.01)] flex flex-col gap-2">
+                  <div key={index} className="bg-white border border-gray-100 rounded-xl sm:rounded-2xl p-3.5 shadow-xs flex flex-col gap-1.5">
                     <div className="w-8 h-8 rounded-xl bg-[#e3eafc] text-[#2f61d5] flex items-center justify-center shrink-0 mb-0.5">
                       {typeof act.icon === "string" ? renderIcon(act.icon, 16, "text-[#2f61d5]") : <act.icon size={16} />}
                     </div>
-                    <h4 className="text-[14px] font-black text-[#1e1e24]">{translateActivityName(act.name)}</h4>
-                    <p className="text-[10px] text-[#7c7d8a] leading-normal font-medium grow">
+                    <h4 className="text-xs sm:text-sm font-black text-[#1e1e24]">{translateActivityName(act.name)}</h4>
+                    <p className="text-xs text-[#7c7d8a] leading-snug font-medium grow">
                       {translateActivityDesc(act.desc)}
                     </p>
                     <div className="flex gap-0.5 text-[#ffb300]">
@@ -602,12 +632,12 @@ export default function ParentLearningDNAScreen() {
           </div>
 
           {/* Section 6: Achievements */}
-          <div className="bg-white border border-gray-100 rounded-[28px] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.02)]">
-            <h3 className="text-sm font-extrabold text-[#7c7d8a] tracking-wider uppercase mb-2">{t("collectible_badges", "Collectible Badges")}</h3>
+          <div className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-5 shadow-xs">
+            <h3 className="text-xs sm:text-sm font-extrabold text-[#7c7d8a] tracking-wider uppercase mb-2">{t("collectible_badges", "Collectible Badges")}</h3>
             {(dnaData?.totalAttempts ?? 0) < 5 ? (
               <div className="bg-gray-50/70 border border-dashed border-gray-200 rounded-[22px] p-4 text-center mb-4">
                 <p className="text-xs font-bold text-[#7c7d8a]">{t("badge_unlock_hint", "Solve at least 5 quizzes to start unlocking badges!")}</p>
-                <p className="text-[10px] text-gray-400 mt-1 font-semibold">{t("current_progress", { current: dnaData?.totalAttempts ?? 0, total: 5, defaultValue: `Current Progress: ${dnaData?.totalAttempts ?? 0} / 5` })}</p>
+                <p className="text-xs text-gray-400 mt-1 font-semibold">{t("current_progress", { current: dnaData?.totalAttempts ?? 0, total: 5, defaultValue: `Current Progress: ${dnaData?.totalAttempts ?? 0} / 5` })}</p>
               </div>
             ) : null}
             <div className="grid grid-cols-2 gap-4">
@@ -619,8 +649,8 @@ export default function ParentLearningDNAScreen() {
                       : "bg-gray-50/50 border-dashed border-gray-200 opacity-50"
                   }`}>
                     {renderIcon(b.icon, 20, b.unlocked ? "text-[#141779]" : "text-gray-400")}
-                    <h4 className="text-[13px] font-extrabold text-[#191c1e]">{t(b.name.toLowerCase().replace(/ /g, "_"), { defaultValue: String(b.name) })}</h4>
-                    <span className="text-[9px] font-bold text-[#7c7d8a]">{b.unlocked ? t("unlocked", "Unlocked") : (b.progressText ? String(b.progressText) : t("locked", "Locked"))}</span>
+                    <h4 className="text-sm font-black text-[#191c1e]">{t(b.name.toLowerCase().replace(/ /g, "_"), { defaultValue: String(b.name) })}</h4>
+                    <span className="text-xs font-bold text-[#7c7d8a]">{b.unlocked ? t("unlocked", "Unlocked") : (b.progressText ? String(b.progressText) : t("locked", "Locked"))}</span>
                   </div>
                 ))
               ) : (
@@ -632,8 +662,8 @@ export default function ParentLearningDNAScreen() {
                       : "bg-gray-50/50 border-dashed border-gray-200 opacity-50"
                   }`}>
                     <Trophy size={20} className={focusVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? "text-[#141779]" : "text-gray-400"} />
-                    <h4 className="text-[13px] font-extrabold text-[#191c1e]">{t("badge_focus_master", "Focus Master")}</h4>
-                    <span className="text-[9px] font-bold text-[#7c7d8a]">{focusVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? t("unlocked", "Unlocked") : t("locked", "Locked")}</span>
+                    <h4 className="text-sm font-black text-[#191c1e]">{t("badge_focus_master", "Focus Master")}</h4>
+                    <span className="text-xs font-bold text-[#7c7d8a]">{focusVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? t("unlocked", "Unlocked") : t("locked", "Locked")}</span>
                   </div>
 
                   {/* 7-Day Streak */}
@@ -643,8 +673,8 @@ export default function ParentLearningDNAScreen() {
                       : "bg-gray-50/50 border-dashed border-gray-200 opacity-50"
                   }`}>
                     <Flame size={20} className={consistencyVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? "text-[#b07b00]" : "text-gray-400"} />
-                    <h4 className="text-[13px] font-extrabold text-[#191c1e]">{t("badge_7day_streak", "7-Day Streak")}</h4>
-                    <span className="text-[9px] font-bold text-[#7c7d8a]">{consistencyVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? t("unlocked", "Unlocked") : t("locked", "Locked")}</span>
+                    <h4 className="text-sm font-black text-[#191c1e]">{t("badge_7day_streak", "7-Day Streak")}</h4>
+                    <span className="text-xs font-bold text-[#7c7d8a]">{consistencyVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? t("unlocked", "Unlocked") : t("locked", "Locked")}</span>
                   </div>
 
                   {/* Curious Mind */}
@@ -654,8 +684,8 @@ export default function ParentLearningDNAScreen() {
                       : "bg-gray-50/50 border-dashed border-gray-200 opacity-50"
                   }`}>
                     <Compass size={20} className={curiosityVal >= 65 && (dnaData?.totalAttempts ?? 0) >= 5 ? "text-[#008272]" : "text-gray-400"} />
-                    <h4 className="text-[13px] font-extrabold text-[#191c1e]">{t("badge_curious_mind", "Curious Mind")}</h4>
-                    <span className="text-[9px] font-bold text-[#7c7d8a]">{curiosityVal >= 65 && (dnaData?.totalAttempts ?? 0) >= 5 ? t("unlocked", "Unlocked") : t("locked", "Locked")}</span>
+                    <h4 className="text-sm font-black text-[#191c1e]">{t("badge_curious_mind", "Curious Mind")}</h4>
+                    <span className="text-xs font-bold text-[#7c7d8a]">{curiosityVal >= 65 && (dnaData?.totalAttempts ?? 0) >= 5 ? t("unlocked", "Unlocked") : t("locked", "Locked")}</span>
                   </div>
 
                   {/* Fast Learner */}
@@ -665,8 +695,8 @@ export default function ParentLearningDNAScreen() {
                       : "bg-gray-50/50 border-dashed border-gray-200 opacity-50"
                   }`}>
                     <Zap size={20} className={creativityVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? "text-[#1a874b]" : "text-gray-400"} />
-                    <h4 className="text-[13px] font-extrabold text-[#191c1e]">{t("badge_fast_learner", "Fast Learner")}</h4>
-                    <span className="text-[9px] font-bold text-[#7c7d8a]">{creativityVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? t("unlocked", "Unlocked") : t("locked", "Locked")}</span>
+                    <h4 className="text-sm font-black text-[#191c1e]">{t("badge_fast_learner", "Fast Learner")}</h4>
+                    <span className="text-xs font-bold text-[#7c7d8a]">{creativityVal >= 70 && (dnaData?.totalAttempts ?? 0) >= 5 ? t("unlocked", "Unlocked") : t("locked", "Locked")}</span>
                   </div>
                 </>
               )}
@@ -681,7 +711,7 @@ export default function ParentLearningDNAScreen() {
               <div className="w-full bg-gray-50 border border-dashed border-gray-200 rounded-[22px] py-8 text-center flex flex-col items-center justify-center gap-2">
                 <Activity size={24} className="text-gray-400 animate-pulse" />
                 <p className="text-xs font-bold text-[#7c7d8a]">{t("weekly_trend_hint", "Weekly trend requires at least 3 completed quizzes.")}</p>
-                <p className="text-[10px] text-gray-400 font-semibold">{t("current_progress", { current: dnaData?.totalAttempts ?? 0, total: 3, defaultValue: `Current Progress: ${dnaData?.totalAttempts ?? 0} / 3` })}</p>
+                <p className="text-xs text-gray-400 font-semibold">{t("current_progress", { current: dnaData?.totalAttempts ?? 0, total: 3, defaultValue: `Current Progress: ${dnaData?.totalAttempts ?? 0} / 3` })}</p>
               </div>
             ) : (
               <>
@@ -735,7 +765,7 @@ export default function ParentLearningDNAScreen() {
                 </div>
                 
                 {/* Days labels */}
-                <div className="flex justify-between text-[11px] font-extrabold text-[#7c7d8a] px-2.5">
+                <div className="flex justify-between text-xs font-black text-[#7c7d8a] px-2.5">
                   <span>{t("day_mon", "Mon")}</span>
                   <span>{t("day_tue", "Tue")}</span>
                   <span>{t("day_wed", "Wed")}</span>
