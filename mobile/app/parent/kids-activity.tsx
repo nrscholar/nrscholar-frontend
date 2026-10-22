@@ -325,15 +325,17 @@ export default function KidsActivityScreen() {
               color:
                 engagementTrend === null
                   ? C.outline
-                  : engagementTrend >= 0
+                  : engagementTrend > 0
                   ? C.success
-                  : C.error,
+                  : engagementTrend < 0
+                  ? C.error
+                  : C.onSurfaceVariant,
             },
           ]}
         >
           {engagementTrend === null
             ? "—"
-            : `${engagementTrend >= 0 ? "+" : ""}${engagementTrend}%`}
+            : `${engagementTrend > 0 ? "+" : ""}${engagementTrend}%`}
         </Text>
         <Text style={styles.summaryLabel}>vs Last Week</Text>
       </View>
@@ -377,7 +379,7 @@ export default function KidsActivityScreen() {
 
       <SectionList
         sections={sections}
-        keyExtractor={(item, idx) => String(item._id || item.createdAt || idx)}
+        keyExtractor={(item: any, idx: number) => String(item._id || item.createdAt || idx)}
         renderItem={renderItem}
         renderSectionHeader={renderSectionHeader}
         ListHeaderComponent={renderListHeader}

@@ -25,6 +25,12 @@ import { getScopedItem, setScopedItem, removeScopedItem, getActiveUserContext } 
 import { showInteractiveNotification } from "../../../services/pushNotificationService";
 import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
+import {
+  filterUniqueQuestions,
+  filterCrossUniqueQuestions,
+  getQuestionIdentifier,
+  getNormalizedQuestionText
+} from "../../../utils/quizQuestionUtils";
 
 type StepPhase = "INTRO" | "QUIZ" | "MINI_REWARD" | "BOSS" | "SUMMARY";
 
@@ -598,7 +604,12 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   const [userAnswers, setUserAnswers] = useState<any[]>(() => {
     if (isFreshReplay) return [];
     const saved = getScopedItem(`user_answers_${chapterId}_${missionSeq}`);
-    return saved ? JSON.parse(saved) : [];
+    if (!saved) return [];
+    try {
+      return filterUniqueQuestions(JSON.parse(saved));
+    } catch {
+      return [];
+    }
   });
   const [isCompleting, setIsCompleting] = useState(false);
 
@@ -660,7 +671,16 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
         const res = await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}?classLevel=${encodeURIComponent(activeCtx.classLevel)}${isFreshReplay ? "&replay=true" : ""}`);
         const json = await res.json().catch(() => null);
         if (json?.success && json?.data) {
-          setMissionData(json.data);
+          const { uniqueQuiz, uniqueBoss } = filterCrossUniqueQuestions(
+            json.data.quizQuestions,
+            json.data.bossQuestions
+          );
+          const sanitizedData = {
+            ...json.data,
+            quizQuestions: uniqueQuiz,
+            bossQuestions: uniqueBoss
+          };
+          setMissionData(sanitizedData);
 
           // Restore draft from database if present (ignore when starting fresh replay)
           const draft = isFreshReplay ? null : json.data.activeDraft;
@@ -669,9 +689,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             let savedAnswers: any[] = [];
             try { savedAnswers = savedAnswersRaw ? JSON.parse(savedAnswersRaw) : []; } catch (e) {}
 
-            const mergedAnswers = (Array.isArray(draft.userAnswers) && draft.userAnswers.length >= savedAnswers.length)
+            const rawMergedAnswers = (Array.isArray(draft.userAnswers) && draft.userAnswers.length >= savedAnswers.length)
               ? draft.userAnswers
               : savedAnswers;
+            const mergedAnswers = filterUniqueQuestions(rawMergedAnswers);
 
             const savedWrong = parseInt(getScopedItem(`boss_wrong_${chapterId}_${missionSeq}`) || "0", 10);
             const savedIndex = parseInt(getScopedItem(`boss_index_${chapterId}_${missionSeq}`) || "0", 10);
@@ -803,18 +824,31 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     loading
   ]);
 
-  const quizQuestions = useMemo(() => {
-    return (missionData?.quizQuestions && missionData.quizQuestions.length > 0)
+  const { uniqueQuiz: quizQuestions, uniqueBoss: bossQuestions } = useMemo(() => {
+    const rawQuiz = (missionData?.quizQuestions && missionData.quizQuestions.length > 0)
       ? missionData.quizQuestions
       : DEFAULT_QUIZ;
-  }, [missionData?.quizQuestions]);
+    const rawBoss = (missionData?.bossQuestions && missionData.bossQuestions.length > 0)
+      ? missionData.bossQuestions
+      : DEFAULT_BOSS;
+    return filterCrossUniqueQuestions(rawQuiz, rawBoss);
+  }, [missionData?.quizQuestions, missionData?.bossQuestions]);
 
-  const bossQuestions = useMemo(() => {
-    if (missionData?.bossQuestions && missionData.bossQuestions.length > 0) {
-      return missionData.bossQuestions;
+  const recordUniqueAnswer = useCallback((prevAnswers: any[], newAns: any) => {
+    const newId = getQuestionIdentifier(newAns);
+    const newText = getNormalizedQuestionText(newAns);
+    const existingIndex = prevAnswers.findIndex((a) => {
+      const aId = getQuestionIdentifier(a);
+      const aText = getNormalizedQuestionText(a);
+      return (newId && aId && newId === aId) || (newText && aText && newText === aText);
+    });
+    if (existingIndex >= 0) {
+      const updated = [...prevAnswers];
+      updated[existingIndex] = newAns;
+      return updated;
     }
-    return DEFAULT_BOSS;
-  }, [missionData?.bossQuestions]);
+    return [...prevAnswers, newAns];
+  }, []);
 
   const bossMaxHp = 3;
   const bossHearts = Math.max(0, bossMaxHp - bossDamageCount);
@@ -916,6 +950,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   const finalizeMission = async (finalBossDamage = bossDamageCount, finalChildDamage = childDamageCount, currentAnswers = userAnswers) => {
     setIsCompleting(true);
     try {
+      const sanitizedAnswers = filterUniqueQuestions(currentAnswers);
       // Clear boss & quiz session state
       removeScopedItem(`boss_damage_${chapterId}_${missionSeq}`);
       removeScopedItem(`boss_wrong_${chapterId}_${missionSeq}`);
@@ -935,10 +970,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           quizCorrect: quizCorrectCount,
           quizTotal: quizQuestions.length,
           bossCorrect: bossCorrect,
-          bossTotal: Math.max(bossCorrect + wrongAnswerCount, currentAnswers.length - quizQuestions.length),
+          bossTotal: Math.max(bossCorrect + wrongAnswerCount, sanitizedAnswers.length - quizQuestions.length),
           timeTakenSec: totalSessionSec,
           livesRemaining: Math.max(0, 3 - finalChildDamage),
-          answers: currentAnswers,
+          answers: sanitizedAnswers,
           classLevel: getActiveUserContext().classLevel
         })
       });
@@ -1261,7 +1296,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
         selectedAnswer: selectedValue,
         timeSpent: QUESTION_TIME_LIMIT - questionTimeLeft
       };
-      setUserAnswers((prev) => [...prev, newAns]);
+      setUserAnswers((prev) => recordUniqueAnswer(prev, newAns));
 
       if (isCorrect) {
         setQuizCorrectCount((prev) => prev + 1);
@@ -1305,7 +1340,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       selectedAnswer: optionText,
       timeSpent: QUESTION_TIME_LIMIT - questionTimeLeft
     };
-    const updatedAnswers = [...userAnswers, newAns];
+    const updatedAnswers = recordUniqueAnswer(userAnswers, newAns);
     setUserAnswers(updatedAnswers);
     executeBossAttack(isCorrect, updatedAnswers);
   };
@@ -1326,7 +1361,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       selectedAnswer: isBossLanguageDrag ? String(selectedBossDragValue) : String(bossBasketCount),
       timeSpent: QUESTION_TIME_LIMIT - questionTimeLeft
     };
-    const updatedAnswers = [...userAnswers, newAns];
+    const updatedAnswers = recordUniqueAnswer(userAnswers, newAns);
     setUserAnswers(updatedAnswers);
     executeBossAttack(isCorrect, updatedAnswers);
   };
@@ -1377,7 +1412,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           selectedAnswer: "TIMEOUT",
           timeSpent: QUESTION_TIME_LIMIT
         };
-        setUserAnswers((prev) => [...prev, newAns]);
+        setUserAnswers((prev) => recordUniqueAnswer(prev, newAns));
         return;
       }
       const t = setInterval(() => {
@@ -1399,7 +1434,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           selectedAnswer: "TIMEOUT",
           timeSpent: QUESTION_TIME_LIMIT
         };
-        const updatedAnswers = [...userAnswers, newAns];
+        const updatedAnswers = recordUniqueAnswer(userAnswers, newAns);
         setUserAnswers(updatedAnswers);
         executeBossAttack(false, updatedAnswers);
         return;

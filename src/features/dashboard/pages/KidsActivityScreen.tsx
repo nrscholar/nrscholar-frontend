@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Clock, CheckCircle2, ShieldAlert, Star, TrendingUp, Search, Calendar, FileText, Activity, X, ChevronDown, ChevronUp, BookOpen, Layers, ChevronRight, Settings, Bell } from "lucide-react";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
 import { getScopedItem, setScopedItem, removeScopedItem, getActiveUserContext } from "../../../utils/sessionCache";
+import { filterUniqueQuestions } from "../../../utils/quizQuestionUtils";
 
 export default function KidsActivityScreen() {
   const { t } = useTranslation();
@@ -51,6 +52,20 @@ export default function KidsActivityScreen() {
   const [engagementHours, setEngagementHours] = useState(cached?.engagementHours || "0");
   const [engagementTrend, setEngagementTrend] = useState<number | null>(cached?.engagementTrend !== undefined ? cached.engagementTrend : null);
   const [selectedActivity, setSelectedActivity] = useState<any>(null);
+
+  const modalUniqueDetails = useMemo(() => {
+    if (!selectedActivity || !Array.isArray(selectedActivity.details)) return [];
+    return filterUniqueQuestions(selectedActivity.details);
+  }, [selectedActivity?.details]);
+
+  const modalTotalQuestions = modalUniqueDetails.length > 0 
+    ? modalUniqueDetails.length 
+    : (selectedActivity?.totalQuestions || 0);
+
+  const modalCorrectQuestions = modalUniqueDetails.length > 0
+    ? modalUniqueDetails.filter((d: any) => d.isCorrect).length
+    : (selectedActivity?.correctQuestions || 0);
+
   const [openDateLabel, setOpenDateLabel] = useState<string | null>(null);
   const [userData, setUserData] = useState<any>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -295,9 +310,19 @@ export default function KidsActivityScreen() {
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-black text-[#141779]">{finalEngagementDisplay}</span>
                 {engagementTrend !== null && engagementTrend !== undefined && (
-                  <span className={`text-sm font-black flex items-center gap-1 ${engagementTrend >= 0 ? 'text-[#006a62]' : 'text-red-600'}`}>
-                    {engagementTrend >= 0 ? <TrendingUp size={16} /> : <TrendingUp size={16} className="rotate-180" />} 
-                    {engagementTrend >= 0 ? '+' : ''}{engagementTrend}%
+                  <span className={`text-sm font-black flex items-center gap-1 ${
+                    engagementTrend > 0
+                      ? 'text-[#006a62]'
+                      : engagementTrend < 0
+                      ? 'text-red-600'
+                      : 'text-slate-500'
+                  }`}>
+                    {engagementTrend > 0 ? (
+                      <TrendingUp size={16} />
+                    ) : engagementTrend < 0 ? (
+                      <TrendingUp size={16} className="rotate-180" />
+                    ) : null} 
+                    {engagementTrend > 0 ? '+' : ''}{engagementTrend}%
                   </span>
                 )}
               </div>
@@ -500,9 +525,9 @@ export default function KidsActivityScreen() {
                       {t("attempt_number", { num: selectedActivity.attemptNumber, defaultValue: `Attempt #${selectedActivity.attemptNumber}` })}
                     </span>
                   )}
-                  {Boolean(selectedActivity.totalQuestions && selectedActivity.totalQuestions > 0) && (
+                  {Boolean(modalTotalQuestions > 0) && (
                     <span className="text-xs font-black text-[#006a62] bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full flex items-center gap-1 shrink-0 whitespace-nowrap">
-                      <CheckCircle2 size={13} /> {selectedActivity.correctQuestions}/{selectedActivity.totalQuestions}
+                      <CheckCircle2 size={13} /> {modalCorrectQuestions}/{modalTotalQuestions}
                     </span>
                   )}
                   {selectedActivity.timeTaken !== undefined && (
@@ -532,8 +557,8 @@ export default function KidsActivityScreen() {
               </h3>
               
               <div className="flex flex-col gap-3">
-                {Array.isArray(selectedActivity.details) && selectedActivity.details.length > 0 ? (
-                  selectedActivity.details.map((detail: any, idx: number) => {
+                {modalUniqueDetails.length > 0 ? (
+                  modalUniqueDetails.map((detail: any, idx: number) => {
                     const rawText = detail.questionText || "";
                     const isGeneric = !rawText || rawText.trim() === "" || rawText.toLowerCase().includes("practice question") || rawText.toLowerCase().startsWith("que ") || rawText.toLowerCase().startsWith("question #");
                     const qTitle = isGeneric

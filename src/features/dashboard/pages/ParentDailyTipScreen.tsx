@@ -10,6 +10,18 @@ import { useTranslation } from "react-i18next";
 import ChildSwitcherModal from "../../../components/ChildSwitcherModal";
 
 interface Tip {
+  // Structured JSON fields
+  dayBadge?: string;
+  categoryTag?: string;
+  subjectFocus?: string | null;
+  tipTitle?: string;
+  tipDescription?: string;
+  actionStep?: string;
+  whyItMatters?: string;
+  xpReward?: number;
+  recommendedRoute?: string;
+
+  // Backward-compatible fields
   instead?: string;
   try?: string;
   benefit?: string;
@@ -17,7 +29,6 @@ interface Tip {
   description?: string;
   rewardPoints?: number;
   category?: string;
-  actionStep?: string;
   status?: string;
   subject?: string;
 }
@@ -86,27 +97,69 @@ export default function ParentDailyTipScreen() {
     ? Math.min(100, Math.round(((xp - xpForCurrentLevel) / (xpForNextLevel - xpForCurrentLevel)) * 100))
     : 100;
 
-  // ── Dynamic Growth Rate Calculation (ZERO Fake Fallback Percentages) ───────
+  // ── Growth Score Starting Rule & Badge Mapping ────────────────────────────
+  // New users/parents start at 0% Growth Score.
+  // Complete Score Range & Badge Mapping:
+  // 0% - 30%: Tag = "New Parent" (Indigo Pill), Subtitle = "Begin your journey — complete lessons to grow! 🌱"
+  // 31% - 50%: Tag = "Active Parent" (Indigo/Blue Pill), Subtitle = "Good progress! Every day counts. 💪"
+  // 51% - 70%: Tag = "Mindful Parent" (Emerald / Teal), Subtitle = "You're soaring! Keep the momentum going! 🚀"
+  // 71% - 85%: Tag = "Growth Coach" (Amber / Gold), Subtitle = "Phenomenal dedication! You are inspiring your child. ⭐"
+  // 86% - 100%: Tag = "Master Parent" (Purple / Violet), Subtitle = "Outstanding! You're in the top 5% of dedicated parents! 🏆"
+
   const hasRealData = metrics?.hasRealData ?? (totalTests > 0 || accuracy > 0);
-  const baseGrowthFromXp = Math.min(100, Math.round((roadmapXp / 2500) * 100));
+  const rawGrowthScore = (metrics?.growthScore !== undefined && metrics?.growthScore !== null)
+    ? Number(metrics.growthScore)
+    : 0;
 
-  // Compute genuine growth score only if real attempts/tests exist
-  const computedGrowthScore = (metrics?.growthScore !== undefined && metrics?.growthScore !== null)
-    ? metrics.growthScore
-    : (hasRealData
-        ? Math.min(100, Math.round((baseGrowthFromXp * 0.5) + (accuracy * 0.5)))
-        : null);
+  const growthScore = Math.min(100, Math.max(0, rawGrowthScore));
 
-  const growthScore = computedGrowthScore;
+  const getGrowthBadgeInfo = (score: number) => {
+    if (score <= 30) {
+      return {
+        tag: t("tag_new_parent", "New Parent"),
+        subtitle: t("growth_subtitle_0_30", "Begin your journey — complete lessons to grow! 🌱"),
+        pillClass: "bg-indigo-50 border-indigo-200 text-indigo-700",
+        dialColorClass: "text-[#141779]",
+        textColorClass: "text-[#141779]",
+      };
+    } else if (score <= 50) {
+      return {
+        tag: t("tag_active_parent", "Active Parent"),
+        subtitle: t("growth_subtitle_31_50", "Good progress! Every day counts. 💪"),
+        pillClass: "bg-blue-50 border-blue-200 text-blue-700",
+        dialColorClass: "text-blue-600",
+        textColorClass: "text-blue-700",
+      };
+    } else if (score <= 70) {
+      return {
+        tag: t("tag_mindful_parent", "Mindful Parent"),
+        subtitle: t("growth_subtitle_51_70", "You're soaring! Keep the momentum going! 🚀"),
+        pillClass: "bg-teal-50 border-teal-200 text-[#006a62]",
+        dialColorClass: "text-[#006a62]",
+        textColorClass: "text-[#006a62]",
+      };
+    } else if (score <= 85) {
+      return {
+        tag: t("tag_growth_coach", "Growth Coach"),
+        subtitle: t("growth_subtitle_71_85", "Phenomenal dedication! You are inspiring your child. ⭐"),
+        pillClass: "bg-amber-50 border-amber-200 text-amber-700",
+        dialColorClass: "text-amber-500",
+        textColorClass: "text-amber-600",
+      };
+    } else {
+      return {
+        tag: t("tag_master_parent", "Master Parent"),
+        subtitle: t("growth_subtitle_86_100", "Outstanding! You're in the top 5% of dedicated parents! 🏆"),
+        pillClass: "bg-purple-50 border-purple-200 text-purple-700",
+        dialColorClass: "text-purple-600",
+        textColorClass: "text-purple-700",
+      };
+    }
+  };
 
-  // Dynamic growth message based on score
-  const growthMessage = !hasRealData
-    ? t("growth_msg_new_user", "Welcome! Complete your child's first quest to unlock real-time growth analytics. 🌱")
-    : (growthScore !== null && growthScore >= 80 ? t("growth_msg_80", "Outstanding! You're in the top tier of parents! 🏆") :
-       growthScore !== null && growthScore >= 60 ? t("growth_msg_60", "You're soaring! Keep the momentum going! 🚀") :
-       growthScore !== null && growthScore >= 40 ? t("growth_msg_40", "Good progress! Every day counts. 💪") :
-       growthScore !== null && growthScore >= 20 ? t("growth_msg_20", "Getting started — consistency is your superpower! 🌱") :
-       t("growth_msg_0", "Begin your journey — complete lessons to grow! ✨"));
+  const badgeInfo = getGrowthBadgeInfo(growthScore);
+  const displayGrowthTag = metrics?.growthTag || badgeInfo.tag;
+  const displayGrowthSubtitle = metrics?.growthSubtitle || badgeInfo.subtitle;
 
   // ── Dynamic Milestones built from real User & Report Data ─────────────────
   const milestones: Milestone[] = [
@@ -401,13 +454,21 @@ export default function ParentDailyTipScreen() {
               </h2>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
-              {tip?.category && (
-                <span className="text-xs sm:text-[13px] font-black text-[#006a62] bg-teal-50 border border-teal-200/80 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                  {tip.category}
+              {(tip?.categoryTag || tip?.category) && (
+                <span className={`text-xs sm:text-[13px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider border ${
+                  (tip.categoryTag || tip.category) === "TARGETED SUPPORT"
+                    ? "text-amber-700 bg-amber-50 border-amber-200/80"
+                    : (tip.categoryTag || tip.category) === "MASTERY CELEBRATION"
+                    ? "text-purple-700 bg-purple-50 border-purple-200/80"
+                    : (tip.categoryTag || tip.category) === "GROWTH MINDSET"
+                    ? "text-[#006a62] bg-teal-50 border-teal-200/80"
+                    : "text-indigo-700 bg-indigo-50 border-indigo-200/80"
+                }`}>
+                  {tip.categoryTag || tip.category}
                 </span>
               )}
               <span className="text-xs sm:text-[13px] font-black text-slate-500 bg-slate-100 border border-slate-200/60 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                {t("day_num", { day: streak > 0 ? streak : 1, defaultValue: streak > 0 ? `Day ${streak}` : "Day 1" })}
+                {tip?.dayBadge || (streak > 0 ? `DAY ${streak}` : "DAY 1")}
               </span>
             </div>
           </div>
@@ -420,9 +481,9 @@ export default function ParentDailyTipScreen() {
             </div>
           ) : tip ? (
             <>
-              {tip.subject && (
+              {(tip.subjectFocus || tip.subject) && (
                 <div className="flex items-center gap-1.5 self-start bg-indigo-50/80 text-[#141779] border border-indigo-200/70 px-2.5 py-0.5 rounded-full text-xs font-black">
-                  <span>🎯 {t("focus_subject", "Subject Focus")}: {tip.subject}</span>
+                  <span>🎯 {t("focus_subject", "Subject Focus")}: {tip.subjectFocus || tip.subject}</span>
                 </div>
               )}
 
@@ -440,8 +501,14 @@ export default function ParentDailyTipScreen() {
                 </div>
               ) : (
                 <div className="bg-gradient-to-br from-indigo-50/80 via-white to-teal-50/40 rounded-2xl p-4 border border-indigo-100/80 shadow-2xs">
-                  {tip.title && <h3 className="text-[#141779] font-black text-sm sm:text-base mb-1.5">💡 {translateTipField(tip.title)}</h3>}
-                  <p className="text-slate-800 font-semibold text-xs sm:text-sm leading-relaxed">{translateTipField(tip.description)}</p>
+                  {(tip.tipTitle || tip.title) && (
+                    <h3 className="text-[#141779] font-black text-sm sm:text-base mb-1.5">
+                      💡 {translateTipField(tip.tipTitle || tip.title)}
+                    </h3>
+                  )}
+                  <p className="text-slate-800 font-semibold text-xs sm:text-sm leading-relaxed">
+                    {translateTipField(tip.tipDescription || tip.description)}
+                  </p>
                 </div>
               )}
 
@@ -459,32 +526,40 @@ export default function ParentDailyTipScreen() {
               )}
 
               {/* Expected Learning or Communication Benefit */}
-              {tip.benefit && (
+              {(tip.whyItMatters || tip.benefit) && (
                 <div className="flex items-start gap-2.5 text-[#006a62] bg-teal-50/70 p-3 rounded-2xl border border-teal-100/90 shadow-2xs">
                   <div className="w-7 h-7 rounded-lg bg-teal-100 text-[#006a62] flex items-center justify-center shrink-0 mt-0.5">
                     <CheckCircle2 size={15} />
                   </div>
                   <div className="flex flex-col min-w-0">
                     <span className="text-xs font-black uppercase tracking-wider text-[#006a62] leading-tight">{t("why_it_matters", "Why It Matters")}</span>
-                    <p className="text-xs font-extrabold text-[#006a62] leading-snug mt-0.5">{translateTipField(tip.benefit)}</p>
+                    <p className="text-xs font-extrabold text-[#006a62] leading-snug mt-0.5">{translateTipField(tip.whyItMatters || tip.benefit)}</p>
                   </div>
                 </div>
               )}
 
               {/* XP Reward for applying tip */}
-              {tip.rewardPoints && (
+              {(tip.xpReward || tip.rewardPoints) && (
                 <div className="flex items-center gap-1.5 self-start bg-teal-50 border border-teal-200/80 text-[#006a62] px-2.5 py-1 rounded-full text-xs font-black shadow-2xs">
                   <Star size={12} fill="currentColor" />
-                  <span>+{tip.rewardPoints} XP {t("for_applying_tip", "for applying this tip")}</span>
+                  <span>+{(tip.xpReward || tip.rewardPoints)} XP {t("for_applying_tip", "for applying this tip")}</span>
                 </div>
               )}
 
               {/* Action Button */}
               <button
-                onClick={() => navigate("/parent/lessons")}
+                onClick={() => navigate(tip.recommendedRoute || "/parent/lessons")}
                 className="w-full bg-[#141779] text-white py-2.5 sm:py-3 rounded-2xl font-black text-xs sm:text-sm hover:bg-[#1e23a0] active:scale-95 transition-all shadow-md cursor-pointer flex items-center justify-center gap-1.5 mt-0.5"
               >
-                <span>{t("explore_related_lessons", "Explore Related Lessons")}</span>
+                <span>
+                  {tip.recommendedRoute === "/parent/activity"
+                    ? t("view_student_activity", "View Student Activity")
+                    : tip.recommendedRoute === "/parent/challenges"
+                    ? t("view_parent_challenges", "View Growth Challenges")
+                    : tip.recommendedRoute === "/parent/roadmap"
+                    ? t("view_growth_roadmap", "View Growth Roadmap")
+                    : t("explore_related_lessons", "Explore Related Lessons")}
+                </span>
                 <span>→</span>
               </button>
             </>
@@ -495,55 +570,48 @@ export default function ParentDailyTipScreen() {
 
         {/* ── 2. Growth Score and Streak Section (Compact & Balanced) ── */}
         <section className="w-full bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-[0_4px_20px_rgba(20,23,121,0.04)] flex flex-col gap-3.5">
-          {/* Growth Score Gauge & Roadmap Stage */}
+          {/* Growth Score Gauge & Badge */}
           <div className="flex items-center gap-3.5">
-            {hasRealData && growthScore !== null ? (
-              <div className="relative w-20 h-20 sm:w-22 sm:h-22 flex items-center justify-center shrink-0">
-                <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-                  <path
-                    className="text-slate-100"
-                    strokeWidth="3.5"
-                    stroke="currentColor"
-                    fill="none"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                  <path
-                    className="text-[#006a62] transition-all duration-1000 ease-out"
-                    strokeDasharray={`${Math.min(100, Math.max(0, growthScore))}, 100`}
-                    strokeWidth="3.5"
-                    strokeLinecap="round"
-                    stroke="currentColor"
-                    fill="none"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-[#006a62] font-black text-lg sm:text-xl leading-none">
-                    {growthScore}%
-                  </span>
-                  <span className="text-[10px] sm:text-xs font-black uppercase text-slate-400 tracking-wider mt-0.5">
-                    {t("growth_score", "Score")}
-                  </span>
-                </div>
+            <div className="relative w-20 h-20 sm:w-22 sm:h-22 flex items-center justify-center shrink-0">
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                <path
+                  className="text-slate-100"
+                  strokeWidth="3.5"
+                  stroke="currentColor"
+                  fill="none"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
+                <path
+                  className={`${badgeInfo.dialColorClass} transition-all duration-1000 ease-out`}
+                  strokeDasharray={`${Math.min(100, Math.max(0, growthScore))}, 100`}
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                  stroke="currentColor"
+                  fill="none"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className={`${badgeInfo.textColorClass} font-black text-lg sm:text-xl leading-none`}>
+                  {growthScore}%
+                </span>
+                <span className="text-[10px] sm:text-xs font-black uppercase text-slate-400 tracking-wider mt-0.5">
+                  {t("growth_score", "Score")}
+                </span>
               </div>
-            ) : (
-              <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl border-2 border-dashed border-teal-300 flex flex-col items-center justify-center bg-teal-50/50 shrink-0">
-                <span className="text-xl">🌱</span>
-                <span className="text-xs font-black text-[#006a62] uppercase tracking-wider mt-0.5">Day 1</span>
-              </div>
-            )}
+            </div>
 
             <div className="min-w-0 flex-1 flex flex-col gap-1">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-xs sm:text-sm font-black text-[#141779] uppercase tracking-wider">
                   {t("growth_score", "Growth Score")}
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-100 text-[#141779] text-xs font-black">
-                  {stageName}
+                <span className={`px-2 py-0.5 rounded-full border text-xs font-black ${badgeInfo.pillClass}`}>
+                  {displayGrowthTag}
                 </span>
               </div>
               <p className="text-slate-700 font-bold text-xs sm:text-sm leading-snug">
-                {growthMessage}
+                {displayGrowthSubtitle}
               </p>
             </div>
           </div>

@@ -64,6 +64,7 @@ declare module 'react-native-webview' {
 
 declare module 'expo-router' {
   export function useRouter(): any;
+  export function useFocusEffect(callback: any): void;
   export function useLocalSearchParams<T = any>(): T;
   export function usePathname(): string;
   export function useSegments(): string[];
@@ -157,6 +158,13 @@ declare module 'expo-status-bar';
 declare module 'expo-system-ui';
 declare module '@react-native-async-storage/async-storage';
 declare module '@react-navigation/*';
+declare module '@react-navigation/native' {
+  export const useFocusEffect: (callback: () => void | (() => void)) => void;
+  export const useNavigation: <T = any>() => T;
+  export const useRoute: <T = any>() => T;
+  export const useIsFocused: () => boolean;
+  export const NavigationContainer: any;
+}
 declare module 'react-native-safe-area-context';
 declare module 'react-native-screens';
 declare module 'react-native-svg';

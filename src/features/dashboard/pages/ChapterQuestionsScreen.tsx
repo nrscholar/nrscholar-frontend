@@ -6,6 +6,7 @@ import { apiFetch } from "../../../api";
 import DragonCharacter from "../../../components/DragonCharacter";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 import { getScopedItem, setScopedItem, getActiveUserContext } from "../../../utils/sessionCache";
+import { filterUniqueQuestions } from "../../../utils/quizQuestionUtils";
 
 const SparkleParticles = lazy(() => import("../../../components/SparkleParticles"));
 
@@ -108,8 +109,8 @@ export default function ChapterQuestionsScreen() {
             }
             return newItem;
           });
-          filtered = shuffledQs;
-          setQuestionsData(shuffledQs);
+          filtered = filterUniqueQuestions(shuffledQs);
+          setQuestionsData(filtered);
         }
         
         if (filtered.length === 0) {
