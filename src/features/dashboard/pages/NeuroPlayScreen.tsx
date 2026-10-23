@@ -532,18 +532,29 @@ export default function NeuroPlayScreen() {
 
       // 3. Also log activity for telemetry
       if (isFirstTime) {
-        await apiFetch("/api/parent/activities", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: `Completed ${selectedSkill.id}`,
-            type: "quiz",
-            timeTaken: 120,
-            correctQuestions: 1,
-            totalQuestions: 1,
-            details: [{ skill: getText(selectedSkill.title), xp: xpGained }]
-          })
-        });
+        try {
+          const skillTitle = getText(selectedSkill.title) || selectedSkill.id;
+          await apiFetch("/api/parent/activities", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: `NeuroPlay: ${skillTitle}`,
+              type: "quiz",
+              timeTaken: 120,
+              correctQuestions: 1,
+              totalQuestions: 1,
+              details: [{
+                questionText: skillTitle,
+                isCorrect: true,
+                timeSpent: 120,
+                skill: skillTitle,
+                xp: xpGained
+              }]
+            })
+          });
+        } catch (actErr) {
+          console.warn("Failed to log NeuroPlay parent activity:", actErr);
+        }
       }
 
       // 4. Immediately update main dashboard userData in localStorage and dispatch event
