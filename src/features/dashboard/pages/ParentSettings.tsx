@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { translateNotificationTitle, translateNotificationMessage } from "../../../utils/notificationTranslator";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
+import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
 
 const CustomDropdown = ({ label, icon: Icon, iconColor, value, options = [], onSelect, placeholder }: any) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -285,6 +286,8 @@ export default function ParentSettings() {
   const [showDeleteCoParentModal, setShowDeleteCoParentModal] = useState(false);
   const [isCheckingCoParentMobile, setIsCheckingCoParentMobile] = useState(false);
   const [isCoParentMobileRegisteredInDb, setIsCoParentMobileRegisteredInDb] = useState(false);
+
+  useLockBodyScroll(Boolean(showAddCoParent || showNotifications));
 
   // Debounced real-time check for co-parent phone number global registration
   useEffect(() => {
@@ -1833,11 +1836,16 @@ export default function ParentSettings() {
           const isFormValid = isPhoneValid && coParentName.trim().length > 0 && isMinLength && hasSpecialChar && passwordsMatch;
 
           return (
-            <div className="fixed inset-0 bg-[#0f114a]/80 backdrop-blur-md z-[99999] flex items-center justify-center p-3 sm:p-4 font-sans animate-in fade-in duration-200">
+            <div 
+              className="fixed inset-0 bg-[#0f114a]/80 backdrop-blur-md z-[99999] flex items-center justify-center p-3 sm:p-4 font-sans animate-in fade-in duration-200"
+              style={{ touchAction: "none" }}
+              onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+            >
               <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
                 className="bg-white rounded-2xl max-w-sm w-full flex flex-col p-4 sm:p-5 shadow-2xl relative border border-white/60 overflow-hidden text-slate-900 max-h-[92vh] overflow-y-auto"
               >
                 {/* Header */}
@@ -2100,8 +2108,15 @@ export default function ParentSettings() {
 
       {/* Notifications Side Panel / Modal Drawer */}
       {showNotifications && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[100] flex justify-end animate-in fade-in duration-200">
-          <div className="w-full sm:w-[420px] h-full bg-[#f7f9fb] shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+        <div 
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[100] flex justify-end animate-in fade-in duration-200"
+          style={{ touchAction: "none" }}
+          onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+        >
+          <div 
+            className="w-full sm:w-[420px] h-full bg-[#f7f9fb] shadow-2xl flex flex-col animate-in slide-in-from-right duration-300"
+            style={{ overscrollBehavior: "contain" }}
+          >
             {/* Header */}
             <div className="flex justify-between items-center p-5 sm:p-6 border-b border-slate-200/80 bg-white">
               <div className="flex items-center gap-2.5">

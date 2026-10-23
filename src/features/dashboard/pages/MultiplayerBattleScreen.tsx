@@ -7,6 +7,7 @@ import { apiFetch } from "../../../api";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 import { getScopedItem } from "../../../utils/sessionCache";
 import { filterUniqueQuestions } from "../../../utils/quizQuestionUtils";
+import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
 
 // Hardcoded rapid fire questions for MVP multiplayer
 const BATTLE_QUESTIONS = [
@@ -40,6 +41,7 @@ export default function MultiplayerBattleScreen() {
   const [isFinished, setIsFinished] = useState(false);
   const [winnerId, setWinnerId] = useState<string | null>(null);
   const [showRewardModal, setShowRewardModal] = useState(false);
+  useLockBodyScroll(Boolean(showRewardModal));
   const [continuousWins, setContinuousWins] = useState(0);
   const [checkingReward, setCheckingReward] = useState(false);
   const [showQuitModal, setShowQuitModal] = useState(false);
@@ -828,10 +830,15 @@ export default function MultiplayerBattleScreen() {
       {/* PHYSICAL REWARD MODAL */}
       <AnimatePresence>
         {showRewardModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm select-none">
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm select-none"
+            style={{ touchAction: "none" }}
+            onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+          >
             <motion.div 
               initial={{ scale: 0.92, opacity: 0, y: 16 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
+              style={{ overscrollBehavior: "contain" }}
               className="bg-white rounded-[32px] p-6 sm:p-8 w-full max-w-[360px] flex flex-col items-center text-center shadow-[0_20px_60px_rgba(20,23,121,0.18)] border border-slate-100 relative"
             >
               <div className="w-20 h-20 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-4xl mb-3 shadow-xs">

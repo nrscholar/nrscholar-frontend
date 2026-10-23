@@ -2,6 +2,7 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronRight, Flame, BookOpen, Star } from "lucide-react";
 import { MapLocationConfig, NRSCHOLAR_COLORS } from "./AdventureTheme";
+import { useLockBodyScroll } from "../../utils/useLockBodyScroll";
 
 interface LocationBottomSheetProps {
   location: MapLocationConfig | null;
@@ -16,13 +17,21 @@ export default function LocationBottomSheet({
   onClose,
   onEnter,
 }: LocationBottomSheetProps) {
+  useLockBodyScroll(Boolean(location));
+
   if (!location) return null;
 
   const isCurrent = state === "current";
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/40 backdrop-blur-xs p-0 sm:p-4">
+      <div 
+        onTouchMove={(e) => {
+          if (e.target === e.currentTarget) e.preventDefault();
+        }}
+        className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/40 backdrop-blur-xs p-0 sm:p-4 overscroll-contain select-none"
+        style={{ overscrollBehavior: "contain", touchAction: "none" }}
+      >
         {/* Backdrop overlay tap dismiss */}
         <div className="absolute inset-0" onClick={onClose} />
 
@@ -32,7 +41,8 @@ export default function LocationBottomSheet({
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: "100%", opacity: 0 }}
           transition={{ type: "spring", damping: 26, stiffness: 240 }}
-          className="relative z-10 w-full max-w-[400px] bg-[#F4F8FF] border-t-4 border-[#2D328F] rounded-t-[32px] sm:rounded-[32px] p-6 text-slate-900 shadow-[0_-12px_40px_rgba(45,50,143,0.2)] flex flex-col gap-4 overflow-hidden select-none"
+          className="relative z-10 w-full max-w-[400px] bg-[#F4F8FF] border-t-4 border-[#2D328F] rounded-t-[32px] sm:rounded-[32px] p-6 text-slate-900 shadow-[0_-12px_40px_rgba(45,50,143,0.2)] flex flex-col gap-4 overflow-hidden overscroll-contain select-text"
+          style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
         >
           {/* Top Sheet Drag Indicator Bar */}
           <div className="w-10 h-1 bg-slate-300 rounded-full mx-auto -mt-2 mb-0.5" />

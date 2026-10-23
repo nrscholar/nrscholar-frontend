@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Rocket, Star, Check, Sparkles, Brain, Lock, Trophy, BookOpen, TrendingUp, Users, Settings, Play, ArrowLeft, Home, BarChart2, Bell } from "lucide-react";
+import { Rocket, Star, Check, Sparkles, Brain, Lock, Trophy, BookOpen, TrendingUp, Users, Settings, Play, ArrowLeft, Home, BarChart2, Bell, Heart } from "lucide-react";
 import { apiFetch } from "../../../api";
 import { getActiveUserContext } from "../../../utils/sessionCache";
 import { useTranslation } from "react-i18next";
@@ -12,7 +12,9 @@ const IconMap: Record<string, any> = {
   Lock,
   Trophy,
   BookOpen,
-  Star
+  Star,
+  Heart,
+  Users
 };
 
 export default function ParentRoadmapScreen() {
@@ -34,41 +36,52 @@ export default function ParentRoadmapScreen() {
   const [profilePic, setProfilePic] = useState("");
   const [username, setUsername] = useState("Parent");
 
-  useEffect(() => {
-    async function fetchRoadmap() {
-      try {
-        const ctx = getActiveUserContext();
-        const childParam = ctx.childId ? `childId=${encodeURIComponent(ctx.childId)}` : "";
-        const classParam = ctx.classLevel ? `classLevel=${encodeURIComponent(ctx.classLevel)}` : "";
-        const qParams = [childParam, classParam].filter(Boolean).join("&");
-        const [resUser, resRoadmap] = await Promise.all([
-          apiFetch("/api/users/me").catch(() => null),
-          apiFetch(`/api/parent/roadmap${qParams ? `?${qParams}` : ""}`).catch(() => null)
-        ]);
+  const fetchRoadmap = useCallback(async () => {
+    try {
+      const ctx = getActiveUserContext();
+      const childParam = ctx.childId ? `childId=${encodeURIComponent(ctx.childId)}` : "";
+      const classParam = ctx.classLevel ? `classLevel=${encodeURIComponent(ctx.classLevel)}` : "";
+      const qParams = [childParam, classParam].filter(Boolean).join("&");
+      const [resUser, resRoadmap] = await Promise.all([
+        apiFetch("/api/users/me").catch(() => null),
+        apiFetch(`/api/parent/roadmap${qParams ? `?${qParams}` : ""}`).catch(() => null)
+      ]);
 
-        if (resUser) {
-          const jsonUser = await resUser.json();
-          if (jsonUser.success && jsonUser.data?.user) {
-            setUsername(jsonUser.data.user.parentName || jsonUser.data.user.username || "Parent");
-            setProfilePic(jsonUser.data.user.parentPhoto || "");
-          }
+      if (resUser) {
+        const jsonUser = await resUser.json();
+        if (jsonUser.success && jsonUser.data?.user) {
+          setUsername(jsonUser.data.user.parentName || jsonUser.data.user.username || "Parent");
+          setProfilePic(jsonUser.data.user.parentPhoto || "");
         }
-
-        if (resRoadmap) {
-          const json = await resRoadmap.json();
-          if (json.success && json.data) {
-            setRoadmapData(json.data);
-            sessionStorage.setItem("parent_roadmap_cache", JSON.stringify(json.data));
-          }
-        }
-      } catch (err) {
-        console.error("Failed to load roadmap", err);
-      } finally {
-        setTimeout(() => setLoading(false), 350);
       }
+
+      if (resRoadmap) {
+        const json = await resRoadmap.json();
+        if (json.success && json.data) {
+          setRoadmapData(json.data);
+          sessionStorage.setItem("parent_roadmap_cache", JSON.stringify(json.data));
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load roadmap", err);
+    } finally {
+      setTimeout(() => setLoading(false), 350);
     }
-    fetchRoadmap();
   }, []);
+
+  useEffect(() => {
+    fetchRoadmap();
+
+    const handleUpdate = () => {
+      fetchRoadmap();
+    };
+    window.addEventListener("userDataUpdated", handleUpdate);
+    window.addEventListener("focus", handleUpdate);
+    return () => {
+      window.removeEventListener("userDataUpdated", handleUpdate);
+      window.removeEventListener("focus", handleUpdate);
+    };
+  }, [fetchRoadmap]);
 
   useEffect(() => {
     const updateHeight = () => {
@@ -360,21 +373,21 @@ export default function ParentRoadmapScreen() {
                       <div className="w-10 h-10 bg-[#006a62] rounded-full flex items-center justify-center mb-2 shadow-lg shadow-[#006a62]/20">
                         <IconComp size={20} color="white" strokeWidth={3} />
                       </div>
-                      {stage.xpRequired > 0 ? (
-                        <div className="flex items-center gap-1 mb-1">
-                          <Star size={14} color="#006a62" />
-                          <span className="text-xs text-[#464652] font-bold uppercase">{stage.xpRequired} XP</span>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-[#006a62] font-bold uppercase tracking-wider mb-1">{t("unlocked", "Unlocked")}</span>
-                      )}
+                      <div className="flex items-center gap-1 mb-1 px-2.5 py-0.5 rounded-full bg-[#006a62]/10 text-[#006a62]">
+                        <Check size={12} strokeWidth={3} />
+                        <span className="text-xs font-black uppercase tracking-wider">
+                          {stage.totalLessons ? `${stage.totalLessons}/${stage.totalLessons} ${t("completed", "Completed")}` : t("completed", "Completed")}
+                        </span>
+                      </div>
                       <h3 className="text-base font-bold text-[#191c1e] text-center">{translateStageTitle(stage.title)}</h3>
                       {stage.rewards && (
-                        <div className="mt-2 text-xs text-[#464652] font-bold grid grid-cols-2 gap-x-2 gap-y-1">
+                        <div className="mt-2 text-xs text-[#006a62] font-bold flex flex-wrap justify-center gap-x-2 gap-y-1">
                           {stage.rewards.map((rw: any, i: number) => {
                             const RIcon = IconMap[rw.icon] || Star;
                             return (
-                              <span key={i} className="flex items-center gap-1"><RIcon size={12} /> {translateRewardLabel(rw.label)}</span>
+                              <span key={i} className="flex items-center gap-1 bg-[#006a62]/10 px-2.5 py-0.5 rounded-full text-[11px] font-bold">
+                                <RIcon size={11} className="text-[#006a62]" /> {translateRewardLabel(rw.label)}
+                              </span>
                             );
                           })}
                         </div>
@@ -394,9 +407,13 @@ export default function ParentRoadmapScreen() {
                       <div className="w-12 h-12 bg-[#2d328f] rounded-full flex items-center justify-center mb-3 shadow-lg ring-4 ring-[#006a62]/30">
                         <IconComp size={24} color="#9ba1ff" />
                       </div>
-                      <div className="flex items-center gap-1 mb-1">
-                        <Star size={16} color="#006a62" />
-                        <span className="text-sm text-[#141779] font-bold uppercase">{stage.xpRequired} XP</span>
+                      <div className="flex items-center gap-1.5 mb-1 px-3 py-1 rounded-full bg-[#006a62]/10 text-[#006a62]">
+                        <BookOpen size={14} className="text-[#006a62]" />
+                        <span className="text-xs font-black uppercase tracking-wider">
+                          {stage.completedLessons !== undefined && stage.totalLessons !== undefined
+                            ? t("lessons_progress_fmt", { completed: stage.completedLessons, total: stage.totalLessons, defaultValue: `${stage.completedLessons}/${stage.totalLessons} Lessons` })
+                            : `${stage.progress}% ${t("completed", "Completed")}`}
+                        </span>
                       </div>
                       <h3 className="text-2xl font-bold text-[#141779] mb-2">{translateStageTitle(stage.title)}</h3>
                       
@@ -459,7 +476,14 @@ export default function ParentRoadmapScreen() {
         </div>
 
         {/* Floating Action Button */}
-        <button onClick={() => navigate('/parent/lessons')} className="fixed bottom-24 right-5 w-14 h-14 bg-[#141779] text-white rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-transform z-40 hover:bg-[#30007f]">
+        <button 
+          onClick={() => {
+            const activeStage = roadmapData?.stages?.find((s: any) => s.status === "active");
+            navigate(activeStage ? `/parent/lessons?category=${encodeURIComponent(activeStage.title)}` : '/parent/lessons');
+          }} 
+          className="fixed bottom-24 right-5 w-14 h-14 bg-[#141779] text-white rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-transform z-40 hover:bg-[#30007f] cursor-pointer"
+          aria-label={t("start_learning", "Start Learning")}
+        >
           <Play size={24} fill="currentColor" />
         </button>
       </main>

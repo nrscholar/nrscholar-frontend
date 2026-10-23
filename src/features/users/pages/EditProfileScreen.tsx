@@ -4,9 +4,11 @@ import { ArrowLeft, UserRound, GraduationCap, Cake, BookOpen, Save, Camera, Chev
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "../../../api";
+import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
 
 const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect, placeholder }: any) => {
   const [isOpen, setIsOpen] = useState(false);
+  useLockBodyScroll(isOpen);
   const isBoard = label ? label.toLowerCase().includes("board") : false;
   const supportedBoards = ["CBSE (NCERT)", "GSEB", "CBSE"];
 
@@ -34,6 +36,8 @@ const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              style={{ touchAction: "none" }}
+              onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
               className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6 select-none"
               onClick={() => setIsOpen(false)}
             >
@@ -42,6 +46,7 @@ const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect
                 animate={{ scale: 1, opacity: 1, y: 0 }}
                 exit={{ scale: 0.92, opacity: 0, y: 16 }}
                 transition={{ type: "spring", stiffness: 350, damping: 26 }}
+                style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
                 className="w-full max-w-[360px] bg-white rounded-[32px] p-6 sm:p-7 max-h-[70vh] flex flex-col shadow-[0_20px_60px_rgba(20,23,121,0.18)] border border-slate-100 relative"
                 onClick={e => e.stopPropagation()}
               >
@@ -51,7 +56,10 @@ const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect
                     Only CBSE & GSEB are currently active
                   </p>
                 )}
-                <div className="overflow-y-auto pr-2">
+                <div 
+                  className="overflow-y-auto pr-2"
+                  style={{ overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}
+                >
                   {options.map((opt: string) => {
                     const isLocked = isBoard && !supportedBoards.includes(opt);
                     return (

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "../api";
+import { useLockBodyScroll } from "../utils/useLockBodyScroll";
 
 export interface RetentionStreakData {
   currentStreak?: number;
@@ -22,6 +23,8 @@ export default function StreakModal({
   streakDays = 0,
   retentionStreak: propRetentionStreak,
 }: StreakModalProps) {
+  useLockBodyScroll(isOpen);
+
   const [retentionStreak, setRetentionStreak] = useState<RetentionStreakData | null>(
     propRetentionStreak || null
   );
@@ -55,12 +58,19 @@ export default function StreakModal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[110] bg-[#f7f9fb]/90 backdrop-blur-md flex flex-col items-center justify-center p-6">
+        <div 
+          onTouchMove={(e) => {
+            if (e.target === e.currentTarget) e.preventDefault();
+          }}
+          className="fixed inset-0 z-[110] bg-[#f7f9fb]/90 backdrop-blur-md flex flex-col items-center justify-center p-6 overscroll-contain select-none"
+          style={{ overscrollBehavior: "contain", touchAction: "none" }}
+        >
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.8, opacity: 0 }}
-            className="bg-gradient-to-br from-[#111453]/95 via-[#141779]/95 to-[#0b0c3f]/95 text-white border border-white/10 w-full max-w-sm rounded-[32px] p-8 text-center relative shadow-[0_20px_50px_rgba(20,23,121,0.5)] flex flex-col items-center justify-between gap-6 overflow-hidden"
+            className="bg-gradient-to-br from-[#111453]/95 via-[#141779]/95 to-[#0b0c3f]/95 text-white border border-white/10 w-full max-w-sm rounded-[32px] p-8 text-center relative shadow-[0_20px_50px_rgba(20,23,121,0.5)] flex flex-col items-center justify-between gap-6 overflow-hidden overscroll-contain select-text"
+            style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
           >
             <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-teal-400/20 blur-2xl pointer-events-none" />
             <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-orange-500/20 blur-2xl pointer-events-none" />

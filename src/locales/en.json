@@ -954,6 +954,8 @@
     "anger_management": "Anger Management",
     "anger_management_desc": "Keep a calm mind during tough moments.",
     "percent_to_target": "{{percent}}% to {{target}}",
+    "lessons_progress_fmt": "{{completed}}/{{total}} Lessons",
+    "lessons_completed_count": "{{total}}/{{total}} Lessons Completed",
     "xp_reward": "{{xp}} XP Reward",
     "locked_caps": "LOCKED",
     "focus_skills": "Focus",

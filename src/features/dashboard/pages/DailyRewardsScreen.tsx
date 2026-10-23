@@ -5,6 +5,7 @@ import { ArrowLeft, Gift, History, HelpCircle, Shield, Sparkles, Star } from "lu
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
+import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
 
 interface Reward {
   name: string;
@@ -42,6 +43,7 @@ export default function DailyRewardsScreen() {
   const [showModal, setShowModal] = useState(false);
   const [showBuyConfirmModal, setShowBuyConfirmModal] = useState(false);
   const [wonReward, setWonReward] = useState<Reward | null>(null);
+  useLockBodyScroll(Boolean(showModal && wonReward));
   const [errorMessage, setErrorMessage] = useState("");
 
   const wheelRef = useRef<HTMLDivElement>(null);
@@ -721,12 +723,18 @@ export default function DailyRewardsScreen() {
       {/* Winner Modal */}
       <AnimatePresence>
         {showModal && wonReward && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center px-6">
+          <div 
+            className="fixed inset-0 z-[100] flex items-center justify-center px-6"
+            style={{ touchAction: "none" }}
+            onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+          >
             {/* Overlay */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              style={{ touchAction: "none" }}
+              onTouchMove={(e) => e.preventDefault()}
               className="absolute inset-0 bg-slate-950/80"
               onClick={handleClaim}
             />
@@ -737,6 +745,7 @@ export default function DailyRewardsScreen() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              style={{ overscrollBehavior: "contain" }}
               className="relative bg-white w-full max-w-[360px] p-8 rounded-[32px] flex flex-col items-center text-center gap-6 border-2 border-slate-200 shadow-2xl overflow-hidden text-slate-950"
             >
               {/* Glow backdrop */}

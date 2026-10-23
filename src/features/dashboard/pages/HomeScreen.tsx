@@ -8,6 +8,7 @@ import AdventureHero from "../../../components/AdventureHero";
 import { startNavigationProgress } from "../../../components/NavigationProgressBar";
 import { getScopedItem, setScopedItem, getActiveUserContext, normalizeClassLevel } from "../../../utils/sessionCache";
 import { loadClassSkills } from "../../../data/neuroplay/skillsLoader";
+import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
 
 const ChildSwitcherModal = lazy(() => import("../../../components/ChildSwitcherModal"));
 
@@ -70,6 +71,16 @@ export default function HomeScreen() {
   const [showRevivalConfirmModal, setShowRevivalConfirmModal] = useState(false);
   const [revivalError, setRevivalError] = useState("");
   const [revivalLoading, setRevivalLoading] = useState(false);
+
+  useLockBodyScroll(
+    Boolean(
+      showDailyMissionModal ||
+      showSpinPopup ||
+      showStreakModal ||
+      showRevivalModal ||
+      showRevivalConfirmModal
+    )
+  );
 
   const handleOpenRevivalConfirm = () => {
     if (!streakRevivalData) return;
@@ -1096,12 +1107,17 @@ export default function HomeScreen() {
       {/* DAILY MISSIONS MODAL */}
       <AnimatePresence>
         {showDailyMissionModal && (
-          <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-hidden">
+          <div 
+            className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-hidden"
+            style={{ touchAction: "none" }}
+            onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+          >
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 30 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 30 }}
               transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
               className="bg-white text-slate-950 w-full max-w-[440px] h-auto max-h-[85vh] p-4 sm:p-6 rounded-[32px] border-2 border-slate-200 shadow-2xl flex flex-col relative overflow-hidden my-auto"
             >
               {/* Modal Header */}
@@ -1318,11 +1334,16 @@ export default function HomeScreen() {
       {/* DAILY FREE SPIN AUTO-POPUP */}
       <AnimatePresence>
         {showSpinPopup && (
-          <div className="fixed inset-0 z-[100] bg-[#f7f9fb]/90 backdrop-blur-md flex items-center justify-center p-6">
+          <div 
+            className="fixed inset-0 z-[100] bg-[#f7f9fb]/90 backdrop-blur-md flex items-center justify-center p-6"
+            style={{ touchAction: "none" }}
+            onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+          >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
+              style={{ overscrollBehavior: "contain" }}
               className="bg-gradient-to-br from-[#111453]/95 via-[#141779]/95 to-[#0b0c3f]/95 text-white w-full max-w-[360px] p-7 rounded-[32px] flex flex-col items-center text-center gap-5 border border-white/10 shadow-[0_20px_50px_rgba(20,23,121,0.5)] relative overflow-hidden"
             >
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(87,250,233,0.12)_0%,transparent_65%)] pointer-events-none" />
@@ -1396,12 +1417,17 @@ export default function HomeScreen() {
           }
 
           return (
-            <div className="fixed inset-0 z-[110] bg-[#0b0c3f]/80 backdrop-blur-md flex flex-col items-center justify-center p-6">
+            <div 
+              className="fixed inset-0 z-[110] bg-[#0b0c3f]/80 backdrop-blur-md flex flex-col items-center justify-center p-6"
+              style={{ touchAction: "none" }}
+              onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+            >
               <motion.div
                 initial={{ scale: 0.85, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.85, opacity: 0 }}
                 transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                style={{ overscrollBehavior: "contain" }}
                 className="bg-gradient-to-br from-[#111453] via-[#141779] to-[#0b0c3f] text-white border border-white/15 w-full max-w-sm rounded-[32px] p-7 text-center relative shadow-[0_20px_50px_rgba(20,23,121,0.6)] flex flex-col items-center justify-between gap-6 overflow-hidden"
               >
                 <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-teal-400/20 blur-2xl pointer-events-none" />
@@ -1472,8 +1498,15 @@ export default function HomeScreen() {
 
       {/* STREAK REVIVAL MODAL */}
       {showRevivalModal && streakRevivalData && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in select-none pointer-events-auto">
-          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border-2 border-red-500/30 flex flex-col items-center text-center relative overflow-hidden animate-scale-up">
+        <div 
+          className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in select-none pointer-events-auto"
+          style={{ touchAction: "none" }}
+          onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+        >
+          <div 
+            className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border-2 border-red-500/30 flex flex-col items-center text-center relative overflow-hidden animate-scale-up"
+            style={{ overscrollBehavior: "contain" }}
+          >
             <div className="absolute -top-12 -right-12 w-40 h-40 bg-red-500/10 rounded-full blur-2xl pointer-events-none" />
 
             <div className="w-20 h-20 rounded-3xl bg-red-50 text-red-500 flex items-center justify-center text-4xl mb-4 border border-red-200 shadow-inner">
@@ -1518,7 +1551,11 @@ export default function HomeScreen() {
       {/* STREAK REVIVAL CONFIRMATION MODAL */}
       <AnimatePresence>
         {showRevivalConfirmModal && streakRevivalData && (
-          <div className="fixed inset-0 z-[1001] flex items-center justify-center px-6">
+          <div 
+            className="fixed inset-0 z-[1001] flex items-center justify-center px-6"
+            style={{ touchAction: "none" }}
+            onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+          >
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1532,6 +1569,7 @@ export default function HomeScreen() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              style={{ overscrollBehavior: "contain" }}
               className="relative bg-white w-full max-w-[360px] p-6 rounded-[32px] flex flex-col items-center text-center gap-5 border-2 border-indigo-100 shadow-2xl overflow-hidden z-10 text-slate-950"
             >
               <div className="w-16 h-16 rounded-full bg-indigo-50 border-2 border-indigo-200 flex items-center justify-center text-3xl shadow-inner">

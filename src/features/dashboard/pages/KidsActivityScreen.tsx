@@ -5,6 +5,7 @@ import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
 import { getScopedItem, setScopedItem, removeScopedItem, getActiveUserContext } from "../../../utils/sessionCache";
 import { filterUniqueQuestions } from "../../../utils/quizQuestionUtils";
+import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
 
 export default function KidsActivityScreen() {
   const { t } = useTranslation();
@@ -52,6 +53,8 @@ export default function KidsActivityScreen() {
   const [engagementHours, setEngagementHours] = useState(cached?.engagementHours || "0");
   const [engagementTrend, setEngagementTrend] = useState<number | null>(cached?.engagementTrend !== undefined ? cached.engagementTrend : null);
   const [selectedActivity, setSelectedActivity] = useState<any>(null);
+
+  useLockBodyScroll(Boolean(selectedActivity));
 
   const modalUniqueDetails = useMemo(() => {
     if (!selectedActivity || !Array.isArray(selectedActivity.details)) return [];
@@ -114,7 +117,13 @@ export default function KidsActivityScreen() {
     if (seconds === undefined || seconds === null) return `0 ${t("sec", "sec")}`;
     if (seconds < 60) return `${seconds} ${t("sec", "sec")}`;
     const mins = Math.floor(seconds / 60);
-    if (mins < 60) return `${mins} ${t("mins", "mins")}`;
+    const remainingSecs = seconds % 60;
+    if (mins < 60) {
+      if (remainingSecs > 0) {
+        return `${mins} ${t("mins", "mins")} ${remainingSecs} ${t("sec", "sec")}`;
+      }
+      return `${mins} ${t("mins", "mins")}`;
+    }
     const hours = Math.floor(mins / 60);
     const remainingMins = mins % 60;
     const hourStr = hours === 1 ? t("hr", "hr") : t("hrs", "hrs");
@@ -512,8 +521,19 @@ export default function KidsActivityScreen() {
 
       {/* Details Modal */}
       {selectedActivity && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-6 animate-in fade-in duration-200">
-          <div className="bg-white w-full sm:max-w-md rounded-t-[32px] sm:rounded-[24px] max-h-[90vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-5">
+        <div 
+          onClick={() => setSelectedActivity(null)}
+          onTouchMove={(e) => {
+            if (e.target === e.currentTarget) e.preventDefault();
+          }}
+          className="fixed inset-0 z-[100] bg-slate-900/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-6 animate-in fade-in duration-200 overscroll-contain select-none"
+          style={{ overscrollBehavior: "contain", touchAction: "none" }}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white w-full sm:max-w-md rounded-t-[32px] sm:rounded-[24px] max-h-[90vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-5 overscroll-contain select-text"
+            style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
+          >
             
             {/* Modal Header */}
             <div className="px-6 py-5 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white z-10 rounded-t-[32px] sm:rounded-[24px]">
@@ -551,7 +571,10 @@ export default function KidsActivityScreen() {
             </div>
             
             {/* Modal Body */}
-            <div className="p-6 overflow-y-auto flex-1 bg-slate-50">
+            <div 
+              className="p-6 overflow-y-auto flex-1 bg-slate-50 overscroll-contain"
+              style={{ overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}
+            >
               <h3 className="text-xs font-black text-slate-500 uppercase tracking-wider mb-4">
                 {selectedActivity.type === 'reading' ? t('session_details', 'Session Details') : t('question_breakdown', 'Question Breakdown')}
               </h3>

@@ -958,6 +958,8 @@
     "anger_management": "क्रोध नियंत्रण",
     "anger_management_desc": "कठिन समय में मन शांत रखें।",
     "percent_to_target": "{{target}} की ओर {{percent}}%",
+    "lessons_progress_fmt": "{{completed}}/{{total}} पाठ",
+    "lessons_completed_count": "{{total}}/{{total}} पाठ पूर्ण",
     "xp_reward": "{{xp}} XP पुरस्कार",
     "locked_caps": "लॉक",
     "focus_skills": "एकाग्रता",

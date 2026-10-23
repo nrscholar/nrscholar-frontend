@@ -25,6 +25,7 @@ import { getScopedItem, setScopedItem, removeScopedItem, getActiveUserContext } 
 import { showInteractiveNotification } from "../../../services/pushNotificationService";
 import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
+import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
 import {
   filterUniqueQuestions,
   filterCrossUniqueQuestions,
@@ -385,6 +386,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   const [revivalSpins, setRevivalSpins] = useState(0);
   const [hasDoubleDamage, setHasDoubleDamage] = useState(false);
   const [lossOverlay, setLossOverlay] = useState<{ show: boolean; xpLoss: number }>({ show: false, xpLoss: 0 });
+  useLockBodyScroll(Boolean(showReviveModal || lossOverlay.show));
   const showToast = (message: string, type: "gamification" | "error" | "success" | "warning" = "gamification") => {
     showNotificationToast({
       title: "Mission Update",
@@ -2613,10 +2615,15 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       )}
 
       {showReviveModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 sm:p-6 text-center select-none">
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 sm:p-6 text-center select-none"
+          style={{ touchAction: "none" }}
+          onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+        >
           <motion.div
             initial={{ scale: 0.92, opacity: 0, y: 16 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
+            style={{ overscrollBehavior: "contain" }}
             className="bg-white border border-slate-100 rounded-[32px] p-6 sm:p-7 max-w-[360px] w-full shadow-[0_20px_60px_rgba(20,23,121,0.18)] flex flex-col items-center relative text-center"
           >
             <div className="w-16 h-16 rounded-full bg-teal-50 border border-teal-200 flex items-center justify-center mb-2 shadow-xs">
@@ -2716,11 +2723,16 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
       {/* Defeat/Retreat Overlay Animation */}
       {lossOverlay.show && (
-        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 sm:p-6 text-center select-none">
+        <div 
+          className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 sm:p-6 text-center select-none"
+          style={{ touchAction: "none" }}
+          onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+        >
           <motion.div
             initial={{ scale: 0.92, opacity: 0, y: 16 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             transition={{ type: "spring", stiffness: 350, damping: 26 }}
+            style={{ overscrollBehavior: "contain" }}
             className="bg-white border border-slate-100 rounded-[32px] p-6 sm:p-7 max-w-[360px] w-full shadow-[0_20px_60px_rgba(20,23,121,0.18)] flex flex-col items-center relative text-center"
           >
             {/* Spotlight Icon Badge */}

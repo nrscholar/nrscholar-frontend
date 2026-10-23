@@ -178,11 +178,23 @@ export default function NeuroPlayScreen() {
   // View mode: 'library' | 'player'
   const [viewMode, setViewMode] = useState<"library" | "player">("library");
 
+  // Selected class tab filter: 'for_you' | 'completed' | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
+  const [activeTab, setActiveTab] = useState<string | number>("for_you");
+
+  // Selected skill ID for player
+  const [selectedSkillId, setSelectedSkillId] = useState<string>("skill_c1_01");
+
   // Track current viewMode for popstate handler
   const viewModeRef = useRef(viewMode);
   useEffect(() => {
     viewModeRef.current = viewMode;
   }, [viewMode]);
+
+  // Track start time for actual elapsed time taken by child
+  const skillStartTimeRef = useRef<number>(Date.now());
+  useEffect(() => {
+    skillStartTimeRef.current = Date.now();
+  }, [selectedSkillId]);
 
   // Handle hardware / browser phone back button while playing a skill
   useEffect(() => {
@@ -208,12 +220,6 @@ export default function NeuroPlayScreen() {
       setViewMode("library");
     }
   };
-  
-  // Selected class tab filter: 'for_you' | 'completed' | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
-  const [activeTab, setActiveTab] = useState<string | number>("for_you");
-
-  // Selected skill ID for player
-  const [selectedSkillId, setSelectedSkillId] = useState<string>("skill_c1_01");
 
   // Card interactive state inside player
   const [activeCardIndex, setActiveCardIndex] = useState(0);
@@ -420,6 +426,7 @@ export default function NeuroPlayScreen() {
     setChecklistState([false, false, false, false]);
     setMissionClaimed(completedSkillIds.includes(skill.id));
     setQuestionErrorToast(null);
+    skillStartTimeRef.current = Date.now();
 
     // Push history state so phone hardware/browser back button returns to NeuroPlay library
     if (!window.history.state || window.history.state.neuroplayMode !== "player") {
@@ -530,23 +537,26 @@ export default function NeuroPlayScreen() {
         console.error("Backend NeuroPlay sync error:", syncErr);
       }
 
-      // 3. Also log activity for telemetry
+      // 3. Also log activity for telemetry with genuine elapsed time taken by child
       if (isFirstTime) {
         try {
           const skillTitle = getText(selectedSkill.title) || selectedSkill.id;
+          const now = Date.now();
+          const startTime = skillStartTimeRef.current || now;
+          const elapsedSeconds = Math.max(5, Math.round((now - startTime) / 1000));
           await apiFetch("/api/parent/activities", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               title: `NeuroPlay: ${skillTitle}`,
               type: "quiz",
-              timeTaken: 120,
+              timeTaken: elapsedSeconds,
               correctQuestions: 1,
               totalQuestions: 1,
               details: [{
                 questionText: skillTitle,
                 isCorrect: true,
-                timeSpent: 120,
+                timeSpent: elapsedSeconds,
                 skill: skillTitle,
                 xp: xpGained
               }]

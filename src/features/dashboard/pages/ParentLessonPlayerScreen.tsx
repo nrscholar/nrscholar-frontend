@@ -80,6 +80,7 @@ export default function ParentLessonPlayerScreen() {
     try {
       // Invalidate session cache immediately
       sessionStorage.removeItem("parent_learning_library_cache");
+      sessionStorage.removeItem("parent_roadmap_cache");
       const res = await apiFetch('/api/parent/learning-library/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

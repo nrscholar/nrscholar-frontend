@@ -3,6 +3,7 @@ import { X, Plus, Check, Sparkles, Copy, CheckCircle2, KeyRound, ChevronDown, Lo
 import { apiFetch } from "../api";
 import { useTranslation } from "react-i18next";
 import { copyToClipboard } from "../utils/clipboard";
+import { useLockBodyScroll } from "../utils/useLockBodyScroll";
 
 interface ChildProfile {
   childId: string;
@@ -39,6 +40,8 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
   const [newBoard, setNewBoard] = useState("CBSE");
   const [isClassOpen, setIsClassOpen] = useState(false);
   const classes = ["Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"];
+
+  useLockBodyScroll(isOpen);
 
   if (!isOpen) return null;
 
@@ -186,8 +189,18 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
   };
 
   return (
-    <div className="fixed inset-0 bg-[#0f114a]/80 backdrop-blur-md z-[99999] flex items-center justify-center p-3 sm:p-4 font-sans animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl max-w-sm w-full max-h-[90vh] flex flex-col p-4 sm:p-5 shadow-2xl relative border border-white/60">
+    <div 
+      onTouchMove={(e) => {
+        if (e.target === e.currentTarget) e.preventDefault();
+      }}
+      className="fixed inset-0 bg-[#0f114a]/80 backdrop-blur-md z-[99999] flex items-center justify-center p-3 sm:p-4 font-sans animate-in fade-in duration-200 overscroll-contain select-none"
+      style={{ overscrollBehavior: "contain", touchAction: "none" }}
+    >
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-2xl max-w-sm w-full max-h-[90vh] flex flex-col p-4 sm:p-5 shadow-2xl relative border border-white/60 overscroll-contain select-text"
+        style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
+      >
         
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-gray-100 shrink-0">
@@ -204,7 +217,10 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
         </div>
 
         {/* Scrollable Modal Content */}
-        <div className="flex-1 overflow-y-auto pr-0.5 space-y-3 pt-3">
+        <div 
+          className="flex-1 overflow-y-auto pr-0.5 space-y-3 pt-3 overscroll-contain"
+          style={{ overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}
+        >
           
           {/* Informational Co-Parent View-Only Banner */}
           {isCoParent && (

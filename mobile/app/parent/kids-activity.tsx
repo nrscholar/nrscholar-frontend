@@ -91,7 +91,10 @@ function formatDuration(seconds: number): string {
   if (!seconds || seconds <= 0) return "—";
   if (seconds < 60) return `${seconds}s`;
   const mins = Math.floor(seconds / 60);
-  if (mins < 60) return `${mins} min`;
+  const remSecs = seconds % 60;
+  if (mins < 60) {
+    return remSecs > 0 ? `${mins}m ${remSecs}s` : `${mins} min`;
+  }
   const hrs = Math.floor(mins / 60);
   const rem = mins % 60;
   return rem > 0 ? `${hrs}h ${rem}m` : `${hrs}h`;

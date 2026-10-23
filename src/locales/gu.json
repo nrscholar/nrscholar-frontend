@@ -949,6 +949,8 @@
     "anger_management": "ક્રોધ નિયંત્રણ",
     "anger_management_desc": "મુશ્કેલ ક્ષણોમાં શાંત મન રાખો.",
     "percent_to_target": "{{target}} તરફ {{percent}}%",
+    "lessons_progress_fmt": "{{completed}}/{{total}} પાઠ",
+    "lessons_completed_count": "{{total}}/{{total}} પાઠ પૂર્ણ",
     "xp_reward": "{{xp}} XP ઇનામ",
     "locked_caps": "લૉક",
     "focus_skills": "એકાગ્રતા",

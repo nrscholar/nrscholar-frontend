@@ -14,6 +14,7 @@ import {
   RISK_AMBER_SHADES, 
   WEAKNESS_RED_SHADES 
 } from "../../../utils/chartColors";
+import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
 
 export default function ParentDashboardScreen() {
   const { t } = useTranslation();
@@ -246,6 +247,9 @@ export default function ParentDashboardScreen() {
   useEffect(() => {
     showBreakdownModalRef.current = showBreakdownModal;
   }, [showBreakdownModal]);
+
+  // Lock background scrolling and touch interactions whenever any modal is active
+  useLockBodyScroll(Boolean(modalType || showBreakdownModal || showNotifications));
 
   // Handle hardware / browser phone back button while modal is open to dismiss modal without leaving dashboard
   useEffect(() => {
@@ -1751,11 +1755,16 @@ export default function ParentDashboardScreen() {
       {modalType && (
         <div 
           onClick={handleCloseModal}
-          className="fixed inset-0 bg-black/40 z-[100] flex justify-center items-end sm:items-center p-0 sm:p-5 backdrop-blur-sm animate-in fade-in duration-300"
+          onTouchMove={(e) => {
+            if (e.target === e.currentTarget) e.preventDefault();
+          }}
+          className="fixed inset-0 bg-black/40 z-[100] flex justify-center items-end sm:items-center p-0 sm:p-5 backdrop-blur-sm animate-in fade-in duration-300 overscroll-contain select-none"
+          style={{ overscrollBehavior: "contain", touchAction: "none" }}
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#f7f9fb] w-full sm:w-[400px] max-w-full rounded-t-3xl sm:rounded-3xl max-h-[90vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-10 duration-300"
+            className="bg-[#f7f9fb] w-full sm:w-[400px] max-w-full rounded-t-3xl sm:rounded-3xl max-h-[90vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-10 duration-300 overscroll-contain select-text"
+            style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
           >
             <div className="flex justify-between items-center p-5 border-b border-gray-100 shrink-0">
               <div className="flex items-center gap-3">
@@ -1782,7 +1791,10 @@ export default function ParentDashboardScreen() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+            <div 
+              className="flex-1 overflow-y-auto p-5 space-y-4 overscroll-contain"
+              style={{ overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}
+            >
               {!hasEnoughData || subjectBreakdown.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-8 bg-slate-50 border border-slate-200/80 rounded-2xl text-center my-4">
                   <span className="text-4xl mb-2">📊</span>
@@ -2137,8 +2149,19 @@ export default function ParentDashboardScreen() {
 
       {/* Notifications Side Panel / Modal Drawer */}
       {showNotifications && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[100] flex justify-end animate-in fade-in duration-200">
-          <div className="w-full sm:w-[420px] h-full bg-[#f7f9fb] shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+        <div 
+          onClick={() => setShowNotifications(false)}
+          onTouchMove={(e) => {
+            if (e.target === e.currentTarget) e.preventDefault();
+          }}
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[100] flex justify-end animate-in fade-in duration-200 overscroll-contain select-none"
+          style={{ overscrollBehavior: "contain", touchAction: "none" }}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="w-full sm:w-[420px] h-full bg-[#f7f9fb] shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 overscroll-contain select-text"
+            style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
+          >
             {/* Header */}
             <div className="flex justify-between items-center p-5 sm:p-6 border-b border-slate-200/80 bg-white">
               <div className="flex items-center gap-2.5">
@@ -2235,11 +2258,16 @@ export default function ParentDashboardScreen() {
       {showBreakdownModal && (
         <div 
           onClick={closeBreakdown}
-          className="fixed inset-0 bg-[#0f114a]/75 backdrop-blur-md z-[99999] flex items-center justify-center p-3 sm:p-4 font-sans animate-in fade-in duration-200"
+          onTouchMove={(e) => {
+            if (e.target === e.currentTarget) e.preventDefault();
+          }}
+          className="fixed inset-0 bg-[#0f114a]/75 backdrop-blur-md z-[99999] flex items-center justify-center p-3 sm:p-4 font-sans animate-in fade-in duration-200 overscroll-contain select-none"
+          style={{ overscrollBehavior: "contain", touchAction: "none" }}
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-[24px] sm:rounded-[32px] max-w-lg w-full max-h-[90vh] flex flex-col p-5 sm:p-6 shadow-2xl relative border border-white/60"
+            className="bg-white rounded-[24px] sm:rounded-[32px] max-w-lg w-full max-h-[90vh] flex flex-col p-5 sm:p-6 shadow-2xl relative border border-white/60 overscroll-contain select-text"
+            style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
           >
             
             {/* Modal Header */}

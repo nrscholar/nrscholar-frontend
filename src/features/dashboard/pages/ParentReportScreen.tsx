@@ -5,13 +5,15 @@ import {
   ArrowLeft, Clock, TrendingUp, AlertTriangle, CheckCircle,
   Calculator, Atom, BookOpen, Star, Target, Lightbulb,
   Award, BookOpenCheck, Loader2, Brain, Zap, ShieldCheck, BookMarked,
-  ChevronDown, ChevronUp, ChevronRight, BarChart2, Settings, Bell
+  ChevronDown, ChevronUp, ChevronRight, BarChart2, Settings, Bell,
+  Download, SlidersHorizontal
 } from "lucide-react";
 import { apiFetch } from "../../../api";
 import ChildSwitcherModal from "../../../components/ChildSwitcherModal";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 import { getSubjectChartColor, DISTINCT_SUBJECT_PALETTE } from "../../../utils/chartColors";
 import { getScopedItem, setScopedItem, removeScopedItem, getActiveUserContext } from "../../../utils/sessionCache";
+import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
 
 const SUBJECT_COLORS = DISTINCT_SUBJECT_PALETTE;
 
@@ -436,34 +438,27 @@ export default function ParentReportScreen() {
           </div>
         )}
 
-        {/* Report Actions Card Skeleton */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-          <div className="p-4 sm:p-5 pb-3.5 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl animate-skeleton shrink-0" />
-            <div className="min-w-0 flex-1 space-y-1.5">
-              <div className="h-4 w-32 rounded-md animate-skeleton" />
-              <div className="h-3 w-48 rounded-md animate-skeleton" />
+        {/* Report Actions Side-by-Side Skeleton */}
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          <div className="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200/80 shadow-xs flex flex-col justify-between h-28">
+            <div className="flex items-center justify-between">
+              <div className="w-10 h-10 rounded-xl animate-skeleton shrink-0" />
+              <div className="w-4 h-4 rounded-md animate-skeleton shrink-0" />
+            </div>
+            <div className="space-y-1.5 mt-2">
+              <div className="h-3.5 w-20 rounded-md animate-skeleton" />
+              <div className="h-2.5 w-28 rounded-md animate-skeleton" />
             </div>
           </div>
-          <div className="p-3.5 sm:p-4 flex items-center justify-between gap-3 border-t border-slate-100">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="w-9 h-9 rounded-xl animate-skeleton shrink-0" />
-              <div className="min-w-0 flex-1 space-y-1.5">
-                <div className="h-3.5 w-24 rounded-md animate-skeleton" />
-                <div className="h-2.5 w-44 rounded-md animate-skeleton" />
-              </div>
+          <div className="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200/80 shadow-xs flex flex-col justify-between h-28">
+            <div className="flex items-center justify-between">
+              <div className="w-10 h-10 rounded-xl animate-skeleton shrink-0" />
+              <div className="w-4 h-4 rounded-md animate-skeleton shrink-0" />
             </div>
-            <div className="w-4 h-4 rounded-md animate-skeleton shrink-0" />
-          </div>
-          <div className="p-3.5 sm:p-4 flex items-center justify-between gap-3 border-t border-slate-100">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="w-9 h-9 rounded-xl animate-skeleton shrink-0" />
-              <div className="min-w-0 flex-1 space-y-1.5">
-                <div className="h-3.5 w-32 rounded-md animate-skeleton" />
-                <div className="h-2.5 w-40 rounded-md animate-skeleton" />
-              </div>
+            <div className="space-y-1.5 mt-2">
+              <div className="h-3.5 w-24 rounded-md animate-skeleton" />
+              <div className="h-2.5 w-28 rounded-md animate-skeleton" />
             </div>
-            <div className="w-4 h-4 rounded-md animate-skeleton shrink-0" />
           </div>
         </div>
 
@@ -1061,72 +1056,59 @@ export default function ParentReportScreen() {
           </div>
         )}
 
-        {/* Report Actions Card */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-          {/* Section Header */}
-          <div className="p-4 sm:p-5 pb-3.5 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-base shrink-0">
-              📄
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="text-sm sm:text-base font-black text-[#141779] leading-tight">
-                {t('report_actions', 'Report Actions')}
-              </h3>
-              <p className="text-xs font-bold text-slate-500 mt-0.5 leading-tight">
-                {t('report_actions_subtitle', 'Manage and export your generated report')}
-              </p>
-            </div>
-          </div>
-
+        {/* Report Actions: Side-by-Side Interactive Tiles */}
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           {/* Action Tile 1: Customize */}
           <button
             type="button"
             onClick={() => setShowCustomizeSheet(true)}
-            className="w-full p-3.5 sm:p-4 text-left hover:bg-slate-50/80 active:bg-slate-100/80 transition-all flex items-center justify-between gap-3 group cursor-pointer border-t border-slate-100"
+            className="group relative bg-white hover:bg-slate-50/90 active:scale-[0.98] transition-all duration-200 rounded-2xl p-3.5 sm:p-4 border border-slate-200/80 hover:border-indigo-300/80 shadow-[0_2px_10px_rgba(20,23,121,0.04)] hover:shadow-[0_6px_20px_rgba(20,23,121,0.08)] flex flex-col justify-between text-left cursor-pointer overflow-hidden min-h-[114px]"
           >
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200/60 flex items-center justify-center text-base shrink-0 group-hover:bg-indigo-50 group-hover:border-indigo-100 transition-colors">
-                ⚙️
+            <div className="flex items-center justify-between w-full mb-2.5">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100/90 flex items-center justify-center text-[#141779] shadow-2xs group-hover:bg-[#141779] group-hover:text-white transition-all duration-200 shrink-0">
+                <SlidersHorizontal size={18} className="stroke-[2.2] transition-transform duration-200 group-hover:rotate-12" />
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h4 className="text-xs sm:text-sm font-black text-slate-800 group-hover:text-[#141779] transition-colors leading-tight">
-                    {t('customize', 'Customize')}
-                  </h4>
-                  {(dateFilter !== "this_week" || subjectFilter !== "all") && (
-                    <span className="text-[10px] font-black bg-indigo-50 border border-indigo-200 text-[#141779] px-2 py-0.5 rounded-full shrink-0">
-                      {getDateLabel().label.replace(/📅\s*/, "")} • {subjectFilter === "all" ? t('all_subjects', 'All Subjects') : getTranslatedSubject(subjectFilter)}
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs font-bold text-slate-500 mt-0.5 truncate leading-tight">
-                  {t('personalize_report_appearance', 'Personalize report appearance')}
-                </p>
+              <div className="flex items-center gap-1.5">
+                {(dateFilter !== "this_week" || subjectFilter !== "all") && (
+                  <span className="w-2 h-2 rounded-full bg-[#141779] ring-4 ring-indigo-50" title="Active filters applied" />
+                )}
+                <ChevronRight size={16} className="text-slate-300 group-hover:text-[#141779] group-hover:translate-x-0.5 transition-all shrink-0" />
               </div>
             </div>
-            <ChevronRight size={18} className="text-slate-400 group-hover:text-[#141779] group-hover:translate-x-0.5 transition-all shrink-0" />
+
+            <div className="min-w-0 w-full">
+              <h4 className="text-xs sm:text-sm font-black text-slate-900 group-hover:text-[#141779] transition-colors leading-tight truncate">
+                {t('customize', 'Customize')}
+              </h4>
+              <p className="text-[11px] font-bold text-slate-400 group-hover:text-slate-500 mt-0.5 leading-snug truncate">
+                {(dateFilter !== "this_week" || subjectFilter !== "all")
+                  ? `${getDateLabel().label.replace(/📅\s*/, "")} • ${subjectFilter === "all" ? t('all_subjects', 'All Subjects') : getTranslatedSubject(subjectFilter)}`
+                  : t('personalize_report_appearance', 'Personalize report appearance')}
+              </p>
+            </div>
           </button>
 
           {/* Action Tile 2: Export Report Data */}
           <button
             type="button"
             onClick={() => setShowExportSheet(true)}
-            className="w-full p-3.5 sm:p-4 text-left hover:bg-slate-50/80 active:bg-slate-100/80 transition-all flex items-center justify-between gap-3 group cursor-pointer border-t border-slate-100"
+            className="group relative bg-white hover:bg-slate-50/90 active:scale-[0.98] transition-all duration-200 rounded-2xl p-3.5 sm:p-4 border border-slate-200/80 hover:border-indigo-300/80 shadow-[0_2px_10px_rgba(20,23,121,0.04)] hover:shadow-[0_6px_20px_rgba(20,23,121,0.08)] flex flex-col justify-between text-left cursor-pointer overflow-hidden min-h-[114px]"
           >
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-base shrink-0 group-hover:bg-emerald-50 group-hover:border-emerald-100 transition-colors">
-                ⬇️
+            <div className="flex items-center justify-between w-full mb-2.5">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#141779] via-[#1c1970] to-[#25218c] text-[#57fae9] shadow-sm shadow-indigo-950/25 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:shadow-indigo-900/35 transition-all duration-200">
+                <Download size={18} className="stroke-[2.5] transition-transform duration-200 group-hover:translate-y-0.5" />
               </div>
-              <div className="min-w-0 flex-1">
-                <h4 className="text-xs sm:text-sm font-black text-slate-800 group-hover:text-[#141779] transition-colors leading-tight">
-                  {t('export_report_data', 'Export Report Data')}
-                </h4>
-                <p className="text-xs font-bold text-slate-500 mt-0.5 truncate leading-tight">
-                  {t('download_formats_subtitle', 'Download PDF, Excel or CSV')}
-                </p>
-              </div>
+              <ChevronRight size={16} className="text-slate-300 group-hover:text-[#141779] group-hover:translate-x-0.5 transition-all shrink-0" />
             </div>
-            <ChevronRight size={18} className="text-slate-400 group-hover:text-[#141779] group-hover:translate-x-0.5 transition-all shrink-0" />
+
+            <div className="min-w-0 w-full">
+              <h4 className="text-xs sm:text-sm font-black text-slate-900 group-hover:text-[#141779] transition-colors leading-tight truncate">
+                {t('export_report_data', 'Export Report Data')}
+              </h4>
+              <p className="text-[11px] font-bold text-slate-400 group-hover:text-slate-500 mt-0.5 leading-snug truncate">
+                {t('download_formats_subtitle', 'Download PDF, Excel or CSV')}
+              </p>
+            </div>
           </button>
         </div>
 
@@ -1700,11 +1682,23 @@ export default function ParentReportScreen() {
 
 function BottomSheet({ isOpen, onClose, title, children }: { isOpen: boolean, onClose: () => void, title: string, children: React.ReactNode }) {
   const { t } = useTranslation();
+  useLockBodyScroll(isOpen);
+
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 bg-slate-950/60 z-[200] flex items-end justify-center animate-in fade-in duration-200">
+    <div 
+      onTouchMove={(e) => {
+        if (e.target === e.currentTarget) e.preventDefault();
+      }}
+      className="fixed inset-0 bg-slate-950/60 z-[200] flex items-end justify-center animate-in fade-in duration-200 overscroll-contain select-none"
+      style={{ overscrollBehavior: "contain", touchAction: "none" }}
+    >
       <div className="absolute inset-0" onClick={onClose} />
-      <div className="bg-white rounded-t-[32px] w-full max-w-[430px] p-6 pb-10 relative z-10 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[90vh] overflow-y-auto font-sans">
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-t-[32px] w-full max-w-[430px] p-6 pb-10 relative z-10 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[90vh] overflow-y-auto font-sans overscroll-contain select-text"
+        style={{ overscrollBehavior: "contain", touchAction: "pan-y", WebkitOverflowScrolling: "touch" }}
+      >
         <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-5" />
         <div className="flex justify-between items-center mb-5">
           <h3 className="text-base font-black text-[#141779]">{title}</h3>

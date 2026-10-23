@@ -7,6 +7,7 @@ import {
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
 import { getActiveUserContext } from "../../../utils/sessionCache";
+import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
 
 export default function ParentAchievementsScreen() {
   const { t } = useTranslation();
@@ -19,6 +20,8 @@ export default function ParentAchievementsScreen() {
   const [parentPhoto, setParentPhoto] = useState("");
   const [username, setUsername] = useState("Parent");
   const [filter, setFilter] = useState<"all" | "unlocked" | "locked">("all");
+
+  useLockBodyScroll(Boolean(activeAchievement));
 
   useEffect(() => {
     async function fetchStats() {
@@ -451,9 +454,17 @@ export default function ParentAchievementsScreen() {
 
         {/* Bento Details Sliding Bottom Drawer */}
         {activeAchievement && (
-          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-[100] flex items-end justify-center animate-fade-in" onClick={hideDetails}>
+          <div 
+            onTouchMove={(e) => {
+              if (e.target === e.currentTarget) e.preventDefault();
+            }}
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-[100] flex items-end justify-center animate-fade-in overscroll-contain select-none" 
+            style={{ overscrollBehavior: "contain", touchAction: "none" }}
+            onClick={hideDetails}
+          >
             <div 
-              className="w-full max-w-lg bg-white rounded-t-[32px] p-6 shadow-2xl border-t border-slate-200 flex flex-col gap-4 animate-slide-up"
+              className="w-full max-w-lg bg-white rounded-t-[32px] p-6 shadow-2xl border-t border-slate-200 flex flex-col gap-4 animate-slide-up overscroll-contain select-text"
+              style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Drawer Pull Element */}
