@@ -125,9 +125,16 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
       const json = await res.json();
       if (json.success && json.data?.user) {
         localStorage.setItem("userData", JSON.stringify(json.data.user));
-        const pin = sessionStorage.getItem("parentPinVerified");
-        sessionStorage.clear(); // Clear cached subject/chapter progress for previous child
-        if (pin) sessionStorage.setItem("parentPinVerified", pin);
+        // Remove legacy flat keys if any exist, preserving all scoped session data and auth tokens
+        const legacyFlatKeys = [
+          "activeSubjectId",
+          "cached_chapter_progress",
+          "cached_completed_chapters",
+          "cached_practice_subjects"
+        ];
+        legacyFlatKeys.forEach((k) => {
+          try { sessionStorage.removeItem(k); } catch (_) {}
+        });
         onUserUpdated(json.data.user);
         window.dispatchEvent(new Event("userDataUpdated"));
         onClose();

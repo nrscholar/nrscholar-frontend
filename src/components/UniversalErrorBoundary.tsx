@@ -1,4 +1,5 @@
 import React from "react";
+import { getDynamicHomeRoute } from "./UniversalErrorScreen";
 
 const UniversalErrorScreen = React.lazy(() => import("./UniversalErrorScreen"));
 
@@ -34,7 +35,8 @@ export class UniversalErrorBoundary extends React.Component<
             }}
             onHome={() => {
               this.setState({ hasError: false, error: undefined });
-              window.location.href = "/home";
+              const targetRoute = getDynamicHomeRoute();
+              window.location.href = targetRoute;
             }}
           />
         </React.Suspense>

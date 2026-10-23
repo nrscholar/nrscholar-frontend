@@ -163,6 +163,7 @@ export default function EditProfileScreen() {
       const data = await res.json();
       if (data.success) {
         localStorage.setItem("userData", JSON.stringify(data.data.user));
+        window.dispatchEvent(new Event("userDataUpdated"));
         setMsg(t('profile_updated_successfully'));
         setTimeout(() => navigate(-1), 1500);
       } else {

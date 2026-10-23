@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Rocket, Star, Check, Sparkles, Brain, Lock, Trophy, BookOpen, TrendingUp, Users, Settings, Play, ArrowLeft, Home, BarChart2 } from "lucide-react";
+import { Rocket, Star, Check, Sparkles, Brain, Lock, Trophy, BookOpen, TrendingUp, Users, Settings, Play, ArrowLeft, Home, BarChart2, Bell } from "lucide-react";
 import { apiFetch } from "../../../api";
+import { getActiveUserContext } from "../../../utils/sessionCache";
 import { useTranslation } from "react-i18next";
 
 const IconMap: Record<string, any> = {
@@ -36,9 +37,13 @@ export default function ParentRoadmapScreen() {
   useEffect(() => {
     async function fetchRoadmap() {
       try {
+        const ctx = getActiveUserContext();
+        const childParam = ctx.childId ? `childId=${encodeURIComponent(ctx.childId)}` : "";
+        const classParam = ctx.classLevel ? `classLevel=${encodeURIComponent(ctx.classLevel)}` : "";
+        const qParams = [childParam, classParam].filter(Boolean).join("&");
         const [resUser, resRoadmap] = await Promise.all([
           apiFetch("/api/users/me").catch(() => null),
-          apiFetch("/api/parent/roadmap").catch(() => null)
+          apiFetch(`/api/parent/roadmap${qParams ? `?${qParams}` : ""}`).catch(() => null)
         ]);
 
         if (resUser) {
@@ -195,12 +200,15 @@ export default function ParentRoadmapScreen() {
     return (
       <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans overflow-hidden">
         {/* Top Header Skeleton */}
-        <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl border-b border-white/40 shadow-xs flex justify-between items-center px-6 h-16">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full animate-skeleton shrink-0"></div>
+        <header className="sticky top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 h-16 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] w-full">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full animate-skeleton shrink-0"></div>
             <div className="h-6 w-36 rounded-lg animate-skeleton"></div>
           </div>
-          <div className="h-7 w-24 rounded-full animate-skeleton"></div>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full animate-skeleton shrink-0"></div>
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full animate-skeleton shrink-0"></div>
+          </div>
         </header>
 
         {/* Roadmap Path Stages Skeleton */}
@@ -270,27 +278,49 @@ export default function ParentRoadmapScreen() {
       `}</style>
 
       {/* TopAppBar Navigation */}
-      <header className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex justify-between items-center px-6 h-16">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-1 hover:bg-[rgba(20,23,121,0.05)] rounded-full transition-colors active:scale-95">
-            <ArrowLeft size={24} color="#141779" />
+      <header className="sticky top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex justify-between items-center px-4 sm:px-6 h-16 w-full">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+          <button 
+            onClick={() => navigate(-1)} 
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("back", "Back")}
+          >
+            <ArrowLeft size={19} />
           </button>
-          <div className="w-10 h-10 rounded-full border-2 border-[#141779]/20 overflow-hidden bg-white shrink-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-slate-200/80 overflow-hidden bg-white shrink-0 shadow-2xs">
             <img 
               alt="User Profile" 
               className="w-full h-full object-cover"
               src={profilePic || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`}
             />
           </div>
-          <Rocket size={20} color="#141779" className="hidden sm:block" />
-          <h1 className="text-xl font-bold text-[#141779] whitespace-nowrap">{t("growth_journey") || "Growth Journey"}</h1>
+          <Rocket size={18} color="#141779" className="hidden sm:block shrink-0" />
+          <h1 className="text-base sm:text-lg font-black text-[#141779] whitespace-nowrap truncate leading-tight">{t("growth_journey") || "Growth Journey"}</h1>
+        </div>
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <button 
+            onClick={() => navigate('/parent/settings')}
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("settings", "Settings")}
+            title={t("settings", "Settings")}
+          >
+            <Settings size={18} />
+          </button>
+          <button
+            onClick={() => navigate('/notifications')}
+            className="relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("notifications", "Notifications")}
+            title={t("notifications", "Notifications")}
+          >
+            <Bell size={18} />
+          </button>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="relative h-screen w-full flex flex-col items-center justify-center pt-20 pb-24">
+      <main className="relative h-[calc(100vh-64px)] w-full flex flex-col items-center justify-center pt-2 pb-24">
         {/* Adventure Roadmap Container */}
-        <div ref={containerRef} className="relative w-full max-w-[430px] h-full flex flex-col items-center overflow-y-auto no-scrollbar pt-6 pb-36 px-4 scroll-pt-24 scroll-pb-32">
+        <div ref={containerRef} className="relative w-full max-w-[430px] h-full flex flex-col items-center overflow-y-auto no-scrollbar pt-6 pb-10 px-4 scroll-pt-24 scroll-pb-10">
           
           {/* Roadmap SVG Path (Visual Guide) */}
           <svg
@@ -340,7 +370,7 @@ export default function ParentRoadmapScreen() {
                       )}
                       <h3 className="text-base font-bold text-[#191c1e] text-center">{translateStageTitle(stage.title)}</h3>
                       {stage.rewards && (
-                        <div className="mt-2 text-[10px] text-[#464652] grid grid-cols-2 gap-x-2 gap-y-1">
+                        <div className="mt-2 text-xs text-[#464652] font-bold grid grid-cols-2 gap-x-2 gap-y-1">
                           {stage.rewards.map((rw: any, i: number) => {
                             const RIcon = IconMap[rw.icon] || Star;
                             return (
@@ -374,13 +404,13 @@ export default function ParentRoadmapScreen() {
                         <div className="bg-[#006a62] h-full rounded-full transition-all duration-1000" style={{ width: `${stage.progress}%` }}></div>
                       </div>
                       {stage.nextStageName && (
-                        <p className="text-[10px] text-[#464652] font-medium mb-3">
+                        <p className="text-xs text-[#464652] font-bold mb-3">
                           {t("percent_to_target", { percent: stage.progress, target: translateStageTitle(stage.nextStageName), defaultValue: `${stage.progress}% to ${translateStageTitle(stage.nextStageName)}` })}
                         </p>
                       )}
                       
                       {stage.rewards && (
-                        <div className="mt-1 flex gap-3 text-[11px] text-[#464652] font-semibold bg-[#57fae9]/20 px-3 py-1 rounded-full">
+                        <div className="mt-1 flex gap-3 text-xs text-[#464652] font-black bg-[#57fae9]/20 px-3 py-1 rounded-full">
                           {stage.rewards.map((rw: any, i: number) => {
                             const RIcon = IconMap[rw.icon] || Star;
                             return (
@@ -405,10 +435,10 @@ export default function ParentRoadmapScreen() {
                         <span className="text-xs text-[#767683] font-bold uppercase tracking-wider mb-1">{t("locked_caps", "LOCKED")}</span>
                         <h3 className="text-base font-bold text-[#464652] text-center">{translateStageTitle(stage.title)}</h3>
                         {stage.description && (
-                          <p className="text-[10px] text-center mt-1 text-[#767683] leading-relaxed">{translateStageDesc(stage.description)}</p>
+                          <p className="text-xs text-center mt-1 text-[#767683] leading-relaxed font-medium">{translateStageDesc(stage.description)}</p>
                         )}
                         {stage.rewards && (
-                          <div className="mt-2 text-[10px] text-[#767683] flex items-center gap-1 font-medium">
+                          <div className="mt-2 text-xs text-[#767683] flex items-center gap-1 font-bold">
                             {stage.rewards.map((rw: any, i: number) => {
                               const RIcon = IconMap[rw.icon] || Star;
                               return (

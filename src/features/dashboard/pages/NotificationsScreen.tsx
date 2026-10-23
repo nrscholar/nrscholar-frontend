@@ -88,23 +88,31 @@ export default function NotificationsScreen() {
   return (
     <div className="min-h-screen bg-[#f7f9fb] font-sans pb-10 overflow-x-hidden relative">
       {/* Header */}
-      <header className="flex items-center px-4 h-16 bg-[rgba(247,249,251,0.8)] border-b border-[rgba(255,255,255,0.2)] sticky top-0 z-40 backdrop-blur-md">
-        <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-full transition-colors mr-3">
-          <ArrowLeft size={24} color="#141779" />
-        </button>
-        <h1 className="text-2xl font-bold text-[#141779]">{t('notifications', 'Notifications')}</h1>
+      <header className="sticky top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex items-center justify-between px-4 sm:px-6 h-16 w-full">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+          <button 
+            onClick={() => navigate(-1)} 
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("back", "Back")}
+          >
+            <ArrowLeft size={19} />
+          </button>
+          <h1 className="text-base sm:text-lg font-black text-[#141779] tracking-tight truncate leading-tight">
+            {t('notifications', 'Notifications')}
+          </h1>
+        </div>
       </header>
 
-      <main className="px-6 pt-8 flex flex-col gap-6 max-w-[500px] mx-auto">
+      <main className="px-4 sm:px-5 pt-3.5 sm:pt-4 pb-24 flex flex-col gap-3.5 sm:gap-4 max-w-lg mx-auto w-full">
         {loading ? (
-          <div className="relative pl-1 flex flex-col gap-6">
+          <div className="relative pl-1 flex flex-col gap-3.5 sm:gap-4">
             <div className="absolute left-[22px] top-0 bottom-0 border-l-2 border-dashed border-[rgba(20,23,121,0.2)] z-0" />
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="flex items-start gap-4 z-10 relative animate-pulse">
+              <div key={i} className="flex items-start gap-3.5 z-10 relative animate-pulse">
                 <div className="w-10 h-10 rounded-full bg-gray-200 mt-1 shrink-0" />
                 <div className="flex-1 relative">
                   <div className="absolute -left-[6px] top-5 w-4 h-4 bg-gray-100 rotate-45 z-0" />
-                  <div className="w-full bg-gray-100 rounded-2xl p-4 border-[1.5px] border-white shadow-sm relative z-10">
+                  <div className="w-full bg-gray-100 rounded-2xl p-3.5 sm:p-4 border-[1.5px] border-white shadow-2xs relative z-10">
                     <div className="flex justify-between items-start mb-2">
                       <div className="h-4 bg-gray-200 rounded w-1/3" />
                       <div className="h-3 bg-gray-200 rounded w-10" />
@@ -118,14 +126,14 @@ export default function NotificationsScreen() {
           </div>
         ) : notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-              <Bell size={28} className="text-gray-400" />
+            <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+              <Bell size={24} className="text-gray-400" />
             </div>
-            <p className="text-lg font-bold text-gray-500">{t('no_notifications_yet', 'No notifications yet!')}</p>
-            <p className="text-sm text-gray-400 mt-1">{t('keep_completing_quests', 'Keep completing quests to see updates.')}</p>
+            <p className="text-base font-bold text-gray-500">{t('no_notifications_yet', 'No notifications yet!')}</p>
+            <p className="text-xs text-gray-400 mt-1">{t('keep_completing_quests', 'Keep completing quests to see updates.')}</p>
           </div>
         ) : (
-          <div className="relative pl-1 flex flex-col gap-6">
+          <div className="relative pl-1 flex flex-col gap-3 sm:gap-3.5">
             {/* Dashed Line */}
             <div className="absolute left-[22px] top-0 bottom-0 border-l-2 border-dashed border-[rgba(20,23,121,0.2)] z-0" />
 
@@ -137,8 +145,8 @@ export default function NotificationsScreen() {
               const isLearning = notif.type === "learning";
               
               return (
-                <div key={notif._id || idx} className="flex items-start gap-4 z-10 relative">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-[0_2px_4px_rgba(0,0,0,0.1)] mt-1 ${
+                <div key={notif._id || idx} className="flex items-start gap-3 sm:gap-3.5 z-10 relative">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-2xs mt-1 ${
                     isSpin ? "bg-purple-600 text-white" :
                     isReward ? "bg-amber-500 text-white" :
                     isPdf ? "bg-indigo-600 text-white" :
@@ -146,21 +154,21 @@ export default function NotificationsScreen() {
                     isGamification ? "bg-[#57fae9] text-[#006a62]" :
                     "bg-[#e0e3e5] text-[#141779]"
                   }`}>
-                    {isSpin ? <Disc size={20} /> :
-                     isReward ? <Gift size={20} /> :
-                     isPdf ? <BookOpen size={20} /> :
-                     isLearning ? <Bell size={20} /> :
-                     isGamification ? <Sparkles size={20} /> :
-                     <AlertCircle size={20} />}
+                    {isSpin ? <Disc size={18} /> :
+                     isReward ? <Gift size={18} /> :
+                     isPdf ? <BookOpen size={18} /> :
+                     isLearning ? <Bell size={18} /> :
+                     isGamification ? <Sparkles size={18} /> :
+                     <AlertCircle size={18} />}
                   </div>
                   <div className="flex-1 relative">
-                    <div className="absolute -left-[6px] top-5 w-4 h-4 bg-[rgba(255,255,255,0.7)] rotate-45 z-0" />
+                    <div className="absolute -left-[6px] top-4 sm:top-5 w-3.5 h-3.5 bg-white rotate-45 z-0" />
                     <div 
                       onClick={() => notif.screen && navigate(notif.screen)}
-                      className={`w-full text-left bg-[rgba(255,255,255,0.7)] rounded-2xl p-4 border-[1.5px] border-[rgba(255,255,255,0.5)] shadow-[0_1px_5px_rgba(0,0,0,0.05)] hover:bg-white transition-colors relative z-10 ${notif.screen ? 'cursor-pointer hover:border-indigo-300' : ''}`}
+                      className={`w-full text-left bg-white/95 rounded-2xl p-3.5 sm:p-4 border border-slate-200/80 shadow-2xs hover:shadow-xs hover:border-indigo-200 transition-all relative z-10 ${notif.screen ? 'cursor-pointer' : ''}`}
                     >
                       <div className="flex justify-between items-start mb-1">
-                        <h3 className="text-sm font-semibold text-[#141779]">
+                        <h3 className="text-xs sm:text-sm font-bold text-[#141779]">
                           {formatNotificationTitle(notif.title)}
                         </h3>
                         {notif.createdAt && (
@@ -169,7 +177,7 @@ export default function NotificationsScreen() {
                           </span>
                         )}
                       </div>
-                      <p className="text-base font-medium text-[#191c1e]">{formatNotificationMessage(notif.message)}</p>
+                      <p className="text-xs sm:text-sm font-medium text-[#191c1e]">{formatNotificationMessage(notif.message)}</p>
                     </div>
                   </div>
                 </div>
@@ -177,20 +185,6 @@ export default function NotificationsScreen() {
             })}
           </div>
         )}
-
-        {/* Visual Anchor */}
-        <div className="mt-8 relative w-full h-48 flex items-center justify-center">
-          <motion.div
-            animate={{ scale: [1, 1.1, 1] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute inset-0 bg-[rgba(0,106,98,0.05)] rounded-full"
-          />
-          <img
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDcg9JTfpWdNOXpWuO22pAh-SmdrVfI0_D7ceGxeDxO3gO-tl8MfHIl2U2sOBoSOnMQxjKkQkUwK6nFeC7BJX9w_D87zfkhtbhlEtizN4c-C_BFnGPHsqutVbgyi8mzN5DIvrn9JnnMETaWneQo-LPHZ1mcXJ_KjTaLb2iDH6eQKZAhFWejwLoV_BrYdrbu2oYvv2-pxHMPTpNHeQbcPAC-aaCDkttqKHBsgbkXzDtN4wyNlmZnXrR4_vboBBJMBA5cEybt9xqJnA"
-            alt="Buddy"
-            className="w-32 h-32 object-contain relative z-10"
-          />
-        </div>
       </main>
 
       {/* Floating Scroll To Top Button */}

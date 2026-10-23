@@ -5,12 +5,13 @@ import {
   ArrowLeft, Clock, TrendingUp, AlertTriangle, CheckCircle,
   Calculator, Atom, BookOpen, Star, Target, Lightbulb,
   Award, BookOpenCheck, Loader2, Brain, Zap, ShieldCheck, BookMarked,
-  ChevronDown, ChevronUp, BarChart2
+  ChevronDown, ChevronUp, ChevronRight, BarChart2, Settings, Bell
 } from "lucide-react";
 import { apiFetch } from "../../../api";
 import ChildSwitcherModal from "../../../components/ChildSwitcherModal";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 import { getSubjectChartColor, DISTINCT_SUBJECT_PALETTE } from "../../../utils/chartColors";
+import { getScopedItem, setScopedItem, removeScopedItem, getActiveUserContext } from "../../../utils/sessionCache";
 
 const SUBJECT_COLORS = DISTINCT_SUBJECT_PALETTE;
 
@@ -25,8 +26,8 @@ function Card({ children, className = "" }: { children: React.ReactNode; classNa
 function StatBox({ label, value, color = "text-[#141779]" }: { label: string; value: string | number; color?: string }) {
   return (
     <div className="bg-[#f2f4f6] p-3 rounded-xl border border-gray-100 flex flex-col">
-      <p className="text-[9px] font-bold text-[#464652] uppercase tracking-wide mb-1">{label}</p>
-      <p className={`text-xl font-bold ${color}`}>{value}</p>
+      <p className="text-xs font-black text-[#464652] uppercase tracking-wider mb-1">{label}</p>
+      <p className={`text-xl sm:text-2xl font-black ${color}`}>{value}</p>
     </div>
   );
 }
@@ -44,8 +45,8 @@ function SectionHeader({ icon, title, subtitle }: { icon: React.ReactNode; title
     <div className="flex items-center gap-3 mb-4">
       <div className="w-10 h-10 rounded-full bg-[rgba(20,23,121,0.08)] flex items-center justify-center shrink-0">{icon}</div>
       <div>
-        <h2 className="text-[15px] font-bold text-[#191c1e]">{title}</h2>
-        {subtitle && <p className="text-xs text-[#767683]">{subtitle}</p>}
+        <h2 className="text-base sm:text-lg font-black text-[#191c1e]">{title}</h2>
+        {subtitle && <p className="text-xs sm:text-sm font-medium text-[#767683]">{subtitle}</p>}
       </div>
     </div>
   );
@@ -86,7 +87,7 @@ export default function ParentReportScreen() {
   const currentLang = i18n.language || localStorage.getItem("i18nextLng") || "en";
   const cachedReport = (() => {
     try {
-      const raw = sessionStorage.getItem(`parent_report_cache_${currentLang}`);
+      const raw = getScopedItem(`parent_report_cache_${currentLang}`);
       return raw ? JSON.parse(raw) : null;
     } catch (e) { return null; }
   })();
@@ -174,7 +175,10 @@ export default function ParentReportScreen() {
       // "today" stays as "daily"
 
       const activeLang = i18n.language || localStorage.getItem("i18nextLng") || "en";
-      const url = `/api/parent/report/download?filter=${downloadFilter}&subject=${subjectFilter}&format=${format}&tz_offset_minutes=${offsetMinutes}&lang=${encodeURIComponent(activeLang)}`;
+      const ctx = getActiveUserContext();
+      const childParam = ctx.childId ? `&childId=${encodeURIComponent(ctx.childId)}` : "";
+      const classParam = ctx.classLevel ? `&classLevel=${encodeURIComponent(ctx.classLevel)}` : "";
+      const url = `/api/parent/report/download?filter=${downloadFilter}&subject=${subjectFilter}&format=${format}&tz_offset_minutes=${offsetMinutes}&lang=${encodeURIComponent(activeLang)}${childParam}${classParam}`;
       const response = await apiFetch(url, { headers: { "Accept-Language": activeLang } });
       
       if (!response.ok) {
@@ -329,20 +333,19 @@ export default function ParentReportScreen() {
     try {
       const lang = i18n.language || localStorage.getItem("i18nextLng") || "en";
       const tzOffset = -new Date().getTimezoneOffset();
-      let activeCid = null;
-      try {
-        const stored = localStorage.getItem("userData");
-        if (stored) activeCid = JSON.parse(stored).activeChildId;
-      } catch (e) {}
+      const ctx = getActiveUserContext();
+      const activeCid = ctx.childId;
+      const activeClass = ctx.classLevel;
       const childParam = activeCid ? `&childId=${encodeURIComponent(activeCid)}` : "";
+      const classParam = activeClass ? `&classLevel=${encodeURIComponent(activeClass)}` : "";
       const [reportRes, userRes] = await Promise.all([
-        apiFetch(`/api/parent/report?lang=${encodeURIComponent(lang)}&tz_offset_minutes=${tzOffset}${childParam}`, { headers: { "Accept-Language": lang } }),
+        apiFetch(`/api/parent/report?lang=${encodeURIComponent(lang)}&tz_offset_minutes=${tzOffset}${childParam}${classParam}`, { headers: { "Accept-Language": lang } }),
         apiFetch("/api/users/me").catch(() => null)
       ]);
       const json = await reportRes.json();
       if (json.success) {
         setReportData(json.data);
-        sessionStorage.setItem(`parent_report_cache_${lang}`, JSON.stringify(json.data));
+        setScopedItem(`parent_report_cache_${lang}`, JSON.stringify(json.data));
       }
       if (userRes && userRes.ok) {
         const ujson = await userRes.json();
@@ -365,59 +368,232 @@ export default function ParentReportScreen() {
   // Note: activeTab and tabs are retained for future tab-based navigation
 
   if (loading) return (
-    <div className="min-h-screen bg-[#f7f9fb] px-5 pt-20 pb-24 flex flex-col gap-6 font-sans relative overflow-hidden">
-      {/* Top Header Skeleton */}
-      <header className="fixed top-0 left-0 right-0 flex items-center justify-between px-6 h-16 bg-white/80 backdrop-blur-xl border-b border-white/40 z-50 shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full animate-skeleton"></div>
-          <div className="h-6 w-36 rounded-lg animate-skeleton"></div>
+    <div className="min-h-screen bg-[#f7f9fb] font-sans pb-4">
+      {/* Header Skeleton */}
+      <header className="sticky top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 h-16 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] w-full">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+          <button 
+            onClick={() => navigate(-1)} 
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("back", "Back")}
+          >
+            <ArrowLeft size={19} />
+          </button>
+          <div className="flex flex-col min-w-0 justify-center">
+            <h1 className="text-base sm:text-lg font-black text-[#141779] tracking-tight truncate leading-tight">
+              {t('reports', 'Reports')}
+            </h1>
+            <p className="text-xs sm:text-[13px] text-slate-500 font-semibold truncate leading-tight mt-0.5">
+              {t('learning_reports_sub', 'Real-time analytics from activity data')}
+            </p>
+          </div>
         </div>
-        <div className="w-8 h-8 rounded-full animate-skeleton"></div>
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <button
+            onClick={() => navigate('/parent/settings')}
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("settings", "Settings")}
+            title={t("settings", "Settings")}
+          >
+            <Settings size={18} />
+          </button>
+          <button
+            onClick={() => navigate('/notifications')}
+            className="relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("notifications", "Notifications")}
+            title={t("notifications", "Notifications")}
+          >
+            <Bell size={18} />
+          </button>
+        </div>
       </header>
 
-      {/* Range Chips Skeleton */}
-      <div className="flex gap-2 pt-2 overflow-x-auto no-scrollbar">
-        {[70, 90, 85, 95, 75].map((w, idx) => (
-          <div key={idx} className="h-9 rounded-full shrink-0 animate-skeleton" style={{ width: `${w}px` }}></div>
-        ))}
-      </div>
-
-      {/* Hero Stats Card Skeleton */}
-      <div className="bg-white/70 backdrop-blur-xl rounded-[24px] p-6 border-2 border-white/50 shadow-sm space-y-4">
-        <div className="flex justify-between items-center">
-          <div className="space-y-2">
-            <div className="h-3 w-32 rounded-md animate-skeleton"></div>
-            <div className="h-8 w-24 rounded-xl animate-skeleton"></div>
+      <main className="px-5 pt-5 flex flex-col gap-5 max-w-lg mx-auto">
+        {/* Child Selector Pills Placeholder (if multiple children exist) */}
+        {userData?.children && userData.children.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+            {userData.children.map((c: any) => {
+              const isActive = (userData.activeChildId || "child_1") === c.childId;
+              return (
+                <div
+                  key={c.childId}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 font-bold text-sm shrink-0 transition-all ${
+                    isActive
+                      ? "border-[#141779] bg-[#141779] text-white shadow-md"
+                      : "border-slate-200 bg-white text-[#141779]"
+                  }`}
+                >
+                  <span className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-black overflow-hidden shrink-0">
+                    {c.childPhoto
+                      ? <img src={c.childPhoto} alt={c.childName} className="w-full h-full object-cover rounded-full" />
+                      : c.childName?.charAt(0).toUpperCase()}
+                  </span>
+                  {c.childName}
+                  {isActive && <span className="text-xs opacity-70">✓</span>}
+                </div>
+              );
+            })}
           </div>
-          <div className="w-14 h-14 rounded-full animate-skeleton"></div>
-        </div>
-        <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
-          <div className="h-full w-4/5 rounded-full animate-skeleton"></div>
-        </div>
-        <div className="pt-2 flex justify-between">
-          <div className="h-3 w-28 rounded-md animate-skeleton"></div>
-          <div className="h-3 w-20 rounded-md animate-skeleton"></div>
-        </div>
-      </div>
+        )}
 
-      {/* Subject Performance Cards Skeleton */}
-      <div className="space-y-3">
-        <div className="h-5 w-48 rounded-md animate-skeleton"></div>
-        <div className="space-y-3">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-white/80 backdrop-blur-md rounded-2xl p-4 border border-slate-200/60 shadow-xs flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl animate-skeleton"></div>
-                <div className="space-y-2">
-                  <div className="h-4 w-32 rounded-md animate-skeleton"></div>
-                  <div className="h-3 w-24 rounded-md animate-skeleton"></div>
+        {/* Report Actions Card Skeleton */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+          <div className="p-4 sm:p-5 pb-3.5 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl animate-skeleton shrink-0" />
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <div className="h-4 w-32 rounded-md animate-skeleton" />
+              <div className="h-3 w-48 rounded-md animate-skeleton" />
+            </div>
+          </div>
+          <div className="p-3.5 sm:p-4 flex items-center justify-between gap-3 border-t border-slate-100">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="w-9 h-9 rounded-xl animate-skeleton shrink-0" />
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <div className="h-3.5 w-24 rounded-md animate-skeleton" />
+                <div className="h-2.5 w-44 rounded-md animate-skeleton" />
+              </div>
+            </div>
+            <div className="w-4 h-4 rounded-md animate-skeleton shrink-0" />
+          </div>
+          <div className="p-3.5 sm:p-4 flex items-center justify-between gap-3 border-t border-slate-100">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="w-9 h-9 rounded-xl animate-skeleton shrink-0" />
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <div className="h-3.5 w-32 rounded-md animate-skeleton" />
+                <div className="h-2.5 w-40 rounded-md animate-skeleton" />
+              </div>
+            </div>
+            <div className="w-4 h-4 rounded-md animate-skeleton shrink-0" />
+          </div>
+        </div>
+
+        {/* Activity Card Skeleton */}
+        <Card>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full animate-skeleton shrink-0" />
+            <div className="space-y-1.5">
+              <div className="h-4 w-36 rounded-md animate-skeleton" />
+              <div className="h-3 w-48 rounded-md animate-skeleton" />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-[#f2f4f6] p-3 rounded-xl border border-gray-100 flex flex-col justify-center">
+                <div className="h-2.5 w-14 rounded animate-skeleton mb-2" />
+                <div className="h-6 w-12 rounded-md animate-skeleton" />
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-between items-center mb-1.5">
+            <div className="h-3 w-20 rounded animate-skeleton" />
+            <div className="h-3 w-8 rounded animate-skeleton" />
+          </div>
+          <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-full w-3/4 rounded-full animate-skeleton" />
+          </div>
+        </Card>
+
+        {/* Question Analytics Card Skeleton */}
+        <Card>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full animate-skeleton shrink-0" />
+            <div className="space-y-1.5">
+              <div className="h-4 w-40 rounded-md animate-skeleton" />
+              <div className="h-3 w-52 rounded-md animate-skeleton" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-[#f2f4f6] p-3 rounded-xl border border-gray-100 flex flex-col justify-center">
+                <div className="h-2.5 w-20 rounded animate-skeleton mb-2" />
+                <div className="h-6 w-12 rounded-md animate-skeleton" />
+              </div>
+            ))}
+          </div>
+          <div className="bg-slate-50/80 border border-slate-100 rounded-xl p-3 flex justify-between items-center">
+            <div className="h-3 w-36 rounded animate-skeleton" />
+            <div className="h-4 w-10 rounded animate-skeleton" />
+          </div>
+        </Card>
+
+        {/* Subject Performance Skeleton */}
+        <Card>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full animate-skeleton shrink-0" />
+            <div className="space-y-1.5">
+              <div className="h-4 w-36 rounded-md animate-skeleton" />
+              <div className="h-3 w-40 rounded-md animate-skeleton" />
+            </div>
+          </div>
+          <div className="space-y-4 mt-2">
+            {[
+              { wTitle: "w-24", wBar: "82%" },
+              { wTitle: "w-20", wBar: "68%" },
+              { wTitle: "w-28", wBar: "74%" }
+            ].map((item, idx) => (
+              <div key={idx} className="space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <div className={`h-3.5 ${item.wTitle} rounded animate-skeleton`} />
+                  <div className="h-3.5 w-8 rounded animate-skeleton" />
+                </div>
+                <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full animate-skeleton" style={{ width: item.wBar }} />
                 </div>
               </div>
-              <div className="h-6 w-14 rounded-full animate-skeleton"></div>
+            ))}
+          </div>
+        </Card>
+
+        {/* Trend Chart Card Skeleton */}
+        <Card>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full animate-skeleton shrink-0" />
+            <div className="space-y-1.5">
+              <div className="h-4 w-48 rounded-md animate-skeleton" />
+              <div className="h-3 w-28 rounded-md animate-skeleton" />
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
+          {/* Legend Skeleton */}
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full animate-skeleton shrink-0" />
+              <div className="h-2.5 w-12 rounded animate-skeleton" />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full animate-skeleton shrink-0" />
+              <div className="h-2.5 w-10 rounded animate-skeleton" />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full animate-skeleton shrink-0" />
+              <div className="h-2.5 w-8 rounded animate-skeleton" />
+            </div>
+          </div>
+          {/* Chart Area Skeleton */}
+          <div className="h-48 sm:h-52 w-full rounded-xl bg-slate-50/70 border border-slate-200/50 p-4 flex flex-col justify-between">
+            <div className="flex justify-between items-center border-b border-slate-200/30 pb-2">
+              <div className="h-2 w-7 rounded animate-skeleton" />
+              <div className="h-0.5 flex-1 mx-2 bg-slate-200/40" />
+            </div>
+            <div className="flex justify-between items-center border-b border-slate-200/30 py-2">
+              <div className="h-2 w-7 rounded animate-skeleton" />
+              <div className="h-0.5 flex-1 mx-2 bg-slate-200/40" />
+            </div>
+            <div className="flex justify-between items-center border-b border-slate-200/30 py-2">
+              <div className="h-2 w-7 rounded animate-skeleton" />
+              <div className="h-0.5 flex-1 mx-2 bg-slate-200/40" />
+            </div>
+            {/* 7-Day Columns matching Last 7 days trend */}
+            <div className="flex justify-between items-end pt-3 px-1 sm:px-2">
+              {[45, 65, 40, 80, 55, 75, 60].map((h, i) => (
+                <div key={i} className="flex flex-col items-center gap-1.5">
+                  <div className="w-4 sm:w-6 rounded-t-md animate-skeleton" style={{ height: `${h}px` }} />
+                  <div className="h-2 w-6 rounded animate-skeleton" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+      </main>
     </div>
   );
 
@@ -791,15 +967,43 @@ export default function ParentReportScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] font-sans pb-28">
+    <div className="min-h-screen bg-[#f7f9fb] font-sans pb-4">
       {/* Header */}
-      <header className="flex items-center gap-4 px-6 py-3.5 bg-white/90 border-b-2 border-slate-200/90 rounded-b-[28px] sticky top-0 z-50 backdrop-blur-2xl shadow-[0_12px_40px_rgba(20,23,121,0.14)]">
-        <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80">
-          <ArrowLeft size={24} color="#141779" />
-        </button>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-[20px] font-bold text-[#141779]">{t('learning_reports', 'Learning Reports')}</h1>
-          <p className="text-xs text-[#767683]">{t('learning_reports_sub', 'Real-time analytics from activity data')}</p>
+      <header className="sticky top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 h-16 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] w-full">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+          <button 
+            onClick={() => navigate(-1)} 
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("back", "Back")}
+          >
+            <ArrowLeft size={19} />
+          </button>
+          <div className="flex flex-col min-w-0 justify-center">
+            <h1 className="text-base sm:text-lg font-black text-[#141779] tracking-tight truncate leading-tight">
+              {t('reports', 'Reports')}
+            </h1>
+            <p className="text-xs sm:text-[13px] text-slate-500 font-semibold truncate leading-tight mt-0.5">
+              {t('learning_reports_sub', 'Real-time analytics from activity data')}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <button
+            onClick={() => navigate('/parent/settings')}
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("settings", "Settings")}
+            title={t("settings", "Settings")}
+          >
+            <Settings size={18} />
+          </button>
+          <button
+            onClick={() => navigate('/notifications')}
+            className="relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("notifications", "Notifications")}
+            title={t("notifications", "Notifications")}
+          >
+            <Bell size={18} />
+          </button>
         </div>
       </header>
 
@@ -824,7 +1028,8 @@ export default function ParentReportScreen() {
                       const json = await res.json();
                       if (json.success && json.data?.user) {
                         localStorage.setItem("userData", JSON.stringify(json.data.user));
-                        sessionStorage.removeItem("parent_report_cache");
+                        window.dispatchEvent(new Event("userDataUpdated"));
+                        removeScopedItem(`parent_report_cache_${currentLang}`);
                         setUserData(json.data.user);
                         setLoading(true);
                         setRefreshKey(k => k + 1);
@@ -843,7 +1048,7 @@ export default function ParentReportScreen() {
                       : c.childName?.charAt(0).toUpperCase()}
                   </span>
                   {c.childName}
-                  {isActive && <span className="text-[10px] opacity-70">✓</span>}
+                  {isActive && <span className="text-xs opacity-70">✓</span>}
                 </button>
               );
             })}
@@ -856,93 +1061,74 @@ export default function ParentReportScreen() {
           </div>
         )}
 
-        {/* 1. Large compact date/time selector */}
-        {dateFilter === "custom" ? (
-          <div className="w-full bg-white border-2 border-indigo-200 p-4 rounded-[24px] shadow-xs space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-black text-[#141779] flex items-center gap-1.5">
-                📅 {t("custom_date_range", "Custom Date Range")}
-              </span>
-              <button 
-                onClick={() => setShowDateSheet(true)}
-                className="text-xs font-black text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-0.5"
-              >
-                {t("change_period", "Change Period")} <ChevronDown size={14} />
-              </button>
+        {/* Report Actions Card */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+          {/* Section Header */}
+          <div className="p-4 sm:p-5 pb-3.5 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-base shrink-0">
+              📄
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500">{t("start_date", "Start Date")}</label>
-                <input
-                  type="date"
-                  value={customStartDate}
-                  onChange={(e) => setCustomStartDate(e.target.value)}
-                  className="w-full bg-white border-2 border-slate-200 rounded-xl p-2 text-xs font-bold text-slate-800 focus:border-[#141779] outline-none transition-colors"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500">{t("end_date", "End Date")}</label>
-                <input
-                  type="date"
-                  value={customEndDate}
-                  onChange={(e) => setCustomEndDate(e.target.value)}
-                  className="w-full bg-white border-2 border-slate-200 rounded-xl p-2 text-xs font-bold text-slate-800 focus:border-[#141779] outline-none transition-colors"
-                />
-              </div>
-            </div>
-          </div>
-        ) : (
-          <button 
-            onClick={() => setShowDateSheet(true)}
-            className="w-full bg-white border-2 border-slate-100 p-4 rounded-[24px] flex items-center justify-between shadow-xs hover:border-slate-200 transition-all active:scale-[0.99]"
-          >
-            <div className="text-left">
-              <span className="text-sm font-black text-slate-800 flex items-center gap-1.5">
-                {getDateLabel().label}
-              </span>
-              <p className="text-xs font-bold text-slate-500 mt-0.5">
-                {getDateLabel().range}
+            <div className="min-w-0 flex-1">
+              <h3 className="text-sm sm:text-base font-black text-[#141779] leading-tight">
+                {t('report_actions', 'Report Actions')}
+              </h3>
+              <p className="text-xs font-bold text-slate-500 mt-0.5 leading-tight">
+                {t('report_actions_subtitle', 'Manage and export your generated report')}
               </p>
             </div>
-            <ChevronDown size={20} className="text-slate-400" />
-          </button>
-        )}
+          </div>
 
-        {/* 2. Sub-filters row 1: Subject & Customize */}
-        <div className="flex gap-3 w-full">
-          {/* Subject pill */}
+          {/* Action Tile 1: Customize */}
           <button
-            onClick={() => setShowSubjectSheet(true)}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-black border-2 shadow-xs active:scale-[0.98] transition-all ${
-              subjectFilter !== "all"
-                ? "border-[#141779] text-[#141779] bg-indigo-50"
-                : "bg-white border-slate-100 text-slate-700 hover:border-slate-200"
-            }`}
-          >
-            <span>📚</span>
-            <span>{subjectFilter === "all" ? t('all_subjects', 'All Subjects') : getTranslatedSubject(subjectFilter)}</span>
-            <ChevronDown size={14} className="text-slate-400" />
-          </button>
-
-          {/* Customize pill */}
-          <button
+            type="button"
             onClick={() => setShowCustomizeSheet(true)}
-            className="flex-1 flex items-center justify-center gap-2 bg-white border-2 border-slate-100 py-3 px-4 rounded-xl text-xs font-black text-slate-700 shadow-xs hover:border-slate-200 active:scale-[0.98] transition-all"
+            className="w-full p-3.5 sm:p-4 text-left hover:bg-slate-50/80 active:bg-slate-100/80 transition-all flex items-center justify-between gap-3 group cursor-pointer border-t border-slate-100"
           >
-            <span>⚙️</span>
-            <span>{t('customize', 'Customize')}</span>
-            <ChevronDown size={14} className="text-slate-400" />
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200/60 flex items-center justify-center text-base shrink-0 group-hover:bg-indigo-50 group-hover:border-indigo-100 transition-colors">
+                ⚙️
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="text-xs sm:text-sm font-black text-slate-800 group-hover:text-[#141779] transition-colors leading-tight">
+                    {t('customize', 'Customize')}
+                  </h4>
+                  {(dateFilter !== "this_week" || subjectFilter !== "all") && (
+                    <span className="text-[10px] font-black bg-indigo-50 border border-indigo-200 text-[#141779] px-2 py-0.5 rounded-full shrink-0">
+                      {getDateLabel().label.replace(/📅\s*/, "")} • {subjectFilter === "all" ? t('all_subjects', 'All Subjects') : getTranslatedSubject(subjectFilter)}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs font-bold text-slate-500 mt-0.5 truncate leading-tight">
+                  {t('personalize_report_appearance', 'Personalize report appearance')}
+                </p>
+              </div>
+            </div>
+            <ChevronRight size={18} className="text-slate-400 group-hover:text-[#141779] group-hover:translate-x-0.5 transition-all shrink-0" />
+          </button>
+
+          {/* Action Tile 2: Export Report Data */}
+          <button
+            type="button"
+            onClick={() => setShowExportSheet(true)}
+            className="w-full p-3.5 sm:p-4 text-left hover:bg-slate-50/80 active:bg-slate-100/80 transition-all flex items-center justify-between gap-3 group cursor-pointer border-t border-slate-100"
+          >
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-base shrink-0 group-hover:bg-emerald-50 group-hover:border-emerald-100 transition-colors">
+                ⬇️
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="text-xs sm:text-sm font-black text-slate-800 group-hover:text-[#141779] transition-colors leading-tight">
+                  {t('export_report_data', 'Export Report Data')}
+                </h4>
+                <p className="text-xs font-bold text-slate-500 mt-0.5 truncate leading-tight">
+                  {t('download_formats_subtitle', 'Download PDF, Excel or CSV')}
+                </p>
+              </div>
+            </div>
+            <ChevronRight size={18} className="text-slate-400 group-hover:text-[#141779] group-hover:translate-x-0.5 transition-all shrink-0" />
           </button>
         </div>
-
-        {/* Sub-filters row 2: Export */}
-        <button
-          onClick={() => setShowExportSheet(true)}
-          className="w-full flex items-center justify-center gap-2 bg-white border-2 border-slate-100 py-3 px-4 rounded-xl text-xs font-black text-slate-700 shadow-xs hover:border-indigo-200 hover:bg-indigo-50 active:scale-[0.98] transition-all"
-        >
-          <span>↓</span>
-          <span>{t('export_report_data', 'Export Report Data')}</span>
-        </button>
 
         {/* Today's Activity Card */}
         <Card>
@@ -953,7 +1139,7 @@ export default function ParentReportScreen() {
             <StatBox label={t('accuracy', 'ACCURACY')}    value={`${displayAccuracy}%`} color="text-[#30007f]" />
           </div>
           <div className="flex justify-between items-center mb-1">
-            <span className="text-[10px] font-bold text-[#464652] uppercase">{t('confidence', 'CONFIDENCE')}</span>
+            <span className="text-xs font-black text-[#464652] uppercase tracking-wider">{t('confidence', 'CONFIDENCE')}</span>
             <span className="text-sm font-black text-[#141779]">{displayAccuracy}%</span>
           </div>
           <ProgressBar value={displayAccuracy} color="bg-gradient-to-r from-[#141779] via-[#30007f] to-[#57fae9]" />
@@ -1028,9 +1214,9 @@ export default function ParentReportScreen() {
             <span className="text-sm font-black text-[#006a62]">{formatReadingTime(rA.totalReadingTime ?? 0)}</span>
           </div>
 
-          {(rA.readChaptersDetailed?.length > 0 || rA.readChaptersList?.length > 0) && (
+          {(rA.readChaptersDetailed?.length > 0 || rA.readChaptersList?.length > 0) ? (
             <div className="mt-4 border-t border-slate-100 pt-3 space-y-2">
-              <h4 className="text-[10px] font-bold text-[#464652] uppercase tracking-wide">{t("read_chapters", "Read Chapters")}</h4>
+              <h4 className="text-xs font-black text-[#464652] uppercase tracking-wider">{t("read_chapters", "Read Chapters")}</h4>
               <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                 {(rA.readChaptersDetailed || (rA.readChaptersList || []).map((name: string) => ({ name }))).map((ch: any, idx: number) => (
                   <div key={idx} className="bg-[#006a62]/5 border border-[#006a62]/15 rounded-xl px-3 py-2 flex justify-between items-center text-xs">
@@ -1039,11 +1225,15 @@ export default function ParentReportScreen() {
                       <span className="font-bold text-[#006a62] truncate">{ch.name}</span>
                     </div>
                     {ch.timeSpent > 0 && (
-                      <span className="text-[10px] font-black text-slate-500 shrink-0 ml-2">⏱️ {formatReadingTime(ch.timeSpent)}</span>
+                      <span className="text-xs font-black text-slate-500 shrink-0 ml-2">⏱️ {formatReadingTime(ch.timeSpent)}</span>
                     )}
                   </div>
                 ))}
               </div>
+            </div>
+          ) : (
+            <div className="mt-4 border-t border-slate-100 pt-3 text-center py-2">
+              <p className="text-xs text-[#767683]">{t("no_reading_activity_data", "No chapter reading activity recorded yet.")}</p>
             </div>
           )}
         </Card>
@@ -1056,7 +1246,7 @@ export default function ParentReportScreen() {
             <div className="py-10 text-center text-xs text-[#767683]">{t("solve_questions_trend", "Solve questions to generate trend analytics.")}</div>
           ) : (
             <div className="relative">
-              <div className="flex items-center justify-center gap-4 mb-4 text-[10px] font-bold text-[#464652]">
+              <div className="flex items-center justify-center gap-4 mb-4 text-xs font-bold text-[#464652]">
                 <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#2563eb]" /><span>{t("mastery", "Mastery")}</span></div>
                 <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#d97706]" /><span>{t("focus", "Focus")}</span></div>
                 <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#dc2626]" /><span>{t("risk", "Risk")}</span></div>
@@ -1100,16 +1290,16 @@ export default function ParentReportScreen() {
               {hoveredIndex !== null && chartHistory[hoveredIndex] && (
                 <div className="mt-3 p-3 bg-white border border-gray-100 rounded-xl shadow-sm grid grid-cols-3 gap-2 text-center">
                   <div className="bg-blue-50 p-1.5 rounded-lg">
-                    <p className="text-[9px] font-bold text-blue-700 uppercase">{t("mastery", "Mastery")}</p>
-                    <p className="text-sm font-bold text-blue-900">{chartHistory[hoveredIndex].masteryScore}%</p>
+                    <p className="text-xs font-black text-blue-700 uppercase tracking-wider">{t("mastery", "Mastery")}</p>
+                    <p className="text-sm sm:text-base font-black text-blue-900">{chartHistory[hoveredIndex].masteryScore}%</p>
                   </div>
                   <div className="bg-amber-50 p-1.5 rounded-lg">
-                    <p className="text-[9px] font-bold text-amber-700 uppercase">{t("focus", "Focus")}</p>
-                    <p className="text-sm font-bold text-amber-900">{chartHistory[hoveredIndex].weaknessScore}%</p>
+                    <p className="text-xs font-black text-amber-700 uppercase tracking-wider">{t("focus", "Focus")}</p>
+                    <p className="text-sm sm:text-base font-black text-amber-900">{chartHistory[hoveredIndex].weaknessScore}%</p>
                   </div>
                   <div className="bg-red-50 p-1.5 rounded-lg">
-                    <p className="text-[9px] font-bold text-red-700 uppercase">{t("risk", "Risk")}</p>
-                    <p className={`text-sm font-bold ${chartHistory[hoveredIndex].riskIndex >= 50 ? "text-red-700" : "text-green-600"}`}>{chartHistory[hoveredIndex].riskIndex}%</p>
+                    <p className="text-xs font-black text-red-700 uppercase tracking-wider">{t("risk", "Risk")}</p>
+                    <p className={`text-sm sm:text-base font-black ${chartHistory[hoveredIndex].riskIndex >= 50 ? "text-red-700" : "text-green-600"}`}>{chartHistory[hoveredIndex].riskIndex}%</p>
                   </div>
                 </div>
               )}
@@ -1119,25 +1309,25 @@ export default function ParentReportScreen() {
 
         {/* Cognitive Strengths & Weaknesses */}
         <Card>
-          <h3 className="text-sm font-bold text-[#191c1e] mb-3">💪 {t("conceptual_strengths", "Conceptual Strengths")}</h3>
+          <h3 className="text-sm sm:text-base font-black text-[#191c1e] mb-3">💪 {t("conceptual_strengths", "Conceptual Strengths")}</h3>
           {!hasStrengths
-            ? <p className="text-xs text-[#767683]">{t("complete_more_quests_strengths", "Complete more quests to identify strengths.")}</p>
+            ? <p className="text-xs sm:text-sm text-[#767683]">{t("complete_more_quests_strengths", "Complete more quests to identify strengths.")}</p>
             : strengths.map((s: string, i: number) => (
               <div key={i} className="bg-green-50 border border-green-100 rounded-xl p-3 mb-2 flex gap-2 items-start">
                 <CheckCircle size={14} className="text-green-600 shrink-0 mt-0.5" />
-                <p className="text-xs text-green-800 font-semibold">{formatInsightMessage(s)}</p>
+                <p className="text-xs sm:text-[13px] text-green-800 font-semibold">{formatInsightMessage(s)}</p>
               </div>
             ))}
         </Card>
 
         <Card>
-          <h3 className="text-sm font-bold text-[#191c1e] mb-3">⚠️ {t("focus_areas", "Focus Areas")}</h3>
+          <h3 className="text-sm sm:text-base font-black text-[#191c1e] mb-3">⚠️ {t("focus_areas", "Focus Areas")}</h3>
           {!hasWeaknesses
-            ? <p className="text-xs text-[#767683]">{t("no_weaknesses_detected", "No weaknesses detected yet.")}</p>
+            ? <p className="text-xs sm:text-sm text-[#767683]">{t("no_weaknesses_detected", "No weaknesses detected yet.")}</p>
             : weaknesses.map((w: string, i: number) => (
               <div key={i} className="bg-orange-50 border border-orange-100 rounded-xl p-3 mb-2 flex gap-2 items-start">
                 <AlertTriangle size={14} className="text-orange-600 shrink-0 mt-0.5" />
-                <p className="text-xs text-orange-800 font-semibold">{formatInsightMessage(w)}</p>
+                <p className="text-xs sm:text-[13px] text-orange-800 font-semibold">{formatInsightMessage(w)}</p>
               </div>
             ))}
         </Card>
@@ -1149,23 +1339,23 @@ export default function ParentReportScreen() {
               <AlertTriangle size={20} className="text-[#ba1a1a]" />
             </div>
             <div>
-              <h2 className="text-[15px] font-bold text-[#191c1e]">{t("incorrect_questions_mistakes", "Incorrect Questions (Mistakes)")}</h2>
-              <p className="text-xs text-[#767683]">{t("review_recent_incorrect", "Review recent questions answered incorrectly")}</p>
+              <h2 className="text-base sm:text-lg font-black text-[#191c1e]">{t("incorrect_questions_mistakes", "Incorrect Questions (Mistakes)")}</h2>
+              <p className="text-xs sm:text-sm text-[#767683]">{t("review_recent_incorrect", "Review recent questions answered incorrectly")}</p>
             </div>
           </div>
 
           {mistakes.length === 0 ? (
             <div className="bg-green-50 border border-green-100 rounded-xl p-4 text-center">
               <span className="text-2xl mb-1 block">🎉</span>
-              <p className="text-xs text-green-800 font-semibold">{t("no_recent_mistakes", "Excellent! No recent mistakes recorded. Keep up the great work!")}</p>
+              <p className="text-xs sm:text-sm text-green-800 font-semibold">{t("no_recent_mistakes", "Excellent! No recent mistakes recorded. Keep up the great work!")}</p>
             </div>
           ) : (
             <div className="space-y-3">
               {(showAllMistakes ? mistakes : mistakes.slice(0, 5)).map((m: any, idx: number) => (
                 <div key={idx} className="bg-slate-50 border-l-[4px] border-l-[#ba1a1a] rounded-xl p-4 shadow-xs border border-slate-100">
-                  <p className="text-[14px] font-bold text-slate-800 mb-2.5 leading-snug">{m.questionText}</p>
+                  <p className="text-sm sm:text-base font-bold text-slate-800 mb-2.5 leading-snug">{m.questionText}</p>
                   
-                  <div className="flex flex-wrap items-center gap-2 text-[10px] font-black">
+                  <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
                     <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md capitalize">
                       📚 {m.subject === "General" ? t("general", "General") : m.subject}
                     </span>
@@ -1183,7 +1373,7 @@ export default function ParentReportScreen() {
                     <div className="mt-2.5 pt-2 border-t border-slate-200/60 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                       {m.selectedOption && (
                         <div className="bg-red-50/80 border border-red-100 rounded-lg p-2 text-red-700">
-                          <span className="font-bold block text-[10px] uppercase tracking-wider text-red-500 mb-0.5">
+                          <span className="font-bold block text-xs uppercase tracking-wider text-red-500 mb-0.5">
                             {t("your_answer", "Child's Answer")}:
                           </span>
                           <span className="font-semibold">{m.selectedOption}</span>
@@ -1191,7 +1381,7 @@ export default function ParentReportScreen() {
                       )}
                       {m.correctAnswer && (
                         <div className="bg-emerald-50/80 border border-emerald-100 rounded-lg p-2 text-emerald-800">
-                          <span className="font-bold block text-[10px] uppercase tracking-wider text-emerald-600 mb-0.5">
+                          <span className="font-bold block text-xs uppercase tracking-wider text-emerald-600 mb-0.5">
                             {t("correct_answer", "Correct Answer")}:
                           </span>
                           <span className="font-semibold">{m.correctAnswer}</span>
@@ -1201,7 +1391,7 @@ export default function ParentReportScreen() {
                   )}
                   {m.explanation && (
                     <div className="mt-2 p-2 bg-amber-50/60 border border-amber-100/70 rounded-lg text-xs text-amber-900">
-                      <span className="font-bold text-[10px] uppercase tracking-wider text-amber-700 block mb-0.5">
+                      <span className="font-bold text-xs uppercase tracking-wider text-amber-700 block mb-0.5">
                         💡 {t("explanation", "Explanation")}:
                       </span>
                       <p className="text-slate-600 font-medium">{m.explanation}</p>
@@ -1279,10 +1469,10 @@ export default function ParentReportScreen() {
           ))}
           {dateFilter === "custom" && (
             <div className="mt-4 p-4 bg-slate-50 border-2 border-slate-100 rounded-3xl space-y-3">
-              <h4 className="text-xs font-black text-[#141779] uppercase">{t("custom_date_range", "Custom Date Range")}</h4>
+              <h4 className="text-xs sm:text-sm font-black text-[#141779] uppercase">{t("custom_date_range", "Custom Date Range")}</h4>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-500">{t("start_date", "Start Date")}</label>
+                  <label className="text-xs font-bold text-slate-500">{t("start_date", "Start Date")}</label>
                   <input
                     type="date"
                     value={customStartDate}
@@ -1291,7 +1481,7 @@ export default function ParentReportScreen() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-500">{t("end_date", "End Date")}</label>
+                  <label className="text-xs font-bold text-slate-500">{t("end_date", "End Date")}</label>
                   <input
                     type="date"
                     value={customEndDate}
@@ -1302,7 +1492,7 @@ export default function ParentReportScreen() {
               </div>
               <button
                 onClick={() => setShowDateSheet(false)}
-                className="w-full mt-2 bg-[#141779] text-white py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-transform active:scale-[0.98]"
+                className="w-full mt-2 bg-[#141779] text-white py-2.5 rounded-xl text-xs sm:text-sm font-black uppercase tracking-wider transition-transform active:scale-[0.98]"
               >
                 {t("apply_custom_range", "Apply Custom Range")}
               </button>
@@ -1359,7 +1549,7 @@ export default function ParentReportScreen() {
                 <button
                   key={opt}
                   onClick={() => setDateFilter(opt)}
-                  className={`py-2.5 px-1 text-[10px] font-black rounded-xl border text-center transition-colors capitalize ${
+                  className={`py-2.5 px-1 text-xs font-black rounded-xl border text-center transition-colors capitalize ${
                     dateFilter === opt
                       ? "bg-[#141779] text-white border-[#141779]"
                       : "bg-slate-50 text-slate-800 border-slate-200"
@@ -1373,21 +1563,21 @@ export default function ParentReportScreen() {
               <div className="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-0.5">
-                    <label className="text-[9px] font-bold text-slate-500">{t("start_date", "Start Date")}</label>
+                    <label className="text-xs font-bold text-slate-500">{t("start_date", "Start Date")}</label>
                     <input
                       type="date"
                       value={customStartDate}
                       onChange={(e) => setCustomStartDate(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-[10px] font-bold text-slate-800"
+                      className="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs font-bold text-slate-800"
                     />
                   </div>
                   <div className="space-y-0.5">
-                    <label className="text-[9px] font-bold text-slate-500">{t("end_date", "End Date")}</label>
+                    <label className="text-xs font-bold text-slate-500">{t("end_date", "End Date")}</label>
                     <input
                       type="date"
                       value={customEndDate}
                       onChange={(e) => setCustomEndDate(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-[10px] font-bold text-slate-800"
+                      className="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs font-bold text-slate-800"
                     />
                   </div>
                 </div>

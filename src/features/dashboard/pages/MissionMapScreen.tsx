@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
 import { motion } from "framer-motion";
 import { prefetchPdf } from "../../../utils/pdfCache";
+import { getScopedItem, setScopedItem, removeScopedItem, getActiveUserContext } from "../../../utils/sessionCache";
 
 export default function MissionMapScreen() {
   const navigate = useNavigate();
@@ -17,7 +18,7 @@ export default function MissionMapScreen() {
   const [chapterData, setChapterData] = useState<any>(null);
   const [childName, setChildName] = useState("Explorer");
   const [childPhoto, setChildPhoto] = useState("");
-  const [userClass, setUserClass] = useState("Class 3");
+  const [userClass, setUserClass] = useState(() => getActiveUserContext().classLevel);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -29,10 +30,12 @@ export default function MissionMapScreen() {
   useEffect(() => {
     async function loadRoadmap() {
       try {
+        const activeCtx = getActiveUserContext();
+        setUserClass(activeCtx.classLevel);
         const [meRes, notifRes, missionsRes] = await Promise.all([
           apiFetch("/api/users/me").catch(() => null),
           apiFetch("/api/notifications").catch(() => null),
-          apiFetch(`/api/practice/chapters/${chapterId}/missions`).catch(() => null)
+          apiFetch(`/api/practice/chapters/${chapterId}/missions?classLevel=${encodeURIComponent(activeCtx.classLevel)}`).catch(() => null)
         ]);
 
         if (meRes && meRes.ok) {
@@ -41,7 +44,7 @@ export default function MissionMapScreen() {
             if (meJson.success && meJson.data?.user) {
               setChildName(meJson.data.user.childName || "Explorer");
               setChildPhoto(meJson.data.user.childPhoto || meJson.data.user.photo || "");
-              setUserClass(meJson.data.user.childClass || "Class 3");
+              setUserClass(activeCtx.classLevel);
             }
           } catch (e) {}
         }
@@ -70,6 +73,14 @@ export default function MissionMapScreen() {
       }
     }
     loadRoadmap();
+
+    const handleUserDataUpdate = () => {
+      loadRoadmap();
+    };
+    window.addEventListener("userDataUpdated", handleUserDataUpdate);
+    return () => {
+      window.removeEventListener("userDataUpdated", handleUserDataUpdate);
+    };
   }, [chapterId]);
 
   if (loading) {
@@ -310,9 +321,9 @@ export default function MissionMapScreen() {
             const isUnlocked = m.status === "unlocked" || isCompleted || isRetest || Boolean(m.hasDraft);
             const isLocked = !isUnlocked;
 
-            const savedAns = sessionStorage.getItem(`user_answers_${chapterId}_${m.seq}`);
-            const savedPhase = sessionStorage.getItem(`mission_phase_${chapterId}_${m.seq}`);
-            const isReplayActive = sessionStorage.getItem(`is_replay_${chapterId}_${m.seq}`) === "true";
+            const savedAns = getScopedItem(`user_answers_${chapterId}_${m.seq}`);
+            const savedPhase = getScopedItem(`mission_phase_${chapterId}_${m.seq}`);
+            const isReplayActive = getScopedItem(`is_replay_${chapterId}_${m.seq}`) === "true";
             
             let hasInProgressSession = false;
             if (isUnlocked && savedPhase !== "SUMMARY" && savedPhase !== "INTRO") {
@@ -446,27 +457,27 @@ export default function MissionMapScreen() {
                             navigate(`/mission-play?chapterId=${chapterId}&missionSeq=${m.seq}`);
                           } else {
                             const isReplaying = isCompleted;
-                            sessionStorage.removeItem(`user_answers_${chapterId}_${m.seq}`);
-                            sessionStorage.removeItem(`mission_phase_${chapterId}_${m.seq}`);
-                            sessionStorage.removeItem(`mission_timer_${chapterId}_${m.seq}`);
-                            sessionStorage.removeItem(`boss_damage_${chapterId}_${m.seq}`);
-                            sessionStorage.removeItem(`boss_wrong_${chapterId}_${m.seq}`);
-                            sessionStorage.removeItem(`boss_index_${chapterId}_${m.seq}`);
-                            sessionStorage.removeItem(`quiz_correct_${chapterId}_${m.seq}`);
-                            sessionStorage.removeItem(`xp_earned_${chapterId}_${m.seq}`);
-                            sessionStorage.removeItem(`coins_earned_${chapterId}_${m.seq}`);
-                            sessionStorage.removeItem(`completion_result_${chapterId}_${m.seq}`);
-                            sessionStorage.removeItem(`summary_step_${chapterId}_${m.seq}`);
+                            removeScopedItem(`user_answers_${chapterId}_${m.seq}`);
+                            removeScopedItem(`mission_phase_${chapterId}_${m.seq}`);
+                            removeScopedItem(`mission_timer_${chapterId}_${m.seq}`);
+                            removeScopedItem(`boss_damage_${chapterId}_${m.seq}`);
+                            removeScopedItem(`boss_wrong_${chapterId}_${m.seq}`);
+                            removeScopedItem(`boss_index_${chapterId}_${m.seq}`);
+                            removeScopedItem(`quiz_correct_${chapterId}_${m.seq}`);
+                            removeScopedItem(`xp_earned_${chapterId}_${m.seq}`);
+                            removeScopedItem(`coins_earned_${chapterId}_${m.seq}`);
+                            removeScopedItem(`completion_result_${chapterId}_${m.seq}`);
+                            removeScopedItem(`summary_step_${chapterId}_${m.seq}`);
                             if (isReplaying) {
                               missions.forEach((otherM: any) => {
                                 if (otherM.seq !== m.seq) {
-                                  sessionStorage.removeItem(`is_replay_${chapterId}_${otherM.seq}`);
+                                  removeScopedItem(`is_replay_${chapterId}_${otherM.seq}`);
                                 }
                               });
-                              sessionStorage.setItem(`is_replay_${chapterId}_${m.seq}`, "true");
+                              setScopedItem(`is_replay_${chapterId}_${m.seq}`, "true");
                               apiFetch(`/api/practice/chapters/${chapterId}/missions/${m.seq}/draft`, { method: "DELETE" }).catch(() => {});
                             } else {
-                              sessionStorage.removeItem(`is_replay_${chapterId}_${m.seq}`);
+                              removeScopedItem(`is_replay_${chapterId}_${m.seq}`);
                             }
                             navigate(`/mission-play?chapterId=${chapterId}&missionSeq=${m.seq}${isReplaying ? "&replay=true" : ""}`);
                           }

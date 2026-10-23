@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
 import StreakModal from "../../../components/StreakModal";
+import { getScopedItem, setScopedItem } from "../../../utils/sessionCache";
 
 // Math-aligned level thresholds matching backend:
 // Level 1: 0 XP
@@ -234,7 +235,7 @@ export default function ProgressScreen() {
       setLoading(false);
 
       if (loadedSubs.length > 0) {
-        const savedSubId = sessionStorage.getItem("activeSubjectId");
+        const savedSubId = getScopedItem("activeSubjectId");
         const found = (savedSubId && savedSubId !== "all") ? loadedSubs.find((s: any) => s._id === savedSubId) : null;
         if (found) {
           setActiveSubject(found);
@@ -247,6 +248,14 @@ export default function ProgressScreen() {
       }
     };
     fetchProgress();
+
+    const handleUserDataUpdate = () => {
+      fetchProgress();
+    };
+    window.addEventListener("userDataUpdated", handleUserDataUpdate);
+    return () => {
+      window.removeEventListener("userDataUpdated", handleUserDataUpdate);
+    };
   }, []);
 
   useEffect(() => {
@@ -550,7 +559,7 @@ export default function ProgressScreen() {
                   key={sub._id}
                   onClick={() => {
                     setActiveSubject(sub);
-                    sessionStorage.setItem("activeSubjectId", sub._id);
+                    setScopedItem("activeSubjectId", sub._id);
                   }}
                   className={`px-4 py-2 rounded-full font-semibold text-[13px] whitespace-nowrap transition-all shrink-0 flex items-center gap-2 ${
                     isActive 

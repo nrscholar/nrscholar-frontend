@@ -2,13 +2,26 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Lightbulb, Flame, ShieldCheck,
-  Brain, CheckCircle, CheckCircle2, Star, Zap, ArrowLeft, Trophy, Target, Bell
+  Brain, CheckCircle, CheckCircle2, Star, Zap, ArrowLeft, Trophy, Target, Bell, Settings
 } from "lucide-react";
 import { apiFetch } from "../../../api";
+import { getActiveUserContext } from "../../../utils/sessionCache";
 import { useTranslation } from "react-i18next";
 import ChildSwitcherModal from "../../../components/ChildSwitcherModal";
 
 interface Tip {
+  // Structured JSON fields
+  dayBadge?: string;
+  categoryTag?: string;
+  subjectFocus?: string | null;
+  tipTitle?: string;
+  tipDescription?: string;
+  actionStep?: string;
+  whyItMatters?: string;
+  xpReward?: number;
+  recommendedRoute?: string;
+
+  // Backward-compatible fields
   instead?: string;
   try?: string;
   benefit?: string;
@@ -16,7 +29,6 @@ interface Tip {
   description?: string;
   rewardPoints?: number;
   category?: string;
-  actionStep?: string;
   status?: string;
   subject?: string;
 }
@@ -85,27 +97,69 @@ export default function ParentDailyTipScreen() {
     ? Math.min(100, Math.round(((xp - xpForCurrentLevel) / (xpForNextLevel - xpForCurrentLevel)) * 100))
     : 100;
 
-  // ── Dynamic Growth Rate Calculation (ZERO Fake Fallback Percentages) ───────
+  // ── Growth Score Starting Rule & Badge Mapping ────────────────────────────
+  // New users/parents start at 0% Growth Score.
+  // Complete Score Range & Badge Mapping:
+  // 0% - 30%: Tag = "New Parent" (Indigo Pill), Subtitle = "Begin your journey — complete lessons to grow! 🌱"
+  // 31% - 50%: Tag = "Active Parent" (Indigo/Blue Pill), Subtitle = "Good progress! Every day counts. 💪"
+  // 51% - 70%: Tag = "Mindful Parent" (Emerald / Teal), Subtitle = "You're soaring! Keep the momentum going! 🚀"
+  // 71% - 85%: Tag = "Growth Coach" (Amber / Gold), Subtitle = "Phenomenal dedication! You are inspiring your child. ⭐"
+  // 86% - 100%: Tag = "Master Parent" (Purple / Violet), Subtitle = "Outstanding! You're in the top 5% of dedicated parents! 🏆"
+
   const hasRealData = metrics?.hasRealData ?? (totalTests > 0 || accuracy > 0);
-  const baseGrowthFromXp = Math.min(100, Math.round((roadmapXp / 2500) * 100));
+  const rawGrowthScore = (metrics?.growthScore !== undefined && metrics?.growthScore !== null)
+    ? Number(metrics.growthScore)
+    : 0;
 
-  // Compute genuine growth score only if real attempts/tests exist
-  const computedGrowthScore = (metrics?.growthScore !== undefined && metrics?.growthScore !== null)
-    ? metrics.growthScore
-    : (hasRealData
-        ? Math.min(100, Math.round((baseGrowthFromXp * 0.5) + (accuracy * 0.5)))
-        : null);
+  const growthScore = Math.min(100, Math.max(0, rawGrowthScore));
 
-  const growthScore = computedGrowthScore;
+  const getGrowthBadgeInfo = (score: number) => {
+    if (score <= 30) {
+      return {
+        tag: t("tag_new_parent", "New Parent"),
+        subtitle: t("growth_subtitle_0_30", "Begin your journey — complete lessons to grow! 🌱"),
+        pillClass: "bg-indigo-50 border-indigo-200 text-indigo-700",
+        dialColorClass: "text-[#141779]",
+        textColorClass: "text-[#141779]",
+      };
+    } else if (score <= 50) {
+      return {
+        tag: t("tag_active_parent", "Active Parent"),
+        subtitle: t("growth_subtitle_31_50", "Good progress! Every day counts. 💪"),
+        pillClass: "bg-blue-50 border-blue-200 text-blue-700",
+        dialColorClass: "text-blue-600",
+        textColorClass: "text-blue-700",
+      };
+    } else if (score <= 70) {
+      return {
+        tag: t("tag_mindful_parent", "Mindful Parent"),
+        subtitle: t("growth_subtitle_51_70", "You're soaring! Keep the momentum going! 🚀"),
+        pillClass: "bg-teal-50 border-teal-200 text-[#006a62]",
+        dialColorClass: "text-[#006a62]",
+        textColorClass: "text-[#006a62]",
+      };
+    } else if (score <= 85) {
+      return {
+        tag: t("tag_growth_coach", "Growth Coach"),
+        subtitle: t("growth_subtitle_71_85", "Phenomenal dedication! You are inspiring your child. ⭐"),
+        pillClass: "bg-amber-50 border-amber-200 text-amber-700",
+        dialColorClass: "text-amber-500",
+        textColorClass: "text-amber-600",
+      };
+    } else {
+      return {
+        tag: t("tag_master_parent", "Master Parent"),
+        subtitle: t("growth_subtitle_86_100", "Outstanding! You're in the top 5% of dedicated parents! 🏆"),
+        pillClass: "bg-purple-50 border-purple-200 text-purple-700",
+        dialColorClass: "text-purple-600",
+        textColorClass: "text-purple-700",
+      };
+    }
+  };
 
-  // Dynamic growth message based on score
-  const growthMessage = !hasRealData
-    ? t("growth_msg_new_user", "Welcome! Complete your child's first quest to unlock real-time growth analytics. 🌱")
-    : (growthScore !== null && growthScore >= 80 ? t("growth_msg_80", "Outstanding! You're in the top tier of parents! 🏆") :
-       growthScore !== null && growthScore >= 60 ? t("growth_msg_60", "You're soaring! Keep the momentum going! 🚀") :
-       growthScore !== null && growthScore >= 40 ? t("growth_msg_40", "Good progress! Every day counts. 💪") :
-       growthScore !== null && growthScore >= 20 ? t("growth_msg_20", "Getting started — consistency is your superpower! 🌱") :
-       t("growth_msg_0", "Begin your journey — complete lessons to grow! ✨"));
+  const badgeInfo = getGrowthBadgeInfo(growthScore);
+  const displayGrowthTag = metrics?.growthTag || badgeInfo.tag;
+  const displayGrowthSubtitle = metrics?.growthSubtitle || badgeInfo.subtitle;
 
   // ── Dynamic Milestones built from real User & Report Data ─────────────────
   const milestones: Milestone[] = [
@@ -156,8 +210,12 @@ export default function ParentDailyTipScreen() {
     window.scrollTo(0, 0);
     async function fetchAll() {
       const nextCache: any = cachedTip ? { ...cachedTip } : {};
+      const ctx = getActiveUserContext();
+      const childParam = ctx.childId ? `childId=${encodeURIComponent(ctx.childId)}` : "";
+      const classParam = ctx.classLevel ? `classLevel=${encodeURIComponent(ctx.classLevel)}` : "";
+      const qParams = [childParam, classParam].filter(Boolean).join("&");
 
-      const tipPromise = apiFetch("/api/parent/daily-tip")
+      const tipPromise = apiFetch(`/api/parent/daily-tip${qParams ? `?${qParams}` : ""}`)
         .then(res => res.json())
         .then(tJson => {
           if (tJson.success && tJson.data) {
@@ -334,49 +392,46 @@ export default function ParentDailyTipScreen() {
   return (
     <div className="bg-[#f7f9fb] text-[#141779] flex flex-col min-h-screen w-full relative overflow-x-hidden font-sans max-w-md mx-auto">
 
-      {/* ── Top Header matching Child Space Header exactly ── */}
-      <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex items-center justify-between px-4 pt-3 pb-3 bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-2xl shadow-[0_4px_16px_rgba(20,23,121,0.05)] gap-2 w-full">
+      {/* ── Top Header matching Parent Space Header exactly ── */}
+      <header className="sticky top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 h-16 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] w-full">
         {/* Left Side: Back button + Title */}
-        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
           <button 
             onClick={() => navigate(-1)} 
-            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
             aria-label={t("back", "Back")}
           >
             <ArrowLeft size={19} />
           </button>
           <div className="flex flex-col min-w-0 justify-center">
-            <h1 className="text-sm sm:text-base font-black text-slate-900 leading-tight truncate">
+            <h1 className="text-base sm:text-lg font-black text-[#141779] leading-tight truncate">
               {t("daily_parenting_tip", "Daily Parenting Tip")}
             </h1>
-            <span className="text-[10.5px] sm:text-xs text-slate-400 font-extrabold truncate mt-0.5">
+            <span className="text-xs sm:text-[13px] text-slate-500 font-semibold truncate mt-0.5">
               {childName ? `${childName} • ` : ""}{t("parent_guidance", "Parent Guidance")}
             </span>
           </div>
         </div>
 
-        {/* Right Side: Currency / XP & Notification Indicators */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        {/* Right Side: Settings & Notification Indicators */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <button
-            onClick={() => navigate("/parent/roadmap")}
-            className="bg-[#eef2ff] hover:bg-indigo-100 border border-indigo-100/90 rounded-2xl px-2.5 py-1.5 flex items-center justify-center gap-1 hover:scale-105 active:scale-95 transition-transform shadow-2xs cursor-pointer"
-            title={t("view_roadmap", "View Roadmap & XP")}
-            aria-label={t("xp_count", { xp, defaultValue: `${xp.toLocaleString()} XP` })}
+            onClick={() => navigate('/parent/settings')}
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("settings", "Settings")}
+            title={t("settings", "Settings")}
           >
-            <span className="text-xs text-amber-500 leading-none">⭐</span>
-            <span className="text-[11px] font-black text-[#141779] leading-none whitespace-nowrap">
-              {xp.toLocaleString()} XP
-            </span>
+            <Settings size={18} />
           </button>
-          
           <button
             onClick={() => navigate("/notifications")}
-            className="w-9 h-9 rounded-2xl bg-slate-50 shadow-2xs flex items-center justify-center hover:bg-slate-100 active:scale-95 transition-all shrink-0 border border-slate-100 relative cursor-pointer"
+            className="relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
             aria-label={t("notifications", "Notifications")}
+            title={t("notifications", "Notifications")}
           >
-            <Bell size={16} className="text-[#1c1970]" />
+            <Bell size={18} />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border border-white pointer-events-none z-10">
+              <span className="absolute top-1 right-1 w-4 h-4 bg-[#ba1a1a] rounded-full border-2 border-white flex items-center justify-center text-[9px] font-bold text-white">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
@@ -385,7 +440,7 @@ export default function ParentDailyTipScreen() {
       </header>
 
       {/* ── Main Content Container with Clearance for Bottom Navigation ── */}
-      <main className="flex-1 px-4 pt-3.5 pb-32 sm:pb-36 flex flex-col gap-3.5 relative z-10 max-w-md mx-auto w-full">
+      <main className="flex-1 px-4 pt-3.5 pb-4 flex flex-col gap-3.5 relative z-10 max-w-md mx-auto w-full">
 
         {/* ── 1. Today's Parenting Tip Card (Primary Focus) ── */}
         <section className="w-full bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-[0_4px_20px_rgba(20,23,121,0.04)] flex flex-col gap-3.5">
@@ -399,13 +454,21 @@ export default function ParentDailyTipScreen() {
               </h2>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
-              {tip?.category && (
-                <span className="text-[10px] font-black text-[#006a62] bg-teal-50 border border-teal-200/80 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                  {tip.category}
+              {(tip?.categoryTag || tip?.category) && (
+                <span className={`text-xs sm:text-[13px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider border ${
+                  (tip.categoryTag || tip.category) === "TARGETED SUPPORT"
+                    ? "text-amber-700 bg-amber-50 border-amber-200/80"
+                    : (tip.categoryTag || tip.category) === "MASTERY CELEBRATION"
+                    ? "text-purple-700 bg-purple-50 border-purple-200/80"
+                    : (tip.categoryTag || tip.category) === "GROWTH MINDSET"
+                    ? "text-[#006a62] bg-teal-50 border-teal-200/80"
+                    : "text-indigo-700 bg-indigo-50 border-indigo-200/80"
+                }`}>
+                  {tip.categoryTag || tip.category}
                 </span>
               )}
-              <span className="text-[10px] sm:text-[11px] font-black text-slate-500 bg-slate-100 border border-slate-200/60 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                {t("day_num", { day: streak > 0 ? streak : 1, defaultValue: streak > 0 ? `Day ${streak}` : "Day 1" })}
+              <span className="text-xs sm:text-[13px] font-black text-slate-500 bg-slate-100 border border-slate-200/60 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                {tip?.dayBadge || (streak > 0 ? `DAY ${streak}` : "DAY 1")}
               </span>
             </div>
           </div>
@@ -418,28 +481,34 @@ export default function ParentDailyTipScreen() {
             </div>
           ) : tip ? (
             <>
-              {tip.subject && (
-                <div className="flex items-center gap-1.5 self-start bg-indigo-50/80 text-[#141779] border border-indigo-200/70 px-2.5 py-0.5 rounded-full text-[11px] font-black">
-                  <span>🎯 {t("focus_subject", "Subject Focus")}: {tip.subject}</span>
+              {(tip.subjectFocus || tip.subject) && (
+                <div className="flex items-center gap-1.5 self-start bg-indigo-50/80 text-[#141779] border border-indigo-200/70 px-2.5 py-0.5 rounded-full text-xs font-black">
+                  <span>🎯 {t("focus_subject", "Subject Focus")}: {tip.subjectFocus || tip.subject}</span>
                 </div>
               )}
 
               {tip.instead ? (
                 <div className="bg-slate-50/90 rounded-2xl p-3.5 flex flex-col gap-2.5 border border-slate-200/70">
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-[9.5px] font-black text-slate-400 uppercase tracking-wider">{t("instead_of", "Instead of:")}</span>
+                    <span className="text-xs font-black text-slate-500 uppercase tracking-wider">{t("instead_of", "Instead of:")}</span>
                     <p className="text-slate-600 font-semibold italic text-xs sm:text-sm leading-relaxed">{translateTipField(tip.instead)}</p>
                   </div>
                   <div className="h-[1px] w-full bg-slate-200/80" />
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-[9.5px] font-black text-[#006a62] uppercase tracking-wider">{t("try_this", "Try:")}</span>
+                    <span className="text-xs font-black text-[#006a62] uppercase tracking-wider">{t("try_this", "Try:")}</span>
                     <p className="text-[#141779] font-bold text-xs sm:text-sm leading-relaxed">{translateTipField(tip.try)}</p>
                   </div>
                 </div>
               ) : (
                 <div className="bg-gradient-to-br from-indigo-50/80 via-white to-teal-50/40 rounded-2xl p-4 border border-indigo-100/80 shadow-2xs">
-                  {tip.title && <h3 className="text-[#141779] font-black text-sm sm:text-base mb-1.5">💡 {translateTipField(tip.title)}</h3>}
-                  <p className="text-slate-800 font-semibold text-xs sm:text-sm leading-relaxed">{translateTipField(tip.description)}</p>
+                  {(tip.tipTitle || tip.title) && (
+                    <h3 className="text-[#141779] font-black text-sm sm:text-base mb-1.5">
+                      💡 {translateTipField(tip.tipTitle || tip.title)}
+                    </h3>
+                  )}
+                  <p className="text-slate-800 font-semibold text-xs sm:text-sm leading-relaxed">
+                    {translateTipField(tip.tipDescription || tip.description)}
+                  </p>
                 </div>
               )}
 
@@ -450,39 +519,47 @@ export default function ParentDailyTipScreen() {
                     <Target size={15} />
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600 leading-tight">{t("action_step", "Action Step")}</span>
+                    <span className="text-xs font-black uppercase tracking-wider text-indigo-600 leading-tight">{t("action_step", "Action Step")}</span>
                     <p className="text-xs font-bold text-indigo-950 leading-snug mt-0.5">{translateTipField(tip.actionStep)}</p>
                   </div>
                 </div>
               )}
 
               {/* Expected Learning or Communication Benefit */}
-              {tip.benefit && (
+              {(tip.whyItMatters || tip.benefit) && (
                 <div className="flex items-start gap-2.5 text-[#006a62] bg-teal-50/70 p-3 rounded-2xl border border-teal-100/90 shadow-2xs">
                   <div className="w-7 h-7 rounded-lg bg-teal-100 text-[#006a62] flex items-center justify-center shrink-0 mt-0.5">
                     <CheckCircle2 size={15} />
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-[#006a62] leading-tight">{t("why_it_matters", "Why It Matters")}</span>
-                    <p className="text-xs font-extrabold text-[#006a62] leading-snug mt-0.5">{translateTipField(tip.benefit)}</p>
+                    <span className="text-xs font-black uppercase tracking-wider text-[#006a62] leading-tight">{t("why_it_matters", "Why It Matters")}</span>
+                    <p className="text-xs font-extrabold text-[#006a62] leading-snug mt-0.5">{translateTipField(tip.whyItMatters || tip.benefit)}</p>
                   </div>
                 </div>
               )}
 
               {/* XP Reward for applying tip */}
-              {tip.rewardPoints && (
+              {(tip.xpReward || tip.rewardPoints) && (
                 <div className="flex items-center gap-1.5 self-start bg-teal-50 border border-teal-200/80 text-[#006a62] px-2.5 py-1 rounded-full text-xs font-black shadow-2xs">
                   <Star size={12} fill="currentColor" />
-                  <span>+{tip.rewardPoints} XP {t("for_applying_tip", "for applying this tip")}</span>
+                  <span>+{(tip.xpReward || tip.rewardPoints)} XP {t("for_applying_tip", "for applying this tip")}</span>
                 </div>
               )}
 
               {/* Action Button */}
               <button
-                onClick={() => navigate("/parent/lessons")}
+                onClick={() => navigate(tip.recommendedRoute || "/parent/lessons")}
                 className="w-full bg-[#141779] text-white py-2.5 sm:py-3 rounded-2xl font-black text-xs sm:text-sm hover:bg-[#1e23a0] active:scale-95 transition-all shadow-md cursor-pointer flex items-center justify-center gap-1.5 mt-0.5"
               >
-                <span>{t("explore_related_lessons", "Explore Related Lessons")}</span>
+                <span>
+                  {tip.recommendedRoute === "/parent/activity"
+                    ? t("view_student_activity", "View Student Activity")
+                    : tip.recommendedRoute === "/parent/challenges"
+                    ? t("view_parent_challenges", "View Growth Challenges")
+                    : tip.recommendedRoute === "/parent/roadmap"
+                    ? t("view_growth_roadmap", "View Growth Roadmap")
+                    : t("explore_related_lessons", "Explore Related Lessons")}
+                </span>
                 <span>→</span>
               </button>
             </>
@@ -493,55 +570,48 @@ export default function ParentDailyTipScreen() {
 
         {/* ── 2. Growth Score and Streak Section (Compact & Balanced) ── */}
         <section className="w-full bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-[0_4px_20px_rgba(20,23,121,0.04)] flex flex-col gap-3.5">
-          {/* Growth Score Gauge & Roadmap Stage */}
+          {/* Growth Score Gauge & Badge */}
           <div className="flex items-center gap-3.5">
-            {hasRealData && growthScore !== null ? (
-              <div className="relative w-20 h-20 sm:w-22 sm:h-22 flex items-center justify-center shrink-0">
-                <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-                  <path
-                    className="text-slate-100"
-                    strokeWidth="3.5"
-                    stroke="currentColor"
-                    fill="none"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                  <path
-                    className="text-[#006a62] transition-all duration-1000 ease-out"
-                    strokeDasharray={`${Math.min(100, Math.max(0, growthScore))}, 100`}
-                    strokeWidth="3.5"
-                    strokeLinecap="round"
-                    stroke="currentColor"
-                    fill="none"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-[#006a62] font-black text-lg sm:text-xl leading-none">
-                    {growthScore}%
-                  </span>
-                  <span className="text-[8px] font-black uppercase text-slate-400 tracking-wider mt-0.5">
-                    {t("growth_score", "Score")}
-                  </span>
-                </div>
+            <div className="relative w-20 h-20 sm:w-22 sm:h-22 flex items-center justify-center shrink-0">
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                <path
+                  className="text-slate-100"
+                  strokeWidth="3.5"
+                  stroke="currentColor"
+                  fill="none"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
+                <path
+                  className={`${badgeInfo.dialColorClass} transition-all duration-1000 ease-out`}
+                  strokeDasharray={`${Math.min(100, Math.max(0, growthScore))}, 100`}
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                  stroke="currentColor"
+                  fill="none"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className={`${badgeInfo.textColorClass} font-black text-lg sm:text-xl leading-none`}>
+                  {growthScore}%
+                </span>
+                <span className="text-[10px] sm:text-xs font-black uppercase text-slate-400 tracking-wider mt-0.5">
+                  {t("growth_score", "Score")}
+                </span>
               </div>
-            ) : (
-              <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl border-2 border-dashed border-teal-300 flex flex-col items-center justify-center bg-teal-50/50 shrink-0">
-                <span className="text-xl">🌱</span>
-                <span className="text-[9px] font-black text-[#006a62] uppercase tracking-wider mt-0.5">Day 1</span>
-              </div>
-            )}
+            </div>
 
             <div className="min-w-0 flex-1 flex flex-col gap-1">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-xs font-black text-[#141779] uppercase tracking-wider">
+                <span className="text-xs sm:text-sm font-black text-[#141779] uppercase tracking-wider">
                   {t("growth_score", "Growth Score")}
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-100 text-[#141779] text-[10px] font-black">
-                  {stageName}
+                <span className={`px-2 py-0.5 rounded-full border text-xs font-black ${badgeInfo.pillClass}`}>
+                  {displayGrowthTag}
                 </span>
               </div>
-              <p className="text-slate-700 font-bold text-xs sm:text-[13px] leading-snug">
-                {growthMessage}
+              <p className="text-slate-700 font-bold text-xs sm:text-sm leading-snug">
+                {displayGrowthSubtitle}
               </p>
             </div>
           </div>
@@ -557,7 +627,7 @@ export default function ParentDailyTipScreen() {
                 <h4 className="text-xs sm:text-sm font-black text-[#141779] truncate leading-tight">
                   {streak > 0 ? t("day_streak_fire", { streak, defaultValue: `${streak} Day Streak 🔥` }) : t("no_active_streak", "0 Day Streak")}
                 </h4>
-                <p className="text-[10px] text-slate-500 font-semibold truncate mt-0.5">
+                <p className="text-xs text-slate-500 font-semibold truncate mt-0.5">
                   {streak === 0 ? t("log_in_daily_streak", "Start today") : t("active_days", { streak, defaultValue: `${streak} active days` })}
                 </p>
               </div>
@@ -572,7 +642,7 @@ export default function ParentDailyTipScreen() {
                 <h4 className="text-xs sm:text-sm font-black text-[#141779] truncate leading-tight">
                   P{parentLevel}+C{childLevel}
                 </h4>
-                <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider truncate mt-0.5">
+                <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider truncate mt-0.5">
                   {t("combo_level", "Combo Level")}
                 </p>
               </div>
@@ -588,7 +658,7 @@ export default function ParentDailyTipScreen() {
               👨‍👩‍👦
             </div>
             <div className="min-w-0 flex-1">
-              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-[#141779] block">
+              <span className="text-xs font-black uppercase tracking-wider text-[#141779] block">
                 {t("parent", "Parent")} · Lvl {parentLevel}
               </span>
               <p className="text-xs sm:text-sm font-black text-slate-800 truncate leading-tight">
@@ -616,15 +686,15 @@ export default function ParentDailyTipScreen() {
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1">
-                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-[#006a62] block truncate">
+                <span className="text-xs font-black uppercase tracking-wider text-[#006a62] block truncate">
                   {t("child", "Child")} · Lvl {childLevel}
                 </span>
-                <span className="text-[9px] text-slate-400 group-hover:text-indigo-600 font-bold">▾</span>
+                <span className="text-xs text-slate-400 group-hover:text-indigo-600 font-bold">▾</span>
               </div>
               <p className="text-xs sm:text-sm font-black text-slate-800 truncate leading-tight group-hover:text-indigo-900 transition-colors">
                 {childName}
               </p>
-              <span className="text-[10px] font-bold text-slate-400 truncate block mt-0.5">
+              <span className="text-xs font-bold text-slate-400 truncate block mt-0.5">
                 📍 {childCity}
               </span>
             </div>
@@ -632,12 +702,12 @@ export default function ParentDailyTipScreen() {
         </section>
 
         {/* ── 4. Family Milestones Section ── */}
-        <section className="w-full flex flex-col gap-2.5 pb-6">
+        <section className="w-full flex flex-col gap-2.5 pb-2">
           <div className="flex items-center justify-between px-1">
             <h2 className="text-[#141779] font-black text-sm sm:text-base tracking-tight">
               {t("family_milestones", "Family Milestones")}
             </h2>
-            <span className="text-[10px] font-black text-[#006a62] bg-teal-50 border border-teal-200/80 px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-2xs">
+            <span className="text-xs font-black text-[#006a62] bg-teal-50 border border-teal-200/80 px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-2xs">
               {milestones.filter(m => m.completed).length}/{milestones.length} {t("done", "Done")}
             </span>
           </div>
@@ -659,16 +729,16 @@ export default function ParentDailyTipScreen() {
                   <div className="flex items-center justify-between gap-2">
                     <h5 className="text-[#141779] font-black text-xs sm:text-sm truncate">{m.title}</h5>
                     {m.completed ? (
-                      <span className="px-2 py-0.5 rounded-full bg-teal-50 text-[#006a62] border border-teal-200 text-[9px] sm:text-[10px] font-black shrink-0">
+                      <span className="px-2.5 py-0.5 rounded-full bg-teal-50 text-[#006a62] border border-teal-200 text-xs font-black shrink-0">
                         ✓ {t("completed", "Completed")}
                       </span>
                     ) : (
-                      <span className="text-[10px] font-bold text-slate-400 shrink-0">
+                      <span className="text-xs font-bold text-slate-400 shrink-0">
                         {m.progress}%
                       </span>
                     )}
                   </div>
-                  <p className="text-slate-500 font-semibold text-[10px] sm:text-[11px] mt-0.5 leading-snug">{m.subtitle}</p>
+                  <p className="text-slate-500 font-semibold text-xs sm:text-[13px] mt-0.5 leading-snug">{m.subtitle}</p>
                   {!m.completed && m.progress !== undefined && (
                     <div className="w-full bg-slate-100 h-1.5 sm:h-2 rounded-full overflow-hidden mt-1.5 border border-slate-200/60">
                       <div

@@ -11,6 +11,7 @@ const LoginScreen = lazy(() => import("../features/auth/pages/LoginScreen"));
 const NotFoundScreen = lazy(() => import("./NotFoundScreen"));
 import { UniversalErrorBoundary } from "../components/UniversalErrorBoundary";
 import NavigationProgressBar from "../components/NavigationProgressBar";
+import MobileBackHandler from "../components/MobileBackHandler";
 const ParentalGateScreen = lazy(() => import("../features/auth/pages/ParentalGateScreen"));
 const SignupStep1Screen = lazy(() => import("../features/auth/pages/SignupStep1"));
 const SignupStep2Screen = lazy(() => import("../features/auth/pages/SignupStep2"));
@@ -162,8 +163,11 @@ function App() {
 function PinGuard() {
   const location = useLocation();
   useEffect(() => {
-    if (!location.pathname.startsWith("/parent")) {
+    if (location.pathname.startsWith("/parent")) {
+      sessionStorage.setItem("last_active_portal", "parent");
+    } else {
       sessionStorage.removeItem("parentPinVerified");
+      sessionStorage.setItem("last_active_portal", "child");
     }
   }, [location.pathname]);
   return null;
@@ -171,6 +175,7 @@ function PinGuard() {
 
   return (
     <BrowserRouter>
+      <MobileBackHandler />
       <NavigationProgressBar />
       <PinGuard />
       <ScrollToTop />

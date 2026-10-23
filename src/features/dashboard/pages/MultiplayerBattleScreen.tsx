@@ -5,6 +5,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
+import { getScopedItem } from "../../../utils/sessionCache";
+import { filterUniqueQuestions } from "../../../utils/quizQuestionUtils";
 
 // Hardcoded rapid fire questions for MVP multiplayer
 const BATTLE_QUESTIONS = [
@@ -160,7 +162,7 @@ export default function MultiplayerBattleScreen() {
   const [battleTheme, setBattleTheme] = useState<"dragon" | "science" | "social">(() => {
     let cachedTier: string | undefined;
     try {
-      const cachedJ = localStorage.getItem("cachedJourneyData");
+      const cachedJ = getScopedItem("cachedJourneyData") || localStorage.getItem("cachedJourneyData");
       if (cachedJ) {
         const parsed = JSON.parse(cachedJ);
         cachedTier = parsed.tierKey;
@@ -211,7 +213,7 @@ export default function MultiplayerBattleScreen() {
         const res = await apiFetch(`/api/multiplayer/room/${roomId}/questions`);
         const data = await res.json();
         if (data.success && data.data && data.data.length > 0) {
-          setQuestions(data.data);
+          setQuestions(filterUniqueQuestions(data.data));
         }
       } catch (e) {
         console.error("Failed to load questions:", e);
@@ -266,7 +268,7 @@ export default function MultiplayerBattleScreen() {
         setRoom(rData);
 
         if (rData.questions && rData.questions.length > 0) {
-          setQuestions(rData.questions);
+          setQuestions(filterUniqueQuestions(rData.questions));
         }
 
         const amHost = rData.hostId === myId;

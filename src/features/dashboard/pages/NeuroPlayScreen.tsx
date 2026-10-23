@@ -968,9 +968,9 @@ export default function NeuroPlayScreen() {
                     {renderSkillIcon(currentCard.icon, selectedSkill.category, 36)}
 
                     <div className="text-center">
-                      <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-indigo-50 border border-indigo-200/80 text-[#141779] font-extrabold text-[10px] tracking-wider uppercase mb-2 shadow-2xs">
-                        <Sparkles size={12} className="text-[#4F46E5]" />
-                        <span>{getText(selectedSkill.category)} • Step 1</span>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-0.5 sm:py-1 rounded-full bg-indigo-50 border border-indigo-200/80 text-[#141779] font-extrabold text-[9px] sm:text-[10px] tracking-wide sm:tracking-wider uppercase mb-2 shadow-2xs max-w-full whitespace-nowrap overflow-hidden">
+                        <Sparkles size={12} className="text-[#4F46E5] shrink-0" />
+                        <span className="truncate">{getText(selectedSkill.category)} • Step 1</span>
                       </span>
                       <h2 className="text-xl sm:text-2xl font-black text-[#141779] leading-tight mb-3">
                         {formatRichText(getText(currentCard.title))}
@@ -1009,9 +1009,9 @@ export default function NeuroPlayScreen() {
                     {renderSkillIcon(currentCard.icon, selectedSkill.category, 36)}
 
                     <div className="text-center">
-                      <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-[#006a62] font-extrabold text-[10px] tracking-wider uppercase mb-2 shadow-2xs">
-                        <BookOpen size={12} className="text-[#006a62]" />
-                        <span>Step 2 • Real Life Story</span>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-0.5 sm:py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-[#006a62] font-extrabold text-[9px] sm:text-[10px] tracking-wide sm:tracking-wider uppercase mb-2 shadow-2xs max-w-full whitespace-nowrap overflow-hidden">
+                        <BookOpen size={12} className="text-[#006a62] shrink-0" />
+                        <span className="truncate">Step 2 • Real Life Story</span>
                       </span>
                       <h2 className="text-xl sm:text-2xl font-black text-[#141779] leading-tight mb-3">
                         {formatRichText(getText(currentCard.title))}
@@ -1038,83 +1038,104 @@ export default function NeuroPlayScreen() {
                 )}
 
                 {/* ────────────────── CARD 3: METHOD CONCEPT CHECK (GATED) ────────────────── */}
-                {currentCard.type === "method_concept_check" && (
-                  <div className="space-y-4">
-                    {renderSkillIcon(currentCard.icon, selectedSkill.category, 36)}
+                {currentCard.type === "method_concept_check" && (() => {
+                  const correctOption = (currentCard.correct_option || currentCard.correctOption || "B").toUpperCase();
+                  const isCard3Correct = card3Selected === correctOption;
 
-                    <div className="text-center">
-                      <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-purple-50 border border-purple-200/80 text-[#7C3AED] font-extrabold text-[10px] tracking-wider uppercase mb-2 shadow-2xs">
-                        <Lightbulb size={12} className="text-[#7C3AED]" />
-                        <span>Step 3 • Brain Check</span>
-                      </span>
-                      <h2 className="text-lg sm:text-xl font-black text-[#141779] leading-snug mb-5">
-                        {formatRichText(getText(currentCard.question))}
-                      </h2>
-                    </div>
+                  return (
+                    <div className="space-y-4">
+                      {renderSkillIcon(currentCard.icon, selectedSkill.category, 36)}
 
-                    {/* 2 Interactive Options (Badges on Left) */}
-                    <div className="space-y-3">
-                      <button
-                        onClick={() => setCard3Selected("A")}
-                        className={`w-full p-3.5 sm:p-4 rounded-2xl border-2 text-left transition-all font-bold text-sm sm:text-base shadow-xs flex items-center gap-3.5 ${
-                          card3Selected === "A"
-                            ? "border-rose-400 bg-rose-50/90 text-rose-950 shadow-sm"
-                            : "border-slate-200 bg-white text-slate-800 hover:border-indigo-400 hover:shadow-md"
-                        }`}
-                      >
-                        <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
-                          card3Selected === "A" ? "bg-rose-500 text-white shadow-sm" : "bg-slate-100 text-slate-600"
-                        }`}>
-                          A
+                      <div className="text-center">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-0.5 sm:py-1 rounded-full bg-purple-50 border border-purple-200/80 text-[#7C3AED] font-extrabold text-[9px] sm:text-[10px] tracking-wide sm:tracking-wider uppercase mb-2 shadow-2xs max-w-full whitespace-nowrap overflow-hidden">
+                          <Lightbulb size={12} className="text-[#7C3AED] shrink-0" />
+                          <span className="truncate">Step 3 • Brain Check</span>
                         </span>
-                        <span className="flex-1 leading-snug">{formatRichText(getText(currentCard.option_a))}</span>
-                      </button>
+                        <h2 className="text-lg sm:text-xl font-black text-[#141779] leading-snug mb-5">
+                          {formatRichText(getText(currentCard.question))}
+                        </h2>
+                      </div>
 
-                      <button
-                        onClick={() => setCard3Selected("B")}
-                        className={`w-full p-3.5 sm:p-4 rounded-2xl border-2 text-left transition-all font-bold text-sm sm:text-base shadow-xs flex items-center gap-3.5 ${
-                          card3Selected === "B"
-                            ? "border-emerald-500 bg-emerald-50/90 text-emerald-950 shadow-md scale-[1.01]"
-                            : "border-slate-200 bg-white text-slate-800 hover:border-indigo-400 hover:shadow-md"
-                        }`}
-                      >
-                        <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
-                          card3Selected === "B" ? "bg-emerald-600 text-white shadow-sm" : "bg-slate-100 text-slate-600"
-                        }`}>
-                          B
-                        </span>
-                        <span className="flex-1 leading-snug">{formatRichText(getText(currentCard.option_b))}</span>
-                      </button>
+                      {/* 2 Interactive Options (Badges on Left) */}
+                      <div className="space-y-3">
+                        <button
+                          onClick={() => setCard3Selected("A")}
+                          className={`w-full p-3.5 sm:p-4 rounded-2xl border-2 text-left transition-all font-bold text-sm sm:text-base shadow-xs flex items-center gap-3.5 ${
+                            card3Selected === "A"
+                              ? isCard3Correct
+                                ? "border-emerald-500 bg-emerald-50/90 text-emerald-950 shadow-md scale-[1.01]"
+                                : "border-rose-400 bg-rose-50/90 text-rose-950 shadow-sm"
+                              : "border-slate-200 bg-white text-slate-800 hover:border-indigo-400 hover:shadow-md"
+                          }`}
+                        >
+                          <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
+                            card3Selected === "A"
+                              ? isCard3Correct
+                                ? "bg-emerald-600 text-white shadow-sm"
+                                : "bg-rose-500 text-white shadow-sm"
+                              : "bg-slate-100 text-slate-600"
+                          }`}>
+                            A
+                          </span>
+                          <span className="flex-1 leading-snug">{formatRichText(getText(currentCard.option_a))}</span>
+                        </button>
+
+                        <button
+                          onClick={() => setCard3Selected("B")}
+                          className={`w-full p-3.5 sm:p-4 rounded-2xl border-2 text-left transition-all font-bold text-sm sm:text-base shadow-xs flex items-center gap-3.5 ${
+                            card3Selected === "B"
+                              ? isCard3Correct
+                                ? "border-emerald-500 bg-emerald-50/90 text-emerald-950 shadow-md scale-[1.01]"
+                                : "border-rose-400 bg-rose-50/90 text-rose-950 shadow-sm"
+                              : "border-slate-200 bg-white text-slate-800 hover:border-indigo-400 hover:shadow-md"
+                          }`}
+                        >
+                          <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
+                            card3Selected === "B"
+                              ? isCard3Correct
+                                ? "bg-emerald-600 text-white shadow-sm"
+                                : "bg-rose-500 text-white shadow-sm"
+                              : "bg-slate-100 text-slate-600"
+                          }`}>
+                            B
+                          </span>
+                          <span className="flex-1 leading-snug">{formatRichText(getText(currentCard.option_b))}</span>
+                        </button>
+                      </div>
+
+                      {/* Feedback Reveal Box */}
+                      {card3Selected && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className={`p-4 sm:p-5 rounded-2xl shadow-lg flex flex-col gap-2 ${
+                            isCard3Correct
+                              ? "bg-gradient-to-r from-[#006a62] to-[#047857] text-white"
+                              : "bg-gradient-to-r from-[#ba1a1a] to-[#991b1b] text-white"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 size={22} className="shrink-0 text-white" />
+                            <h3 className="font-black text-base sm:text-lg">
+                              {isCard3Correct 
+                                ? (lang === 'hi' ? 'शाबाश! सही उत्तर!' : lang === 'gu' ? 'શાબાશ! સાચો જવાબ!' : 'Spot On! Correct!') 
+                                : (lang === 'hi' ? 'पुनर्विचार करें!' : lang === 'gu' ? 'ફરી વિચારો!' : 'Think Again!')}
+                            </h3>
+                          </div>
+                          <p className="text-xs sm:text-sm font-medium leading-relaxed text-white/95">
+                            {isCard3Correct
+                              ? formatRichText(getText(currentCard.feedback))
+                              : (lang === 'hi' 
+                                  ? `रटना या उंगलियों पर धीरे-धीरे गिनना समय लेता है। स्मार्ट ट्रिक (Option ${correctOption}) चुनें!` 
+                                  : lang === 'gu' 
+                                  ? `ગોખણપટ્ટી કે આંગળી પર ધીમે ગણવું સમય બગાડે છે. સ્માર્ટ ટ્રિક (Option ${correctOption}) પસંદ કરો!` 
+                                  : `Line counting is slow. Choose Option ${correctOption} for the smart cognitive trick!`)}
+                          </p>
+                        </motion.div>
+                      )}
                     </div>
-
-                    {/* Feedback Reveal Box */}
-                    {card3Selected && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className={`p-4 sm:p-5 rounded-2xl shadow-lg flex flex-col gap-2 ${
-                          card3Selected === "B"
-                            ? "bg-gradient-to-r from-[#006a62] to-[#047857] text-white"
-                            : "bg-gradient-to-r from-[#ba1a1a] to-[#991b1b] text-white"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <CheckCircle2 size={22} className="shrink-0 text-white" />
-                          <h3 className="font-black text-base sm:text-lg">
-                            {card3Selected === "B" 
-                              ? (lang === 'hi' ? 'शाबाश! सही उत्तर!' : lang === 'gu' ? 'શાબાશ! સાચો જવાબ!' : 'Spot On! Correct!') 
-                              : (lang === 'hi' ? 'पुनर्विचार करें!' : lang === 'gu' ? 'ફરી વિચારો!' : 'Think Again!')}
-                          </h3>
-                        </div>
-                        <p className="text-xs sm:text-sm font-medium leading-relaxed text-white/95">
-                          {card3Selected === "B"
-                            ? formatRichText(getText(currentCard.feedback))
-                            : (lang === 'hi' ? 'रटना या उंगलियों पर धीरे-धीरे गिनना समय लेता है। स्मार्ट ट्रिक (Option B) चुनें!' : lang === 'gu' ? 'ગોખણપટ્ટી કે આંગળી પર ધીમે ગણવું સમય બગાડે છે. સ્માર્ટ ટ્રિક (Option B) પસંદ કરો!' : 'Line counting is slow. Choose Option B for the smart cognitive trick!')}
-                        </p>
-                      </motion.div>
-                    )}
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* ────────────────── CARD 4: SKILL PRACTICE QUIZ (GATED) ────────────────── */}
                 {currentCard.type === "skill_practice_quiz" && (
@@ -1122,9 +1143,9 @@ export default function NeuroPlayScreen() {
                     {renderSkillIcon(currentCard.icon, selectedSkill.category, 36)}
 
                     <div className="text-center">
-                      <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-amber-50 border border-amber-200/80 text-[#D97706] font-extrabold text-[10px] tracking-wider uppercase mb-2 shadow-2xs">
-                        <Target size={12} className="text-[#D97706]" />
-                        <span>Step 4 • Skill Practice Quiz</span>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-0.5 sm:py-1 rounded-full bg-amber-50 border border-amber-200/80 text-[#D97706] font-extrabold text-[9px] sm:text-[10px] tracking-wide sm:tracking-wider uppercase mb-2 shadow-2xs max-w-full whitespace-nowrap overflow-hidden">
+                        <Target size={12} className="text-[#D97706] shrink-0" />
+                        <span className="truncate">Step 4 • Skill Practice Quiz</span>
                       </span>
                       <h2 className="text-lg sm:text-xl font-black text-[#141779] leading-snug mb-5">
                         {formatRichText(getText(currentCard.question))}
@@ -1198,9 +1219,9 @@ export default function NeuroPlayScreen() {
                     {renderSkillIcon(currentCard.icon, selectedSkill.category, 36)}
 
                     <div className="text-center">
-                      <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-indigo-50 border border-indigo-200/80 text-[#141779] font-extrabold text-[10px] tracking-wider uppercase mb-2 shadow-2xs">
-                        <Zap size={12} className="text-[#4F46E5]" />
-                        <span>Step 5 • Strategy Formula</span>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-0.5 sm:py-1 rounded-full bg-indigo-50 border border-indigo-200/80 text-[#141779] font-extrabold text-[9px] sm:text-[10px] tracking-wide sm:tracking-wider uppercase mb-2 shadow-2xs max-w-full whitespace-nowrap overflow-hidden">
+                        <Zap size={12} className="text-[#4F46E5] shrink-0" />
+                        <span className="truncate">Step 5 • Strategy Formula</span>
                       </span>
                       <h2 className="text-xl sm:text-2xl font-black text-[#141779] leading-tight mb-2">
                         {formatRichText(getText(currentCard.title))}
@@ -1230,9 +1251,9 @@ export default function NeuroPlayScreen() {
                     {renderSkillIcon(currentCard.icon, selectedSkill.category, 30)}
 
                     <div className="text-center">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-teal-50 border border-teal-200/80 text-[#006a62] font-extrabold text-[10px] tracking-wider uppercase mb-1.5 shadow-2xs">
-                        <CheckSquare size={12} className="text-[#006a62]" />
-                        <span>Step 6 • Action Checklist</span>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-0.5 sm:py-1 rounded-full bg-teal-50 border border-teal-200/80 text-[#006a62] font-extrabold text-[9px] sm:text-[10px] tracking-wide sm:tracking-wider uppercase mb-1.5 shadow-2xs max-w-full whitespace-nowrap overflow-hidden">
+                        <CheckSquare size={12} className="text-[#006a62] shrink-0" />
+                        <span className="truncate">Step 6 • Action Checklist</span>
                       </span>
                       <h2 className="text-lg sm:text-xl font-black text-[#141779] leading-tight mb-1">
                         {formatRichText(getText(currentCard.title))}
@@ -1270,9 +1291,9 @@ export default function NeuroPlayScreen() {
                   <div className="space-y-4 text-center">
                     {renderSkillIcon("trophy", selectedSkill.category, 40)}
 
-                    <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-amber-50 border border-amber-200/80 text-[#D97706] font-extrabold text-[10px] tracking-wider uppercase mb-2 shadow-2xs">
-                      <Trophy size={12} className="text-[#D97706]" />
-                      <span>Step 7 • Daily Mission</span>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-0.5 sm:py-1 rounded-full bg-amber-50 border border-amber-200/80 text-[#D97706] font-extrabold text-[9px] sm:text-[10px] tracking-wide sm:tracking-wider uppercase mb-2 shadow-2xs max-w-full whitespace-nowrap overflow-hidden">
+                      <Trophy size={12} className="text-[#D97706] shrink-0" />
+                      <span className="truncate">Step 7 • Daily Mission</span>
                     </span>
                     <h2 className="text-2xl sm:text-3xl font-black text-[#141779] leading-tight mb-3">
                       {formatRichText(getText(currentCard.title))}
