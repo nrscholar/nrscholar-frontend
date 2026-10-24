@@ -15,6 +15,7 @@ import {
   WEAKNESS_RED_SHADES 
 } from "../../../utils/chartColors";
 import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
+import DynamicAiInsightCard from "../../../components/DynamicAiInsightCard";
 
 export default function ParentDashboardScreen() {
   const { t } = useTranslation();
@@ -1334,22 +1335,27 @@ export default function ParentDashboardScreen() {
             </div>
           </div>
 
-          {/* Today's Learning Metrics (2-column layout, spacious & clear) */}
-          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-            <div className="bg-slate-50/80 rounded-2xl py-2.5 sm:py-3 px-3.5 sm:px-4 flex flex-col items-center justify-center border border-slate-200/70 shadow-2xs">
+          {/* Today's Learning Metrics (Direct on card background with vertical divider) */}
+          <div className="py-1 flex items-center justify-between">
+            {/* Left Side: Today's Time */}
+            <div className="flex-1 flex flex-col items-center justify-center text-center">
               <span className="text-2xl sm:text-3xl font-black text-[#006a62] leading-none mb-1">
                 {todayTime}<span className="text-sm sm:text-base font-bold ml-0.5">m</span>
               </span>
-              <span className="text-xs font-black text-slate-600 uppercase tracking-wider text-center">
+              <span className="text-xs font-black text-slate-500 uppercase tracking-wider text-center">
                 {t('todays_time', "TODAY'S TIME")}
               </span>
             </div>
 
-            <div className="bg-slate-50/80 rounded-2xl py-2.5 sm:py-3 px-3.5 sm:px-4 flex flex-col items-center justify-center border border-slate-200/70 shadow-2xs">
+            {/* Subtle Vertical Divider */}
+            <div className="w-[1px] bg-slate-200/90 self-stretch my-1 shrink-0" />
+
+            {/* Right Side: Solved Today */}
+            <div className="flex-1 flex flex-col items-center justify-center text-center">
               <span className="text-2xl sm:text-3xl font-black text-[#30007f] leading-none mb-1">
                 {solvedToday}
               </span>
-              <span className="text-xs font-black text-slate-600 uppercase tracking-wider text-center">
+              <span className="text-xs font-black text-slate-500 uppercase tracking-wider text-center">
                 {t('solved_today', 'SOLVED TODAY')}
               </span>
             </div>
@@ -1515,106 +1521,8 @@ export default function ParentDashboardScreen() {
         {/* Performance Trend Chart */}
         {renderTop3SubjectsGraphCard()}
 
-        {/* 3. Recent Kids Activity (Child's immediate activity directly following subject trends) */}
-        {(() => {
-          const actType = (lastActivityDetails?.type || "").toLowerCase();
-          const actTitle = (lastActivityDetails?.title || "").trim();
-          const lowerTitle = actTitle.toLowerCase();
-          const isMockTitle = !actTitle ||
-            lowerTitle.includes("exploring new quests") ||
-            lowerTitle === "activity logged" ||
-            lowerTitle === "no recent activity" ||
-            lowerTitle === "activity";
-
-          const isReadingType = actType === "reading" || actType === "chapter";
-          const isValidLastActivity = Boolean(
-            lastActivityDetails &&
-            !isMockTitle &&
-            (
-              (isReadingType && (lastActivityDetails.timeTaken >= 15 || lastActivityDetails.completed)) ||
-              (!isReadingType && (lastActivityDetails.totalQuestions > 0 || lastActivityDetails.timeTaken >= 15 || lastActivityDetails.completed))
-            )
-          );
-
-          return (
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between px-1">
-                <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-600">
-                  {t("recent_activity", "Recent Activity")}
-                </h3>
-                {isValidLastActivity && (
-                  <button
-                    onClick={() => navigate('/parent/kids-activity')}
-                    className="text-xs sm:text-[13px] font-bold text-indigo-700 hover:text-indigo-900 transition-colors cursor-pointer flex items-center gap-1 group"
-                  >
-                    <span>{t("view_all", "View All").replace(/[-–—]?\s*[>→›»]/g, "").replace(/->/g, "").trim()}</span>
-                    <ChevronRight size={13} className="group-hover:translate-x-0.5 transition-transform shrink-0" />
-                  </button>
-                )}
-              </div>
-
-              {isValidLastActivity ? (
-                <button
-                  onClick={() => navigate('/parent/kids-activity')}
-                  className="w-full bg-white rounded-2xl p-3 border border-slate-200/70 shadow-xs flex justify-between items-center hover:bg-slate-50 hover:shadow-sm transition-all group gap-3 cursor-pointer text-left"
-                >
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
-                      <Clock size={17} className="text-[#141779]" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-sm font-black text-[#141779] leading-tight truncate mb-1">
-                        {translateActivityTitle(lastActivityDetails.title)}
-                      </h4>
-                      <div className="flex items-center gap-2 text-xs font-medium text-slate-500 flex-nowrap overflow-hidden">
-                        <span className={`px-2 py-0.5 rounded-md text-[11px] font-black uppercase tracking-wider shrink-0 whitespace-nowrap ${
-                          lastActivityDetails.type === "reading" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
-                          lastActivityDetails.type === "battle" ? "bg-rose-50 text-rose-700 border border-rose-200" :
-                          lastActivityDetails.type === "multiplayer" ? "bg-purple-50 text-purple-700 border border-purple-200" :
-                          "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                        }`}>
-                          {lastActivityDetails.type === "reading" ? `📖 ${t("reading", "Reading")}` :
-                           lastActivityDetails.type === "battle" ? `🐉 ${t("boss", "Boss")}` :
-                           lastActivityDetails.type === "multiplayer" ? `⚔️ ${t("arena", "Arena")}` :
-                           `🎯 ${t("quiz", "Quiz")}`}
-                        </span>
-                        {lastActivityDetails.timeTaken > 0 && (
-                          <span className="shrink-0 whitespace-nowrap">⏱️ {Math.round(lastActivityDetails.timeTaken / 60) || 1}m</span>
-                        )}
-                        {lastActivityDetails?.timeTaken > 0 && lastActivityDetails?.totalQuestions > 0 && <span className="shrink-0 text-slate-400">•</span>}
-                        {lastActivityDetails?.totalQuestions > 0 && (
-                          <span className="text-indigo-600 font-bold shrink-0 whitespace-nowrap">
-                            🎯 {lastActivityDetails.correctQuestions}/{lastActivityDetails.totalQuestions} {t("correct", "Correct")}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <ChevronRight size={16} className="text-[#141779] group-hover:translate-x-0.5 transition-transform shrink-0" />
-                </button>
-              ) : (
-                <div className="w-full bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex items-center justify-between text-left">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center shrink-0 text-slate-400">
-                      <Activity size={18} />
-                    </div>
-                    <div>
-                      <h4 className="text-xs sm:text-sm font-bold text-slate-600 leading-tight">
-                        {t("no_recent_activity_title", "No recent activity")}
-                      </h4>
-                      <p className="text-xs text-slate-500 font-medium mt-0.5">
-                        {t("child_hasnt_completed_activities", "Your child hasn't completed any activities yet.")}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })()}
-
-        {/* 4. Parent Learning Section — Compact & Polished */}
-        <div className="flex flex-col gap-1.5 w-full">
+        {/* 3. Parent Learning Section — Compact & Polished (Moved Above Recent Activity) */}
+        <div className="flex flex-col gap-2 w-full">
           <div className="flex items-center justify-between px-1">
             <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-600">
               {t("parent_learning", "Parent Learning")}
@@ -1716,36 +1624,133 @@ export default function ParentDashboardScreen() {
               </div>
             </button>
           </div>
-        </div>
 
-        {/* 5. Settings & DNA Compact Actions */}
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={() => navigate('/parent/settings')}
-            className="bg-white rounded-xl p-2.5 border border-slate-200/70 shadow-2xs flex items-center justify-between hover:bg-slate-50 transition-all group cursor-pointer text-left"
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
-                <Settings size={15} className="text-slate-700" />
-              </div>
-              <span className="text-xs sm:text-sm font-black text-[#141779] truncate">{t("settings", "Settings")}</span>
-            </div>
-            <ChevronRight size={15} className="text-slate-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
-          </button>
-
+          {/* Expanded Prominent DNA Horizontal Card */}
           <button
             onClick={() => navigate('/parent/learning-dna')}
-            className="bg-white rounded-xl p-2.5 border border-slate-200/70 shadow-2xs flex items-center justify-between hover:bg-slate-50 transition-all group cursor-pointer text-left"
+            className="w-full bg-white hover:bg-teal-50/20 rounded-2xl py-3.5 sm:py-4 px-3.5 sm:px-4 border border-slate-200/80 hover:border-teal-300 shadow-2xs hover:shadow-xs transition-all flex items-center justify-between group cursor-pointer text-left mt-1"
           >
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-teal-50 border border-teal-100/80 flex items-center justify-center shrink-0">
-                <BrainCircuit size={15} className="text-[#006a62]" />
+            <div className="flex items-center gap-3.5 min-w-0 flex-1">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-teal-50 border border-teal-100 text-[#006a62] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
+                <BrainCircuit size={19} />
               </div>
-              <span className="text-xs sm:text-sm font-black text-[#141779] truncate">{t("dna", "DNA")}</span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm sm:text-base font-black text-[#141779] group-hover:text-teal-700 transition-colors leading-tight truncate">
+                    {t("learning_dna", "Learning DNA")}
+                  </h4>
+                  <span className="bg-teal-50 text-teal-700 border border-teal-200/80 text-[10px] sm:text-[11px] font-black uppercase px-2 py-0.5 rounded-full tracking-wider shrink-0">
+                    {t("dna", "DNA")}
+                  </span>
+                </div>
+                <p className="text-xs sm:text-[13px] text-slate-500 font-medium truncate mt-1 leading-snug">
+                  {t("learning_dna_sub", "Cognitive profile, thinking habits & telemetry")}
+                </p>
+              </div>
             </div>
-            <ChevronRight size={15} className="text-slate-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
+            <div className="w-8 h-8 rounded-full bg-slate-50/90 border border-slate-100 text-slate-400 group-hover:text-teal-700 group-hover:bg-teal-50 flex items-center justify-center shrink-0 ml-2 group-hover:translate-x-0.5 transition-all shadow-2xs">
+              <ChevronRight size={16} />
+            </div>
           </button>
         </div>
+
+        {/* 4. Recent Kids Activity (Moved Below Parent Learning) */}
+        {(() => {
+          const actType = (lastActivityDetails?.type || "").toLowerCase();
+          const actTitle = (lastActivityDetails?.title || "").trim();
+          const lowerTitle = actTitle.toLowerCase();
+          const isMockTitle = !actTitle ||
+            lowerTitle.includes("exploring new quests") ||
+            lowerTitle === "activity logged" ||
+            lowerTitle === "no recent activity" ||
+            lowerTitle === "activity";
+
+          const isReadingType = actType === "reading" || actType === "chapter";
+          const isValidLastActivity = Boolean(
+            lastActivityDetails &&
+            !isMockTitle &&
+            (
+              (isReadingType && (lastActivityDetails.timeTaken >= 15 || lastActivityDetails.completed)) ||
+              (!isReadingType && (lastActivityDetails.totalQuestions > 0 || lastActivityDetails.timeTaken >= 15 || lastActivityDetails.completed))
+            )
+          );
+
+          return (
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between px-1">
+                <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-600">
+                  {t("recent_activity", "Recent Activity")}
+                </h3>
+                {isValidLastActivity && (
+                  <button
+                    onClick={() => navigate('/parent/kids-activity')}
+                    className="text-xs sm:text-[13px] font-bold text-indigo-700 hover:text-indigo-900 transition-colors cursor-pointer flex items-center gap-1 group"
+                  >
+                    <span>{t("view_all", "View All").replace(/[-–—]?\s*[>→›»]/g, "").replace(/->/g, "").trim()}</span>
+                    <ChevronRight size={13} className="group-hover:translate-x-0.5 transition-transform shrink-0" />
+                  </button>
+                )}
+              </div>
+
+              {isValidLastActivity ? (
+                <button
+                  onClick={() => navigate('/parent/kids-activity')}
+                  className="w-full bg-white rounded-2xl p-3 border border-slate-200/70 shadow-xs flex justify-between items-center hover:bg-slate-50 hover:shadow-sm transition-all group gap-3 cursor-pointer text-left"
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
+                      <Clock size={17} className="text-[#141779]" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-sm font-black text-[#141779] leading-tight truncate mb-1">
+                        {translateActivityTitle(lastActivityDetails.title)}
+                      </h4>
+                      <div className="flex items-center gap-2 text-xs font-medium text-slate-500 flex-nowrap overflow-hidden">
+                        <span className={`px-2 py-0.5 rounded-md text-[11px] font-black uppercase tracking-wider shrink-0 whitespace-nowrap ${
+                          lastActivityDetails.type === "reading" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
+                          lastActivityDetails.type === "battle" ? "bg-rose-50 text-rose-700 border border-rose-200" :
+                          lastActivityDetails.type === "multiplayer" ? "bg-purple-50 text-purple-700 border border-purple-200" :
+                          "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                        }`}>
+                          {lastActivityDetails.type === "reading" ? `📖 ${t("reading", "Reading")}` :
+                           lastActivityDetails.type === "battle" ? `🐉 ${t("boss", "Boss")}` :
+                           lastActivityDetails.type === "multiplayer" ? `⚔️ ${t("arena", "Arena")}` :
+                           `🎯 ${t("quiz", "Quiz")}`}
+                        </span>
+                        {lastActivityDetails.timeTaken > 0 && (
+                          <span className="shrink-0 whitespace-nowrap">⏱️ {Math.round(lastActivityDetails.timeTaken / 60) || 1}m</span>
+                        )}
+                        {lastActivityDetails?.timeTaken > 0 && lastActivityDetails?.totalQuestions > 0 && <span className="shrink-0 text-slate-400">•</span>}
+                        {lastActivityDetails?.totalQuestions > 0 && (
+                          <span className="text-indigo-600 font-bold shrink-0 whitespace-nowrap">
+                            🎯 {lastActivityDetails.correctQuestions}/{lastActivityDetails.totalQuestions} {t("correct", "Correct")}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight size={16} className="text-[#141779] group-hover:translate-x-0.5 transition-transform shrink-0" />
+                </button>
+              ) : (
+                <div className="w-full bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex items-center justify-between text-left">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center shrink-0 text-slate-400">
+                      <Activity size={18} />
+                    </div>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-600 leading-tight">
+                        {t("no_recent_activity_title", "No recent activity")}
+                      </h4>
+                      <p className="text-xs text-slate-500 font-medium mt-0.5">
+                        {t("child_hasnt_completed_activities", "Your child hasn't completed any activities yet.")}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
       </main>
 
@@ -1792,7 +1797,7 @@ export default function ParentDashboardScreen() {
             </div>
 
             <div 
-              className="flex-1 overflow-y-auto p-5 space-y-4 overscroll-contain"
+              className="flex-1 overflow-y-auto p-5 pb-7 space-y-4 overscroll-contain"
               style={{ overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}
             >
               {!hasEnoughData || subjectBreakdown.length === 0 ? (
@@ -1851,38 +1856,13 @@ export default function ParentDashboardScreen() {
                       /* Enhanced Weaknesses Cards (consecutive days < 70%) */
                       <div className="space-y-3">
                         {actualWeakSubjects.map((sb, idx) => {
-                          const improvementNeeded = Math.max(1, maxAccuracy - sb.accuracy);
                           const subjName = translateSubjectName(sb.subject);
-                          const normSubj = sb.subject.toLowerCase();
-
-                          const matchingWeakness = weaknesses?.find(
-                            w =>
-                              w.toLowerCase().includes(normSubj) &&
-                              !w.includes("No weakness") &&
-                              !w.includes("Not enough Data") &&
-                              !w.includes("No data available")
-                          );
-
-                          let insightText = "";
-                          if (matchingWeakness && !matchingWeakness.includes("currently")) {
-                            insightText = translateInsightText(matchingWeakness);
-                          } else if (sb.wrongAnswers !== undefined && sb.wrongAnswers > 0) {
-                            insightText = t("weakness_insight_review_mistakes", {
-                              subject: subjName,
-                              count: sb.wrongAnswers,
-                              defaultValue: `Practice ${subjName} regularly and review recent mistakes.`
-                            });
-                          } else {
-                            insightText = t("weakness_insight_general", {
-                              subject: subjName,
-                              defaultValue: `Review chapter concepts in ${subjName} and retry practice questions to lift score above 70%.`
-                            });
-                          }
+                          const isDeepRecovery = (sb.accuracy ?? 0) < 50;
 
                           return (
                             <div
                               key={idx}
-                              className="bg-white rounded-2xl p-4 border border-rose-200/90 shadow-xs space-y-2.5"
+                              className="bg-white rounded-2xl p-4 border border-rose-200/90 shadow-xs space-y-3"
                             >
                               <div className="flex justify-between items-center">
                                 <h4 className="text-sm font-black text-slate-800 flex items-center gap-1.5">
@@ -1897,22 +1877,8 @@ export default function ParentDashboardScreen() {
                                 </h4>
                                 <span className="text-xs font-black px-2.5 py-1 rounded-full bg-rose-50 text-[#dc2626] border border-rose-200 flex items-center gap-1">
                                   <span className="text-[10px]">●</span>
-                                  <span>{t("status_needs_improvement", "Needs Improvement (2+ Days)")}</span>
+                                  <span>{t("status_needs_improvement", "Needs Improvement")}</span>
                                 </span>
-                              </div>
-
-                              <div className="flex justify-between items-center text-xs font-bold">
-                                <span className="text-[#dc2626] font-bold">
-                                  {`${subjName} needs improvement with ${sb.accuracy}% accuracy.`}
-                                </span>
-                                {improvementNeeded > 0 && (
-                                  <span className="text-xs text-[#dc2626] font-bold bg-rose-50/70 px-2 py-0.5 rounded-md">
-                                    {t("improvement_needed_gap", {
-                                      gap: improvementNeeded,
-                                      defaultValue: `+${improvementNeeded}% to match top subject`
-                                    })}
-                                  </span>
-                                )}
                               </div>
 
                               <div className="h-2.5 w-full bg-rose-100/70 rounded-full overflow-hidden">
@@ -1939,12 +1905,26 @@ export default function ParentDashboardScreen() {
                                 </div>
                               )}
 
-                              <div className="bg-rose-50/60 rounded-xl p-2.5 border border-rose-100/80 text-xs leading-relaxed">
-                                <span className="font-extrabold text-[#dc2626]">
-                                  {t("actionable_insight_label", "Actionable Insight")}:{" "}
-                                </span>
-                                <span className="font-semibold text-slate-700">{insightText}</span>
-                              </div>
+                              {/* Dynamic AI Insight (LLM Mistake Pattern Analysis & 7-Day / 15-Day Structured Recovery Plan) */}
+                              {(() => {
+                                const normSubj = (sb.subject || "").toLowerCase();
+                                const subjectMistakes = (reportData?.mistakes || []).filter((m: any) => {
+                                  const mSubj = (m.subject || "").toLowerCase();
+                                  return mSubj === normSubj || mSubj.includes(normSubj) || normSubj.includes(mSubj);
+                                });
+                                return (
+                                  <DynamicAiInsightCard
+                                    mode="weakness"
+                                    subject={subjName}
+                                    accuracy={sb.accuracy}
+                                    mistakeCount={sb.wrongAnswers !== undefined ? sb.wrongAnswers : subjectMistakes.length}
+                                    correctCount={sb.correctAnswers ?? 0}
+                                    recentTrend={sb.trend7Day || sb.timeline || activeTrend}
+                                    incorrectQuestionLogs={subjectMistakes}
+                                    studentName={cleanChildName}
+                                  />
+                                );
+                              })()}
                             </div>
                           );
                         })}
@@ -1985,12 +1965,6 @@ export default function ParentDashboardScreen() {
                                 </span>
                               </div>
 
-                              <div className="flex justify-between items-center text-xs font-bold">
-                                <span className="text-[#b45309] font-bold">
-                                  {`${subjName} needs attention with ${sb.accuracy}% accuracy.`}
-                                </span>
-                              </div>
-
                               <div className="h-2.5 w-full bg-amber-100/70 rounded-full overflow-hidden">
                                 <div
                                   className="h-full rounded-full transition-all duration-700"
@@ -2009,17 +1983,26 @@ export default function ParentDashboardScreen() {
                                 </div>
                               )}
 
-                              <div className="bg-amber-50/60 rounded-xl p-2.5 border border-amber-100/80 text-xs leading-relaxed">
-                                <span className="font-extrabold text-[#b45309]">
-                                  {t("recovery_tip_label", "Recovery Tip")}:{" "}
-                                </span>
-                                <span className="font-semibold text-slate-700">
-                                  {t("risk_recovery_tip", {
-                                    subject: subjName,
-                                    defaultValue: `Practice ${subjName} tomorrow and score 70% or above to automatically recover and clear this alert.`
-                                  })}
-                                </span>
-                              </div>
+                              {/* Dynamic AI Insight (Day 1 Recovery Protocol) */}
+                              {(() => {
+                                const normSubj = (sb.subject || "").toLowerCase();
+                                const subjectMistakes = (reportData?.mistakes || []).filter((m: any) => {
+                                  const mSubj = (m.subject || "").toLowerCase();
+                                  return mSubj === normSubj || mSubj.includes(normSubj) || normSubj.includes(mSubj);
+                                });
+                                return (
+                                  <DynamicAiInsightCard
+                                    mode="risk"
+                                    subject={subjName}
+                                    accuracy={sb.accuracy}
+                                    mistakeCount={sb.wrongAnswers !== undefined ? sb.wrongAnswers : subjectMistakes.length}
+                                    correctCount={sb.correctAnswers ?? 0}
+                                    recentTrend={sb.trend7Day || sb.timeline || activeTrend}
+                                    incorrectQuestionLogs={subjectMistakes}
+                                    studentName={cleanChildName}
+                                  />
+                                );
+                              })()}
                             </div>
                           );
                         })}
@@ -2057,12 +2040,6 @@ export default function ParentDashboardScreen() {
                                 </span>
                               </div>
 
-                              <div className="flex justify-between items-center text-xs font-bold">
-                                <span className="text-[#006a62] font-bold">
-                                  {`${subjName} is currently high performing with ${sb.accuracy}% accuracy.`}
-                                </span>
-                              </div>
-
                               <div className="h-2.5 w-full bg-emerald-100/70 rounded-full overflow-hidden">
                                 <div
                                   className="h-full rounded-full transition-all duration-700"
@@ -2080,6 +2057,18 @@ export default function ParentDashboardScreen() {
                                   <span className="text-slate-600">{t("solved_count", { correct: sb.correctAnswers, total: sb.correctAnswers + sb.wrongAnswers, defaultValue: `${sb.correctAnswers}/${sb.correctAnswers + sb.wrongAnswers} correct` })}</span>
                                 </div>
                               )}
+
+                              {/* Interactive AI Insight Trigger Button (opens high-end Mastery Modal) */}
+                              <DynamicAiInsightCard
+                                mode="strengths"
+                                subject={subjName}
+                                accuracy={sb.accuracy}
+                                mistakeCount={sb.wrongAnswers ?? 0}
+                                correctCount={sb.correctAnswers ?? 0}
+                                recentTrend={sb.trend7Day || sb.timeline || activeTrend}
+                                incorrectQuestionLogs={[]}
+                                studentName={cleanChildName}
+                              />
                             </div>
                           );
                         })}
@@ -2092,57 +2081,9 @@ export default function ParentDashboardScreen() {
                       </div>
                     )}
                   </div>
-
-                  {/* General Insight Box (kept for strengths, risks, or other non-weakness views) */}
-                  {modalType !== "weaknesses" && (
-                    <div className="bg-indigo-50 p-4 rounded-xl shadow-sm border border-indigo-100">
-                      <p className="text-xs text-[#141779] leading-relaxed">
-                        <span className="font-bold text-[#141779]">{t("actionable_insight", "Actionable Insight: ")} </span>
-                        {modalType === "risks" ? (
-                          actualRiskSubjects.length > 0 ? (
-                            translateInsightText(
-                              actualRiskSubjects
-                                .map(s => `${translateSubjectName(s.subject)} needs attention with ${s.accuracy}% accuracy.`)
-                                .join(" ")
-                            )
-                          ) : (
-                            <>{t("maintaining_good_scores", { name: cleanChildName, defaultValue: `${cleanChildName} is maintaining good scores across all subjects.` })}</>
-                          )
-                        ) : modalType === "strengths" ? (
-                          actualStrengthSubjects.length > 0 ? (
-                            translateInsightText(
-                              actualStrengthSubjects
-                                .map(s => `${translateSubjectName(s.subject)} is currently high performing with ${s.accuracy}% accuracy.`)
-                                .join(" ")
-                            )
-                          ) : (
-                            <>{t("showing_good_performance", { name: cleanChildName, defaultValue: `${cleanChildName} is showing good performance in active subjects.` })}</>
-                          )
-                        ) : (
-                          <>{t("no_trend_data_available", "No trend data available yet. Complete more quizzes to get personalized insights.")}</>
-                        )}
-                      </p>
-                    </div>
-                  )}
                 </>
               )}
             </div>
-
-            {/* View Reports CTA */}
-            {hasEnoughData && (
-              <div className="p-5 pt-2 border-t border-slate-100 bg-white/50 shrink-0">
-                <button
-                  onClick={() => { setModalType(null); navigate('/parent/reports'); }}
-                  className="w-full flex items-center justify-center gap-2 bg-[#141779] text-white font-extrabold text-sm py-3 px-5 rounded-2xl hover:bg-[#1e23a0] active:scale-[0.98] transition-all shadow-md shadow-[#141779]/20"
-                >
-                  <span>📊</span>
-                  <span>
-                    {modalType === "weaknesses" ? t("review_mistakes_reports", "Review Mistakes & Reports") : t("view_subject_reports", "View Subject Reports")}
-                  </span>
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-            )}
           </div>
         </div>
       )}
