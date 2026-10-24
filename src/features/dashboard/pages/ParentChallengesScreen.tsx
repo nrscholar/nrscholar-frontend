@@ -631,21 +631,23 @@ export default function ParentChallengesScreen() {
                       key={`completed_${chal.id}_${idx}`}
                       className="border-2 border-dashed border-[#141779]/30 hover:border-[#141779]/50 bg-white/95 rounded-2xl p-4 sm:p-4.5 flex flex-col gap-3 shadow-2xs transition-all"
                     >
-                      <div className="flex items-start gap-3.5">
-                        <div className="w-10 h-10 bg-[#141779]/10 rounded-full flex items-center justify-center text-[#141779] shrink-0 ring-2 ring-[#141779]/10">
+                      <div className="flex items-start gap-3 sm:gap-3.5">
+                        <div className="w-10 h-10 bg-[#141779]/10 rounded-full flex items-center justify-center text-[#141779] shrink-0 ring-2 ring-[#141779]/10 mt-0.5">
                           <Icon size={20} fill="currentColor" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-bold text-[#141779] text-sm sm:text-base">
-                            {translateChalTitle(chal.title)}
-                          </h4>
-                          <p className="text-slate-800 text-xs sm:text-[13px] font-semibold mt-0.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <h4 className="font-bold text-[#141779] text-sm sm:text-base leading-snug">
+                              {translateChalTitle(chal.title)}
+                            </h4>
+                            <span className="bg-gradient-to-r from-[#141779] to-[#25218c] text-white text-[10px] sm:text-xs px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full font-black shrink-0 shadow-xs tracking-wider">
+                              {t("completed_caps", "COMPLETED")}
+                            </span>
+                          </div>
+                          <p className="text-slate-800 text-xs sm:text-[13px] font-semibold leading-relaxed mt-1">
                             {translateChalDesc(chal.desc)}
                           </p>
                         </div>
-                        <span className="bg-gradient-to-r from-[#141779] to-[#25218c] text-white text-xs px-3 py-1 rounded-full font-black shrink-0 shadow-xs tracking-wider">
-                          {t("completed_caps", "COMPLETED")}
-                        </span>
                       </div>
                       <div className="flex justify-between items-center bg-slate-50 p-2.5 rounded-xl px-4 border border-slate-200/80">
                         <div className="flex items-center gap-2">
