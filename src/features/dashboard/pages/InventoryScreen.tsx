@@ -4,6 +4,7 @@ import { ArrowLeft, Coins, Zap, Shield, MapPin, Package, Star, Gift, PartyPopper
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
+import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
 
 // Stylized 3D Treasure Box Hero SVG
 const MysteryBoxHeroSVG = ({ type }: { type?: string }) => {
@@ -68,6 +69,7 @@ export default function InventoryScreen() {
   const [openingBox, setOpeningBox] = useState<string | null>(null);
   const [hatchingType, setHatchingType] = useState<string | null>(null);
   const [rewardData, setRewardData] = useState<any>(null);
+  useLockBodyScroll(Boolean(rewardData));
   const [subTab, setSubTab] = useState<"Journey" | "Lab">("Journey");
 
   const [xp, setXp] = useState(0);
@@ -1166,6 +1168,8 @@ export default function InventoryScreen() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            style={{ touchAction: "none" }}
+            onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
             className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
           >
             <motion.div 
@@ -1173,6 +1177,7 @@ export default function InventoryScreen() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.6, opacity: 0 }}
               transition={{ type: "spring", damping: 15 }}
+              style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
               className="bg-white border-2 border-[#F59E0B] w-full max-w-xs rounded-3xl p-6 pt-9 text-center relative shadow-2xl mt-6"
             >
               <div className="absolute -top-10 left-1/2 -translate-x-1/2 z-10">

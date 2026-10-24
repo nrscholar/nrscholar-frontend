@@ -1,6 +1,7 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, AlertTriangle, CheckCircle2, Info, Trash2, HelpCircle } from "lucide-react";
+import { useLockBodyScroll } from "../utils/useLockBodyScroll";
 
 export type ModalVariant = "primary" | "danger" | "warning" | "success" | "info";
 
@@ -35,6 +36,8 @@ export default function UnifiedConfirmModal({
   maxWidth = "max-w-[360px]",
   zIndex = "z-[300]"
 }: UnifiedConfirmModalProps) {
+  useLockBodyScroll(isOpen);
+
   if (!isOpen) return null;
 
   const renderDefaultIcon = () => {
@@ -84,13 +87,20 @@ export default function UnifiedConfirmModal({
 
   return (
     <AnimatePresence>
-      <div className={`fixed inset-0 ${zIndex} flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm select-none animate-in fade-in duration-200`}>
+      <div 
+        onTouchMove={(e) => {
+          if (e.target === e.currentTarget) e.preventDefault();
+        }}
+        className={`fixed inset-0 ${zIndex} flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm select-none animate-in fade-in duration-200 overscroll-contain`}
+        style={{ overscrollBehavior: "contain", touchAction: "none" }}
+      >
         <motion.div
           initial={{ scale: 0.92, opacity: 0, y: 16 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.92, opacity: 0, y: 16 }}
           transition={{ type: "spring", stiffness: 350, damping: 26 }}
-          className={`w-full ${maxWidth} bg-white rounded-[32px] p-6 sm:p-7 shadow-[0_20px_60px_rgba(20,23,121,0.18)] border border-slate-100 flex flex-col items-center text-center relative`}
+          className={`w-full ${maxWidth} bg-white rounded-[32px] p-6 sm:p-7 shadow-[0_20px_60px_rgba(20,23,121,0.18)] border border-slate-100 flex flex-col items-center text-center relative overscroll-contain select-text`}
+          style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
         >
           {/* Close button */}
           <button

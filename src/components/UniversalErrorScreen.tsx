@@ -117,6 +117,41 @@ const getErrorConfig = (statusCode?: ErrorStatusCode): ErrorConfig => {
   };
 };
 
+/**
+ * Detects whether the user was in Parent Mode or Child Mode when the error occurred,
+ * returning the appropriate dashboard destination without destroying PIN verification state.
+ */
+export function getDynamicHomeRoute(): string {
+  try {
+    const isPinVerified = sessionStorage.getItem("parentPinVerified") === "true";
+    const currentPath = window.location.pathname || "";
+    const isParentPath = currentPath.startsWith("/parent");
+    const lastActivePortal = sessionStorage.getItem("last_active_portal");
+
+    // Check user data from localStorage
+    const rawUserData = localStorage.getItem("userData") || localStorage.getItem("user");
+    const user = rawUserData ? JSON.parse(rawUserData) : null;
+    const role = (user?.role || "").toLowerCase();
+    const isCoParent = Boolean(
+      user?.isSecondaryParent ||
+      user?.isCoParent ||
+      role === "co_parent" ||
+      role === "secondary_parent" ||
+      user?.primary_parent_id
+    );
+
+    // If on a parent path, or PIN was verified in this session, or last active portal was parent, or restricted co-parent
+    if (isParentPath || isPinVerified || lastActivePortal === "parent" || isCoParent) {
+      return "/parent/dashboard";
+    }
+
+    // Default to Student / Child Dashboard
+    return "/home";
+  } catch {
+    return "/home";
+  }
+}
+
 export default function UniversalErrorScreen({
   statusCode = 404,
   title: customTitle,
@@ -155,8 +190,13 @@ export default function UniversalErrorScreen({
   const handleHomeClick = () => {
     if (onHome) {
       onHome();
-    } else {
-      window.location.href = "/home";
+      return;
+    }
+    const homeRoute = getDynamicHomeRoute();
+    try {
+      navigate(homeRoute);
+    } catch {
+      window.location.href = homeRoute;
     }
   };
 

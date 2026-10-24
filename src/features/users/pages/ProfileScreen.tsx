@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Zap, Coins, Flame, Users, HelpCircle, LogOut, Gift, ChevronRight, Trophy, GraduationCap, Cake, BookOpen, Bell } from "lucide-react";
-import { motion } from "framer-motion";
-import { apiFetch, clearAuthSession } from "../../../api";
+import { apiFetch, clearAuthSession, logoutUser } from "../../../api";
 import { useTranslation } from "react-i18next";
 import StreakModal from "../../../components/StreakModal";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
@@ -41,6 +40,7 @@ export default function ProfileScreen() {
   const { t, i18n } = useTranslation();
   const [loading] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [showStreakModal, setShowStreakModal] = useState(false);
   const [retentionStreak, setRetentionStreak] = useState<any>(null);
 
@@ -131,11 +131,9 @@ export default function ProfileScreen() {
   }
 
   const handleLogout = async () => {
-    try {
-      await apiFetch("/api/users/logout", { method: "POST" });
-    } catch (e) {}
-    clearAuthSession();
-    navigate("/login");
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    await logoutUser(navigate);
   };
 
   const xp = user.xp || 0;
@@ -481,14 +479,21 @@ export default function ProfileScreen() {
           {/* Logout Device Button */}
           <button 
             onClick={() => setShowLogoutModal(true)}
-            className="w-full flex items-center justify-between bg-white rounded-2xl p-3 border border-slate-100 hover:border-red-100 hover:bg-red-50/30 transition-all shadow-xs group mt-0.5"
+            disabled={isLoggingOut}
+            className="w-full flex items-center justify-between bg-white rounded-2xl p-3 border border-slate-100 hover:border-red-100 hover:bg-red-50/30 transition-all shadow-xs group mt-0.5 disabled:opacity-60"
           >
             <div className="flex items-center gap-3">
               <div className="w-7 h-7 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0 border border-red-100/60">
-                <LogOut size={15} />
+                {isLoggingOut ? (
+                  <div className="w-3.5 h-3.5 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <LogOut size={15} />
+                )}
               </div>
               <div className="text-left">
-                <span className="text-xs font-bold text-red-600 block">{t('logout_device', 'Logout Device')}</span>
+                <span className="text-xs font-bold text-red-600 block">
+                  {isLoggingOut ? t('logging_out', 'Logging out...') : t('logout_device', 'Logout Device')}
+                </span>
                 <span className="text-[10px] font-medium text-slate-400 block">{t('logout_subtitle', 'Sign out from this device')}</span>
               </div>
             </div>
@@ -500,11 +505,12 @@ export default function ProfileScreen() {
       {/* Logout Confirmation Modal */}
       <UnifiedConfirmModal
         isOpen={showLogoutModal}
-        onClose={() => setShowLogoutModal(false)}
+        onClose={() => !isLoggingOut && setShowLogoutModal(false)}
         onConfirm={handleLogout}
+        loading={isLoggingOut}
         title={t('logout_device', 'Logout Device')}
         message={t('logout_confirm_msg', 'Are you sure you want to log out from this device? You will need your credentials to sign back in.')}
-        confirmText={t('yes_logout_device', 'Yes, Logout Device')}
+        confirmText={isLoggingOut ? t('logging_out', 'Logging out...') : t('yes_logout_device', 'Yes, Logout Device')}
         cancelText={t('cancel', 'Cancel')}
         variant="danger"
         icon={<LogOut size={28} className="text-rose-600" />}

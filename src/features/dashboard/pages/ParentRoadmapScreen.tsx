@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Rocket, Star, Check, Sparkles, Brain, Lock, Trophy, BookOpen, TrendingUp, Users, Settings, Play, ArrowLeft, Home, BarChart2 } from "lucide-react";
+import { Rocket, Star, Check, Sparkles, Brain, Lock, Trophy, BookOpen, TrendingUp, Users, Settings, Play, ArrowLeft, Home, BarChart2, Bell, Heart } from "lucide-react";
 import { apiFetch } from "../../../api";
+import { getActiveUserContext } from "../../../utils/sessionCache";
 import { useTranslation } from "react-i18next";
 
 const IconMap: Record<string, any> = {
@@ -11,7 +12,9 @@ const IconMap: Record<string, any> = {
   Lock,
   Trophy,
   BookOpen,
-  Star
+  Star,
+  Heart,
+  Users
 };
 
 export default function ParentRoadmapScreen() {
@@ -33,37 +36,52 @@ export default function ParentRoadmapScreen() {
   const [profilePic, setProfilePic] = useState("");
   const [username, setUsername] = useState("Parent");
 
-  useEffect(() => {
-    async function fetchRoadmap() {
-      try {
-        const [resUser, resRoadmap] = await Promise.all([
-          apiFetch("/api/users/me").catch(() => null),
-          apiFetch("/api/parent/roadmap").catch(() => null)
-        ]);
+  const fetchRoadmap = useCallback(async () => {
+    try {
+      const ctx = getActiveUserContext();
+      const childParam = ctx.childId ? `childId=${encodeURIComponent(ctx.childId)}` : "";
+      const classParam = ctx.classLevel ? `classLevel=${encodeURIComponent(ctx.classLevel)}` : "";
+      const qParams = [childParam, classParam].filter(Boolean).join("&");
+      const [resUser, resRoadmap] = await Promise.all([
+        apiFetch("/api/users/me").catch(() => null),
+        apiFetch(`/api/parent/roadmap${qParams ? `?${qParams}` : ""}`).catch(() => null)
+      ]);
 
-        if (resUser) {
-          const jsonUser = await resUser.json();
-          if (jsonUser.success && jsonUser.data?.user) {
-            setUsername(jsonUser.data.user.parentName || jsonUser.data.user.username || "Parent");
-            setProfilePic(jsonUser.data.user.parentPhoto || "");
-          }
+      if (resUser) {
+        const jsonUser = await resUser.json();
+        if (jsonUser.success && jsonUser.data?.user) {
+          setUsername(jsonUser.data.user.parentName || jsonUser.data.user.username || "Parent");
+          setProfilePic(jsonUser.data.user.parentPhoto || "");
         }
-
-        if (resRoadmap) {
-          const json = await resRoadmap.json();
-          if (json.success && json.data) {
-            setRoadmapData(json.data);
-            sessionStorage.setItem("parent_roadmap_cache", JSON.stringify(json.data));
-          }
-        }
-      } catch (err) {
-        console.error("Failed to load roadmap", err);
-      } finally {
-        setTimeout(() => setLoading(false), 350);
       }
+
+      if (resRoadmap) {
+        const json = await resRoadmap.json();
+        if (json.success && json.data) {
+          setRoadmapData(json.data);
+          sessionStorage.setItem("parent_roadmap_cache", JSON.stringify(json.data));
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load roadmap", err);
+    } finally {
+      setTimeout(() => setLoading(false), 350);
     }
-    fetchRoadmap();
   }, []);
+
+  useEffect(() => {
+    fetchRoadmap();
+
+    const handleUpdate = () => {
+      fetchRoadmap();
+    };
+    window.addEventListener("userDataUpdated", handleUpdate);
+    window.addEventListener("focus", handleUpdate);
+    return () => {
+      window.removeEventListener("userDataUpdated", handleUpdate);
+      window.removeEventListener("focus", handleUpdate);
+    };
+  }, [fetchRoadmap]);
 
   useEffect(() => {
     const updateHeight = () => {
@@ -195,12 +213,15 @@ export default function ParentRoadmapScreen() {
     return (
       <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans overflow-hidden">
         {/* Top Header Skeleton */}
-        <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl border-b border-white/40 shadow-xs flex justify-between items-center px-6 h-16">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full animate-skeleton shrink-0"></div>
+        <header className="sticky top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 h-16 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] w-full">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full animate-skeleton shrink-0"></div>
             <div className="h-6 w-36 rounded-lg animate-skeleton"></div>
           </div>
-          <div className="h-7 w-24 rounded-full animate-skeleton"></div>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full animate-skeleton shrink-0"></div>
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full animate-skeleton shrink-0"></div>
+          </div>
         </header>
 
         {/* Roadmap Path Stages Skeleton */}
@@ -270,27 +291,49 @@ export default function ParentRoadmapScreen() {
       `}</style>
 
       {/* TopAppBar Navigation */}
-      <header className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex justify-between items-center px-6 h-16">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-1 hover:bg-[rgba(20,23,121,0.05)] rounded-full transition-colors active:scale-95">
-            <ArrowLeft size={24} color="#141779" />
+      <header className="sticky top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex justify-between items-center px-4 sm:px-6 h-16 w-full">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+          <button 
+            onClick={() => navigate(-1)} 
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("back", "Back")}
+          >
+            <ArrowLeft size={19} />
           </button>
-          <div className="w-10 h-10 rounded-full border-2 border-[#141779]/20 overflow-hidden bg-white shrink-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-slate-200/80 overflow-hidden bg-white shrink-0 shadow-2xs">
             <img 
               alt="User Profile" 
               className="w-full h-full object-cover"
               src={profilePic || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`}
             />
           </div>
-          <Rocket size={20} color="#141779" className="hidden sm:block" />
-          <h1 className="text-xl font-bold text-[#141779] whitespace-nowrap">{t("growth_journey") || "Growth Journey"}</h1>
+          <Rocket size={18} color="#141779" className="hidden sm:block shrink-0" />
+          <h1 className="text-base sm:text-lg font-black text-[#141779] whitespace-nowrap truncate leading-tight">{t("growth_journey") || "Growth Journey"}</h1>
+        </div>
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <button 
+            onClick={() => navigate('/parent/settings')}
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("settings", "Settings")}
+            title={t("settings", "Settings")}
+          >
+            <Settings size={18} />
+          </button>
+          <button
+            onClick={() => navigate('/notifications')}
+            className="relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("notifications", "Notifications")}
+            title={t("notifications", "Notifications")}
+          >
+            <Bell size={18} />
+          </button>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="relative h-screen w-full flex flex-col items-center justify-center pt-20 pb-24">
+      <main className="relative h-[calc(100vh-64px)] w-full flex flex-col items-center justify-center pt-2 pb-24">
         {/* Adventure Roadmap Container */}
-        <div ref={containerRef} className="relative w-full max-w-[430px] h-full flex flex-col items-center overflow-y-auto no-scrollbar pt-6 pb-36 px-4 scroll-pt-24 scroll-pb-32">
+        <div ref={containerRef} className="relative w-full max-w-[430px] h-full flex flex-col items-center overflow-y-auto no-scrollbar pt-6 pb-10 px-4 scroll-pt-24 scroll-pb-10">
           
           {/* Roadmap SVG Path (Visual Guide) */}
           <svg
@@ -330,21 +373,21 @@ export default function ParentRoadmapScreen() {
                       <div className="w-10 h-10 bg-[#006a62] rounded-full flex items-center justify-center mb-2 shadow-lg shadow-[#006a62]/20">
                         <IconComp size={20} color="white" strokeWidth={3} />
                       </div>
-                      {stage.xpRequired > 0 ? (
-                        <div className="flex items-center gap-1 mb-1">
-                          <Star size={14} color="#006a62" />
-                          <span className="text-xs text-[#464652] font-bold uppercase">{stage.xpRequired} XP</span>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-[#006a62] font-bold uppercase tracking-wider mb-1">{t("unlocked", "Unlocked")}</span>
-                      )}
+                      <div className="flex items-center gap-1 mb-1 px-2.5 py-0.5 rounded-full bg-[#006a62]/10 text-[#006a62]">
+                        <Check size={12} strokeWidth={3} />
+                        <span className="text-xs font-black uppercase tracking-wider">
+                          {stage.totalLessons ? `${stage.totalLessons}/${stage.totalLessons} ${t("completed", "Completed")}` : t("completed", "Completed")}
+                        </span>
+                      </div>
                       <h3 className="text-base font-bold text-[#191c1e] text-center">{translateStageTitle(stage.title)}</h3>
                       {stage.rewards && (
-                        <div className="mt-2 text-[10px] text-[#464652] grid grid-cols-2 gap-x-2 gap-y-1">
+                        <div className="mt-2 text-xs text-[#006a62] font-bold flex flex-wrap justify-center gap-x-2 gap-y-1">
                           {stage.rewards.map((rw: any, i: number) => {
                             const RIcon = IconMap[rw.icon] || Star;
                             return (
-                              <span key={i} className="flex items-center gap-1"><RIcon size={12} /> {translateRewardLabel(rw.label)}</span>
+                              <span key={i} className="flex items-center gap-1 bg-[#006a62]/10 px-2.5 py-0.5 rounded-full text-[11px] font-bold">
+                                <RIcon size={11} className="text-[#006a62]" /> {translateRewardLabel(rw.label)}
+                              </span>
                             );
                           })}
                         </div>
@@ -364,9 +407,13 @@ export default function ParentRoadmapScreen() {
                       <div className="w-12 h-12 bg-[#2d328f] rounded-full flex items-center justify-center mb-3 shadow-lg ring-4 ring-[#006a62]/30">
                         <IconComp size={24} color="#9ba1ff" />
                       </div>
-                      <div className="flex items-center gap-1 mb-1">
-                        <Star size={16} color="#006a62" />
-                        <span className="text-sm text-[#141779] font-bold uppercase">{stage.xpRequired} XP</span>
+                      <div className="flex items-center gap-1.5 mb-1 px-3 py-1 rounded-full bg-[#006a62]/10 text-[#006a62]">
+                        <BookOpen size={14} className="text-[#006a62]" />
+                        <span className="text-xs font-black uppercase tracking-wider">
+                          {stage.completedLessons !== undefined && stage.totalLessons !== undefined
+                            ? t("lessons_progress_fmt", { completed: stage.completedLessons, total: stage.totalLessons, defaultValue: `${stage.completedLessons}/${stage.totalLessons} Lessons` })
+                            : `${stage.progress}% ${t("completed", "Completed")}`}
+                        </span>
                       </div>
                       <h3 className="text-2xl font-bold text-[#141779] mb-2">{translateStageTitle(stage.title)}</h3>
                       
@@ -374,13 +421,13 @@ export default function ParentRoadmapScreen() {
                         <div className="bg-[#006a62] h-full rounded-full transition-all duration-1000" style={{ width: `${stage.progress}%` }}></div>
                       </div>
                       {stage.nextStageName && (
-                        <p className="text-[10px] text-[#464652] font-medium mb-3">
+                        <p className="text-xs text-[#464652] font-bold mb-3">
                           {t("percent_to_target", { percent: stage.progress, target: translateStageTitle(stage.nextStageName), defaultValue: `${stage.progress}% to ${translateStageTitle(stage.nextStageName)}` })}
                         </p>
                       )}
                       
                       {stage.rewards && (
-                        <div className="mt-1 flex gap-3 text-[11px] text-[#464652] font-semibold bg-[#57fae9]/20 px-3 py-1 rounded-full">
+                        <div className="mt-1 flex gap-3 text-xs text-[#464652] font-black bg-[#57fae9]/20 px-3 py-1 rounded-full">
                           {stage.rewards.map((rw: any, i: number) => {
                             const RIcon = IconMap[rw.icon] || Star;
                             return (
@@ -405,10 +452,10 @@ export default function ParentRoadmapScreen() {
                         <span className="text-xs text-[#767683] font-bold uppercase tracking-wider mb-1">{t("locked_caps", "LOCKED")}</span>
                         <h3 className="text-base font-bold text-[#464652] text-center">{translateStageTitle(stage.title)}</h3>
                         {stage.description && (
-                          <p className="text-[10px] text-center mt-1 text-[#767683] leading-relaxed">{translateStageDesc(stage.description)}</p>
+                          <p className="text-xs text-center mt-1 text-[#767683] leading-relaxed font-medium">{translateStageDesc(stage.description)}</p>
                         )}
                         {stage.rewards && (
-                          <div className="mt-2 text-[10px] text-[#767683] flex items-center gap-1 font-medium">
+                          <div className="mt-2 text-xs text-[#767683] flex items-center gap-1 font-bold">
                             {stage.rewards.map((rw: any, i: number) => {
                               const RIcon = IconMap[rw.icon] || Star;
                               return (
@@ -429,7 +476,14 @@ export default function ParentRoadmapScreen() {
         </div>
 
         {/* Floating Action Button */}
-        <button onClick={() => navigate('/parent/lessons')} className="fixed bottom-24 right-5 w-14 h-14 bg-[#141779] text-white rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-transform z-40 hover:bg-[#30007f]">
+        <button 
+          onClick={() => {
+            const activeStage = roadmapData?.stages?.find((s: any) => s.status === "active");
+            navigate(activeStage ? `/parent/lessons?category=${encodeURIComponent(activeStage.title)}` : '/parent/lessons');
+          }} 
+          className="fixed bottom-24 right-5 w-14 h-14 bg-[#141779] text-white rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-transform z-40 hover:bg-[#30007f] cursor-pointer"
+          aria-label={t("start_learning", "Start Learning")}
+        >
           <Play size={24} fill="currentColor" />
         </button>
       </main>

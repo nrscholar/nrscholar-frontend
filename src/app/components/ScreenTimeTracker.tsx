@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { Clock, ChevronRight, X } from "lucide-react";
 import { apiFetch } from "../../api";
 import { registerPushNotificationToken } from "../../services/pushNotificationService";
+import { useLockBodyScroll } from "../../utils/useLockBodyScroll";
 
 const ChildSwitcherModal = lazy(() => import("../../components/ChildSwitcherModal"));
 
@@ -42,6 +43,8 @@ export default function ScreenTimeTracker() {
   const [activeMilestone, setActiveMilestone] = useState<{ key: string; title: string; subtitle: string; timeBadge: string; icon: string } | null>(null);
 
   const location = useLocation();
+  const isParentRoute = location.pathname.startsWith('/parent');
+  useLockBodyScroll(Boolean(isLocked && !isParentRoute));
   const locationRef = useRef(location.pathname);
 
   useEffect(() => {
@@ -207,8 +210,6 @@ export default function ScreenTimeTracker() {
     setActiveMilestone(null);
   };
 
-  const isParentRoute = location.pathname.startsWith('/parent');
-
   // Render Warning Milestone Popup (Top-Side Global Notification Banner Style matching Photo 2)
   if (activeMilestone && !isLocked && !isParentRoute) {
     return (
@@ -250,8 +251,15 @@ export default function ScreenTimeTracker() {
   // Render Final Screen Time Lock Screen
   if (isLocked && !isParentRoute) {
     return (
-      <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-lg z-[9999] flex items-center justify-center p-5 text-center font-sans animate-in fade-in duration-300">
-        <div className="bg-[#141779] border-4 border-amber-400 rounded-[32px] p-6 sm:p-8 max-w-sm w-full shadow-[0_25px_60px_rgba(20,23,121,0.5)] flex flex-col items-center relative overflow-hidden text-white">
+      <div 
+        className="fixed inset-0 bg-slate-950/80 backdrop-blur-lg z-[9999] flex items-center justify-center p-5 text-center font-sans animate-in fade-in duration-300"
+        style={{ touchAction: "none" }}
+        onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+      >
+        <div 
+          className="bg-[#141779] border-4 border-amber-400 rounded-[32px] p-6 sm:p-8 max-w-sm w-full shadow-[0_25px_60px_rgba(20,23,121,0.5)] flex flex-col items-center relative overflow-hidden text-white"
+          style={{ overscrollBehavior: "contain" }}
+        >
           <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-amber-400/15 blur-2xl pointer-events-none" />
           <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full bg-teal-400/15 blur-2xl pointer-events-none" />
 

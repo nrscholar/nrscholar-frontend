@@ -54,9 +54,9 @@ export default function LearningDNA() {
   const circ3 = 2 * Math.PI * radius3;
 
   // Extract scores dynamically from backend report
-  const val1 = report?.learningDnaRadar?.consistency ?? 91;
-  const val2 = report?.learningDnaRadar?.accuracy ?? 82;
-  const val3 = report?.learningDnaRadar?.speed ?? 54;
+  const val1 = report?.learningDnaRadar?.consistency ?? 0;
+  const val2 = report?.learningDnaRadar?.accuracy ?? 0;
+  const val3 = report?.learningDnaRadar?.speed ?? 0;
 
   const target1 = circ1 * (1 - val1 / 100);
   const target2 = circ2 * (1 - val2 / 100);

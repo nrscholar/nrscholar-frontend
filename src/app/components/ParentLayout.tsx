@@ -1,5 +1,5 @@
 import { useNavigate, useLocation, Navigate, Outlet } from "react-router-dom";
-import { Home, BarChart2, BookOpen, TrendingUp, Settings } from "lucide-react";
+import { Home, BarChart2, BookOpen, TrendingUp, User } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useState, useEffect, Suspense } from "react";
 import { startNavigationProgress } from "../../components/NavigationProgressBar";
@@ -49,7 +49,7 @@ export default function ParentLayout() {
     { path: "/parent/reports", label: t('reports', 'Reports'), icon: BarChart2 },
     { path: "/parent/lessons", label: t('academy', 'Academy'), icon: BookOpen },
     { path: "/parent/roadmap", label: t('roadmap', 'Roadmap'), icon: TrendingUp },
-    { path: "/parent/settings", label: t('settings', 'Settings'), icon: Settings },
+    { path: "/parent/settings", label: t('profile', 'Profile'), icon: User },
   ];
 
   const isLessonPlayer = currentPath.startsWith("/parent/lessons/player");
@@ -154,8 +154,8 @@ export default function ParentLayout() {
                     }`}
                   />
                   <span
-                    className={`text-[10px] tracking-wide whitespace-nowrap leading-none transition-colors duration-150 ${
-                      isActive ? "text-white font-extrabold" : "text-[#5c5f73] font-medium"
+                    className={`text-[11px] sm:text-xs tracking-tight whitespace-nowrap leading-none transition-colors duration-150 ${
+                      isActive ? "text-white font-black" : "text-[#5c5f73] font-bold"
                     }`}
                   >
                     {item.label}

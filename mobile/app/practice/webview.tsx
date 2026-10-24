@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import * as React from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -46,15 +47,43 @@ export default function WebViewScreen() {
     loadToken();
   }, []);
 
+  const currentUrlRef = useRef<string>("");
+
+  const isAtShadowArenaHub = (currentUrl?: string) => {
+    const u = currentUrl || currentUrlRef.current || "";
+    return (
+      (u.includes("/multiplayer-hub") || u === "/multiplayer-hub") &&
+      !u.includes("/multiplayer-room") &&
+      !u.includes("/multiplayer-battle")
+    );
+  };
+
   // ── 2. Hardware Android Back Button Handler ──────────────
   const handleHardwareBack = useCallback(() => {
-    if (canGoBack && webViewRef.current) {
+    const current = currentUrlRef.current || "";
+    const isHub = isAtShadowArenaHub(current);
+    const isHome = current.includes("/home") || current.endsWith("/home/") || current.endsWith("/home");
+
+    // If user is on the Shadow Arena Hub (/multiplayer-hub) or on /home, return to native HomeScreen
+    if (isHub || isHome) {
+      router.back();
+      return true; // Consume event
+    }
+
+    // If on a sub-screen like /multiplayer-room, go back in webview history to return to /multiplayer-hub
+    if (webViewRef.current) {
       try {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       } catch (e) {}
-      webViewRef.current.goBack();
+      webViewRef.current.injectJavaScript("window.history.back(); true;");
       return true; // Consume event
     }
+
+    if (canGoBack && webViewRef.current) {
+      webViewRef.current.goBack();
+      return true;
+    }
+
     return false; // Let React Navigation pop the screen
   }, [canGoBack]);
 
@@ -82,9 +111,17 @@ export default function WebViewScreen() {
     });
   };
 
-  // ── 4. Navigation State Change ───────────────────────────
+  // ── 4. Navigation State Change & PostMessage Listener ────
   const handleNavigationStateChange = (navState: WebViewNavigation) => {
-    setCanGoBack(navState.canGoBack);
+    if (navState.url) {
+      currentUrlRef.current = navState.url;
+    }
+    // If webview navigates to /home from multiplayer, exit webview and return to native HomeScreen
+    if (path && path.includes("multiplayer") && navState.url && (navState.url.includes("/home") || navState.url.endsWith("/home/") || navState.url.endsWith("/home"))) {
+      router.back();
+      return;
+    }
+    setCanGoBack(Boolean(navState.canGoBack));
     if (navState.title && !customTitle && !navState.title.includes("vercel.app") && !navState.title.includes("localhost")) {
       setPageTitle(navState.title);
     }
@@ -93,7 +130,43 @@ export default function WebViewScreen() {
     }
   };
 
+  const handleMessage = (event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.type === "EXIT_TO_APP") {
+        router.back();
+        return;
+      }
+      if (data.type === "SPA_NAVIGATION") {
+        currentUrlRef.current = data.url || data.pathname || "";
+        if (
+          path &&
+          path.includes("multiplayer") &&
+          (data.pathname === "/home" || data.pathname === "/home/" || (data.url && data.url.includes("/home")))
+        ) {
+          router.back();
+        }
+      }
+    } catch (e) {
+      // ignore non-JSON messages
+    }
+  };
+
   const handleHeaderBack = () => {
+    const current = currentUrlRef.current || "";
+    const isHub = isAtShadowArenaHub(current);
+    const isHome = current.includes("/home") || current.endsWith("/home/") || current.endsWith("/home");
+
+    if (isHub || isHome) {
+      router.back();
+      return;
+    }
+
+    if (webViewRef.current) {
+      webViewRef.current.injectJavaScript("window.history.back(); true;");
+      return;
+    }
+
     if (canGoBack && webViewRef.current) {
       webViewRef.current.goBack();
     } else {
@@ -145,17 +218,44 @@ export default function WebViewScreen() {
     url = `${url}${separator}token=${encodeURIComponent(token)}`;
   }
 
-  const injectedJS = token
-    ? `
-      (function() {
+  const injectedJS = `
+    (function() {
+      ${token ? `try { localStorage.setItem('userToken', '${token}'); window.dispatchEvent(new Event('storage')); } catch(e) {}` : ''}
+
+      function reportNav() {
         try {
-          localStorage.setItem('userToken', '${token}');
-          window.dispatchEvent(new Event('storage'));
+          if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: 'SPA_NAVIGATION',
+              url: window.location.href,
+              pathname: window.location.pathname
+            }));
+          }
         } catch(e) {}
-      })();
-      true;
-    `
-    : "";
+      }
+
+      var origPushState = history.pushState;
+      history.pushState = function() {
+        var ret = origPushState.apply(this, arguments);
+        reportNav();
+        return ret;
+      };
+
+      var origReplaceState = history.replaceState;
+      history.replaceState = function() {
+        var ret = origReplaceState.apply(this, arguments);
+        reportNav();
+        return ret;
+      };
+
+      window.addEventListener('popstate', reportNav);
+      window.addEventListener('hashchange', reportNav);
+
+      setTimeout(reportNav, 100);
+      setTimeout(reportNav, 500);
+    })();
+    true;
+  `;
 
   return (
     <View style={styles.container}>
@@ -218,10 +318,11 @@ export default function WebViewScreen() {
           allowsInlineMediaPlayback={true}
           onLoadProgress={handleLoadProgress}
           onNavigationStateChange={handleNavigationStateChange}
-          onError={(syntheticEvent) => {
-            const { nativeEvent } = syntheticEvent;
+          onMessage={handleMessage}
+          onError={(syntheticEvent: any) => {
+            const { nativeEvent } = syntheticEvent || {};
             setHasError(true);
-            setErrorMessage(nativeEvent.description || "Failed to connect.");
+            setErrorMessage(nativeEvent?.description || "Failed to connect.");
           }}
           renderLoading={() => (
             <View style={styles.loaderOverlay}>

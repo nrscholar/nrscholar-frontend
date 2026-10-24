@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronRight, Zap, Coins, Gift, Swords, Sparkles, BookOpen } from "lucide-react";
 import { MapStageConfig, NRSCHOLAR_TOKENS } from "./AdventureTheme";
 import { useTranslation } from "react-i18next";
+import { useLockBodyScroll } from "../../utils/useLockBodyScroll";
 
 interface LocationModalSheetProps {
   stage: MapStageConfig | null;
@@ -18,6 +19,8 @@ export default function LocationModalSheet({
   onEnter,
 }: LocationModalSheetProps) {
   const { t } = useTranslation();
+  useLockBodyScroll(Boolean(stage));
+
   if (!stage) return null;
 
   const isCurrent = state === "current";
@@ -25,7 +28,13 @@ export default function LocationModalSheet({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 backdrop-blur-xs p-0 sm:p-4 select-none">
+      <div 
+        onTouchMove={(e) => {
+          if (e.target === e.currentTarget) e.preventDefault();
+        }}
+        className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 backdrop-blur-xs p-0 sm:p-4 select-none overscroll-contain"
+        style={{ overscrollBehavior: "contain", touchAction: "none" }}
+      >
         {/* Backdrop Tap Dismiss */}
         <div className="absolute inset-0" onClick={onClose} />
 
@@ -35,7 +44,8 @@ export default function LocationModalSheet({
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: "100%", opacity: 0 }}
           transition={{ type: "spring", damping: 26, stiffness: 240 }}
-          className="relative z-10 w-full max-w-[420px] bg-[#F4F8FF] border-t-4 border-[#2D328F] rounded-t-[32px] sm:rounded-[32px] p-6 text-slate-900 shadow-[0_-16px_48px_rgba(45,50,143,0.25)] flex flex-col gap-4 overflow-hidden"
+          className="relative z-10 w-full max-w-[420px] bg-[#F4F8FF] border-t-4 border-[#2D328F] rounded-t-[32px] sm:rounded-[32px] p-6 text-slate-900 shadow-[0_-16px_48px_rgba(45,50,143,0.25)] flex flex-col gap-4 overflow-hidden overscroll-contain select-text"
+          style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
         >
           {/* Top Handle */}
           <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto -mt-2 mb-0.5" />

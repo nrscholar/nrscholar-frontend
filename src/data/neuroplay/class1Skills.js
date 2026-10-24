@@ -94,6 +94,7 @@ export const class1Skills = [
           "hi": "1 से शुरू करें और उंगलियों पर 1, 2, 3, 4, 5, 6, 7, 8, 9 गिनें।",
           "gu": "૧ થી શરૂ કરીને આંગળીઓ પર ૧, ૨, ૩, ૪, ૫, ૬, ૭, ૮, ૯ ગણો."
         },
+        "correct_option": "A",
         "feedback": {
           "en": "Correct! Locking the larger number (6) in memory and counting on 3 steps saves 75% of your time!",
           "hi": "सही! बड़ी संख्या (6) को याद रखकर 3 कदम आगे गिनने से 75% समय बचता है!",

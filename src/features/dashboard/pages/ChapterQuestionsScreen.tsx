@@ -5,6 +5,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import DragonCharacter from "../../../components/DragonCharacter";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
+import { getScopedItem, setScopedItem, getActiveUserContext } from "../../../utils/sessionCache";
+import { filterUniqueQuestions } from "../../../utils/quizQuestionUtils";
 
 const SparkleParticles = lazy(() => import("../../../components/SparkleParticles"));
 
@@ -51,11 +53,12 @@ export default function ChapterQuestionsScreen() {
         return;
       }
       try {
+        const activeCtx = getActiveUserContext();
         const [meRes, notifRes, qRes, pRes] = await Promise.all([
           apiFetch("/api/users/me").catch(() => null),
           apiFetch("/api/notifications").catch(() => null),
-          apiFetch(`/api/practice/questions/${chapterId}`).catch(() => null),
-          apiFetch(`/api/practice/chapter-progress/${chapterId}`).catch(() => null)
+          apiFetch(`/api/practice/questions/${chapterId}?classLevel=${encodeURIComponent(activeCtx.classLevel)}`).catch(() => null),
+          apiFetch(`/api/practice/chapter-progress/${chapterId}?classLevel=${encodeURIComponent(activeCtx.classLevel)}`).catch(() => null)
         ]);
 
         if (meRes && meRes.ok) {
@@ -106,7 +109,8 @@ export default function ChapterQuestionsScreen() {
             }
             return newItem;
           });
-          setQuestionsData(shuffledQs);
+          filtered = filterUniqueQuestions(shuffledQs);
+          setQuestionsData(filtered);
         }
         
         if (filtered.length === 0) {
@@ -122,7 +126,8 @@ export default function ChapterQuestionsScreen() {
                 completed: false,
                 readingCompleted: true,
                 questionsCompleted: true,
-                chapterCompleted: false
+                chapterCompleted: false,
+                classLevel: activeCtx.classLevel
               })
             });
           } catch (e) {}
@@ -141,7 +146,7 @@ export default function ChapterQuestionsScreen() {
               // User finished questions, redirect directly to chapter roadmap
               const roadmapUrl = `/mission-roadmap?chapterId=${chapterId}&title=${encodeURIComponent(searchParams.get("chapterName") || "")}&subjectName=${encodeURIComponent(searchParams.get("subjectName") || "")}`;
               
-              sessionStorage.setItem("lastSessionAnswers", JSON.stringify(pJson.data.answers || []));
+              setScopedItem("lastSessionAnswers", JSON.stringify(pJson.data.answers || []));
               await submitActivityLog(pJson.data.answers || []);
               
               navigate(roadmapUrl, { replace: true });
@@ -320,13 +325,14 @@ export default function ChapterQuestionsScreen() {
               completed: false,
               readingCompleted: true,
               questionsCompleted: true,
-              chapterCompleted: false
+              chapterCompleted: false,
+              classLevel: getActiveUserContext().classLevel
             })
           });
           await submitActivityLog(userAnswers);
 
           try {
-            const cachedProg = sessionStorage.getItem("cached_chapter_progress");
+            const cachedProg = getScopedItem("cached_chapter_progress");
             const progMap = cachedProg ? JSON.parse(cachedProg) : {};
             const chIdStr = String(chapterId);
             const updatedDoc = {
@@ -337,7 +343,7 @@ export default function ChapterQuestionsScreen() {
             };
             progMap[chIdStr] = updatedDoc;
             progMap[chapterId] = updatedDoc;
-            sessionStorage.setItem("cached_chapter_progress", JSON.stringify(progMap));
+            setScopedItem("cached_chapter_progress", JSON.stringify(progMap));
           } catch (_) {}
 
           window.dispatchEvent(new Event("userDataUpdated"));
@@ -349,7 +355,7 @@ export default function ChapterQuestionsScreen() {
         // and /api/practice/chapter-progress — no need to call it here
         
         const roadmapUrl = `/mission-roadmap?chapterId=${chapterId}&title=${encodeURIComponent(searchParams.get("chapterName") || "")}&subjectName=${encodeURIComponent(searchParams.get("subjectName") || "")}`;
-        sessionStorage.setItem("lastSessionAnswers", JSON.stringify(userAnswers));
+        setScopedItem("lastSessionAnswers", JSON.stringify(userAnswers));
         
         navigate(roadmapUrl, { replace: true });
       }
