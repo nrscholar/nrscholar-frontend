@@ -9,7 +9,7 @@ import * as SecureStore from "expo-secure-store";
 // We use your machine's local IP address (extracted from Expo logs) to connect to the backend.
 import { Platform } from "react-native";
 
-export const BASE_URL = "https://nrscholar-backend.onrender.com";
+export const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "https://nrscholar-backend.onrender.com";
 
 const TOKEN_KEY = "nrscholar_token";
 
