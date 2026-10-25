@@ -82,7 +82,16 @@ export default defineConfig(({ mode }) => ({
             if (id.includes('lottie-react') || id.includes('lottie-web')) {
               return 'vendor-lottie';
             }
-            if (id.includes('i18next') || id.includes('/react/') || id.includes('react-dom') || id.includes('react-router') || id.includes('@remix-run/router')) {
+            if (
+              id.includes('i18next') ||
+              id.includes('react-i18next') ||
+              id.includes('/react/') ||
+              id.includes('react-dom') ||
+              id.includes('react-router') ||
+              id.includes('@remix-run/router') ||
+              id.includes('zustand') ||
+              id.includes('use-sync-external-store')
+            ) {
               return 'vendor-core';
             }
           }
