@@ -63,7 +63,7 @@ export async function logoutUser(navigate?: (path: string, options?: any) => voi
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 600);
       const API_BASE = import.meta.env.VITE_API_URL || "";
-      const requestUrl = (API_BASE ? `${API_BASE}/api/users/logout` : "/api/users/logout");
+      const requestUrl = `${API_BASE ? API_BASE : ""}/api/users/logout`;
 
       await fetch(requestUrl, {
         method: "POST",
