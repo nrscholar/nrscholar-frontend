@@ -107,12 +107,12 @@ export default function MultiplayerRoomScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col relative overflow-x-clip">
       {/* Background Decor */}
       <div className="absolute top-[10%] left-[10%] w-64 h-64 bg-[#e8ddff] rounded-full blur-[80px] opacity-60"></div>
       <div className="absolute bottom-[20%] right-[10%] w-64 h-64 bg-[#ffd700] rounded-full blur-[100px] opacity-10"></div>
 
-      <header className="flex items-center justify-between px-5 py-6 relative z-10">
+      <header className="sticky top-0 z-40 flex items-center justify-between px-5 py-6 bg-[#f4efff]/90 backdrop-blur-md">
         <button 
           onClick={handleBackToArena} 
           className="p-2 bg-white border border-[#e0e0e0] shadow-sm rounded-full hover:bg-[#e8ddff] transition-colors"

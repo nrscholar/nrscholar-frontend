@@ -1,11 +1,18 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, Search, BookOpen, TrendingUp, Users, Settings, Plus, PlayCircle, ArrowLeft, Lock, ChevronDown, Globe, CheckCircle, Bell } from "lucide-react";
+import { BookOpen, Settings, PlayCircle, ArrowLeft, Lock, ChevronDown, Globe, CheckCircle, Bell } from "lucide-react";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
+import {
+  LessonsLanguage,
+  getLocalizedCategory,
+  getLocalizedTopicTitle,
+  getCanonicalCategory,
+  PARENT_LESSONS_UI_TEXT
+} from "./parentLessonsTranslations";
 
 export default function ParentLessonsScreen() {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const navigate = useNavigate();
   const [allTopics, setAllTopics] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState(() => {
@@ -16,7 +23,12 @@ export default function ParentLessonsScreen() {
   const [xp, setXp] = useState(0);
   const [username, setUsername] = useState("Parent");
   const [profilePic, setProfilePic] = useState("");
-  const [contentLanguage, setContentLanguage] = useState(() => (i18n?.language || "en").split("-")[0]);
+  const [contentLanguage, setContentLanguage] = useState<LessonsLanguage>(() => {
+    const saved = sessionStorage.getItem("parent_lessons_lang");
+    if (saved === "hi" || saved === "gu" || saved === "en") return saved as LessonsLanguage;
+    const base = (i18n?.language || "en").split("-")[0];
+    return base === "hi" || base === "gu" ? (base as LessonsLanguage) : "en";
+  });
   const [loading, setLoading] = useState(true);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
 
@@ -27,15 +39,12 @@ export default function ParentLessonsScreen() {
     return Math.floor(250 * Math.pow(1.5, lvl - 3));
   }
 
-  const fetchLibrary = async (langOverride?: string) => {
+  const fetchLibrary = async () => {
     try {
       setLoading(true);
-      const targetLang = langOverride || contentLanguage;
-      const res = await apiFetch('/api/parent/learning-library', {
-        headers: { "accept-language": targetLang }
-      });
+      const res = await apiFetch('/api/parent/learning-library');
       const data = await res.json();
-      if (data.success) {
+      if (data.success && data.data?.topics) {
         setAllTopics(data.data.topics);
       }
     } catch (e) {
@@ -60,23 +69,9 @@ export default function ParentLessonsScreen() {
         console.error("Failed to fetch user data", e);
       }
     };
-    const fetchControls = async () => {
-      try {
-        const res = await apiFetch('/api/parent/controls');
-        const json = await res.json();
-        if (json.success && json.data?.parentControls?.contentLanguage) {
-          const storedLang = json.data.parentControls.contentLanguage;
-          setContentLanguage(storedLang);
-          fetchLibrary(storedLang);
-        } else {
-          fetchLibrary();
-        }
-      } catch (e) {
-        fetchLibrary();
-      }
-    };
+
     fetchUser();
-    fetchControls();
+    fetchLibrary();
 
     const handleUserDataUpdate = () => {
       fetchUser();
@@ -88,21 +83,14 @@ export default function ParentLessonsScreen() {
     };
   }, []);
 
-  const handleLanguageChange = async (newLang: string) => {
+  const handleLanguageChange = (newLang: LessonsLanguage) => {
     setContentLanguage(newLang);
+    sessionStorage.setItem("parent_lessons_lang", newLang);
     setLangDropdownOpen(false);
-    try {
-      await apiFetch('/api/parent/controls', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contentLanguage: newLang })
-      });
-    } catch (e) {}
-    fetchLibrary(newLang);
   };
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans pb-4 overflow-x-hidden relative">
+    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans pb-4 overflow-x-clip relative">
       <style>{`
         .glass-card {
             background: rgba(255, 255, 255, 0.7);
@@ -122,12 +110,13 @@ export default function ParentLessonsScreen() {
       `}</style>
 
       {/* TopAppBar Navigation */}
-      <header className="sticky top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex justify-between items-center px-4 sm:px-6 h-16 w-full">
+      <header className="sticky top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex justify-between items-center px-4 sm:px-6 h-16 w-full">
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
           <button 
             onClick={() => navigate(-1)} 
             className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
-            aria-label={t("back", "Back")}
+            aria-label={PARENT_LESSONS_UI_TEXT.back[contentLanguage]}
+            title={PARENT_LESSONS_UI_TEXT.back[contentLanguage]}
           >
             <ArrowLeft size={19} />
           </button>
@@ -138,13 +127,16 @@ export default function ParentLessonsScreen() {
               className="w-full h-full object-cover"
             />
           </div>
-          <h1 className="text-base sm:text-lg font-black text-[#141779] truncate leading-tight">{t("lessons") || "Daily Parenting Lessons"}</h1>
+          <h1 className="text-base sm:text-lg font-black text-[#141779] truncate leading-tight">
+            {PARENT_LESSONS_UI_TEXT.headerTitle[contentLanguage]}
+          </h1>
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {/* Dedicated Lesson Language Selector */}
           <div className="relative shrink-0">
             <button
+              id="lessons-language-button"
               onClick={() => setLangDropdownOpen(!langDropdownOpen)}
               className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-slate-50/90 border border-slate-200/80 text-[#141779] font-bold text-xs shadow-2xs hover:bg-slate-100 active:scale-95 transition-all cursor-pointer"
             >
@@ -156,12 +148,13 @@ export default function ParentLessonsScreen() {
             {langDropdownOpen && (
               <div className="absolute right-0 mt-2 w-32 bg-white rounded-2xl shadow-xl border border-slate-100 py-1 z-50 animate-in fade-in zoom-in duration-200">
                 {[
-                  { code: "en", label: "English" },
-                  { code: "hi", label: "हिन्दी" },
-                  { code: "gu", label: "ગુજરાતી" }
+                  { code: "en" as const, label: "English", id: "lessons-lang-en" },
+                  { code: "hi" as const, label: "हिन्दी", id: "lessons-lang-hi" },
+                  { code: "gu" as const, label: "ગુજરાતી", id: "lessons-lang-gu" }
                 ].map(lang => (
                   <button
                     key={lang.code}
+                    id={lang.id}
                     onClick={() => handleLanguageChange(lang.code)}
                     className={`w-full text-left px-4 py-2 text-xs font-bold transition-colors ${contentLanguage === lang.code ? 'bg-[#141779] text-white' : 'text-slate-700 hover:bg-slate-50'}`}
                   >
@@ -175,16 +168,16 @@ export default function ParentLessonsScreen() {
           <button 
             onClick={() => navigate('/parent/settings')}
             className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
-            aria-label={t("settings", "Settings")}
-            title={t("settings", "Settings")}
+            aria-label={PARENT_LESSONS_UI_TEXT.settings[contentLanguage]}
+            title={PARENT_LESSONS_UI_TEXT.settings[contentLanguage]}
           >
             <Settings size={18} />
           </button>
           <button
             onClick={() => navigate('/notifications')}
             className="relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
-            aria-label={t("notifications", "Notifications")}
-            title={t("notifications", "Notifications")}
+            aria-label={PARENT_LESSONS_UI_TEXT.notifications[contentLanguage]}
+            title={PARENT_LESSONS_UI_TEXT.notifications[contentLanguage]}
           >
             <Bell size={18} />
           </button>
@@ -198,10 +191,10 @@ export default function ParentLessonsScreen() {
             <div className="flex justify-between items-end mb-2">
               <div>
                 <p className="text-xs font-bold text-[#006a62] uppercase tracking-wider">
-                  {contentLanguage === "hi" ? "विकास की स्थिति" : contentLanguage === "gu" ? "વિકાસ સ્થિતિ" : "Growth Status"}
+                  {PARENT_LESSONS_UI_TEXT.growthStatus[contentLanguage]}
                 </p>
                 <h2 className="text-xl sm:text-2xl font-black text-[#141779]">
-                  {contentLanguage === "hi" ? `स्तर ${level} अभिभावक` : contentLanguage === "gu" ? `સ્તર ${level} વાલી` : `Level ${level} Parent`}
+                  {PARENT_LESSONS_UI_TEXT.levelParent(level, contentLanguage)}
                 </h2>
               </div>
               <span className="text-[#141779] font-black text-sm sm:text-base">
@@ -234,16 +227,16 @@ export default function ParentLessonsScreen() {
             {[
               { id: "For You", label: contentLanguage === "hi" ? "आपके लिए" : contentLanguage === "gu" ? "તમારા માટે" : "For You" },
               { id: "Completed", label: contentLanguage === "hi" ? "पूर्ण पाठ" : contentLanguage === "gu" ? "પૂર્ણ થયેલા પાઠ" : "Completed" },
-              { id: "Communication", label: contentLanguage === "hi" ? "संचार एवं बातचीत" : contentLanguage === "gu" ? "સંચાર અને વાતચીત" : "Communication" },
-              { id: "Anger Management", label: contentLanguage === "hi" ? "क्रोध नियंत्रण" : contentLanguage === "gu" ? "ક્રોધ નિયંત્રણ" : "Anger Management" },
-              { id: "Child Psychology", label: contentLanguage === "hi" ? "बाल मनोविज्ञान" : contentLanguage === "gu" ? "બાળ મનોવિજ્ઞાન" : "Child Psychology" },
-              { id: "Emotional Intelligence", label: contentLanguage === "hi" ? "भावनात्मक बुद्धिमत्ता" : contentLanguage === "gu" ? "ભાવનાત્મક બુદ્ધિમત્તા" : "Emotional Intelligence" },
-              { id: "Focus", label: contentLanguage === "hi" ? "एकाग्रता एवं ध्यान" : contentLanguage === "gu" ? "એકાગ્રતા અને ધ્યાન" : "Focus" },
-              { id: "Study Habits", label: contentLanguage === "hi" ? "अध्ययन की आदतें" : contentLanguage === "gu" ? "અભ્યાસની ટેવો" : "Study Habits" },
-              { id: "Confidence Building", label: contentLanguage === "hi" ? "आत्मविश्वास निर्माण" : contentLanguage === "gu" ? "આત્મવિશ્વાસ નિર્માણ" : "Confidence Building" },
-              { id: "Digital Parenting", label: contentLanguage === "hi" ? "डिजिटल पैरेंटिंग" : contentLanguage === "gu" ? "ડિજિટલ પેરિન્ટિંગ" : "Digital Parenting" },
-              { id: "Family Growth", label: contentLanguage === "hi" ? "पारिवारिक विकास" : contentLanguage === "gu" ? "પારિવારિક વિકાસ" : "Family Growth" },
-              { id: "Advanced Parenting", label: contentLanguage === "hi" ? "उन्नत पैरेंटिंग" : contentLanguage === "gu" ? "ઉન્નત પેરિન્ટિંગ" : "Advanced Parenting" }
+              { id: "Communication", label: getLocalizedCategory("Communication", contentLanguage) },
+              { id: "Anger Management", label: getLocalizedCategory("Anger Management", contentLanguage) },
+              { id: "Child Psychology", label: getLocalizedCategory("Child Psychology", contentLanguage) },
+              { id: "Emotional Intelligence", label: getLocalizedCategory("Emotional Intelligence", contentLanguage) },
+              { id: "Focus", label: getLocalizedCategory("Focus", contentLanguage) },
+              { id: "Study Habits", label: getLocalizedCategory("Study Habits", contentLanguage) },
+              { id: "Confidence Building", label: getLocalizedCategory("Confidence Building", contentLanguage) },
+              { id: "Digital Parenting", label: getLocalizedCategory("Digital Parenting", contentLanguage) },
+              { id: "Family Growth", label: getLocalizedCategory("Family Growth", contentLanguage) },
+              { id: "Advanced Parenting", label: getLocalizedCategory("Advanced Parenting", contentLanguage) }
             ].map(filter => (
               <button 
                 key={filter.id}
@@ -256,16 +249,16 @@ export default function ParentLessonsScreen() {
           </div>
         </section>
 
-        {/* First Row: Recommended */}
+        {/* First Row: Recommended / Completed */}
         <section className="mt-2.5 sm:mt-3">
           <div className="px-5 sm:px-6 flex justify-between items-center mb-2.5 sm:mb-3 gap-2">
             <h3 className="text-lg sm:text-xl font-black text-[#191c1e] leading-normal flex-1 min-w-0">
               {activeFilter === "Completed" 
-                ? (contentLanguage === "hi" ? "पूर्ण किए गए पाठ" : contentLanguage === "gu" ? "પૂર્ણ થયેલા પાઠ" : "Completed Lessons") 
-                : (contentLanguage === "hi" ? "आपके लिए अनुशंसित" : contentLanguage === "gu" ? "તમારા માટે ભલામણ કરેલ" : "Recommended for You")}
+                ? PARENT_LESSONS_UI_TEXT.completedLessonsTitle[contentLanguage]
+                : PARENT_LESSONS_UI_TEXT.recommendedForYou[contentLanguage]}
             </h3>
             <button onClick={() => navigate('/parent/learning-library')} className="text-[#006a62] font-bold text-xs sm:text-sm hover:underline">
-              {contentLanguage === "hi" ? "सभी देखें" : contentLanguage === "gu" ? "બધું જુઓ" : "See All"}
+              {PARENT_LESSONS_UI_TEXT.seeAll[contentLanguage]}
             </button>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:gap-4 px-5 sm:px-6 pb-4">
@@ -290,10 +283,11 @@ export default function ParentLessonsScreen() {
                 if (t.status === "completed") {
                   return false;
                 }
-                const matchesCategory = activeFilter === "For You" ||
-                  t.category === activeFilter ||
-                  t.originalCategory === activeFilter;
-                return matchesCategory;
+                if (activeFilter === "For You") {
+                  return true;
+                }
+                const tCanonical = getCanonicalCategory(t.category) || getCanonicalCategory(t.originalCategory);
+                return tCanonical === activeFilter || t.category === activeFilter || t.originalCategory === activeFilter;
               });
 
               if (filtered.length === 0) {
@@ -301,50 +295,33 @@ export default function ParentLessonsScreen() {
                   <div className="col-span-2 w-full py-12 px-6 text-center flex flex-col items-center justify-center bg-white/50 border border-slate-200/50 rounded-3xl shadow-xs backdrop-blur-xs">
                     <BookOpen size={48} className="text-[#141779]/30 mb-4 animate-pulse" />
                     <p className="text-base font-bold text-[#141779]">
-                      {activeFilter === "Completed" ? (
-                        contentLanguage === "hi" 
-                          ? "कोई पूर्ण पाठ नहीं" 
-                          : contentLanguage === "gu" 
-                          ? "કોઈ પૂર્ણ થયેલ પાઠ નથી" 
-                          : "No Completed Lessons Yet"
-                      ) : (
-                        contentLanguage === "hi" 
-                          ? "सभी पाठ पूर्ण हो चुके हैं!" 
-                          : contentLanguage === "gu" 
-                          ? "બધા પાઠ પૂર્ણ થયા!" 
-                          : "All Lessons Completed!"
-                      )}
+                      {activeFilter === "Completed"
+                        ? PARENT_LESSONS_UI_TEXT.noCompletedTitle[contentLanguage]
+                        : PARENT_LESSONS_UI_TEXT.allCompletedTitle[contentLanguage]}
                     </p>
                     <p className="text-xs font-semibold text-slate-500 mt-2 max-w-[280px] leading-relaxed">
-                      {activeFilter === "Completed" ? (
-                        contentLanguage === "hi"
-                          ? "आपने अभी तक कोई पाठ पूरा नहीं किया है। सीखना शुरू करने के लिए 'आपके लिए' पर जाएं!"
-                          : contentLanguage === "gu"
-                          ? "તમે હજુ સુધી કોઈ પાઠ પૂર્ણ કર્યો નથી. શીખવાનું શરૂ કરવા માટે 'તમારા માટે' પર જાઓ!"
-                          : "You haven't completed any lessons yet. Start learning from the 'For You' tab to see them here!"
-                      ) : (
-                        contentLanguage === "hi"
-                          ? "आपने इस अनुभाग के सभी पाठ पूर्ण कर लिए हैं। अपने पूर्ण पाठों की समीक्षा करने के लिए 'पूर्ण पाठ' टैब पर जाएं!"
-                          : contentLanguage === "gu"
-                          ? "તમે આ વિભાગના બધા પાઠ પૂર્ણ કર્યા છે. તમારા પૂર્ણ થયેલા પાઠની સમીક્ષા કરવા માટે 'પૂર્ણ થયેલા પાઠ' ટેબ પર જાઓ!"
-                          : "You have completed all lessons in this section. Visit the 'Completed' tab to re-read them anytime!"
-                      )}
+                      {activeFilter === "Completed"
+                        ? PARENT_LESSONS_UI_TEXT.noCompletedDesc[contentLanguage]
+                        : PARENT_LESSONS_UI_TEXT.allCompletedDesc[contentLanguage]}
                     </p>
                     {activeFilter === "Completed" && (
                       <button 
                         onClick={() => setActiveFilter("For You")}
                         className="mt-5 px-5 py-2.5 bg-[#141779] text-white rounded-full text-xs font-bold shadow-md hover:bg-[#30007f] active:scale-95 transition-all"
                       >
-                        {contentLanguage === "hi" ? "पाठ ब्राउज़ करें" : contentLanguage === "gu" ? "પાઠ બ્રાઉઝ કરો" : "Browse Lessons"}
+                        {PARENT_LESSONS_UI_TEXT.browseLessonsBtn[contentLanguage]}
                       </button>
                     )}
                   </div>
                 );
               }
 
-              return filtered.map((topic, index) => {
+              return filtered.map((topic) => {
                 const isCompleted = topic.status === "completed";
                 const isLocked = topic.status === "locked";
+                const localizedTitle = getLocalizedTopicTitle(topic.topicId, topic.title, contentLanguage);
+                const localizedCategory = getLocalizedCategory(topic.category || topic.originalCategory, contentLanguage);
+
                 return (
                   <div
                     key={topic.topicId}
@@ -353,7 +330,7 @@ export default function ParentLessonsScreen() {
                   >
                     <div className="relative h-28 md:h-36 overflow-hidden bg-gray-200">
                       <img
-                        alt={topic.title}
+                        alt={localizedTitle}
                         src={topic.imageUrl}
                         className={`w-full h-full object-cover ${!isLocked ? 'group-hover:scale-110' : ''} transition-transform duration-700`}
                       />
@@ -361,17 +338,23 @@ export default function ParentLessonsScreen() {
                       {isCompleted ? (
                         <div className="absolute top-2 left-2 bg-[#006a62]/90 backdrop-blur-md text-white px-2.5 py-0.5 rounded-full text-xs font-black shadow-sm border border-white/20 flex items-center gap-1">
                           <CheckCircle size={12} className="text-[#57fae9]" />
-                          <span>+{topic.xp || 30} XP ({contentLanguage === "hi" ? "पूर्ण" : contentLanguage === "gu" ? "પૂર્ણ" : "Completed"})</span>
+                          <span>+{topic.xp || 30} XP ({PARENT_LESSONS_UI_TEXT.completedBadge[contentLanguage]})</span>
                         </div>
                       ) : (
                         <div className="absolute top-2 left-2 bg-[#141779] text-white px-2.5 py-0.5 rounded-full text-xs font-black shadow-sm border border-white/20">+{topic.xp || 30} XP</div>
                       )}
-                      <div className="absolute bottom-2 right-2 bg-black/40 backdrop-blur-md text-white px-2 py-0.5 rounded-full text-xs font-bold">{topic.duration || 3} min</div>
+                      <div className="absolute bottom-2 right-2 bg-black/40 backdrop-blur-md text-white px-2 py-0.5 rounded-full text-xs font-bold">
+                        {PARENT_LESSONS_UI_TEXT.minuteDuration(topic.duration || 3, contentLanguage)}
+                      </div>
                       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                         {!isLocked && <PlayCircle size={48} className="text-white drop-shadow-lg" />}
                       </div>
                       {isLocked && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
+                        <div 
+                          className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[2px]"
+                          title={PARENT_LESSONS_UI_TEXT.lockedMessage[contentLanguage]}
+                          aria-label={PARENT_LESSONS_UI_TEXT.lockedMessage[contentLanguage]}
+                        >
                           <Lock size={32} className="text-white drop-shadow-md" />
                         </div>
                       )}
@@ -379,9 +362,13 @@ export default function ParentLessonsScreen() {
                     <div className="p-3 bg-white/50 backdrop-blur-md flex-1 flex flex-col justify-between">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[#006a62] text-xs font-black uppercase tracking-wider">{topic.category}</span>
+                          <span className="text-[#006a62] text-xs font-black uppercase tracking-wider">
+                            {localizedCategory}
+                          </span>
                         </div>
-                        <h4 className="text-sm sm:text-base font-black text-[#141779] leading-snug pt-1 pb-1">{topic.title}</h4>
+                        <h4 className="text-sm sm:text-base font-black text-[#141779] leading-snug pt-1 pb-1">
+                          {localizedTitle}
+                        </h4>
                       </div>
                     </div>
                   </div>

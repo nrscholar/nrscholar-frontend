@@ -692,12 +692,12 @@ export default function HomeScreen() {
   const handleMissionClick = useCallback(() => setShowDailyMissionModal(true), []);
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-[#141779] font-sans relative overflow-x-hidden pb-3 max-w-md mx-auto">
+    <div className="min-h-screen bg-[#f7f9fb] text-[#141779] font-sans relative overflow-x-clip pb-3 max-w-md mx-auto">
       {/* Dynamic Background Glows */}
       <div className="absolute bottom-[20%] -left-[25%] w-[320px] h-[320px] rounded-full bg-[rgba(20,23,121,0.05)] pointer-events-none" />
 
       {/* TOP HEADER */}
-      <header className="fixed top-0 left-0 right-0 max-w-md mx-auto flex items-center justify-between px-4 pt-3 pb-3 bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-2xl shadow-[0_4px_16px_rgba(20,23,121,0.05)] z-50 gap-2 select-none">
+      <header className="fixed top-0 left-0 right-0 max-w-md mx-auto flex items-center justify-between px-4 pt-3 pb-3 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-[0_4px_16px_rgba(20,23,121,0.05)] z-50 gap-2 select-none">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <div className="relative shrink-0">
             <button

@@ -477,7 +477,7 @@ export default function ChapterReaderScreen() {
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       {!isFullscreen && (
-        <header className="flex items-center justify-between px-5 py-3.5 bg-white shrink-0 shadow-sm z-20 relative border-b border-slate-100">
+        <header className="sticky top-0 flex items-center justify-between px-5 py-3.5 bg-white shrink-0 shadow-sm z-20 border-b border-slate-100">
           <button
             onClick={async () => {
               await logReadingTime();

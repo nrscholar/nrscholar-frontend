@@ -639,7 +639,7 @@ export default function NeuroPlayScreen() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col justify-between relative overflow-x-hidden selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col justify-between relative overflow-x-clip selection:bg-indigo-500 selection:text-white">
       
       {/* ═════════════════════════════════════════════════════════════════════ */}
       {/* MODE 1: SKILL LIBRARY VIEW (PARENT ACADEMY PHOTO CARD LAYOUT)        */}
@@ -891,7 +891,7 @@ export default function NeuroPlayScreen() {
       {/* (Ultra-Polished Light Theme • 10/10 Aesthetic Score)                */}
       {/* ═════════════════════════════════════════════════════════════════════ */}
       {viewMode === "player" && (
-        <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans pb-28 relative overflow-x-hidden selection:bg-indigo-500 selection:text-white">
+        <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans pb-28 relative overflow-x-clip selection:bg-indigo-500 selection:text-white">
           
           {/* Ambient Background Glows matching application */}
           <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
