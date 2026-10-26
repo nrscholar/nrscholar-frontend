@@ -68,6 +68,7 @@ const AdminLoginScreen = lazy(() => import("../features/admin/pages/AdminLoginSc
 const QuestionBankScreen = lazy(() => import("../features/admin/pages/QuestionBankScreen"));
 const ChapterReviewScreen = lazy(() => import("../features/admin/pages/ChapterReviewScreen"));
 const AllQuestionsScreen = lazy(() => import("../features/admin/pages/AllQuestionsScreen"));
+const RevisionReviewScreen = lazy(() => import("../features/admin/pages/RevisionReviewScreen"));
 const AdminProtectedRoute = lazy(() =>
   import("../features/admin/components/AdminUI").then((m) => ({ default: m.AdminProtectedRoute }))
 );
@@ -505,6 +506,7 @@ function PinGuard() {
               <Route path="question-bank" element={<QuestionBankScreen />} />
               <Route path="question-bank/:chapterId" element={<ChapterReviewScreen />} />
               <Route path="all-questions" element={<AllQuestionsScreen />} />
+              <Route path="question-revisions" element={<RevisionReviewScreen />} />
             </Route>
 
             <Route path="*" element={<NotFoundScreen />} />

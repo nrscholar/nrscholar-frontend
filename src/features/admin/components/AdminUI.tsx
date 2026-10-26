@@ -37,6 +37,9 @@ function AdminHeader() {
           <Link to="/admin/all-questions" className="flex items-center gap-1 rounded-lg px-2 py-1 font-semibold text-slate-700 hover:bg-slate-100">
             <ListChecks className="h-4 w-4" /> All Questions
           </Link>
+          <Link to="/admin/question-revisions" className="flex items-center gap-1 rounded-lg px-2 py-1 font-semibold text-slate-700 hover:bg-slate-100">
+            <ListChecks className="h-4 w-4" /> Modified Questions
+          </Link>
           <span className="hidden text-slate-500 sm:inline">{user?.email}</span>
           <button
             onClick={() => {

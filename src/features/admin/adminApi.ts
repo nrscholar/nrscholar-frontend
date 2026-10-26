@@ -123,6 +123,8 @@ export interface Draft {
   explanation: string;
   sourceQuote: string;
   sourcePage: number;
+  passageId?: string;
+  passage?: string;
   quoteScore: number | null;
   sourceTextMethod: string;
   verification: { chosen_option: string; correct_option_count: number; answerable_from_chapter: boolean; difficulty: Difficulty; issues: string } | null;
@@ -218,6 +220,56 @@ export interface FolderMatch {
   candidates: DriveFile[];
   currentUrl: string | null;
 }
+
+
+export type RevisionVerdict = "ATTACH_PASSAGE" | "STANDALONE" | "NEEDS_IMAGE" | "REJECT";
+export type RevisionStatus = "pending" | "approved" | "rejected";
+
+export interface Revision {
+  id: string;
+  originalDraftId: string;
+  board: string;
+  classLevel: string;
+  subject: string;
+  chapterName: string;
+  verdict: RevisionVerdict;
+  originalType: string;
+  original: { question: string; options: string[]; answer: string };
+  passage: string;
+  passageGroupId: string;
+  passagePages: string;
+  proposed: { question: string; options: string[]; answer: string };
+  image: { type: string; spec: string; svg: string };
+  reason: string;
+  status: RevisionStatus;
+  editedByHuman?: boolean;
+  reviewedBy?: string;
+  reviewNote?: string;
+}
+
+export interface RevisionEdits {
+  question?: string;
+  options?: string[];
+  answer?: string;
+  passage?: string;
+}
+
+export interface RevisionList {
+  total: number;
+  page: number;
+  limit: number;
+  items: Revision[];
+}
+
+export interface RevisionSummaryRow {
+  board: string;
+  classLevel: string;
+  verdict: RevisionVerdict;
+  status: RevisionStatus;
+  count: number;
+}
+
+const REV = "/api/admin/question-revisions";
 
 export class ApiError extends Error {
   status: number;
@@ -347,4 +399,29 @@ export const adminApi = {
 
   reject: (draftId: string, reason: string) =>
     post<{ data: Draft }>(`${BASE}/drafts/${draftId}/reject`, { reason }).then((r) => r.data),
+
+  revisionFilters: (board?: string, classLevel?: string) => {
+    const q = new URLSearchParams();
+    if (board) q.set("board", board);
+    if (classLevel) q.set("classLevel", classLevel);
+    return request<{ data: { boards: string[]; classLevels: string[]; subjects: string[]; chapters: string[] } }>(`${REV}/filters?${q}`).then((r) => r.data);
+  },
+
+  revisionSummary: () => request<{ data: RevisionSummaryRow[] }>(`${REV}/summary`).then((r) => r.data),
+
+  revisions: (params: Record<string, string>) => {
+    const q = new URLSearchParams(Object.entries(params).filter(([, v]) => v));
+    return request<{ data: RevisionList }>(`${REV}?${q}`).then((r) => r.data);
+  },
+
+  editRevision: (id: string, edits: RevisionEdits) =>
+    request<{ data: Revision }>(`${REV}/${id}`, { method: "PUT", body: JSON.stringify(edits) }).then((r) => r.data),
+
+  approveRevision: (id: string, edits?: RevisionEdits) =>
+    post<{ data: Revision }>(`${REV}/${id}/approve`, { edits: edits || null }).then((r) => r.data),
+
+  rejectRevision: (id: string, note = "") =>
+    post<{ data: Revision }>(`${REV}/${id}/reject`, { note }).then((r) => r.data),
+
+  resetRevision: (id: string) => post<{ success: boolean }>(`${REV}/${id}/reset`),
 };
