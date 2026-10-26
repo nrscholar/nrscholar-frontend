@@ -149,9 +149,9 @@ export default function ParentAchievementsScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f9fb] font-sans relative pb-24 overflow-x-hidden">
+      <div className="min-h-screen bg-[#f7f9fb] font-sans relative pb-24 overflow-x-clip">
         {/* Top Header Skeleton */}
-        <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-white/40 shadow-xs flex items-center justify-between px-6 h-16">
+        <header className="sticky top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-white/40 shadow-xs flex items-center justify-between px-6 h-16">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full animate-skeleton shrink-0"></div>
             <div className="h-6 w-36 rounded-lg animate-skeleton"></div>
@@ -212,7 +212,7 @@ export default function ParentAchievementsScreen() {
   });
 
   return (
-    <div className="bg-gradient-to-b from-[#f0f4f8] to-[#e6eef5] text-[#141779] flex flex-col min-h-screen w-full relative overflow-x-hidden font-sans">
+    <div className="bg-gradient-to-b from-[#f0f4f8] to-[#e6eef5] text-[#141779] flex flex-col min-h-screen w-full relative overflow-x-clip font-sans">
       <style>{`
         .bento-card {
             background: #ffffff;
@@ -234,7 +234,7 @@ export default function ParentAchievementsScreen() {
       `}</style>
 
       {/* Top Header */}
-      <header className="sticky top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex items-center justify-between px-4 sm:px-6 h-16 w-full">
+      <header className="sticky top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex items-center justify-between px-4 sm:px-6 h-16 w-full">
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
           <button 
             onClick={() => navigate(-1)} 
@@ -273,7 +273,7 @@ export default function ParentAchievementsScreen() {
       </header>
 
       {/* Main Bento Layout Container */}
-      <main className="w-full max-w-lg mx-auto pt-3 sm:pt-4 pb-4 px-4 sm:px-5 flex flex-col items-center overflow-y-auto no-scrollbar relative gap-3.5">
+      <main className="w-full max-w-lg mx-auto pt-3 sm:pt-4 pb-4 px-4 sm:px-5 flex flex-col items-center no-scrollbar relative gap-3.5">
         
         {/* Bento Grid */}
         <div className="w-full grid grid-cols-2 gap-3 sm:gap-3.5 mt-0.5">

@@ -263,8 +263,8 @@ export default function ParentalGateScreen() {
 
   if (mode === "loading") {
     return (
-      <div className="min-h-screen bg-[#f7f9fb] font-sans flex flex-col relative overflow-hidden">
-        <header className="flex items-center justify-between px-5 py-4 z-50">
+      <div className="min-h-screen bg-[#f7f9fb] font-sans flex flex-col relative overflow-x-clip">
+        <header className="sticky top-0 z-50 flex items-center justify-between px-5 py-4 bg-[#f7f9fb]/90 backdrop-blur-md">
           <div className="flex items-center gap-3">
             <button onClick={handleBack} className="p-1 hover:opacity-80 transition-opacity" aria-label="Back">
               <ArrowLeft size={24} color="#141779" />
@@ -295,13 +295,13 @@ export default function ParentalGateScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] font-sans flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-[#f7f9fb] font-sans flex flex-col relative overflow-x-clip">
       {/* Decorative Background */}
       <div className="absolute top-[15%] -left-12 w-64 h-64 rounded-full bg-[rgba(0,106,98,0.05)]" />
       <div className="absolute bottom-[20%] -right-24 w-80 h-80 rounded-full bg-[rgba(20,23,121,0.05)]" />
 
       {/* Header */}
-      <header className="flex items-center justify-between px-5 py-4 z-50">
+      <header className="sticky top-0 z-50 flex items-center justify-between px-5 py-4 bg-[#f7f9fb]/90 backdrop-blur-md">
         <div className="flex items-center gap-3">
           <button onClick={handleBack} className="p-1 hover:opacity-80 transition-opacity" aria-label="Back">
             <ArrowLeft size={24} color="#141779" />
@@ -373,6 +373,7 @@ export default function ParentalGateScreen() {
               {row.map((btn, btnIndex) => (
                 <button
                   key={btnIndex}
+                  id={btn === "delete" ? "pin-btn-delete" : btn ? `pin-btn-${btn}` : undefined}
                   onClick={() => btn === "delete" ? removePin() : btn ? addPin(btn) : null}
                   className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${
                     btn ? "hover:bg-[rgba(20,23,121,0.05)]" : ""

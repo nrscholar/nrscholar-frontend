@@ -85,7 +85,7 @@ export default function MissionMapScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#17157F] font-sans pb-28 relative overflow-x-hidden">
+      <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#17157F] font-sans pb-28 relative overflow-x-clip">
         {/* Background Glow Accents */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden">
           <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[35%] rounded-full bg-[#5B5CFF]/10 blur-[90px]" />
@@ -93,7 +93,7 @@ export default function MissionMapScreen() {
         </div>
 
         {/* Top Header Bar Skeleton */}
-        <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex items-center justify-between bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-[28px] shadow-xs px-4 py-3 gap-2">
+        <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex items-center justify-between bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-xs px-4 py-3 gap-2">
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <div className="w-10 h-10 rounded-full bg-indigo-100/80 animate-pulse shrink-0 border border-indigo-200/50" />
             <div className="space-y-1.5 flex-1">
@@ -194,7 +194,7 @@ export default function MissionMapScreen() {
   const themeMeta = getThemeHeader();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#17157F] font-sans pb-44 relative selection:bg-[#5B5CFF] selection:text-white overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#17157F] font-sans pb-44 relative selection:bg-[#5B5CFF] selection:text-white overflow-x-clip">
       {/* Background World Glow Accents */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[35%] rounded-full bg-[#5B5CFF]/10 blur-[90px]" />
@@ -202,7 +202,7 @@ export default function MissionMapScreen() {
       </div>
 
       {/* Top Header Bar */}
-      <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex items-center justify-between bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-[28px] shadow-xs px-4 py-3 gap-2">
+      <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex items-center justify-between bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-xs px-4 py-3 gap-2">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <button
             onClick={() => navigate("/practice/chapters")}

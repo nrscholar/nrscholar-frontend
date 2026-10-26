@@ -326,7 +326,7 @@ export default function ProgressScreen() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F5F6FB] font-sans pb-28 animate-pulse flex flex-col max-w-lg mx-auto">
-        <header className="flex items-center justify-between px-4 py-4 bg-white/80 border-b border-[#E0E3E5]">
+        <header className="sticky top-0 z-50 flex items-center justify-between px-4 py-4 bg-white/80 backdrop-blur-md border-b border-[#E0E3E5]">
           <div className="flex items-center gap-3 w-full">
             <div className="w-8 h-8 bg-gray-200 rounded-full shrink-0" />
             <div className="w-9 h-9 bg-gray-200 rounded-full shrink-0" />
@@ -372,15 +372,15 @@ export default function ProgressScreen() {
     : (weeklyGrowth.length > 0 ? [weeklyGrowth[0]] : []);
 
   return (
-    <div className="min-h-screen bg-[#F7F9FB] text-[#17177F] font-sans pb-28 max-w-lg mx-auto relative selection:bg-[#4D4BFF] selection:text-white overflow-x-hidden">
+    <div className="min-h-screen bg-[#F7F9FB] text-[#17177F] font-sans pb-28 max-w-lg mx-auto relative selection:bg-[#4D4BFF] selection:text-white overflow-x-clip">
       {/* Background Soft Glow Accents */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[55%] h-[40%] rounded-full bg-[#17177F]/8 blur-[100px]" />
         <div className="absolute top-[40%] right-[-10%] w-[55%] h-[40%] rounded-full bg-[#4D4BFF]/8 blur-[100px]" />
       </div>
 
-      {/* TOP APP BAR / GAME HUD (Curved Sticky Design) */}
-      <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex items-center justify-between px-4 py-3 bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-2xl shadow-xs gap-2">
+      {/* TOP APP BAR / GAME HUD (Square Sticky Design) */}
+      <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex items-center justify-between px-4 py-3 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-xs gap-2">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <button
             onClick={() => navigate("/profile")}

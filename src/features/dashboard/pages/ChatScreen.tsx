@@ -138,7 +138,7 @@ export default function ChatScreen() {
     <div className="min-h-screen bg-[#f7f9fb] font-sans flex flex-col relative pb-32 max-w-md mx-auto">
       
       {/* Sticky Header */}
-      <header className="sticky top-0 left-0 right-0 w-full max-w-md mx-auto z-50 bg-white border-b border-slate-100 rounded-b-2xl shadow-xs pb-1 select-none">
+      <header className="sticky top-0 left-0 right-0 w-full max-w-md mx-auto z-50 bg-white border-b border-slate-100 shadow-xs pb-1 select-none">
         <div className="flex items-center justify-between px-4 py-3 gap-2">
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <button

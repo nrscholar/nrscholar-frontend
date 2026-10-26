@@ -488,13 +488,13 @@ export default function MultiplayerBattleScreen() {
   );
 
   return (
-    <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col relative overflow-hidden text-[#141779]">
+    <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col relative overflow-x-clip text-[#141779]">
       {/* Background Decor */}
       <div className="absolute top-[10%] left-[10%] w-64 h-64 bg-[#e8ddff] rounded-full blur-[80px] opacity-60"></div>
       <div className="absolute bottom-[20%] right-[10%] w-64 h-64 bg-[#ffd700] rounded-full blur-[100px] opacity-10"></div>
 
       {/* VS Header with Progress Bars */}
-      <header className="px-4 py-4 relative z-10 bg-white shadow-md border-b border-[#e0e0e0]">
+      <header className="sticky top-0 z-40 px-4 py-4 bg-white shadow-md border-b border-[#e0e0e0]">
         <div className="flex justify-between items-center mb-4">
           <button onClick={() => setShowQuitModal(true)} className="p-2 bg-[#f4efff] rounded-full hover:bg-[#e8ddff] border border-[#e0e0e0] transition-colors">
              <X size={20} color="#141779" />

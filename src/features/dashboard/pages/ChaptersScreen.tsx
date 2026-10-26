@@ -527,15 +527,15 @@ export default function ChaptersScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#17157F] font-sans pb-44 relative selection:bg-[#5B5CFF] selection:text-white overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#17157F] font-sans pb-44 relative selection:bg-[#5B5CFF] selection:text-white overflow-x-clip">
       {/* Background World Glow Accents */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[35%] rounded-full bg-[#5B5CFF]/10 blur-[90px]" />
         <div className="absolute top-[40%] right-[-10%] w-[50%] h-[40%] rounded-full bg-[#FFC83D]/15 blur-[90px]" />
       </div>
 
-      {/* TOP APP BAR / GAME HUD (Curved Sticky Design) */}
-      <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex flex-col bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-2xl shadow-xs gap-2 pb-2 select-none">
+      {/* TOP APP BAR / GAME HUD (Square Sticky Design) */}
+      <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex flex-col bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-xs gap-2 pb-2 select-none">
         <div className="flex items-center justify-between px-4 py-3 gap-2">
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <button

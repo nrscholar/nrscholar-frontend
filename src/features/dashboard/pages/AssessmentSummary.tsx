@@ -109,7 +109,7 @@ export default function AssessmentSummary() {
   if (isReviewing) {
     return (
       <div className="fixed inset-0 bg-[#f7f9fb] text-[#141779] p-6 pb-20 overflow-y-auto font-sans z-50">
-        <header className="flex items-center gap-4 mb-6 pt-4">
+        <header className="sticky top-0 z-50 flex items-center gap-4 mb-6 pt-4 pb-2 bg-[#f7f9fb]/90 backdrop-blur-md">
            <button onClick={() => setIsReviewing(false)} className="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm border border-[#e0e3e5] hover:opacity-80"> 
              <ArrowLeft size={24} color="#141779" />
            </button>
@@ -180,7 +180,7 @@ export default function AssessmentSummary() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-[#141779] font-sans relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#f7f9fb] text-[#141779] font-sans relative overflow-x-clip">
       {/* Confetti Background Layer */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {Array.from({ length: NUM_CONFETTI }).map((_, i) => (

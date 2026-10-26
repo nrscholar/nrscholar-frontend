@@ -1539,7 +1539,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans overflow-x-hidden flex flex-col justify-between">
+    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans overflow-x-clip flex flex-col justify-between">
       <header className="sticky top-0 z-40 bg-[rgba(247,249,251,0.85)] backdrop-blur-md border-b border-gray-200 px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between shadow-xs">
         <button
           onClick={async () => {

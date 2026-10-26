@@ -478,14 +478,14 @@ export default function DailyRewardsScreen() {
   const segmentAngle = 360 / currentRewards.length;
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 w-full flex flex-col items-center overflow-x-hidden font-headline relative">
+    <div className="min-h-screen bg-white text-slate-900 w-full flex flex-col items-center overflow-x-clip font-headline relative">
       {/* Background Soft Glow */}
       <div 
         className="absolute inset-0 pointer-events-none opacity-40 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-50/60 via-slate-50 to-white" 
       />
 
       {/* Top App Bar */}
-      <header className="w-full z-50 bg-white/90 backdrop-blur-lg border-b border-slate-200 flex justify-between items-center px-6 py-4 max-w-[430px] mx-auto">
+      <header className="sticky top-0 w-full z-50 bg-white/90 backdrop-blur-lg border-b border-slate-200 flex justify-between items-center px-6 py-4 max-w-[430px] mx-auto shadow-2xs">
         <button onClick={handleBack} className="active:scale-95 transition-transform text-slate-700 hover:text-slate-950">
           <ArrowLeft className="w-6 h-6" />
         </button>
