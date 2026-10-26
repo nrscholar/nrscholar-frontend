@@ -17,7 +17,11 @@ import {
   ShieldAlert,
   Play,
   Swords,
-  RotateCcw
+  RotateCcw,
+  Maximize2,
+  ChevronDown,
+  ChevronUp,
+  X
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "../../../api";
@@ -124,7 +128,7 @@ const RenderClassIllustration = ({ classNum }: { classNum: number }) => {
         >
           ✨
         </motion.div>
-        
+
         <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-xl">
           <path d="M30,85 L70,85 L62,55 L38,55 Z" fill="#e2e8f0" />
           <path d="M48,55 L52,55 L50,68 Z" fill="#141779" />
@@ -136,16 +140,16 @@ const RenderClassIllustration = ({ classNum }: { classNum: number }) => {
             <circle cx="50" cy="40" r="18" fill="#4f46e5" />
             <path d="M32,32 L25,22 L38,28 Z" fill="#312e81" />
             <path d="M68,32 L75,22 L62,28 Z" fill="#312e81" />
-            
+
             <circle cx="43" cy="40" r="6.5" fill="white" />
             <circle cx="43" cy="40" r="3" fill="#1e1b4b" />
             <circle cx="57" cy="40" r="6.5" fill="white" />
             <circle cx="57" cy="40" r="3" fill="#1e1b4b" />
-            
+
             <circle cx="43" cy="40" r="7.5" fill="none" stroke="#fbbf24" strokeWidth="2.5" />
             <circle cx="57" cy="40" r="7.5" fill="none" stroke="#fbbf24" strokeWidth="2.5" />
             <line x1="50.5" y1="40" x2="49.5" y2="40" stroke="#fbbf24" strokeWidth="2.5" />
-            
+
             <path d="M50,44 L47,48 L53,48 Z" fill="#fb923c" />
           </motion.g>
           <circle cx="34" cy="65" r="4" fill="#4f46e5" />
@@ -178,13 +182,13 @@ const RenderClassIllustration = ({ classNum }: { classNum: number }) => {
         >
           ✨
         </motion.div>
-        
+
         <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-xl">
           <path d="M35,50 L25,90 L40,80 L48,50 Z" fill="#e11d48" />
           <path d="M65,50 L75,90 L60,80 L52,50 Z" fill="#e11d48" />
           <path d="M38,50 L32,85 L42,77 L47,50 Z" fill="#be123c" />
           <path d="M62,50 L68,85 L58,77 L53,50 Z" fill="#be123c" />
-          
+
           <motion.circle
             cx="50"
             cy="46"
@@ -356,7 +360,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           if (r.reward_type === "heart" && r.amount) {
             return Math.max(0, 3 - r.amount);
           }
-        } catch (e) {}
+        } catch (e) { }
       }
       return 2; // 1 heart remaining (3 - 2 = 1)
     }
@@ -386,7 +390,21 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   const [revivalSpins, setRevivalSpins] = useState(0);
   const [hasDoubleDamage, setHasDoubleDamage] = useState(false);
   const [lossOverlay, setLossOverlay] = useState<{ show: boolean; xpLoss: number }>({ show: false, xpLoss: 0 });
-  useLockBodyScroll(Boolean(showReviveModal || lossOverlay.show));
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [showQuestionReview, setShowQuestionReview] = useState(false);
+  useLockBodyScroll(Boolean(showReviveModal || lossOverlay.show || lightboxImage));
+
+  const getQuestionImage = (q: any): string | null => {
+    if (!q) return null;
+    const img = q.imageUrl || q.image || q.image_url || q.media?.url || (typeof q.media === "string" ? q.media : null) || q.interaction?.details?.imageUrl || q.interaction?.details?.image;
+    return typeof img === "string" && img.trim().length > 0 ? img.trim() : null;
+  };
+
+  const getQuestionExplanation = (q: any): string | null => {
+    if (!q) return null;
+    const exp = q.explanation || q.solution || q.hint || q.interaction?.details?.explanation || q.interaction?.details?.solution;
+    return typeof exp === "string" && exp.trim().length > 0 ? exp.trim() : null;
+  };
   const showToast = (message: string, type: "gamification" | "error" | "success" | "warning" = "gamification") => {
     showNotificationToast({
       title: "Mission Update",
@@ -408,7 +426,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           : null;
         return activeChild?.childName || data?.childName || data?.name || data?.fullName || "Hero";
       }
-    } catch (e) {}
+    } catch (e) { }
     return "Hero";
   });
 
@@ -426,7 +444,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           const name = activeChild?.childName || u.childName || u.name || u.fullName || "Hero";
           if (name) setActiveChildName(name);
         }
-      } catch (e) {}
+      } catch (e) { }
     };
     fetchUser();
   }, []);
@@ -505,7 +523,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             localStorage.setItem("userData", JSON.stringify(uJson.data.user));
             window.dispatchEvent(new Event("userDataUpdated"));
           }
-        } catch (ue) {}
+        } catch (ue) { }
 
         setScopedItem("mission_boss_revival_active", "true");
         setScopedItem(`boss_damage_${chapterId}_${missionSeq}`, bossDamageCount.toString());
@@ -549,7 +567,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           } else if (r.reward_type === "double_damage") {
             setHasDoubleDamage(true);
           }
-        } catch (e) {}
+        } catch (e) { }
       }
 
       setChildDamageCount(Math.max(0, 3 - heartsRestored));
@@ -599,7 +617,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     if (saved) {
       try {
         return JSON.parse(saved);
-      } catch (e) {}
+      } catch (e) { }
     }
     return null;
   });
@@ -667,7 +685,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           return;
         }
         if (isFreshReplay) {
-          apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, { method: "DELETE" }).catch(() => {});
+          apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, { method: "DELETE" }).catch(() => { });
         }
         const activeCtx = getActiveUserContext();
         const res = await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}?classLevel=${encodeURIComponent(activeCtx.classLevel)}${isFreshReplay ? "&replay=true" : ""}`);
@@ -689,7 +707,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           if (draft) {
             const savedAnswersRaw = getScopedItem(`user_answers_${chapterId}_${missionSeq}`);
             let savedAnswers: any[] = [];
-            try { savedAnswers = savedAnswersRaw ? JSON.parse(savedAnswersRaw) : []; } catch (e) {}
+            try { savedAnswers = savedAnswersRaw ? JSON.parse(savedAnswersRaw) : []; } catch (e) { }
 
             const rawMergedAnswers = (Array.isArray(draft.userAnswers) && draft.userAnswers.length >= savedAnswers.length)
               ? draft.userAnswers
@@ -1024,7 +1042,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           progMap[chIdStr] = updatedDoc;
           progMap[chapterId] = updatedDoc;
           setScopedItem("cached_chapter_progress", JSON.stringify(progMap));
-        } catch (_) {}
+        } catch (_) { }
 
         window.dispatchEvent(new Event("userDataUpdated"));
 
@@ -1038,7 +1056,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
         const oldStr = json.data.oldStreak !== undefined ? json.data.oldStreak : (json.data.streak || 1);
         setDisplayedStreak(oldStr);
         setStreakDaysOfWeek(json.data.streakDaysOfWeek || [false, false, false, false, false, false, false]);
-        
+
         // If it should animate (first lesson today), trigger numbers increment after delay
         if (json.data.shouldAnimateStreak) {
           setTimeout(() => {
@@ -1090,7 +1108,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
     try {
       await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, { method: "DELETE" });
-    } catch (e) {}
+    } catch (e) { }
 
     navigate(`/mission-roadmap?chapterId=${chapterId}`, { replace: true });
   }, [chapterId, missionSeq, navigate]);
@@ -1116,7 +1134,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
     try {
       await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, { method: "DELETE" });
-    } catch (e) {}
+    } catch (e) { }
 
     window.location.href = `/mission-play?chapterId=${chapterId}&missionSeq=${missionSeq}&replay=true`;
   }, [chapterId, missionSeq]);
@@ -1141,7 +1159,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
     try {
       await apiFetch(`/api/practice/chapters/${chapterId}/missions/${nextSeq}/draft`, { method: "DELETE" });
-    } catch (e) {}
+    } catch (e) { }
 
     window.location.href = `/mission-play?chapterId=${chapterId}&missionSeq=${nextSeq}`;
   }, [chapterId, missionSeq, handleBackToRoadmap]);
@@ -1270,6 +1288,50 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     }
   }, [bossDamageCount, childDamageCount, wrongAnswerCount, currentBossIndex, bossMaxHp, bossQuestions.length, userAnswers, hasDoubleDamage]);
 
+  // Compute merged review items for report screen review mode
+  const reviewItems = useMemo(() => {
+    const qMap = new Map<string, any>();
+    (quizQuestions || []).forEach((q: any) => {
+      const qid = String(q._id || q.questionId || "").trim();
+      const qtext = String(q.question || q.text || "").trim();
+      if (qid) qMap.set(qid, q);
+      if (qtext) qMap.set(qtext, q);
+    });
+    (bossQuestions || []).forEach((q: any) => {
+      const qid = String(q._id || q.questionId || "").trim();
+      const qtext = String(q.question || q.text || "").trim();
+      if (qid) qMap.set(qid, q);
+      if (qtext) qMap.set(qtext, q);
+    });
+
+    if (Array.isArray(userAnswers) && userAnswers.length > 0) {
+      return userAnswers.map((ans: any) => {
+        const qid = String(ans.questionId || "").trim();
+        const qtext = String(ans.questionText || ans.question || "").trim();
+        const orig = qMap.get(qid) || qMap.get(qtext) || {};
+        return {
+          ...orig,
+          ...ans,
+          question: ans.questionText || orig.question || orig.text || ans.question,
+          answer: orig.answer || ans.correctAnswer || orig.correctAnswer,
+          correctAnswer: orig.answer || ans.correctAnswer || orig.correctAnswer,
+          explanation: ans.explanation || orig.explanation || orig.solution,
+          solution: ans.solution || orig.solution || orig.explanation,
+          imageUrl: ans.imageUrl || orig.imageUrl || orig.image || ans.image,
+          image: ans.image || orig.image || orig.imageUrl || ans.imageUrl,
+          isCorrect: ans.isCorrect !== undefined ? ans.isCorrect : (String(ans.selectedAnswer).trim().toLowerCase() === String(orig.answer).trim().toLowerCase())
+        };
+      });
+    }
+
+    return (quizQuestions || []).map((q: any) => ({
+      ...q,
+      isCorrect: true,
+      selectedAnswer: q.answer,
+      correctAnswer: q.answer
+    }));
+  }, [userAnswers, quizQuestions, bossQuestions]);
+
   const handleQuizConfirm = () => {
     if (!quizConfirmed) {
       let isCorrect = false;
@@ -1288,14 +1350,17 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       setQuizConfirmed(true);
       setQuizIsCorrect(isCorrect);
 
-      const selectedValue = isDragObjects 
-        ? (isLanguageDrag ? String(selectedDragValue) : String(basketCount)) 
+      const selectedValue = isDragObjects
+        ? (isLanguageDrag ? String(selectedDragValue) : String(basketCount))
         : (quizSelected !== null ? String(currentQ?.options?.[quizSelected]) : "");
       const newAns = {
         questionId: currentQ?._id,
         questionText: currentQ?.question || currentQ?.text || currentQ?.title || "",
         isCorrect: isCorrect,
         selectedAnswer: selectedValue,
+        correctAnswer: currentQ?.answer || currentQ?.correctAnswer || "",
+        explanation: getQuestionExplanation(currentQ) || "",
+        imageUrl: getQuestionImage(currentQ) || "",
         timeSpent: QUESTION_TIME_LIMIT - questionTimeLeft
       };
       setUserAnswers((prev) => recordUniqueAnswer(prev, newAns));
@@ -1340,6 +1405,9 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       questionText: activeBossQ?.question || activeBossQ?.text || activeBossQ?.title || "",
       isCorrect: isCorrect,
       selectedAnswer: optionText,
+      correctAnswer: activeBossQ?.answer || activeBossQ?.correctAnswer || "",
+      explanation: getQuestionExplanation(activeBossQ) || "",
+      imageUrl: getQuestionImage(activeBossQ) || "",
       timeSpent: QUESTION_TIME_LIMIT - questionTimeLeft
     };
     const updatedAnswers = recordUniqueAnswer(userAnswers, newAns);
@@ -1361,6 +1429,9 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       questionText: activeBossQ?.question || activeBossQ?.text || activeBossQ?.title || "",
       isCorrect: isCorrect,
       selectedAnswer: isBossLanguageDrag ? String(selectedBossDragValue) : String(bossBasketCount),
+      correctAnswer: activeBossQ?.answer || activeBossQ?.correctAnswer || "",
+      explanation: getQuestionExplanation(activeBossQ) || "",
+      imageUrl: getQuestionImage(activeBossQ) || "",
       timeSpent: QUESTION_TIME_LIMIT - questionTimeLeft
     };
     const updatedAnswers = recordUniqueAnswer(userAnswers, newAns);
@@ -1412,6 +1483,9 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           questionText: currentQ?.question || currentQ?.text || currentQ?.title || "",
           isCorrect: false,
           selectedAnswer: "TIMEOUT",
+          correctAnswer: currentQ?.answer || currentQ?.correctAnswer || "",
+          explanation: getQuestionExplanation(currentQ) || "",
+          imageUrl: getQuestionImage(currentQ) || "",
           timeSpent: QUESTION_TIME_LIMIT
         };
         setUserAnswers((prev) => recordUniqueAnswer(prev, newAns));
@@ -1434,6 +1508,9 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           questionText: activeBossQ?.question || activeBossQ?.text || activeBossQ?.title || "",
           isCorrect: false,
           selectedAnswer: "TIMEOUT",
+          correctAnswer: activeBossQ?.answer || activeBossQ?.correctAnswer || "",
+          explanation: getQuestionExplanation(activeBossQ) || "",
+          imageUrl: getQuestionImage(activeBossQ) || "",
           timeSpent: QUESTION_TIME_LIMIT
         };
         const updatedAnswers = recordUniqueAnswer(userAnswers, newAns);
@@ -1488,7 +1565,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                 await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, {
                   method: "DELETE"
                 });
-              } catch (e) {}
+              } catch (e) { }
             } else if (!isQuitting && phase && phase !== "INTRO" && phase !== "SUMMARY") {
               try {
                 await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, {
@@ -1553,8 +1630,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           )}
 
           <div className={`flex items-center gap-1 sm:gap-1.5 border px-2 sm:px-3.5 py-1 rounded-full font-mono font-extrabold text-[10px] sm:text-xs shadow-2xs transition-all shrink-0 whitespace-nowrap ${(phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5
-              ? "bg-rose-50 border-rose-300 text-rose-700 animate-pulse ring-2 ring-rose-400/40"
-              : "bg-slate-100/90 border-slate-200 text-slate-800"
+            ? "bg-rose-50 border-rose-300 text-rose-700 animate-pulse ring-2 ring-rose-400/40"
+            : "bg-slate-100/90 border-slate-200 text-slate-800"
             }`}>
             <div className="relative flex items-center justify-center">
               <Clock size={12} className={(phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5 ? "text-rose-600 animate-bounce" : "text-indigo-600"} />
@@ -1641,16 +1718,40 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             <h3 className="text-lg font-bold text-[#141779] leading-snug">
               {currentQ?.question?.normalize("NFD").replace(/[\u0300-\u036f]/g, "")}
             </h3>
+
+            {/* Optional Question Image */}
+            {getQuestionImage(currentQ) && (
+              <div className="mt-4 relative group">
+                <div
+                  onClick={() => setLightboxImage(getQuestionImage(currentQ))}
+                  className="relative overflow-hidden rounded-2xl border border-indigo-100 bg-slate-50 cursor-pointer hover:border-indigo-300 hover:shadow-md transition-all duration-200 max-h-56 sm:max-h-64 flex items-center justify-center p-2"
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Enlarge question image"
+                >
+                  <img
+                    src={getQuestionImage(currentQ)!}
+                    alt="Question visual"
+                    className="w-auto h-auto max-h-52 sm:max-h-60 max-w-full object-contain rounded-xl select-none"
+                    loading="lazy"
+                  />
+                  <div className="absolute bottom-2.5 right-2.5 bg-slate-900/75 hover:bg-slate-900 text-white text-[11px] font-bold px-2.5 py-1 rounded-full backdrop-blur-xs flex items-center gap-1 shadow-xs transition-transform active:scale-95">
+                    <Maximize2 size={12} />
+                    <span>{t('tap_to_zoom', 'Tap to enlarge')}</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {isDragObjects ? (
             <div className="flex flex-col gap-4 mb-4">
               <div
                 className={`w-full min-h-[140px] rounded-2xl border-4 border-dashed p-4 flex flex-wrap gap-2 items-center justify-center transition-colors ${quizConfirmed
-                    ? quizIsCorrect
-                      ? "border-emerald-500 bg-emerald-50"
-                      : "border-red-500 bg-red-50"
-                    : "border-gray-300 bg-white cursor-pointer hover:bg-gray-50"
+                  ? quizIsCorrect
+                    ? "border-emerald-500 bg-emerald-50"
+                    : "border-red-500 bg-red-50"
+                  : "border-gray-300 bg-white cursor-pointer hover:bg-gray-50"
                   }`}
                 onClick={() => {
                   if (!quizConfirmed) {
@@ -1703,11 +1804,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                             setBasketCount(1);
                           }
                         }}
-                        className={`px-5 py-3 rounded-xl border text-xl font-bold transition-all ${
-                          isSelected
+                        className={`px-5 py-3 rounded-xl border text-xl font-bold transition-all ${isSelected
                             ? "bg-[#141779] border-[#141779] text-white scale-105 shadow-md animate-pulse"
                             : "bg-gray-50 border-gray-200 text-slate-700 hover:border-indigo-400 active:scale-95"
-                        }`}
+                          }`}
                       >
                         {opt}
                       </button>
@@ -1773,18 +1873,41 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             </div>
           )}
 
+          {/* Post-Answer Explanation Card */}
+          {quizConfirmed && getQuestionExplanation(currentQ) && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+              className={`p-4 rounded-2xl border mb-4 text-left shadow-xs ${quizIsCorrect
+                  ? "bg-emerald-50/90 border-emerald-200 text-emerald-950"
+                  : "bg-amber-50/90 border-amber-200 text-amber-950"
+                }`}
+            >
+              <div className="flex items-center gap-2 mb-1.5 font-black text-xs uppercase tracking-wider">
+                <span className="text-base">{quizIsCorrect ? "💡" : "📖"}</span>
+                <span className={quizIsCorrect ? "text-emerald-800" : "text-amber-800"}>
+                  {t('explanation_title', 'Explanation')}
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm font-semibold leading-relaxed text-slate-800 whitespace-pre-line">
+                {getQuestionExplanation(currentQ)}
+              </p>
+            </motion.div>
+          )}
+
           <div className="flex flex-col gap-3">
 
             <button
               disabled={!isDragObjects && quizSelected === null && !quizConfirmed}
               onClick={handleQuizConfirm}
               className={`w-full py-4 rounded-2xl font-black text-base shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all ${!isDragObjects && quizSelected === null && !quizConfirmed
-                  ? "bg-gray-300 text-gray-500 cursor-not-allowed shadow-none"
-                  : !quizConfirmed
-                    ? "bg-[#141779] text-white hover:bg-[#101362]"
-                    : quizIsCorrect
-                      ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                      : "bg-red-600 text-white hover:bg-red-700"
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed shadow-none"
+                : !quizConfirmed
+                  ? "bg-[#141779] text-white hover:bg-[#101362]"
+                  : quizIsCorrect
+                    ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                    : "bg-red-600 text-white hover:bg-red-700"
                 }`}
             >
               <span>{quizConfirmed ? t('continue_btn', 'CONTINUE →') : t('check_answer', 'CHECK ANSWER')}</span>
@@ -1839,7 +1962,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
         <main className="px-3 sm:px-6 py-4 sm:py-6 flex-1 flex flex-col justify-between max-w-md mx-auto w-full">
           {/* Top Outer Indigo/Lavender Boss Stage Header Card with Premium Visual Aesthetics */}
           <div className="bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] rounded-[28px] sm:rounded-[32px] p-3 sm:p-5 pt-4 pb-3.5 mb-4 shadow-[0_10px_30px_rgba(20,23,121,0.08)] border-2 border-indigo-200/80 relative backdrop-blur-md overflow-hidden">
-            
+
             {/* Top Bar: Hero vs Boss Header */}
             <div className="flex items-center justify-between mb-3 relative z-10 px-0.5 gap-1">
 
@@ -1926,6 +2049,30 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             <h3 className="text-base sm:text-lg font-black text-[#141779] leading-snug">
               {activeBossQ?.question?.replace(/^(Boss\s+)?(Challenge|Question)(\s*#\d+)?(\s*\([^)]+\))?:\s*/i, "").trim().replace(/^\w/, c => c.toUpperCase()).normalize("NFD").replace(/[\u0300-\u036f]/g, "")}
             </h3>
+
+            {/* Optional Boss Question Image */}
+            {getQuestionImage(activeBossQ) && (
+              <div className="mt-4 relative group">
+                <div
+                  onClick={() => setLightboxImage(getQuestionImage(activeBossQ))}
+                  className="relative overflow-hidden rounded-2xl border-2 border-[#141779]/20 bg-slate-50 cursor-pointer hover:border-[#141779]/40 hover:shadow-md transition-all duration-200 max-h-52 sm:max-h-60 flex items-center justify-center p-2"
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Enlarge boss question image"
+                >
+                  <img
+                    src={getQuestionImage(activeBossQ)!}
+                    alt="Boss challenge visual"
+                    className="w-auto h-auto max-h-48 sm:max-h-56 max-w-full object-contain rounded-xl select-none"
+                    loading="lazy"
+                  />
+                  <div className="absolute bottom-2.5 right-2.5 bg-slate-900/75 hover:bg-slate-900 text-white text-[11px] font-bold px-2.5 py-1 rounded-full backdrop-blur-xs flex items-center gap-1 shadow-xs transition-transform active:scale-95">
+                    <Maximize2 size={12} />
+                    <span>{t('tap_to_zoom', 'Tap to enlarge')}</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Answer options / drag section with Enhanced UI */}
@@ -1984,11 +2131,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                             setBossBasketCount(1);
                           }
                         }}
-                        className={`px-4 py-2.5 rounded-lg border text-lg font-bold transition-all ${
-                          isSelected
+                        className={`px-4 py-2.5 rounded-lg border text-lg font-bold transition-all ${isSelected
                             ? "bg-[#141779] border-[#141779] text-white scale-105 shadow-md animate-pulse"
                             : "bg-gray-50 border-gray-200 text-slate-700 hover:border-indigo-400 active:scale-95"
-                        }`}
+                          }`}
                       >
                         {opt}
                       </button>
@@ -2063,11 +2209,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                       className={`w-full p-4 rounded-2xl border text-left font-bold text-sm sm:text-base transition-all flex items-center justify-between active:scale-98 ${style}`}
                     >
                       <div className="flex items-center gap-3">
-                        <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0 transition-colors ${
-                          bossConfirmed && isCorrect ? "bg-white/20 text-white" :
-                          bossConfirmed && isSelected && !isCorrect ? "bg-white/20 text-white" :
-                          isSelected ? "bg-[#141779] text-white" : "bg-[#F3F4F6] text-[#141779]"
-                        }`}>
+                        <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0 transition-colors ${bossConfirmed && isCorrect ? "bg-white/20 text-white" :
+                            bossConfirmed && isSelected && !isCorrect ? "bg-white/20 text-white" :
+                              isSelected ? "bg-[#141779] text-white" : "bg-[#F3F4F6] text-[#141779]"
+                          }`}>
                           {String.fromCharCode(65 + idx)}
                         </span>
                         <span>{opt}</span>
@@ -2083,11 +2228,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                 whileTap={bossSelected !== null && !bossConfirmed ? { scale: 0.96 } : undefined}
                 disabled={bossSelected === null || bossConfirmed}
                 onClick={handleBossMCConfirm}
-                className={`w-full py-4 mt-2 rounded-2xl text-white font-black text-base shadow-[0_10px_25px_rgba(20,23,121,0.2)] flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-40 uppercase tracking-wider ${
-                  bossSelected === null || bossConfirmed
+                className={`w-full py-4 mt-2 rounded-2xl text-white font-black text-base shadow-[0_10px_25px_rgba(20,23,121,0.2)] flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-40 uppercase tracking-wider ${bossSelected === null || bossConfirmed
                     ? "bg-[#9FA0D7] cursor-not-allowed shadow-none"
                     : "bg-gradient-to-r from-[#141779] via-[#25299e] to-[#3a3ebd] hover:opacity-95"
-                }`}
+                  }`}
               >
                 <span>STRIKE BOSS ⚡</span>
               </motion.button>
@@ -2186,7 +2330,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                 onClick={() => {
                   const todayKey = `streak_shown_${new Date().toISOString().slice(0, 10)}`;
                   const alreadyShownToday = localStorage.getItem(todayKey) === "true";
-                  
+
                   if (completionResult?.shouldAnimateStreak && !alreadyShownToday) {
                     localStorage.setItem(todayKey, "true");
                     setSummaryStep("STREAK");
@@ -2217,7 +2361,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                       STREAK EXTENDED! 🔥
                     </motion.div>
                   )}
-                  
+
                   <motion.div
                     animate={animateStreakNumber ? {
                       scale: [1, 1.35, 1.1, 1.18, 1],
@@ -2244,13 +2388,13 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                 <div className="flex justify-between w-full max-w-xs px-2 mt-4 gap-1.5">
                   {["S", "M", "T", "W", "T", "F", "S"].map((day, idx) => {
                     const isToday = new Date().getDay() === idx;
-                    
+
                     // If this is today, and we should animate, start with today as inactive (grey)
                     // and animate it active (colored) when animateStreakNumber is true.
-                    const isActive = isToday 
+                    const isActive = isToday
                       ? (completionResult?.shouldAnimateStreak ? animateStreakNumber : streakDaysOfWeek[idx])
                       : streakDaysOfWeek[idx];
-                    
+
                     return (
                       <div key={idx} className="flex flex-col items-center gap-1.5 flex-1 relative">
                         {/* Floating +1 Day badge above today's circle */}
@@ -2264,18 +2408,17 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                             +1 DAY!
                           </motion.div>
                         )}
-                        
+
                         <motion.div
                           animate={isToday && animateStreakNumber ? {
                             scale: [1, 1.35, 1.05, 1.1, 1],
                             rotate: [0, 15, -15, 0]
                           } : {}}
                           transition={{ duration: 0.6, delay: 0.2 }}
-                          className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-black shadow-xs transition-all duration-500 border ${
-                            isActive
+                          className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-black shadow-xs transition-all duration-500 border ${isActive
                               ? "bg-gradient-to-br from-amber-400 to-orange-500 border-amber-300 text-white shadow-inner scale-105"
                               : "bg-gray-100 border-gray-200 text-gray-400"
-                          }`}
+                            }`}
                         >
                           {day}
                         </motion.div>
@@ -2294,8 +2437,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                     {displayedStreak === 0
                       ? t('zero_streak_quote', '“Every expert was once a beginner! Complete 1 lesson today to ignite your flame!” 🔥')
                       : displayedStreak === 1
-                      ? t('one_day_streak_sub', 'Awesome start! Complete a lesson tomorrow to build your streak momentum! 💪')
-                      : t('complete_lesson_daily', 'Complete a lesson every day to build your streak!')}
+                        ? t('one_day_streak_sub', 'Awesome start! Complete a lesson tomorrow to build your streak momentum! 💪')
+                        : t('complete_lesson_daily', 'Complete a lesson every day to build your streak!')}
                   </p>
                 </div>
               </div>
@@ -2402,14 +2545,13 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                         🏆 {t('best_accuracy_retained', { best: completionResult.bestAccuracy, run: completionResult.runAccuracy, defaultValue: `Best record of ${completionResult.bestAccuracy}% preserved! (This run: ${completionResult.runAccuracy}%)` })}
                       </span>
                     )}
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full mt-1 border ${
-                      (completionResult?.accuracy ?? 100) >= 85
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full mt-1 border ${(completionResult?.accuracy ?? 100) >= 85
                         ? "text-emerald-700 bg-emerald-50 border-emerald-200"
                         : (completionResult?.accuracy ?? 100) >= 65
-                        ? "text-blue-700 bg-blue-50 border-blue-200"
-                        : "text-amber-700 bg-amber-50 border-amber-200"
-                    }`}>
-                      {completionResult?.targetStatus 
+                          ? "text-blue-700 bg-blue-50 border-blue-200"
+                          : "text-amber-700 bg-amber-50 border-amber-200"
+                      }`}>
+                      {completionResult?.targetStatus
                         ? t(String(completionResult.targetStatus || "").toLowerCase().replace(/ /g, '_'), { defaultValue: completionResult.targetStatus })
                         : ((completionResult?.accuracy ?? 100) >= 85 ? t('target_exceeded', 'Target Exceeded') : (completionResult?.accuracy ?? 100) >= 65 ? t('target_met', 'Target Met') : t('needs_practice', 'Needs Practice'))}
                     </span>
@@ -2534,6 +2676,120 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                     </div>
                   )}
                 </div>
+
+                {/* Collapsible Questions & Solutions Review in Report Mode */}
+                <div className="w-full mb-6 text-left">
+                  <button
+                    onClick={() => setShowQuestionReview(!showQuestionReview)}
+                    className="w-full py-3.5 px-4 rounded-2xl bg-white border border-indigo-100 hover:border-indigo-200 shadow-xs flex items-center justify-between transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">📝</span>
+                      <span className="text-xs font-black text-[#141779] uppercase tracking-wider">
+                        {t('review_questions_title', 'Review Questions & Explanations')}
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+                        {reviewItems.length}
+                      </span>
+                    </div>
+                    {showQuestionReview ? (
+                      <ChevronUp size={16} className="text-[#141779]" />
+                    ) : (
+                      <ChevronDown size={16} className="text-[#141779]" />
+                    )}
+                  </button>
+
+                  <AnimatePresence>
+                    {showQuestionReview && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="overflow-hidden mt-3 space-y-3"
+                      >
+                        {reviewItems.map((item: any, idx: number) => {
+                          const itemImg = getQuestionImage(item);
+                          const itemExp = getQuestionExplanation(item);
+                          const isCorrect = Boolean(item.isCorrect);
+
+                          return (
+                            <div
+                              key={item._id || item.questionId || idx}
+                              className={`p-4 rounded-2xl border bg-white shadow-2xs ${isCorrect ? "border-emerald-200" : "border-rose-200"
+                                }`}
+                            >
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${isCorrect ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-rose-50 text-rose-700 border border-rose-200"
+                                  }`}>
+                                  {isCorrect ? "✅ " + t('correct', 'Correct') : "❌ " + t('incorrect', 'Mistake')}
+                                </span>
+                                <span className="text-[10px] font-bold text-gray-400">
+                                  #{idx + 1}
+                                </span>
+                              </div>
+
+                              <p className="text-xs font-bold text-[#141779] leading-snug mb-2">
+                                {item.question || item.questionText || item.text}
+                              </p>
+
+                              {/* Question Image if present */}
+                              {itemImg && (
+                                <div className="mb-3">
+                                  <div
+                                    onClick={() => setLightboxImage(itemImg)}
+                                    className="relative overflow-hidden rounded-xl border border-gray-200 bg-slate-50 cursor-pointer hover:shadow-xs transition-all max-h-40 flex items-center justify-center p-1.5"
+                                  >
+                                    <img
+                                      src={itemImg}
+                                      alt="Question thumbnail"
+                                      className="w-auto h-auto max-h-36 max-w-full object-contain rounded-lg"
+                                      loading="lazy"
+                                    />
+                                    <div className="absolute bottom-1.5 right-1.5 bg-slate-900/70 text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                                      <Maximize2 size={10} />
+                                      <span>Enlarge</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className="text-[11px] space-y-1 mb-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                                <div className="flex items-baseline gap-1.5">
+                                  <span className="font-bold text-gray-500">{t('your_answer', 'Your Answer')}:</span>
+                                  <span className={`font-black ${isCorrect ? "text-emerald-700" : "text-rose-700"}`}>
+                                    {item.selectedAnswer || (isCorrect ? item.answer : "None")}
+                                  </span>
+                                </div>
+                                {!isCorrect && item.correctAnswer && (
+                                  <div className="flex items-baseline gap-1.5">
+                                    <span className="font-bold text-gray-500">{t('correct_answer', 'Correct Answer')}:</span>
+                                    <span className="font-black text-emerald-700">
+                                      {item.correctAnswer}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Conditionally display Explanation */}
+                              {itemExp && (
+                                <div className="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/80 text-[11px] leading-relaxed text-amber-950 font-semibold">
+                                  <div className="flex items-center gap-1 font-bold text-amber-800 mb-0.5 uppercase tracking-wider text-[10px]">
+                                    <span>💡</span>
+                                    <span>{t('explanation', 'Explanation')}:</span>
+                                  </div>
+                                  <p className="whitespace-pre-line text-slate-700 font-medium">
+                                    {itemExp}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </main>
 
               {/* NON-SCROLLABLE FIXED BOTTOM ACTION BAR (EQUAL 50-50 BUTTON SIZES) */}
@@ -2615,7 +2871,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       )}
 
       {showReviveModal && (
-        <div 
+        <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 sm:p-6 text-center select-none"
           style={{ touchAction: "none" }}
           onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
@@ -2723,7 +2979,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
       {/* Defeat/Retreat Overlay Animation */}
       {lossOverlay.show && (
-        <div 
+        <div
           className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 sm:p-6 text-center select-none"
           style={{ touchAction: "none" }}
           onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
@@ -2762,6 +3018,48 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           </motion.div>
         </div>
       )}
+
+      {/* Fullscreen Lightbox Modal for Question Visuals */}
+      <AnimatePresence>
+        {lightboxImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setLightboxImage(null)}
+            className="fixed inset-0 z-[300] bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-4 select-none cursor-zoom-out"
+          >
+            <div className="relative max-w-3xl max-h-[90vh] w-full flex flex-col items-center">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxImage(null);
+                }}
+                className="absolute -top-12 right-0 w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center backdrop-blur-sm transition-all active:scale-95 cursor-pointer shadow-lg z-10"
+                aria-label="Close image viewer"
+              >
+                <X size={20} />
+              </button>
+
+              <motion.img
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                src={lightboxImage}
+                alt="Enlarged question visual"
+                onClick={(e) => e.stopPropagation()}
+                className="max-h-[80vh] max-w-full w-auto object-contain rounded-2xl bg-white p-2 shadow-2xl border border-white/20"
+              />
+
+              <div className="mt-3 bg-white/10 text-white/90 text-xs font-semibold px-4 py-1.5 rounded-full backdrop-blur-xs flex items-center gap-1.5 shadow-sm">
+                <span>🔍</span>
+                <span>{t('tap_outside_close', 'Tap anywhere outside to close')}</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
