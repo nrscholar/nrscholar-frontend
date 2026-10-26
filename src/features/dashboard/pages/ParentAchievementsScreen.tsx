@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   Globe, BookOpen, Flame, Lock, GraduationCap, Users, X, 
-  Settings, ArrowLeft, Trophy, Sparkles, CheckCircle2, Bell
+  Settings, ArrowLeft, Trophy, Sparkles, CheckCircle2, Bell, Star
 } from "lucide-react";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
@@ -280,12 +280,11 @@ export default function ParentAchievementsScreen() {
           
           {/* Bento Box 1: Welcome & Profile Info */}
           <div className="col-span-2 bento-card rounded-2xl p-4 sm:p-5 flex items-center justify-between relative overflow-hidden bg-white">
-            <div className="flex flex-col gap-1 z-10">
-              <span className="text-xs font-black text-slate-500 tracking-wider uppercase">{t("parent_dashboard_upper", "PARENT DASHBOARD")}</span>
+            <div className="flex flex-col gap-0.5 z-10">
+              <span className="text-[11px] font-black text-slate-400 tracking-wider uppercase">{t("parent_dashboard_upper", "PARENT DASHBOARD")}</span>
               <h2 className="text-lg sm:text-xl font-black text-[#141779] flex items-center gap-1.5">
                 {t("hi_user", { name: username, defaultValue: `Hi, ${username}` })} <Sparkles className="text-amber-500 animate-pulse" size={18} />
               </h2>
-              <p className="text-xs text-slate-600 font-bold leading-snug mt-0.5">{t("nurturing_curiosity_sub", "Nurturing curiosity & celebrating key learning milestones.")}</p>
             </div>
             <div className="flex items-center justify-center bg-indigo-50 border border-indigo-100 w-11 h-11 sm:w-12 sm:h-12 rounded-xl text-[#141779] shadow-2xs shrink-0">
               <Trophy size={22} />
@@ -342,7 +341,6 @@ export default function ParentAchievementsScreen() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h4 className="text-sm font-black text-[#141779] truncate">{translateAchText(nextMilestone.title)}</h4>
-                  <p className="text-xs text-slate-600 font-bold truncate mt-0.5">{translateAchText(nextMilestone.desc)}</p>
                 </div>
               </div>
 
@@ -391,6 +389,7 @@ export default function ParentAchievementsScreen() {
           {/* Achievement Grid Cards */}
           {filteredAchievements.map((ach) => {
             const isUnlocked = ach.currentProgress >= ach.totalRequired;
+            const percent = Math.min(100, Math.round((ach.currentProgress / ach.totalRequired) * 100));
             const IconComponent = ICON_MAP[ach.icon] || Lock;
             const isSelected = activeAchievement?.id === ach.id;
             
@@ -398,53 +397,80 @@ export default function ParentAchievementsScreen() {
               <div 
                 key={ach.id} 
                 onClick={() => showDetails(ach)}
-                className={`col-span-1 bento-card rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between min-h-[135px] cursor-pointer relative overflow-hidden ${isSelected ? "bento-card-active border-[#141779]" : ""}`}
+                className={`col-span-1 bento-card rounded-2xl p-4 flex flex-col items-center justify-between text-center min-h-[155px] cursor-pointer relative overflow-hidden transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
+                  isSelected ? "bento-card-active border-[#141779] ring-2 ring-[#141779]/20" : ""
+                } ${
+                  isUnlocked 
+                    ? "bg-gradient-to-b from-white via-white to-teal-50/30 border-teal-200/80 shadow-2xs" 
+                    : "bg-white border-slate-200/80"
+                }`}
               >
-                {/* Badge Icon Slot */}
-                <div className="flex items-start justify-between">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shadow-2xs ${
-                    isUnlocked 
-                      ? "bg-gradient-to-br from-[#141779] to-[#30007f] text-white" 
-                      : "bg-slate-100 text-slate-400 border border-slate-200"
+                {/* Visual Badge with Progress Ring */}
+                <div className="relative w-14 h-14 flex items-center justify-center shrink-0 mt-1">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                    <path
+                      className="text-slate-100"
+                      strokeWidth="3.2"
+                      stroke="currentColor"
+                      fill="none"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    />
+                    <path
+                      className={`${
+                        isUnlocked 
+                          ? "text-[#006a62]" 
+                          : percent > 0 
+                          ? "text-[#141779]" 
+                          : "text-transparent"
+                      } transition-all duration-700 ease-out`}
+                      strokeDasharray={`${percent}, 100`}
+                      strokeWidth="3.2"
+                      strokeLinecap="round"
+                      stroke="currentColor"
+                      fill="none"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    />
+                  </svg>
+                  <div className={`absolute inset-0 m-1.5 rounded-full flex items-center justify-center shadow-2xs ${
+                    isUnlocked
+                      ? "bg-gradient-to-br from-[#141779] to-[#006a62] text-amber-300"
+                      : "bg-slate-100 text-slate-400"
                   }`}>
-                    <IconComponent size={18} />
+                    <IconComponent size={20} />
                   </div>
-                  
                   {isUnlocked ? (
-                    <span className="p-1 bg-teal-50 text-[#006a62] rounded-full border border-teal-200">
-                      <CheckCircle2 size={16} />
+                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-amber-400 text-slate-900 border-2 border-white flex items-center justify-center shadow-xs">
+                      <Star size={9} fill="currentColor" />
+                    </span>
+                  ) : percent > 0 ? (
+                    <span className="absolute -top-0.5 -right-0.5 px-1 h-3.5 rounded-full bg-[#141779] text-white border border-white flex items-center justify-center shadow-xs text-[8px] font-black">
+                      {percent}%
                     </span>
                   ) : (
-                    <span className="p-1 bg-slate-100 text-slate-400 rounded-full border border-slate-200">
-                      <Lock size={14} />
+                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-slate-200 text-slate-500 border-2 border-white flex items-center justify-center shadow-xs">
+                      <Lock size={8} />
                     </span>
                   )}
                 </div>
 
-                {/* Info Text */}
-                <div className="mt-3 flex flex-col gap-1">
-                  <h5 className={`text-sm font-black leading-tight truncate ${isUnlocked ? "text-[#141779]" : "text-slate-700"}`}>
-                    {translateAchText(ach.title)}
-                  </h5>
-                  <p className="text-xs text-slate-600 font-bold line-clamp-2 leading-snug">
-                    {translateAchText(ach.desc)}
-                  </p>
-                </div>
+                {/* Short Badge Title Only */}
+                <h5 className={`text-xs sm:text-sm font-black leading-tight w-full truncate mt-2.5 ${
+                  isUnlocked ? "text-[#141779]" : "text-slate-700"
+                }`}>
+                  {translateAchText(ach.title)}
+                </h5>
 
-                {/* Progress Mini Bar */}
-                <div className="mt-3">
-                  <div className="flex justify-between items-center text-xs text-slate-600 font-black mb-1">
-                    <span>{t("progress", "Progress")}</span>
-                    <span className="font-black text-[#141779]">
+                {/* Simple Numerical Progress Indicator */}
+                <div className="mt-2 w-full flex items-center justify-center">
+                  {isUnlocked ? (
+                    <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-teal-50 border border-teal-200/80 text-[#006a62] shadow-2xs">
+                      {ach.totalRequired}/{ach.totalRequired} {t("completed", "Completed")}
+                    </span>
+                  ) : (
+                    <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200/80 text-[#141779]">
                       {Math.min(ach.totalRequired, ach.currentProgress)}/{ach.totalRequired}
                     </span>
-                  </div>
-                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/60">
-                    <div 
-                      className={`h-full rounded-full transition-all duration-500 ${isUnlocked ? "bg-[#006a62]" : "bg-[#141779]/40"}`}
-                      style={{ width: `${Math.min(100, (ach.currentProgress / ach.totalRequired) * 100)}%` }}
-                    />
-                  </div>
+                  )}
                 </div>
               </div>
             );
@@ -458,13 +484,13 @@ export default function ParentAchievementsScreen() {
             onTouchMove={(e) => {
               if (e.target === e.currentTarget) e.preventDefault();
             }}
-            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-[100] flex items-end justify-center animate-fade-in overscroll-contain select-none" 
-            style={{ overscrollBehavior: "contain", touchAction: "none" }}
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-[9999] flex items-end justify-center p-3 pb-24 sm:p-4 animate-fade-in overscroll-contain select-none" 
+            style={{ zIndex: 9999, overscrollBehavior: "contain", touchAction: "none" }}
             onClick={hideDetails}
           >
             <div 
-              className="w-full max-w-lg bg-white rounded-t-[32px] p-6 shadow-2xl border-t border-slate-200 flex flex-col gap-4 animate-slide-up overscroll-contain select-text"
-              style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
+              className="w-full max-w-lg bg-white rounded-3xl p-6 shadow-2xl border border-slate-200 flex flex-col gap-4 animate-slide-up overscroll-contain select-text mb-1 sm:mb-0"
+              style={{ zIndex: 10000, overscrollBehavior: "contain", touchAction: "pan-y" }}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Drawer Pull Element */}

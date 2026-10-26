@@ -1763,13 +1763,13 @@ export default function ParentDashboardScreen() {
           onTouchMove={(e) => {
             if (e.target === e.currentTarget) e.preventDefault();
           }}
-          className="fixed inset-0 bg-black/40 z-[100] flex justify-center items-end sm:items-center p-0 sm:p-5 backdrop-blur-sm animate-in fade-in duration-300 overscroll-contain select-none"
-          style={{ overscrollBehavior: "contain", touchAction: "none" }}
+          className="fixed inset-0 bg-black/40 z-[9999] flex justify-center items-end sm:items-center p-3 pb-24 sm:p-5 backdrop-blur-sm animate-in fade-in duration-300 overscroll-contain select-none"
+          style={{ zIndex: 9999, overscrollBehavior: "contain", touchAction: "none" }}
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#f7f9fb] w-full sm:w-[400px] max-w-full rounded-t-3xl sm:rounded-3xl max-h-[90vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-10 duration-300 overscroll-contain select-text"
-            style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
+            className="bg-[#f7f9fb] w-full sm:w-[400px] max-w-full rounded-3xl max-h-[85vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-10 duration-300 overscroll-contain select-text mb-1 sm:mb-0"
+            style={{ zIndex: 10000, overscrollBehavior: "contain", touchAction: "pan-y" }}
           >
             <div className="flex justify-between items-center p-5 border-b border-gray-100 shrink-0">
               <div className="flex items-center gap-3">
@@ -2095,13 +2095,13 @@ export default function ParentDashboardScreen() {
           onTouchMove={(e) => {
             if (e.target === e.currentTarget) e.preventDefault();
           }}
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[100] flex justify-end animate-in fade-in duration-200 overscroll-contain select-none"
-          style={{ overscrollBehavior: "contain", touchAction: "none" }}
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[9999] flex justify-end animate-in fade-in duration-200 overscroll-contain select-none"
+          style={{ zIndex: 9999, overscrollBehavior: "contain", touchAction: "none" }}
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="w-full sm:w-[420px] h-full bg-[#f7f9fb] shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 overscroll-contain select-text"
-            style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
+            className="w-full sm:w-[420px] h-full bg-[#f7f9fb] shadow-2xl flex flex-col pb-24 sm:pb-0 animate-in slide-in-from-right duration-300 overscroll-contain select-text"
+            style={{ zIndex: 10000, overscrollBehavior: "contain", touchAction: "pan-y" }}
           >
             {/* Header */}
             <div className="flex justify-between items-center p-5 sm:p-6 border-b border-slate-200/80 bg-white">
@@ -2202,13 +2202,23 @@ export default function ParentDashboardScreen() {
           onTouchMove={(e) => {
             if (e.target === e.currentTarget) e.preventDefault();
           }}
-          className="fixed inset-0 bg-[#0f114a]/75 backdrop-blur-md z-[99999] flex items-center justify-center p-3 sm:p-4 font-sans animate-in fade-in duration-200 overscroll-contain select-none"
-          style={{ overscrollBehavior: "contain", touchAction: "none" }}
+          className="fixed inset-0 bg-[#0f114a]/75 backdrop-blur-md z-[99999] flex items-end sm:items-center justify-center p-3 pb-[92px] sm:p-4 font-sans animate-in fade-in duration-200 overscroll-contain select-none"
+          style={{
+            zIndex: 99999,
+            overscrollBehavior: "contain",
+            touchAction: "none",
+            paddingBottom: "calc(5.75rem + env(safe-area-inset-bottom, 0px))"
+          }}
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-[24px] sm:rounded-[32px] max-w-lg w-full max-h-[90vh] flex flex-col p-5 sm:p-6 shadow-2xl relative border border-white/60 overscroll-contain select-text"
-            style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
+            className="bg-white rounded-[24px] sm:rounded-[32px] max-w-lg w-full max-h-[72vh] sm:max-h-[85vh] flex flex-col p-5 sm:p-6 shadow-2xl relative border border-white/60 overscroll-contain select-text mb-1 sm:mb-0"
+            style={{
+              zIndex: 100000,
+              overscrollBehavior: "contain",
+              touchAction: "pan-y",
+              maxHeight: "min(72vh, calc(100dvh - 128px - env(safe-area-inset-bottom, 0px)))"
+            }}
           >
             
             {/* Modal Header */}
@@ -2237,7 +2247,7 @@ export default function ParentDashboardScreen() {
                 <span className="text-xs font-bold text-slate-500">{t("calculating_todays_time", "Calculating today's time & attempts...")}</span>
               </div>
             ) : (
-              <div className="flex-1 overflow-y-auto pr-0.5 space-y-4">
+              <div className="flex-1 overflow-y-auto pr-0.5 pb-6 sm:pb-6 space-y-4">
                 
                 {/* 3 Summary Stats */}
                 <div className="grid grid-cols-3 gap-2 sm:gap-3">
