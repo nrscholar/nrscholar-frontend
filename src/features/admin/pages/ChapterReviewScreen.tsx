@@ -418,6 +418,12 @@ function DraftCard({ draft, onChanged, onShowPage }: { draft: Draft; onChanged: 
         </>
       )}
 
+      {draft.passage && (
+        <details className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50/60 p-3">
+          <summary className="cursor-pointer text-sm font-semibold text-indigo-800">📖 Passage shown to the student</summary>
+          <p className="mt-2 max-h-56 overflow-auto whitespace-pre-line text-sm text-slate-800">{draft.passage}</p>
+        </details>
+      )}
       <blockquote className="mt-3 border-l-4 border-primary-fixed-dim bg-primary-fixed/30 px-3 py-2 text-sm italic text-slate-700">
         “{draft.sourceQuote}”
         <button onClick={() => onShowPage(draft.sourcePage)} className="ml-2 not-italic text-xs font-semibold text-blue-700 hover:underline">

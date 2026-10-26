@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "../../../api";
+import QuestionContext from "../components/QuestionContext";
 import { getScopedItem, setScopedItem, removeScopedItem, getActiveUserContext } from "../../../utils/sessionCache";
 import { showInteractiveNotification } from "../../../services/pushNotificationService";
 import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
@@ -1711,6 +1712,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             </div>
           </div>
 
+          <QuestionContext question={currentQ} previous={safeQuizIndex > 0 ? quizQuestions[safeQuizIndex - 1] : null} />
           <div className="my-4 bg-white border border-gray-200 rounded-3xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.06)] relative">
             <span className="text-xs font-bold text-[#006a62] uppercase tracking-wider block mb-2">
               {t('question_number', { num: currentQuizIndex + 1, defaultValue: `Question #${currentQuizIndex + 1}` })} {isDragObjects ? t('drag_drop_tag', '• Drag & Drop') : ""}
@@ -2036,6 +2038,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             </div>
           </div>
 
+          <QuestionContext question={activeBossQ} previous={safeBossIndex > 0 ? bossQuestions[safeBossIndex - 1] : null} />
           {/* Question Box Card with Soft Floating Elevation */}
           <div className="my-3 bg-white border-2 border-[#E2E4FA] rounded-[24px] sm:rounded-[28px] p-5 sm:p-6 shadow-[0_8px_25px_rgba(20,23,121,0.06)] relative">
             <div className="flex items-center gap-2 mb-2.5 flex-wrap">

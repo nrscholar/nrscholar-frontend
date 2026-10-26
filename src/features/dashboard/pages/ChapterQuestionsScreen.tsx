@@ -4,6 +4,7 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import DragonCharacter from "../../../components/DragonCharacter";
+import QuestionContext from "../components/QuestionContext";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 import { getScopedItem, setScopedItem, getActiveUserContext } from "../../../utils/sessionCache";
 import { filterUniqueQuestions } from "../../../utils/quizQuestionUtils";
@@ -521,6 +522,9 @@ export default function ChapterQuestionsScreen() {
             />
           </div>
         </div>
+
+        {/* Passage / illustration for this question (only when it has one) */}
+        <QuestionContext question={q} previous={currentQ > 0 ? questionsData[currentQ - 1] : null} />
 
         {/* Mascot Question Area (Duolingo Style) */}
         <div className="flex items-end gap-4 mb-8 mt-4 px-2 relative z-10">
