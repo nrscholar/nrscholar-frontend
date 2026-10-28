@@ -67,6 +67,8 @@ const MissionPlayScreen = lazy(() => import("../features/dashboard/pages/Mission
 const AdminLoginScreen = lazy(() => import("../features/admin/pages/AdminLoginScreen"));
 const QuestionBankScreen = lazy(() => import("../features/admin/pages/QuestionBankScreen"));
 const ChapterReviewScreen = lazy(() => import("../features/admin/pages/ChapterReviewScreen"));
+const StudentViewScreen = lazy(() => import("../features/admin/pages/StudentViewScreen"));
+const QuestionStatsScreen = lazy(() => import("../features/admin/pages/QuestionStatsScreen"));
 const AllQuestionsScreen = lazy(() => import("../features/admin/pages/AllQuestionsScreen"));
 const RevisionReviewScreen = lazy(() => import("../features/admin/pages/RevisionReviewScreen"));
 const AdminProtectedRoute = lazy(() =>
@@ -505,6 +507,8 @@ function PinGuard() {
               <Route index element={<Navigate to="/admin/question-bank" replace />} />
               <Route path="question-bank" element={<QuestionBankScreen />} />
               <Route path="question-bank/:chapterId" element={<ChapterReviewScreen />} />
+              <Route path="question-bank/:chapterId/student-view" element={<StudentViewScreen />} />
+              <Route path="question-stats" element={<QuestionStatsScreen />} />
               <Route path="all-questions" element={<AllQuestionsScreen />} />
               <Route path="question-revisions" element={<RevisionReviewScreen />} />
             </Route>

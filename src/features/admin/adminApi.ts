@@ -1,3 +1,4 @@
+import type { QuestionImage } from "../dashboard/components/questionTypes";
 // Admin session is kept separate from the student/parent session in api.ts.
 const TOKEN_KEY = "adminToken";
 const USER_KEY = "adminUser";
@@ -115,8 +116,14 @@ export interface ChapterDetail {
 
 export interface Draft {
   id: string;
+  chapterId: string;
   status: DraftStatus;
   difficulty: Difficulty;
+  // multiple_choice (default), match_pairs, fill_letters or ordering.
+  type?: string;
+  image?: QuestionImage;
+  optionImages?: QuestionImage[];
+  interaction?: { type?: string; details?: any };
   question: string;
   options: string[];
   answer: string;
@@ -135,6 +142,16 @@ export interface Draft {
   editedByHuman?: boolean;
   rejectReason?: string;
   reviewedBy?: string;
+}
+
+/** Live questions per round, picture questions (picture MCQ + match / fill / order) and the review queue. */
+export interface QuestionStats {
+  total: number;
+  picture: number;
+  rounds: Record<RoundName, { total: number; picture: number }>;
+  kinds: Record<string, number>;
+  byClass: { classLevel: string; total: number; picture: number; quiz: number; boss: number; shadow: number }[];
+  drafts: Record<string, { total: number; picture: number }>;
 }
 
 export interface DraftEdits {
@@ -338,6 +355,13 @@ export const adminApi = {
     return request<{ data: { boards: string[]; classLevels: string[]; subjects: { id: string; name: string }[] } }>(
       `${BASE}/filters?${q}`
     ).then((r) => r.data);
+  },
+
+  stats: (board?: string, classLevel?: string) => {
+    const q = new URLSearchParams();
+    if (board) q.set("board", board);
+    if (classLevel) q.set("classLevel", classLevel);
+    return request<{ data: QuestionStats }>(`${BASE}/stats?${q}`).then((r) => r.data);
   },
 
   chapters: (subjectId: string) =>

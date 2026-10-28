@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from "react";
 import { Link, Navigate, Outlet, useNavigate } from "react-router-dom";
-import { BookCheck, ListChecks, Loader2, LogOut } from "lucide-react";
+import { BarChart3, BookCheck, ListChecks, Loader2, LogOut } from "lucide-react";
 import { adminSession, type Difficulty } from "../adminApi";
 import { DIFFICULTIES } from "../constants";
 
@@ -34,6 +34,9 @@ function AdminHeader() {
           NR Scholar · Question Bank
         </Link>
         <div className="flex items-center gap-3 text-sm">
+          <Link to="/admin/question-stats" className="flex items-center gap-1 rounded-lg px-2 py-1 font-semibold text-slate-700 hover:bg-slate-100">
+            <BarChart3 className="h-4 w-4" /> Stats
+          </Link>
           <Link to="/admin/all-questions" className="flex items-center gap-1 rounded-lg px-2 py-1 font-semibold text-slate-700 hover:bg-slate-100">
             <ListChecks className="h-4 w-4" /> All Questions
           </Link>
