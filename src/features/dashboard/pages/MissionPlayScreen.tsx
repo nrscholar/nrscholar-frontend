@@ -26,6 +26,8 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "../../../api";
 import QuestionContext from "../components/QuestionContext";
+import { ActivityQuestion, OptionList } from "../components/ActivityQuestion";
+import { activityType, sameAnswer } from "../components/questionTypes";
 import { getScopedItem, setScopedItem, removeScopedItem, getActiveUserContext } from "../../../utils/sessionCache";
 import { showInteractiveNotification } from "../../../services/pushNotificationService";
 import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
@@ -301,6 +303,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     return 0;
   });
   const [quizSelected, setQuizSelected] = useState<number | null>(null);
+  // Answer string of a match / fill-letters / ordering question; null until every part is done.
+  const [activityValue, setActivityValue] = useState<string | null>(null);
   const [quizCorrectCount, setQuizCorrectCount] = useState(() => {
     if (isFreshReplay) return 0;
     const saved = getScopedItem(`quiz_correct_${chapterId}_${missionSeq}`);
@@ -915,6 +919,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   const currentQ = quizQuestions[safeQuizIndex] || quizQuestions[0];
   const interactionType = currentQ?.interaction?.type || currentQ?.type || "multiple_choice";
   const isDragObjects = interactionType === "drag_objects";
+  const currentActivity = activityType(currentQ);
+  const quizReady = isDragObjects || (currentActivity ? activityValue !== null : quizSelected !== null);
 
   const dragDetails = currentQ?.interaction?.details || {};
   const targetCount = dragDetails.targetCount ?? (parseInt(currentQ?.answer) || 3);
@@ -929,6 +935,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     }
     setQuizConfirmed(false);
     setQuizSelected(null);
+    setActivityValue(null);
     setSelectedDragValue(null);
   }, [safeQuizIndex, currentQ?._id]);
 
@@ -1342,6 +1349,9 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
         } else {
           isCorrect = (basketCount === targetCount || String(basketCount) === String(currentQ?.answer));
         }
+      } else if (currentActivity) {
+        if (activityValue === null) return;
+        isCorrect = sameAnswer(activityValue, currentQ?.answer);
       } else {
         if (quizSelected === null) return;
         const selectedOpt = currentQ?.options?.[quizSelected];
@@ -1353,7 +1363,9 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
       const selectedValue = isDragObjects
         ? (isLanguageDrag ? String(selectedDragValue) : String(basketCount))
-        : (quizSelected !== null ? String(currentQ?.options?.[quizSelected]) : "");
+        : currentActivity
+          ? String(activityValue)
+          : (quizSelected !== null ? String(currentQ?.options?.[quizSelected]) : "");
       const newAns = {
         questionId: currentQ?._id,
         questionText: currentQ?.question || currentQ?.text || currentQ?.title || "",
@@ -1901,9 +1913,9 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           <div className="flex flex-col gap-3">
 
             <button
-              disabled={!isDragObjects && quizSelected === null && !quizConfirmed}
+              disabled={!quizReady && !quizConfirmed}
               onClick={handleQuizConfirm}
-              className={`w-full py-4 rounded-2xl font-black text-base shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all ${!isDragObjects && quizSelected === null && !quizConfirmed
+              className={`w-full py-4 rounded-2xl font-black text-base shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all ${!quizReady && !quizConfirmed
                 ? "bg-gray-300 text-gray-500 cursor-not-allowed shadow-none"
                 : !quizConfirmed
                   ? "bg-[#141779] text-white hover:bg-[#101362]"

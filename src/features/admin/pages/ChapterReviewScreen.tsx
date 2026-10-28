@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-  AlertTriangle, ArrowLeft, Check, ChevronDown, ExternalLink, FileText, Pencil, ShieldCheck, Sparkles, X,
+  AlertTriangle, ArrowLeft, Check, ChevronDown, ExternalLink, Eye, FileText, Pencil, ShieldCheck, Sparkles, X,
 } from "lucide-react";
 import {
   adminApi, type ChapterDetail, type Difficulty, type Draft, type DraftEdits, type DraftStatus, type Job, type RoundName,
@@ -13,6 +13,11 @@ import { DIFFICULTIES, DIFFICULTY_TONE, ROUND_LABELS } from "../constants";
 import RoundCards from "../components/RoundCards";
 import ClaudeImportPanel from "../components/ClaudeImportPanel";
 import SetsPanel from "../components/SetsPanel";
+import { activityType, imageSrc, type QuestionImage } from "../../dashboard/components/questionTypes";
+
+const TYPE_LABELS: Record<string, string> = {
+  match_pairs: "Match the pairs", fill_letters: "Fill missing letters", ordering: "Put in order",
+};
 
 const ACTIVE = ["queued", "running"];
 
@@ -199,7 +204,13 @@ export default function ChapterReviewScreen() {
                   );
                 })}
               </div>
-              <div className="flex gap-1">
+              <div className="flex flex-wrap items-center gap-1">
+                {(tab === "pending" || tab === "approved") && shown.length > 0 && (
+                  <button onClick={() => navigate(`/admin/question-bank/${chapterId}/student-view?status=${tab}`)}
+                    className="mr-2 flex items-center gap-1 rounded-full bg-[#141779] px-3 py-1 text-xs font-semibold text-white hover:bg-[#101362]">
+                    <Eye className="h-3.5 w-3.5" /> Play as student
+                  </button>
+                )}
                 {(["", ...DIFFICULTIES] as (Difficulty | "")[]).map((d) => (
                   <button key={d || "all"} onClick={() => setDifficulty(d)}
                     className={`rounded-full px-3 py-1 text-xs font-semibold ${difficulty === d ? "bg-primary text-white" : "bg-slate-100 text-slate-600"}`}>
@@ -369,11 +380,15 @@ function DraftCard({ draft, onChanged, onShowPage }: { draft: Draft; onChanged: 
 
   const v = draft.verification;
   const pending = draft.status === "pending";
+  const activity = activityType(draft);
+  const hasPictures = !!(activity || draft.image || draft.optionImages);
+  const navigate = useNavigate();
 
   return (
     <div className="rounded-2xl border border-slate-200 p-4">
       <div className="mb-2 flex flex-wrap items-center gap-1.5">
         <Badge tone={DIFFICULTY_TONE[draft.difficulty]}>{draft.difficulty}</Badge>
+        {activity ? <Badge tone="violet">{TYPE_LABELS[activity]}</Badge> : hasPictures && <Badge tone="violet">Picture MCQ</Badge>}
         {draft.targetRound && <Badge tone="slate">{ROUND_LABELS[draft.targetRound]} round</Badge>}
         {v && v.correct_option_count === 1 && v.answerable_from_chapter && (
           <Badge tone="green"><Check className="h-3 w-3" /> Verifier agreed</Badge>
@@ -390,7 +405,8 @@ function DraftCard({ draft, onChanged, onShowPage }: { draft: Draft; onChanged: 
         <div className="space-y-2">
           <textarea value={form.question} onChange={(e) => setForm({ ...form, question: e.target.value })} rows={2}
             className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm font-semibold outline-none focus:border-primary" />
-          {form.options.map((opt, i) => (
+          {activity && <p className="text-xs text-slate-500">The pairs, words and steps of this question cannot be edited here; reject it and re-import to change them.</p>}
+          {!activity && form.options.map((opt, i) => (
             <label key={i} className="flex items-center gap-2">
               <input type="radio" checked={form.answer === opt} onChange={() => setForm({ ...form, answer: opt })} title="Correct answer" />
               <input value={opt} onChange={(e) => setOption(i, e.target.value)}
@@ -407,13 +423,8 @@ function DraftCard({ draft, onChanged, onShowPage }: { draft: Draft; onChanged: 
       ) : (
         <>
           <p className="font-semibold text-slate-900">{draft.question}</p>
-          <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
-            {draft.options.map((opt, i) => (
-              <li key={i} className={`rounded-lg px-3 py-1.5 text-sm ${opt === draft.answer ? "bg-emerald-50 font-semibold text-emerald-800 ring-1 ring-emerald-200" : "bg-slate-50 text-slate-700"}`}>
-                {String.fromCharCode(65 + i)}. {opt}
-              </li>
-            ))}
-          </ul>
+          {draft.image && <Thumb img={draft.image} className="mt-2 h-28 w-auto max-w-full rounded-lg border border-slate-200 bg-white p-1" />}
+          <AnswerKey draft={draft} />
           {draft.explanation && <p className="mt-2 text-sm text-slate-600">{draft.explanation}</p>}
         </>
       )}
@@ -475,6 +486,65 @@ function DraftCard({ draft, onChanged, onShowPage }: { draft: Draft; onChanged: 
           )}
         </div>
       )}
+      {draft.status !== "rejected" && (
+        <button type="button" onClick={() => navigate(`/admin/question-bank/${draft.chapterId}/student-view?status=${draft.status}&q=${draft.id}`)}
+          className="mt-3 flex items-center gap-1 text-xs font-semibold text-blue-700 hover:underline">
+          <Eye className="h-3.5 w-3.5" /> Open in student view
+        </button>
+      )}
     </div>
   );
+}
+
+const Thumb = ({ img, className }: { img?: QuestionImage; className: string }) =>
+  imageSrc(img) ? <img src={imageSrc(img)} alt="" className={`object-contain ${className}`} /> : null;
+
+/** The correct answer of each question type, for the reviewer. */
+function AnswerKey({ draft }: { draft: Draft }) {
+  const details = draft.interaction?.details || {};
+  const correct = "bg-emerald-50 font-semibold text-emerald-800 ring-1 ring-emerald-200";
+  switch (activityType(draft)) {
+    case "match_pairs":
+      return (
+        <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
+          {(details.pairs || []).map((p: { left: QuestionImage; right: string }, i: number) => (
+            <li key={i} className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm ${correct}`}>
+              <Thumb img={p.left} className="h-8 w-8" /> → {p.right}
+            </li>
+          ))}
+        </ul>
+      );
+    case "fill_letters":
+      return (
+        <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
+          {(details.items || []).map((it: { label: string; pattern: string; answer: string }, i: number) => (
+            <li key={i} className="rounded-lg bg-slate-50 px-3 py-1.5 text-sm text-slate-700">
+              {it.label}. <span className="font-mono tracking-widest">{it.pattern}</span> → <span className="font-semibold text-emerald-800">{it.answer}</span>
+            </li>
+          ))}
+        </ul>
+      );
+    case "ordering":
+      return (
+        <ol className="mt-2 space-y-1.5">
+          {(details.items || []).map((it: { text: string; image?: QuestionImage }, i: number) => (
+            <li key={i} className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm ${correct}`}>
+              <span className="w-4 font-bold">{i + 1}.</span> <Thumb img={it.image} className="h-7 w-7" /> {it.text}
+            </li>
+          ))}
+          <li className="text-xs text-slate-500">Correct order shown; the student sees the steps shuffled.</li>
+        </ol>
+      );
+    default:
+      return (
+        <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
+          {draft.options.map((opt, i) => (
+            <li key={i} className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm ${opt === draft.answer ? correct : "bg-slate-50 text-slate-700"}`}>
+              <Thumb img={draft.optionImages?.[i]} className="h-8 w-8" />
+              {String.fromCharCode(65 + i)}. {opt}
+            </li>
+          ))}
+        </ul>
+      );
+  }
 }
