@@ -231,6 +231,17 @@ export default function LoginScreen() {
                 Sign up
               </button>
             </div>
+
+            <div className="flex justify-center items-center pt-1">
+              <button
+                type="button"
+                onClick={() => navigate("/splash")}
+                className="text-[11px] font-bold text-slate-400 hover:text-[#141779] transition-colors flex items-center gap-1"
+              >
+                <span>✨ Explore App Journeys (Class 1–10)</span>
+                <ArrowRight size={12} />
+              </button>
+            </div>
           </div>
         </form>
 
