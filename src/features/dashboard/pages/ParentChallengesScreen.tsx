@@ -55,6 +55,11 @@ export default function ParentChallengesScreen() {
     if (title.includes("Pause") || title.includes("5s")) return t("chal_title_pause_5s", "5-Second Pause");
     if (title.includes("Active Listener") || title.includes("Listening")) return t("chal_title_active_listener", "Active Listener");
     if (title.includes("No-Interruption") || title.includes("Interruption")) return t("chal_title_no_interruption", "No-Interruption Time");
+    if (title.includes("Open-Ended") || title.includes("Question")) return t("chal_title_open_ended_question", "Open-Ended Question");
+    if (title.includes("Check-in") || title.includes("Ritual")) return t("chal_title_daily_checkin", "Daily Check-in Ritual");
+    if (title.includes("Gratitude Share") || title.includes("Gratitude")) return t("chal_title_gratitude_share", "Gratitude Share");
+    if (title.includes("Calm Tone") || title.includes("Calm Voice")) return t("chal_title_calm_tone", "Calm Tone Challenge");
+    if (title.includes("Affirmation Note") || title.includes("Affirmation")) return t("chal_title_affirmation_note", "Affirmation Note");
     return t(title, title);
   };
 
@@ -74,6 +79,21 @@ export default function ParentChallengesScreen() {
     }
     if (desc.includes("Let your child speak completely") || desc.includes("without interrupting")) {
       return t("chal_desc_no_interruption", "Let your child speak completely during dinner without interrupting them.");
+    }
+    if (desc.includes("open-ended question") || desc.includes("cannot be answered")) {
+      return t("chal_desc_open_ended_question", "Ask your child one open-ended question about their day that cannot be answered with 'good' or 'fine'.");
+    }
+    if (desc.includes("check-in time") || desc.includes("before bedtime") || desc.includes("dedicated check-in")) {
+      return t("chal_desc_daily_checkin", "Establish a 5-minute dedicated check-in time with your child before bedtime.");
+    }
+    if (desc.includes("grateful for about your child") || desc.includes("one thing you are grateful")) {
+      return t("chal_desc_gratitude_share", "Share one thing you are grateful for about your child directly to them today.");
+    }
+    if (desc.includes("voice soft and calm") || desc.includes("chores")) {
+      return t("chal_desc_calm_tone", "Keep your voice soft and calm even when reminding your child about chores.");
+    }
+    if (desc.includes("handwritten note") || desc.includes("encouragement in your child's notebook")) {
+      return t("chal_desc_affirmation_note", "Leave a small handwritten note of encouragement in your child's notebook or desk.");
     }
     return t(desc, desc);
   };
@@ -601,7 +621,7 @@ export default function ParentChallengesScreen() {
                             {translateChalTitle(uc.title)}
                           </h4>
                           <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
-                            Lesson {uc.lessonId}
+                            {t("lesson_num", "Lesson {{num}}", { num: uc.lessonId })}
                           </span>
                         </div>
                         <p className="text-slate-800 text-xs sm:text-[13px] font-semibold mt-0.5">

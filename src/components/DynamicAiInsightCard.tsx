@@ -111,6 +111,59 @@ export function classifyQuestionSubtopic(subject: string, questionText: string, 
 }
 
 /**
+ * Helper to localize subtopics and core concepts across languages
+ */
+export function localizeSubtopic(name: string, lang: string): string {
+  if (!name) return "";
+  if (lang === "gu") {
+    if (name.includes("Core Concepts")) return name.replace("Core Concepts", "મુખ્ય વિભાવનાઓ");
+    if (name === "Fractions & Decimals") return "અપૂર્ણાંક અને દશાંશ";
+    if (name === "Multiplication & Tables") return "ગુણાકાર અને ઘડિયા";
+    if (name === "Subtraction & Borrowing") return "બાદબાકી અને દસકો";
+    if (name === "Addition & Carryover") return "સરવાળો અને વદ્દી";
+    if (name === "Geometry & Measurement") return "ભૂમિતિ અને માપન";
+    if (name === "Multi-Step Word Problems") return "બહુ-પગલાં કૂટપ્રશ્નો";
+    if (name === "Foundational Arithmetic") return "મૂળભૂત અંકગણિત";
+    if (name === "Plants & Photosynthesis") return "વનસ્પતિ અને પ્રકાશસંશ્લેષણ";
+    if (name === "Human Organ Systems") return "માનવ અંગ પ્રણાલીઓ";
+    if (name === "Force, Energy & Motion") return "બળ, ઊર્જા અને ગતિ";
+    if (name === "States of Matter") return "દ્રવ્યની સ્થિતિઓ";
+    if (name === "Animal Habitats & Ecology") return "પ્રાણી આવાસ અને પર્યાવરણ";
+    if (name === "Natural Science Concepts") return "પ્રાકૃતિક વિજ્ઞાન વિભાવનાઓ";
+    if (name === "Parts of Speech & Grammar") return "શબ્દભેદ અને વ્યાકરણ";
+    if (name === "Verb Tenses & Conjugation") return "ક્રિયાપદ કાળ અને રૂપ";
+    if (name === "Vocabulary & Word Nuances") return "શબ્દભંડોળ અને અર્થ";
+    if (name === "Sentence Structure & Punctuation") return "વાક્ય રચના અને વિરામચિહ્નો";
+    if (name === "Reading Comprehension") return "વાંચન અને અર્થગ્રહણ";
+    if (name === "Language Structure & Usage") return "ભાષા રચના અને ઉપયોગ";
+    if (name === "Foundational Concepts") return "મૂળભૂત વિભાવનાઓ";
+  } else if (lang === "hi") {
+    if (name.includes("Core Concepts")) return name.replace("Core Concepts", "मूल अवधारणाएं");
+    if (name === "Fractions & Decimals") return "भिन्न और दशमलव";
+    if (name === "Multiplication & Tables") return "गुणा और पहाड़े";
+    if (name === "Subtraction & Borrowing") return "घटाव और उधार";
+    if (name === "Addition & Carryover") return "जोड़ और हासिल";
+    if (name === "Geometry & Measurement") return "ज्यामिति और मापन";
+    if (name === "Multi-Step Word Problems") return "बहु-चरणीय शाब्दिक प्रश्न";
+    if (name === "Foundational Arithmetic") return "मूलभूत अंकगणित";
+    if (name === "Plants & Photosynthesis") return "पौधे और प्रकाश संश्लेषण";
+    if (name === "Human Organ Systems") return "मानव अंग प्रणालियाँ";
+    if (name === "Force, Energy & Motion") return "बल, ऊर्जा और गति";
+    if (name === "States of Matter") return "पदार्थ की अवस्थाएँ";
+    if (name === "Animal Habitats & Ecology") return "पशु आवास और पर्यावरण";
+    if (name === "Natural Science Concepts") return "प्राकृतिक विज्ञान अवधारणाएं";
+    if (name === "Parts of Speech & Grammar") return "शब्द भेद और व्याकरण";
+    if (name === "Verb Tenses & Conjugation") return "काल और क्रिया रूप";
+    if (name === "Vocabulary & Word Nuances") return "शब्दावली और अर्थ";
+    if (name === "Sentence Structure & Punctuation") return "वाक्य रचना और विराम चिह्न";
+    if (name === "Reading Comprehension") return "पठन और बोध";
+    if (name === "Language Structure & Usage") return "भाषा संरचना और उपयोग";
+    if (name === "Foundational Concepts") return "मूलभूत अवधारणाएं";
+  }
+  return name;
+}
+
+/**
  * Granular diagnostic analyzer for client fallback.
  */
 export function computeDeepSubjectInsights(
@@ -137,16 +190,18 @@ export function computeDeepSubjectInsights(
 
   const subtopicCounts: Record<string, number> = {};
   mistakes.forEach(m => {
-    const st = classifyQuestionSubtopic(subject, m?.questionText, m?.chapter, m?.explanation);
+    const rawSt = classifyQuestionSubtopic(subject, m?.questionText, m?.chapter, m?.explanation);
+    const st = localizeSubtopic(rawSt, lang);
     subtopicCounts[st] = (subtopicCounts[st] || 0) + 1;
   });
 
+  const localizedCanonical = canonicalTopics.map(t => localizeSubtopic(t, lang));
   const totalMistakes = mistakes.length || Math.max(1, mistakeCount);
   const sortedSubtopics = Object.keys(subtopicCounts).sort((a, b) => subtopicCounts[b] - subtopicCounts[a]);
-  const weakConcepts = sortedSubtopics.length > 0 ? sortedSubtopics : [canonicalTopics[canonicalTopics.length - 1]];
-  const strongConcepts = canonicalTopics.filter(t => !weakConcepts.includes(t));
+  const weakConcepts = sortedSubtopics.length > 0 ? sortedSubtopics : [localizedCanonical[localizedCanonical.length - 1]];
+  const strongConcepts = localizedCanonical.filter(t => !weakConcepts.includes(t));
   if (strongConcepts.length === 0) {
-    strongConcepts.push(canonicalTopics[0], canonicalTopics[1]);
+    strongConcepts.push(localizedCanonical[0], localizedCanonical[1]);
   }
 
   const subTopicBreakdown = weakConcepts.map(st => {
@@ -163,7 +218,8 @@ export function computeDeepSubjectInsights(
     };
   });
 
-  const primaryWeak = weakConcepts[0] || "Foundational Concepts";
+  const defaultWeak = lang === "gu" ? "મૂળભૂત વિભાવનાઓ" : lang === "hi" ? "मूलभूत अवधारणाएं" : "Foundational Concepts";
+  const primaryWeak = weakConcepts[0] || defaultWeak;
   const topWeakPct = subTopicBreakdown[0]?.errorSharePct || 80;
   const strongJoined = strongConcepts.slice(0, 3).join(", ");
 
@@ -181,30 +237,78 @@ export function computeDeepSubjectInsights(
 
   const planSteps = isDeep
     ? [
-        { days: lang === "gu" ? "દિવસ 1–5" : lang === "hi" ? "दिन 1–5" : "Days 1–5", title: `${primaryWeak} Rebuilding`, action: `10 min daily micro-drills on core rules of ${primaryWeak}.` },
-        { days: lang === "gu" ? "દિવસ 6–10" : lang === "hi" ? "दिन 6–10" : "Days 6–10", title: "Targeted Retries", action: `Re-attempt missed questions with step hints.` },
-        { days: lang === "gu" ? "દિવસ 11–15" : lang === "hi" ? "दिन 11–15" : "Days 11–15", title: "Milestone Quizzes", action: `Timed benchmark quizzes to push accuracy above 70%.` }
+        {
+          days: lang === "gu" ? "દિવસ 1–5" : lang === "hi" ? "दिन 1–5" : "Days 1–5",
+          title: lang === "gu" ? `${primaryWeak} પુનઃનિર્માણ` : lang === "hi" ? `${primaryWeak} पुनर्निर्माण` : `${primaryWeak} Rebuilding`,
+          action: lang === "gu" ? `${primaryWeak} ના મૂળ નિયમો પર દૈનિક 10 મિનિટ માઇક્રો-ડ્રિલ્સ.` : lang === "hi" ? `${primaryWeak} के मूल नियमों पर 10 मिनट का दैनिक अभ्यास।` : `10 min daily micro-drills on core rules of ${primaryWeak}.`
+        },
+        {
+          days: lang === "gu" ? "દિવસ 6–10" : lang === "hi" ? "दिन 6–10" : "Days 6–10",
+          title: lang === "gu" ? "લક્ષિત પુનઃપ્રયાસ" : lang === "hi" ? "लक्षित पुनः प्रयास" : "Targeted Retries",
+          action: lang === "gu" ? "સહાયક સંકેતો સાથે છૂટી ગયેલા પ્રશ્નોનો ફરીથી પ્રયાસ કરો." : lang === "hi" ? "संकेतों के साथ छूटे हुए प्रश्नों का पुनः प्रयास करें।" : "Re-attempt missed questions with step hints."
+        },
+        {
+          days: lang === "gu" ? "દિવસ 11–15" : lang === "hi" ? "दिन 11–15" : "Days 11–15",
+          title: lang === "gu" ? "માઇલસ્ટોન ક્વિઝ" : lang === "hi" ? "मील का पत्थर क्विज़" : "Milestone Quizzes",
+          action: lang === "gu" ? "ચોકસાઈને 70% થી વધુ લઈ જવા માટે સમયબદ્ધ બેન્ચમાર્ક ક્વિઝ." : lang === "hi" ? "सटीकता को 70% से ऊपर ले जाने के लिए समयबद्ध बेंचमार्क क्विज़।" : "Timed benchmark quizzes to push accuracy above 70%."
+        }
       ]
     : [
-        { days: lang === "gu" ? "દિવસ 1–3" : lang === "hi" ? "दिन 1–3" : "Days 1–3", title: "Diagnostic Review", action: `Review missed questions in ${primaryWeak} to isolate trap rules.` },
-        { days: lang === "gu" ? "દિવસ 4–5" : lang === "hi" ? "दिन 4–5" : "Days 4–5", title: "Focused Practice", action: `Practice 6–8 targeted questions on ${primaryWeak}.` },
-        { days: lang === "gu" ? "દિવસ 6–7" : lang === "hi" ? "दिन 6–7" : "Days 6–7", title: "Speed Benchmark", action: `10-question speed quiz to lock score above 70%.` }
+        {
+          days: lang === "gu" ? "દિવસ 1–3" : lang === "hi" ? "दिन 1–3" : "Days 1–3",
+          title: lang === "gu" ? "નિદાન સમીક્ષા" : lang === "hi" ? "नैदानिक समीक्षा" : "Diagnostic Review",
+          action: lang === "gu" ? `${primaryWeak} માં મુશ્કેલ નિયમો ઓળખવા માટે ચૂકી ગયેલા પ્રશ્નોની સમીક્ષા કરો.` : lang === "hi" ? `${primaryWeak} में छूटे हुए प्रश्नों की समीक्षा करके कठिन नियमों को समझें।` : `Review missed questions in ${primaryWeak} to isolate trap rules.`
+        },
+        {
+          days: lang === "gu" ? "દિવસ 4–5" : lang === "hi" ? "दिन 4–5" : "Days 4–5",
+          title: lang === "gu" ? "કેન્દ્રિત અભ્યાસ" : lang === "hi" ? "केंद्रित अभ्यास" : "Focused Practice",
+          action: lang === "gu" ? `${primaryWeak} પર 6–8 લક્ષિત પ્રશ્નોનો અભ્યાસ કરો.` : lang === "hi" ? `${primaryWeak} पर 6–8 लक्षित प्रश्नों का अभ्यास करें।` : `Practice 6–8 targeted questions on ${primaryWeak}.`
+        },
+        {
+          days: lang === "gu" ? "દિવસ 6–7" : lang === "hi" ? "दिन 6–7" : "Days 6–7",
+          title: lang === "gu" ? "ઝડપ બેન્ચમાર્ક" : lang === "hi" ? "गति बेंचमार्क" : "Speed Benchmark",
+          action: lang === "gu" ? "70% થી વધુ સ્કોર જાળવવા 10-પ્રશ્નોની ઝડપી ક્વિઝ." : lang === "hi" ? "70% से अधिक स्कोर बनाए रखने के लिए 10-प्रश्नों की गति क्विज़।" : "10-question speed quiz to lock score above 70%."
+        }
       ];
 
   let conceptualKeys = [
-    "Step Verification: Separate given data from target question before computing.",
-    "Inverse Check: Apply inverse reasoning to verify answer before submission."
+    lang === "gu"
+      ? "પગલું ચકાસણી: ગણતરી કરતા પહેલા લક્ષ્ય પ્રશ્નમાંથી આપેલો ડેટા અલગ કરો."
+      : lang === "hi"
+      ? "चरण सत्यापन: गणना करने से पहले दिए गए डेटा को लक्ष्य प्रश्न से अलग करें।"
+      : "Step Verification: Separate given data from target question before computing.",
+    lang === "gu"
+      ? "ઊલટો તાળો: સબમિટ કરતા પહેલા જવાબ ચકાસવા માટે ઊલટી ગણતરી લાગુ કરો."
+      : lang === "hi"
+      ? "उलटी जाँच: जमा करने से पहले उत्तर की पुष्टि के लिए उल्टे तर्क का प्रयोग करें।"
+      : "Inverse Check: Apply inverse reasoning to verify answer before submission."
   ];
 
-  if (primaryWeak.includes("Division")) {
+  if (primaryWeak.includes("Division") || primaryWeak.includes("ભાગાકાર") || primaryWeak.includes("भाग")) {
     conceptualKeys = [
-      "Remainder Rule: In division, Remainder must always be strictly less than Divisor (R < D).",
-      "Verification Check: Dividend = (Divisor × Quotient) + Remainder."
+      lang === "gu"
+        ? "શેષ નિયમ: ભાગાકારમાં, શેષ હંમેશા ભાજક કરતાં ઓછી હોવી જોઈએ (R < D)."
+        : lang === "hi"
+        ? "शेषफल नियम: भाग में, शेषफल हमेशा भाजक से कम होना चाहिए (R < D)।"
+        : "Remainder Rule: In division, Remainder must always be strictly less than Divisor (R < D).",
+      lang === "gu"
+        ? "ચકાસણી તપાસ: ભાજ્ય = (ભાજક × ભાગફળ) + શેષ."
+        : lang === "hi"
+        ? "सत्यापन जाँच: भाज्य = (भाजक × भागफल) + शेषफल।"
+        : "Verification Check: Dividend = (Divisor × Quotient) + Remainder."
     ];
-  } else if (primaryWeak.includes("Fraction")) {
+  } else if (primaryWeak.includes("Fraction") || primaryWeak.includes("અપૂર્ણાંક") || primaryWeak.includes("भिन्न")) {
     conceptualKeys = [
-      "Common Denominator: Fractions can only be added or subtracted when denominators match.",
-      "Equivalence Rule: Multiplying numerator and denominator by same number preserves value."
+      lang === "gu"
+        ? "સામાન્ય છેદ: અપૂર્ણાંકો ત્યારે જ ઉમેરી કે બાદ કરી શકાય જ્યારે છેદ સમાન હોય."
+        : lang === "hi"
+        ? "समान हर: भिन्नों को तभी जोड़ा या घटाया जा सकता है जब हर समान हों।"
+        : "Common Denominator: Fractions can only be added or subtracted when denominators match.",
+      lang === "gu"
+        ? "સમતુલ્ય નિયમ: અંશ અને છેદને સમાન સંખ્યાથી ગુણવાથી મૂલ્ય જળવાઈ રહે છે."
+        : lang === "hi"
+        ? "समतुल्यता नियम: अंश और हर को समान संख्या से गुणा करने पर मान स्थिर रहता है।"
+        : "Equivalence Rule: Multiplying numerator and denominator by same number preserves value."
     ];
   }
 
@@ -218,13 +322,37 @@ export function computeDeepSubjectInsights(
     conceptualKeys,
     planType,
     planSteps,
-    stabilityGuidance: `Strong conceptual stability with ${accuracy}% accuracy across ${correctCount} questions solved.`,
-    maintenanceKey: "2 light review sessions weekly (10–15 mins). Protects recall without study fatigue.",
-    dropPreventionStrategy: "Weekly 10-min mixed-topic quiz to test recall under pressure.",
+    stabilityGuidance: lang === "gu"
+      ? `${correctCount} પ્રશ્નો ઉકેલવા સાથે ${accuracy}% ચોકસાઈ સાથે મજબૂત વિભાવનાત્મક સ્થિરતા.`
+      : lang === "hi"
+      ? `${correctCount} प्रश्नों के हल के साथ ${accuracy}% सटीकता पर मजबूत वैचारिक स्थिरता।`
+      : `Strong conceptual stability with ${accuracy}% accuracy across ${correctCount} questions solved.`,
+    maintenanceKey: lang === "gu"
+      ? "અઠવાડિયે 2 હળવા સમીક્ષા સત્રો (10–15 મિનિટ). થાક વગર યાદશક્તિ જાળવે છે."
+      : lang === "hi"
+      ? "सप्ताह में 2 हल्के समीक्षा सत्र (10–15 मिनट)। बिना थकान के स्मरण शक्ति सुरक्षित रखता है।"
+      : "2 light review sessions weekly (10–15 mins). Protects recall without study fatigue.",
+    dropPreventionStrategy: lang === "gu"
+      ? "દબાણ હેઠળ સ્મરણ શક્તિ ચકાસવા સાપ્તાહિક 10-મિનિટની મિશ્ર-વિષય ક્વિઝ."
+      : lang === "hi"
+      ? "दबाव में स्मरण शक्ति का परीक्षण करने के लिए साप्ताहिक 10-मिनट की मिश्रित-विषय क्विज़।"
+      : "Weekly 10-min mixed-topic quiz to test recall under pressure.",
     masteryMilestones: [
-      { phase: "Milestone 1", title: "Speed & Accuracy", action: `Maintain ≥85% accuracy within optimal target time.` },
-      { phase: "Milestone 2", title: "Interleaved Concepts", action: "Solve mixed multi-chapter questions across syllabus units." },
-      { phase: "Milestone 3", title: "Recall Defense", action: "Verbalize reasoning out loud to solidify long-term memory." }
+      {
+        phase: lang === "gu" ? "તબક્કો 1" : lang === "hi" ? "चरण 1" : "Milestone 1",
+        title: lang === "gu" ? "ઝડપ અને ચોકસાઈ" : lang === "hi" ? "गति और सटीकता" : "Speed & Accuracy",
+        action: lang === "gu" ? "શ્રેષ્ઠ લક્ષ્ય સમયમાં ≥85% ચોકસાઈ જાળવો." : lang === "hi" ? "इष्टतम लक्ष्य समय के भीतर ≥85% सटीकता बनाए रखें।" : `Maintain ≥85% accuracy within optimal target time.`
+      },
+      {
+        phase: lang === "gu" ? "તબક્કો 2" : lang === "hi" ? "चरण 2" : "Milestone 2",
+        title: lang === "gu" ? "મિશ્ર વિભાવનાઓ" : lang === "hi" ? "मिश्रित अवधारणाएं" : "Interleaved Concepts",
+        action: lang === "gu" ? "અભ્યાસક્રમના એકમોમાંથી મિશ્ર પ્રશ્નો ઉકેલો." : lang === "hi" ? "पाठ्यक्रम इकाइयों के मिश्रित बहु-अध्याय प्रश्न हल करें।" : "Solve mixed multi-chapter questions across syllabus units."
+      },
+      {
+        phase: lang === "gu" ? "તબક્કો 3" : lang === "hi" ? "चरण 3" : "Milestone 3",
+        title: lang === "gu" ? "દીર્ઘકાલીન યાદશક્તિ" : lang === "hi" ? "दीर्घकालिक स्मरण" : "Recall Defense",
+        action: lang === "gu" ? "દીર્ઘકાલીન સ્મરણ મજબૂત કરવા બોલીને તર્ક સ્પષ્ટ કરો." : lang === "hi" ? "दीर्घकालिक स्मृति को मजबूत करने के लिए तर्क को बोलकर स्पष्ट करें।" : "Verbalize reasoning out loud to solidify long-term memory."
+      }
     ]
   };
 }
@@ -659,7 +787,7 @@ export const DynamicAiInsightCard: React.FC<DynamicAiInsightCardProps> = ({
                           <span>{t("mastery_milestones", "Mastery Progression")}</span>
                         </div>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200/70">
-                          3-Phase Goal
+                          {t("three_phase_goal", "3-Phase Goal")}
                         </span>
                       </div>
 
@@ -804,7 +932,7 @@ export const DynamicAiInsightCard: React.FC<DynamicAiInsightCardProps> = ({
                                       ? "bg-rose-50 text-rose-700 border-rose-200" 
                                       : "bg-amber-50 text-amber-700 border-amber-200"
                                   }`}>
-                                    {item.status}
+                                    {item.status === "Critical Gap" ? t("critical_gap", "Critical Gap") : item.status === "Needs Practice" ? t("needs_practice", "Needs Practice") : t("minor_slip", "Minor Slip")}
                                   </span>
                                   <span className="text-xs font-black text-slate-700">
                                     {item.errorShare}
@@ -839,7 +967,7 @@ export const DynamicAiInsightCard: React.FC<DynamicAiInsightCardProps> = ({
                           <span>{t("conceptual_keys_label", "Key Rules to Remember")}</span>
                         </div>
                         <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-700">
-                          Anchor Rules
+                          {t("anchor_rules", "Anchor Rules")}
                         </span>
                       </div>
 
@@ -881,7 +1009,7 @@ export const DynamicAiInsightCard: React.FC<DynamicAiInsightCardProps> = ({
                             ? "bg-amber-50 text-[#b45309] border-amber-200" 
                             : "bg-rose-50 text-[#dc2626] border-rose-200"
                         }`}>
-                          {isDeepRecovery ? "15-Day Milestone" : "7-Day Sprint"}
+                          {isDeepRecovery ? t("fifteen_day_milestone", "15-Day Milestone") : t("seven_day_sprint", "7-Day Sprint")}
                         </span>
                       </div>
 

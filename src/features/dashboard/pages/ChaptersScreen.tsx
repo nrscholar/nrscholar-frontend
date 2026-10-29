@@ -24,6 +24,18 @@ export default function ChaptersScreen() {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
 
+  const translateSubjectName = (subj: string) => {
+    if (!subj) return "";
+    const lower = subj.toLowerCase();
+    if (lower.includes("gujarati")) return t("gujarati", "Gujarati");
+    if (lower.includes("math")) return t("mathematics", t("maths", "Mathematics"));
+    if (lower.includes("english")) return t("english_subject", "English");
+    if (lower.includes("social")) return t("social_science", t("social_studies", "Social Science"));
+    if (lower.includes("science")) return t("science", "Science");
+    if (lower.includes("hindi")) return t("hindi_subject", "Hindi");
+    return t(subj.toLowerCase().replace(/ /g, '_'), { defaultValue: subj });
+  };
+
   // Synchronous cache initialization for 0ms instant display
   const getInitialSubjects = () => {
     try {
@@ -635,7 +647,7 @@ export default function ChaptersScreen() {
                     }`}
                   >
                     <Globe size={13} className={isActive ? "text-[#FFC83D]" : "text-[#767683]"} />
-                    <span>{t(sub.name.toLowerCase(), { defaultValue: sub.name })}</span>
+                    <span>{translateSubjectName(sub.name)}</span>
                   </button>
                 );
               })
