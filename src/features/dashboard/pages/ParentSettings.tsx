@@ -199,6 +199,18 @@ export default function ParentSettings() {
     return translateNotificationMessage(msg, t, activeC?.childName || user?.childName);
   };
 
+  const translateSubjectName = (subj: string) => {
+    if (!subj) return "";
+    const lower = subj.toLowerCase();
+    if (lower.includes("gujarati")) return t("gujarati", "Gujarati");
+    if (lower.includes("math")) return t("mathematics", t("maths", "Mathematics"));
+    if (lower.includes("english")) return t("english_subject", "English");
+    if (lower.includes("social")) return t("social_science", t("social_studies", "Social Science"));
+    if (lower.includes("science")) return t("science", "Science");
+    if (lower.includes("hindi")) return t("hindi_subject", "Hindi");
+    return t(lower.replace(/\s+/g, '_'), subj);
+  };
+
   const fetchNotifications = async (targetChildId?: string) => {
     try {
       let activeChildId = targetChildId || user?.activeChildId;
@@ -546,7 +558,7 @@ export default function ParentSettings() {
                 setChild1Age(fallbackAge1 ? (typeof fallbackAge1 === 'string' && fallbackAge1.includes('Years') ? fallbackAge1 : `${fallbackAge1} Years`) : "");
                 setChild1Board(k1.childBoard || u.childBoard || "");
                 setChild1Photo(k1.childPhoto || u.childPhoto || "");
-                              } else {
+              } else {
                 setChild1Name(u.childName || "");
                 setChild1Class(u.childClass || "");
                 setChild1Age(u.childAge ? `${u.childAge} Years` : "");
@@ -562,7 +574,7 @@ export default function ParentSettings() {
                 setChild2Age(k2.childAge ? `${k2.childAge} Years` : "");
                 setChild2Board(k2.childBoard || "");
                 setChild2Photo(k2.childPhoto || "");
-                              } else {
+              } else {
                 setHasChild2(false);
               }
             }
@@ -618,7 +630,7 @@ export default function ParentSettings() {
             setChild1Age(age1 ? (typeof age1 === "string" && age1.includes("Years") ? age1 : `${age1} Years`) : "");
             setChild1Board(k1.childBoard || "");
             setChild1Photo(k1.childPhoto || "");
-                      }
+          }
           const k2 = kids.length > 1 ? (kids.find((k: any) => k.childId === "child_2") || kids[1]) : null;
           if (k2) {
             setHasChild2(true);
@@ -627,10 +639,11 @@ export default function ParentSettings() {
             setChild2Age(k2.childAge ? `${k2.childAge} Years` : "");
             setChild2Board(k2.childBoard || "");
             setChild2Photo(k2.childPhoto || "");
-                      } else {
+          } else {
             setHasChild2(false);
             setChild2Name(""); setChild2Class(""); setChild2Age("");
-            setChild2Board(""); setChild2Photo("");           }
+            setChild2Board(""); setChild2Photo("");
+          }
           fetchNotifications(u.activeChildId);
           fetchSecondaryParents();
         } catch (e) { }
@@ -752,7 +765,7 @@ export default function ParentSettings() {
           setChild1Age(a1 ? (typeof a1 === "string" && a1.includes("Years") ? a1 : `${a1} Years`) : "");
           setChild1Board(k1.childBoard || "");
           setChild1Photo(k1.childPhoto || "");
-                  }
+        }
         const k2 = kids.length > 1 ? (kids.find((k: any) => k.childId === "child_2") || kids[1]) : null;
         if (k2) {
           setHasChild2(true);
@@ -761,10 +774,11 @@ export default function ParentSettings() {
           setChild2Age(k2.childAge ? `${k2.childAge} Years` : "");
           setChild2Board(k2.childBoard || "");
           setChild2Photo(k2.childPhoto || "");
-                  } else {
+        } else {
           setHasChild2(false);
           setChild2Name(""); setChild2Class(""); setChild2Age("");
-          setChild2Board(""); setChild2Photo("");         }
+          setChild2Board(""); setChild2Photo("");
+        }
       }
 
       showNotificationToast({
@@ -915,7 +929,7 @@ export default function ParentSettings() {
         // Always clear child2 state first to avoid showing ghost data
         setHasChild2(false);
         setChild2Name(""); setChild2Class(""); setChild2Age("");
-        setChild2Board(""); setChild2Photo(""); 
+        setChild2Board(""); setChild2Photo("");
         // Re-hydrate from fresh API response — never from stale pre-delete localStorage
         const kids = u.children || [];
         const k1 = kids.find((k: any) => k.childId === "child_1") || kids[0];
@@ -925,7 +939,7 @@ export default function ParentSettings() {
           setChild1Age(k1.childAge ? `${k1.childAge} Years` : "");
           setChild1Board(k1.childBoard || "");
           setChild1Photo(k1.childPhoto || "");
-                  }
+        }
         const k2 = kids.length > 1 ? kids.find((k: any) => k.childId === "child_2") : null;
         if (k2) {
           setHasChild2(true);
@@ -934,7 +948,7 @@ export default function ParentSettings() {
           setChild2Age(k2.childAge ? `${k2.childAge} Years` : "");
           setChild2Board(k2.childBoard || "");
           setChild2Photo(k2.childPhoto || "");
-                  }
+        }
 
         showNotificationToast({
           title: "Profile Deleted",
@@ -970,7 +984,7 @@ export default function ParentSettings() {
       setChild2Age("");
       setChild2Board("");
       setChild2Photo("");
-          }
+    }
   };
 
   const isScreenTimeOn = screenTimeMinutes > 0 && screenTimeMinutes < 9999;
@@ -1132,7 +1146,7 @@ export default function ParentSettings() {
                           subject.toLowerCase().includes("science") ? "🔬" :
                             subject.toLowerCase().includes("english") || subject.toLowerCase().includes("language") ? "📚" : "📖"}
                       </span>
-                      <span className="text-xs sm:text-sm font-black text-[#141779]">{t(subject.toLowerCase(), { defaultValue: subject })}</span>
+                      <span className="text-xs sm:text-sm font-black text-[#141779]">{translateSubjectName(subject)}</span>
                     </div>
                     <CustomSwitch
                       checked={!restrictedSubjects[subject]}
@@ -1354,14 +1368,14 @@ export default function ParentSettings() {
               <motion.div variants={itemVariants} className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col gap-3.5">
                 <div className="flex justify-between items-center">
                   <h3 className="text-base sm:text-lg font-black text-[#141779] flex items-center gap-2">
-                    <UserRound size={20} className="text-[#141779]" /> Child 2 Profile
+                    <UserRound size={20} className="text-[#141779]" /> {t("child_2_profile", "Child 2 Profile")}
                   </h3>
                   {!isCoParent && (
                     <button
                       type="button"
                       onClick={deleteChild2Click}
                       className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
-                      title="Remove second child details"
+                      title={t("delete_profile", "Delete Profile")}
                     >
                       <Trash2 size={18} />
                     </button>
@@ -1387,52 +1401,73 @@ export default function ParentSettings() {
                         className="hidden"
                       />
                     </div>
-                    <span className="text-xs font-black text-slate-500 mt-1">Tap photo to edit</span>
+                    <span className="text-xs font-black text-slate-500 mt-1">{t("tap_photo_to_edit", "Tap photo to edit")}</span>
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-black text-slate-600 uppercase tracking-wider ml-1">Child Name</label>
+                    <label className="text-xs font-black text-slate-600 uppercase tracking-wider ml-1">{t("child_name_label", "Child Name")}</label>
                     <input
                       type="text"
                       value={child2Name}
                       onChange={(e) => setChild2Name(e.target.value)}
+                      placeholder={t("enter_child_name", "Enter Child Name")}
                       className="w-full h-11 bg-slate-50 rounded-xl px-4 text-sm font-extrabold text-slate-800 border border-slate-200 focus:border-[#141779] outline-none shadow-2xs"
                     />
                   </div>
 
                   <CustomDropdown
-                    label="Education Board"
+                    label={t("education_board", "Education Board")}
                     icon={BookOpen}
                     iconColor="#006a62"
                     value={child2Board}
                     options={boards}
                     onSelect={setChild2Board}
-                    placeholder="Select Board"
+                    placeholder={t("select_board", "Select Board")}
                   />
 
                   <div className="flex gap-3 w-full relative z-10">
                     <CustomDropdown
-                      label="Class / Grade"
+                      label={t("class_grade", "Class / Grade")}
                       icon={GraduationCap}
                       iconColor="#30007f"
                       value={child2Class}
                       options={classes}
                       onSelect={setChild2Class}
-                      placeholder="Select"
+                      placeholder={t("select", "Select")}
                     />
 
                     <CustomDropdown
-                      label="Age"
+                      label={t("age", "Age")}
                       icon={Cake}
                       iconColor="#141779"
                       value={child2Age}
                       options={ages}
                       onSelect={setChild2Age}
-                      placeholder="Select"
+                      placeholder={t("select", "Select")}
                     />
                   </div>
 
-
+                  <div className="flex flex-col gap-1.5 mt-0.5">
+                    <label className="text-xs font-black text-slate-600 uppercase tracking-wider ml-1">{t("child_device_code_label", "Child Device Code (Scholar Login)")}</label>
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex items-center justify-between">
+                      <span className="text-base sm:text-lg font-black tracking-widest text-[#141779]">
+                        {child2Code || "N/A"}
+                      </span>
+                      {!isCoParent ? (
+                        <button
+                          type="button"
+                          onClick={() => requestRegenCode("child_2")}
+                          className="px-3 py-1.5 rounded-full text-xs font-black bg-indigo-50 text-[#141779] border border-indigo-100 hover:bg-indigo-100 transition-colors cursor-pointer"
+                        >
+                          {t("regenerate", "Regenerate")}
+                        </button>
+                      ) : (
+                        <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
+                          <Lock size={12} /> {t("view_only", "View-only")}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             ) : isCoParent ? (
@@ -1440,15 +1475,15 @@ export default function ParentSettings() {
                 <button
                   type="button"
                   disabled
-                  title="To add a new child or modify family settings, please log in using the Primary Parent account."
+                  title={t("primary_parent_notice", "To add a new child or modify family settings, please log in using the Primary Parent account.")}
                   className="w-full py-3.5 border-2 border-dashed border-slate-300 rounded-2xl text-slate-400 font-black text-sm flex items-center justify-center gap-2 bg-slate-50 cursor-not-allowed opacity-80"
                 >
                   <Lock size={18} className="text-slate-400" />
-                  <span>Add Second Child Profile</span>
+                  <span>{t("add_second_child_profile", "Add Second Child Profile")}</span>
                 </button>
                 <p className="text-xs text-center text-amber-800 font-semibold flex items-center justify-center gap-1">
                   <AlertTriangle size={12} />
-                  To add a new child or modify family settings, please log in using the Primary Parent account.
+                  {t("primary_parent_notice", "To add a new child or modify family settings, please log in using the Primary Parent account.")}
                 </p>
               </motion.div>
             ) : (
@@ -1462,11 +1497,11 @@ export default function ParentSettings() {
                   setChild2Age("6 Years");
                   setChild2Board("CBSE (NCERT)");
                   setChild2Photo("");
-                                  }}
+                }}
                 className="w-full py-3.5 border-2 border-dashed border-[#141779]/30 rounded-2xl text-[#141779] font-black text-sm flex items-center justify-center gap-2 hover:bg-[#141779]/5 transition-all bg-white cursor-pointer"
               >
                 <Plus size={20} />
-                <span>Add Second Child Profile</span>
+                <span>{t("add_second_child_profile", "Add Second Child Profile")}</span>
               </motion.button>
             )}
 
@@ -1479,10 +1514,10 @@ export default function ParentSettings() {
                   </div>
                   <div className="min-w-0">
                     <h3 className="text-base font-black text-[#141779] truncate">
-                      Co-Parents & Guardians
+                      {t("coparents_guardians", "Co-Parents & Guardians")}
                     </h3>
                     <p className="text-xs text-slate-500 font-medium truncate">
-                      Manage independent logins for co-parents & family guardians
+                      {t("manage_coparents_desc", "Manage independent logins for co-parents & family guardians")}
                     </p>
                   </div>
                 </div>
@@ -1491,11 +1526,11 @@ export default function ParentSettings() {
                   <button
                     type="button"
                     disabled
-                    title="To add a new child or modify family settings, please log in using the Primary Parent account."
+                    title={t("primary_parent_notice", "To add a new child or modify family settings, please log in using the Primary Parent account.")}
                     className="px-3 py-1.5 bg-slate-200 text-slate-500 rounded-xl text-xs font-black tracking-wide flex items-center gap-1.5 cursor-not-allowed shrink-0"
                   >
                     <Lock size={13} />
-                    <span>Primary Parent Only</span>
+                    <span>{t("primary_parent_only", "Primary Parent Only")}</span>
                   </button>
                 ) : (
                   <button
@@ -1512,7 +1547,7 @@ export default function ParentSettings() {
                     className="px-3.5 py-1.5 bg-[#141779] hover:bg-[#1c1970] active:scale-95 text-white rounded-xl text-xs font-black tracking-wide flex items-center gap-1.5 shadow-xs transition-all cursor-pointer shrink-0"
                   >
                     <Plus size={15} />
-                    <span>Add Co-Parent</span>
+                    <span>{t("add_coparent", "Add Co-Parent")}</span>
                   </button>
                 )}
               </div>
@@ -1557,7 +1592,7 @@ export default function ParentSettings() {
               ) : (
                 <div className="py-2.5 px-3.5 bg-slate-50/80 rounded-xl border border-slate-200/70 flex items-center gap-2.5 text-xs text-slate-500 font-medium">
                   <ShieldCheck size={16} className="text-slate-400 shrink-0" />
-                  <span>No secondary co-parent accounts linked yet.</span>
+                  <span>{t("no_coparents_linked", "No secondary co-parent accounts linked yet.")}</span>
                 </div>
               )}
             </motion.div>
@@ -1569,14 +1604,14 @@ export default function ParentSettings() {
                   <button
                     type="button"
                     disabled
-                    title="To add a new child or modify family settings, please log in using the Primary Parent account."
+                    title={t("primary_parent_notice", "To add a new child or modify family settings, please log in using the Primary Parent account.")}
                     className="w-full h-12 sm:h-13 bg-slate-200 text-slate-400 rounded-xl sm:rounded-2xl flex items-center justify-center gap-2.5 font-black text-sm sm:text-base cursor-not-allowed opacity-80"
                   >
                     <Lock size={18} />
-                    <span>View-Only Mode</span>
+                    <span>{t("view_only_mode", "View-Only Mode")}</span>
                   </button>
                   <p className="text-xs text-center text-amber-800 font-semibold">
-                    To add a new child or modify family settings, please log in using the Primary Parent account.
+                    {t("primary_parent_notice", "To add a new child or modify family settings, please log in using the Primary Parent account.")}
                   </p>
                 </div>
               ) : (
@@ -1585,7 +1620,7 @@ export default function ParentSettings() {
                   disabled={isSavingProfile}
                   className="w-full h-12 sm:h-13 bg-[#141779] hover:bg-[#1e23a0] rounded-xl sm:rounded-2xl flex items-center justify-center gap-2.5 shadow-md active:scale-95 transition-all disabled:opacity-70 text-white font-black text-sm sm:text-base cursor-pointer"
                 >
-                  <span>{isSavingProfile ? "Saving Profiles..." : "Save Profiles"}</span>
+                  <span>{isSavingProfile ? t("saving_profiles", "Saving Profiles...") : t("save_profiles", "Save Profiles")}</span>
                   {!isSavingProfile && <Save size={18} color="white" />}
                 </button>
               )}
@@ -1663,15 +1698,29 @@ export default function ParentSettings() {
           setChildIdToDelete(null);
         }}
         onConfirm={confirmDeleteChild}
-        title="Delete Profile"
-        message="Are you sure you want to delete this child profile? All progress for this child will be permanently lost."
-        confirmText="Yes, Delete"
-        cancelText="Cancel"
+        title={t("delete_profile_title", "Delete Profile")}
+        message={t("delete_profile_msg", "Are you sure you want to delete this child profile? All progress for this child will be permanently lost.")}
+        confirmText={t("yes_delete", "Yes, Delete")}
+        cancelText={t("cancel", "Cancel")}
         variant="danger"
         icon={<Trash2 size={28} className="text-rose-600" />}
       />
 
-
+      {/* Custom Regenerate Code Confirmation Modal */}
+      <UnifiedConfirmModal
+        isOpen={regenConfirmOpen}
+        onClose={() => {
+          setRegenConfirmOpen(false);
+          setChildIdToRegen(null);
+        }}
+        onConfirm={confirmRegenCode}
+        title={t("regen_code_title", "Regenerate Device Code")}
+        message={t("regen_code_msg", "Are you sure you want to regenerate a new random device code for this child? The old code will stop working immediately.")}
+        confirmText={t("yes_regenerate", "Yes, Regenerate")}
+        cancelText={t("cancel", "Cancel")}
+        variant="primary"
+        icon={<RefreshCw size={28} className="text-[#141779]" />}
+      />
 
       {/* Delete Co-Parent Confirmation Modal */}
       <UnifiedConfirmModal
@@ -1681,10 +1730,10 @@ export default function ParentSettings() {
           setCoParentDeleteId(null);
         }}
         onConfirm={confirmDeleteCoParent}
-        title="Remove Co-Parent"
-        message="Are you sure you want to remove this secondary parent? They will no longer be able to log in to access this household."
-        confirmText="Yes, Remove"
-        cancelText="Cancel"
+        title={t("remove_coparent_title", "Remove Co-Parent")}
+        message={t("remove_coparent_msg", "Are you sure you want to remove this secondary parent? They will no longer be able to log in to access this household.")}
+        confirmText={t("yes_remove", "Yes, Remove")}
+        cancelText={t("cancel", "Cancel")}
         variant="danger"
         icon={<Trash2 size={28} className="text-rose-600" />}
       />
@@ -1708,7 +1757,7 @@ export default function ParentSettings() {
           const isFormValid = isPhoneValid && coParentName.trim().length > 0 && isMinLength && hasSpecialChar && passwordsMatch;
 
           return (
-            <div 
+            <div
               className="fixed inset-0 bg-[#0f114a]/80 backdrop-blur-md z-[99999] flex items-center justify-center p-3 sm:p-4 font-sans animate-in fade-in duration-200"
               style={{ touchAction: "none" }}
               onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
@@ -1728,10 +1777,10 @@ export default function ParentSettings() {
                     </div>
                     <div>
                       <h3 className="text-base font-black text-[#141779] leading-tight">
-                        Add Co-Parent
+                        {t("add_coparent", "Add Co-Parent")}
                       </h3>
                       <p className="text-xs text-slate-500 font-medium">
-                        Create login credentials for guardian
+                        {t("create_guardian_credentials", "Create login credentials for guardian")}
                       </p>
                     </div>
                   </div>
@@ -1763,14 +1812,14 @@ export default function ParentSettings() {
                   {/* Relationship Pills */}
                   <div className="flex flex-col gap-1">
                     <label className="text-xs font-black text-slate-500 uppercase tracking-wider ml-0.5">
-                      Relationship
+                      {t("relationship", "Relationship")}
                     </label>
                     <div className="grid grid-cols-4 gap-1">
                       {[
-                        { id: "Mother", label: "Mother" },
-                        { id: "Father", label: "Father" },
-                        { id: "Guardian", label: "Guardian" },
-                        { id: "Tutor", label: "Tutor" },
+                        { id: "Mother", label: t("mother", "Mother") },
+                        { id: "Father", label: t("father", "Father") },
+                        { id: "Guardian", label: t("guardian", "Guardian") },
+                        { id: "Tutor", label: t("tutor", "Tutor") },
                       ].map((rel) => {
                         const isSelected = coParentRel === rel.id;
                         return (
@@ -1779,8 +1828,8 @@ export default function ParentSettings() {
                             type="button"
                             onClick={() => setCoParentRel(rel.id)}
                             className={`py-1.5 px-1 rounded-lg text-xs font-bold transition-all cursor-pointer text-center ${isSelected
-                                ? "bg-[#141779] text-white shadow-2xs"
-                                : "bg-slate-100 text-slate-600 hover:bg-indigo-50 hover:text-[#141779]"
+                              ? "bg-[#141779] text-white shadow-2xs"
+                              : "bg-slate-100 text-slate-600 hover:bg-indigo-50 hover:text-[#141779]"
                               }`}
                           >
                             {rel.label}
@@ -1834,10 +1883,10 @@ export default function ParentSettings() {
                           if (coParentError) setCoParentError("");
                         }}
                         className={`w-full h-9 bg-slate-50 rounded-xl pl-10 pr-8 text-xs font-bold text-slate-900 border transition-colors outline-none focus:bg-white ${isDuplicateNumber
-                            ? "border-amber-400 bg-amber-50/30 focus:border-amber-500"
-                            : cleanInputM.length === 10 && /^[6-9]/.test(cleanInputM) && !isCheckingCoParentMobile
-                              ? "border-emerald-300 focus:border-emerald-500"
-                              : "border-slate-200 focus:border-[#141779]"
+                          ? "border-amber-400 bg-amber-50/30 focus:border-amber-500"
+                          : cleanInputM.length === 10 && /^[6-9]/.test(cleanInputM) && !isCheckingCoParentMobile
+                            ? "border-emerald-300 focus:border-emerald-500"
+                            : "border-slate-200 focus:border-[#141779]"
                           }`}
                         required
                       />
@@ -1960,14 +2009,14 @@ export default function ParentSettings() {
                       }}
                       className="flex-1 h-9 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
                     >
-                      Cancel
+                      {t("cancel", "Cancel")}
                     </button>
                     <button
                       type="submit"
                       disabled={isSavingCoParent || !isFormValid}
                       className="flex-1 h-9 bg-[#141779] text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-xs hover:bg-[#1c1970] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {isSavingCoParent ? "Saving..." : "Save Co-Parent"}
+                      {isSavingCoParent ? t("saving", "Saving...") : t("save_coparent", "Save Co-Parent")}
                     </button>
                   </div>
                 </form>
@@ -1980,12 +2029,12 @@ export default function ParentSettings() {
 
       {/* Notifications Side Panel / Modal Drawer */}
       {showNotifications && (
-        <div 
+        <div
           className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[100] flex justify-end animate-in fade-in duration-200"
           style={{ touchAction: "none" }}
           onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
         >
-          <div 
+          <div
             className="w-full sm:w-[420px] h-full bg-[#f7f9fb] shadow-2xl flex flex-col animate-in slide-in-from-right duration-300"
             style={{ overscrollBehavior: "contain" }}
           >

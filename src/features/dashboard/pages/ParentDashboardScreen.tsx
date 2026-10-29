@@ -331,10 +331,10 @@ export default function ParentDashboardScreen() {
     if (!subj) return "";
     const lower = subj.toLowerCase();
     if (lower.includes("gujarati")) return t("gujarati", "Gujarati");
-    if (lower.includes("math")) return t("maths", "Maths");
+    if (lower.includes("math")) return t("mathematics", t("maths", "Mathematics"));
     if (lower.includes("english")) return t("english_subject", "English");
+    if (lower.includes("social")) return t("social_science", t("social_studies", "Social Science"));
     if (lower.includes("science")) return t("science", "Science");
-    if (lower.includes("social")) return t("social_studies", "Social Studies");
     if (lower.includes("hindi")) return t("hindi_subject", "Hindi");
     return t(subj, subj);
   };
@@ -726,7 +726,7 @@ export default function ParentDashboardScreen() {
             </p>
           </div>
           <div className="bg-indigo-50/90 border border-indigo-100/90 px-3 py-1.5 rounded-xl flex items-center justify-center shrink-0">
-            <span className="text-xs font-extrabold text-[#141779] leading-none">7-DAY TREND</span>
+            <span className="text-xs font-extrabold text-[#141779] leading-none">{t("seven_day_trend_pill", "7-DAY TREND")}</span>
           </div>
         </div>
 
@@ -828,7 +828,7 @@ export default function ParentDashboardScreen() {
           <div className="flex justify-between text-xs font-bold text-slate-500 pt-2" style={{ paddingLeft: `${startX}px`, paddingRight: `${320 - endX}px` }}>
             {dayLabels.map((day, i) => (
               <span key={i} className={i === dayLabels.length - 1 ? "font-extrabold text-[#141779]" : ""}>
-                {day}
+                {t(day.toLowerCase(), day)}
               </span>
             ))}
           </div>
@@ -1294,12 +1294,10 @@ export default function ParentDashboardScreen() {
         <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-[0_4px_20px_rgba(20,23,121,0.04)] flex flex-col gap-3.5">
           {/* Identity Header Row */}
           <div className="flex items-center justify-between gap-3">
-            <button
-              onClick={() => setShowSwitcher(true)}
-              className="flex items-center gap-3 min-w-0 flex-1 text-left group cursor-pointer"
-              title={t("switch_child_profile", "Click to switch student")}
+            <div
+              className="flex items-center gap-3 min-w-0 flex-1 text-left"
             >
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-gradient-to-tr from-[#141779] to-[#2d328f] text-white flex items-center justify-center text-sm sm:text-base font-black shrink-0 shadow-2xs overflow-hidden border border-white/60 group-hover:scale-105 transition-transform">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-gradient-to-tr from-[#141779] to-[#2d328f] text-white flex items-center justify-center text-sm sm:text-base font-black shrink-0 shadow-2xs overflow-hidden border border-white/60">
                 {childPhoto ? (
                   <img src={childPhoto} alt={cleanChildName} className="w-full h-full object-cover" />
                 ) : (
@@ -1308,23 +1306,23 @@ export default function ParentDashboardScreen() {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <h2 className="text-base sm:text-lg font-black text-[#141779] leading-tight truncate group-hover:text-indigo-800 transition-colors">
+                  <h2 className="text-base sm:text-lg font-black text-[#141779] leading-tight truncate">
                     {childName}'s {t("journey", "Journey")}
                   </h2>
-                  <ChevronDown size={15} className="text-slate-400 group-hover:text-[#141779] shrink-0 transition-colors" />
+                  <ChevronDown size={15} className="text-slate-400 shrink-0" />
                 </div>
-                <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                  <span className="text-xs sm:text-[13px] font-black text-white bg-[#141779] px-3 py-1 rounded-full shrink-0 shadow-2xs">
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className="text-xs sm:text-[13px] font-black text-white bg-[#141779] px-3 py-1 rounded-full shrink-0 shadow-2xs whitespace-nowrap">
                     {t('lvl_explorer', { level: userLevel, defaultValue: `Lvl ${userLevel}` })}
                   </span>
                   {childClass && (
-                    <span className="text-xs sm:text-[13px] font-bold text-[#141779] bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full shrink-0">
+                    <span className="text-xs sm:text-[13px] font-bold text-[#141779] bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full shrink-0 whitespace-nowrap">
                       {childClass}
                     </span>
                   )}
                 </div>
               </div>
-            </button>
+            </div>
 
             {/* Active profile status badge */}
             <div className="flex items-center gap-1.5 shrink-0">
