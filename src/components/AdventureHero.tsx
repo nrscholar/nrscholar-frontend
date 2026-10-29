@@ -34,7 +34,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     worldTitle: "🐉 DRAGON VALLEY",
     storyText: "The dragon needs your help finding its lost egg in the mystic valley!",
     missionTitle: "Complete today's learning quest to cross Dragon Valley",
-    missionProgress: { current: 3, total: 5 },
+    missionProgress: { current: 0, total: 0 },
     missionRewardText: "+50 XP & Dragon Scale",
     currentLocationName: "Egg Village",
     destinationName: "Hatchling Haven",
@@ -57,7 +57,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     worldTitle: "🧪 SCIENCE LAB",
     storyText: "Help Professor Owl finish Experiment #04 to synthesize the Quantum Catalyst!",
     missionTitle: "Complete 4 science challenges to ignite the lab furnace",
-    missionProgress: { current: 2, total: 4 },
+    missionProgress: { current: 0, total: 0 },
     missionRewardText: "+60 XP & Quantum Core",
     currentLocationName: "Apprentice Lab",
     destinationName: "Atom Academy",
@@ -80,7 +80,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     worldTitle: "🏆 CHAMPION'S ARENA",
     storyText: "Step into the arena and master confidence challenges to earn the Silver Medal!",
     missionTitle: "Complete 3 daily habit challenges",
-    missionProgress: { current: 1, total: 3 },
+    missionProgress: { current: 0, total: 0 },
     missionRewardText: "+40 XP & Arena Star",
     currentLocationName: "Bronze Novice",
     destinationName: "Bronze Vanguard",
@@ -103,7 +103,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     worldTitle: "🚀 GALAXY QUEST",
     storyText: "Pilot your rover across the starlight asteroid belt toward Planet Nebula!",
     missionTitle: "Complete 5 space problems to charge thrusters",
-    missionProgress: { current: 3, total: 5 },
+    missionProgress: { current: 0, total: 0 },
     missionRewardText: "+75 XP & Space Crystal",
     currentLocationName: "Launch Pad",
     destinationName: "Planet Nebula",
@@ -126,7 +126,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     worldTitle: "🌊 OCEAN EXPLORER",
     storyText: "Dive into the coral reef trenches to locate the sunken Royal Treasure Chest!",
     missionTitle: "Complete 4 reading quests underwater",
-    missionProgress: { current: 2, total: 4 },
+    missionProgress: { current: 0, total: 0 },
     missionRewardText: "+50 XP & Pearl Shell",
     currentLocationName: "Shallow Reef",
     destinationName: "Coral Trench",
@@ -149,7 +149,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     worldTitle: "📜 ANCIENT RUINS",
     storyText: "Uncover forgotten scrolls in the Sunken Temple of Alexandria!",
     missionTitle: "Complete 3 history investigations",
-    missionProgress: { current: 1, total: 3 },
+    missionProgress: { current: 0, total: 0 },
     missionRewardText: "+45 XP & Golden Scroll",
     currentLocationName: "Desert Camp",
     destinationName: "Sunken Temple",
@@ -184,12 +184,13 @@ interface AdventureHeroProps {
   missionXpReward?: number;
   missionCoinReward?: number;
   journeyData?: any;
+  isLoadingMission?: boolean;
 }
 
 function AdventureHero({
   themeKey = "dragon",
-  xp = 1105,
-  targetXp = 2500,
+  xp = 0,
+  targetXp = 1000,
   currentLocationName,
   destinationName,
   progressPercentage,
@@ -202,6 +203,7 @@ function AdventureHero({
   missionXpReward,
   missionCoinReward,
   journeyData,
+  isLoadingMission = false,
 }: AdventureHeroProps) {
   const { t } = useTranslation();
   const theme = ADVENTURE_THEMES[themeKey] || ADVENTURE_THEMES.dragon;
@@ -432,56 +434,90 @@ function AdventureHero({
         </button>
       </div>
 
-      {/* 2. TODAY'S QUEST CARD (100% MATCHING SCREENSHOT) */}
+      {/* 2. TODAY'S QUEST CARD */}
       <div className="w-full bg-white rounded-[28px] p-4 border border-slate-100 shadow-xs flex flex-col gap-3">
-        {/* Top Header Row */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className="w-11 h-11 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center text-2xl shrink-0 shadow-2xs">
-              🎯
+        {isLoadingMission || !missionTitle ? (
+          <div className="animate-pulse flex flex-col gap-3 select-none">
+            {/* Top Header Row Skeleton */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="w-11 h-11 rounded-full bg-rose-50 flex items-center justify-center text-xl shrink-0">
+                  🎯
+                </div>
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <div className="h-2.5 w-24 bg-slate-200 rounded" />
+                  <div className="h-4 w-44 bg-slate-200 rounded" />
+                  <div className="h-3 w-56 bg-slate-100 rounded" />
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-1.5 shrink-0">
+                <div className="h-3.5 w-10 bg-slate-200 rounded" />
+                <div className="w-20 h-2 bg-slate-100 rounded-full" />
+              </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <span className="text-[10px] font-black text-[#4f46e5] uppercase tracking-wider block">
-                {t('todays_quest', { defaultValue: "TODAY'S QUEST" })}
+            {/* Bottom Rewards & CTA Button Row Skeleton */}
+            <div className="flex items-center justify-between gap-1.5 pt-1">
+              <div className="h-8 w-20 rounded-2xl bg-slate-100" />
+              <div className="h-8 w-20 rounded-2xl bg-slate-100" />
+              <div className="h-8 w-32 rounded-2xl bg-slate-200" />
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Top Header Row */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="w-11 h-11 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center text-2xl shrink-0 shadow-2xs">
+                  🎯
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="text-[10px] font-black text-[#4f46e5] uppercase tracking-wider block">
+                    {t('todays_quest', { defaultValue: "TODAY'S QUEST" })}
+                  </span>
+                  <h4 className="text-sm font-black text-[#1c1970] leading-tight truncate mt-0.5">
+                    {t(displayMissionTitle.toLowerCase().replace(/ /g, '_'), { defaultValue: displayMissionTitle })}
+                  </h4>
+                  <p className="text-[11px] font-semibold text-slate-400 truncate mt-0.5">
+                    {missionRewardText || t('defeat_boss_desc', { defaultValue: "Complete today's active quest to earn rewards!" })}
+                  </p>
+                </div>
+              </div>
+
+              {/* Progress Meter on Right */}
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                <span className="text-xs font-black text-[#4f46e5]">
+                  {displayMissionProgress.current} / {displayMissionProgress.total}
+                </span>
+                <div className="w-20 h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/60 p-0.5">
+                  <div
+                    className="h-full bg-[#4f46e5] rounded-full transition-all duration-500"
+                    style={{
+                      width: `${displayMissionProgress.total > 0
+                        ? Math.min(100, (displayMissionProgress.current / displayMissionProgress.total) * 100)
+                        : 0}%`
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Rewards & CTA Button Row */}
+            <div className="flex items-center justify-between gap-1.5 pt-1">
+              <span className="bg-[#fff0f3] text-[#f43f5e] font-black border border-rose-100 px-2.5 py-2 rounded-2xl text-[10.5px] sm:text-[11px] flex items-center justify-center gap-1 shadow-2xs whitespace-nowrap">
+                🎁 +{displayXpReward} XP
               </span>
-              <h4 className="text-sm font-black text-[#1c1970] leading-tight truncate mt-0.5">
-                {t(displayMissionTitle.toLowerCase().replace(/ /g, '_'), { defaultValue: displayMissionTitle || "Win 7 Boss Battles" })}
-              </h4>
-              <p className="text-[11px] font-semibold text-slate-400 truncate mt-0.5">
-                {t('defeat_boss_desc', { defaultValue: "Defeat 7 boss battles and earn rewards!" })}
-              </p>
+              <span className="bg-[#fffbeb] text-[#d97706] font-black border border-amber-100 px-2.5 py-2 rounded-2xl text-[10.5px] sm:text-[11px] flex items-center justify-center gap-1 shadow-2xs whitespace-nowrap">
+                🪙 +{displayCoinReward} Coins
+              </span>
+              <button
+                onClick={onMissionClick || onCtaClick}
+                className="bg-[#1c1970] hover:bg-[#25218c] text-white font-black text-[11px] sm:text-xs uppercase tracking-wider px-3 py-2 rounded-2xl shadow-md transition-transform active:scale-95 flex items-center justify-center gap-1 shrink-0 whitespace-nowrap cursor-pointer"
+              >
+                <span>{t('continue_quest', { defaultValue: "CONTINUE QUEST ->" })}</span>
+              </button>
             </div>
-          </div>
-
-          {/* Progress Meter on Right */}
-          <div className="flex flex-col items-end gap-1 shrink-0">
-            <span className="text-xs font-black text-[#4f46e5]">
-              {displayMissionProgress.current} / {displayMissionProgress.total}
-            </span>
-            <div className="w-20 h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/60 p-0.5">
-              <div
-                className="h-full bg-[#4f46e5] rounded-full transition-all duration-500"
-                style={{ width: `${Math.min(100, (displayMissionProgress.current / displayMissionProgress.total) * 100)}%` }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom Rewards & CTA Button Row */}
-        <div className="flex items-center justify-between gap-1.5 pt-1">
-          <span className="bg-[#fff0f3] text-[#f43f5e] font-black border border-rose-100 px-2.5 py-2 rounded-2xl text-[10.5px] sm:text-[11px] flex items-center justify-center gap-1 shadow-2xs whitespace-nowrap">
-            🎁 +{displayXpReward} XP
-          </span>
-          <span className="bg-[#fffbeb] text-[#d97706] font-black border border-amber-100 px-2.5 py-2 rounded-2xl text-[10.5px] sm:text-[11px] flex items-center justify-center gap-1 shadow-2xs whitespace-nowrap">
-            🪙 +{displayCoinReward} Coins
-          </span>
-          <button
-            onClick={onMissionClick || onCtaClick}
-            className="bg-[#1c1970] hover:bg-[#25218c] text-white font-black text-[11px] sm:text-xs uppercase tracking-wider px-3 py-2 rounded-2xl shadow-md transition-transform active:scale-95 flex items-center justify-center gap-1 shrink-0 whitespace-nowrap"
-          >
-            <span>{t('continue_quest', { defaultValue: "CONTINUE QUEST ->" })}</span>
-          </button>
-        </div>
+          </>
+        )}
       </div>
     </div>
   );

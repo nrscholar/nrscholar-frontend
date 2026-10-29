@@ -336,11 +336,8 @@ export default function ParentLessonsScreen() {
                 if (activeFilter === "Completed") {
                   return t.status === "completed";
                 }
-                // Exclude completed lessons from main page / "For You" / Category tabs
-                if (t.status === "completed") {
-                  return false;
-                }
                 if (activeFilter === "For You") {
+                  // Keep all lessons visible in "For You" catalog, including completed ones
                   return true;
                 }
                 const canon = getCanonicalCategory(t.originalCategory || t.category);
@@ -398,7 +395,7 @@ export default function ParentLessonsScreen() {
                           title={PARENT_LESSONS_UI_TEXT.completedBadge[contentLanguage]}
                           aria-label={PARENT_LESSONS_UI_TEXT.completedBadge[contentLanguage]}
                         >
-                          <Check size={13} strokeWidth={3} className="text-white" />
+                          <Check size={14} strokeWidth={3} className="text-white" />
                         </div>
                       ) : (
                         <div className="absolute top-2 left-2 bg-[#141779] text-white px-2.5 py-0.5 rounded-full text-xs font-black shadow-sm border border-white/20">+{topic.xp || 30} XP</div>

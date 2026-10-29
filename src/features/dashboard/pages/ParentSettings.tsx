@@ -255,7 +255,6 @@ export default function ParentSettings() {
   const [child1Age, setChild1Age] = useState("");
   const [child1Board, setChild1Board] = useState("");
   const [child1Photo, setChild1Photo] = useState("");
-  const [child1Code, setChild1Code] = useState("");
 
   // Child 2 Profile States
   const [hasChild2, setHasChild2] = useState(false);
@@ -264,11 +263,8 @@ export default function ParentSettings() {
   const [child2Age, setChild2Age] = useState("");
   const [child2Board, setChild2Board] = useState("");
   const [child2Photo, setChild2Photo] = useState("");
-  const [child2Code, setChild2Code] = useState("");
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [childIdToDelete, setChildIdToDelete] = useState<string | null>(null);
-  const [regenConfirmOpen, setRegenConfirmOpen] = useState(false);
-  const [childIdToRegen, setChildIdToRegen] = useState<string | null>(null);
 
   // Secondary Parent / Co-Parent States
   const [secondaryParents, setSecondaryParents] = useState<any[]>([]);
@@ -550,8 +546,7 @@ export default function ParentSettings() {
                 setChild1Age(fallbackAge1 ? (typeof fallbackAge1 === 'string' && fallbackAge1.includes('Years') ? fallbackAge1 : `${fallbackAge1} Years`) : "");
                 setChild1Board(k1.childBoard || u.childBoard || "");
                 setChild1Photo(k1.childPhoto || u.childPhoto || "");
-                setChild1Code(k1.uniqueCode || u.uniqueCode || "");
-              } else {
+                              } else {
                 setChild1Name(u.childName || "");
                 setChild1Class(u.childClass || "");
                 setChild1Age(u.childAge ? `${u.childAge} Years` : "");
@@ -567,8 +562,7 @@ export default function ParentSettings() {
                 setChild2Age(k2.childAge ? `${k2.childAge} Years` : "");
                 setChild2Board(k2.childBoard || "");
                 setChild2Photo(k2.childPhoto || "");
-                setChild2Code(k2.uniqueCode || "");
-              } else {
+                              } else {
                 setHasChild2(false);
               }
             }
@@ -624,8 +618,7 @@ export default function ParentSettings() {
             setChild1Age(age1 ? (typeof age1 === "string" && age1.includes("Years") ? age1 : `${age1} Years`) : "");
             setChild1Board(k1.childBoard || "");
             setChild1Photo(k1.childPhoto || "");
-            setChild1Code(k1.uniqueCode || "");
-          }
+                      }
           const k2 = kids.length > 1 ? (kids.find((k: any) => k.childId === "child_2") || kids[1]) : null;
           if (k2) {
             setHasChild2(true);
@@ -634,12 +627,10 @@ export default function ParentSettings() {
             setChild2Age(k2.childAge ? `${k2.childAge} Years` : "");
             setChild2Board(k2.childBoard || "");
             setChild2Photo(k2.childPhoto || "");
-            setChild2Code(k2.uniqueCode || "");
-          } else {
+                      } else {
             setHasChild2(false);
             setChild2Name(""); setChild2Class(""); setChild2Age("");
-            setChild2Board(""); setChild2Photo(""); setChild2Code("");
-          }
+            setChild2Board(""); setChild2Photo("");           }
           fetchNotifications(u.activeChildId);
           fetchSecondaryParents();
         } catch (e) { }
@@ -761,8 +752,7 @@ export default function ParentSettings() {
           setChild1Age(a1 ? (typeof a1 === "string" && a1.includes("Years") ? a1 : `${a1} Years`) : "");
           setChild1Board(k1.childBoard || "");
           setChild1Photo(k1.childPhoto || "");
-          setChild1Code(k1.uniqueCode || "");
-        }
+                  }
         const k2 = kids.length > 1 ? (kids.find((k: any) => k.childId === "child_2") || kids[1]) : null;
         if (k2) {
           setHasChild2(true);
@@ -771,12 +761,10 @@ export default function ParentSettings() {
           setChild2Age(k2.childAge ? `${k2.childAge} Years` : "");
           setChild2Board(k2.childBoard || "");
           setChild2Photo(k2.childPhoto || "");
-          setChild2Code(k2.uniqueCode || "");
-        } else {
+                  } else {
           setHasChild2(false);
           setChild2Name(""); setChild2Class(""); setChild2Age("");
-          setChild2Board(""); setChild2Photo(""); setChild2Code("");
-        }
+          setChild2Board(""); setChild2Photo("");         }
       }
 
       showNotificationToast({
@@ -927,8 +915,7 @@ export default function ParentSettings() {
         // Always clear child2 state first to avoid showing ghost data
         setHasChild2(false);
         setChild2Name(""); setChild2Class(""); setChild2Age("");
-        setChild2Board(""); setChild2Photo(""); setChild2Code("");
-
+        setChild2Board(""); setChild2Photo(""); 
         // Re-hydrate from fresh API response — never from stale pre-delete localStorage
         const kids = u.children || [];
         const k1 = kids.find((k: any) => k.childId === "child_1") || kids[0];
@@ -938,8 +925,7 @@ export default function ParentSettings() {
           setChild1Age(k1.childAge ? `${k1.childAge} Years` : "");
           setChild1Board(k1.childBoard || "");
           setChild1Photo(k1.childPhoto || "");
-          setChild1Code(k1.uniqueCode || "");
-        }
+                  }
         const k2 = kids.length > 1 ? kids.find((k: any) => k.childId === "child_2") : null;
         if (k2) {
           setHasChild2(true);
@@ -948,8 +934,7 @@ export default function ParentSettings() {
           setChild2Age(k2.childAge ? `${k2.childAge} Years` : "");
           setChild2Board(k2.childBoard || "");
           setChild2Photo(k2.childPhoto || "");
-          setChild2Code(k2.uniqueCode || "");
-        }
+                  }
 
         showNotificationToast({
           title: "Profile Deleted",
@@ -985,65 +970,7 @@ export default function ParentSettings() {
       setChild2Age("");
       setChild2Board("");
       setChild2Photo("");
-      setChild2Code("");
-    }
-  };
-
-  const requestRegenCode = (childId: string) => {
-    if (isCoParent) {
-      showNotificationToast({
-        title: "Permission Denied",
-        message: "To add a new child or modify family settings, please log in using the Primary Parent account.",
-        type: "warning"
-      });
-      return;
-    }
-    setChildIdToRegen(childId);
-    setRegenConfirmOpen(true);
-  };
-
-  const confirmRegenCode = async () => {
-    if (!childIdToRegen) return;
-    const childId = childIdToRegen;
-    setRegenConfirmOpen(false);
-    setChildIdToRegen(null);
-    try {
-      const res = await apiFetch("/api/users/child-code/update", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ childId })
-      });
-      const json = await res.json();
-      if (json.success && json.uniqueCode) {
-        if (childId === "child_1") {
-          setChild1Code(json.uniqueCode);
-        } else {
-          setChild2Code(json.uniqueCode);
-        }
-        if (json.user) {
-          localStorage.setItem("userData", JSON.stringify(json.user));
-          setUser(json.user);
-          window.dispatchEvent(new Event("userDataUpdated"));
-        }
-        showNotificationToast({
-          title: "Code Regenerated",
-          message: "Device code regenerated successfully! 🔑",
-          type: "success"
-        });
-      } else {
-        showNotificationToast({
-          title: "Regenerate Failed",
-          message: json.detail || json.message || "Failed to regenerate code.",
-          type: "warning"
-        });
-      }
-    } catch (e) {
-      showNotificationToast({
-        title: "Connection Error",
-        message: "Error connecting to server.",
-        type: "error"
-      });
-    }
+          }
   };
 
   const isScreenTimeOn = screenTimeMinutes > 0 && screenTimeMinutes < 9999;
@@ -1418,27 +1345,7 @@ export default function ParentSettings() {
                   />
                 </div>
 
-                <div className="flex flex-col gap-1.5 mt-0.5">
-                  <label className="text-xs font-black text-slate-600 uppercase tracking-wider ml-1">{t("child_device_code_label", "Child Device Code (Scholar Login)")}</label>
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex items-center justify-between">
-                    <span className="text-base sm:text-lg font-black tracking-widest text-[#141779]">
-                      {child1Code || "N/A"}
-                    </span>
-                    {!isCoParent ? (
-                      <button
-                        type="button"
-                        onClick={() => requestRegenCode("child_1")}
-                        className="px-3 py-1.5 rounded-full text-xs font-black bg-indigo-50 text-[#141779] border border-indigo-100 hover:bg-indigo-100 transition-colors cursor-pointer"
-                      >
-                        {t("regenerate", "Regenerate")}
-                      </button>
-                    ) : (
-                      <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
-                        <Lock size={12} /> View-only
-                      </span>
-                    )}
-                  </div>
-                </div>
+
               </div>
             </motion.div>
 
@@ -1525,27 +1432,7 @@ export default function ParentSettings() {
                     />
                   </div>
 
-                  <div className="flex flex-col gap-1.5 mt-0.5">
-                    <label className="text-xs font-black text-slate-600 uppercase tracking-wider ml-1">Child Device Code (Scholar Login)</label>
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex items-center justify-between">
-                      <span className="text-base sm:text-lg font-black tracking-widest text-[#141779]">
-                        {child2Code || "N/A"}
-                      </span>
-                      {!isCoParent ? (
-                        <button
-                          type="button"
-                          onClick={() => requestRegenCode("child_2")}
-                          className="px-3 py-1.5 rounded-full text-xs font-black bg-indigo-50 text-[#141779] border border-indigo-100 hover:bg-indigo-100 transition-colors cursor-pointer"
-                        >
-                          Regenerate
-                        </button>
-                      ) : (
-                        <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
-                          <Lock size={12} /> View-only
-                        </span>
-                      )}
-                    </div>
-                  </div>
+
                 </div>
               </motion.div>
             ) : isCoParent ? (
@@ -1575,8 +1462,7 @@ export default function ParentSettings() {
                   setChild2Age("6 Years");
                   setChild2Board("CBSE (NCERT)");
                   setChild2Photo("");
-                  setChild2Code("");
-                }}
+                                  }}
                 className="w-full py-3.5 border-2 border-dashed border-[#141779]/30 rounded-2xl text-[#141779] font-black text-sm flex items-center justify-center gap-2 hover:bg-[#141779]/5 transition-all bg-white cursor-pointer"
               >
                 <Plus size={20} />
@@ -1785,21 +1671,7 @@ export default function ParentSettings() {
         icon={<Trash2 size={28} className="text-rose-600" />}
       />
 
-      {/* Custom Regenerate Code Confirmation Modal */}
-      <UnifiedConfirmModal
-        isOpen={regenConfirmOpen}
-        onClose={() => {
-          setRegenConfirmOpen(false);
-          setChildIdToRegen(null);
-        }}
-        onConfirm={confirmRegenCode}
-        title="Regenerate Device Code"
-        message="Are you sure you want to regenerate a new random device code for this child? The old code will stop working immediately."
-        confirmText="Yes, Regenerate"
-        cancelText="Cancel"
-        variant="primary"
-        icon={<RefreshCw size={28} className="text-[#141779]" />}
-      />
+
 
       {/* Delete Co-Parent Confirmation Modal */}
       <UnifiedConfirmModal
