@@ -1531,21 +1531,26 @@ export default function ParentDashboardScreen() {
           <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
             {/* Daily Tip */}
             <button
+              type="button"
               onClick={() => navigate('/parent/daily-tip')}
-              className="bg-white hover:bg-teal-50/30 rounded-2xl p-2.5 sm:p-3 border border-slate-200/80 hover:border-teal-300 shadow-2xs hover:shadow-xs transition-all text-left flex flex-col justify-start group cursor-pointer min-w-0 w-full"
+              className="bg-white hover:bg-slate-50/80 rounded-2xl sm:rounded-3xl p-3 sm:p-3.5 border border-slate-200/90 hover:border-teal-300 shadow-2xs hover:shadow-xs transition-all text-left flex flex-col justify-between group cursor-pointer min-w-0 w-full min-h-[105px] active:scale-[0.98]"
             >
               <div className="flex items-center justify-between w-full mb-2">
-                <div className="w-7 h-7 rounded-lg bg-teal-50 border border-teal-100 text-[#006a62] flex items-center justify-center shrink-0">
-                  <BrainCircuit size={15} />
+                <div className="w-8 h-8 rounded-xl bg-teal-50 border border-teal-200/70 text-[#006a62] flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
+                  <BrainCircuit size={16} />
                 </div>
-                <span className="bg-teal-50 text-teal-700 border border-teal-200/80 text-xs font-black uppercase px-2.5 py-0.5 rounded-full tracking-wider shrink-0">
-                  {t("hot", "Hot")}
+                <span className="bg-amber-50 text-amber-800 border border-amber-200/80 text-[10px] sm:text-xs font-black uppercase px-2 py-0.5 rounded-full tracking-wider shrink-0 flex items-center gap-1 shadow-2xs">
+                  <Sparkles size={10} className="text-amber-600" />
+                  <span>{t("hot", "Hot")}</span>
                 </span>
               </div>
               <div className="w-full min-w-0">
-                <h4 className="text-xs sm:text-sm font-black text-[#141779] group-hover:text-teal-700 transition-colors leading-tight truncate">
-                  {t("daily_tip", "Daily Tip")}
-                </h4>
+                <div className="flex items-center justify-between gap-1">
+                  <h4 className="text-xs sm:text-sm font-black text-[#141779] group-hover:text-[#006a62] transition-colors leading-tight truncate">
+                    {t("daily_tip", "Daily Tip")}
+                  </h4>
+                  <ChevronRight size={13} className="text-slate-400 group-hover:text-[#006a62] group-hover:translate-x-0.5 transition-all shrink-0" />
+                </div>
                 <p 
                   className="text-xs sm:text-[13px] text-slate-500 font-medium truncate mt-0.5 leading-tight"
                   title={dailyTipTitle || t("daily_tip_sub", "Quick family harmony ideas.")}

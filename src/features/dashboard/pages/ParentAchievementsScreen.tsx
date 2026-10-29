@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   Globe, BookOpen, Flame, Lock, GraduationCap, Users, X, 
@@ -23,55 +23,176 @@ export default function ParentAchievementsScreen() {
 
   useLockBodyScroll(Boolean(activeAchievement));
 
-  useEffect(() => {
-    async function fetchStats() {
+  const fetchStats = useCallback(async (isSilent = false) => {
+    try {
+      if (!isSilent) setLoading(true);
+
+      const ctx = getActiveUserContext();
+      const childParam = ctx.childId ? `childId=${encodeURIComponent(ctx.childId)}` : "";
+      const classParam = ctx.classLevel ? `classLevel=${encodeURIComponent(ctx.classLevel)}` : "";
+      const q = [childParam, classParam].filter(Boolean).join("&");
+
+      const uPromise = apiFetch("/api/users/me").then(r => r.json()).catch(() => ({ success: false }));
+      const libPromise = apiFetch("/api/parent/learning-library").then(r => r.json()).catch(() => ({ success: false }));
+      const chalPromise = apiFetch("/api/parent/challenges").then(r => r.json()).catch(() => ({ success: false }));
+      const achPromise = apiFetch(`/api/parent/achievements${q ? `?${q}` : ""}`).then(r => r.json()).catch(() => ({ success: false }));
+      const rankPromise = apiFetch(`/api/parent/rank${q ? `?${q}` : ""}`).then(r => r.json()).catch(() => ({ success: false }));
+
+      const [uRes, libRes, chalRes, achRes, rankRes] = await Promise.allSettled([
+        uPromise, libPromise, chalPromise, achPromise, rankPromise
+      ]);
+
+      let userObj: any = null;
+      let realStreak = 0;
+      let realXp = 0;
+      if (uRes.status === "fulfilled" && uRes.value?.success && uRes.value.data?.user) {
+        userObj = uRes.value.data.user;
+        setParentPhoto(userObj.parentPhoto || "");
+        setUsername(userObj.parentName || userObj.username || "Parent");
+        realStreak = userObj.parentStreak !== undefined ? userObj.parentStreak : (userObj.streak || 0);
+        realXp = userObj.parentXp !== undefined ? userObj.parentXp : (userObj.xp || 0);
+      }
+
+      let completedLessonsCount = 0;
+      if (libRes.status === "fulfilled" && libRes.value?.success && Array.isArray(libRes.value.data?.topics)) {
+        completedLessonsCount = libRes.value.data.topics.filter((t: any) => t.status === "completed").length;
+      }
       try {
-        setLoading(true);
-        const uPromise = (async () => {
-          try {
-            const uRes = await apiFetch("/api/users/me");
-            const uJson = await uRes.json();
-            if (uJson.success && uJson.data?.user) {
-              setParentPhoto(uJson.data.user.parentPhoto || "");
-              setUsername(uJson.data.user.parentName || uJson.data.user.username || "Parent");
-            }
-          } catch (e) {}
-        })();
+        const cached = JSON.parse(sessionStorage.getItem("parent_learning_library_cache") || "{}");
+        if (Array.isArray(cached?.topics)) {
+          const cCount = cached.topics.filter((t: any) => t.status === "completed").length;
+          completedLessonsCount = Math.max(completedLessonsCount, cCount);
+        }
+      } catch (_) {}
 
-        const ctx = getActiveUserContext();
-        const childParam = ctx.childId ? `childId=${encodeURIComponent(ctx.childId)}` : "";
-        const classParam = ctx.classLevel ? `classLevel=${encodeURIComponent(ctx.classLevel)}` : "";
-        const q = [childParam, classParam].filter(Boolean).join("&");
+      let completedChallengesCount = 0;
+      if (chalRes.status === "fulfilled" && chalRes.value?.success && Array.isArray(chalRes.value.data?.challenges)) {
+        completedChallengesCount = chalRes.value.data.challenges.filter(
+          (c: any) => c.isCompleted || c.claimed || (c.completedDays && c.totalDays && c.completedDays >= c.totalDays)
+        ).length;
+      }
 
-        const rankPromise = (async () => {
-          try {
-            const rankRes = await apiFetch(`/api/parent/rank${q ? `?${q}` : ""}`);
-            const rankJson = await rankRes.json();
-            if (rankJson.success && rankJson.data) {
-              setGlobalRank(rankJson.data.rank);
-            }
-          } catch (e) {}
-        })();
+      if (rankRes.status === "fulfilled" && rankRes.value?.success && rankRes.value.data?.rank) {
+        setGlobalRank(rankRes.value.data.rank);
+      } else {
+        const uXpTotal = realXp + (userObj?.xp || 0);
+        const derivedRank = Math.max(1, Math.min(100, 100 - Math.floor(uXpTotal / 50)));
+        setGlobalRank(derivedRank);
+      }
 
-        const achPromise = (async () => {
-          try {
-            const achRes = await apiFetch(`/api/parent/achievements${q ? `?${q}` : ""}`);
-            const achJson = await achRes.json();
-            if (achJson.success && achJson.data) {
-              setAchievements(achJson.data.achievements);
-              setBadgesEarned(achJson.data.badgesEarned);
-            }
-          } catch (e) {}
-        })();
+      const defaultAchievements = [
+        {
+          id: "lesson",
+          title: "First Steps",
+          icon: "BookOpen",
+          desc: "Successfully completed your first parenting module or test. The journey of a thousand miles begins here!",
+          totalRequired: 1,
+          currentProgress: completedLessonsCount,
+          progressUnit: "Modules"
+        },
+        {
+          id: "streak7",
+          title: "Week On Fire",
+          icon: "Flame",
+          desc: "Maintained a consistent learning rhythm for 7 consecutive days. You are building amazing habits!",
+          totalRequired: 7,
+          currentProgress: realStreak,
+          progressUnit: "Days"
+        },
+        {
+          id: "streak30",
+          title: "Monthly Master",
+          icon: "Lock",
+          desc: "Achieve a 30-day learning streak to unlock this achievement.",
+          totalRequired: 30,
+          currentProgress: realStreak,
+          progressUnit: "Days"
+        },
+        {
+          id: "lesson10",
+          title: "Rising Scholar",
+          icon: "GraduationCap",
+          desc: "You have completed 10 lessons or tests! Your dedication to growth is making a real difference at home.",
+          totalRequired: 10,
+          currentProgress: completedLessonsCount,
+          progressUnit: "Lessons"
+        },
+        {
+          id: "challenges5",
+          title: "Challenger",
+          icon: "Lock",
+          desc: "Complete 5 growth challenges to unlock this badge.",
+          totalRequired: 5,
+          currentProgress: completedChallengesCount,
+          progressUnit: "Challenges"
+        },
+        {
+          id: "community1",
+          title: "Supporter",
+          icon: "Users",
+          desc: "Participate in the community forum.",
+          totalRequired: 1,
+          currentProgress: 0,
+          progressUnit: "Posts"
+        }
+      ];
 
-        await Promise.allSettled([uPromise, rankPromise, achPromise]);
-      } catch (e) {
-      } finally {
-        setTimeout(() => setLoading(false), 350);
+      const baseList = (achRes.status === "fulfilled" && achRes.value?.success && Array.isArray(achRes.value.data?.achievements) && achRes.value.data.achievements.length > 0)
+        ? achRes.value.data.achievements
+        : defaultAchievements;
+
+      const enriched = baseList.map((ach: any) => {
+        let progress = ach.currentProgress ?? 0;
+
+        if (ach.id === "lesson" || ach.id === "lesson10" || /first steps|rising scholar|lesson|module/i.test(ach.title)) {
+          progress = Math.max(progress, completedLessonsCount);
+        } else if (ach.id === "streak7" || ach.id === "streak30" || /fire|streak|master/i.test(ach.title)) {
+          progress = Math.max(progress, realStreak);
+        } else if (ach.id === "challenges5" || /challenger/i.test(ach.title)) {
+          progress = Math.max(progress, completedChallengesCount);
+        }
+
+        return {
+          ...ach,
+          currentProgress: progress
+        };
+      });
+
+      setAchievements(enriched);
+      const unlockedCount = enriched.filter((a: any) => a.currentProgress >= a.totalRequired).length;
+      setBadgesEarned(unlockedCount);
+
+      // Keep active achievement drawer modal synchronized in real time
+      setActiveAchievement((prev: any) => {
+        if (!prev) return null;
+        return enriched.find((a: any) => a.id === prev.id) || prev;
+      });
+    } catch (e) {
+      console.error("Failed to fetch achievements telemetry", e);
+    } finally {
+      if (!isSilent) {
+        setTimeout(() => setLoading(false), 250);
       }
     }
-    fetchStats();
   }, []);
+
+  useEffect(() => {
+    fetchStats();
+
+    const handleDataUpdate = () => {
+      fetchStats(true);
+    };
+
+    window.addEventListener("userDataUpdated", handleDataUpdate);
+    window.addEventListener("parentLessonsLanguageChanged", handleDataUpdate);
+    window.addEventListener("focus", handleDataUpdate);
+
+    return () => {
+      window.removeEventListener("userDataUpdated", handleDataUpdate);
+      window.removeEventListener("parentLessonsLanguageChanged", handleDataUpdate);
+      window.removeEventListener("focus", handleDataUpdate);
+    };
+  }, [fetchStats]);
 
   const ICON_MAP: Record<string, any> = {
     BookOpen, Flame, Lock, GraduationCap, Users, Trophy
@@ -314,13 +435,13 @@ export default function ParentAchievementsScreen() {
               </div>
             </div>
             <div>
-              <div className="text-2xl sm:text-3xl font-black text-[#141779] tracking-tight">#{globalRank}</div>
+              <div className="text-2xl sm:text-3xl font-black text-[#141779] tracking-tight">#{globalRank > 0 ? globalRank : 1}</div>
               <span className="text-xs text-slate-600 font-black">{t("worldwide_position", "Worldwide Position")}</span>
             </div>
           </div>
 
           {/* Bento Box 4: Next Milestone */}
-          {nextMilestone && (
+          {nextMilestone ? (
             <div className="col-span-2 bento-card rounded-2xl p-4 sm:p-5 flex flex-col gap-2.5 bg-white">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -359,29 +480,53 @@ export default function ParentAchievementsScreen() {
                 </div>
               </div>
             </div>
+          ) : (
+            <div className="col-span-2 bento-card rounded-2xl p-4 sm:p-5 flex items-center gap-3.5 bg-gradient-to-r from-teal-50/70 via-white to-indigo-50/70 border border-teal-200">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#006a62] to-[#141779] text-amber-300 flex items-center justify-center shrink-0 shadow-sm">
+                <Trophy size={22} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="text-[10px] font-black uppercase tracking-wider text-[#006a62] block">{t("all_milestones_unlocked", "All Milestones Unlocked")}</span>
+                <p className="text-xs sm:text-sm font-black text-[#141779] leading-snug">
+                  {t("master_parent_achieved", "Master Parent Status Achieved! Keep leading by example.")}
+                </p>
+              </div>
+            </div>
           )}
 
           {/* Filters Bar */}
           <div className="col-span-2 flex items-center justify-between mt-1 mb-0.5 px-0.5">
             <span className="text-base font-black text-[#141779]">{t("achievement_wall", "Achievement Wall")}</span>
-            <div className="flex bg-slate-200/80 p-1 rounded-xl border border-slate-300/60">
+            <div className="flex bg-slate-200/80 p-1 rounded-xl border border-slate-300/60 gap-1">
               <button 
+                type="button"
                 onClick={() => setFilter("all")} 
-                className={`text-xs font-black px-3 py-1 rounded-lg transition-all ${filter === "all" ? "bg-[#141779] text-white shadow-2xs" : "text-slate-700 hover:text-[#141779]"}`}
+                className={`text-xs font-black px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${filter === "all" ? "bg-[#141779] text-white shadow-2xs" : "text-slate-700 hover:text-[#141779] hover:bg-white/50"}`}
               >
-                {t("all", "All")}
+                <span>{t("all", "All")}</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${filter === "all" ? "bg-white/20 text-white" : "bg-slate-300/80 text-slate-700"}`}>
+                  {achievements.length}
+                </span>
               </button>
               <button 
+                type="button"
                 onClick={() => setFilter("unlocked")} 
-                className={`text-xs font-black px-3 py-1 rounded-lg transition-all ${filter === "unlocked" ? "bg-[#141779] text-white shadow-2xs" : "text-slate-700 hover:text-[#141779]"}`}
+                className={`text-xs font-black px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${filter === "unlocked" ? "bg-[#141779] text-white shadow-2xs" : "text-slate-700 hover:text-[#141779] hover:bg-white/50"}`}
               >
-                {t("unlocked", "Unlocked")}
+                <span>{t("unlocked", "Unlocked")}</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${filter === "unlocked" ? "bg-white/20 text-white" : "bg-teal-100 text-[#006a62]"}`}>
+                  {badgesEarned}
+                </span>
               </button>
               <button 
+                type="button"
                 onClick={() => setFilter("locked")} 
-                className={`text-xs font-black px-3 py-1 rounded-lg transition-all ${filter === "locked" ? "bg-[#141779] text-white shadow-2xs" : "text-slate-700 hover:text-[#141779]"}`}
+                className={`text-xs font-black px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${filter === "locked" ? "bg-[#141779] text-white shadow-2xs" : "text-slate-700 hover:text-[#141779] hover:bg-white/50"}`}
               >
-                {t("locked", "Locked")}
+                <span>{t("locked", "Locked")}</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${filter === "locked" ? "bg-white/20 text-white" : "bg-slate-300/80 text-slate-700"}`}>
+                  {Math.max(0, achievements.length - badgesEarned)}
+                </span>
               </button>
             </div>
           </div>
@@ -476,6 +621,20 @@ export default function ParentAchievementsScreen() {
             );
           })}
 
+          {/* Empty State for Filter Tabs */}
+          {filteredAchievements.length === 0 && (
+            <div className="col-span-2 py-8 px-4 text-center bg-white rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col items-center justify-center gap-2">
+              <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400">
+                {filter === "unlocked" ? <Trophy size={24} className="text-slate-400" /> : <Lock size={24} className="text-slate-400" />}
+              </div>
+              <p className="text-xs font-black text-[#141779]">
+                {filter === "unlocked"
+                  ? t("no_unlocked_achievements", "No unlocked badges yet. Complete lessons to unlock!")
+                  : t("no_locked_achievements", "Great job! All achievements have been unlocked!")}
+              </p>
+            </div>
+          )}
+
         </div>
 
         {/* Bento Details Sliding Bottom Drawer */}
@@ -484,13 +643,18 @@ export default function ParentAchievementsScreen() {
             onTouchMove={(e) => {
               if (e.target === e.currentTarget) e.preventDefault();
             }}
-            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-[9999] flex items-end justify-center p-3 pb-24 sm:p-4 animate-fade-in overscroll-contain select-none" 
-            style={{ zIndex: 9999, overscrollBehavior: "contain", touchAction: "none" }}
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-[99999] flex items-end justify-center p-3 pb-24 sm:p-4 animate-fade-in overscroll-contain select-none" 
+            style={{
+              zIndex: 99999,
+              overscrollBehavior: "contain",
+              touchAction: "none",
+              paddingBottom: "calc(5.5rem + env(safe-area-inset-bottom, 0px))"
+            }}
             onClick={hideDetails}
           >
             <div 
-              className="w-full max-w-lg bg-white rounded-3xl p-6 shadow-2xl border border-slate-200 flex flex-col gap-4 animate-slide-up overscroll-contain select-text mb-1 sm:mb-0"
-              style={{ zIndex: 10000, overscrollBehavior: "contain", touchAction: "pan-y" }}
+              className="w-full max-w-lg bg-white rounded-3xl p-6 shadow-2xl border border-slate-200 flex flex-col gap-4 animate-slide-up overscroll-contain select-text mb-1 sm:mb-0 max-h-[80vh] overflow-y-auto"
+              style={{ zIndex: 100000, overscrollBehavior: "contain", touchAction: "pan-y" }}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Drawer Pull Element */}

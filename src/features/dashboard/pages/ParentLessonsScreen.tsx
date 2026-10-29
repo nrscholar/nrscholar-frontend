@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { BookOpen, Settings, PlayCircle, ArrowLeft, Lock, ChevronDown, Globe, CheckCircle, Bell } from "lucide-react";
+import { BookOpen, Settings, PlayCircle, ArrowLeft, Lock, ChevronDown, Globe, Bell, Check } from "lucide-react";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
 import {
@@ -393,9 +393,12 @@ export default function ParentLessonsScreen() {
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                       {isCompleted ? (
-                        <div className="absolute top-2 left-2 bg-[#006a62]/90 backdrop-blur-md text-white px-2.5 py-0.5 rounded-full text-xs font-black shadow-sm border border-white/20 flex items-center gap-1">
-                          <CheckCircle size={12} className="text-[#57fae9]" />
-                          <span>+{topic.xp || 30} XP ({PARENT_LESSONS_UI_TEXT.completedBadge[contentLanguage]})</span>
+                        <div 
+                          className="absolute top-2 left-2 w-6 h-6 rounded-full bg-[#006a62]/95 backdrop-blur-md text-white shadow-sm border border-white/30 flex items-center justify-center"
+                          title={PARENT_LESSONS_UI_TEXT.completedBadge[contentLanguage]}
+                          aria-label={PARENT_LESSONS_UI_TEXT.completedBadge[contentLanguage]}
+                        >
+                          <Check size={13} strokeWidth={3} className="text-white" />
                         </div>
                       ) : (
                         <div className="absolute top-2 left-2 bg-[#141779] text-white px-2.5 py-0.5 rounded-full text-xs font-black shadow-sm border border-white/20">+{topic.xp || 30} XP</div>

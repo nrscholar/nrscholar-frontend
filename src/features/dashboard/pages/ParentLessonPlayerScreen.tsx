@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { 
   X, CheckCircle, Check, Star, Clock, BrainCircuit, MessageSquare, CheckSquare, 
   Heart, Eye, Award, Smartphone, ShieldCheck, Flame, BookOpen, Sparkles, 
-  Ear, VolumeX, Lightbulb, Target, Zap, Shield, Trophy, MonitorOff, Languages, ChevronDown
+  Ear, VolumeX, Lightbulb, Target, Zap, Shield, Trophy, MonitorOff
 } from "lucide-react";
 
 const LessonIcons: Record<string, any> = {
@@ -25,8 +25,6 @@ export default function ParentLessonPlayerScreen() {
   const [scopedLang, setScopedLang] = useState<string>(() => {
     return searchParams.get('lang') || localStorage.getItem("parent_lessons_content_lang") || "en";
   });
-  const [langDropdownOpen, setLangDropdownOpen] = useState(false);
-  const langDropdownRef = useRef<HTMLDivElement>(null);
 
   const [lessonData, setLessonData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -39,17 +37,6 @@ export default function ParentLessonPlayerScreen() {
   const [completing, setCompleting] = useState(false);
 
   const transitioningRef = useRef(false);
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (langDropdownRef.current && !langDropdownRef.current.contains(e.target as Node)) {
-        setLangDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   // Listen for language changes from other views (e.g. ParentLessonsScreen or ParentLearningLibraryScreen)
   useEffect(() => {
@@ -107,7 +94,6 @@ export default function ParentLessonPlayerScreen() {
 
   const handleLanguageChange = (newLang: string) => {
     setScopedLang(newLang);
-    setLangDropdownOpen(false);
 
     try {
       localStorage.setItem("parent_lessons_content_lang", newLang);
@@ -134,7 +120,6 @@ export default function ParentLessonPlayerScreen() {
 
   const slides = lessonData?.slides || [];
   const totalSteps = slides.length > 0 ? slides.length : 1;
-  const progress = (currentStep / (totalSteps - 1 || 1)) * 100;
 
   const nextStep = () => {
     if (transitioningRef.current) return;
@@ -412,63 +397,7 @@ export default function ParentLessonPlayerScreen() {
 
   return (
     <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans flex flex-col">
-      <header className="sticky top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex items-center justify-between px-3 sm:px-6 h-16 w-full">
-        <button 
-          onClick={() => navigate(-1)} 
-          className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
-          aria-label={scopedLang === 'gu' ? 'પાછા જાઓ' : scopedLang === 'hi' ? 'वापस जाएं' : 'Close'}
-        >
-          <X size={19} />
-        </button>
-
-        <div className="flex-1 mx-3 sm:mx-4 flex flex-col justify-center">
-          <div className="flex justify-between items-center text-[10px] sm:text-xs font-bold text-[#767683] mb-1 px-0.5">
-            <span>
-              {scopedLang === 'gu' ? `પગલું ${currentStep + 1} / ${totalSteps}` : scopedLang === 'hi' ? `चरण ${currentStep + 1} / ${totalSteps}` : `Step ${currentStep + 1} of ${totalSteps}`}
-            </span>
-            <span>{Math.round(progress)}%</span>
-          </div>
-          <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-            <div 
-              className="bg-[#141779] h-full rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${progress}%` }}
-            ></div>
-          </div>
-        </div>
-
-        {/* Localized Language Selector */}
-        <div className="relative shrink-0" ref={langDropdownRef}>
-          <button
-            onClick={() => setLangDropdownOpen(!langDropdownOpen)}
-            className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 text-[#141779] font-bold text-xs cursor-pointer transition-all active:scale-95"
-            aria-label="Change lesson language"
-          >
-            <Languages size={15} />
-            <span className="uppercase">{scopedLang === 'gu' ? 'ગુ' : scopedLang === 'hi' ? 'हि' : 'EN'}</span>
-            <ChevronDown size={13} className={`transition-transform duration-200 ${langDropdownOpen ? 'rotate-180' : ''}`} />
-          </button>
-
-          {langDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-32 bg-white rounded-2xl shadow-xl border border-slate-100 py-1 z-50 animate-in fade-in zoom-in duration-200">
-              {[
-                { code: "en", label: "English" },
-                { code: "hi", label: "हिन्दी" },
-                { code: "gu", label: "ગુજરાતી" }
-              ].map(lang => (
-                <button
-                  key={lang.code}
-                  onClick={() => handleLanguageChange(lang.code)}
-                  className={`w-full text-left px-4 py-2 text-xs font-bold transition-colors cursor-pointer ${scopedLang === lang.code ? 'bg-[#141779] text-white' : 'text-slate-700 hover:bg-slate-50'}`}
-                >
-                  {lang.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </header>
-
-      <main className="flex-1 px-6 pb-32 flex flex-col justify-center relative z-10">
+      <main className="flex-1 px-6 pt-6 sm:pt-8 pb-32 flex flex-col justify-center relative z-10">
         {loading ? (
           <div className="flex flex-col items-center justify-center h-full gap-8 w-full max-w-md mx-auto">
             <div className="w-32 h-32 bg-gray-200 animate-pulse rounded-3xl"></div>

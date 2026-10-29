@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Brain, CheckCircle2, Star, Zap, ArrowLeft, Trophy, Target, Bell, Settings,
-  BookOpen, Sparkles, ChevronDown, ChevronRight, X
+  BookOpen, Sparkles, ChevronDown, ChevronRight, X, Lightbulb, Info, TrendingUp
 } from "lucide-react";
 import { apiFetch } from "../../../api";
 import { getActiveUserContext } from "../../../utils/sessionCache";
@@ -700,7 +700,6 @@ export default function ParentDailyTipScreen() {
 
   // Daily tip from backend (no fake static tip fallback)
   const [tip, setTip] = useState<Tip | null>(cachedTip?.tip || null);
-  const [tipLoading, setTipLoading] = useState(!cachedTip?.tip);
   const [metrics, setMetrics] = useState<any>(cachedTip?.metrics || null);
 
   // Header notifications & child switcher modal
@@ -716,21 +715,23 @@ export default function ParentDailyTipScreen() {
   const [aiGeneratingId, setAiGeneratingId] = useState<string | null>(null);
   const [deepAiPlans, setDeepAiPlans] = useState<Record<string, any>>({});
   const [selectedInsightModal, setSelectedInsightModal] = useState<PriorityInsight | null>(null);
+  const [showGrowthScoreModal, setShowGrowthScoreModal] = useState<boolean>(false);
 
-  // Prevent background scrolling while the diagnostic insight modal is active
-  useLockBodyScroll(Boolean(selectedInsightModal));
+  // Prevent background scrolling while diagnostic insight modal or growth score modal is active
+  useLockBodyScroll(Boolean(selectedInsightModal || showGrowthScoreModal));
 
-  // Handle Escape key to close details modal
+  // Handle Escape key to close open modals
   useEffect(() => {
-    if (!selectedInsightModal) return;
+    if (!selectedInsightModal && !showGrowthScoreModal) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setSelectedInsightModal(null);
+        setShowGrowthScoreModal(false);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedInsightModal]);
+  }, [selectedInsightModal, showGrowthScoreModal]);
 
   // ── Level XP thresholds ──────────────────────────────────────────────────
   function getXpForLevel(lvl: number): number {
@@ -950,8 +951,7 @@ export default function ParentDailyTipScreen() {
             nextCache.tip = tJson.data;
           }
         })
-        .catch(() => {})
-        .finally(() => setTipLoading(false));
+        .catch(() => {});
 
       const statsPromise = (async () => {
         try {
@@ -1103,49 +1103,6 @@ export default function ParentDailyTipScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const translateTipField = (text?: string) => {
-    if (!text) return "";
-    const trimmed = text.trim();
-
-    // 1. Screen-Free Dinner Table
-    if (/Screen-Free Dinner Table/i.test(trimmed)) {
-      return t("tip_screen_free_table", "Screen-Free Dinner Table");
-    }
-    if (/Designate the dinner table as a screen-free zone/i.test(trimmed)) {
-      return t("tip_screen_free_table_desc", "Designate the dinner table as a screen-free zone for everyone. Use this time for family conversation.");
-    }
-    if (/Strengthens family connections and social habits/i.test(trimmed)) {
-      return t("tip_screen_free_table_benefit", "Strengthens family connections and social habits.");
-    }
-
-    // 2. Model Self-Regulation
-    if (/Model Self-Regulation/i.test(trimmed)) {
-      return t("model_self_regulation", "Model Self-Regulation");
-    }
-    if (/When you feel frustrated, speak your coping strategy/i.test(trimmed)) {
-      return t("model_self_regulation_desc", "When you feel frustrated, speak your coping strategy aloud: 'I'm feeling a bit overwhelmed, so I'm going to take three deep breaths.'");
-    }
-    if (/Teaches emotional control by example/i.test(trimmed)) {
-      return t("model_self_regulation_benefit", "Teaches emotional control by example.");
-    }
-
-    // 3. Establish Bedtime Routines
-    if (/Establish Bedtime Routines/i.test(trimmed)) {
-      return t("tip_bedtime_routines", "Establish Bedtime Routines");
-    }
-    if (/Create a consistent bedtime routine/i.test(trimmed)) {
-      return t("tip_bedtime_routines_desc", "Create a consistent bedtime routine. Clear structures help children feel safe and reduce transition anxiety.");
-    }
-    if (/Improves sleep quality/i.test(trimmed)) {
-      return t("tip_bedtime_routines_benefit", "Improves sleep quality and emotional stability.");
-    }
-
-    const direct = t(trimmed, "");
-    if (direct && direct !== trimmed) return direct;
-
-    return t(trimmed, trimmed);
-  };
-
   return (
     <div className="bg-[#f7f9fb] text-[#141779] flex flex-col min-h-screen w-full relative overflow-x-clip font-sans max-w-md mx-auto">
 
@@ -1211,21 +1168,22 @@ export default function ParentDailyTipScreen() {
       <main className="flex-1 px-4 pt-3.5 pb-4 flex flex-col gap-3.5 relative z-10 max-w-md mx-auto w-full">
 
         {/* ── 1. Dynamic LLM Priority Insight Card (Unified High-End Container) ── */}
-        <section className="w-full bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-[0_4px_20px_rgba(20,23,121,0.04)] flex flex-col gap-4">
+        <section className="w-full bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-[0_4px_24px_rgba(20,23,121,0.05)] flex flex-col gap-4">
           
           {/* Card Header: AI Priority Insights Title & Subtitle */}
           <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#141779] to-[#006a62] flex items-center justify-center text-white shadow-md shrink-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#141779] via-[#103078] to-[#006a62] flex items-center justify-center text-white shadow-sm shrink-0">
                 <Brain size={20} className="text-teal-200" />
               </div>
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-[#141779] font-black text-sm sm:text-base leading-tight">
+                  <h2 className="text-[#141779] font-black text-base sm:text-lg leading-tight tracking-tight">
                     {t("ai_priority_insights", "AI Priority Insights")}
                   </h2>
-                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-50 border border-teal-200/80 text-[#006a62] shrink-0">
-                    LLM Active
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-50 border border-teal-200/80 text-[#006a62] flex items-center gap-1 shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse" />
+                    <span>LLM Active</span>
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 font-semibold mt-0.5 leading-snug">
@@ -1238,19 +1196,19 @@ export default function ParentDailyTipScreen() {
             </div>
           </div>
 
-          {/* Child Subject Analytics Bar Graph Strip (Streamlined) */}
+          {/* Child Subject Analytics Bar Graph Strip (Streamlined & Generous Whitespace) */}
           {subjectBreakdown.length > 0 && (
-            <div className="bg-slate-50/70 rounded-xl p-3 border border-slate-200/60 flex flex-col gap-2">
+            <div className="bg-slate-50/80 rounded-2xl p-3.5 sm:p-4 border border-slate-200/70 flex flex-col gap-2.5">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                  <Sparkles size={12} className="text-[#006a62]" />
+                <span className="text-xs font-black uppercase tracking-wider text-[#141779] flex items-center gap-1.5">
+                  <Sparkles size={13} className="text-[#006a62]" />
                   {t("subject_accuracy_analytics", "Subject Accuracy Analytics")}
                 </span>
-                <span className="text-[11px] font-bold text-slate-400">
+                <span className="text-xs font-bold text-slate-500">
                   {childName}
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-0.5">
                 {subjectBreakdown.map((s, idx) => {
                   const sAcc = Math.round(s.accuracy ?? 0);
                   const isUrgent = sAcc < 50 || s.isRisk;
@@ -1267,14 +1225,14 @@ export default function ParentDailyTipScreen() {
                     : "text-[#006a62] bg-teal-50 border-teal-200";
 
                   return (
-                    <div key={`sub-bar-${idx}`} className="flex flex-col gap-1">
+                    <div key={`sub-bar-${idx}`} className="bg-white rounded-xl p-2.5 border border-slate-200/60 shadow-2xs flex flex-col gap-1.5">
                       <div className="flex items-center justify-between text-xs font-bold">
-                        <span className="text-slate-700 truncate text-[11px]">{getLocalizedSubjectName(s.subject, currentLang)}</span>
-                        <span className={`px-1.5 py-0.2 rounded text-[10px] font-black border ${badgeColor}`}>
+                        <span className="text-slate-800 truncate font-black text-xs">{getLocalizedSubjectName(s.subject, currentLang)}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-black border ${badgeColor}`}>
                           {sAcc}%
                         </span>
                       </div>
-                      <div className="w-full bg-slate-200/70 rounded-full h-1.5 overflow-hidden">
+                      <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                         <div
                           className={`h-full ${barColor} rounded-full transition-all duration-700`}
                           style={{ width: `${Math.max(6, Math.min(100, sAcc))}%` }}
@@ -1287,23 +1245,25 @@ export default function ParentDailyTipScreen() {
             </div>
           )}
 
-          {/* Segmented Priority Tabs: Urgent / Moderate / Low */}
-          <div className="grid grid-cols-3 gap-1.5 bg-slate-100/90 p-1 rounded-xl border border-slate-200/80">
+          {/* Segmented Priority Tabs: Urgent / Moderate / Low (Clean Subtle Border & Light Tint, Zero Solid Fills) */}
+          <div className="grid grid-cols-3 gap-1.5 bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200/80">
             {/* Urgent Tab */}
             <button
               type="button"
               onClick={() => setPriorityTab("urgent")}
-              className={`flex items-center justify-center gap-1.5 py-1.5 px-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+              className={`min-h-[44px] flex items-center justify-center gap-1.5 py-2 px-1 rounded-xl text-xs font-black transition-all cursor-pointer border ${
                 priorityTab === "urgent"
-                  ? "bg-white text-rose-700 shadow-2xs border border-rose-200/80"
-                  : "text-slate-600 hover:text-rose-700 hover:bg-white/50"
+                  ? "bg-rose-50/90 border-rose-300 text-rose-700 shadow-2xs"
+                  : "border-transparent text-slate-500 hover:text-rose-700 hover:bg-white/70"
               }`}
             >
               <span>🚨</span>
               <span>{t("priority_urgent", "Urgent")}</span>
               {priorityInsights.urgent.length > 0 && (
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
-                  priorityTab === "urgent" ? "bg-rose-100 text-rose-700" : "bg-slate-200 text-slate-700"
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black border ${
+                  priorityTab === "urgent"
+                    ? "bg-rose-100 text-rose-700 border-rose-200"
+                    : "bg-slate-200/80 text-slate-600 border-transparent"
                 }`}>
                   {priorityInsights.urgent.length}
                 </span>
@@ -1314,17 +1274,19 @@ export default function ParentDailyTipScreen() {
             <button
               type="button"
               onClick={() => setPriorityTab("moderate")}
-              className={`flex items-center justify-center gap-1.5 py-1.5 px-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+              className={`min-h-[44px] flex items-center justify-center gap-1.5 py-2 px-1 rounded-xl text-xs font-black transition-all cursor-pointer border ${
                 priorityTab === "moderate"
-                  ? "bg-white text-amber-800 shadow-2xs border border-amber-200/80"
-                  : "text-slate-600 hover:text-amber-800 hover:bg-white/50"
+                  ? "bg-amber-50/90 border-amber-300 text-amber-700 shadow-2xs"
+                  : "border-transparent text-slate-500 hover:text-amber-700 hover:bg-white/70"
               }`}
             >
               <span>⚠️</span>
               <span>{t("priority_moderate", "Moderate")}</span>
               {priorityInsights.moderate.length > 0 && (
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
-                  priorityTab === "moderate" ? "bg-amber-100 text-amber-800" : "bg-slate-200 text-slate-700"
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black border ${
+                  priorityTab === "moderate"
+                    ? "bg-amber-100 text-amber-700 border-amber-200"
+                    : "bg-slate-200/80 text-slate-600 border-transparent"
                 }`}>
                   {priorityInsights.moderate.length}
                 </span>
@@ -1335,17 +1297,19 @@ export default function ParentDailyTipScreen() {
             <button
               type="button"
               onClick={() => setPriorityTab("low")}
-              className={`flex items-center justify-center gap-1.5 py-1.5 px-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+              className={`min-h-[44px] flex items-center justify-center gap-1.5 py-2 px-1 rounded-xl text-xs font-black transition-all cursor-pointer border ${
                 priorityTab === "low"
-                  ? "bg-white text-[#006a62] shadow-2xs border border-teal-200/80"
-                  : "text-slate-600 hover:text-[#006a62] hover:bg-white/50"
+                  ? "bg-teal-50/90 border-teal-300 text-[#006a62] shadow-2xs"
+                  : "border-transparent text-slate-500 hover:text-[#006a62] hover:bg-white/70"
               }`}
             >
               <span>✨</span>
               <span>{t("priority_low", "Low")}</span>
               {priorityInsights.low.length > 0 && (
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
-                  priorityTab === "low" ? "bg-teal-100 text-[#006a62]" : "bg-slate-200 text-slate-700"
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black border ${
+                  priorityTab === "low"
+                    ? "bg-teal-100 text-[#006a62] border-teal-200"
+                    : "bg-slate-200/80 text-slate-600 border-transparent"
                 }`}>
                   {priorityInsights.low.length}
                 </span>
@@ -1353,11 +1317,11 @@ export default function ParentDailyTipScreen() {
             </button>
           </div>
 
-          {/* Active Priority Insights Display (Ultra-Concise Ticker / Micro-Cards) */}
-          <div className="flex flex-col gap-2">
+          {/* Active Priority Insights Display (Clean, Spacious, Zero Reading Fatigue) */}
+          <div className="flex flex-col gap-3">
             {activeInsights.length === 0 ? (
-              <div className="bg-slate-50 rounded-xl p-3.5 text-center border border-slate-200/70">
-                <p className="text-xs font-bold text-slate-500">
+              <div className="bg-slate-50/80 rounded-2xl p-5 text-center border border-slate-200/70">
+                <p className="text-xs font-bold text-slate-500 leading-relaxed">
                   {priorityTab === "urgent"
                     ? t("no_urgent_alerts", "No urgent issues detected! All foundational concepts are stable.")
                     : priorityTab === "moderate"
@@ -1366,41 +1330,188 @@ export default function ParentDailyTipScreen() {
                 </p>
               </div>
             ) : (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-3">
                 {activeInsights.map((insight) => {
-                  const { headline, takeaway } = getInsightHeadlineAndTakeaway(insight, currentLang);
+                  const { headline } = getInsightHeadlineAndTakeaway(insight, currentLang);
+                  const isExpanded = expandedPlanId === insight.id;
+                  const isAiGenerating = aiGeneratingId === insight.id;
+                  const dynamicPlan = deepAiPlans[insight.id];
+                  const activePlanSteps = dynamicPlan?.planSteps || insight.planSteps;
+
+                  const priorityBadgeConfig = insight.priority === "urgent"
+                    ? {
+                        bg: "bg-rose-50",
+                        border: "border-rose-200",
+                        text: "text-rose-700",
+                        dot: "bg-rose-500",
+                        icon: "🚨",
+                        label: t("priority_urgent", "Urgent Priority")
+                      }
+                    : insight.priority === "moderate"
+                    ? {
+                        bg: "bg-amber-50",
+                        border: "border-amber-200",
+                        text: "text-amber-800",
+                        dot: "bg-amber-500",
+                        icon: "⚠️",
+                        label: t("priority_moderate", "Moderate Focus")
+                      }
+                    : {
+                        bg: "bg-teal-50",
+                        border: "border-teal-200",
+                        text: "text-[#006a62]",
+                        dot: "bg-teal-500",
+                        icon: "✨",
+                        label: t("priority_low", "Steady Mastery")
+                      };
 
                   return (
                     <div
                       key={insight.id}
-                      onClick={() => setSelectedInsightModal(insight)}
-                      className="p-3 rounded-2xl bg-slate-50/90 hover:bg-slate-100 border border-slate-200/80 transition-all flex items-center justify-between gap-2.5 cursor-pointer group active:scale-[0.99] shadow-2xs"
+                      className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-[0_2px_12px_rgba(20,23,121,0.03)] hover:border-slate-300 transition-all p-4 sm:p-5 flex flex-col gap-3"
                     >
-                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <span className="text-base shrink-0">
-                          {priorityTab === "urgent" ? "🚨" : priorityTab === "moderate" ? "⚠️" : "✨"}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs sm:text-[13px] font-black text-slate-900 truncate leading-snug">
-                            {headline}
-                          </p>
-                          <p className="text-[11px] font-semibold text-slate-500 truncate mt-0.5">
-                            {takeaway}
-                          </p>
+                      {/* Top Row: Priority Badge + Accuracy Pill */}
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-black border ${priorityBadgeConfig.bg} ${priorityBadgeConfig.border} ${priorityBadgeConfig.text}`}>
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${priorityBadgeConfig.dot} ${insight.priority === "urgent" ? "animate-pulse" : ""}`} />
+                          <span>{priorityBadgeConfig.label}</span>
                         </div>
+
+                        {insight.accuracy !== undefined && (
+                          <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200/80 text-xs font-black text-slate-700">
+                            <Target size={12} className="text-[#141779]" />
+                            <span>{insight.accuracy}% {t("accuracy_short", "Acc.")}</span>
+                          </div>
+                        )}
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedInsightModal(insight);
-                        }}
-                        className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-[#141779] group-hover:text-[#006a62] group-hover:border-teal-300 text-[11px] font-black shadow-2xs transition-colors cursor-pointer"
-                      >
-                        <span>{t("view_details", "Details")}</span>
-                        <ChevronRight size={12} className="opacity-70 group-hover:translate-x-0.5 transition-transform" />
-                      </button>
+                      {/* Main Insight Title & Observation (Generous Whitespace, No Ellipsis) */}
+                      <div className="space-y-1">
+                        <h4 className="text-sm sm:text-base font-black text-[#141779] leading-snug">
+                          {headline}
+                        </h4>
+                        <p className="text-xs sm:text-[13px] text-slate-600 font-medium leading-relaxed pt-0.5">
+                          {insight.observation}
+                        </p>
+                      </div>
+
+                      {/* Action Step Callout (Elevated Box) */}
+                      {insight.actionStep && (
+                        <div className="p-3 sm:p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/70 flex items-start gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-teal-50 border border-teal-100 flex items-center justify-center text-[#006a62] shrink-0 mt-0.5">
+                            <Target size={14} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-[#006a62] block">
+                              {t("action_step", "Action Step")}
+                            </span>
+                            <p className="text-xs sm:text-[13px] text-slate-800 font-semibold leading-relaxed mt-0.5">
+                              {insight.actionStep}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Interactive Diagnostic Plan Toggle Button */}
+                      <div className="pt-0.5 flex flex-col gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleGenerateDeepPlan(insight)}
+                          className={`min-h-[44px] w-full py-2.5 px-4 rounded-xl font-black text-xs flex items-center justify-between transition-all cursor-pointer select-none active:scale-[0.99] ${
+                            isExpanded
+                              ? "bg-[#141779] text-white shadow-xs"
+                              : "bg-slate-50 hover:bg-slate-100 text-[#141779] border border-slate-200/80"
+                          }`}
+                          aria-expanded={isExpanded}
+                        >
+                          <div className="flex items-center gap-2">
+                            {isAiGenerating ? (
+                              <Sparkles size={14} className="animate-spin text-amber-300" />
+                            ) : (
+                              <Brain size={14} className={isExpanded ? "text-teal-200" : "text-[#006a62]"} />
+                            )}
+                            <span>
+                              {isExpanded
+                                ? t("hide_ai_plan", "Hide Diagnostic Plan")
+                                : t("deep_ai_diagnostic_plan", "Deep AI Diagnostic Plan")}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                              isExpanded ? "bg-white/20 text-white" : "bg-white border border-slate-200 text-slate-600"
+                            }`}>
+                              {activePlanSteps && activePlanSteps.length > 0 ? `${activePlanSteps.length} Phases` : "Phased Plan"}
+                            </span>
+                            <ChevronDown
+                              size={15}
+                              className={`transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`}
+                            />
+                          </div>
+                        </button>
+
+                        {/* Smooth Transition Expandable Plan Container */}
+                        <div
+                          className={`grid transition-all duration-300 ease-in-out ${
+                            isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0 pointer-events-none"
+                          }`}
+                        >
+                          <div className="overflow-hidden space-y-2.5 pt-1">
+                            {/* Why it matters */}
+                            {insight.whyItMatters && (
+                              <div className="p-3 rounded-xl bg-teal-50/50 border border-teal-200/60 flex items-start gap-2.5">
+                                <CheckCircle2 size={15} className="text-[#006a62] shrink-0 mt-0.5" />
+                                <div className="min-w-0 flex-1">
+                                  <span className="text-[10px] font-black uppercase tracking-wider text-[#006a62] block">
+                                    {t("why_it_matters", "Why This Matters")}
+                                  </span>
+                                  <p className="text-xs text-slate-600 font-medium leading-relaxed mt-0.5">
+                                    {insight.whyItMatters}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Phased Roadmap Steps */}
+                            {activePlanSteps && activePlanSteps.length > 0 && (
+                              <div className="space-y-2 pt-1">
+                                <div className="flex items-center justify-between px-0.5">
+                                  <span className="text-[11px] font-black uppercase tracking-wider text-[#141779] flex items-center gap-1.5">
+                                    <Sparkles size={11} className="text-[#d97706]" />
+                                    {insight.priority === "urgent"
+                                      ? t("15_day_recovery_plan", "15-Day Remediation Roadmap")
+                                      : t("milestone_practice_plan", "Milestone Action Plan")}
+                                  </span>
+                                  <span className="text-[10px] font-bold text-slate-400">
+                                    {insight.subject || "Subject"}
+                                  </span>
+                                </div>
+
+                                <div className="space-y-2">
+                                  {activePlanSteps.map((step: any, sIdx: number) => (
+                                    <div
+                                      key={`step-${sIdx}`}
+                                      className="p-3 rounded-xl bg-slate-50/80 border border-slate-200/70 flex items-start gap-2.5 hover:bg-slate-50 transition-colors"
+                                    >
+                                      <span className="font-black text-[#141779] shrink-0 text-[10px] bg-white px-2 py-0.5 rounded-md border border-slate-200 shadow-2xs mt-0.5">
+                                        {step.days || `Phase ${sIdx + 1}`}
+                                      </span>
+                                      <div className="min-w-0 flex-1">
+                                        <h5 className="text-xs sm:text-[13px] font-black text-slate-900 leading-tight">
+                                          {step.title}
+                                        </h5>
+                                        <p className="text-xs text-slate-600 font-medium leading-relaxed mt-1">
+                                          {step.action}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   );
                 })}
@@ -1416,18 +1527,18 @@ export default function ParentDailyTipScreen() {
 
           return (
             <div
-              className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 pb-[92px] sm:p-4 overscroll-contain touch-none select-none animate-in fade-in duration-150"
+              className="fixed inset-0 z-[99999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 pb-24 sm:p-4 sm:pb-6 overscroll-contain touch-none select-none animate-in fade-in duration-150"
               style={{
-                zIndex: 9999,
-                paddingBottom: "calc(5.75rem + env(safe-area-inset-bottom, 0px))"
+                zIndex: 99999,
+                paddingBottom: "calc(5.5rem + env(safe-area-inset-bottom, 0px))"
               }}
               onClick={() => setSelectedInsightModal(null)}
             >
               <div
-                className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 flex flex-col max-h-[72vh] sm:max-h-[82vh] overflow-hidden select-text animate-in slide-in-from-bottom-5 sm:zoom-in-95 duration-200 touch-auto mb-1 sm:mb-0"
+                className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 flex flex-col max-h-[75vh] sm:max-h-[82vh] overflow-hidden select-text animate-in slide-in-from-bottom-5 sm:zoom-in-95 duration-200 touch-auto my-auto"
                 style={{
-                  zIndex: 10000,
-                  maxHeight: "min(72vh, calc(100dvh - 128px - env(safe-area-inset-bottom, 0px)))"
+                  zIndex: 100000,
+                  maxHeight: "min(78vh, calc(100dvh - 120px - env(safe-area-inset-bottom, 0px)))"
                 }}
                 onClick={(e) => e.stopPropagation()}
                 onTouchMove={(e) => e.stopPropagation()}
@@ -1473,10 +1584,10 @@ export default function ParentDailyTipScreen() {
                   <button
                     type="button"
                     onClick={() => setSelectedInsightModal(null)}
-                    className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer shrink-0 ml-2"
+                    className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer shrink-0 ml-2"
                     aria-label={t("close", "Close")}
                   >
-                    <X size={16} />
+                    <X size={17} />
                   </button>
                 </div>
 
@@ -1556,7 +1667,7 @@ export default function ParentDailyTipScreen() {
                   <button
                     type="button"
                     onClick={() => setSelectedInsightModal(null)}
-                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#141779] hover:bg-[#1a1f9c] text-white text-xs font-black transition-all cursor-pointer shadow-md hover:shadow-lg active:scale-[0.98]"
+                    className="w-full sm:w-auto px-6 py-2.5 min-h-[44px] rounded-xl bg-[#141779] hover:bg-[#1a1f9c] text-white text-xs font-black transition-all cursor-pointer shadow-md hover:shadow-lg active:scale-[0.98] flex items-center justify-center"
                   >
                     {t("close", "Close")}
                   </button>
@@ -1566,10 +1677,237 @@ export default function ParentDailyTipScreen() {
           );
         })()}
 
-        {/* ── 2. Growth Score Section (Intact, without Streak & Combo cards) ── */}
-        <section className="w-full bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-[0_4px_20px_rgba(20,23,121,0.04)] flex items-center gap-3.5">
-          <div className="relative w-20 h-20 sm:w-22 sm:h-22 flex items-center justify-center shrink-0">
-            <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+        {/* ── Growth Score Breakdown Modal ── */}
+        {showGrowthScoreModal && (() => {
+          const breakdownPillars = [
+            {
+              icon: <Brain className="w-5 h-5 text-indigo-600" />,
+              iconBg: "bg-indigo-50 border-indigo-200/80",
+              title: currentLang === "gu"
+                ? "બાળકની ક્વિઝ અને પ્રેક્ટિસ ચોકસાઈ"
+                : currentLang === "hi"
+                ? "बच्चे की क्विज़ और अभ्यास सटीकता"
+                : "Child Practice & Quiz Accuracy",
+              weight: "35%",
+              badge: currentLang === "gu" ? "મુખ્ય પાયો" : currentLang === "hi" ? "मुख्य आधार" : "Core Pillar",
+              badgeColor: "bg-indigo-50 text-indigo-700 border-indigo-200",
+              description: currentLang === "gu"
+                ? `${childName || "બાળક"} દ્વારા ક્વિઝ અને પ્રેક્ટિસ સત્રોમાં આપેલા સાચા જવાબો અને સુધરેલી ચોકસાઈ.`
+                : currentLang === "hi"
+                ? `${childName || "बच्चे"} द्वारा क्विज़ और अभ्यास में दिए गए सही उत्तर एवं सटीकता में सुधार।`
+                : `Accuracy and correct answers achieved by ${childName || "your child"} during chapter quizzes and practice drills.`
+            },
+            {
+              icon: <BookOpen className="w-5 h-5 text-teal-600" />,
+              iconBg: "bg-teal-50 border-teal-200/80",
+              title: currentLang === "gu"
+                ? "પેરેન્ટ એકેડેમી પાઠ અને માર્ગદર્શન"
+                : currentLang === "hi"
+                ? "पैरेंट एकेडमी पाठ और मार्गदर्शन"
+                : "Parent Academy Lessons",
+              weight: "25%",
+              badge: currentLang === "gu" ? "પેરેન્ટ ભૂમિકા" : currentLang === "hi" ? "अभिभावक भूमिका" : "Parent Role",
+              badgeColor: "bg-teal-50 text-teal-700 border-teal-200",
+              description: currentLang === "gu"
+                ? "તમે પૂર્ણ કરેલા માર્ગદર્શન મોડ્યુલ્સ અને બાળકની મુશ્કેલીઓ ઉકેલવા લીધેલા પગલાં."
+                : currentLang === "hi"
+                ? "आपके द्वारा पूरे किए गए पैरेंटिंग पाठ और बच्चे की समस्याओं को हल करने के उपाय।"
+                : "Parenting micro-lessons completed and guidance actions taken to support your child."
+            },
+            {
+              icon: <Zap className="w-5 h-5 text-amber-600" />,
+              iconBg: "bg-amber-50 border-amber-200/80",
+              title: currentLang === "gu"
+                ? "દૈનિક સાતત્ય અને સ્ટ્રીક"
+                : currentLang === "hi"
+                ? "दैनिक निरंतरता और स्ट्रीक"
+                : "Daily Practice Consistency",
+              weight: "20%",
+              badge: currentLang === "gu" ? "આદત નિર્માણ" : currentLang === "hi" ? "आदत निर्माण" : "Habit Building",
+              badgeColor: "bg-amber-50 text-amber-700 border-amber-200",
+              description: currentLang === "gu"
+                ? "દરરોજ અભ્યાસ કરવાની ટેવ અને એપ પર નિયમિત સક્રિયતા."
+                : currentLang === "hi"
+                ? "प्रतिदिन पढ़ाई करने की नियमित आदत और ऐप पर दैनिक उपस्थिति।"
+                : "Building a regular, unbroken study habit through daily practice and engagement."
+            },
+            {
+              icon: <Target className="w-5 h-5 text-purple-600" />,
+              iconBg: "bg-purple-50 border-purple-200/80",
+              title: currentLang === "gu"
+                ? "સિદ્ધિઓ અને એક્ટિવિટી સ્તર"
+                : currentLang === "hi"
+                ? "उपलब्धियां और एक्टिविटी स्तर"
+                : "Parent XP & Milestones",
+              weight: "20%",
+              badge: currentLang === "gu" ? "સિદ્ધિઓ" : currentLang === "hi" ? "उपलब्धियां" : "Achievements",
+              badgeColor: "bg-purple-50 text-purple-700 border-purple-200",
+              description: currentLang === "gu"
+                ? "દૈનિક પડકારો અને સીમાચિહ્નો પાર કરીને મેળવેલ XP અને પ્રોત્સાહક બેજ."
+                : currentLang === "hi"
+                ? "दैनिक चुनौतियों और माइलस्टोन को पूरा करके अर्जित XP और स्तर।"
+                : "Experience points earned and family milestones unlocked across learning activities."
+            }
+          ];
+
+          return (
+            <div
+              className="fixed inset-0 z-[99999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 pb-24 sm:p-4 sm:pb-6 animate-in fade-in duration-200 overflow-y-auto overscroll-contain select-none"
+              style={{
+                zIndex: 99999,
+                paddingBottom: "calc(5.5rem + env(safe-area-inset-bottom, 0px))"
+              }}
+              onClick={() => setShowGrowthScoreModal(false)}
+            >
+              <div
+                className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200/90 overflow-hidden flex flex-col max-h-[75vh] sm:max-h-[82vh] my-auto animate-in zoom-in-95 duration-200 select-text"
+                style={{
+                  zIndex: 100000,
+                  maxHeight: "min(78vh, calc(100dvh - 120px - env(safe-area-inset-bottom, 0px)))"
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Top Accent Strip */}
+                <div className="h-1.5 w-full bg-gradient-to-r from-[#141779] via-[#006a62] to-amber-500" />
+
+                {/* Modal Header */}
+                <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between gap-3 bg-white shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0 text-[#141779]">
+                      <TrendingUp className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-base sm:text-lg font-black text-[#141779] leading-tight">
+                        {currentLang === "gu"
+                          ? "ગ્રોથ સ્કોર કેવી રીતે ગણાય છે?"
+                          : currentLang === "hi"
+                          ? "ग्रोथ स्कोर कैसे काम करता है?"
+                          : "How Growth Score Works"}
+                      </h3>
+                      <p className="text-xs text-slate-500 font-bold mt-0.5">
+                        {currentLang === "gu"
+                          ? "તમારા પરિવારની શીખવાની ગતિનું મૂલ્યાંકન"
+                          : currentLang === "hi"
+                          ? "पारिवारिक सीखने की निरंतर प्रगति का माप"
+                          : "A holistic measure of your family's learning momentum"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowGrowthScoreModal(false)}
+                    aria-label={t("close", "Close")}
+                    className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer shrink-0 min-w-[36px] min-h-[36px] flex items-center justify-center"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
+                  {/* Current Score Summary Card */}
+                  <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-indigo-50/70 via-white to-teal-50/50 border border-indigo-100 flex items-center justify-between gap-3 shadow-2xs">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-center shrink-0">
+                        <span className={`text-base sm:text-lg font-black ${badgeInfo.textColorClass}`}>
+                          {growthScore}%
+                        </span>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black text-[#141779] uppercase tracking-wider">
+                            {t("growth_score", "Growth Score")}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded-full border text-[11px] font-black ${badgeInfo.pillClass}`}>
+                            {displayGrowthTag}
+                          </span>
+                        </div>
+                        <p className="text-xs font-semibold text-slate-600 mt-0.5">
+                          {displayGrowthSubtitle}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Pillars Introduction */}
+                  <div className="px-0.5">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-600">
+                      {currentLang === "gu"
+                        ? "4 મુખ્ય પરિબળો પર આધારિત:"
+                        : currentLang === "hi"
+                        ? "4 मुख्य स्तंभों पर आधारित:"
+                        : "Calculated from 4 core pillars:"}
+                    </h4>
+                  </div>
+
+                  {/* 4 Pillars List */}
+                  <div className="space-y-2.5">
+                    {breakdownPillars.map((pillar, idx) => (
+                      <div
+                        key={`growth-pillar-${idx}`}
+                        className="p-3 sm:p-3.5 rounded-2xl border border-slate-200/80 bg-white hover:border-slate-300 transition-all flex items-start gap-3 shadow-2xs"
+                      >
+                        <div className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 mt-0.5 ${pillar.iconBg}`}>
+                          {pillar.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 mb-1.5">
+                            <h5 className="text-xs sm:text-[13px] font-black text-[#141779] leading-snug flex-1 min-w-0">
+                              {pillar.title}
+                            </h5>
+                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border uppercase tracking-wider shrink-0 whitespace-nowrap self-start mt-0.5 ${pillar.badgeColor}`}>
+                              {pillar.badge}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                            {pillar.description}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Friendly Pro-Tip */}
+                  <div className="p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200/80 flex items-start gap-2.5">
+                    <Lightbulb className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <p className="text-xs text-amber-900 font-semibold leading-relaxed">
+                      {currentLang === "gu"
+                        ? "મહત્વપૂર્ણ ટિપ: દરરોજ સંપૂર્ણ સ્કોર લાવવો જરૂરી નથી! માત્ર 10 મિનિટ નિયમિત પ્રેક્ટિસ અને 1 પેરેન્ટ ગાઈડ વાંચવાથી તમારો ગ્રોથ સ્કોર સતત ઊંચો રહે છે."
+                        : currentLang === "hi"
+                        ? "सरल टिप: हर दिन पूर्ण स्कोर होना आवश्यक नहीं है! बस 10 मिनट का नियमित अभ्यास और 1 पैरेंट टिप आपके ग्रोथ स्कोर को लगातार बढ़ाए रखती है।"
+                        : "Pro-Tip: You don't need perfection every day! Just 10 minutes of daily child practice and reading 1 quick parent guide keeps your score climbing."}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="p-3.5 sm:p-4 border-t border-slate-100 bg-white sm:bg-slate-50/60 flex items-center justify-end shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setShowGrowthScoreModal(false)}
+                    className="w-full sm:w-auto px-6 py-2.5 min-h-[44px] rounded-xl bg-[#141779] hover:bg-[#1a1f9c] text-white text-xs font-black transition-all cursor-pointer shadow-md hover:shadow-lg active:scale-[0.98] flex items-center justify-center"
+                  >
+                    {t("got_it", "Got it!")}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ── 2. Growth Score Section ── */}
+        <section className="w-full bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-slate-200/80 shadow-[0_4px_20px_rgba(20,23,121,0.04)] flex items-center gap-3.5 sm:gap-4 overflow-hidden">
+          {/* Dial circle */}
+          <button
+            type="button"
+            onClick={() => setShowGrowthScoreModal(true)}
+            title={t("view_growth_breakdown", "Tap to view breakdown")}
+            aria-label={t("how_growth_score_works", "How Growth Score works")}
+            className="relative w-20 h-20 sm:w-20 sm:h-20 flex items-center justify-center shrink-0 group cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#141779] rounded-full"
+            style={{ width: "76px", height: "76px", minWidth: "76px", minHeight: "76px", maxWidth: "76px", maxHeight: "76px" }}
+          >
+            <svg className="w-full h-full -rotate-90 transition-transform group-hover:scale-105 duration-300" viewBox="0 0 36 36">
               <path
                 className="text-slate-100"
                 strokeWidth="3.5"
@@ -1587,26 +1925,36 @@ export default function ParentDailyTipScreen() {
                 d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
               />
             </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
               <span className={`${badgeInfo.textColorClass} font-black text-lg sm:text-xl leading-none`}>
                 {growthScore}%
               </span>
-              <span className="text-[10px] sm:text-xs font-black uppercase text-slate-400 tracking-wider mt-0.5">
-                {t("growth_score", "Score")}
+              <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider mt-0.5">
+                {currentLang === "gu" ? "સ્કોર" : currentLang === "hi" ? "स्कोर" : "Score"}
               </span>
             </div>
-          </div>
+          </button>
 
+          {/* Details body */}
           <div className="min-w-0 flex-1 flex flex-col gap-1">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-xs sm:text-sm font-black text-[#141779] uppercase tracking-wider">
+              <span className="text-xs sm:text-sm font-black text-[#141779] uppercase tracking-wider shrink-0">
                 {t("growth_score", "Growth Score")}
               </span>
-              <span className={`px-2 py-0.5 rounded-full border text-xs font-black ${badgeInfo.pillClass}`}>
-                {displayGrowthTag}
-              </span>
+              {/* Badge with Info icon on the right side - bundled tightly so it never wraps to a separate line */}
+              <button
+                type="button"
+                onClick={() => setShowGrowthScoreModal(true)}
+                title={t("how_growth_score_works", "How Growth Score works")}
+                aria-label={t("how_growth_score_works", "How Growth Score works")}
+                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[11px] sm:text-xs font-black cursor-pointer transition-all hover:shadow-2xs active:scale-[0.98] shrink-0 ${badgeInfo.pillClass}`}
+              >
+                <span>{displayGrowthTag}</span>
+                <Info className="w-3 h-3 opacity-75" />
+              </button>
             </div>
-            <p className="text-slate-700 font-bold text-xs sm:text-sm leading-snug">
+
+            <p className="text-slate-600 font-medium text-xs sm:text-[13px] leading-snug">
               {displayGrowthSubtitle}
             </p>
           </div>
