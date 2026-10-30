@@ -9,6 +9,7 @@ export default function ParentalGateScreen() {
   const [searchParams] = useSearchParams();
   const targetPath = searchParams.get("returnTo") || "/parent/dashboard";
   const { t } = useTranslation();
+  // Default to loading to prevent premature enter-mode flashing; check API for authoritative isPinSet
   const [mode, setMode] = useState<"loading" | "set-step1" | "set-step2" | "enter" | "reset-step1" | "reset-step2">("loading");
   const [pin, setPin] = useState("");
   const [tempPin, setTempPin] = useState("");
@@ -25,13 +26,16 @@ export default function ParentalGateScreen() {
         const res = await apiFetch("/api/parent/controls");
         const json = await res.json();
         if (json.success && json.data?.isPinSet) {
+          localStorage.setItem("isParentPinSet", "true");
           setMode("enter");
         } else {
+          localStorage.setItem("isParentPinSet", "false");
           setMode("set-step1");
         }
       } catch (err) {
         console.error("Failed to check PIN status", err);
-        setMode("set-step1");
+        const fallback = localStorage.getItem("isParentPinSet") === "true";
+        setMode(fallback ? "enter" : "set-step1");
       }
     }
     checkPinStatus();
@@ -119,7 +123,17 @@ export default function ParentalGateScreen() {
       const json = await res.json();
       
       if (json.success) {
+        localStorage.setItem("isParentPinSet", "true");
         sessionStorage.setItem("parentPinVerified", "true");
+        try {
+          const raw = localStorage.getItem("userData");
+          if (raw) {
+            const u = JSON.parse(raw);
+            u.isPinSet = true;
+            u.is_pin_set = true;
+            localStorage.setItem("userData", JSON.stringify(u));
+          }
+        } catch {}
         setSuccessMsg("PIN Set Successfully!");
         setTimeout(() => navigate(targetPath, { replace: true }), 1000);
       } else {
@@ -143,7 +157,17 @@ export default function ParentalGateScreen() {
       const json = await res.json();
       
       if (json.success) {
+        localStorage.setItem("isParentPinSet", "true");
         sessionStorage.setItem("parentPinVerified", "true");
+        try {
+          const raw = localStorage.getItem("userData");
+          if (raw) {
+            const u = JSON.parse(raw);
+            u.isPinSet = true;
+            u.is_pin_set = true;
+            localStorage.setItem("userData", JSON.stringify(u));
+          }
+        } catch {}
         setSuccessMsg("PIN Reset Successfully!");
         setTimeout(() => navigate(targetPath, { replace: true }), 1000);
       } else {
@@ -208,7 +232,67 @@ export default function ParentalGateScreen() {
     setShowForgotModal(true);
   };
 
-  if (mode === "loading") return <div className="min-h-screen bg-[#f7f9fb]" />;
+  const currentUser = (() => {
+    try {
+      const raw = localStorage.getItem("userData");
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  })();
+  const isCoParent = Boolean(
+    currentUser?.isSecondaryParent ||
+    currentUser?.isCoParent ||
+    currentUser?.role === "co_parent" ||
+    currentUser?.role === "secondary_parent" ||
+    currentUser?.primary_parent_id
+  );
+
+  const handleBack = () => {
+    const isPinVerified = sessionStorage.getItem("parentPinVerified") === "true";
+    if (isCoParent) {
+      if (isPinVerified) {
+        navigate("/parent/dashboard", { replace: true });
+      } else {
+        navigate("/login", { replace: true });
+      }
+    } else {
+      navigate("/home", { replace: true });
+    }
+  };
+
+  if (mode === "loading") {
+    return (
+      <div className="min-h-screen bg-[#f7f9fb] font-sans flex flex-col relative overflow-hidden">
+        <header className="flex items-center justify-between px-5 py-4 z-50">
+          <div className="flex items-center gap-3">
+            <button onClick={handleBack} className="p-1 hover:opacity-80 transition-opacity" aria-label="Back">
+              <ArrowLeft size={24} color="#141779" />
+            </button>
+            <h1 className="text-2xl font-bold text-[#141779] tracking-tight">NR Scholar</h1>
+          </div>
+        </header>
+        <main className="flex-1 flex flex-col items-center justify-center px-6 pb-12 z-10">
+          <div className="h-7 w-44 rounded-xl animate-skeleton mb-3"></div>
+          <div className="h-4 w-60 rounded-lg animate-skeleton mb-8"></div>
+          <div className="flex gap-5 mb-10">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="w-4 h-4 rounded-full border-2 border-[#c7c5d4]" />
+            ))}
+          </div>
+          <div className="bg-[rgba(255,255,255,0.7)] border-[1.5px] border-[rgba(255,255,255,0.4)] rounded-2xl p-6 w-full max-w-[320px] flex flex-col gap-4">
+            {[1, 2, 3, 4].map((r) => (
+              <div key={r} className="flex justify-between">
+                {[1, 2, 3].map((c) => (
+                  <div key={c} className="w-14 h-14 rounded-full animate-skeleton" />
+                ))}
+              </div>
+            ))}
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f7f9fb] font-sans flex flex-col relative overflow-hidden">
@@ -219,7 +303,7 @@ export default function ParentalGateScreen() {
       {/* Header */}
       <header className="flex items-center justify-between px-5 py-4 z-50">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity">
+          <button onClick={handleBack} className="p-1 hover:opacity-80 transition-opacity" aria-label="Back">
             <ArrowLeft size={24} color="#141779" />
           </button>
           <h1 className="text-2xl font-bold text-[#141779] tracking-tight">NR Scholar</h1>

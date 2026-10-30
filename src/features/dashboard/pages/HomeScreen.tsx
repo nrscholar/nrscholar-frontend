@@ -1,30 +1,44 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Bookmark, BookOpen, CheckCircle, ChevronRight, Clock, Gift, Map, Shield, Star, Bell } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Bookmark, BookOpen, Brain, CheckCircle, ChevronRight, Clock, Gift, Map, Shield, Star, Bell, Crown, Gem, Swords, Trophy, Users, ChevronDown } from "lucide-react";
+import { useEffect, useState, useMemo, useCallback, lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { apiFetch } from "../../../api";
-import ChildSwitcherModal from "../../../components/ChildSwitcherModal";
 import AdventureHero from "../../../components/AdventureHero";
+import { startNavigationProgress } from "../../../components/NavigationProgressBar";
+import { getScopedItem, setScopedItem, getActiveUserContext, normalizeClassLevel } from "../../../utils/sessionCache";
+import { loadClassSkills } from "../../../data/neuroplay/skillsLoader";
+import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
+
+const ChildSwitcherModal = lazy(() => import("../../../components/ChildSwitcherModal"));
 
 export default function HomeScreen() {
-  const navigate = useNavigate();
+  const rawNavigate = useNavigate();
+  const navigate = useCallback((to: any, options?: any) => {
+    startNavigationProgress();
+    rawNavigate(to, options);
+  }, [rawNavigate]);
+  const [searchParams] = useSearchParams();
   const { t } = useTranslation();
 
-  const [xp, setXp] = useState(0);
-  const [coins, setCoins] = useState(0);
-  const [childName, setChildName] = useState("Explorer");
-  const [childPhoto, setChildPhoto] = useState("");
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = useState<any>(() => {
+    try {
+      const raw = localStorage.getItem("userData");
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  });
+  const [xp, setXp] = useState<number>(() => userData?.xp || 0);
+  const [coins, setCoins] = useState<number>(() => userData?.coins || 0);
+  const [childName, setChildName] = useState<string>(() => userData?.childName || "Explorer");
+  const [childPhoto, setChildPhoto] = useState<string>(() => userData?.childPhoto || "");
+  const [userLevel, setUserLevel] = useState<number>(() => userData?.level || 1);
+  const [streakDays, setStreakDays] = useState<number>(() => userData?.streakDays || 0);
   const [showSwitcher, setShowSwitcher] = useState(false);
   const [showDailyMissionModal, setShowDailyMissionModal] = useState(false);
   const [questTab, setQuestTab] = useState<'all' | 'active' | 'completed'>('all');
 
-
   const [dailyLimitReached, setDailyLimitReached] = useState(false);
   const [todayCompletedCount, setTodayCompletedCount] = useState(0);
-  const [userLevel, setUserLevel] = useState(1);
-  const [streakDays, setStreakDays] = useState(0);
 
   const [missions, setMissions] = useState<any[]>([]);
   const [retentionStreak, setRetentionStreak] = useState<any>(null);
@@ -54,8 +68,31 @@ export default function HomeScreen() {
   const [showStreakModal, setShowStreakModal] = useState(false);
   const [streakRevivalData, setStreakRevivalData] = useState<any>(null);
   const [showRevivalModal, setShowRevivalModal] = useState(false);
+  const [showRevivalConfirmModal, setShowRevivalConfirmModal] = useState(false);
   const [revivalError, setRevivalError] = useState("");
   const [revivalLoading, setRevivalLoading] = useState(false);
+
+  useLockBodyScroll(
+    Boolean(
+      showDailyMissionModal ||
+      showSpinPopup ||
+      showStreakModal ||
+      showRevivalModal ||
+      showRevivalConfirmModal
+    )
+  );
+
+  const handleOpenRevivalConfirm = () => {
+    if (!streakRevivalData) return;
+    setRevivalError("");
+
+    if ((coins || 0) < streakRevivalData.reviveCost) {
+      setRevivalError("You don't have enough coins to revive your streak!");
+      return;
+    }
+
+    setShowRevivalConfirmModal(true);
+  };
 
   const handleReviveStreak = async () => {
     setRevivalError("");
@@ -64,36 +101,66 @@ export default function HomeScreen() {
       const res = await apiFetch("/api/retention/streak/revive", { method: "POST" });
       const json = await res.json();
       if (json.success) {
+        setShowRevivalConfirmModal(false);
         setShowRevivalModal(false);
         setCoins(json.coins);
         setStreakDays(json.current_streak);
+
+        const cachedData = localStorage.getItem("userData");
+        if (cachedData) {
+          try {
+            const u = JSON.parse(cachedData);
+            u.coins = json.coins;
+            u.streakDays = json.current_streak;
+            localStorage.setItem("userData", JSON.stringify(u));
+          } catch (e) { }
+        }
+        window.dispatchEvent(new Event("userDataUpdated"));
+
         fetchProfile();
-        
+
         try {
           const stRes = await apiFetch("/api/retention/streak");
           if (stRes.ok) {
             const stData = await stRes.json();
             setRetentionStreak(stData);
           }
-        } catch (e) {}
+        } catch (e) { }
 
         setShowStreakModal(true);
       } else {
         setRevivalError(json.message || "You don't have enough coins to revive your streak!");
+        setShowRevivalConfirmModal(false);
       }
     } catch (e) {
       setRevivalError("Failed to revive streak. Please try again.");
+      setShowRevivalConfirmModal(false);
     } finally {
       setRevivalLoading(false);
     }
   };
 
   const handleDeclineRevival = async () => {
-    try {
-      await apiFetch("/api/retention/streak/decline", { method: "POST" });
-    } catch (e) {}
+    setShowRevivalConfirmModal(false);
     setShowRevivalModal(false);
     setStreakDays(0);
+    setRetentionStreak((prev: any) => ({
+      ...(prev || {}),
+      currentStreak: 0,
+      streakDaysOfWeek: [false, false, false, false, false, false, false]
+    }));
+    try {
+      const stored = localStorage.getItem("userData");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        parsed.streakDays = 0;
+        localStorage.setItem("userData", JSON.stringify(parsed));
+      }
+    } catch (e) { }
+
+    try {
+      await apiFetch("/api/retention/streak/decline", { method: "POST" });
+    } catch (e) { }
     fetchProfile();
 
     try {
@@ -102,11 +169,55 @@ export default function HomeScreen() {
         const stData = await stRes.json();
         setRetentionStreak(stData);
       }
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const [citiesData, setCitiesData] = useState<any[]>([]);
-  const [journeyData, setJourneyData] = useState<any>(null);
+  const [journeyData, setJourneyData] = useState<any>(() => {
+    try {
+      const raw = getScopedItem("cachedJourneyData") || localStorage.getItem("cachedJourneyData");
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  });
+  const [continueLearningProgress, setContinueLearningProgress] = useState<{ completed: number; total: number; percent: number }>(() => {
+    try {
+      const raw = getScopedItem("cached_continue_learning_progress");
+      return raw ? JSON.parse(raw) : { completed: 0, total: 0, percent: 0 };
+    } catch { return { completed: 0, total: 0, percent: 0 }; }
+  });
+  const [neuroPlayProgress, setNeuroPlayProgress] = useState<{ completed: number; total: number; percent: number }>(() => {
+    try {
+      const raw = getScopedItem("cached_neuroplay_progress");
+      return raw ? JSON.parse(raw) : { completed: 0, total: 0, percent: 0 };
+    } catch { return { completed: 0, total: 0, percent: 0 }; }
+  });
+  const [dailyHabitData, setDailyHabitData] = useState<any>(() => {
+    try {
+      const ctx = getActiveUserContext();
+      const raw = sessionStorage.getItem(`nrs_global_habit_${ctx.childId}`) || getScopedItem("cached_daily_habit_data");
+      if (raw) return JSON.parse(raw);
+    } catch (e) { }
+    return null;
+  });
+  const [isHabitLoading, setIsHabitLoading] = useState<boolean>(() => {
+    try {
+      const ctx = getActiveUserContext();
+      return !(sessionStorage.getItem(`nrs_global_habit_${ctx.childId}`) || getScopedItem("cached_daily_habit_data"));
+    } catch { return true; }
+  });
+  const [shadowArenaProgress, setShadowArenaProgress] = useState<{ completed: number; total: number; percent: number }>(() => {
+    try {
+      const cached = getScopedItem("cached_shadow_arena_progress");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        const completed = Number(parsed.completed ?? 0);
+        const total = 100;
+        const percent = Math.min(100, Math.max(0, Math.round((completed / total) * 100)));
+        return { completed, total, percent };
+      }
+    } catch (e) { }
+    return { completed: 0, total: 100, percent: 0 };
+  });
 
   useEffect(() => {
     if (pendingSpinPopup) {
@@ -116,9 +227,17 @@ export default function HomeScreen() {
     }
   }, [pendingSpinPopup]);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (userDoc?: any) => {
     try {
-      const res = await apiFetch("/api/notifications");
+      const u = userDoc || userData || (() => {
+        try {
+          const stored = localStorage.getItem("userData");
+          return stored ? JSON.parse(stored) : null;
+        } catch (e) { return null; }
+      })();
+      const activeChildId = u?.activeChildId || u?.children?.[0]?.childId || u?.childId || "";
+      const notifUrl = `/api/notifications?role=child${activeChildId ? `&childId=${encodeURIComponent(activeChildId)}` : ""}`;
+      const res = await apiFetch(notifUrl);
       const json = await res.json();
       if (json.success && json.data) {
         setUnreadCount(json.data.filter((n: any) => !n.isRead).length);
@@ -129,29 +248,168 @@ export default function HomeScreen() {
   const fetchJourneyData = async (userDoc?: any) => {
     try {
       const u = userDoc || userData;
+      const ctx = getActiveUserContext();
       let url = "/api/journey/progress";
-      if (u) {
-        const params = new URLSearchParams();
-        if (u.childClass) params.append("classLevel", u.childClass);
-        if (u.childBoard) params.append("board", u.childBoard);
-        if (u.activeChildId) params.append("child_id", u.activeChildId);
-        
-        const q = params.toString();
-        if (q) {
-          url += `?${q}`;
-        }
+      const params = new URLSearchParams();
+      if (ctx.classLevel) params.append("classLevel", ctx.classLevel);
+      if (u?.childBoard) params.append("board", u.childBoard);
+      if (ctx.childId) params.append("child_id", ctx.childId);
+
+      const q = params.toString();
+      if (q) {
+        url += `?${q}`;
       }
       const res = await apiFetch(url);
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data) {
           setJourneyData(json.data);
+          try {
+            setScopedItem("cachedJourneyData", JSON.stringify(json.data));
+          } catch (e) { }
         }
       }
     } catch (e) {
       console.error("Failed to fetch journey progress", e);
     }
   };
+
+  const fetchContinueLearningProgress = useCallback(async (userDoc?: any) => {
+    try {
+      const u = userDoc || userData;
+      const ctx = getActiveUserContext();
+      const classLevel = ctx.classLevel || u?.childClass || "Class 1";
+      const [subRes, progRes, journeyRes] = await Promise.all([
+        apiFetch(`/api/practice/subjects?classLevel=${encodeURIComponent(classLevel)}`).catch(() => null),
+        apiFetch(`/api/practice/chapter-progress?classLevel=${encodeURIComponent(classLevel)}`).catch(() => null),
+        apiFetch(`/api/journey/progress?classLevel=${encodeURIComponent(classLevel)}`).catch(() => null)
+      ]);
+
+      let totalChapters = 0;
+      if (journeyRes?.ok) {
+        const jData = await journeyRes.json().catch(() => null);
+        if (jData?.success && jData?.data) {
+          totalChapters = jData.data.totalCurrentClassChapters || jData.data.totalTierChapters || 0;
+        }
+      }
+      if (subRes?.ok) {
+        const subData = await subRes.json().catch(() => null);
+        if (subData?.success && Array.isArray(subData.data)) {
+          setScopedItem("cached_practice_subjects", JSON.stringify(subData.data));
+          if (!totalChapters) {
+            totalChapters = subData.data.reduce((sum: number, s: any) => sum + (Number(s.totalChapters) || 0), 0);
+          }
+        }
+      }
+
+      let completedChapters = 0;
+      let partialProgress = 0;
+      if (progRes?.ok) {
+        const progData = await progRes.json().catch(() => null);
+        if (progData?.success && Array.isArray(progData.data)) {
+          progData.data.forEach((p: any) => {
+            const isDone = Boolean(p.completed || p.chapterCompleted);
+            if (isDone) {
+              completedChapters += 1;
+            } else {
+              if (Array.isArray(p.completedMissions) && p.completedMissions.length > 0) {
+                partialProgress += Math.min(0.9, p.completedMissions.length / 5);
+              } else if (p.readingCompleted || p.questionsCompleted) {
+                partialProgress += 0.2;
+              }
+            }
+          });
+        }
+      }
+
+      const effectiveCompleted = completedChapters + partialProgress;
+      const percent = totalChapters > 0 ? Math.min(100, Math.round((effectiveCompleted / totalChapters) * 100)) : 0;
+      const progressObj = { completed: completedChapters, total: totalChapters, percent };
+      setContinueLearningProgress(progressObj);
+      try {
+        setScopedItem("cached_continue_learning_progress", JSON.stringify(progressObj));
+      } catch (e) { }
+    } catch (e) {
+      console.error("Failed to fetch continue learning progress", e);
+    }
+  }, [userData]);
+
+  const fetchNeuroPlayProgress = useCallback(async (userDoc?: any) => {
+    try {
+      const u = userDoc || userData;
+      const ctx = getActiveUserContext();
+      const rawClass = ctx.classLevel || u?.childClass || u?.studentClass || u?.grade || "Class 1";
+      const match = String(rawClass).match(/\d+/);
+      const classNum = match ? parseInt(match[0], 10) : 1;
+
+      const skills = await loadClassSkills(classNum);
+      const activeChild = Array.isArray(u?.children) ? u.children.find((c: any) => c.childId === ctx.childId) : null;
+      const apiSkills: string[] = Array.isArray(activeChild?.neuroplayCompletedSkills)
+        ? activeChild.neuroplayCompletedSkills
+        : (Array.isArray(u?.neuroplayCompletedSkills) ? u.neuroplayCompletedSkills : []);
+
+      const uid = String(u?._id || u?.id || "");
+      const childKey = ctx.childId ? `neuroplay_completed_skills_${ctx.childId}` : (uid ? `neuroplay_completed_skills_${uid}` : null);
+      let localSkills: string[] = [];
+      if (childKey) {
+        try {
+          const str = localStorage.getItem(childKey);
+          if (str) localSkills = JSON.parse(str);
+        } catch { }
+      }
+
+      const allCompleted = new Set([...apiSkills, ...localSkills]);
+      const totalSkills = Array.isArray(skills) ? skills.length : 0;
+      const completedSkills = Array.isArray(skills) ? skills.filter((s: any) => allCompleted.has(s.id)).length : 0;
+      const percent = totalSkills > 0 ? Math.min(100, Math.round((completedSkills / totalSkills) * 100)) : 0;
+
+      const progressObj = { completed: completedSkills, total: totalSkills, percent };
+      setNeuroPlayProgress(progressObj);
+      try {
+        setScopedItem("cached_neuroplay_progress", JSON.stringify(progressObj));
+      } catch (e) { }
+    } catch (e) {
+      console.error("Failed to fetch neuroplay progress", e);
+    }
+  }, [userData]);
+
+  const fetchShadowArenaProgress = useCallback(async (userDoc?: any) => {
+    try {
+      const u = userDoc || userData;
+      const ctx = getActiveUserContext();
+      const normClass = normalizeClassLevel(ctx.classLevel || u?.childClass || u?.studentClass || u?.grade || "Class 1");
+      const childId = ctx.childId || u?.activeChildId || "child_1";
+
+      const res = await apiFetch(`/api/multiplayer/progress?classLevel=${encodeURIComponent(normClass)}&childId=${encodeURIComponent(childId)}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          const completed = Number(json.data.completedFights ?? 0);
+          const total = 100;
+          const percent = Math.min(100, Math.max(0, Math.round((completed / total) * 100)));
+          const progressObj = { completed, total, percent };
+          setShadowArenaProgress(progressObj);
+          try {
+            setScopedItem("cached_shadow_arena_progress", JSON.stringify(progressObj));
+          } catch (e) { }
+          return;
+        }
+      }
+
+      const activeChild = Array.isArray(u?.children) ? u.children.find((c: any) => c.childId === childId) : null;
+      const fbc = activeChild?.multiplayerFightsByClass || u?.multiplayerFightsByClass || {};
+      const completed = Number(fbc[normClass] ?? fbc[ctx.classLevel] ?? 0);
+      const total = 100;
+      const percent = Math.min(100, Math.max(0, Math.round((completed / total) * 100)));
+      const progressObj = { completed, total, percent };
+      setShadowArenaProgress(progressObj);
+      try {
+        setScopedItem("cached_shadow_arena_progress", JSON.stringify(progressObj));
+      } catch (e) { }
+    } catch (e) {
+      console.error("Failed to fetch shadow arena progress", e);
+    }
+  }, [userData]);
 
   const fetchProfile = async () => {
     const token = localStorage.getItem("userToken");
@@ -170,6 +428,9 @@ export default function HomeScreen() {
         setStreakDays(u.streakDays || 0);
         localStorage.setItem("userData", JSON.stringify(u));
         fetchJourneyData(u);
+        fetchContinueLearningProgress(u);
+        fetchNeuroPlayProgress(u);
+        fetchShadowArenaProgress(u);
       }
     } catch (e) {
       console.error("Failed to fetch profile");
@@ -177,97 +438,125 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
-    const cached = localStorage.getItem("userData");
-    if (cached) {
-      try {
-        const u = JSON.parse(cached);
-        setUserData(u);
-        setXp(u.xp || 0);
-        setCoins(u.coins || 0);
-        setChildName(u.childName || "Explorer");
-        setChildPhoto(u.childPhoto || "");
-        setUserLevel(u.level || 1);
-        setStreakDays(u.streakDays || 0);
-        fetchJourneyData(u);
-      } catch (e) { }
-    }
+    let deferTimer: any = null;
 
     const loadAllDashboardData = async () => {
       const token = localStorage.getItem("userToken");
       if (!token) return;
 
+      // Stage 1 (Critical Above-The-Fold): Fetch profile, missions, journey, continue learning, and neuroplay immediately
       const profilePromise = fetchProfile();
       const missionsPromise = fetchMissions();
-      const notificationsPromise = fetchNotifications();
-
-      const citiesPromise = (async () => {
-        try {
-          const cRes = await apiFetch("/api/practice/cities");
-          if (cRes.ok) {
-            const cData = await cRes.json();
-            if (cData.success && cData.data) {
-              setCitiesData(cData.data);
-            }
-          }
-        } catch (e) {
-          console.error("Failed to fetch cities", e);
-        }
-      })();
-
-      const spinWheelPromise = (async () => {
-        try {
-          const spinRes = await apiFetch("/api/retention/spin-wheel/status");
-          if (spinRes.ok) {
-            const spinData = await spinRes.json();
-            if (spinData && spinData.balances) {
-              const dailyCount = spinData.balances.daily_spins_balance || 0;
-              const hasSpin = dailyCount > 0 || (spinData.balances.event_spins_balance || 0) > 0;
-              setHasFreeSpin(hasSpin);
-
-              if (dailyCount > 0 && sessionStorage.getItem("dailySpinPopupShown") !== "true") {
-                setPendingSpinPopup(true);
-              }
-            }
-          }
-        } catch (e) {
-          console.error("Failed to fetch spin wheel status", e);
-        }
-      })();
-
-      const streakSequencePromise = (async () => {
-        try {
-          try {
-            const statusRes = await apiFetch("/api/retention/streak/status");
-            if (statusRes.ok) {
-              const sData = await statusRes.json();
-              if (sData.lostStreak) {
-                setStreakRevivalData(sData);
-                setShowRevivalModal(true);
-              }
-            }
-          } catch (e) { }
-
-          const stRes = await apiFetch("/api/retention/streak");
-          if (stRes.ok) {
-            const stData = await stRes.json();
-            setRetentionStreak(stData);
-          }
-        } catch (e) {
-          console.error("Failed to fetch streak info", e);
-        }
-      })();
-
       const journeyPromise = fetchJourneyData();
+      const continueLearningPromise = fetchContinueLearningProgress();
+      const neuroPlayPromise = fetchNeuroPlayProgress();
+      const shadowArenaPromise = fetchShadowArenaProgress();
 
       await Promise.allSettled([
         profilePromise,
         missionsPromise,
-        notificationsPromise,
-        citiesPromise,
-        spinWheelPromise,
-        streakSequencePromise,
-        journeyPromise
+        journeyPromise,
+        continueLearningPromise,
+        neuroPlayPromise,
+        shadowArenaPromise
       ]);
+
+      // Stage 2 (Deferred Background Work): Unblock the main thread to complete FCP & LCP paint
+      deferTimer = setTimeout(async () => {
+        try {
+          const notificationsPromise = fetchNotifications();
+
+          const citiesPromise = (async () => {
+            try {
+              const cRes = await apiFetch("/api/practice/cities");
+              if (cRes.ok) {
+                const cData = await cRes.json();
+                if (cData.success && cData.data) {
+                  setCitiesData(cData.data);
+                }
+              }
+            } catch (e) {
+              console.error("Failed to fetch cities", e);
+            }
+          })();
+
+          const spinWheelPromise = (async () => {
+            try {
+              const spinRes = await apiFetch("/api/retention/spin-wheel/status");
+              if (spinRes.ok) {
+                const spinData = await spinRes.json();
+                if (spinData && spinData.balances) {
+                  const dailyCount = spinData.balances.daily_spins_balance || 0;
+                  const hasSpin = dailyCount > 0 || (spinData.balances.event_spins_balance || 0) > 0;
+                  setHasFreeSpin(hasSpin);
+
+                  if (dailyCount > 0 && sessionStorage.getItem("dailySpinPopupShown") !== "true") {
+                    setPendingSpinPopup(true);
+                  }
+                }
+              }
+            } catch (e) {
+              console.error("Failed to fetch spin wheel status", e);
+            }
+          })();
+
+          const streakSequencePromise = (async () => {
+            try {
+              try {
+                const statusRes = await apiFetch("/api/retention/streak/status");
+                if (statusRes.ok) {
+                  const sData = await statusRes.json();
+                  if (sData.lostStreak) {
+                    setStreakRevivalData(sData);
+                    setShowRevivalModal(true);
+                  }
+                }
+              } catch (e) { }
+
+              const stRes = await apiFetch("/api/retention/streak");
+              if (stRes.ok) {
+                const stData = await stRes.json();
+                setRetentionStreak(stData);
+              }
+            } catch (e) {
+              console.error("Failed to fetch streak info", e);
+            }
+          })();
+
+          const dailyHabitPromise = (async () => {
+            try {
+              const ctx = getActiveUserContext();
+              const childId = ctx.childId || userData?.activeChildId || "child_1";
+              const res = await apiFetch(`/api/practice/habits/daily?childId=${encodeURIComponent(childId)}`);
+              if (res.ok) {
+                const json = await res.json();
+                if (json.success && json.data) {
+                  setDailyHabitData(json.data);
+                  try {
+                    sessionStorage.setItem(`nrs_global_habit_${childId}`, JSON.stringify(json.data));
+                  } catch (e) { }
+                  return;
+                }
+              }
+              // Graceful fallback to Day 1 if response is not successful
+              setDailyHabitData((prev: any) => prev || { currentDay: 1, isCompletedToday: false, completedCount: 0, totalHabits: 365 });
+            } catch (e) {
+              console.error("Failed to fetch daily habit info", e);
+              setDailyHabitData((prev: any) => prev || { currentDay: 1, isCompletedToday: false, completedCount: 0, totalHabits: 365 });
+            } finally {
+              setIsHabitLoading(false);
+            }
+          })();
+
+          await Promise.allSettled([
+            notificationsPromise,
+            citiesPromise,
+            spinWheelPromise,
+            streakSequencePromise,
+            dailyHabitPromise
+          ]);
+        } catch (e) { }
+      }, 120);
     };
 
     loadAllDashboardData();
@@ -290,6 +579,21 @@ export default function HomeScreen() {
           setChildPhoto(u.childPhoto || "");
           setUserLevel(u.level || 1);
           setStreakDays(u.streakDays || 0);
+          fetchJourneyData(u);
+          fetchContinueLearningProgress(u);
+          fetchNeuroPlayProgress(u);
+          fetchNotifications(u);
+          const cachedSA = getScopedItem("cached_shadow_arena_progress");
+          if (cachedSA) {
+            try {
+              const parsed = JSON.parse(cachedSA);
+              const completed = Number(parsed.completed ?? 0);
+              const total = 100;
+              const percent = Math.min(100, Math.max(0, Math.round((completed / total) * 100)));
+              setShadowArenaProgress({ completed, total, percent });
+            } catch (e) {}
+          }
+          fetchShadowArenaProgress(u);
         } catch (e) {
           console.error("Failed to parse cached userData:", e);
         }
@@ -304,6 +608,7 @@ export default function HomeScreen() {
     const pollInterval = setInterval(fetchMissions, 10000);
 
     return () => {
+      if (deferTimer) clearTimeout(deferTimer);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('userDataUpdated', handleUserDataUpdated);
       clearInterval(pollInterval);
@@ -332,197 +637,469 @@ export default function HomeScreen() {
     }
   };
 
-  const activeMission = missions.find(m => m.status !== 'claimed') || missions[0];
+  const activeMission = useMemo(() => {
+    return missions.find(m => m.status !== 'claimed') || missions[0];
+  }, [missions]);
+
+  const displayMissions = useMemo(() => {
+    const rawList = (missions && missions.length > 0 ? missions : [
+      { seq: 1, id: "seq_1", title: t('answer_10_questions', 'Answer 10 Questions'), coin_reward: 10, xp_reward: 20, current_progress: 0, target_progress: 10, status: "pending", mission_type: "answer_questions" },
+      { seq: 2, id: "seq_2", title: t('win_1_boss_battle', 'Win 1 Boss Battle'), coin_reward: 15, xp_reward: 20, current_progress: 0, target_progress: 1, status: "pending", mission_type: "boss_win" },
+      { seq: 3, id: "seq_3", title: t('win_1_shadow_arena', 'Win 1 Shadow Arena Battle'), coin_reward: 50, xp_reward: 50, current_progress: 0, target_progress: 1, status: "pending", mission_type: "shadow_arena_win" }
+    ]);
+
+    const filteredList = rawList.filter((m) => {
+      const isDone = m.status === "completed";
+      if (questTab === 'completed') return isDone;
+      if (questTab === 'active') return !isDone;
+      return true;
+    });
+
+    const sortedList = [...filteredList].sort((a, b) => {
+      const isDoneA = a.status === "completed";
+      const isReadyA = a.status === "ready_to_claim" || (a.current_progress >= (a.target_progress || 1) && !isDoneA);
+      const isDoneB = b.status === "completed";
+      const isReadyB = b.status === "ready_to_claim" || (b.current_progress >= (b.target_progress || 1) && !isDoneB);
+
+      const orderA = isReadyA ? 0 : isDoneA ? 2 : 1;
+      const orderB = isReadyB ? 0 : isDoneB ? 2 : 1;
+      if (orderA !== orderB) return orderA - orderB;
+      return (a.seq || 0) - (b.seq || 0);
+    });
+
+    return sortedList.slice(0, 3);
+  }, [missions, questTab, t]);
+
+  const effectiveTheme = useMemo(() => {
+    const themeParam = searchParams.get("theme");
+    if (themeParam && ["dragon", "science", "social"].includes(themeParam)) return themeParam;
+    if (journeyData?.tierKey === "scientist") return "science";
+    if (journeyData?.tierKey === "social_proof") return "social";
+    if (journeyData?.tierKey === "dragon") return "dragon";
+
+    const childClassStr = userData?.childClass || "";
+    const match = childClassStr.match(/\d+/);
+    const classNum = match ? parseInt(match[0], 10) : 1;
+    if (classNum >= 8) return "social";
+    if (classNum >= 5) return "science";
+    return "dragon";
+  }, [searchParams, journeyData?.tierKey, userData?.childClass]);
+
+  const handleCtaClick = useCallback(() => {
+    startNavigationProgress();
+    navigate("/practice/journey-map");
+  }, [navigate]);
+  const handleMissionClick = useCallback(() => setShowDailyMissionModal(true), []);
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-[#141779] font-sans relative overflow-x-hidden pb-28 max-w-md mx-auto">
+    <div className="min-h-screen bg-[#f7f9fb] text-[#141779] font-sans relative overflow-x-hidden pb-3 max-w-md mx-auto">
       {/* Dynamic Background Glows */}
-      <div className="absolute top-[10%] -right-[20%] w-[280px] h-[280px] rounded-full bg-[rgba(87,250,233,0.12)] pointer-events-none" />
       <div className="absolute bottom-[20%] -left-[25%] w-[320px] h-[320px] rounded-full bg-[rgba(20,23,121,0.05)] pointer-events-none" />
 
       {/* TOP HEADER */}
-      <header className="fixed top-0 left-0 right-0 max-w-md mx-auto flex items-center justify-between px-5 py-3.5 bg-[#f7f9fb]/90 border-b border-slate-100 z-50 backdrop-blur-md gap-2">
+      <header className="fixed top-0 left-0 right-0 max-w-md mx-auto flex items-center justify-between px-4 pt-3 pb-3 bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-2xl shadow-[0_4px_16px_rgba(20,23,121,0.05)] z-50 gap-2 select-none">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          <button
-            onClick={() => navigate("/profile")}
-            className="w-10 h-10 rounded-full border-2 border-[#57fae9] overflow-hidden hover:opacity-80 transition-opacity shrink-0 bg-white shadow-xs"
-          >
-            {childPhoto ? (
-              <img
-                src={childPhoto}
-                alt="Avatar"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <img
-                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(childName || "Kid")}&background=random`}
-                alt="Avatar"
-                className="w-full h-full object-cover"
-              />
-            )}
-          </button>
-          <div className="flex flex-col min-w-0">
-            <h1 className="text-sm font-black text-slate-900 leading-tight truncate">{childName}</h1>
-            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-              <span className="text-[10px] text-[#5B5CFF] bg-[#EEF1FF] font-black px-1.5 py-0.5 rounded-md border border-[#5B5CFF]/20 shrink-0">
-                {userData?.childClass || t('class_1', { defaultValue: "Class 1" })}
-              </span>
-              {userData?.childAge && (
-                <span className="text-[10px] text-amber-700 bg-amber-50 font-black px-1.5 py-0.5 rounded-md border border-amber-200/60 shrink-0">
-                  {userData.childAge} {t('yrs', { defaultValue: "yrs" })}
-                </span>
+          <div className="relative shrink-0">
+            <button
+              onClick={() => {
+                startNavigationProgress();
+                navigate("/profile");
+              }}
+              className="w-10 h-10 rounded-full border-2 border-indigo-100 overflow-hidden hover:opacity-90 active:scale-90 touch-manipulation transition-all shrink-0 bg-[#141779] shadow-xs block cursor-pointer"
+              aria-label="Profile Avatar"
+            >
+              {childPhoto ? (
+                <img
+                  src={childPhoto}
+                  alt="Avatar"
+                  width={40}
+                  height={40}
+                  loading="eager"
+                  decoding="async"
+                  // @ts-ignore fetchpriority for React 18
+                  fetchpriority="high"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-[#141779] text-white font-bold text-xs flex items-center justify-center">
+                  {childName ? childName.slice(0, 2).toUpperCase() : "NR"}
+                </div>
               )}
-              <span className="text-[10px] text-slate-500 font-extrabold truncate">
-                {t('explorer_level', { defaultValue: "Explorer Level" })} {userLevel}
+            </button>
+          </div>
+          <div className="flex flex-col min-w-0 justify-center">
+            {/* Line 1: Child Name (Full Width, No Truncation Cramming) */}
+            <div className="min-w-0">
+              <h1 className="text-sm font-black text-slate-900 leading-tight truncate">{childName}</h1>
+            </div>
+            {/* Line 2: Class Badge, Level & Switch Pill Button */}
+            <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+              <span className="text-[10px] text-[#4f46e5] bg-[#eef2ff] font-black px-1.5 py-0.5 rounded-full border border-indigo-100 shrink-0 whitespace-nowrap">
+                {userData?.childClass || t('class_10', { defaultValue: "Class 10" })}
               </span>
+              <span className="text-[10.5px] text-slate-400 font-extrabold whitespace-nowrap">
+                Lvl {userLevel}
+              </span>
+              {userData?.children && userData.children.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setShowSwitcher(true)}
+                  className="px-2 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-[#141779] rounded-full text-[9.5px] font-black border border-indigo-200/80 active:scale-95 transition-all shrink-0 cursor-pointer"
+                  title="Switch child profile"
+                >
+                  Switch
+                </button>
+              )}
             </div>
           </div>
         </div>
 
         {/* Currency & Streak Stats */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           <button
             onClick={() => setShowStreakModal(true)}
-            className="h-8.5 bg-orange-50 px-2.5 rounded-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-transform border border-orange-100 whitespace-nowrap"
+            className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1 flex items-center justify-center hover:scale-105 active:scale-95 touch-manipulation transition-transform shadow-2xs cursor-pointer"
           >
-            <span className="text-[11px] font-black text-orange-600">🔥 {retentionStreak?.currentStreak ?? streakDays}</span>
+            <span className="text-[11px] font-black text-[#ea580c] leading-none whitespace-nowrap">🔥 {retentionStreak?.currentStreak ?? streakDays ?? 0}</span>
           </button>
-          
           <button
-            onClick={() => navigate("/notifications")}
-            className="w-8.5 h-8.5 rounded-xl bg-white shadow-xs flex items-center justify-center hover:bg-slate-50 transition-all shrink-0 border border-slate-200/60 relative"
+            onClick={() => {
+              startNavigationProgress();
+              navigate("/practice/inventory");
+            }}
+            className="bg-[#fffbeb] border border-amber-100/80 rounded-2xl px-2 py-1 flex items-center justify-center hover:scale-105 active:scale-90 touch-manipulation transition-transform shadow-2xs cursor-pointer"
           >
-            <Bell size={16} className="text-[#141779]" />
+            <span className="text-[11px] font-black text-[#b45309] leading-none whitespace-nowrap">🪙 {coins || 0}</span>
+          </button>
+          <button
+            onClick={() => {
+              startNavigationProgress();
+              navigate("/notifications");
+            }}
+            className="w-8 h-8 rounded-2xl bg-slate-50 shadow-2xs flex items-center justify-center hover:bg-slate-100 active:scale-90 touch-manipulation transition-all shrink-0 border border-slate-100 relative cursor-pointer"
+          >
+            <Bell size={15} className="text-[#1c1970]" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full text-[8px] text-white flex items-center justify-center font-bold border border-white pointer-events-none z-10">
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border border-white pointer-events-none z-10">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
           </button>
-          
-          <button
-            onClick={() => navigate("/practice/inventory")}
-            className="h-8.5 bg-amber-50 px-2.5 rounded-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-transform border border-amber-100 whitespace-nowrap shrink-0"
-          >
-            <span className="text-[11px] font-black text-amber-700">🪙 {coins}</span>
-          </button>
         </div>
       </header>
 
-      <main className="px-5 pt-[96px] flex flex-col gap-4 relative z-10">
-        {/* 1. ADVENTURE HERO CARD (LIGHT THEME WITH ANIMATED CHARACTER & PARTICLES) */}
+      <main className="px-4 pt-[68px] flex flex-col gap-3.5 relative z-10">
+        {/* 1. ADVENTURE HERO CARD */}
         <AdventureHero
-          themeKey={journeyData?.tierKey === "scientist" ? "science" : journeyData?.tierKey === "social_proof" ? "social" : "dragon"}
+          themeKey={effectiveTheme}
           xp={xp}
           targetXp={1000}
           currentLocationName={journeyData?.currentLocation || "Egg Village"}
           destinationName={journeyData?.nextNodeName || "Forest Kingdom"}
           journeyData={journeyData}
-          onCtaClick={() => navigate("/practice/journey-map")}
-          onMissionClick={() => navigate("/practice/chapters")}
+          onCtaClick={handleCtaClick}
+          onMissionClick={handleMissionClick}
           missionTitle={activeMission?.title}
-          missionProgress={activeMission ? { current: activeMission.current_progress || 0, total: activeMission.target_progress || 10 } : undefined}
-          missionRewardText={activeMission ? `+${activeMission.xp_reward || 20} XP & ${activeMission.coin_reward || 10} Coins` : undefined}
+          missionProgress={activeMission ? { current: activeMission.current_progress ?? activeMission.currentProgress ?? 0, total: activeMission.target_progress ?? activeMission.targetProgress ?? 10 } : undefined}
+          missionRewardText={activeMission ? `+${activeMission.xp_reward ?? activeMission.xpReward ?? 20} XP & ${activeMission.coin_reward ?? activeMission.coinReward ?? 10} Coins` : undefined}
+          missionXpReward={activeMission ? (activeMission.xp_reward ?? activeMission.xpReward ?? activeMission.xp) : undefined}
+          missionCoinReward={activeMission ? (activeMission.coin_reward ?? activeMission.coinReward ?? activeMission.coins) : undefined}
         />
 
-        {/* 2. FOUR QUICK ACTION BENTO GRID (2x2 Pastel Cards) */}
+        {/* 2. SIX QUICK ACTION BENTO GRID (2x3 Cards with Continue Learning, Good Habits, Journey, My Collections, Brain Quest, Shadow Arena) */}
         <section className="grid grid-cols-2 gap-3">
           {/* Continue Learning */}
-          <button
-            onClick={() => navigate("/practice/chapters")}
-            className="bg-[#e0e0ff] rounded-[20px] p-4 flex flex-col justify-between h-32 border-[1.5px] border-white/60 shadow-xs text-left hover:scale-[1.02] transition-transform"
-          >
-            <div className="w-10 h-10 rounded-full bg-[rgba(20,23,121,0.12)] flex items-center justify-center">
-              <BookOpen size={20} className="text-[#141779]" />
-            </div>
-            <div>
-              <h3 className="text-xs font-black text-[#141779] mb-0.5">📚 {t('continue_learning')}</h3>
-              <p className="text-[10px] text-[#767683] font-semibold">{t('math_science_quests')}</p>
-            </div>
-          </button>
+          {(() => {
+            const classCurriculumTotal = journeyData?.totalCurrentClassChapters ?? journeyData?.totalTierChapters;
+            const totalCh = classCurriculumTotal || continueLearningProgress.total || 0;
+            const completedCh = continueLearningProgress.completed;
+            const pct = totalCh > 0 ? Math.min(100, Math.round((completedCh / totalCh) * 100)) : 0;
+            const progressText = totalCh > 0
+              ? t('chapters_complete', { completed: completedCh, total: totalCh, defaultValue: `${completedCh}/${totalCh} Chapters Complete` })
+              : t('resume_chapters', 'Resume chapters & practice');
+
+            return (
+              <button
+                onClick={() => navigate("/practice/chapters")}
+                className="bg-[#e0e0ff] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#c7c7ff]/70 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
+              >
+                <div className="w-9 h-9 rounded-full bg-[rgba(20,23,121,0.12)] flex items-center justify-center">
+                  <BookOpen size={18} className="text-[#141779]" />
+                </div>
+                <div className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
+                  <ChevronRight size={14} />
+                </div>
+                <div className="mt-2">
+                  <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('continue_learning')}</h3>
+                  <p className="text-[11px] text-[#525266] font-bold leading-relaxed mb-2 truncate">{t('math_science_quests')}</p>
+                  <div className="space-y-1">
+                    <div className="text-[9.5px] font-extrabold text-[#141779] truncate">
+                      {progressText}
+                    </div>
+                    <div className="w-full h-1.5 bg-[#c7c7ff]/70 rounded-full overflow-hidden">
+                      <div className="h-full bg-[#141779] rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                </div>
+              </button>
+            );
+          })()}
 
           {/* Good Habits */}
-          <button
-            onClick={() => navigate("/good-habits")}
-            className="bg-[#fff0da] rounded-[20px] p-4 flex flex-col justify-between h-32 border-[1.5px] border-white/60 shadow-xs text-left hover:scale-[1.02] transition-transform"
-          >
-            <div className="w-10 h-10 rounded-full bg-[rgba(255,159,67,0.2)] flex items-center justify-center">
-              <Star size={20} className="text-[#ff9f43]" />
-            </div>
-            <div>
-              <h3 className="text-xs font-black text-[#141779] mb-0.5">⭐ {t('good_habits')}</h3>
-              <p className="text-[10px] text-[#767683] font-semibold">{t('daily_lessons_rewards')}</p>
-            </div>
-          </button>
+          {(() => {
+            const isLoading = isHabitLoading && !dailyHabitData;
+            const currentHabitDay = dailyHabitData?.currentDay || 1;
+            const isCompletedToday = dailyHabitData?.isCompletedToday ?? false;
+            const totalHabits = dailyHabitData?.totalHabits || 365;
+            const completedHabits = typeof dailyHabitData?.completedCount === "number"
+              ? dailyHabitData.completedCount
+              : Math.max(0, isCompletedToday ? currentHabitDay : currentHabitDay - 1);
 
-          {/* My Journey */}
-          <button
-            onClick={() => navigate("/practice/journey-map")}
-            className="bg-[#d7fdf5] rounded-[20px] p-4 flex flex-col justify-between h-32 border-[1.5px] border-white/60 shadow-xs text-left hover:scale-[1.02] transition-transform"
-          >
-            <div className="w-10 h-10 rounded-full bg-[rgba(0,106,98,0.15)] flex items-center justify-center">
-              <Map size={20} className="text-[#006a62]" />
-            </div>
-            <div>
-              <h3 className="text-xs font-black text-[#141779] mb-0.5">🗺 {t('journey')}</h3>
-              <p className="text-[10px] text-[#767683] font-semibold">{t('explorer_map')}</p>
-            </div>
-          </button>
+            const habitsPct = totalHabits > 0
+              ? Math.min(100, Math.round((completedHabits / totalHabits) * 100))
+              : 0;
+
+            const habitsBarWidth = completedHabits > 0 ? Math.max(1, habitsPct) : 0;
+
+            const habitsDoneText = t('habits_completed_ratio', {
+              completed: completedHabits,
+              total: totalHabits,
+              pct: habitsPct,
+              defaultValue: `${completedHabits}/${totalHabits} Habits (${habitsPct}%)`
+            });
+
+            return (
+              <button
+                onClick={() => navigate("/good-habits")}
+                className="bg-[#fff8ee] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#fed7aa]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
+              >
+                <div className="w-9 h-9 rounded-full bg-[#ffedd5] flex items-center justify-center">
+                  <Star size={18} className="text-[#f97316] fill-[#f97316]" />
+                </div>
+                <div className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
+                  <ChevronRight size={14} />
+                </div>
+                <div className="mt-2">
+                  <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('good_habits', 'Good Habits')}</h3>
+                  <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-2 truncate">{t('daily_lessons_rewards', 'Daily lessons & rewards')}</p>
+                  {isLoading ? (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-orange-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse shrink-0" />
+                        <span className="animate-pulse truncate">{t('loading', 'Loading...')}</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-orange-100/80 rounded-full overflow-hidden">
+                        <div className="h-full bg-orange-300/60 rounded-full animate-pulse transition-all duration-500" style={{ width: '0%' }} />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <div className="text-[9.5px] font-extrabold text-[#f97316] truncate flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#f97316] shrink-0" />
+                        <span className="truncate">{habitsDoneText}</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-orange-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-orange-400 rounded-full transition-all duration-500" style={{ width: `${habitsBarWidth}%` }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </button>
+            );
+          })()}
+
+          {/* Journey */}
+          {(() => {
+            const activeClassNum = (() => {
+              const raw = getActiveUserContext().classLevel || userData?.childClass || "Class 1";
+              const m = String(raw).match(/\d+/);
+              return m ? parseInt(m[0], 10) : 1;
+            })();
+
+            const currentClassNodes = Array.isArray(journeyData?.nodes)
+              ? journeyData.nodes.filter((n: any) => n.minClass === activeClassNum)
+              : [];
+            const totalLevels = currentClassNodes.length || (activeClassNum >= 4 ? 4 : 3);
+            const completedLevels = currentClassNodes.filter((n: any) => Boolean(n.completed)).length;
+
+            const journeyCompleted = journeyData?.completedCurrentClassChapters ?? journeyData?.completedChapters ?? 0;
+            const journeyTotal = journeyData?.totalCurrentClassChapters ?? journeyData?.totalTierChapters ?? 0;
+            const journeyPct = typeof journeyData?.currentClassProgress === "number"
+              ? Math.min(100, Math.max(0, Math.round(journeyData.currentClassProgress)))
+              : (typeof journeyData?.journeyProgress === "number"
+                ? Math.min(100, Math.max(0, Math.round(journeyData.journeyProgress)))
+                : (typeof journeyData?.progressPercentage === "number"
+                  ? Math.min(100, Math.max(0, Math.round(journeyData.progressPercentage)))
+                  : (journeyTotal > 0 ? Math.min(100, Math.max(0, Math.round((journeyCompleted / journeyTotal) * 100))) : 0)));
+
+            const journeyProgressText = t('levels_progress_ratio', {
+              completed: completedLevels,
+              total: totalLevels,
+              pct: journeyPct,
+              defaultValue: `${completedLevels}/${totalLevels} Levels (${journeyPct}%)`
+            });
+
+            return (
+              <button
+                onClick={() => navigate("/practice/journey-map")}
+                className="bg-[#e6fbf7] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#b2f5ea]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
+              >
+                <div className="w-9 h-9 rounded-full bg-[#ccfbf1] flex items-center justify-center">
+                  <BookOpen size={18} className="text-[#0d9488]" />
+                </div>
+                <div className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
+                  <ChevronRight size={14} />
+                </div>
+                <div className="mt-2">
+                  <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('journey', 'Journey')}</h3>
+                  <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-2 truncate">{t('explorer_map', 'Explorer Map & Stages')}</p>
+                  <div className="space-y-1">
+                    <div className="text-[9.5px] font-extrabold text-[#0d9488] truncate flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#0d9488] shrink-0" />
+                      <span className="truncate">
+                        {journeyProgressText}
+                      </span>
+                    </div>
+                    <div className="w-full h-1.5 bg-[#ccfbf1] rounded-full overflow-hidden">
+                      <div className="h-full bg-[#0d9488] rounded-full transition-all duration-500" style={{ width: `${journeyPct}%` }} />
+                    </div>
+                  </div>
+                </div>
+              </button>
+            );
+          })()}
 
           {/* My Collections */}
           <button
             onClick={() => navigate("/practice/collections")}
-            className="bg-[#ffe8ed] rounded-[20px] p-4 flex flex-col justify-between h-32 border-[1.5px] border-white/60 shadow-xs text-left hover:scale-[1.02] transition-transform"
+            className="bg-[#fff1f3] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#fecdd3]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group"
           >
-            <div className="w-10 h-10 rounded-full bg-[rgba(255,107,107,0.15)] flex items-center justify-center">
-              <Bookmark size={20} className="text-[#ff6b6b]" />
+            <div className="w-9 h-9 rounded-full bg-[#ffe4e6] flex items-center justify-center">
+              <Trophy size={18} className="text-[#e11d48]" />
             </div>
-            <div>
-              <h3 className="text-xs font-black text-[#141779] mb-0.5">🏆 {t('my_collections')}</h3>
-              <p className="text-[10px] text-[#767683] font-semibold">{t('unlocked_cards_badges')}</p>
+            <div className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
+              <ChevronRight size={14} />
+            </div>
+            <div className="mt-2">
+              <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('my_collections', 'My Collections')}</h3>
+              <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-2 truncate">{t('unlocked_cards_badges', 'Unlocked cards & badges')}</p>
+              <div className="flex items-center gap-1.5 pt-0.5">
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-amber-500 to-yellow-400 text-white flex items-center justify-center shadow-2xs border border-amber-200/50">
+                  <Star size={12} className="fill-white" />
+                </div>
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-500 text-white flex items-center justify-center shadow-2xs border border-purple-200/50">
+                  <Crown size={12} className="fill-white" />
+                </div>
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-rose-500 to-pink-400 text-white flex items-center justify-center shadow-2xs border border-pink-200/50">
+                  <BookOpen size={12} />
+                </div>
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-cyan-500 to-blue-500 text-white flex items-center justify-center shadow-2xs border border-cyan-200/50">
+                  <Gem size={12} />
+                </div>
+              </div>
             </div>
           </button>
-        </section>
 
-        {/* 3. SHADOW ARENA (1V1) CARD */}
-        <section>
-          <button
-            onClick={() => navigate("/multiplayer-hub")}
-            className="w-full bg-gradient-to-r from-[#141779] via-[#1E239E] to-[#30007f] rounded-[20px] p-4 flex items-center justify-between shadow-md hover:scale-[1.01] transition-transform border border-white/20"
-          >
-            <div className="flex items-center gap-3.5">
-              <div className="w-11 h-11 rounded-full bg-white/10 flex items-center justify-center border border-white/20 shrink-0">
-                <span className="text-2xl">⚔️</span>
-              </div>
-              <div className="text-left">
-                <h3 className="text-sm font-black text-white uppercase tracking-wider mb-0.5">{t('shadow_arena')}</h3>
-                <p className="text-[10px] text-[#57fae9] font-bold">{t('challenge_friends')}</p>
-              </div>
-            </div>
-            <div className="bg-white/20 p-1.5 rounded-full">
-              <ChevronRight size={18} color="white" />
-            </div>
-          </button>
+          {/* Neuro Play */}
+          {(() => {
+            const skillsCompleted = neuroPlayProgress.completed;
+            const totalSkills = neuroPlayProgress.total;
+            const pct = neuroPlayProgress.percent;
+            const neuroPlayText = totalSkills > 0
+              ? t('skills_completed_ratio', { completed: skillsCompleted, total: totalSkills, defaultValue: `${skillsCompleted}/${totalSkills} Skills completed` })
+              : t('day_1_quests', 'Day 1 Quests (M01 & M02)');
+
+            return (
+              <button
+                onClick={() => navigate("/neuro-play")}
+                className="bg-[#f3e8ff] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#d8b4fe]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
+              >
+                <div className="w-9 h-9 rounded-full bg-[#ede9fe] flex items-center justify-center">
+                  <Brain size={18} className="text-[#8b5cf6]" />
+                </div>
+                <div className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
+                  <ChevronRight size={14} />
+                </div>
+                <div className="mt-2">
+                  <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('neuro_play', 'Neuro Play')}</h3>
+                  <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-2 truncate">{t('brain_skill_lab', 'Brain Skill Lab & Quests')}</p>
+                  <div className="space-y-1">
+                    <div className="text-[9.5px] font-extrabold text-[#7c3aed] truncate flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#7c3aed] shrink-0" />
+                      <span className="truncate">{neuroPlayText}</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-[#ede9fe] rounded-full overflow-hidden">
+                      <div className="h-full bg-[#8b5cf6] rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                </div>
+              </button>
+            );
+          })()}
+
+          {/* Shadow Arena */}
+          {(() => {
+            const fightsCompleted = Number(shadowArenaProgress.completed || 0);
+            const targetFights = 100;
+            const fightsPct = Math.min(100, Math.max(0, Math.round((fightsCompleted / targetFights) * 100)));
+            const fightsBarWidth = fightsCompleted > 0 ? Math.max(1, fightsPct) : 0;
+
+            const fightsText = t('fights_completed_ratio', {
+              completed: fightsCompleted,
+              total: targetFights,
+              pct: fightsPct,
+              defaultValue: `${fightsCompleted}/${targetFights} Fights (${fightsPct}%)`
+            });
+
+            return (
+              <button
+                onClick={() => navigate("/multiplayer-hub")}
+                className="bg-[#e8fdf5] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#b7f4d8]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
+              >
+                <div className="w-9 h-9 rounded-full bg-[#d1fae5] flex items-center justify-center">
+                  <Swords size={18} className="text-[#059669]" />
+                </div>
+                <div className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
+                  <ChevronRight size={14} />
+                </div>
+                <div className="mt-2">
+                  <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('shadow_arena', 'Shadow Arena')}</h3>
+                  <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-2 truncate">{t('challenge_friends_short', 'Challenge friends in real...')}</p>
+                  <div className="space-y-1">
+                    <div className="text-[9.5px] font-extrabold text-[#059669] truncate flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] shrink-0" />
+                      <span className="truncate">{fightsText}</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-[#d1fae5] rounded-full overflow-hidden">
+                      <div className="h-full bg-[#10b981] rounded-full transition-all duration-500" style={{ width: `${fightsBarWidth}%` }} />
+                    </div>
+                  </div>
+                </div>
+              </button>
+            );
+          })()}
         </section>
 
         {/* 4. PARENT SPACE LINK CARD */}
         <section>
           <button
             onClick={() => navigate("/parent")}
-            className="w-full bg-white rounded-[20px] p-3.5 flex justify-between items-center border-2 border-indigo-100 shadow-xs hover:bg-indigo-50/50 hover:border-indigo-200 transition-all group cursor-pointer"
+            className="w-full bg-white rounded-[24px] p-3.5 flex justify-between items-center border border-slate-200/80 shadow-2xs hover:bg-slate-50/80 transition-all group cursor-pointer"
           >
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center shrink-0 border border-indigo-100">
-                <Shield size={18} className="text-[#141779]" />
+              <div className="w-10 h-10 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
+                <Shield size={18} className="text-[#1c1970]" />
               </div>
               <div className="text-left">
-                <h3 className="text-xs font-black text-[#141779] flex items-center gap-1.5">
+                <h3 className="text-sm font-black text-slate-900">
                   <span>{t('parent_space', 'Parent Space')}</span>
                 </h3>
-                <p className="text-[10px] text-slate-500 font-semibold">{t('view_stats_dna', 'View detailed stats and learning DNA')}</p>
+                <p className="text-[11px] text-slate-400 font-semibold">{t('view_stats_dna', 'View detailed stats & learning DNA')}</p>
               </div>
             </div>
-            <ChevronRight size={20} className="text-[#141779] group-hover:translate-x-0.5 transition-transform" />
+            <div className="w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
+              <ChevronRight size={14} />
+            </div>
           </button>
         </section>
       </main>
@@ -530,24 +1107,29 @@ export default function HomeScreen() {
       {/* DAILY MISSIONS MODAL */}
       <AnimatePresence>
         {showDailyMissionModal && (
-          <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-hidden">
+          <div 
+            className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-hidden"
+            style={{ touchAction: "none" }}
+            onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+          >
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 30 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 30 }}
               transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              className="bg-white text-slate-950 w-full max-w-[440px] h-[82vh] max-h-[620px] p-4 sm:p-6 rounded-[32px] border-2 border-slate-200 shadow-2xl flex flex-col relative overflow-hidden"
+              style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
+              className="bg-white text-slate-950 w-full max-w-[440px] h-auto max-h-[85vh] p-4 sm:p-6 rounded-[32px] border-2 border-slate-200 shadow-2xl flex flex-col relative overflow-hidden my-auto"
             >
               {/* Modal Header */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0 relative z-10">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-400 to-amber-500 text-slate-950 flex items-center justify-center shadow-lg shadow-amber-500/20 border-2 border-white shrink-0">
-                    <Clock className="w-5 h-5 animate-pulse" />
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#141779] to-[#25218c] text-white flex items-center justify-center shadow-lg shadow-indigo-900/20 border-2 border-indigo-200/40 shrink-0">
+                    <Clock className="w-5 h-5 animate-pulse text-[#57fae9]" />
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <h3 className="text-base sm:text-lg font-black text-slate-950 tracking-tight truncate">{t('daily_quests', 'Daily Quests')}</h3>
-                      <span className="text-[10px] sm:text-xs font-black bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full border border-amber-400 shrink-0">
+                      <span className="text-[10px] sm:text-xs font-black bg-[#141779] text-white px-2 py-0.5 rounded-full border border-indigo-900/40 shrink-0">
                         ⚡ {todayCompletedCount}/25
                       </span>
                     </div>
@@ -566,81 +1148,53 @@ export default function HomeScreen() {
               <div className="flex items-center gap-2 py-2.5 border-b border-slate-100 shrink-0 relative z-10">
                 <button
                   onClick={() => setQuestTab('all')}
-                  className={`px-3.5 py-1.5 rounded-xl font-black text-xs transition-all ${
-                    questTab === 'all'
-                      ? 'bg-[#141779] text-white shadow-sm'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
+                  className={`px-3.5 py-1.5 rounded-xl font-black text-xs transition-all ${questTab === 'all'
+                    ? 'bg-[#141779] text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
                 >
                   {t('all', 'All')}
                 </button>
                 <button
                   onClick={() => setQuestTab('active')}
-                  className={`px-3.5 py-1.5 rounded-xl font-black text-xs transition-all ${
-                    questTab === 'active'
-                      ? 'bg-[#141779] text-white shadow-sm'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
+                  className={`px-3.5 py-1.5 rounded-xl font-black text-xs transition-all ${questTab === 'active'
+                    ? 'bg-[#141779] text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
                 >
                   🎯 {t('active', 'Active')}
                 </button>
                 <button
                   onClick={() => setQuestTab('completed')}
-                  className={`px-3.5 py-1.5 rounded-xl font-black text-xs transition-all ${
-                    questTab === 'completed'
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
+                  className={`px-3.5 py-1.5 rounded-xl font-black text-xs transition-all ${questTab === 'completed'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
                 >
                   ✅ {t('completed', 'Completed')}
                 </button>
               </div>
 
               {dailyLimitReached ? (
-                <div className="p-6 my-auto bg-gradient-to-b from-amber-50 to-amber-100/40 rounded-[24px] border-2 border-amber-200 text-center flex flex-col items-center gap-3 shadow-sm relative z-10">
-                  <div className="w-16 h-16 rounded-full bg-amber-500 text-white flex items-center justify-center font-black text-3xl shadow-lg shadow-amber-500/25 animate-bounce">
+                <div className="p-6 my-auto bg-gradient-to-b from-indigo-50 to-indigo-100/50 rounded-[24px] border-2 border-indigo-200 text-center flex flex-col items-center gap-3 shadow-sm relative z-10">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#141779] to-[#25218c] text-white flex items-center justify-center font-black text-3xl shadow-lg shadow-indigo-900/25 animate-bounce">
                     🏆
                   </div>
-                  <h4 className="text-base sm:text-lg font-black text-amber-950">{t('quests_mastered_today', '25 / 25 Quests Mastered Today!')}</h4>
-                  <p className="text-xs font-semibold text-amber-800 leading-relaxed">
+                  <h4 className="text-base sm:text-lg font-black text-[#141779]">{t('quests_mastered_today', '25 / 25 Quests Mastered Today!')}</h4>
+                  <p className="text-xs font-semibold text-indigo-950 leading-relaxed">
                     {t('quests_mastered_desc', "Sensational effort! You have completed today's maximum 25 quests. Tomorrow starts your next continuous sequence!")}
                   </p>
                 </div>
               ) : (
                 /* GUARANTEED TOUCH & MOUSE SCROLL CONTAINER */
                 <div
-                  className="my-2.5 flex-1 min-h-0 overflow-y-auto overscroll-contain py-1 pr-1 flex flex-col gap-2.5 relative z-10 select-none [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-amber-400 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-100"
+                  className="my-2 flex-1 min-h-0 overflow-y-auto overscroll-contain py-1 pr-1 flex flex-col gap-2.5 relative z-10 select-none [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-[#141779]/30 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-100"
                   style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
                 >
                   {(() => {
-                    const rawList = (missions && missions.length > 0 ? missions : [
-                      { seq: 1, id: "seq_1", title: t('answer_10_questions', 'Answer 10 Questions'), coin_reward: 10, xp_reward: 20, current_progress: 0, target_progress: 10, status: "pending", mission_type: "answer_questions" },
-                      { seq: 2, id: "seq_2", title: t('win_1_boss_battle', 'Win 1 Boss Battle'), coin_reward: 15, xp_reward: 20, current_progress: 0, target_progress: 1, status: "pending", mission_type: "boss_win" },
-                      { seq: 3, id: "seq_3", title: t('win_1_shadow_arena', 'Win 1 Shadow Arena Battle'), coin_reward: 50, xp_reward: 50, current_progress: 0, target_progress: 1, status: "pending", mission_type: "shadow_arena_win" }
-                    ]);
-
-                    const filteredList = rawList.filter((m) => {
-                      const isDone = m.status === "completed";
-                      if (questTab === 'completed') return isDone;
-                      if (questTab === 'active') return !isDone;
-                      return true;
-                    });
-
-                    const sortedList = [...filteredList].sort((a, b) => {
-                      const isDoneA = a.status === "completed";
-                      const isReadyA = a.status === "ready_to_claim" || (a.current_progress >= (a.target_progress || 1) && !isDoneA);
-                      const isDoneB = b.status === "completed";
-                      const isReadyB = b.status === "ready_to_claim" || (b.current_progress >= (b.target_progress || 1) && !isDoneB);
-
-                      const orderA = isReadyA ? 0 : isDoneA ? 2 : 1;
-                      const orderB = isReadyB ? 0 : isDoneB ? 2 : 1;
-                      if (orderA !== orderB) return orderA - orderB;
-                      return (a.seq || 0) - (b.seq || 0);
-                    });
-
-                    if (sortedList.length === 0) {
+                    if (displayMissions.length === 0) {
                       return (
-                        <div className="py-12 text-center text-slate-500 font-bold text-sm">
+                        <div className="py-8 text-center text-slate-500 font-bold text-sm">
                           {questTab === 'completed'
                             ? t('no_completed_quests', 'No completed quests yet!')
                             : t('no_active_quests', 'No active quests remaining!')}
@@ -648,7 +1202,7 @@ export default function HomeScreen() {
                       );
                     }
 
-                    return sortedList.map((mission) => {
+                    return displayMissions.map((mission) => {
                       const isDone = mission.status === "completed";
                       const isReady = mission.status === "ready_to_claim" || (mission.current_progress >= (mission.target_progress || 1) && !isDone);
                       const cur = mission.current_progress || 0;
@@ -665,22 +1219,20 @@ export default function HomeScreen() {
                       return (
                         <div
                           key={mission.id || `seq_${mission.seq}`}
-                          className={`p-3 sm:p-3.5 rounded-2xl border-2 transition-all flex items-center justify-between gap-3 shrink-0 ${
-                            isDone
-                              ? "bg-emerald-50/90 border-emerald-200 text-emerald-950"
-                              : isReady
-                                ? "bg-amber-50 border-amber-300 shadow-md ring-2 ring-amber-400/20"
-                                : "bg-slate-50 border-slate-200/90 text-slate-900"
-                          }`}
+                          className={`p-3 sm:p-3.5 rounded-2xl border-2 transition-all flex items-center justify-between gap-3 shrink-0 ${isDone
+                            ? "bg-emerald-50/90 border-emerald-200 text-emerald-950"
+                            : isReady
+                              ? "bg-indigo-50/80 border-indigo-300 shadow-md ring-2 ring-indigo-500/20"
+                              : "bg-slate-50 border-slate-200/90 text-slate-900"
+                            }`}
                         >
                           <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 text-xl font-bold border shadow-sm ${
-                              isDone
-                                ? "bg-emerald-500 border-emerald-400 text-white"
-                                : isReady
-                                  ? "bg-amber-500 border-amber-400 text-slate-950 animate-bounce"
-                                  : "bg-[#4338ca] border-indigo-500 text-white"
-                            }`}>
+                            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 text-xl font-bold border shadow-sm ${isDone
+                              ? "bg-emerald-500 border-emerald-400 text-white"
+                              : isReady
+                                ? "bg-[#141779] border-indigo-500 text-white animate-bounce"
+                                : "bg-[#4338ca] border-indigo-500 text-white"
+                              }`}>
                               {isDone ? <CheckCircle className="w-6 h-6" /> : getIcon()}
                             </div>
                             <div className="min-w-0 flex-1">
@@ -691,7 +1243,7 @@ export default function HomeScreen() {
                                 {translatedTitle}
                               </h4>
                               <div className="flex items-center gap-1.5 text-[10px] font-black flex-wrap">
-                                <span className="inline-flex items-center gap-0.5 bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full border border-amber-200">
+                                <span className="inline-flex items-center gap-0.5 bg-indigo-50 text-[#141779] px-2 py-0.5 rounded-full border border-indigo-200/80">
                                   🪙 +{mission.coin_reward || mission.coinReward || 10}
                                 </span>
                                 <span className="inline-flex items-center gap-0.5 bg-indigo-100 text-indigo-900 px-2 py-0.5 rounded-full border border-indigo-200">
@@ -712,7 +1264,7 @@ export default function HomeScreen() {
                                 onClick={() => {
                                   completeMission(mission.id || `seq_${mission.seq}`);
                                 }}
-                                className="text-xs font-black text-slate-950 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-400 hover:from-amber-500 hover:to-amber-600 active:scale-95 px-3.5 py-1.5 rounded-xl shadow-md shadow-amber-500/30 animate-pulse border border-amber-300"
+                                className="text-xs font-black text-white bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] hover:from-[#1c1970] hover:to-[#2e2aab] active:scale-95 px-3.5 py-1.5 rounded-xl shadow-md shadow-indigo-900/30 animate-pulse border border-indigo-300/40"
                               >
                                 {t('claim', '🎁 CLAIM')}
                               </button>
@@ -754,12 +1306,9 @@ export default function HomeScreen() {
         >
           <button
             onClick={() => navigate("/daily-rewards")}
-            className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center border-2 transition-transform hover:scale-110 active:scale-95 ${hasFreeSpin
-                ? "bg-[#57fae9] border-[#007168] text-[#007168] animate-pulse"
-                : "bg-white border-[#141779] text-[#141779]"
-              }`}
+            className="w-12 h-12 rounded-full bg-gradient-to-br from-[#141779] to-[#25218c] border-2 border-[#FFC83D] text-[#FFC83D] shadow-[0_4px_16px_rgba(20,23,121,0.4)] flex items-center justify-center transition-transform hover:scale-110 active:scale-95"
           >
-            <Gift className="w-6 h-6" />
+            <Gift className="w-6 h-6 text-[#FFC83D]" />
           </button>
         </motion.div>
 
@@ -770,11 +1319,11 @@ export default function HomeScreen() {
               fetchMissions();
               setShowDailyMissionModal(true);
             }}
-            className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#141779] to-[#30007f] text-amber-300 shadow-lg flex items-center justify-center border-2 border-amber-300/40 relative hover:scale-105 transition-transform"
+            className="w-12 h-12 rounded-full bg-gradient-to-br from-[#141779] to-[#25218c] border-2 border-[#FFC83D] text-[#FFC83D] shadow-[0_4px_16px_rgba(20,23,121,0.4)] flex items-center justify-center relative hover:scale-105 transition-transform"
           >
-            <Clock className="w-6 h-6 animate-pulse" />
+            <Clock className="w-6 h-6 animate-pulse text-[#FFC83D]" />
             {missions.some(m => m.status === 'ready_to_claim') && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-slate-900 rounded-full text-[9px] font-black flex items-center justify-center border border-white animate-bounce">
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#FFC83D] text-[#141779] rounded-full text-[9px] font-black flex items-center justify-center border border-[#141779] animate-bounce">
                 !
               </span>
             )}
@@ -785,11 +1334,16 @@ export default function HomeScreen() {
       {/* DAILY FREE SPIN AUTO-POPUP */}
       <AnimatePresence>
         {showSpinPopup && (
-          <div className="fixed inset-0 z-[100] bg-[#f7f9fb]/90 backdrop-blur-md flex items-center justify-center p-6">
+          <div 
+            className="fixed inset-0 z-[100] bg-[#f7f9fb]/90 backdrop-blur-md flex items-center justify-center p-6"
+            style={{ touchAction: "none" }}
+            onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+          >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
+              style={{ overscrollBehavior: "contain" }}
               className="bg-gradient-to-br from-[#111453]/95 via-[#141779]/95 to-[#0b0c3f]/95 text-white w-full max-w-[360px] p-7 rounded-[32px] flex flex-col items-center text-center gap-5 border border-white/10 shadow-[0_20px_50px_rgba(20,23,121,0.5)] relative overflow-hidden"
             >
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(87,250,233,0.12)_0%,transparent_65%)] pointer-events-none" />
@@ -797,7 +1351,7 @@ export default function HomeScreen() {
               <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-indigo-500/20 blur-2xl pointer-events-none" />
 
               <div className="relative w-20 h-20 rounded-full bg-[rgba(87,250,233,0.08)] flex items-center justify-center border border-[#57fae9]/40 shadow-[0_0_30px_rgba(87,250,233,0.25)] z-10">
-                <div 
+                <div
                   className="absolute inset-[-6px] border-2 border-dashed border-[#57fae9]/40 rounded-full pointer-events-none"
                   style={{ animation: 'spin 20s linear infinite' }}
                 />
@@ -838,89 +1392,123 @@ export default function HomeScreen() {
         )}
       </AnimatePresence>
 
-      <ChildSwitcherModal
-        isOpen={showSwitcher}
-        onClose={() => setShowSwitcher(false)}
-        user={userData}
-        onUserUpdated={(u) => setUserData(u)}
-      />
-
       <AnimatePresence>
-        {showStreakModal && (
-          <div className="fixed inset-0 z-[110] bg-[#f7f9fb]/90 backdrop-blur-md flex flex-col items-center justify-center p-6">
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              className="bg-gradient-to-br from-[#111453]/95 via-[#141779]/95 to-[#0b0c3f]/95 text-white border border-white/10 w-full max-w-sm rounded-[32px] p-8 text-center relative shadow-[0_20px_50px_rgba(20,23,121,0.5)] flex flex-col items-center justify-between gap-6 overflow-hidden"
+        {showStreakModal && (() => {
+          const currentStreakVal = Number(retentionStreak?.currentStreak ?? streakDays ?? 0);
+          const rawLongestStreakVal = Number(retentionStreak?.longestStreak ?? streakDays ?? 0);
+          const longestStreakVal = Math.max(currentStreakVal, rawLongestStreakVal);
+
+          let titleText = `${currentStreakVal} Day Streak!`;
+          let subtitleText = `Your longest streak is ${longestStreakVal} days. Keep up the consistency!`;
+          let btnText = "AWESOME!";
+
+          if (currentStreakVal === 0) {
+            titleText = "Start Your Streak Today! 🚀";
+            subtitleText = "“Every expert was once a beginner! Complete 1 lesson today to ignite your flame!” 🔥";
+            btnText = "LET'S DO THIS! 🚀";
+          } else if (currentStreakVal === 1) {
+            titleText = "1 Day Streak! 🔥";
+            subtitleText = "Awesome start! Complete a lesson tomorrow to build your streak momentum! 💪";
+            btnText = "AWESOME!";
+          } else if (currentStreakVal >= longestStreakVal && currentStreakVal > 1) {
+            titleText = `${currentStreakVal} Day Streak! 🎉`;
+            subtitleText = `🏆 New Personal Record! You've achieved your longest streak ever. Keep it burning!`;
+            btnText = "AWESOME!";
+          }
+
+          return (
+            <div 
+              className="fixed inset-0 z-[110] bg-[#0b0c3f]/80 backdrop-blur-md flex flex-col items-center justify-center p-6"
+              style={{ touchAction: "none" }}
+              onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
             >
-              <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-teal-400/20 blur-2xl pointer-events-none" />
-              <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-orange-500/20 blur-2xl pointer-events-none" />
-
-              <div className="flex-1 flex flex-col items-center justify-center w-full gap-6 z-10">
-                <div className="relative w-40 h-40 flex items-center justify-center">
-                  <motion.div
-                    animate={{
-                      scale: [1, 1.05, 1],
-                      filter: ["brightness(1)", "brightness(1.1)", "brightness(1)"]
-                    }}
-                    transition={{ repeat: Infinity, duration: 2 }}
-                    className="w-full h-full text-[140px] flex items-center justify-center filter drop-shadow-[0_8px_25px_rgba(255,159,67,0.4)] select-none animate-pulse"
-                  >
-                    🔥
-                  </motion.div>
-                  <span className="absolute text-4xl font-black text-white mt-10 select-none">
-                    {retentionStreak?.currentStreak ?? streakDays}
-                  </span>
-                </div>
-
-                <div className="flex justify-between w-full px-1 gap-1">
-                  {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day, idx) => {
-                    const isActive = Boolean(retentionStreak?.streakDaysOfWeek?.[idx]);
-                    
-                    return (
-                      <div key={idx} className="flex flex-col items-center gap-1 flex-1">
-                        <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black shadow-inner border ${
-                            isActive
-                              ? "bg-gradient-to-br from-amber-400 to-orange-500 border-amber-300 text-white"
-                              : "bg-white/5 border-white/10 text-slate-400"
-                          }`}
-                        >
-                          {day}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="space-y-1 mt-2">
-                  <h2 className="text-2xl font-black text-white leading-tight">
-                    {retentionStreak?.currentStreak ?? streakDays} Day Streak!
-                  </h2>
-                  <p className="text-xs font-bold text-slate-300 leading-relaxed px-4">
-                    Your longest streak is {retentionStreak?.longestStreak ?? streakDays} days. Keep up the consistency!
-                  </p>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setShowStreakModal(false)}
-                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#57fae9] to-[#00c9b7] text-[#141779] font-black text-xs shadow-[0_4px_15px_rgba(87,250,233,0.3)] uppercase tracking-wider active:scale-95 transition-all mt-4 z-10 border-0"
+              <motion.div
+                initial={{ scale: 0.85, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.85, opacity: 0 }}
+                transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                style={{ overscrollBehavior: "contain" }}
+                className="bg-gradient-to-br from-[#111453] via-[#141779] to-[#0b0c3f] text-white border border-white/15 w-full max-w-sm rounded-[32px] p-7 text-center relative shadow-[0_20px_50px_rgba(20,23,121,0.6)] flex flex-col items-center justify-between gap-6 overflow-hidden"
               >
-                Awesome!
-              </button>
-            </motion.div>
-          </div>
-        )}
+                <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-teal-400/20 blur-2xl pointer-events-none" />
+                <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-orange-500/20 blur-2xl pointer-events-none" />
+
+                <div className="flex-1 flex flex-col items-center justify-center w-full gap-5 z-10">
+                  <div className="relative w-36 h-36 flex items-center justify-center">
+                    <motion.div
+                      animate={{
+                        scale: [1, 1.06, 1],
+                        filter: ["brightness(1)", "brightness(1.2)", "brightness(1)"]
+                      }}
+                      transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+                      className="w-full h-full text-[120px] flex items-center justify-center filter drop-shadow-[0_8px_25px_rgba(255,159,67,0.5)] select-none"
+                    >
+                      🔥
+                    </motion.div>
+                    <span className="absolute text-4xl font-black text-white mt-8 select-none drop-shadow-md">
+                      {currentStreakVal}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between w-full px-1 gap-1.5">
+                    {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day, idx) => {
+                      const isActive = Boolean(retentionStreak?.streakDaysOfWeek?.[idx]);
+
+                      return (
+                        <div key={idx} className="flex flex-col items-center gap-1 flex-1">
+                          <div
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black transition-all duration-300 ${isActive
+                              ? "bg-gradient-to-br from-amber-400 to-orange-500 border-2 border-amber-300 text-white shadow-[0_0_12px_rgba(251,191,36,0.6)] scale-110"
+                              : "bg-white/10 border border-white/15 text-slate-300 opacity-60"
+                              }`}
+                          >
+                            {day}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="space-y-1.5 mt-1">
+                    <h2 className="text-2xl font-black text-white leading-tight">
+                      {titleText}
+                    </h2>
+                    <p className="text-xs font-bold text-slate-200 leading-relaxed px-2">
+                      {subtitleText}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setShowStreakModal(false);
+                    if (currentStreakVal === 0) {
+                      navigate("/practice/chapters");
+                    }
+                  }}
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#57fae9] to-[#00c9b7] text-[#141779] font-black text-xs shadow-[0_4px_15px_rgba(87,250,233,0.3)] uppercase tracking-wider active:scale-95 transition-all mt-2 z-10 border-0 cursor-pointer"
+                >
+                  {btnText}
+                </button>
+              </motion.div>
+            </div>
+          );
+        })()}
       </AnimatePresence>
 
       {/* STREAK REVIVAL MODAL */}
       {showRevivalModal && streakRevivalData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in select-none">
-          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border-2 border-red-500/30 flex flex-col items-center text-center relative overflow-hidden animate-scale-up">
+        <div 
+          className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in select-none pointer-events-auto"
+          style={{ touchAction: "none" }}
+          onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+        >
+          <div 
+            className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border-2 border-red-500/30 flex flex-col items-center text-center relative overflow-hidden animate-scale-up"
+            style={{ overscrollBehavior: "contain" }}
+          >
             <div className="absolute -top-12 -right-12 w-40 h-40 bg-red-500/10 rounded-full blur-2xl pointer-events-none" />
-            
+
             <div className="w-20 h-20 rounded-3xl bg-red-50 text-red-500 flex items-center justify-center text-4xl mb-4 border border-red-200 shadow-inner">
               💔
             </div>
@@ -941,9 +1529,9 @@ export default function HomeScreen() {
 
             <div className="w-full flex flex-col gap-2.5 mt-1">
               <button
-                onClick={handleReviveStreak}
+                onClick={handleOpenRevivalConfirm}
                 disabled={revivalLoading}
-                className="w-full py-3.5 px-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 active:scale-95 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg border border-amber-300/40 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                className="w-full py-3.5 px-4 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] hover:brightness-110 active:scale-95 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-[#141779]/20 border border-indigo-200/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
               >
                 <span>🔥 Pay {streakRevivalData.reviveCost} Coins to Revive</span>
               </button>
@@ -953,11 +1541,96 @@ export default function HomeScreen() {
                 disabled={revivalLoading}
                 className="w-full py-3 px-4 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-600 font-bold text-xs rounded-2xl transition-all"
               >
-                Start Fresh 🔄
+                Start Fresh
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* STREAK REVIVAL CONFIRMATION MODAL */}
+      <AnimatePresence>
+        {showRevivalConfirmModal && streakRevivalData && (
+          <div 
+            className="fixed inset-0 z-[1001] flex items-center justify-center px-6"
+            style={{ touchAction: "none" }}
+            onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+          >
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-950/80 backdrop-blur-xs"
+              onClick={() => !revivalLoading && setShowRevivalConfirmModal(false)}
+            />
+
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              style={{ overscrollBehavior: "contain" }}
+              className="relative bg-white w-full max-w-[360px] p-6 rounded-[32px] flex flex-col items-center text-center gap-5 border-2 border-indigo-100 shadow-2xl overflow-hidden z-10 text-slate-950"
+            >
+              <div className="w-16 h-16 rounded-full bg-indigo-50 border-2 border-indigo-200 flex items-center justify-center text-3xl shadow-inner">
+                🔥
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-xl font-black text-slate-950">
+                  Confirm Streak Revival
+                </h3>
+                <p className="text-xs sm:text-sm font-semibold text-slate-600 leading-relaxed">
+                  Spend <span className="font-extrabold text-[#141779]">{streakRevivalData.reviveCost} Coins</span> to restore your <span className="font-extrabold text-slate-900">{streakRevivalData.previousStreak}-day streak</span>?
+                </p>
+              </div>
+
+              <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 flex justify-between items-center text-xs font-bold text-slate-900">
+                <span>🪙 Cost:</span>
+                <span className="text-[#141779] font-extrabold text-sm">{streakRevivalData.reviveCost} Coins</span>
+              </div>
+
+              <div className="w-full flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowRevivalConfirmModal(false)}
+                  disabled={revivalLoading}
+                  className="flex-1 py-3.5 rounded-full font-black text-xs uppercase tracking-wider text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all border border-slate-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleReviveStreak}
+                  disabled={revivalLoading}
+                  className="flex-1 py-3.5 rounded-full font-black text-xs uppercase tracking-wider text-white bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] hover:brightness-110 transition-all shadow-md shadow-[#141779]/20 border border-indigo-300/40 flex items-center justify-center gap-1.5"
+                >
+                  {revivalLoading ? "Reviving..." : "Confirm & Pay"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {showSwitcher && (
+        <Suspense fallback={null}>
+          <ChildSwitcherModal
+            isOpen={showSwitcher}
+            onClose={() => setShowSwitcher(false)}
+            user={userData}
+            onUserUpdated={(updated) => {
+              setUserData(updated);
+              localStorage.setItem("userData", JSON.stringify(updated));
+              window.dispatchEvent(new Event("userDataUpdated"));
+            }}
+            onSwitched={() => {
+              fetchProfile();
+              fetchMissions();
+              fetchJourneyData();
+              fetchContinueLearningProgress();
+              fetchNeuroPlayProgress();
+            }}
+          />
+        </Suspense>
       )}
     </div>
   );

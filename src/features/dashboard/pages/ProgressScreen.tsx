@@ -4,6 +4,8 @@ import { ArrowLeft, Award, Flame, Bell, Rocket, Atom, ShieldCheck, Zap, Trophy, 
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
+import StreakModal from "../../../components/StreakModal";
+import { getScopedItem, setScopedItem } from "../../../utils/sessionCache";
 
 // Math-aligned level thresholds matching backend:
 // Level 1: 0 XP
@@ -33,17 +35,54 @@ function getLevelInfo(xp: number) {
   }
 }
 
+function getCanonicalSubject(s: string) {
+  if (!s) return "";
+  const str = s.toLowerCase();
+  if (str.includes("social") || str.includes("સમાજ") || str.includes("સામાજિક") || str.includes("सामाजिक")) return "social_science";
+  if (str.includes("sci") || str.includes("વિજ્ઞાન") || str.includes("विज्ञान")) return "science";
+  if (str.includes("math") || str.includes("ગણિત") || str.includes("गणित")) return "math";
+  if (str.includes("guj") || str.includes("ગુજરાત") || str.includes("गुजરા")) return "gujarati";
+  if (str.includes("eng") || str.includes("અંગ્રેજી") || str.includes("अंग्रे")) return "english";
+  if (str.includes("hin") || str.includes("હિન્દી") || str.includes("हिन्दी") || str.includes("हिंदी")) return "hindi";
+  return str.trim();
+}
+
+function matchSubject(item: any, activeSub: any) {
+  if (!item || !activeSub) return false;
+  if (item.subjectId && (item.subjectId === activeSub._id || item.subjectId === activeSub.id)) return true;
+  
+  const iCanonical = getCanonicalSubject(item.rawName || item.name || "");
+  const aCanonical = getCanonicalSubject(activeSub.name || activeSub.subject || "");
+  if (iCanonical && aCanonical) {
+    return iCanonical === aCanonical;
+  }
+  
+  const iName = (item.rawName || item.name || "").toLowerCase().trim();
+  const aName = (activeSub.name || activeSub.subject || "").toLowerCase().trim();
+  return iName === aName;
+}
+
 export default function ProgressScreen() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [loading, setLoading] = useState(true);
+  const cachedUserData = (() => {
+    try {
+      const raw = localStorage.getItem("userData");
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  })();
 
-  const [streakDays, setStreakDays] = useState(0);
-  const [xp, setXp] = useState(0);
-  const [username, setUsername] = useState("Explorer");
-  const [userPhoto, setUserPhoto] = useState("");
+  const [loading, setLoading] = useState(!cachedUserData);
+
+  const [streakDays, setStreakDays] = useState(cachedUserData?.streakDays || 0);
+  const [xp, setXp] = useState(cachedUserData?.xp || 0);
+  const [coins, setCoins] = useState(cachedUserData?.coins || 0);
+  const [showStreakModal, setShowStreakModal] = useState(false);
+  const [userData, setUserData] = useState<any>(cachedUserData);
+  const [username, setUsername] = useState(cachedUserData?.childName || cachedUserData?.name || "Explorer");
+  const [userPhoto, setUserPhoto] = useState(cachedUserData?.childPhoto || cachedUserData?.photo || "");
   const [unreadCount, setUnreadCount] = useState(0);
-  const [badges, setBadges] = useState<any[]>([]);
+  const [badges, setBadges] = useState<any[]>(cachedUserData?.badges || []);
 
   const [subjects, setSubjects] = useState<any[]>([]);
   const [activeSubject, setActiveSubject] = useState<any>(null);
@@ -64,7 +103,18 @@ export default function ProgressScreen() {
       const completedSet = new Set<string>();
       if (pData.success && pData.data) {
         pData.data.forEach((p: any) => {
-          if (p.chapterCompleted || p.completed) {
+          const mList = Array.isArray(p.completedMissions) ? p.completedMissions : [];
+          let isDone = false;
+          if (mList.length > 0) {
+            isDone = mList.length >= 5 && p.chapterCompleted !== false;
+          } else {
+            isDone = Boolean(
+              p.chapterCompleted === true &&
+              p.completed === true &&
+              p.questionsCompleted === true
+            );
+          }
+          if (isDone) {
             completedSet.add(String(p.chapterId));
             completedSet.add(`${p.chapterId}_hard`);
           }
@@ -102,6 +152,8 @@ export default function ProgressScreen() {
         try {
           const u = JSON.parse(cached);
           setXp(u.xp || 0);
+          setCoins(u.coins || 0);
+          setUserData(u);
           setStreakDays(u.streakDays || 0);
           setUsername(u.childName || u.name || "Explorer");
           setUserPhoto(u.childPhoto || u.photo || "");
@@ -117,6 +169,8 @@ export default function ProgressScreen() {
           if (data.success && data.data.user) {
              const u = data.data.user;
              setXp(u.xp || 0);
+             setCoins(u.coins || 0);
+             setUserData(u);
              setStreakDays(u.streakDays || 0);
              setUsername(u.childName || u.name || "Explorer");
              setUserPhoto(u.childPhoto || u.photo || "");
@@ -135,22 +189,30 @@ export default function ProgressScreen() {
         } catch (e) {}
       })();
 
+      let loadedSubs: any[] = [];
+      let loadedGrowth: any[] = [];
+
       const subjectsPromise = (async () => {
         try {
           const subRes = await apiFetch("/api/practice/subjects");
           const subData = await subRes.json();
           if (subData.success && subData.data && subData.data.length > 0) {
-            setSubjects(subData.data);
-            const savedSubId = sessionStorage.getItem("activeSubjectId");
-            const found = (savedSubId && savedSubId !== "all") ? subData.data.find((s: any) => s._id === savedSubId) : null;
-            setActiveSubject(found || subData.data[0]);
-            // Run completion stats fetch asynchronously in background
-            setTimeout(() => fetchAllSubjectCompletion(subData.data), 0);
+            const validSubs = subData.data.filter((s: any) => 
+              (s.totalChapters === undefined || s.totalChapters > 0) && 
+              s.hasContent !== false && 
+              s.isactive !== 0
+            );
+            if (validSubs.length > 0) {
+              setSubjects(validSubs);
+              loadedSubs = validSubs;
+              // Run completion stats fetch asynchronously in background
+              setTimeout(() => fetchAllSubjectCompletion(validSubs), 0);
+            } else {
+              setSubjects([]);
+            }
           }
         } catch (e) {
           console.error("Failed to fetch subjects:", e);
-        } finally {
-          setLoading(false);
         }
       })();
 
@@ -160,6 +222,7 @@ export default function ProgressScreen() {
           const data = await res.json();
           if (data.success && data.data) {
             setWeeklyGrowth(data.data);
+            loadedGrowth = data.data;
           }
         } catch (e) {
           console.error("Failed to fetch weekly subject growth:", e);
@@ -170,8 +233,29 @@ export default function ProgressScreen() {
 
       await Promise.allSettled([mePromise, notifPromise, subjectsPromise, growthPromise]);
       setLoading(false);
+
+      if (loadedSubs.length > 0) {
+        const savedSubId = getScopedItem("activeSubjectId");
+        const found = (savedSubId && savedSubId !== "all") ? loadedSubs.find((s: any) => s._id === savedSubId) : null;
+        if (found) {
+          setActiveSubject(found);
+        } else {
+          // Smart selection: auto-pick the subject with recent quiz activity / non-zero accuracy
+          const activeGrowth = loadedGrowth.find((g: any) => g.thisWeekAccuracy > 0);
+          const activeSub = activeGrowth ? loadedSubs.find((s: any) => matchSubject(activeGrowth, s)) : null;
+          setActiveSubject(activeSub || loadedSubs[0]);
+        }
+      }
     };
     fetchProgress();
+
+    const handleUserDataUpdate = () => {
+      fetchProgress();
+    };
+    window.addEventListener("userDataUpdated", handleUserDataUpdate);
+    return () => {
+      window.removeEventListener("userDataUpdated", handleUserDataUpdate);
+    };
   }, []);
 
   useEffect(() => {
@@ -198,8 +282,18 @@ export default function ProgressScreen() {
         }
         if (pData.success && pData.data) {
           completedChapterIds = pData.data
-            .filter((p: any) => p.chapterCompleted || p.completed)
-            .map((p: any) => p.chapterId);
+            .filter((p: any) => {
+              const mList = Array.isArray(p.completedMissions) ? p.completedMissions : [];
+              if (mList.length > 0) {
+                return mList.length >= 5 && p.chapterCompleted !== false;
+              }
+              return Boolean(
+                p.chapterCompleted === true &&
+                p.completed === true &&
+                p.questionsCompleted === true
+              );
+            })
+            .map((p: any) => String(p.chapterId));
         }
 
         if (chapters.length > 0) {
@@ -258,17 +352,24 @@ export default function ProgressScreen() {
   const unlockedMilestonesCount = [hasMathAce, isStreakUnlocked, hasScienceProdigy, hasArenaMaster].filter(Boolean).length;
   const totalBadgesCount = Math.max(badges.length, unlockedMilestonesCount);
 
-  // Filter growth list based on active subject selection
-  const filteredGrowth = activeSubject
-    ? weeklyGrowth.filter((item: any) => 
-        item.subjectId === activeSubject._id || 
-        item.name.toLowerCase().replace(/ /g, '_') === activeSubject.name.toLowerCase().replace(/ /g, '_') ||
-        item.name.toLowerCase().includes(activeSubject.name.toLowerCase()) || 
-        activeSubject.name.toLowerCase().includes(item.name.toLowerCase())
-      )
+  let filteredGrowth = activeSubject
+    ? weeklyGrowth.filter((item: any) => matchSubject(item, activeSubject))
     : weeklyGrowth;
 
-  const displayedGrowth = filteredGrowth.length > 0 ? filteredGrowth : weeklyGrowth;
+  // Restrict to exactly 1 primary graph for the active subject; never bleed other subject's data!
+  const displayedGrowth = activeSubject
+    ? (filteredGrowth.length > 0
+        ? [filteredGrowth[0]]
+        : [{
+            subjectId: activeSubject._id,
+            name: activeSubject.name || activeSubject.subject || "Subject",
+            rawName: activeSubject.name || activeSubject.subject || "Subject",
+            icon: activeSubject.icon,
+            thisWeekAccuracy: 0,
+            lastWeekAccuracy: 0,
+            growthDelta: 0
+          }])
+    : (weeklyGrowth.length > 0 ? [weeklyGrowth[0]] : []);
 
   return (
     <div className="min-h-screen bg-[#F7F9FB] text-[#17177F] font-sans pb-28 max-w-lg mx-auto relative selection:bg-[#4D4BFF] selection:text-white overflow-x-hidden">
@@ -278,95 +379,99 @@ export default function ProgressScreen() {
         <div className="absolute top-[40%] right-[-10%] w-[55%] h-[40%] rounded-full bg-[#4D4BFF]/8 blur-[100px]" />
       </div>
 
-      {/* TOP APP BAR / GAME HUD */}
-      <header className="flex flex-col bg-white/90 backdrop-blur-xl border-b border-[#E0E3E5]/70 sticky top-0 z-50 shadow-[0_4px_20px_rgba(0,0,0,0.02)] pb-3">
-        <div className="flex items-center justify-between px-5 py-4">
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => navigate(-1)} 
-              className="w-10 h-10 rounded-full bg-[#F7F9FB] border border-[#E0E3E5] hover:bg-[#EEF1FF] flex items-center justify-center transition-all active:scale-95 shrink-0 shadow-2xs"
-              aria-label="Back"
-            >
-              <ArrowLeft size={20} className="text-[#17177F]" />
-            </button>
-            <button 
-              onClick={() => navigate("/profile")}
-              className="w-10 h-10 rounded-full border-2 border-[#17177F]/40 overflow-hidden bg-white shrink-0 active:scale-95 transition-all shadow-sm"
-            >
-              {userPhoto ? (
-                <img src={userPhoto} alt="Avatar" className="w-full h-full object-cover" />
-              ) : (
-                <img 
-                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=17177F&color=fff`} 
-                  alt="Avatar"
-                  className="w-full h-full object-cover"
-                />
-              )}
-            </button>
-            <div className="text-left">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
-                <span className="text-[12px] font-medium text-[#767683]">
-                  {t('updated_just_now', 'Updated just now')}
-                </span>
+      {/* TOP APP BAR / GAME HUD (Curved Sticky Design) */}
+      <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex items-center justify-between px-4 py-3 bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-2xl shadow-xs gap-2">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          <button
+            onClick={() => navigate("/profile")}
+            className="w-10 h-10 rounded-full border-2 border-indigo-100 overflow-hidden hover:opacity-90 transition-opacity shrink-0 bg-[#141779] shadow-xs"
+          >
+            {userPhoto ? (
+              <img src={userPhoto} alt="Avatar" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-[#141779] text-white font-bold text-xs flex items-center justify-center">
+                {username ? username.slice(0, 2).toUpperCase() : "NR"}
               </div>
-              <h1 className="text-[22px] font-bold text-[#17177F] tracking-tight leading-tight">
-                {t('my_journey', 'My Journey')}
-              </h1>
+            )}
+          </button>
+          <div className="flex flex-col min-w-0 justify-center">
+            {/* Line 1: Name + Class on same line */}
+            <div className="flex items-center gap-1.5 min-w-0">
+              <h1 className="text-sm font-black text-slate-900 leading-tight truncate max-w-[130px]">{username || "Explorer"}</h1>
+              <span className="text-[10px] text-[#4f46e5] bg-[#eef2ff] font-black px-2 py-0.5 rounded-full border border-indigo-100 shrink-0 whitespace-nowrap">
+                {userData?.childClass || t('class_10', { defaultValue: "Class 10" })}
+              </span>
+            </div>
+            {/* Line 2: Level */}
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-[11.5px] text-slate-400 font-extrabold whitespace-nowrap">
+                {t('explorer_level', { defaultValue: "Explorer Level" })} {level}
+              </span>
             </div>
           </div>
-          
-          {/* Right Bell Notification */}
-          <button 
-            onClick={() => navigate("/notifications")}
-            className="w-10 h-10 rounded-full bg-white border border-[#E0E3E5] shadow-xs flex items-center justify-center hover:bg-[#F7F9FB] active:scale-95 transition-all shrink-0"
+        </div>
+
+        {/* Currency & Streak Stats */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={() => setShowStreakModal(true)}
+            className="bg-[#fff7ed] border border-orange-100/80 rounded-2xl px-2 py-1.5 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
           >
-            <div className="relative">
-              <Bell size={20} className="text-[#17177F]" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#EF4444] rounded-full text-[9px] text-white flex items-center justify-center font-bold border-2 border-white pointer-events-none z-10 shadow-xs">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </div>
+            <span className="text-[11px] font-black text-[#ea580c] leading-none">🔥 {streakDays || 0}</span>
+          </button>
+          <button
+            onClick={() => navigate("/practice/inventory")}
+            className="bg-[#fffbeb] border border-amber-100/80 rounded-2xl px-2 py-1.5 flex flex-col items-center justify-center min-w-[44px] hover:scale-105 active:scale-95 transition-transform shadow-2xs"
+          >
+            <span className="text-[11px] font-black text-[#b45309] leading-none">🪙 {coins || 0}</span>
+          </button>
+          <button
+            onClick={() => navigate("/notifications")}
+            className="w-9 h-9 rounded-2xl bg-slate-50 shadow-2xs flex items-center justify-center hover:bg-slate-100 transition-all shrink-0 border border-slate-100 relative"
+          >
+            <Bell size={16} className="text-[#1c1970]" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border border-white pointer-events-none z-10">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
           </button>
         </div>
       </header>
 
-      <main className="px-5 pt-3.5 sm:pt-5 flex flex-col gap-4 relative z-10">
+      <main className="px-4 pt-3.5 sm:pt-5 flex flex-col gap-4 relative z-10">
         {/* 1. TOP XP HERO CARD */}
-        <section className="bg-gradient-to-br from-[#17177F] via-[#141779] to-[#0D0E4C] rounded-[24px] p-5 sm:p-6 text-white shadow-[0_10px_35px_-8px_rgba(23,23,127,0.35)] relative overflow-hidden">
+        <section className="bg-gradient-to-br from-[#17177F] via-[#141779] to-[#0D0E4C] rounded-[24px] p-4 sm:p-5 text-white shadow-[0_10px_35px_-8px_rgba(23,23,127,0.35)] relative overflow-hidden">
           <div className="w-48 h-48 rounded-full bg-white/5 blur-2xl absolute -right-6 -bottom-6 pointer-events-none" />
           <div className="w-32 h-32 rounded-full bg-white/5 blur-xl absolute -left-6 -top-6 pointer-events-none" />
 
-          <div className="relative z-10 flex flex-col gap-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/25 shadow-xs text-[11px] sm:text-[13px] font-bold text-white uppercase shrink-0">
-                <Zap size={14} className="text-[#FFC83D] fill-[#FFC83D]" />
+          <div className="relative z-10 flex flex-col gap-2.5 sm:gap-3">
+            <div className="flex items-center justify-between gap-2 overflow-x-auto hide-scrollbar">
+              <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-md px-2.5 sm:px-3 py-1 sm:py-1 rounded-full border border-white/25 shadow-xs text-[10px] sm:text-[11.5px] font-bold text-white uppercase shrink-0 whitespace-nowrap">
                 <span>
                   {t('level_adventurer', { level, defaultValue: `LEVEL ${level} • ADVENTURER` })}
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/25 shadow-xs text-[11px] sm:text-[13px] font-bold text-white tracking-wide shrink-0">
+              <div className="flex items-center gap-1 sm:gap-1.5 bg-white/15 backdrop-blur-md px-2.5 sm:px-3 py-1 sm:py-1 rounded-full border border-white/25 shadow-xs text-[10px] sm:text-[11.5px] font-bold text-white tracking-wide shrink-0 whitespace-nowrap">
                 <span className="text-[#FFC83D]">⚡</span>
-                <span>{t('xp_earned', 'XP Earned Today')}:</span>
+                <span>{t('xp_earned', 'XP Earned ')}:</span>
                 <span className="text-[#FFC83D]">{xp.toLocaleString()} XP</span>
               </div>
             </div>
 
-            <div className="flex flex-col text-left mt-1">
+            <div className="flex flex-col text-left mt-0.5">
               <div className="flex items-baseline gap-2">
-                <span className="text-[32px] sm:text-[36px] font-black tracking-tight leading-none text-white">
+                <span className="text-[30px] sm:text-[34px] font-black tracking-tight leading-none text-white">
                   {xp.toLocaleString()}
                 </span>
-                <span className="text-[16px] sm:text-[18px] font-bold text-[#EEF1FF]">XP</span>
+                <span className="text-[15px] sm:text-[17px] font-bold text-[#EEF1FF]">XP</span>
               </div>
-              <span className="text-[12px] sm:text-[13px] font-medium text-[#E0E7FF] mt-1">
+              <span className="text-[11.5px] sm:text-[12.5px] font-medium text-[#E0E7FF] mt-0.5">
                 {t('total_xp_accumulated', 'Total Experience Points Accumulated')}
               </span>
             </div>
 
-            <div className="w-full h-3.5 sm:h-4 bg-black/30 rounded-full overflow-hidden p-0.5 border border-white/20 shadow-inner">
+            <div className="w-full h-3 sm:h-3.5 bg-black/30 rounded-full overflow-hidden p-0.5 border border-white/20 shadow-inner">
               <motion.div 
                 initial={{ width: 0 }}
                 animate={{ width: `${progressPercent}%` }}
@@ -375,7 +480,7 @@ export default function ProgressScreen() {
               />
             </div>
 
-            <div className="flex items-center justify-between text-[11px] sm:text-[13px] font-medium text-[#EEF1FF]">
+            <div className="flex items-center justify-between text-[10.5px] sm:text-[12px] font-medium text-[#EEF1FF]">
               <span>{progressPercent}% {t('complete', 'Complete')}</span>
               <span className="text-white font-bold flex items-center gap-1">
                 {xpNeededForNext > 0 ? t('xp_until_level', { xp: xpNeededForNext, level: level + 1, defaultValue: `${xpNeededForNext} XP until Level ${level + 1}` }) : t('max_level_reached', 'Max Level Reached!')} →
@@ -396,7 +501,10 @@ export default function ProgressScreen() {
             </div>
           </div>
 
-          <div className="bg-white rounded-[16px] sm:rounded-[20px] p-2.5 sm:p-4 text-center shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-[#E0E3E5]/60 flex flex-col items-center justify-center gap-1.5 sm:gap-2 hover:shadow-[0_8px_25px_rgba(0,0,0,0.06)] transition-all overflow-hidden">
+          <div 
+            onClick={() => setShowStreakModal(true)}
+            className="bg-white rounded-[16px] sm:rounded-[20px] p-2.5 sm:p-4 text-center shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-[#E0E3E5]/60 flex flex-col items-center justify-center gap-1.5 sm:gap-2 hover:shadow-[0_8px_25px_rgba(0,0,0,0.06)] transition-all overflow-hidden cursor-pointer active:scale-95"
+          >
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#FFC83D]/20 flex items-center justify-center text-[#D97706] shadow-2xs shrink-0">
               <Flame size={16} className="fill-[#D97706]" />
             </div>
@@ -434,12 +542,24 @@ export default function ProgressScreen() {
             {subjects.map((sub) => {
               const isActive = activeSubject?._id === sub._id;
               const translatedSubName = t(sub.name.toLowerCase().replace(/ /g, '_'), { defaultValue: sub.name });
+              const growthItem = weeklyGrowth.find((g: any) => matchSubject(g, sub));
+              const tabEmoji = (() => {
+                const check = `${sub.icon || ''} ${sub.name || ''}`.toLowerCase();
+                if (check.includes("guj") || check.includes("ગુજરાતી")) return "📘";
+                if (check.includes("math") || check.includes("calculator") || check.includes("calc") || check.includes("ગણિત")) return "🧮";
+                if (check.includes("sci") || check.includes("flask") || check.includes("વિજ્ઞાન")) return "🔬";
+                if (check.includes("eng") || check.includes("અંગ્રેજી")) return "📖";
+                if (check.includes("hin") || check.includes("હિન્દી") || check.includes("hindi")) return "📙";
+                if (check.includes("soc") || check.includes("સામાજિક") || check.includes("social")) return "🏛️";
+                if (sub.icon && sub.icon.length <= 4 && !/^[a-z0-9_-]+$/i.test(sub.icon)) return sub.icon;
+                return "📚";
+              })();
               return (
                 <button
                   key={sub._id}
                   onClick={() => {
                     setActiveSubject(sub);
-                    sessionStorage.setItem("activeSubjectId", sub._id);
+                    setScopedItem("activeSubjectId", sub._id);
                   }}
                   className={`px-4 py-2 rounded-full font-semibold text-[13px] whitespace-nowrap transition-all shrink-0 flex items-center gap-2 ${
                     isActive 
@@ -447,14 +567,21 @@ export default function ProgressScreen() {
                       : 'bg-white text-[#767683] border border-[#E0E3E5] hover:border-[#17177F]/40 shadow-2xs'
                   }`}
                 >
-                  <Compass size={14} className={isActive ? "text-white" : "text-[#767683]"} />
+                  <span className="text-sm shrink-0 leading-none">{tabEmoji}</span>
                   <span>{translatedSubName}</span>
+                  {growthItem && growthItem.thisWeekAccuracy > 0 && (
+                    <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                      isActive ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-700"
+                    }`}>
+                      {growthItem.thisWeekAccuracy}%
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
 
-          <div className="bg-white rounded-[24px] p-5 sm:p-6 shadow-[0_10px_35px_-8px_rgba(0,0,0,0.06)] border border-[#E0E3E5]/60 flex flex-col gap-4">
+          <div className="bg-white rounded-[24px] p-5 sm:p-6 shadow-[0_10px_35px_-8px_rgba(0,0,0,0.06)] border border-[#E0E3E5]/60 flex flex-col gap-5">
             <div className="flex flex-col gap-1 text-left">
               <h2 className="text-[20px] font-bold text-[#17177F] tracking-tight leading-snug">
                 {t('weekly_subject_growth_title', 'Subject Analytics & Growth')}
@@ -485,22 +612,25 @@ export default function ProgressScreen() {
                 {t('no_growth_data', 'Complete quizzes across subjects to see weekly growth breakdown!')}
               </div>
             ) : (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-6">
                 {displayedGrowth.map((item: any, idx: number) => {
                   const delta = item.growthDelta !== undefined ? item.growthDelta : (item.thisWeekAccuracy - item.lastWeekAccuracy);
                   const isPositive = delta >= 0;
                   const translatedSubName = t(item.name.toLowerCase().replace(/ /g, '_'), { defaultValue: item.name });
 
-                  const getIcon = (n: string) => {
-                    const lower = n.toLowerCase();
-                    if (lower.includes("guj")) return "📘";
-                    if (lower.includes("math")) return "🧮";
-                    if (lower.includes("sci")) return "🔬";
-                    if (lower.includes("eng")) return "📖";
-                    return "🌎";
+                  const getIcon = (iconStr?: string, nameStr?: string) => {
+                    const check = `${iconStr || ''} ${nameStr || ''}`.toLowerCase();
+                    if (check.includes("guj") || check.includes("ગુજરાતી")) return "📘";
+                    if (check.includes("math") || check.includes("calculator") || check.includes("calc") || check.includes("ગણિત")) return "🧮";
+                    if (check.includes("sci") || check.includes("flask") || check.includes("વિજ્ઞાન")) return "🔬";
+                    if (check.includes("eng") || check.includes("અંગ્રેજી")) return "📖";
+                    if (check.includes("hin") || check.includes("હિન્દી") || check.includes("hindi")) return "📙";
+                    if (check.includes("soc") || check.includes("સામાજિક") || check.includes("social")) return "🏛️";
+                    if (iconStr && iconStr.length <= 4 && !/^[a-z0-9_-]+$/i.test(iconStr)) return iconStr;
+                    return "📚";
                   };
 
-                  const icon = item.icon || getIcon(item.name);
+                  const icon = getIcon(item.icon, item.name);
 
                   const getPerfLabel = (acc: number) => {
                     if (acc >= 85) return t('excellent_progress', 'Excellent Progress');
@@ -519,27 +649,27 @@ export default function ProgressScreen() {
                   return (
                     <motion.div
                       key={item.subjectId || idx}
-                      initial={{ opacity: 0, y: 15, scale: 0.97 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      transition={{ duration: 0.5, delay: idx * 0.08 }}
-                      className="bg-white rounded-[20px] p-[18px] shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-[#E0E3E5]/60 flex flex-col gap-5 hover:shadow-[0_8px_25px_rgba(0,0,0,0.06)] transition-all duration-300"
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4, delay: idx * 0.08 }}
+                      className="flex flex-col gap-5 text-left"
                     >
                       {/* 1. SUBJECT HEADER & ACCURACY SCORE */}
-                      <div className="flex items-start justify-between">
-                        <div className="flex flex-col gap-0.5 text-left">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xl">{icon}</span>
-                            <h3 className="text-[16px] font-bold text-[#17177F]">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex flex-col gap-0.5 text-left min-w-0 flex-1">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-xl shrink-0 leading-none">{icon}</span>
+                            <h3 className="text-[16px] font-bold text-[#17177F] truncate">
                               {translatedSubName}
                             </h3>
                           </div>
-                          <span className="text-[13px] font-medium text-[#767683]">
+                          <span className="text-[13px] font-medium text-[#767683] truncate">
                             {getPerfLabel(item.thisWeekAccuracy)}
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-3">
-                          <span className="text-[34px] font-black text-[#17177F] tracking-tight leading-none">
+                        <div className="flex items-center gap-2.5 shrink-0">
+                          <span className="text-[34px] font-black text-[#17177F] tracking-tight leading-none whitespace-nowrap">
                             {item.thisWeekAccuracy}%
                           </span>
 
@@ -547,7 +677,7 @@ export default function ProgressScreen() {
                             initial={{ opacity: 0, scale: 0.8 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ duration: 0.5, delay: idx * 0.1 + 0.2 }}
-                            className={`px-[10px] py-[5px] rounded-[100px] text-[13px] font-bold flex items-center gap-1 shadow-2xs ${
+                            className={`px-[10px] py-[5px] rounded-[100px] text-[13px] font-bold flex items-center gap-1 shadow-2xs whitespace-nowrap ${
                               isPositive
                                 ? "bg-[#DCFCE7] text-[#16A34A]"
                                 : "bg-[#FEE2E2] text-[#DC2626]"
@@ -560,15 +690,15 @@ export default function ProgressScreen() {
                       </div>
 
                       {/* 2. FIRST: PREMIUM REDESIGNED WEEKLY COMPARISON BAR CHART */}
-                      <div className="bg-[#FAFBFD] rounded-[24px] p-6 shadow-[0_10px_30px_rgba(0,0,0,0.04)] border border-[#F1F5F9] flex flex-col">
+                      <div className="flex flex-col gap-2">
                         {/* Chart Header */}
-                        <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center justify-between">
                           <div className="flex flex-col text-left">
                             <span className="text-[13px] font-bold text-[#17177F] tracking-wide">
-                              {t('weekly_comparison', 'Weekly Comparison')}
+                              {t('weekly_quiz_accuracy', 'Quiz & Mission Accuracy Score')}
                             </span>
                             <span className="text-[11px] font-medium text-[#64748B]">
-                              {t('current_vs_previous', 'Current Week vs Previous Week')}
+                              {t('current_vs_previous_accuracy', 'Percentage of correct answers (Current Week vs Previous Week)')}
                             </span>
                           </div>
                         </div>
@@ -591,7 +721,7 @@ export default function ProgressScreen() {
                               <div className="h-32 flex items-end">
                                 <motion.div
                                   initial={{ height: 0 }}
-                                  animate={{ height: `${Math.max(16, (item.thisWeekAccuracy / 100) * 120)}px` }}
+                                  animate={{ height: item.thisWeekAccuracy > 0 ? `${Math.max(8, (item.thisWeekAccuracy / 100) * 120)}px` : '4px' }}
                                   transition={{ duration: 0.7, ease: "easeOut" }}
                                   className="w-12 sm:w-14 rounded-t-[16px] rounded-b-[4px] bg-gradient-to-t from-[#4F46E5] to-[#7C6CFF] shadow-[0_6px_16px_rgba(79,70,229,0.25)] hover:scale-[1.03] transition-transform duration-200 overflow-hidden relative"
                                 >
@@ -612,7 +742,7 @@ export default function ProgressScreen() {
                               <div className="h-32 flex items-end">
                                 <motion.div
                                   initial={{ height: 0 }}
-                                  animate={{ height: `${Math.max(16, (item.lastWeekAccuracy / 100) * 120)}px` }}
+                                  animate={{ height: item.lastWeekAccuracy > 0 ? `${Math.max(8, (item.lastWeekAccuracy / 100) * 120)}px` : '4px' }}
                                   transition={{ duration: 0.7, delay: 0.1, ease: "easeOut" }}
                                   className="w-12 sm:w-14 rounded-t-[16px] rounded-b-[4px] bg-gradient-to-t from-[#94A3B8] to-[#CBD5E1] shadow-[0_6px_16px_rgba(148,163,184,0.2)] hover:scale-[1.03] transition-transform duration-200 overflow-hidden relative"
                                 >
@@ -628,7 +758,7 @@ export default function ProgressScreen() {
                         </div>
 
                         {/* Compact Summary Row (Insight) */}
-                        <div className="mt-3 pt-3 border-t border-[#F1F5F9] flex items-center gap-2 text-left">
+                        <div className="mt-1 pt-3 border-t border-[#F1F5F9] flex items-center gap-2 text-left">
                           <span className={`px-3 py-1 rounded-full text-[13px] font-semibold flex items-center gap-1 shadow-2xs ${
                             isPositive ? "bg-[#DCFCE7] text-[#16A34A]" : "bg-[#FEE2E2] text-[#DC2626]"
                           }`}>
@@ -643,11 +773,14 @@ export default function ProgressScreen() {
                           </span>
                         </div>
                       </div>
-
+            
                       {/* 3. AFTER THAT: CIRCLE PROGRESS GRAPH (Chapter / Syllabus Completion for Active Subject) */}
-                      <div className="bg-[#F8FAFC] rounded-[18px] p-4 border border-[#E0E3E5]/70 flex flex-col items-center justify-center gap-2">
+                      <div className="flex flex-col items-center justify-center gap-1 pt-2">
                         <span className="text-[11px] font-extrabold tracking-wider text-[#767683] uppercase">
-                          {t('chapter_completion', 'CHAPTER COMPLETION')}
+                          {t('chapter_completion', 'SYLLABUS & CHAPTER COMPLETION')}
+                        </span>
+                        <span className="text-[11px] text-[#64748B] font-medium text-center max-w-xs">
+                          {t('chapter_completion_sub', 'Tracks 100% finished chapters (complete all 5 missions with ≥65% mastery)')}
                         </span>
                         
                         <div className="relative w-36 h-36 flex items-center justify-center my-1">
@@ -705,13 +838,18 @@ export default function ProgressScreen() {
                           </div>
                         </div>
 
-                        <div className="text-center flex flex-col items-center">
+                        <div className="text-center flex flex-col items-center gap-1">
                           <span className="text-[12px] font-bold text-[#4D4BFF]">
                             {stats.total > 0 
                               ? `${stats.completed}/${stats.total} ${t('chapters', 'Chapters')} ${t('completed', 'Completed')}`
                               : `${stats.percent}% ${t('mastered', 'Mastered')}`
                             }
                           </span>
+                          {activeChapter && (
+                            <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-3 py-0.5 rounded-full">
+                              Active: <strong className="text-slate-700">{activeChapter.chapterName || activeChapter.name || activeChapter.title || "Chapter 1"}</strong>
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -797,6 +935,12 @@ export default function ProgressScreen() {
           </div>
         </section>
       </main>
+
+      <StreakModal
+        isOpen={showStreakModal}
+        onClose={() => setShowStreakModal(false)}
+        streakDays={streakDays}
+      />
     </div>
   );
 }

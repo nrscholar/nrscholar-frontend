@@ -16,30 +16,32 @@ import {
   Volume2,
   ShieldAlert,
   Play,
-  Swords
+  Swords,
+  RotateCcw
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "../../../api";
 import QuestionContext from "../components/QuestionContext";
 import { ActivityQuestion, OptionList } from "../components/ActivityQuestion";
 import { activityType, imageSrc, optionImage, sameAnswer } from "../components/questionTypes";
+import { getScopedItem, setScopedItem, removeScopedItem, getActiveUserContext } from "../../../utils/sessionCache";
 import { showInteractiveNotification } from "../../../services/pushNotificationService";
+import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
+import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
+import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
+import {
+  filterUniqueQuestions,
+  filterCrossUniqueQuestions,
+  getQuestionIdentifier,
+  getNormalizedQuestionText
+} from "../../../utils/quizQuestionUtils";
 
 type StepPhase = "INTRO" | "QUIZ" | "MINI_REWARD" | "BOSS" | "SUMMARY";
 
 const getUserClassNumber = (): number => {
-  const cached = localStorage.getItem("userData");
-  if (cached) {
-    try {
-      const u = JSON.parse(cached);
-      const className = u.childClass || "Class 3";
-      const num = parseInt(className.replace(/\D/g, ""), 10);
-      return isNaN(num) ? 3 : num;
-    } catch (e) {
-      return 3;
-    }
-  }
-  return 3;
+  const { classLevel } = getActiveUserContext();
+  const num = parseInt(classLevel.replace(/\D/g, ""), 10);
+  return isNaN(num) ? 3 : num;
 };
 
 const RenderClassIllustration = ({ classNum }: { classNum: number }) => {
@@ -203,35 +205,71 @@ const RenderClassIllustration = ({ classNum }: { classNum: number }) => {
   }
 };
 
+const DEFAULT_QUIZ = [
+  { _id: "fq1", question: "Which of the following is a synonym for 'happy'?", options: ["Joyful", "Sad", "Angry", "Tired"], answer: "Joyful", type: "multiple_choice" },
+  { _id: "fq2", question: "Which of these is a primary color?", options: ["Red", "Green", "Purple", "Orange"], answer: "Red", type: "multiple_choice" },
+  { _id: "fq3", question: "What is the capital city of France?", options: ["Paris", "London", "Berlin", "Rome"], answer: "Paris", type: "multiple_choice" },
+  { _id: "fq4", question: "What comes after the letter B in the alphabet?", options: ["C", "A", "D", "E"], answer: "C", type: "multiple_choice" },
+  { _id: "fq5", question: "Which geometric shape has three sides?", options: ["Triangle", "Square", "Circle", "Rectangle"], answer: "Triangle", type: "multiple_choice" }
+];
+
+const DEFAULT_BOSS = [
+  { _id: "fb1", question: "Chapter Boss Challenge: Which of the following best demonstrates this chapter's advanced concept?", options: ["Option A", "Option B", "Option C", "Option D"], answer: "Option A", type: "multiple_choice", difficulty: "Hard", isBoss: true },
+  { _id: "fb2", question: "Boss Guardian Strike: Identify the core mastery principle from this chapter.", options: ["Correct Statement", "Option 1", "Option 2", "Option 3"], answer: "Correct Statement", type: "multiple_choice", difficulty: "Hard", isBoss: true },
+  { _id: "fb3", question: "Final Boss Strike: Solve this chapter mastery challenge to defeat the boss.", options: ["Mastery Answer", "Option 1", "Option 2", "Option 3"], answer: "Mastery Answer", type: "multiple_choice", difficulty: "Hard", isBoss: true }
+];
+
 export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scholar Mission Play Engine (Updated)
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const chapterId = searchParams.get("chapterId") || "ch1";
   const missionSeq = parseInt(searchParams.get("missionSeq") || "1", 10);
-  const isReplay = searchParams.get("replay") === "true";
+  const isFreshReplay = searchParams.get("replay") === "true";
+  const [isReplay] = useState(() => {
+    const fromUrl = searchParams.get("replay") === "true";
+    const fromSession = getScopedItem(`is_replay_${chapterId}_${missionSeq}`) === "true";
+    const res = fromUrl || fromSession;
+    if (res) {
+      setScopedItem(`is_replay_${chapterId}_${missionSeq}`, "true");
+      for (let s = 1; s <= 5; s++) {
+        if (s !== missionSeq) {
+          removeScopedItem(`is_replay_${chapterId}_${s}`);
+        }
+      }
+    }
+    return res;
+  });
+
+  useEffect(() => {
+    if (searchParams.get("replay") === "true") {
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete("replay");
+      window.history.replaceState({}, "", newUrl.toString());
+    }
+  }, []);
 
   const [loading, setLoading] = useState(true);
   const [missionData, setMissionData] = useState<any>(null);
   // Check if an in-progress session exists in sessionStorage for this specific mission
-  const savedPhase = sessionStorage.getItem(`mission_phase_${chapterId}_${missionSeq}`);
+  const savedPhase = getScopedItem(`mission_phase_${chapterId}_${missionSeq}`);
   const hasSavedSession = Boolean(
-    savedPhase && (savedPhase === "BOSS" || savedPhase === "QUIZ" || savedPhase === "MINI_REWARD" || savedPhase === "SUMMARY")
+    savedPhase && (savedPhase === "BOSS" || savedPhase === "QUIZ" || savedPhase === "MINI_REWARD")
   );
 
   const [phase, setPhase] = useState<StepPhase>(() => {
-    if (isReplay) {
-      sessionStorage.removeItem(`mission_phase_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`boss_damage_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`boss_wrong_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`boss_index_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`mission_timer_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`user_answers_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`quiz_correct_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`xp_earned_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`coins_earned_${chapterId}_${missionSeq}`);
+    if (isFreshReplay) {
+      removeScopedItem(`mission_phase_${chapterId}_${missionSeq}`);
+      removeScopedItem(`boss_damage_${chapterId}_${missionSeq}`);
+      removeScopedItem(`boss_wrong_${chapterId}_${missionSeq}`);
+      removeScopedItem(`boss_index_${chapterId}_${missionSeq}`);
+      removeScopedItem(`mission_timer_${chapterId}_${missionSeq}`);
+      removeScopedItem(`user_answers_${chapterId}_${missionSeq}`);
+      removeScopedItem(`quiz_correct_${chapterId}_${missionSeq}`);
+      removeScopedItem(`xp_earned_${chapterId}_${missionSeq}`);
+      removeScopedItem(`coins_earned_${chapterId}_${missionSeq}`);
       const queryPhase = searchParams.get("phase");
-      if (queryPhase === "BOSS" || queryPhase === "QUIZ" || queryPhase === "SUMMARY") {
+      if (queryPhase === "BOSS" || queryPhase === "QUIZ" || queryPhase === "MINI_REWARD") {
         return queryPhase as StepPhase;
       }
       return "INTRO";
@@ -240,7 +278,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       return savedPhase as StepPhase;
     }
     const queryPhase = searchParams.get("phase");
-    if (queryPhase === "BOSS" || queryPhase === "QUIZ" || queryPhase === "SUMMARY") {
+    if (queryPhase === "BOSS" || queryPhase === "QUIZ" || queryPhase === "MINI_REWARD") {
       return queryPhase as StepPhase;
     }
     return "INTRO";
@@ -248,8 +286,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
   // Quiz state
   const [currentQuizIndex, setCurrentQuizIndex] = useState(() => {
-    if (isReplay) return 0;
-    const savedAns = sessionStorage.getItem(`user_answers_${chapterId}_${missionSeq}`);
+    if (isFreshReplay) return 0;
+    const savedAns = getScopedItem(`user_answers_${chapterId}_${missionSeq}`);
     if (savedAns) {
       try {
         const arr = JSON.parse(savedAns);
@@ -264,10 +302,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   // Answer string of a match / fill-letters / ordering question; null until every part is done.
   const [activityValue, setActivityValue] = useState<string | null>(null);
   const [quizCorrectCount, setQuizCorrectCount] = useState(() => {
-    if (isReplay) return 0;
-    const saved = sessionStorage.getItem(`quiz_correct_${chapterId}_${missionSeq}`);
+    if (isFreshReplay) return 0;
+    const saved = getScopedItem(`quiz_correct_${chapterId}_${missionSeq}`);
     if (saved !== null) return parseInt(saved, 10) || 0;
-    const savedAns = sessionStorage.getItem(`user_answers_${chapterId}_${missionSeq}`);
+    const savedAns = getScopedItem(`user_answers_${chapterId}_${missionSeq}`);
     if (savedAns) {
       try {
         const arr = JSON.parse(savedAns);
@@ -286,13 +324,13 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
   // Stats state
   const [xpEarned, setXpEarned] = useState(() => {
-    if (isReplay) return 0;
-    const saved = sessionStorage.getItem(`xp_earned_${chapterId}_${missionSeq}`);
+    if (isFreshReplay) return 0;
+    const saved = getScopedItem(`xp_earned_${chapterId}_${missionSeq}`);
     return saved ? (parseInt(saved, 10) || 0) : 0;
   });
   const [coinsEarned, setCoinsEarned] = useState(() => {
-    if (isReplay) return 0;
-    const saved = sessionStorage.getItem(`coins_earned_${chapterId}_${missionSeq}`);
+    if (isFreshReplay) return 0;
+    const saved = getScopedItem(`coins_earned_${chapterId}_${missionSeq}`);
     return saved ? (parseInt(saved, 10) || 0) : 0;
   });
   const [streak, setStreak] = useState(1);
@@ -302,26 +340,41 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   // Question Countdown Timer State (30s per question)
   const [questionTimeLeft, setQuestionTimeLeft] = useState(QUESTION_TIME_LIMIT);
   const [totalSessionSec, setTotalSessionSec] = useState(() => {
-    if (isReplay) return 0;
-    const saved = sessionStorage.getItem(`mission_timer_${chapterId}_${missionSeq}`);
+    if (isFreshReplay) return 0;
+    const saved = getScopedItem(`mission_timer_${chapterId}_${missionSeq}`);
     return saved ? (parseInt(saved, 10) || 0) : 0;
   });
 
   // Boss Battle state
   const [bossDamageCount, setBossDamageCount] = useState(() => {
-    if (isReplay) return 0;
-    const saved = sessionStorage.getItem(`boss_damage_${chapterId}_${missionSeq}`);
+    if (isFreshReplay) return 0;
+    const saved = getScopedItem(`boss_damage_${chapterId}_${missionSeq}`);
     return saved ? (parseInt(saved, 10) || 0) : 0;
   });
-  const [childDamageCount, setChildDamageCount] = useState(0); // tracks hearts lost (0-3)
+  const [childDamageCount, setChildDamageCount] = useState(() => {
+    const isReviving = getScopedItem("mission_boss_revival_active") || getScopedItem("boss_revival_won_reward");
+    if (isReviving) {
+      const wonRewardStr = getScopedItem("boss_revival_won_reward");
+      if (wonRewardStr) {
+        try {
+          const r = JSON.parse(wonRewardStr);
+          if (r.reward_type === "heart" && r.amount) {
+            return Math.max(0, 3 - r.amount);
+          }
+        } catch (e) {}
+      }
+      return 2; // 1 heart remaining (3 - 2 = 1)
+    }
+    return 0;
+  }); // tracks hearts lost (0-3)
   const [wrongAnswerCount, setWrongAnswerCount] = useState(() => {
-    if (isReplay) return 0;
-    const saved = sessionStorage.getItem(`boss_wrong_${chapterId}_${missionSeq}`);
+    if (isFreshReplay) return 0;
+    const saved = getScopedItem(`boss_wrong_${chapterId}_${missionSeq}`);
     return saved ? (parseInt(saved, 10) || 0) : 0;
   });
   const [currentBossIndex, setCurrentBossIndex] = useState(() => {
-    if (isReplay) return 0;
-    const saved = sessionStorage.getItem(`boss_index_${chapterId}_${missionSeq}`);
+    if (isFreshReplay) return 0;
+    const saved = getScopedItem(`boss_index_${chapterId}_${missionSeq}`);
     return saved ? (parseInt(saved, 10) || 0) : 0;
   });
   const [bossSelected, setBossSelected] = useState<number | null>(null);
@@ -333,24 +386,69 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
   // Revival State
   const [showReviveModal, setShowReviveModal] = useState(false);
+  const [showBuySpinConfirmModal, setShowBuySpinConfirmModal] = useState(false);
+  const [isBuyingRevivalSpin, setIsBuyingRevivalSpin] = useState(false);
   const [revivalSpins, setRevivalSpins] = useState(0);
   const [hasDoubleDamage, setHasDoubleDamage] = useState(false);
   const [lossOverlay, setLossOverlay] = useState<{ show: boolean; xpLoss: number }>({ show: false, xpLoss: 0 });
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const showToast = (message: string) => {
-    setToastMessage(message);
-    setTimeout(() => setToastMessage(null), 3000);
+  useLockBodyScroll(Boolean(showReviveModal || lossOverlay.show));
+  const showToast = (message: string, type: "gamification" | "error" | "success" | "warning" = "gamification") => {
+    showNotificationToast({
+      title: "Mission Update",
+      message,
+      type
+    });
   };
   const [userCoins, setUserCoins] = useState(0);
 
+  // Active Child Name for Hero Badge
+  const [activeChildName, setActiveChildName] = useState<string>(() => {
+    try {
+      const raw = localStorage.getItem("userData") || localStorage.getItem("user");
+      if (raw) {
+        const data = JSON.parse(raw);
+        const childId = data?.activeChildId || data?.childId || "child_1";
+        const activeChild = Array.isArray(data?.children)
+          ? data.children.find((c: any) => c?.childId === childId)
+          : null;
+        return activeChild?.childName || data?.childName || data?.name || data?.fullName || "Hero";
+      }
+    } catch (e) {}
+    return "Hero";
+  });
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await apiFetch("/api/users/me");
+        const json = await res.json();
+        if (json.success && json.data?.user) {
+          const u = json.data.user;
+          const childId = u.activeChildId || u.childId || "child_1";
+          const activeChild = Array.isArray(u.children)
+            ? u.children.find((c: any) => c?.childId === childId)
+            : null;
+          const name = activeChild?.childName || u.childName || u.name || u.fullName || "Hero";
+          if (name) setActiveChildName(name);
+        }
+      } catch (e) {}
+    };
+    fetchUser();
+  }, []);
+
   // Duolingo Streak animations and steps
-  const [summaryStep, setSummaryStep] = useState<"LESSON_COMPLETE" | "STREAK" | "REPORT">("LESSON_COMPLETE");
+  const [summaryStep, setSummaryStep] = useState<"LESSON_COMPLETE" | "STREAK" | "REPORT">(() => {
+    if (isFreshReplay) return "LESSON_COMPLETE";
+    const saved = getScopedItem(`summary_step_${chapterId}_${missionSeq}`);
+    return (saved as any) || "LESSON_COMPLETE";
+  });
   const [displayedStreak, setDisplayedStreak] = useState(0);
   const [streakDaysOfWeek, setStreakDaysOfWeek] = useState<boolean[]>([false, false, false, false, false, false, false]);
   const [animateStreakNumber, setAnimateStreakNumber] = useState(false);
 
   const openReviveModal = async () => {
     setShowReviveModal(true);
+    setShowBuySpinConfirmModal(false);
     try {
       const res = await apiFetch("/api/users/me");
       const json = await res.json();
@@ -371,109 +469,322 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     }
   };
 
+  const handleGoToMissionSpinWheel = () => {
+    setScopedItem("mission_boss_revival_active", "true");
+    setScopedItem(`boss_damage_${chapterId}_${missionSeq}`, bossDamageCount.toString());
+    setScopedItem(`boss_wrong_${chapterId}_${missionSeq}`, wrongAnswerCount.toString());
+    setScopedItem(`boss_index_${chapterId}_${missionSeq}`, currentBossIndex.toString());
+    setScopedItem(`mission_phase_${chapterId}_${missionSeq}`, "BOSS");
+    setScopedItem(`user_answers_${chapterId}_${missionSeq}`, JSON.stringify(userAnswers));
+
+    setShowReviveModal(false);
+    setShowBuySpinConfirmModal(false);
+
+    const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+    navigate(`/daily-rewards?type=boss_revival&chapter_id=${chapterId}&mission_seq=${missionSeq}&returnTo=${returnUrl}`);
+  };
+
+  const handleConfirmBuyRevivalSpin = async () => {
+    if (userCoins < 100) {
+      showToast("Not enough coins! You need 100 coins.", "warning");
+      setShowBuySpinConfirmModal(false);
+      return;
+    }
+    setIsBuyingRevivalSpin(true);
+
+    try {
+      const res = await apiFetch("/api/retention/spin-wheel/buy-revival", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      const json = await res.json();
+      if (json.success) {
+        const newCoins = json.coins !== undefined ? json.coins : Math.max(0, userCoins - 100);
+        setUserCoins(newCoins);
+        setRevivalSpins(1);
+
+        try {
+          const uRes = await apiFetch("/api/users/me");
+          const uJson = await uRes.json();
+          if (uJson.success && uJson.data?.user) {
+            localStorage.setItem("userData", JSON.stringify(uJson.data.user));
+            window.dispatchEvent(new Event("userDataUpdated"));
+          }
+        } catch (ue) {}
+
+        setScopedItem("mission_boss_revival_active", "true");
+        setScopedItem(`boss_damage_${chapterId}_${missionSeq}`, bossDamageCount.toString());
+        setScopedItem(`boss_wrong_${chapterId}_${missionSeq}`, wrongAnswerCount.toString());
+        setScopedItem(`boss_index_${chapterId}_${missionSeq}`, currentBossIndex.toString());
+        setScopedItem(`mission_phase_${chapterId}_${missionSeq}`, "BOSS");
+        setScopedItem(`user_answers_${chapterId}_${missionSeq}`, JSON.stringify(userAnswers));
+
+        setShowBuySpinConfirmModal(false);
+        setShowReviveModal(false);
+
+        showToast("Purchased 1 Revival Spin! Heading to the wheel... 🎉", "success");
+
+        const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+        navigate(`/daily-rewards?type=boss_revival&chapter_id=${chapterId}&mission_seq=${missionSeq}&returnTo=${returnUrl}`);
+      } else {
+        showToast(json.message || "Purchase failed.", "error");
+        setShowBuySpinConfirmModal(false);
+        setShowReviveModal(true);
+      }
+    } catch (e) {
+      showToast("Purchase failed.", "error");
+      setShowBuySpinConfirmModal(false);
+      setShowReviveModal(true);
+    } finally {
+      setIsBuyingRevivalSpin(false);
+    }
+  };
+
+  // Check and apply revival bonus when returning from DailyRewardsScreen
   useEffect(() => {
-    sessionStorage.setItem(`boss_damage_${chapterId}_${missionSeq}`, bossDamageCount.toString());
+    const isReviving = getScopedItem("mission_boss_revival_active") || getScopedItem("boss_revival_won_reward");
+    if (isReviving) {
+      const wonRewardStr = getScopedItem("boss_revival_won_reward");
+      let heartsRestored = 1;
+      if (wonRewardStr) {
+        try {
+          const r = JSON.parse(wonRewardStr);
+          if (r.reward_type === "heart" && r.amount) {
+            heartsRestored = r.amount;
+          } else if (r.reward_type === "double_damage") {
+            setHasDoubleDamage(true);
+          }
+        } catch (e) {}
+      }
+
+      setChildDamageCount(Math.max(0, 3 - heartsRestored));
+      setShowReviveModal(false);
+      setShowBuySpinConfirmModal(false);
+      setBossSelected(null);
+      setBossConfirmed(false);
+      setBossAngry(false);
+      setDragonCrying(false);
+      setQuestionTimeLeft(QUESTION_TIME_LIMIT);
+
+      removeScopedItem("mission_boss_revival_active");
+      removeScopedItem("boss_revival_won_reward");
+
+      showToast("Revived and ready! Your hearts have been restored. Defeat the boss! ❤️", "success");
+    }
+  }, []);
+
+  useEffect(() => {
+    setScopedItem(`boss_damage_${chapterId}_${missionSeq}`, bossDamageCount.toString());
   }, [bossDamageCount, chapterId, missionSeq]);
 
   useEffect(() => {
-    sessionStorage.setItem(`boss_wrong_${chapterId}_${missionSeq}`, wrongAnswerCount.toString());
+    setScopedItem(`boss_wrong_${chapterId}_${missionSeq}`, wrongAnswerCount.toString());
   }, [wrongAnswerCount, chapterId, missionSeq]);
 
   useEffect(() => {
-    sessionStorage.setItem(`boss_index_${chapterId}_${missionSeq}`, currentBossIndex.toString());
+    setScopedItem(`boss_index_${chapterId}_${missionSeq}`, currentBossIndex.toString());
   }, [currentBossIndex, chapterId, missionSeq]);
 
   useEffect(() => {
-    sessionStorage.setItem(`quiz_correct_${chapterId}_${missionSeq}`, quizCorrectCount.toString());
+    setScopedItem(`quiz_correct_${chapterId}_${missionSeq}`, quizCorrectCount.toString());
   }, [quizCorrectCount, chapterId, missionSeq]);
 
   useEffect(() => {
-    sessionStorage.setItem(`xp_earned_${chapterId}_${missionSeq}`, xpEarned.toString());
+    setScopedItem(`xp_earned_${chapterId}_${missionSeq}`, xpEarned.toString());
   }, [xpEarned, chapterId, missionSeq]);
 
   useEffect(() => {
-    sessionStorage.setItem(`coins_earned_${chapterId}_${missionSeq}`, coinsEarned.toString());
+    setScopedItem(`coins_earned_${chapterId}_${missionSeq}`, coinsEarned.toString());
   }, [coinsEarned, chapterId, missionSeq]);
 
   // Final Summary state
-  const [completionResult, setCompletionResult] = useState<any>(null);
+  const [completionResult, setCompletionResult] = useState<any>(() => {
+    if (isFreshReplay || phase !== "SUMMARY") return null;
+    const saved = getScopedItem(`completion_result_${chapterId}_${missionSeq}`);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return null;
+  });
   const [userAnswers, setUserAnswers] = useState<any[]>(() => {
-    if (isReplay) return [];
-    const saved = sessionStorage.getItem(`user_answers_${chapterId}_${missionSeq}`);
-    return saved ? JSON.parse(saved) : [];
+    if (isFreshReplay) return [];
+    const saved = getScopedItem(`user_answers_${chapterId}_${missionSeq}`);
+    if (!saved) return [];
+    try {
+      return filterUniqueQuestions(JSON.parse(saved));
+    } catch {
+      return [];
+    }
   });
   const [isCompleting, setIsCompleting] = useState(false);
 
   useEffect(() => {
-    sessionStorage.setItem(`user_answers_${chapterId}_${missionSeq}`, JSON.stringify(userAnswers));
+    setScopedItem(`user_answers_${chapterId}_${missionSeq}`, JSON.stringify(userAnswers));
   }, [userAnswers, chapterId, missionSeq]);
 
   useEffect(() => {
     if (phase && phase !== "INTRO") {
-      sessionStorage.setItem(`mission_phase_${chapterId}_${missionSeq}`, phase);
+      setScopedItem(`mission_phase_${chapterId}_${missionSeq}`, phase);
     }
   }, [phase, chapterId, missionSeq]);
 
   useEffect(() => {
-    if (searchParams.get("replay") === "true") {
-      const newParams = new URLSearchParams(searchParams);
-      newParams.delete("replay");
-      navigate(`?${newParams.toString()}`, { replace: true });
+    setScopedItem(`quiz_correct_${chapterId}_${missionSeq}`, quizCorrectCount.toString());
+  }, [quizCorrectCount, chapterId, missionSeq]);
+
+  useEffect(() => {
+    setScopedItem(`xp_earned_${chapterId}_${missionSeq}`, xpEarned.toString());
+  }, [xpEarned, chapterId, missionSeq]);
+
+  useEffect(() => {
+    setScopedItem(`coins_earned_${chapterId}_${missionSeq}`, coinsEarned.toString());
+  }, [coinsEarned, chapterId, missionSeq]);
+
+  useEffect(() => {
+    setScopedItem(`boss_damage_${chapterId}_${missionSeq}`, bossDamageCount.toString());
+  }, [bossDamageCount, chapterId, missionSeq]);
+
+  useEffect(() => {
+    setScopedItem(`boss_wrong_${chapterId}_${missionSeq}`, wrongAnswerCount.toString());
+  }, [wrongAnswerCount, chapterId, missionSeq]);
+
+  useEffect(() => {
+    setScopedItem(`boss_index_${chapterId}_${missionSeq}`, currentBossIndex.toString());
+  }, [currentBossIndex, chapterId, missionSeq]);
+
+  useEffect(() => {
+    if (phase === "SUMMARY") {
+      setScopedItem(`summary_step_${chapterId}_${missionSeq}`, summaryStep);
     }
-  }, [searchParams, navigate]);
+  }, [summaryStep, phase, chapterId, missionSeq]);
 
   const [isDraftRestored, setIsDraftRestored] = useState(false);
+  const [isQuitting, setIsQuitting] = useState(false);
 
   // Fetch Mission Data Effect
   useEffect(() => {
     async function fetchMission() {
       try {
-        if (isReplay) {
+        if (missionSeq > 5 || missionSeq < 1) {
+          navigate(`/mission-roadmap?chapterId=${chapterId}`, { replace: true });
+          return;
+        }
+        if (isFreshReplay) {
           apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, { method: "DELETE" }).catch(() => {});
         }
-        const res = await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}`);
-        const json = await res.json();
-        if (json.success && json.data) {
-          setMissionData(json.data);
+        const activeCtx = getActiveUserContext();
+        const res = await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}?classLevel=${encodeURIComponent(activeCtx.classLevel)}${isFreshReplay ? "&replay=true" : ""}`);
+        const json = await res.json().catch(() => null);
+        if (json?.success && json?.data) {
+          const { uniqueQuiz, uniqueBoss } = filterCrossUniqueQuestions(
+            json.data.quizQuestions,
+            json.data.bossQuestions
+          );
+          const sanitizedData = {
+            ...json.data,
+            quizQuestions: uniqueQuiz,
+            bossQuestions: uniqueBoss
+          };
+          setMissionData(sanitizedData);
 
           // Restore draft from database if present (ignore when starting fresh replay)
-          const draft = isReplay ? null : json.data.activeDraft;
+          const draft = isFreshReplay ? null : json.data.activeDraft;
           if (draft) {
-            if (typeof draft.currentQuizIndex === "number") setCurrentQuizIndex(draft.currentQuizIndex);
+            const savedAnswersRaw = getScopedItem(`user_answers_${chapterId}_${missionSeq}`);
+            let savedAnswers: any[] = [];
+            try { savedAnswers = savedAnswersRaw ? JSON.parse(savedAnswersRaw) : []; } catch (e) {}
+
+            const rawMergedAnswers = (Array.isArray(draft.userAnswers) && draft.userAnswers.length >= savedAnswers.length)
+              ? draft.userAnswers
+              : savedAnswers;
+            const mergedAnswers = filterUniqueQuestions(rawMergedAnswers);
+
+            const savedWrong = parseInt(getScopedItem(`boss_wrong_${chapterId}_${missionSeq}`) || "0", 10);
+            const savedIndex = parseInt(getScopedItem(`boss_index_${chapterId}_${missionSeq}`) || "0", 10);
+
+            const totalQuizQ = Array.isArray(json.data.quizQuestions) && json.data.quizQuestions.length > 0
+              ? json.data.quizQuestions.length
+              : DEFAULT_QUIZ.length;
+
+            if (typeof draft.currentQuizIndex === "number") {
+              setCurrentQuizIndex(Math.max(0, Math.min(draft.currentQuizIndex, totalQuizQ - 1)));
+            }
             if (draft.phase && draft.phase !== "INTRO") setPhase(draft.phase);
             if (typeof draft.quizCorrectCount === "number") setQuizCorrectCount(draft.quizCorrectCount);
-            if (Array.isArray(draft.userAnswers)) setUserAnswers(draft.userAnswers);
+            if (mergedAnswers.length > 0) setUserAnswers(mergedAnswers);
             if (typeof draft.xpEarned === "number") setXpEarned(draft.xpEarned);
             if (typeof draft.coinsEarned === "number") setCoinsEarned(draft.coinsEarned);
             if (typeof draft.bossDamageCount === "number") setBossDamageCount(draft.bossDamageCount);
-            if (typeof draft.wrongAnswerCount === "number") setWrongAnswerCount(draft.wrongAnswerCount);
-            if (typeof draft.currentBossIndex === "number") setCurrentBossIndex(draft.currentBossIndex);
+            setWrongAnswerCount(Math.max(draft.wrongAnswerCount || 0, savedWrong));
+            setCurrentBossIndex(Math.max(draft.currentBossIndex || 0, savedIndex));
             if (typeof draft.totalSessionSec === "number") setTotalSessionSec(draft.totalSessionSec);
-          } else if (json.data.quizCompleted && !isReplay && (!hasSavedSession || savedPhase === "BOSS")) {
-            setPhase("BOSS");
           }
 
           if (json.data.doubleDamage !== undefined) {
             setHasDoubleDamage(json.data.doubleDamage);
           }
-          if (isReplay || !draft) {
+          if (isFreshReplay) {
             setChildDamageCount(0);
-          } else if (json.data.childHearts !== undefined) {
-            setChildDamageCount(3 - json.data.childHearts);
+            setBossDamageCount(0);
+            setWrongAnswerCount(0);
+            setCurrentBossIndex(0);
+            removeScopedItem(`boss_wrong_${chapterId}_${missionSeq}`);
+          } else if (!draft && !hasSavedSession) {
+            setChildDamageCount(0);
+            setBossDamageCount(0);
+            setWrongAnswerCount(0);
+            setCurrentBossIndex(0);
+            removeScopedItem(`boss_wrong_${chapterId}_${missionSeq}`);
+          } else if (json.data.childHearts !== undefined && draft?.phase === "BOSS") {
+            setChildDamageCount(Math.max(0, 3 - json.data.childHearts));
             if (json.data.childHearts === 0) {
               openReviveModal();
             }
+          } else {
+            setChildDamageCount(0);
           }
+        } else {
+          // Mission data unavailable or empty pool: Fallback to standard mission questions instead of silent redirect
+          showNotificationToast({ message: "Loaded practice mission with standard challenge questions", type: "info" });
+          setMissionData({
+            missionSeq,
+            title: `Mission ${missionSeq}`,
+            icon: "🎯",
+            bossName: "Boss Guardian",
+            quizQuestions: DEFAULT_QUIZ,
+            bossQuestions: DEFAULT_BOSS,
+            bossHearts: 3,
+            childHearts: 3,
+            doubleDamage: false,
+            quizCompleted: false,
+            activeDraft: null
+          });
         }
       } catch (e) {
         console.error("Failed to load mission:", e);
+        showNotificationToast({ message: "Loaded practice mission with standard challenge questions", type: "info" });
+        setMissionData({
+          missionSeq,
+          title: `Mission ${missionSeq}`,
+          icon: "🎯",
+          bossName: "Boss Guardian",
+          quizQuestions: DEFAULT_QUIZ,
+          bossQuestions: DEFAULT_BOSS,
+          bossHearts: 3,
+          childHearts: 3,
+          doubleDamage: false,
+          quizCompleted: false,
+          activeDraft: null
+        });
       } finally {
         setLoading(false);
         setIsDraftRestored(true);
       }
     }
     fetchMission();
-  }, [chapterId, missionSeq]);
+  }, [chapterId, missionSeq, navigate]);
 
   // The timer ticks every second; keep it in a ref so it is saved with the draft without re-triggering the sync.
   const totalSessionSecRef = useRef(totalSessionSec);
@@ -481,7 +792,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
   // Auto-sync active mission draft state to backend database (Solution 1)
   useEffect(() => {
-    if (!isDraftRestored || isReplay || !phase || phase === "INTRO" || phase === "SUMMARY" || loading) return;
+    if (!isDraftRestored || isQuitting || !phase || phase === "INTRO" || phase === "SUMMARY" || loading) return;
 
     const timeoutId = setTimeout(() => {
       apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, {
@@ -497,7 +808,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           bossDamageCount,
           wrongAnswerCount,
           currentBossIndex,
-          totalSessionSec: totalSessionSecRef.current
+          totalSessionSec: totalSessionSecRef.current,
+          classLevel: getActiveUserContext().classLevel
         })
       }).catch((err) => console.error("Failed to sync draft to server:", err));
     }, 500);
@@ -505,6 +817,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     return () => clearTimeout(timeoutId);
   }, [
     isDraftRestored,
+    isQuitting,
+    childDamageCount,
     currentQuizIndex,
     phase,
     quizCorrectCount,
@@ -520,41 +834,37 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     loading
   ]);
 
-  const defaultQuiz = [
-    { _id: "fq1", question: "Which of the following is a synonym for 'happy'?", options: ["Joyful", "Sad", "Angry", "Tired"], answer: "Joyful", type: "multiple_choice" },
-    { _id: "fq2", question: "Which of these is a primary color?", options: ["Red", "Green", "Purple", "Orange"], answer: "Red", type: "multiple_choice" },
-    { _id: "fq3", question: "What is the capital city of France?", options: ["Paris", "London", "Berlin", "Rome"], answer: "Paris", type: "multiple_choice" },
-    { _id: "fq4", question: "What comes after the letter B in the alphabet?", options: ["C", "A", "D", "E"], answer: "C", type: "multiple_choice" }
-  ];
-
-  const shuffleQuestionOptions = (questions: any[]) => {
-    return questions.map((q) => {
-      if (!q || !q.options || !Array.isArray(q.options) || q.options.length < 2) return q;
-      const opts = [...q.options];
-      for (let i = opts.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [opts[i], opts[j]] = [opts[j], opts[i]];
-      }
-      return { ...q, options: opts };
-    });
-  };
-
-  const rawQuiz = (missionData?.quizQuestions && missionData.quizQuestions.length > 0)
-    ? missionData.quizQuestions
-    : defaultQuiz;
-
-  const quizQuestions = useMemo(() => shuffleQuestionOptions(rawQuiz), [rawQuiz]);
-
-  const apiBoss = missionData?.bossQuestions;
-  const bossQuestions = useMemo(() => {
-    // A partial set may have no boss questions; then the quiz questions are reused, rotated by half.
-    const half = Math.ceil(quizQuestions.length / 2);
-    const fallback = [...quizQuestions.slice(half), ...quizQuestions.slice(0, half)];
-    const source = apiBoss && apiBoss.length > 0 ? apiBoss : fallback;
+  const { uniqueQuiz: quizQuestions, uniqueBoss: bossQuestions } = useMemo(() => {
+    const apiQuiz = missionData?.quizQuestions;
+    const apiBoss = missionData?.bossQuestions;
+    const rawQuiz = apiQuiz && apiQuiz.length > 0 ? apiQuiz : DEFAULT_QUIZ;
+    const { uniqueQuiz, uniqueBoss } = filterCrossUniqueQuestions(rawQuiz, apiBoss && apiBoss.length > 0 ? apiBoss : DEFAULT_BOSS);
+    let boss = uniqueBoss;
+    if (boss.length === 0 && apiQuiz && apiQuiz.length > 0) {
+      // A partial set may have no boss questions; then the quiz questions are reused, rotated by half.
+      const half = Math.ceil(uniqueQuiz.length / 2);
+      boss = [...uniqueQuiz.slice(half), ...uniqueQuiz.slice(0, half)];
+    }
     // The boss arena only plays multiple choice (match / fill letters / ordering stay in the quiz).
-    const playable = source.filter((q: any) => !activityType(q));
-    return shuffleQuestionOptions(playable.length > 0 ? playable : defaultQuiz);
-  }, [apiBoss, quizQuestions]);
+    const playable = boss.filter((q: any) => !activityType(q));
+    return { uniqueQuiz, uniqueBoss: playable.length > 0 ? playable : DEFAULT_BOSS };
+  }, [missionData?.quizQuestions, missionData?.bossQuestions]);
+
+  const recordUniqueAnswer = useCallback((prevAnswers: any[], newAns: any) => {
+    const newId = getQuestionIdentifier(newAns);
+    const newText = getNormalizedQuestionText(newAns);
+    const existingIndex = prevAnswers.findIndex((a) => {
+      const aId = getQuestionIdentifier(a);
+      const aText = getNormalizedQuestionText(a);
+      return (newId && aId && newId === aId) || (newText && aText && newText === aText);
+    });
+    if (existingIndex >= 0) {
+      const updated = [...prevAnswers];
+      updated[existingIndex] = newAns;
+      return updated;
+    }
+    return [...prevAnswers, newAns];
+  }, []);
 
   const bossMaxHp = 3;
   const bossHearts = Math.max(0, bossMaxHp - bossDamageCount);
@@ -580,30 +890,11 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   }, [currentBossIndex, activeBossQ?._id]);
 
   const activeBossOptions = useMemo(() => {
-    const rawOpts = (activeBossQ?.options && Array.isArray(activeBossQ.options) && activeBossQ.options.length > 0)
-      ? activeBossQ.options
-      : [activeBossQ?.answer || "Option 1", "Option 2", "Option 3", "Option 4"];
-
-    const opts = [...rawOpts];
-    // Seeded PRNG Fisher-Yates shuffle per question text/id
-    const seedStr = String(activeBossQ?._id || activeBossQ?.question || currentBossIndex);
-    let h = 2166136261;
-    for (let i = 0; i < seedStr.length; i++) {
-      h = Math.imul(h ^ seedStr.charCodeAt(i), 16777619);
+    if (activeBossQ?.options && Array.isArray(activeBossQ.options) && activeBossQ.options.length > 0) {
+      return activeBossQ.options;
     }
-    const rng = () => {
-      h += h << 13;
-      h ^= h >> 7;
-      h += h << 3;
-      h ^= h >> 17;
-      return ((h += h << 5) >>> 0) / 4294967296;
-    };
-    for (let i = opts.length - 1; i > 0; i--) {
-      const j = Math.floor(rng() * (i + 1));
-      [opts[i], opts[j]] = [opts[j], opts[i]];
-    }
-    return opts;
-  }, [activeBossQ?._id, activeBossQ?.question, activeBossQ?.options, currentBossIndex]);
+    return [activeBossQ?.answer || "Option 1", "Option 2", "Option 3", "Option 4"];
+  }, [activeBossQ?._id, activeBossQ?.options, activeBossQ?.answer]);
 
   const bossName = missionData?.bossName || "Boss Guardian";
   const missionTitle = missionData?.title || `Mission ${missionSeq}`;
@@ -678,16 +969,17 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   const finalizeMission = async (finalBossDamage = bossDamageCount, finalChildDamage = childDamageCount, currentAnswers = userAnswers) => {
     setIsCompleting(true);
     try {
+      const sanitizedAnswers = filterUniqueQuestions(currentAnswers);
       // Clear boss & quiz session state
-      sessionStorage.removeItem(`boss_damage_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`boss_wrong_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`boss_index_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`mission_phase_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`mission_timer_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`user_answers_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`quiz_correct_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`xp_earned_${chapterId}_${missionSeq}`);
-      sessionStorage.removeItem(`coins_earned_${chapterId}_${missionSeq}`);
+      removeScopedItem(`boss_damage_${chapterId}_${missionSeq}`);
+      removeScopedItem(`boss_wrong_${chapterId}_${missionSeq}`);
+      removeScopedItem(`boss_index_${chapterId}_${missionSeq}`);
+      removeScopedItem(`mission_phase_${chapterId}_${missionSeq}`);
+      removeScopedItem(`mission_timer_${chapterId}_${missionSeq}`);
+      removeScopedItem(`user_answers_${chapterId}_${missionSeq}`);
+      removeScopedItem(`quiz_correct_${chapterId}_${missionSeq}`);
+      removeScopedItem(`xp_earned_${chapterId}_${missionSeq}`);
+      removeScopedItem(`coins_earned_${chapterId}_${missionSeq}`);
 
       const bossCorrect = finalBossDamage;
       const res = await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/complete`, {
@@ -697,15 +989,62 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           quizCorrect: quizCorrectCount,
           quizTotal: quizQuestions.length,
           bossCorrect: bossCorrect,
-          bossTotal: bossCorrect + wrongAnswerCount,
+          bossTotal: Math.max(bossCorrect + wrongAnswerCount, sanitizedAnswers.length - quizQuestions.length),
           timeTakenSec: totalSessionSec,
           livesRemaining: Math.max(0, 3 - finalChildDamage),
-          answers: currentAnswers
+          answers: sanitizedAnswers,
+          classLevel: getActiveUserContext().classLevel
         })
       });
       const json = await res.json();
       if (json.success && json.data) {
         setCompletionResult(json.data);
+        setScopedItem(`completion_result_${chapterId}_${missionSeq}`, JSON.stringify(json.data));
+
+        removeScopedItem(`is_replay_${chapterId}_${missionSeq}`);
+
+        try {
+          const chIdStr = String(chapterId);
+          const cachedCompleted = getScopedItem("cached_completed_chapters");
+          let completedList: string[] = cachedCompleted ? JSON.parse(cachedCompleted) : [];
+
+          const cachedProg = getScopedItem("cached_chapter_progress");
+          const progMap = cachedProg ? JSON.parse(cachedProg) : {};
+          const prevDoc = progMap[chIdStr] || {};
+
+          // A chapter once completed must NEVER revert to uncompleted on replay!
+          const wasAlreadyDone = Boolean(prevDoc.chapterCompleted || prevDoc.completed || completedList.includes(chIdStr));
+          const isChapDone = Boolean(json.data.chapterCompleted) || wasAlreadyDone;
+
+          if (isChapDone) {
+            if (!completedList.includes(chIdStr)) completedList.push(chIdStr);
+            if (!completedList.includes(`${chIdStr}_hard`)) completedList.push(`${chIdStr}_hard`);
+          } else {
+            // Strictly remove from completed list only if it was never completed
+            completedList = completedList.filter((id) => id !== chIdStr && id !== `${chIdStr}_hard`);
+          }
+          setScopedItem("cached_completed_chapters", JSON.stringify(completedList));
+
+          const prevMissions = Array.isArray(prevDoc.completedMissions) ? prevDoc.completedMissions : [];
+          const backendMissions = Array.isArray(json.data.completedMissions) ? json.data.completedMissions : [];
+          const updatedMissions = Array.from(new Set([...prevMissions, ...backendMissions]));
+          const totalMissions = Number(json.data.totalMissions || 5);
+          const allMissionsFinished = isChapDone || (updatedMissions.length >= totalMissions) || Boolean(prevDoc.chapterCompleted);
+
+          const updatedDoc = {
+            ...prevDoc,
+            chapterId: chIdStr,
+            chapterCompleted: allMissionsFinished,
+            completed: allMissionsFinished,
+            completedMissions: updatedMissions
+          };
+          progMap[chIdStr] = updatedDoc;
+          progMap[chapterId] = updatedDoc;
+          setScopedItem("cached_chapter_progress", JSON.stringify(progMap));
+        } catch (_) {}
+
+        window.dispatchEvent(new Event("userDataUpdated"));
+
         // Trigger Interactive Desktop Push Notification & Floating Banner Toast
         showInteractiveNotification(
           "🧩 MYSTERY SOLVED!",
@@ -726,6 +1065,23 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
         } else {
           setDisplayedStreak(json.data.streak || 1);
         }
+      } else {
+        const currentAcc = Math.round(((quizCorrectCount + finalBossDamage) / Math.max(1, quizQuestions.length + bossQuestions.length)) * 100);
+        const fallbackRes = {
+          xpEarned: xpEarned || 20,
+          coinsEarned: coinsEarned || 50,
+          earnedXp: xpEarned || 20,
+          earnedCoins: coinsEarned || 50,
+          accuracy: currentAcc,
+          runAccuracy: currentAcc,
+          bestAccuracy: currentAcc,
+          totalQuestions: quizQuestions.length + bossQuestions.length,
+          correctAnswers: quizCorrectCount + finalBossDamage,
+          streak: streak || 1,
+          todayLessonsCount: 1
+        };
+        setCompletionResult(fallbackRes);
+        setScopedItem(`completion_result_${chapterId}_${missionSeq}`, JSON.stringify(fallbackRes));
       }
     } catch (e) {
       console.error("Failed to complete mission:", e);
@@ -735,19 +1091,95 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     }
   };
 
+  const handleBackToRoadmap = useCallback(async () => {
+    removeScopedItem(`is_replay_${chapterId}_${missionSeq}`);
+    removeScopedItem(`user_answers_${chapterId}_${missionSeq}`);
+    removeScopedItem(`mission_phase_${chapterId}_${missionSeq}`);
+    removeScopedItem(`mission_timer_${chapterId}_${missionSeq}`);
+    removeScopedItem(`boss_damage_${chapterId}_${missionSeq}`);
+    removeScopedItem(`boss_wrong_${chapterId}_${missionSeq}`);
+    removeScopedItem(`boss_index_${chapterId}_${missionSeq}`);
+    removeScopedItem(`quiz_correct_${chapterId}_${missionSeq}`);
+    removeScopedItem(`xp_earned_${chapterId}_${missionSeq}`);
+    removeScopedItem(`coins_earned_${chapterId}_${missionSeq}`);
+    removeScopedItem(`completion_result_${chapterId}_${missionSeq}`);
+    removeScopedItem(`summary_step_${chapterId}_${missionSeq}`);
+
+    try {
+      await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, { method: "DELETE" });
+    } catch (e) {}
+
+    navigate(`/mission-roadmap?chapterId=${chapterId}`, { replace: true });
+  }, [chapterId, missionSeq, navigate]);
+
+  const handleReplayMission = useCallback(async () => {
+    for (let s = 1; s <= 5; s++) {
+      if (s !== missionSeq) {
+        removeScopedItem(`is_replay_${chapterId}_${s}`);
+      }
+    }
+    setScopedItem(`is_replay_${chapterId}_${missionSeq}`, "true");
+    removeScopedItem(`user_answers_${chapterId}_${missionSeq}`);
+    removeScopedItem(`mission_phase_${chapterId}_${missionSeq}`);
+    removeScopedItem(`mission_timer_${chapterId}_${missionSeq}`);
+    removeScopedItem(`boss_damage_${chapterId}_${missionSeq}`);
+    removeScopedItem(`boss_wrong_${chapterId}_${missionSeq}`);
+    removeScopedItem(`boss_index_${chapterId}_${missionSeq}`);
+    removeScopedItem(`quiz_correct_${chapterId}_${missionSeq}`);
+    removeScopedItem(`xp_earned_${chapterId}_${missionSeq}`);
+    removeScopedItem(`coins_earned_${chapterId}_${missionSeq}`);
+    removeScopedItem(`completion_result_${chapterId}_${missionSeq}`);
+    removeScopedItem(`summary_step_${chapterId}_${missionSeq}`);
+
+    try {
+      await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, { method: "DELETE" });
+    } catch (e) {}
+
+    window.location.href = `/mission-play?chapterId=${chapterId}&missionSeq=${missionSeq}&replay=true`;
+  }, [chapterId, missionSeq]);
+
+  const handleNextMission = useCallback(async () => {
+    if (missionSeq >= 5) {
+      handleBackToRoadmap();
+      return;
+    }
+    const nextSeq = missionSeq + 1;
+    removeScopedItem(`user_answers_${chapterId}_${nextSeq}`);
+    removeScopedItem(`mission_phase_${chapterId}_${nextSeq}`);
+    removeScopedItem(`mission_timer_${chapterId}_${nextSeq}`);
+    removeScopedItem(`boss_damage_${chapterId}_${nextSeq}`);
+    removeScopedItem(`boss_wrong_${chapterId}_${nextSeq}`);
+    removeScopedItem(`boss_index_${chapterId}_${nextSeq}`);
+    removeScopedItem(`quiz_correct_${chapterId}_${nextSeq}`);
+    removeScopedItem(`xp_earned_${chapterId}_${nextSeq}`);
+    removeScopedItem(`coins_earned_${chapterId}_${nextSeq}`);
+    removeScopedItem(`completion_result_${chapterId}_${nextSeq}`);
+    removeScopedItem(`summary_step_${chapterId}_${nextSeq}`);
+
+    try {
+      await apiFetch(`/api/practice/chapters/${chapterId}/missions/${nextSeq}/draft`, { method: "DELETE" });
+    } catch (e) {}
+
+    window.location.href = `/mission-play?chapterId=${chapterId}&missionSeq=${nextSeq}`;
+  }, [chapterId, missionSeq, handleBackToRoadmap]);
+
   const handleGiveUp = async () => {
+    setIsQuitting(true);
     setShowReviveModal(false);
 
     // Clear all session storage keys for this mission
-    sessionStorage.removeItem(`boss_damage_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`boss_wrong_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`boss_index_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`mission_phase_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`mission_timer_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`user_answers_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`quiz_correct_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`xp_earned_${chapterId}_${missionSeq}`);
-    sessionStorage.removeItem(`coins_earned_${chapterId}_${missionSeq}`);
+    removeScopedItem(`boss_damage_${chapterId}_${missionSeq}`);
+    removeScopedItem(`boss_wrong_${chapterId}_${missionSeq}`);
+    removeScopedItem(`boss_index_${chapterId}_${missionSeq}`);
+    removeScopedItem(`mission_phase_${chapterId}_${missionSeq}`);
+    removeScopedItem(`mission_timer_${chapterId}_${missionSeq}`);
+    removeScopedItem(`user_answers_${chapterId}_${missionSeq}`);
+    removeScopedItem(`quiz_correct_${chapterId}_${missionSeq}`);
+    removeScopedItem(`xp_earned_${chapterId}_${missionSeq}`);
+    removeScopedItem(`coins_earned_${chapterId}_${missionSeq}`);
+    removeScopedItem("mission_boss_revival_active");
+    removeScopedItem("boss_revival_won_reward");
+    removeScopedItem(`is_replay_${chapterId}_${missionSeq}`);
 
     try {
       // Call backend retreat endpoint to apply XP deduction & reset hearts
@@ -758,17 +1190,16 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           answers: userAnswers
         })
       });
+      // Delete draft on server explicitly
+      await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, {
+        method: "DELETE"
+      });
     } catch (e) {
       console.error("Failed to call retreat API:", e);
     }
 
-    // Show the defeat overlay with XP loss
-    setLossOverlay({ show: true, xpLoss: -30 });
-
-    // Navigate back to the previous screen (the roadmap) after 3 seconds
-    setTimeout(() => {
-      navigate(-1);
-    }, 3000);
+    // Immediately exit mission and redirect to Chapter Roadmap without lingering modals
+    navigate(`/mission-roadmap?chapterId=${chapterId}`, { replace: true });
   };
 
   // Boss Attack execution helper
@@ -809,11 +1240,34 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       const newChildDamage = Math.min(3, childDamageCount + 1);
       setChildDamageCount(newChildDamage);
 
-      // Sync updated lives to the backend immediately so that revival spin checks are accurate
+      const nextIndex = currentBossIndex + 1;
+      setScopedItem(`boss_wrong_${chapterId}_${missionSeq}`, newWrongCount.toString());
+      setScopedItem(`user_answers_${chapterId}_${missionSeq}`, JSON.stringify(currentAnswers));
+      setScopedItem(`boss_index_${chapterId}_${missionSeq}`, nextIndex.toString());
+
+      // Sync updated lives & draft to the backend immediately so that revival spin checks and question counts are preserved
       apiFetch(`/api/practice/chapters/${chapterId}/missions/hearts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ hearts: Math.max(0, 3 - newChildDamage) })
+      }).catch(console.error);
+
+      apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentQuizIndex,
+          phase,
+          quizCorrectCount,
+          userAnswers: currentAnswers,
+          xpEarned,
+          coinsEarned,
+          bossDamageCount,
+          wrongAnswerCount: newWrongCount,
+          currentBossIndex: nextIndex,
+          totalSessionSec,
+          classLevel: getActiveUserContext().classLevel
+        })
       }).catch(console.error);
 
       setTimeout(() => {
@@ -823,13 +1277,11 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       setTimeout(async () => {
         setBossSelected(null);
         setBossBasketCount(0);
-        const nextIndex = currentBossIndex + 1;
+        setCurrentBossIndex(nextIndex);
         if (newChildDamage >= 3) {
           openReviveModal();
         } else if (nextIndex >= bossQuestions.length) {
           await finalizeMission(bossDamageCount, newChildDamage, currentAnswers);
-        } else {
-          setCurrentBossIndex(nextIndex);
         }
       }, 1400);
     }
@@ -863,11 +1315,12 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           : (quizSelected !== null ? String(currentQ?.options?.[quizSelected]) : "");
       const newAns = {
         questionId: currentQ?._id,
+        questionText: currentQ?.question || currentQ?.text || currentQ?.title || "",
         isCorrect: isCorrect,
         selectedAnswer: selectedValue,
         timeSpent: QUESTION_TIME_LIMIT - questionTimeLeft
       };
-      setUserAnswers((prev) => [...prev, newAns]);
+      setUserAnswers((prev) => recordUniqueAnswer(prev, newAns));
 
       if (isCorrect) {
         setQuizCorrectCount((prev) => prev + 1);
@@ -906,11 +1359,12 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     const isCorrect = String(optionText).trim().toLowerCase() === String(activeBossQ?.answer).trim().toLowerCase();
     const newAns = {
       questionId: activeBossQ?._id,
+      questionText: activeBossQ?.question || activeBossQ?.text || activeBossQ?.title || "",
       isCorrect: isCorrect,
       selectedAnswer: optionText,
       timeSpent: QUESTION_TIME_LIMIT - questionTimeLeft
     };
-    const updatedAnswers = [...userAnswers, newAns];
+    const updatedAnswers = recordUniqueAnswer(userAnswers, newAns);
     setUserAnswers(updatedAnswers);
     executeBossAttack(isCorrect, updatedAnswers);
   };
@@ -926,18 +1380,19 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     }
     const newAns = {
       questionId: activeBossQ?._id,
+      questionText: activeBossQ?.question || activeBossQ?.text || activeBossQ?.title || "",
       isCorrect: isCorrect,
       selectedAnswer: isBossLanguageDrag ? String(selectedBossDragValue) : String(bossBasketCount),
       timeSpent: QUESTION_TIME_LIMIT - questionTimeLeft
     };
-    const updatedAnswers = [...userAnswers, newAns];
+    const updatedAnswers = recordUniqueAnswer(userAnswers, newAns);
     setUserAnswers(updatedAnswers);
     executeBossAttack(isCorrect, updatedAnswers);
   };
 
   useEffect(() => {
     if (phase && phase !== "INTRO") {
-      sessionStorage.setItem(`mission_phase_${chapterId}_${missionSeq}`, phase);
+      setScopedItem(`mission_phase_${chapterId}_${missionSeq}`, phase);
     }
   }, [phase, chapterId, missionSeq]);
 
@@ -948,7 +1403,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       if (isCompleting) return;
       setTotalSessionSec((prev) => {
         const next = prev + 1;
-        sessionStorage.setItem(`mission_timer_${chapterId}_${missionSeq}`, next.toString());
+        setScopedItem(`mission_timer_${chapterId}_${missionSeq}`, next.toString());
         return next;
       });
     }, 1000);
@@ -976,11 +1431,12 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
         const newAns = {
           questionId: currentQ?._id,
+          questionText: currentQ?.question || currentQ?.text || currentQ?.title || "",
           isCorrect: false,
           selectedAnswer: "TIMEOUT",
           timeSpent: QUESTION_TIME_LIMIT
         };
-        setUserAnswers((prev) => [...prev, newAns]);
+        setUserAnswers((prev) => recordUniqueAnswer(prev, newAns));
         return;
       }
       const t = setInterval(() => {
@@ -997,11 +1453,12 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
         const newAns = {
           questionId: activeBossQ?._id,
+          questionText: activeBossQ?.question || activeBossQ?.text || activeBossQ?.title || "",
           isCorrect: false,
           selectedAnswer: "TIMEOUT",
           timeSpent: QUESTION_TIME_LIMIT
         };
-        const updatedAnswers = [...userAnswers, newAns];
+        const updatedAnswers = recordUniqueAnswer(userAnswers, newAns);
         setUserAnswers(updatedAnswers);
         executeBossAttack(false, updatedAnswers);
         return;
@@ -1032,7 +1489,30 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       <header className="sticky top-0 z-40 bg-[rgba(247,249,251,0.85)] backdrop-blur-md border-b border-gray-200 px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between shadow-xs">
         <button
           onClick={async () => {
-            if (phase !== "INTRO" && phase !== "SUMMARY") {
+            if (childDamageCount >= 3 || showReviveModal) {
+              setIsQuitting(true);
+              removeScopedItem(`is_replay_${chapterId}_${missionSeq}`);
+              removeScopedItem(`boss_damage_${chapterId}_${missionSeq}`);
+              removeScopedItem(`boss_wrong_${chapterId}_${missionSeq}`);
+              removeScopedItem(`boss_index_${chapterId}_${missionSeq}`);
+              removeScopedItem(`mission_phase_${chapterId}_${missionSeq}`);
+              removeScopedItem(`mission_timer_${chapterId}_${missionSeq}`);
+              removeScopedItem(`user_answers_${chapterId}_${missionSeq}`);
+              removeScopedItem(`quiz_correct_${chapterId}_${missionSeq}`);
+              removeScopedItem(`xp_earned_${chapterId}_${missionSeq}`);
+              removeScopedItem(`coins_earned_${chapterId}_${missionSeq}`);
+
+              try {
+                await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/retreat`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ answers: userAnswers })
+                });
+                await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, {
+                  method: "DELETE"
+                });
+              } catch (e) {}
+            } else if (!isQuitting && phase && phase !== "INTRO" && phase !== "SUMMARY") {
               try {
                 await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, {
                   method: "POST",
@@ -1047,14 +1527,26 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                     bossDamageCount,
                     wrongAnswerCount,
                     currentBossIndex,
-                    totalSessionSec
+                    totalSessionSec,
+                    classLevel: getActiveUserContext().classLevel
                   })
                 });
               } catch (e) {
                 console.error("Save draft on back button click failed:", e);
               }
+            } else if (phase === "INTRO") {
+              removeScopedItem(`is_replay_${chapterId}_${missionSeq}`);
+              removeScopedItem(`mission_phase_${chapterId}_${missionSeq}`);
+              removeScopedItem(`user_answers_${chapterId}_${missionSeq}`);
+              removeScopedItem(`mission_timer_${chapterId}_${missionSeq}`);
+              removeScopedItem(`boss_damage_${chapterId}_${missionSeq}`);
+              removeScopedItem(`boss_wrong_${chapterId}_${missionSeq}`);
+              removeScopedItem(`boss_index_${chapterId}_${missionSeq}`);
+              removeScopedItem(`quiz_correct_${chapterId}_${missionSeq}`);
+              removeScopedItem(`xp_earned_${chapterId}_${missionSeq}`);
+              removeScopedItem(`coins_earned_${chapterId}_${missionSeq}`);
             }
-            navigate(-1);
+            navigate(`/mission-roadmap?chapterId=${chapterId}`, { replace: true });
           }}
           className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-white border border-gray-200 hover:bg-gray-50 active:scale-95 transition-all shadow-xs shrink-0"
         >
@@ -1072,20 +1564,32 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           </div>
         </div>
 
-        <div className={`flex items-center gap-1 sm:gap-1.5 border px-2 sm:px-3.5 py-1 rounded-full font-mono font-extrabold text-[10px] sm:text-xs shadow-2xs transition-all shrink-0 whitespace-nowrap ${(phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5
-            ? "bg-rose-50 border-rose-300 text-rose-700 animate-pulse ring-2 ring-rose-400/40"
-            : "bg-slate-100/90 border-slate-200 text-slate-800"
-          }`}>
-          <div className="relative flex items-center justify-center">
-            <Clock size={12} className={(phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5 ? "text-rose-600 animate-bounce" : "text-indigo-600"} />
-            <span className={`absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ${(phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5 ? "bg-rose-500 animate-ping" : "bg-emerald-500 animate-ping"
-              }`} />
+        <div className="flex items-center gap-2">
+          {phase === "SUMMARY" && (
+            <button
+              onClick={handleReplayMission}
+              title={t('replay_mission_btn', 'Replay Mission 🔄')}
+              className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full bg-[#141779] text-white hover:bg-[#101362] active:scale-95 transition-all shadow-md shrink-0 cursor-pointer border border-indigo-200"
+            >
+              <RotateCcw size={16} className="text-white" />
+            </button>
+          )}
+
+          <div className={`flex items-center gap-1 sm:gap-1.5 border px-2 sm:px-3.5 py-1 rounded-full font-mono font-extrabold text-[10px] sm:text-xs shadow-2xs transition-all shrink-0 whitespace-nowrap ${(phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5
+              ? "bg-rose-50 border-rose-300 text-rose-700 animate-pulse ring-2 ring-rose-400/40"
+              : "bg-slate-100/90 border-slate-200 text-slate-800"
+            }`}>
+            <div className="relative flex items-center justify-center">
+              <Clock size={12} className={(phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5 ? "text-rose-600 animate-bounce" : "text-indigo-600"} />
+              <span className={`absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ${(phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5 ? "bg-rose-500 animate-ping" : "bg-emerald-500 animate-ping"
+                }`} />
+            </div>
+            <span>
+              {phase === "QUIZ" || phase === "BOSS"
+                ? `${questionTimeLeft}s`
+                : `${Math.floor(totalSessionSec / 60).toString().padStart(2, '0')}:${(totalSessionSec % 60).toString().padStart(2, '0')}`}
+            </span>
           </div>
-          <span>
-            {phase === "QUIZ" || phase === "BOSS"
-              ? `${questionTimeLeft}s`
-              : `${Math.floor(totalSessionSec / 60).toString().padStart(2, '0')}:${(totalSessionSec % 60).toString().padStart(2, '0')}`}
-          </span>
         </div>
       </header>
 
@@ -1320,7 +1824,9 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             </div>
 
             <button
-              onClick={() => setPhase("BOSS")}
+              onClick={() => {
+                setPhase("BOSS");
+              }}
               className="w-full py-4 rounded-2xl bg-[#141779] text-white font-black text-base shadow-lg hover:bg-[#101362] flex items-center justify-center gap-3 active:scale-95 transition-all"
             >
               <span>{t('enter_boss_arena', 'Enter Boss Arena 👹')}</span>
@@ -1330,46 +1836,46 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       })()}
 
       {phase === "BOSS" && (
-        <main className="px-4 sm:px-6 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex-1 flex flex-col gap-3 max-w-md mx-auto w-full">
-          {/* Top Outer Light Yellow/Cream Boss Stage Header Card with Premium Visual Aesthetics */}
-          <div className="bg-gradient-to-b from-[#FFFDF2] via-[#FFFBEB] to-[#F4F4FC] rounded-[32px] p-4.5 pt-5 mb-4 shadow-[0_10px_30px_rgba(20,23,121,0.08)] border-2 border-[#E2E4FA] relative backdrop-blur-md">
+        <main className="px-3 sm:px-6 py-4 sm:py-6 flex-1 flex flex-col justify-between max-w-md mx-auto w-full">
+          {/* Top Outer Indigo/Lavender Boss Stage Header Card with Premium Visual Aesthetics */}
+          <div className="bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] rounded-[28px] sm:rounded-[32px] p-3 sm:p-5 pt-4 pb-3.5 mb-4 shadow-[0_10px_30px_rgba(20,23,121,0.08)] border-2 border-indigo-200/80 relative backdrop-blur-md overflow-hidden">
             
             {/* Top Bar: Hero vs Boss Header */}
-            <div className="flex items-center justify-between mb-3.5 relative z-10 px-1 gap-1">
+            <div className="flex items-center justify-between mb-3 relative z-10 px-0.5 gap-1">
 
-              {/* Left: Dragon Hero */}
-              <div className="flex flex-col items-start shrink-0">
-                <span className="text-[10px] sm:text-[11px] font-black uppercase text-[#006a62] tracking-wider block leading-tight whitespace-nowrap">
-                  DRAGON HERO
+              {/* Left: Active Child in Pill Container */}
+              <div className="flex flex-col items-start shrink-0 bg-white/95 backdrop-blur-xs px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl sm:rounded-2xl border-2 border-indigo-100/90 shadow-2xs">
+                <span className="text-[9px] xs:text-[10px] sm:text-[11px] font-black uppercase text-[#141779] tracking-wider block leading-tight whitespace-nowrap max-w-[100px] xs:max-w-[130px] truncate">
+                  {activeChildName ? activeChildName.toUpperCase() : "HERO"}
                 </span>
-                <div className="flex gap-1 mt-1">
+                <div className="flex gap-0.5 sm:gap-1 mt-1">
                   {[1, 2, 3].map((h) => (
                     <Heart
                       key={h}
-                      size={14}
-                      className={`w-3.5 h-3.5 ${h <= childHearts ? (dragonCrying ? "text-cyan-500 fill-cyan-400 animate-ping" : "text-rose-500 fill-rose-500 drop-shadow-xs") : "text-gray-300"}`}
+                      size={13}
+                      className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${h <= childHearts ? (dragonCrying ? "text-cyan-500 fill-cyan-400 animate-ping" : "text-rose-500 fill-rose-500 drop-shadow-xs") : "text-slate-300 fill-slate-200"}`}
                     />
                   ))}
                 </div>
               </div>
 
               {/* Center: Boss Stage Badge */}
-              <div className="px-3.5 py-1.5 bg-gradient-to-r from-[#141779] to-[#25299e] text-white font-black text-[10px] sm:text-[11px] uppercase tracking-wider rounded-full shadow-md border border-white/20 flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+              <div className="px-2 py-1 sm:px-3.5 sm:py-1.5 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white font-black text-[9px] xs:text-[10px] sm:text-[11px] uppercase tracking-wider rounded-full shadow-md border border-white/20 flex items-center gap-1 shrink-0 whitespace-nowrap">
                 <span>BOSS STAGE</span>
                 <span className="text-xs">⚔️</span>
               </div>
 
-              {/* Right: Boss Name / Chapter Stage */}
-              <div className="flex flex-col items-end shrink-0">
-                <span className="text-[10px] sm:text-[11px] font-black uppercase text-[#141779] tracking-wider block leading-tight text-right whitespace-nowrap max-w-[110px] truncate">
+              {/* Right: Boss Name / Chapter Stage in Pill Container */}
+              <div className="flex flex-col items-end shrink-0 bg-white/95 backdrop-blur-xs px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl border border-indigo-100/80 shadow-2xs min-w-0">
+                <span className="text-[9px] xs:text-[10px] sm:text-[11px] font-black uppercase text-[#141779] tracking-wider block leading-tight text-right whitespace-nowrap max-w-[110px] xs:max-w-none truncate">
                   {bossName ? bossName.toUpperCase() : 'BOSS'}
                 </span>
-                <div className="flex gap-1 mt-1">
+                <div className="flex gap-0.5 sm:gap-1 mt-1">
                   {[1, 2, 3].map((h) => (
                     <Heart
                       key={h}
-                      size={14}
-                      className={`w-3.5 h-3.5 ${h <= bossHearts ? "text-amber-400 fill-amber-400 drop-shadow-xs" : "text-gray-300"}`}
+                      size={13}
+                      className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${h <= bossHearts ? "text-rose-500 fill-rose-500 drop-shadow-xs" : "text-slate-300 fill-slate-200"}`}
                     />
                   ))}
                 </div>
@@ -1378,7 +1884,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             </div>
 
             {/* Inner White Boss Card with Soft Depth & Breathing Animation */}
-            <div className="relative p-4 rounded-[24px] bg-white/95 border border-[#F0F0F0] flex items-center justify-between shadow-xs">
+            <div className="relative p-3.5 sm:p-4 rounded-[24px] bg-white border-2 border-indigo-100/80 flex items-center justify-between shadow-xs">
               <motion.div
                 animate={{
                   y: bossAngry ? [0, -8, 0] : [0, -4, 0],
@@ -1386,21 +1892,21 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                   rotate: bossAngry ? [-3, 3, -3, 3, 0] : 0
                 }}
                 transition={bossAngry ? { duration: 0.5, repeat: 2 } : { duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
-                className="relative z-10 flex items-center gap-3.5"
+                className="relative z-10 flex items-center gap-3"
               >
-                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FFF9C4] to-[#FFE082] border-2 border-[#FFE082] flex items-center justify-center text-3xl shrink-0 shadow-sm relative ${bossAngry ? "ring-4 ring-rose-500/80 animate-pulse" : ""}`}>
+                <div className={`w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-indigo-50/80 border-2 border-indigo-200 flex items-center justify-center text-2xl sm:text-3xl shrink-0 shadow-xs relative ${bossAngry ? "ring-4 ring-rose-500/80 animate-pulse" : ""}`}>
                   <span>🐉</span>
                 </div>
                 <div>
-                  <h4 className="text-lg font-black text-[#141779] leading-tight drop-shadow-2xs">{bossName}</h4>
-                  <span className={`text-xs font-bold ${bossAngry ? "text-rose-600 animate-pulse" : "text-[#D97706]"}`}>
+                  <h4 className="text-base sm:text-lg font-black text-[#141779] leading-tight drop-shadow-2xs">{bossName}</h4>
+                  <span className={`text-xs font-bold ${bossAngry ? "text-rose-600 animate-pulse" : "text-indigo-600"}`}>
                     {bossState.status}
                   </span>
                 </div>
               </motion.div>
 
               <div className="relative z-10 flex flex-col items-end gap-1.5 shrink-0">
-                <span className="text-xs font-black bg-white border-2 border-[#FFE082] px-4 py-1.5 rounded-full text-[#141779] shadow-xs whitespace-nowrap">
+                <span className="text-xs font-black bg-indigo-50/80 border border-indigo-100 px-3.5 py-1.5 rounded-full text-[#141779] shadow-2xs whitespace-nowrap">
                   {bossHearts} / {bossMaxHp} HP
                 </span>
               </div>
@@ -1409,13 +1915,16 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
           <QuestionContext part="passage" question={activeBossQ} previous={safeBossIndex > 0 ? bossQuestions[safeBossIndex - 1] : null} />
 
-          {/* Question Box Card with Soft Floating Elevation; the picture sits under the question */}
-          <div className="bg-white border-2 border-[#E2E4FA] rounded-[28px] px-4 py-4 sm:px-5 shadow-[0_8px_25px_rgba(20,23,121,0.06)] relative">
-            <span className="text-xs font-black text-[#006a62] uppercase tracking-wider block mb-2 flex items-center gap-1.5">
-              <span>⚔️ BOSS STRIKE #{safeBossIndex + 1}</span>
-              <span>•</span>
-              <span>{isBossDrag ? "DRAG & DROP STRIKE" : "DIRECT STRIKE"}</span>
-            </span>
+          {/* Question Box Card with Soft Floating Elevation */}
+          <div className="my-3 bg-white border-2 border-[#E2E4FA] rounded-[24px] sm:rounded-[28px] p-5 sm:p-6 shadow-[0_8px_25px_rgba(20,23,121,0.06)] relative">
+            <div className="flex items-center gap-2 mb-2.5 flex-wrap">
+              <span className="text-[10px] font-black text-[#006a62] uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-teal-50 border border-teal-200/80 shadow-2xs">
+                ⚔️ BOSS STRIKE #{safeBossIndex + 1}
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-black uppercase tracking-wider shadow-2xs">
+                BOSS LEVEL HARD
+              </span>
+            </div>
             <h3 className="text-base sm:text-lg font-black text-[#141779] leading-snug">
               {activeBossQ?.question?.replace(/^(Boss\s+)?(Challenge|Question)(\s*#\d+)?(\s*\([^)]+\))?:\s*/i, "").trim().replace(/^\w/, c => c.toUpperCase()).normalize("NFD").replace(/[\u0300-\u036f]/g, "")}
             </h3>
@@ -1783,10 +2292,16 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
                 <div className="space-y-2 max-w-xs mt-2">
                   <h2 className="text-2xl font-black text-slate-800 leading-tight tracking-tight uppercase">
-                    {t('day_streak', { streak: displayedStreak, days: displayedStreak, defaultValue: `${displayedStreak} Day Streak!` })}
+                    {displayedStreak === 0
+                      ? t('start_streak_title', 'Start Your Streak Today! 🚀')
+                      : t('day_streak', { streak: displayedStreak, days: displayedStreak, defaultValue: `${displayedStreak} Day Streak!` })}
                   </h2>
                   <p className="text-xs font-bold text-slate-500 leading-relaxed">
-                    {t('complete_lesson_daily', 'Complete a lesson every day to build your streak!')}
+                    {displayedStreak === 0
+                      ? t('zero_streak_quote', '“Every expert was once a beginner! Complete 1 lesson today to ignite your flame!” 🔥')
+                      : displayedStreak === 1
+                      ? t('one_day_streak_sub', 'Awesome start! Complete a lesson tomorrow to build your streak momentum! 💪')
+                      : t('complete_lesson_daily', 'Complete a lesson every day to build your streak!')}
                   </p>
                 </div>
               </div>
@@ -1802,316 +2317,362 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           )}
 
           {summaryStep === "REPORT" && (
-            <main className="px-6 py-6 flex-1 flex flex-col items-center max-w-md mx-auto w-full text-center overflow-y-auto">
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="w-20 h-20 rounded-3xl bg-[#141779] flex items-center justify-center text-4xl shadow-xl mb-3 border-4 border-amber-300 text-white shrink-0"
-              >
-                {missionIcon}
-              </motion.div>
+            <div className="fixed inset-0 z-50 bg-[#f7f9fb] flex flex-col justify-between max-w-md mx-auto w-full overflow-hidden">
+              <header className="sticky top-0 z-40 bg-[#f7f9fb]/90 backdrop-blur-md border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-2xs shrink-0 w-full relative">
+                <button
+                  onClick={handleBackToRoadmap}
+                  className="w-9 h-9 flex items-center justify-center rounded-full bg-white border border-gray-200 hover:bg-gray-50 active:scale-95 transition-all shadow-xs shrink-0 cursor-pointer z-10"
+                >
+                  <ArrowLeft size={18} className="text-[#141779]" />
+                </button>
 
-              <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold text-xs uppercase tracking-widest border border-emerald-300 mb-2">
-                {t('mission_accomplished', { seq: missionSeq, defaultValue: `Mission ${missionSeq} Accomplished!` })}
-              </span>
-
-              <h2 className="text-2xl font-black text-[#141779] mb-1">
-                {t('victory_title', { title: t(String(missionTitle || "").toLowerCase().replace(/ /g, '_'), { defaultValue: missionTitle }), defaultValue: `${missionTitle} Victory!` })}
-              </h2>
-              <p className="text-xs text-[#464652] font-semibold mb-4">{t('progression_report', 'Chapter Progression & Performance Report')}</p>
-
-              <div className="flex flex-col items-center gap-1.5 mb-5">
-                <div className="flex gap-2">
-                  {[1, 2, 3].map((s) => (
-                    <Star
-                      key={s}
-                      size={28}
-                      className={
-                        s <= (completionResult?.runStars ?? (completionResult?.stars ?? 0))
-                          ? "text-amber-500 fill-amber-400"
-                          : "text-gray-300"
-                      }
-                    />
-                  ))}
-                </div>
-                {completionResult?.runStars !== undefined && completionResult?.bestStars !== undefined && completionResult.runStars < completionResult.bestStars && (
-                  <span className="text-[10px] font-extrabold text-amber-800 bg-amber-100/90 px-3 py-1 rounded-full border border-amber-300 mt-1 shadow-xs">
-                    🏆 {t('best_record_retained', { best: completionResult.bestStars, run: completionResult.runStars, defaultValue: `Best record of ${completionResult.bestStars} ⭐ preserved! (This run: ${completionResult.runStars} ⭐)` })}
-                  </span>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 w-full mb-4">
-                <div className="bg-white border border-gray-200 rounded-3xl p-4 flex flex-col items-center shadow-xs">
-                  <span className="text-[10px] font-black text-[#767683] uppercase tracking-wider">{t('accuracy', 'Accuracy')}</span>
-                  <span className="text-3xl font-black text-emerald-600 mt-1">
-                    {completionResult?.accuracy ?? Math.round((quizCorrectCount / Math.max(1, quizQuestions.length)) * 100)}%
-                  </span>
-                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full mt-1 border border-emerald-200">
-                    {completionResult?.targetStatus 
-                      ? t(String(completionResult.targetStatus || "").toLowerCase().replace(/ /g, '_'), { defaultValue: completionResult.targetStatus })
-                      : ((completionResult?.accuracy ?? 100) >= 85 ? t('target_exceeded', 'Target Exceeded') : t('target_met', 'Target Met'))}
-                  </span>
-                </div>
-
-                <div className="bg-white border border-gray-200 rounded-3xl p-4 flex flex-col items-center shadow-xs">
-                  <span className="text-[10px] font-black text-[#767683] uppercase tracking-wider">{t('confidence', 'Confidence')}</span>
-                  <span className="text-xl font-black text-[#141779] mt-2">
-                    {completionResult?.confidenceLabel ? t(String(completionResult.confidenceLabel || "").toLowerCase().replace(/ /g, '_'), { defaultValue: completionResult.confidenceLabel }) : t('high_mastery', 'High Mastery 🚀')}
-                  </span>
-                  <div className="w-full h-2 bg-gray-200 rounded-full mt-2 overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-amber-400 to-emerald-500 rounded-full"
-                      style={{ width: `${completionResult?.confidenceScore || 90}%` }}
-                    />
+                <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
+                  <div className="flex items-center gap-1 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 text-amber-800 font-bold text-xs shrink-0 whitespace-nowrap">
+                    <Zap size={12} className="text-amber-500 fill-amber-400" />
+                    <span>+{completionResult?.xpEarned ?? xpEarned} XP</span>
+                  </div>
+                  <div className="flex items-center gap-1 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200 text-teal-800 font-bold text-xs shrink-0 whitespace-nowrap">
+                    <Award size={12} className="text-teal-600 fill-teal-500" />
+                    <span>+{completionResult?.coinsEarned ?? coinsEarned} Coins</span>
                   </div>
                 </div>
-              </div>
 
-              <div className="bg-white border border-gray-200 rounded-3xl p-4 w-full mb-4 text-left shadow-xs">
-                {completionResult?.threeDayAvailable !== false ? (
-                  <>
-                    <div className="flex justify-between items-center mb-3">
-                      <div>
-                        <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1">
-                          <span>📈 {t('three_day_avg', '3-Day Performance Average')}</span>
-                        </h4>
-                        <span className="text-[11px] text-gray-500 font-semibold">{t('short_term_retention', 'Short-term retention trend')}</span>
-                      </div>
-                      <span className="text-base font-black text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-xl border border-indigo-200">
-                        {completionResult?.threeDayAvg ?? 0}%
+                <div className="w-9 h-9 shrink-0 pointer-events-none" />
+              </header>
+
+              <main className="px-6 pt-4 pb-28 flex-1 flex flex-col items-center w-full text-center overflow-y-auto">
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="w-24 h-24 rounded-3xl bg-[#141779] flex items-center justify-center text-4xl shadow-xl mb-4 border-4 border-amber-300 text-white shrink-0"
+                >
+                  {missionIcon}
+                </motion.div>
+
+                <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold text-xs uppercase tracking-widest border border-emerald-300 mb-2">
+                  {t('mission_accomplished', { seq: missionSeq, defaultValue: `Mission ${missionSeq} Accomplished!` })}
+                </span>
+
+                <h2 className="text-2xl font-black text-[#141779] mb-1">
+                  {t('victory_title', { title: t(String(missionTitle || "").toLowerCase().replace(/ /g, '_'), { defaultValue: missionTitle }), defaultValue: `${missionTitle} Victory!` })}
+                </h2>
+                <p className="text-xs text-[#464652] font-semibold mb-4">{t('progression_report', 'Chapter Progression & Performance Report')}</p>
+
+                <div className="flex flex-col items-center gap-1.5 mb-4">
+                  <div className="flex gap-2">
+                    {[1, 2, 3].map((s) => (
+                      <Star
+                        key={s}
+                        size={28}
+                        className={
+                          s <= (completionResult?.runStars ?? (completionResult?.stars ?? 0))
+                            ? "text-amber-500 fill-amber-400"
+                            : "text-gray-300"
+                        }
+                      />
+                    ))}
+                  </div>
+                  {completionResult?.runStars !== undefined && completionResult?.bestStars !== undefined && completionResult.runStars < completionResult.bestStars && (
+                    <span className="text-[10px] font-extrabold text-amber-800 bg-amber-100/90 px-3 py-1 rounded-full border border-amber-300 mt-1 shadow-xs">
+                      🏆 {t('best_record_retained', { best: completionResult.bestStars, run: completionResult.runStars, defaultValue: `Best record of ${completionResult.bestStars} ⭐ preserved! (This run: ${completionResult.runStars} ⭐)` })}
+                    </span>
+                  )}
+                </div>
+
+                {/* Questions Breakdown Metric Card */}
+                <div className="w-full bg-white border border-gray-200 rounded-2xl p-3 mb-4 flex items-center justify-around shadow-xs text-xs font-black">
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] text-gray-400 uppercase tracking-wider">{t('total_questions', 'Questions')}</span>
+                    <span className="text-slate-800 text-sm mt-0.5">{quizQuestions.length + bossDamageCount + wrongAnswerCount}</span>
+                  </div>
+                  <div className="w-px h-6 bg-gray-200" />
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] text-emerald-600 uppercase tracking-wider">{t('correct', 'Correct')}</span>
+                    <span className="text-emerald-700 text-sm mt-0.5">✅ {quizCorrectCount + bossDamageCount}</span>
+                  </div>
+                  <div className="w-px h-6 bg-gray-200" />
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] text-rose-600 uppercase tracking-wider">{t('incorrect', 'Mistakes')}</span>
+                    <span className="text-rose-700 text-sm mt-0.5">❌ {Math.max(0, (quizQuestions.length - quizCorrectCount) + wrongAnswerCount)}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 w-full mb-4">
+                  <div className="bg-white border border-gray-200 rounded-3xl p-4 flex flex-col items-center shadow-xs">
+                    <span className="text-[10px] font-black text-[#767683] uppercase tracking-wider">{t('accuracy', 'Accuracy')}</span>
+                    <span className="text-3xl font-black text-emerald-600 mt-1">
+                      {completionResult?.bestAccuracy ?? completionResult?.accuracy ?? Math.round(((quizCorrectCount + bossDamageCount) / Math.max(1, quizQuestions.length + bossDamageCount + wrongAnswerCount)) * 100)}%
+                    </span>
+                    {completionResult?.runAccuracy !== undefined && completionResult?.bestAccuracy !== undefined && completionResult.runAccuracy < completionResult.bestAccuracy && (
+                      <span className="text-[9px] font-extrabold text-amber-800 bg-amber-100/90 px-2 py-0.5 rounded-full border border-amber-300 mt-1 shadow-2xs">
+                        🏆 {t('best_accuracy_retained', { best: completionResult.bestAccuracy, run: completionResult.runAccuracy, defaultValue: `Best record of ${completionResult.bestAccuracy}% preserved! (This run: ${completionResult.runAccuracy}%)` })}
                       </span>
-                    </div>
-
-                    <div className="flex items-end justify-between gap-3 h-24 pt-4 px-2">
-                      {(completionResult?.threeDayTrend || [
-                        { day: "Day 1", accuracy: 0 },
-                        { day: "Day 2", accuracy: 0 },
-                        { day: "Today", accuracy: completionResult?.accuracy || 0 }
-                      ]).map((d: any, idx: number) => (
-                        <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
-                          <span className="text-[10px] font-extrabold text-[#141779]">{d.accuracy}%</span>
-                          <div className="w-full bg-gray-100 rounded-xl h-full flex items-end overflow-hidden p-1">
-                            <motion.div
-                              initial={{ height: 0 }}
-                              animate={{ height: `${d.accuracy}%` }}
-                              transition={{ duration: 0.8, delay: idx * 0.15 }}
-                              className="w-full bg-gradient-to-t from-indigo-600 to-teal-400 rounded-lg"
-                            />
-                          </div>
-                          <span className="text-[10px] font-bold text-gray-500">{t(String(d?.day || "").toLowerCase().replace(/ /g, '_'), { defaultValue: d?.day })}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-6 px-4 text-center">
-                    <div className="w-12 h-12 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 mb-3 shadow-2xs">
-                      <Clock size={20} className="animate-pulse" />
-                    </div>
-                    <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1 mb-1.5">
-                      <span>📈 {t('three_day_avg', '3-Day Performance Average')}</span>
-                    </h4>
-                    <p className="text-xs text-gray-500 font-bold max-w-[280px] leading-relaxed">
-                      {t('data_not_available_days', "Required data not available. You'll see in next few learning Days.")}
-                    </p>
+                    )}
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full mt-1 border ${
+                      (completionResult?.accuracy ?? 100) >= 85
+                        ? "text-emerald-700 bg-emerald-50 border-emerald-200"
+                        : (completionResult?.accuracy ?? 100) >= 65
+                        ? "text-blue-700 bg-blue-50 border-blue-200"
+                        : "text-amber-700 bg-amber-50 border-amber-200"
+                    }`}>
+                      {completionResult?.targetStatus 
+                        ? t(String(completionResult.targetStatus || "").toLowerCase().replace(/ /g, '_'), { defaultValue: completionResult.targetStatus })
+                        : ((completionResult?.accuracy ?? 100) >= 85 ? t('target_exceeded', 'Target Exceeded') : (completionResult?.accuracy ?? 100) >= 65 ? t('target_met', 'Target Met') : t('needs_practice', 'Needs Practice'))}
+                    </span>
                   </div>
-                )}
-              </div>
 
-              <div className="bg-white border border-gray-200 rounded-3xl p-4 w-full mb-6 text-left shadow-xs">
-                {completionResult?.sevenDayAvailable !== false ? (
-                  <>
-                    <div className="flex justify-between items-center mb-3">
-                      <div>
-                        <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1">
-                          <span>📊 {t('seven_day_trend', '7-Day Performance Trend')}</span>
-                        </h4>
-                        <span className="text-[11px] text-gray-500 font-semibold">{t('weekly_consistency', 'Weekly consistency overview')}</span>
+                  <div className="bg-white border border-gray-200 rounded-3xl p-4 flex flex-col items-center shadow-xs">
+                    <span className="text-[10px] font-black text-[#767683] uppercase tracking-wider">{t('confidence', 'Confidence')}</span>
+                    <span className="text-xl font-black text-[#141779] mt-2">
+                      {completionResult?.confidenceLabel ? t(String(completionResult.confidenceLabel || "").toLowerCase().replace(/ /g, '_'), { defaultValue: completionResult.confidenceLabel }) : t('high_mastery', 'High Mastery 🚀')}
+                    </span>
+                    <div className="w-full h-2 bg-gray-200 rounded-full mt-2 overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-amber-400 to-emerald-500 rounded-full"
+                        style={{ width: `${completionResult?.confidenceScore || 90}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white border border-gray-200 rounded-3xl p-4 w-full mb-4 text-left shadow-xs">
+                  {completionResult?.threeDayAvailable !== false ? (
+                    <>
+                      <div className="flex justify-between items-center mb-3">
+                        <div>
+                          <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1">
+                            <span>📈 {t('three_day_avg', '3-Day Performance Average')}</span>
+                          </h4>
+                          <span className="text-[11px] text-gray-500 font-semibold">{t('short_term_retention', 'Short-term retention trend')}</span>
+                        </div>
+                        <span className="text-base font-black text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-xl border border-indigo-200">
+                          {completionResult?.threeDayAvg ?? 0}%
+                        </span>
                       </div>
-                      <span className="text-base font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200">
-                        {completionResult?.sevenDayAvg ?? 0}%
-                      </span>
-                    </div>
 
-                    <div className="flex items-end justify-between gap-2 h-24 pt-4 px-1">
-                      {(completionResult?.sevenDayTrend || [
-                        { day: "Mon", accuracy: 0 },
-                        { day: "Tue", accuracy: 0 },
-                        { day: "Wed", accuracy: 0 },
-                        { day: "Thu", accuracy: 0 },
-                        { day: "Fri", accuracy: 0 },
-                        { day: "Sat", accuracy: 0 },
-                        { day: "Sun", accuracy: completionResult?.accuracy || 0 }
-                      ]).map((d: any, idx: number) => (
-                        <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
-                          <span className="text-[9px] font-bold text-gray-500">{d.accuracy}%</span>
-                          <div className="w-full bg-gray-100 rounded-lg h-full flex items-end overflow-hidden p-0.5">
-                            <motion.div
-                              initial={{ height: 0 }}
-                              animate={{ height: `${d.accuracy}%` }}
-                              transition={{ duration: 0.8, delay: idx * 0.08 }}
-                              className="w-full bg-gradient-to-t from-teal-600 to-emerald-400 rounded-md"
-                            />
+                      <div className="flex items-end justify-between gap-3 h-24 pt-4 px-2">
+                        {(completionResult?.threeDayTrend || [
+                          { day: "Day 1", accuracy: 0 },
+                          { day: "Day 2", accuracy: 0 },
+                          { day: "Today", accuracy: completionResult?.accuracy || 0 }
+                        ]).map((d: any, idx: number) => (
+                          <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
+                            <span className="text-[10px] font-extrabold text-[#141779]">{d.accuracy}%</span>
+                            <div className="w-full bg-gray-100 rounded-xl h-full flex items-end overflow-hidden p-1">
+                              <motion.div
+                                initial={{ height: 0 }}
+                                animate={{ height: `${d.accuracy}%` }}
+                                transition={{ duration: 0.8, delay: idx * 0.15 }}
+                                className="w-full bg-gradient-to-t from-indigo-600 to-teal-400 rounded-lg"
+                              />
+                            </div>
+                            <span className="text-[10px] font-bold text-gray-500">{t(String(d?.day || "").toLowerCase().replace(/ /g, '_'), { defaultValue: d?.day })}</span>
                           </div>
-                          <span className="text-[9px] font-extrabold text-gray-600">{t(String(d?.day || "").toLowerCase(), { defaultValue: d?.day })}</span>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-6 px-4 text-center">
+                      <div className="w-12 h-12 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 mb-3 shadow-2xs">
+                        <Clock size={20} className="animate-pulse" />
+                      </div>
+                      <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1 mb-1.5">
+                        <span>📈 {t('three_day_avg', '3-Day Performance Average')}</span>
+                      </h4>
+                      <p className="text-xs text-gray-500 font-bold max-w-[280px] leading-relaxed">
+                        {t('data_not_available_days', "Required data not available. You'll see in next few learning Days.")}
+                      </p>
                     </div>
-                  </>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-6 px-4 text-center">
-                    <div className="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 mb-3 shadow-2xs">
-                      <Clock size={20} className="animate-pulse" />
-                    </div>
-                    <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1 mb-1.5">
-                      <span>📊 {t('seven_day_trend', '7-Day Performance Trend')}</span>
-                    </h4>
-                    <p className="text-xs text-gray-500 font-bold max-w-[280px] leading-relaxed">
-                      {t('data_not_available_days', "Required data not available. You'll see in next few learning Days.")}
-                    </p>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
 
+                <div className="bg-white border border-gray-200 rounded-3xl p-4 w-full mb-6 text-left shadow-xs">
+                  {completionResult?.sevenDayAvailable !== false ? (
+                    <>
+                      <div className="flex justify-between items-center mb-3">
+                        <div>
+                          <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1">
+                            <span>📊 {t('seven_day_trend', '7-Day Performance Trend')}</span>
+                          </h4>
+                          <span className="text-[11px] text-gray-500 font-semibold">{t('weekly_consistency', 'Weekly consistency overview')}</span>
+                        </div>
+                        <span className="text-base font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200">
+                          {completionResult?.sevenDayAvg ?? 0}%
+                        </span>
+                      </div>
+
+                      <div className="flex items-end justify-between gap-2 h-24 pt-4 px-1">
+                        {(completionResult?.sevenDayTrend || [
+                          { day: "Mon", accuracy: 0 },
+                          { day: "Tue", accuracy: 0 },
+                          { day: "Wed", accuracy: 0 },
+                          { day: "Thu", accuracy: 0 },
+                          { day: "Fri", accuracy: 0 },
+                          { day: "Sat", accuracy: 0 },
+                          { day: "Sun", accuracy: completionResult?.accuracy || 0 }
+                        ]).map((d: any, idx: number) => (
+                          <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
+                            <span className="text-[9px] font-bold text-gray-500">{d.accuracy}%</span>
+                            <div className="w-full bg-gray-100 rounded-lg h-full flex items-end overflow-hidden p-0.5">
+                              <motion.div
+                                initial={{ height: 0 }}
+                                animate={{ height: `${d.accuracy}%` }}
+                                transition={{ duration: 0.8, delay: idx * 0.08 }}
+                                className="w-full bg-gradient-to-t from-teal-600 to-emerald-400 rounded-md"
+                              />
+                            </div>
+                            <span className="text-[9px] font-extrabold text-gray-600">{t(String(d?.day || "").toLowerCase(), { defaultValue: d?.day })}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-6 px-4 text-center">
+                      <div className="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 mb-3 shadow-2xs">
+                        <Clock size={20} className="animate-pulse" />
+                      </div>
+                      <h4 className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1 mb-1.5">
+                        <span>📊 {t('seven_day_trend', '7-Day Performance Trend')}</span>
+                      </h4>
+                      <p className="text-xs text-gray-500 font-bold max-w-[280px] leading-relaxed">
+                        {t('data_not_available_days', "Required data not available. You'll see in next few learning Days.")}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </main>
+
+              {/* NON-SCROLLABLE FIXED BOTTOM ACTION BAR (EQUAL 50-50 BUTTON SIZES) */}
               {(() => {
                 const finalAcc = completionResult?.accuracy ?? Math.round((quizCorrectCount / Math.max(1, quizQuestions.length)) * 100);
-                const hasPassedMission = finalAcc >= 75;
-
-                const handleReplayMission = () => {
-                  sessionStorage.removeItem(`user_answers_${chapterId}_${missionSeq}`);
-                  sessionStorage.removeItem(`mission_phase_${chapterId}_${missionSeq}`);
-                  sessionStorage.removeItem(`mission_timer_${chapterId}_${missionSeq}`);
-                  sessionStorage.removeItem(`boss_damage_${chapterId}_${missionSeq}`);
-                  sessionStorage.removeItem(`boss_wrong_${chapterId}_${missionSeq}`);
-                  sessionStorage.removeItem(`boss_index_${chapterId}_${missionSeq}`);
-
-                  setCurrentQuizIndex(0);
-                  setQuizCorrectCount(0);
-                  setCurrentBossIndex(0);
-                  setBossDamageCount(0);
-                  setChildDamageCount(0);
-                  setUserAnswers([]);
-                  setStreak(1);
-                  setQuizSelected(null);
-                  setQuizConfirmed(false);
-                  setBasketCount(0);
-                  setQuestionTimeLeft(QUESTION_TIME_LIMIT);
-                  setIsTimeout(false);
-                  setXpEarned(0);
-                  setCoinsEarned(0);
-                  setTotalSessionSec(0);
-
-                  window.location.reload();
-                };
+                const hasPassedMission = finalAcc >= 65;
+                const totalMissions = completionResult?.totalMissions || 5;
+                const isLastMission = missionSeq >= totalMissions;
+                const hasNextMission = !isReplay && hasPassedMission && !isLastMission && !completionResult?.chapterCompleted && (completionResult?.nextMissionSeq !== null && completionResult?.nextMissionSeq !== undefined);
 
                 return (
-                  <div className="w-full flex flex-col gap-3">
-                    {hasPassedMission ? (
-                      <>
-                        <button
-                          onClick={() => navigate(`/mission-roadmap?chapterId=${chapterId}`)}
-                          className="w-full py-4 rounded-2xl bg-[#141779] text-white font-black text-base shadow-lg hover:bg-[#101362] flex items-center justify-center gap-2 active:scale-95 transition-all"
-                        >
-                          <span>{t('next_mission_btn', 'Next Mission 🚀')}</span>
-                          <Play size={18} className="fill-white" />
-                        </button>
-                        <button
-                          onClick={handleReplayMission}
-                          className="w-full py-3 rounded-2xl bg-white border-2 border-indigo-200 text-[#141779] font-black text-sm hover:bg-indigo-50 flex items-center justify-center gap-2 active:scale-95 transition-all"
-                        >
-                          <span>{t('replay_mission_btn', 'Replay Mission 🔄')}</span>
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-2xl text-xs font-bold text-center">
-                          ⚠️ {t('pass_accuracy_warning', '75% accuracy is required to unlock the Next Mission. Replay to master unmastered questions!')}
+                  <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-4 py-3 shadow-[0_-8px_30px_rgba(0,0,0,0.1)]">
+                    <div className="max-w-md mx-auto w-full">
+                      {hasNextMission ? (
+                        <div className="grid grid-cols-2 gap-3 w-full">
+                          <button
+                            onClick={handleBackToRoadmap}
+                            className="w-full h-12 rounded-2xl bg-white border-2 border-slate-200 text-slate-700 font-black text-xs hover:bg-slate-50 flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer shadow-2xs whitespace-nowrap uppercase tracking-wider box-border"
+                          >
+                            <span>🚪 {t('roadmap', 'Roadmap')}</span>
+                          </button>
+                          <button
+                            onClick={handleNextMission}
+                            className="w-full h-12 rounded-2xl bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] border-2 border-transparent text-white font-black text-xs shadow-md hover:brightness-110 flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer whitespace-nowrap uppercase tracking-wider box-border"
+                          >
+                            <span>{t('next_mission_btn', 'Next Mission 🚀')}</span>
+                            <Play size={14} className="fill-white shrink-0" />
+                          </button>
                         </div>
-                        <button
-                          onClick={handleReplayMission}
-                          className="w-full py-4 rounded-2xl bg-[#141779] text-white font-black text-base shadow-lg hover:bg-[#101362] flex items-center justify-center gap-2 active:scale-95 transition-all"
-                        >
-                          <span>{t('replay_mission_btn', 'Replay Mission 🔄')}</span>
-                        </button>
-                        <button
-                          onClick={() => navigate(`/mission-roadmap?chapterId=${chapterId}`)}
-                          className="w-full py-3 rounded-2xl bg-white border-2 border-gray-200 text-gray-700 font-bold text-sm hover:bg-gray-50 flex items-center justify-center gap-2 active:scale-95 transition-all"
-                        >
-                          <span>Back to Roadmap 🚪</span>
-                        </button>
-                      </>
-                    )}
+                      ) : hasPassedMission ? (
+                        <div className="flex flex-col gap-2 w-full">
+                          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-2 rounded-xl text-[11px] font-black text-center leading-tight flex items-center justify-center gap-1.5">
+                            <span>🏆</span>
+                            <span>{t('all_missions_complete', 'All 5 Chapter Missions Completed! Outstanding work!')}</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3 w-full">
+                            <button
+                              onClick={handleReplayMission}
+                              className="w-full h-12 rounded-2xl bg-white border-2 border-slate-200 text-slate-700 font-black text-xs hover:bg-slate-50 flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer shadow-2xs whitespace-nowrap uppercase tracking-wider box-border"
+                            >
+                              <span>{t('replay_mission_btn', 'Replay Mission 🔄')}</span>
+                            </button>
+                            <button
+                              onClick={handleBackToRoadmap}
+                              className="w-full h-12 rounded-2xl bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] border-2 border-transparent text-white font-black text-xs shadow-md hover:brightness-110 flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer whitespace-nowrap uppercase tracking-wider box-border"
+                            >
+                              <span>🗺️ {t('roadmap', 'Roadmap')}</span>
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-1.5 w-full">
+                          <div className="bg-amber-50 border border-amber-200 text-amber-800 p-2 rounded-xl text-[10px] font-bold text-center leading-tight">
+                            ⚠️ {t('pass_accuracy_warning', '65% accuracy required for Next Mission. Replay to master!')}
+                          </div>
+                          <div className="grid grid-cols-2 gap-3 w-full">
+                            <button
+                              onClick={handleBackToRoadmap}
+                              className="w-full h-12 rounded-2xl bg-white border-2 border-slate-200 text-slate-700 font-black text-xs hover:bg-slate-50 flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer shadow-2xs whitespace-nowrap uppercase tracking-wider box-border"
+                            >
+                              <span>🚪 {t('roadmap', 'Roadmap')}</span>
+                            </button>
+                            <button
+                              onClick={handleReplayMission}
+                              className="w-full h-12 rounded-2xl bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] border-2 border-transparent text-white font-black text-xs shadow-md hover:brightness-110 flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer whitespace-nowrap uppercase tracking-wider box-border"
+                            >
+                              <span>{t('replay_mission_btn', 'Replay Mission 🔄')}</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })()}
-            </main>
+            </div>
           )}
         </>
       )}
 
       {showReviveModal && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-900/40 backdrop-blur-md px-6 text-center">
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 sm:p-6 text-center select-none"
+          style={{ touchAction: "none" }}
+          onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+        >
           <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-white border-2 border-[#141779]/20 rounded-3xl p-8 max-w-sm w-full shadow-[0_20px_60px_rgba(20,23,121,0.15)] flex flex-col items-center gap-6"
+            initial={{ scale: 0.92, opacity: 0, y: 16 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            style={{ overscrollBehavior: "contain" }}
+            className="bg-white border border-slate-100 rounded-[32px] p-6 sm:p-7 max-w-[360px] w-full shadow-[0_20px_60px_rgba(20,23,121,0.18)] flex flex-col items-center relative text-center"
           >
-            <div className="w-20 h-20 rounded-full bg-teal-50 border-2 border-teal-200 flex items-center justify-center animate-pulse">
-              <Swords className="text-[#006a62] w-10 h-10 animate-bounce" />
+            <div className="w-16 h-16 rounded-full bg-teal-50 border border-teal-200 flex items-center justify-center mb-2 shadow-xs">
+              <Swords className="text-[#006a62] w-8 h-8" />
             </div>
             <div>
-              <h2 className="text-2xl font-black text-[#141779] uppercase tracking-widest">Final Chance!</h2>
-              <p className="text-xs font-semibold text-[#464652] mt-2 leading-relaxed">
+              <h2 className="text-xl font-black text-[#141779] leading-snug">Final Chance!</h2>
+              <p className="text-xs font-semibold text-slate-600 mt-1 leading-relaxed">
                 You ran out of hearts! Revive using the Revival Wheel to keep your current progress and fight on!
               </p>
             </div>
 
-            <div className="w-full bg-[#f8fafc] rounded-2xl p-4 border border-gray-200 flex justify-between items-center text-center shadow-xs">
+            <div className="w-full bg-slate-50 rounded-2xl p-3.5 border border-slate-200/80 flex justify-between items-center text-center shadow-xs my-4">
               <div className="flex-1">
-                <span className="text-[10px] text-[#767683] uppercase font-black tracking-widest block mb-1">Revival Spins</span>
-                <span className="text-2xl font-black text-teal-700">{revivalSpins}</span>
+                <span className="text-[10px] text-slate-500 uppercase font-black tracking-widest block mb-0.5">Revival Spins</span>
+                <span className="text-xl font-black text-teal-700">{revivalSpins}</span>
               </div>
-              <div className="w-px h-8 bg-gray-200" />
+              <div className="w-px h-8 bg-slate-200" />
               <div className="flex-1">
-                <span className="text-[10px] text-[#767683] uppercase font-black tracking-widest block mb-1">Your Coins</span>
-                <span className="text-2xl font-black text-amber-600">🪙 {Math.max(0, userCoins)}</span>
+                <span className="text-[10px] text-slate-500 uppercase font-black tracking-widest block mb-0.5">Your Coins</span>
+                <span className="text-xl font-black text-amber-600">🪙 {Math.max(0, userCoins)}</span>
               </div>
             </div>
 
             <div className="flex flex-col gap-2.5 w-full">
               {revivalSpins > 0 ? (
                 <button
-                  onClick={() => navigate(`/daily-rewards?type=boss_revival&chapter_id=${chapterId}`)}
-                  className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-black rounded-2xl hover:brightness-110 active:scale-95 transition-all uppercase tracking-wider text-sm flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20"
+                  onClick={handleGoToMissionSpinWheel}
+                  className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:brightness-110 active:scale-95 text-white font-black rounded-full uppercase tracking-wider text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
                 >
                   <span>🔥 Spin to Revive</span>
                 </button>
               ) : (
                 <button
-                  onClick={async () => {
+                  onClick={() => {
                     if (userCoins < 100) {
-                      showToast("Not enough coins! You need 100 coins.");
+                      showToast("Not enough coins! You need 100 coins.", "warning");
                       return;
                     }
-                    try {
-                      const res = await apiFetch("/api/retention/spin-wheel/buy-revival", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" }
-                      });
-                      const json = await res.json();
-                      if (json.success) {
-                        setRevivalSpins(json.balances.boss_revival_spins_balance || 1);
-                        setUserCoins(json.coins);
-                        showToast("Purchased 1 Revival Spin! 🎉");
-                      } else {
-                        showToast(json.message || "Purchase failed.");
-                      }
-                    } catch (e) {
-                      showToast("Purchase failed.");
-                    }
+                    setShowReviveModal(false);
+                    setShowBuySpinConfirmModal(true);
                   }}
-                  className="w-full py-4 bg-gradient-to-r from-amber-400 to-orange-500 text-white font-black rounded-2xl hover:brightness-110 active:scale-95 transition-all uppercase tracking-wider text-sm flex items-center justify-center gap-2 shadow-md shadow-amber-500/20"
+                  className="w-full py-3.5 bg-[#141779] hover:bg-[#101362] active:scale-95 text-white font-black rounded-full uppercase tracking-wider text-xs flex items-center justify-center gap-2 shadow-md shadow-[#141779]/20 transition-all cursor-pointer"
                 >
                   <span>🛒 Buy Revival Spin (100 🪙)</span>
                 </button>
@@ -2119,7 +2680,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
               <button
                 onClick={handleGiveUp}
-                className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold rounded-2xl active:scale-95 transition-all text-xs border border-gray-200"
+                className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-full active:scale-95 transition-all text-xs cursor-pointer"
               >
                 Retreat & Lose XP
               </button>
@@ -2128,33 +2689,76 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
         </div>
       )}
 
+      {/* Buy Revival Spin Confirmation Modal */}
+      <UnifiedConfirmModal
+        isOpen={showBuySpinConfirmModal}
+        zIndex="z-[300]"
+        onClose={() => {
+          if (!isBuyingRevivalSpin) {
+            setShowBuySpinConfirmModal(false);
+            setShowReviveModal(true);
+          }
+        }}
+        onConfirm={handleConfirmBuyRevivalSpin}
+        title="Buy Revival Spin?"
+        message={
+          <div className="space-y-3">
+            <p className="text-xs sm:text-sm font-semibold text-slate-600 leading-relaxed">
+              Spend 100 coins to buy 1 Revival Spin? You can spin the Revival Wheel to recover hearts and keep fighting!
+            </p>
+            <div className="w-full bg-amber-50 border border-amber-200 rounded-2xl p-3 flex justify-between items-center text-xs font-bold text-amber-900">
+              <span className="flex items-center gap-1.5">
+                <span>🪙</span> Cost:
+              </span>
+              <span className="text-amber-700 font-black text-sm">
+                100 Coins
+              </span>
+            </div>
+            <div className="text-[11px] font-bold text-slate-500 text-left px-1 flex justify-between">
+              <span>Current Coins: <strong className="text-slate-800">{userCoins}</strong></span>
+              <span>Remaining: <strong className="text-slate-800">{Math.max(0, userCoins - 100)}</strong></span>
+            </div>
+          </div>
+        }
+        confirmText={isBuyingRevivalSpin ? "Buying..." : "Yes, Spend 100 Coins"}
+        cancelText="Cancel"
+        variant="primary"
+        loading={isBuyingRevivalSpin}
+        icon={<span className="text-3xl">🪙</span>}
+      />
+
       {/* Defeat/Retreat Overlay Animation */}
       {lossOverlay.show && (
-        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-900/40 backdrop-blur-md px-6 text-center">
+        <div 
+          className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 sm:p-6 text-center select-none"
+          style={{ touchAction: "none" }}
+          onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+        >
           <motion.div
-            initial={{ scale: 0.9, opacity: 0, y: 30 }}
+            initial={{ scale: 0.92, opacity: 0, y: 16 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            transition={{ type: "spring", duration: 0.5 }}
-            className="bg-white border-2 border-rose-200 rounded-3xl p-8 max-w-sm w-full shadow-[0_20px_60px_rgba(0,0,0,0.12)] flex flex-col items-center gap-6"
+            transition={{ type: "spring", stiffness: 350, damping: 26 }}
+            style={{ overscrollBehavior: "contain" }}
+            className="bg-white border border-slate-100 rounded-[32px] p-6 sm:p-7 max-w-[360px] w-full shadow-[0_20px_60px_rgba(20,23,121,0.18)] flex flex-col items-center relative text-center"
           >
-            {/* Spotlight Icon */}
-            <div className="w-20 h-20 rounded-full bg-rose-50 border-2 border-rose-200 flex items-center justify-center shadow-xs relative">
-              <ShieldAlert className="text-rose-600 w-10 h-10 animate-pulse" />
+            {/* Spotlight Icon Badge */}
+            <div className="w-16 h-16 rounded-full bg-rose-50 border border-rose-200 flex items-center justify-center mb-2 shadow-xs">
+              <ShieldAlert className="text-rose-600 w-8 h-8 animate-pulse" />
             </div>
 
             {/* Content */}
-            <div className="space-y-2">
-              <h2 className="text-2xl font-black text-[#141779] uppercase tracking-wider">
+            <div className="space-y-1 mb-2">
+              <h2 className="text-xl font-black text-[#141779] leading-snug">
                 Fall Back!
               </h2>
-              <p className="text-xs text-[#464652] leading-relaxed font-bold">
+              <p className="text-xs text-slate-600 leading-relaxed font-semibold">
                 You retreated from the mission. Rest up and try again!
               </p>
             </div>
 
             {/* Penalty Box */}
-            <div className="w-full bg-rose-50/70 rounded-2xl p-4 border border-rose-200 relative overflow-hidden">
-              <span className="text-[10px] text-rose-700 uppercase font-black tracking-widest block mb-1">
+            <div className="w-full bg-rose-50/80 rounded-2xl p-4 border border-rose-200 relative overflow-hidden my-2">
+              <span className="text-[10px] text-rose-700 uppercase font-black tracking-widest block mb-0.5">
                 XP Penalty
               </span>
               <span className="text-2xl font-black text-rose-600">
@@ -2162,16 +2766,6 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
               </span>
             </div>
           </motion.div>
-        </div>
-      )}
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div
-          className="fixed top-24 z-[250] bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl border border-slate-800/80 font-bold text-xs sm:text-sm tracking-wide flex items-center justify-center gap-2 text-center animate-bounce max-w-[90vw] w-auto"
-          style={{ left: "50%", transform: "translateX(-50%)" }}
-        >
-          <span>✨</span>
-          <span>{toastMessage}</span>
         </div>
       )}
 

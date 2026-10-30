@@ -91,7 +91,10 @@ function formatDuration(seconds: number): string {
   if (!seconds || seconds <= 0) return "—";
   if (seconds < 60) return `${seconds}s`;
   const mins = Math.floor(seconds / 60);
-  if (mins < 60) return `${mins} min`;
+  const remSecs = seconds % 60;
+  if (mins < 60) {
+    return remSecs > 0 ? `${mins}m ${remSecs}s` : `${mins} min`;
+  }
   const hrs = Math.floor(mins / 60);
   const rem = mins % 60;
   return rem > 0 ? `${hrs}h ${rem}m` : `${hrs}h`;
@@ -325,15 +328,17 @@ export default function KidsActivityScreen() {
               color:
                 engagementTrend === null
                   ? C.outline
-                  : engagementTrend >= 0
+                  : engagementTrend > 0
                   ? C.success
-                  : C.error,
+                  : engagementTrend < 0
+                  ? C.error
+                  : C.onSurfaceVariant,
             },
           ]}
         >
           {engagementTrend === null
             ? "—"
-            : `${engagementTrend >= 0 ? "+" : ""}${engagementTrend}%`}
+            : `${engagementTrend > 0 ? "+" : ""}${engagementTrend}%`}
         </Text>
         <Text style={styles.summaryLabel}>vs Last Week</Text>
       </View>
@@ -346,7 +351,7 @@ export default function KidsActivityScreen() {
       <Text style={styles.emptyTitle}>No Activities Yet</Text>
       <Text style={styles.emptyDesc}>
         Activities will appear here after your child completes practice sessions,
-        quizzes, or boss battles.
+        quizzes, or learning missions.
       </Text>
     </View>
   );
@@ -377,7 +382,7 @@ export default function KidsActivityScreen() {
 
       <SectionList
         sections={sections}
-        keyExtractor={(item, idx) => String(item._id || item.createdAt || idx)}
+        keyExtractor={(item: any, idx: number) => String(item._id || item.createdAt || idx)}
         renderItem={renderItem}
         renderSectionHeader={renderSectionHeader}
         ListHeaderComponent={renderListHeader}

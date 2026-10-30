@@ -7,6 +7,7 @@ export interface MapStageConfig {
   iconBg?: string;
   terrainIcon?: string;
   storyQuote: string;
+  description?: string;
   questsCount: number;
   lessonsCount: number;
   xpReward: number;
@@ -17,6 +18,9 @@ export interface MapStageConfig {
   y: number; // percentage on map (0 - 100)
   biomeType: "forest" | "cave" | "volcano" | "castle";
   missions: { title: string; type: string; xp: number; icon: string }[];
+  unlocked?: boolean;
+  minClass?: number;
+  nodeData?: any;
 }
 
 export type MapLocationConfig = MapStageConfig;

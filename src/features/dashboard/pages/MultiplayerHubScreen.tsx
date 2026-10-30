@@ -1,8 +1,12 @@
 import { ArrowLeft, Book, ChevronDown, Globe, Microscope, Shapes, Swords, Trophy, Users, Lock, BookOpen, X, Sparkles, Check, Key } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
+import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
+import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
+import ShadowArenaDuelStage, { ShadowArenaTheme } from "../../../components/ShadowArenaDuelStage";
+import { getScopedItem } from "../../../utils/sessionCache";
 
 const getSubjectStyle = (name: string) => {
   const n = name.toLowerCase();
@@ -13,62 +17,9 @@ const getSubjectStyle = (name: string) => {
   return { icon: BookOpen, color: "text-[#3520A8]", bg: "bg-[#F4EFF7]", border: "border-[#6C4DFF]", activeBg: "bg-[#EAE2FB]", glow: "shadow-[0_4px_16px_rgba(108,77,255,0.25)]" };
 };
 
-// Left Shadow Fighter Silhouette SVG
-const FighterLeftSVG = () => (
-  <svg viewBox="0 0 100 120" className="w-16 h-20 sm:w-20 sm:h-24 drop-shadow-[0_0_10px_rgba(108,77,255,0.8)]">
-    <defs>
-      <linearGradient id="fighterGlowLeft" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#9C7CFF" />
-        <stop offset="100%" stopColor="#3520A8" />
-      </linearGradient>
-      <filter id="glowLeft" x="-20%" y="-20%" width="140%" height="140%">
-        <feGaussianBlur stdDeviation="3" result="blur" />
-        <feComposite in="SourceGraphic" in2="blur" operator="over" />
-      </filter>
-    </defs>
-    <g filter="url(#glowLeft)">
-      <ellipse cx="50" cy="100" rx="36" ry="8" fill="url(#fighterGlowLeft)" opacity="0.5" />
-      <circle cx="58" cy="24" r="11" fill="#140B3B" stroke="#9C7CFF" strokeWidth="2" />
-      <path d="M 46 20 Q 34 16 30 22 Q 40 24 47 26 Z" fill="#6C4DFF" />
-      <path d="M 48 35 Q 65 32 68 47 L 60 72 L 40 70 L 38 50 Z" fill="#0D0628" stroke="#6C4DFF" strokeWidth="1.5" />
-      <path d="M 64 38 L 84 30 L 90 36 L 68 48 Z" fill="#1B1052" stroke="#9C7CFF" strokeWidth="1.5" />
-      <path d="M 46 40 L 30 47 L 34 54 L 50 46 Z" fill="#0A041E" stroke="#6C4DFF" strokeWidth="1" />
-      <path d="M 42 70 L 22 100 L 12 98 L 34 67 Z" fill="#0A041E" stroke="#6C4DFF" strokeWidth="1.5" />
-      <path d="M 58 71 L 75 100 L 88 100 L 66 68 Z" fill="#140B3B" stroke="#9C7CFF" strokeWidth="1.5" />
-      <path d="M 59 14 A 11 11 0 0 1 68 27" fill="none" stroke="#F4C95D" strokeWidth="2" strokeLinecap="round" />
-    </g>
-  </svg>
-);
-
-// Right Shadow Fighter Silhouette SVG
-const FighterRightSVG = () => (
-  <svg viewBox="0 0 100 120" className="w-16 h-20 sm:w-20 sm:h-24 drop-shadow-[0_0_10px_rgba(244,201,93,0.8)]">
-    <defs>
-      <linearGradient id="fighterGlowRight" x1="100%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#F4C95D" />
-        <stop offset="100%" stopColor="#FF5252" />
-      </linearGradient>
-      <filter id="glowRight" x="-20%" y="-20%" width="140%" height="140%">
-        <feGaussianBlur stdDeviation="3" result="blur" />
-        <feComposite in="SourceGraphic" in2="blur" operator="over" />
-      </filter>
-    </defs>
-    <g filter="url(#glowRight)">
-      <ellipse cx="50" cy="100" rx="36" ry="8" fill="url(#fighterGlowRight)" opacity="0.5" />
-      <circle cx="42" cy="24" r="11" fill="#140B3B" stroke="#F4C95D" strokeWidth="2" />
-      <path d="M 54 20 Q 66 16 70 22 Q 60 24 53 26 Z" fill="#FF5252" />
-      <path d="M 52 35 Q 35 32 32 47 L 40 72 L 60 70 L 62 50 Z" fill="#0D0628" stroke="#F4C95D" strokeWidth="1.5" />
-      <path d="M 36 38 L 16 30 L 10 36 L 32 48 Z" fill="#1B1052" stroke="#F4C95D" strokeWidth="1.5" />
-      <path d="M 54 40 L 70 47 L 66 54 L 50 46 Z" fill="#0A041E" stroke="#FF5252" strokeWidth="1" />
-      <path d="M 58 70 L 78 100 L 88 98 L 66 67 Z" fill="#0A041E" stroke="#F4C95D" strokeWidth="1.5" />
-      <path d="M 42 71 L 25 100 L 12 100 L 34 68 Z" fill="#140B3B" stroke="#F4C95D" strokeWidth="1.5" />
-      <path d="M 41 14 A 11 11 0 0 0 32 27" fill="none" stroke="#00F0FF" strokeWidth="2" strokeLinecap="round" />
-    </g>
-  </svg>
-);
-
 export default function MultiplayerHubScreen() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { t } = useTranslation();
   const [joinCode, setJoinCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -77,6 +28,7 @@ export default function MultiplayerHubScreen() {
   const [chaptersList, setChaptersList] = useState<string[]>([]);
   const [myClass, setMyClass] = useState("Class 1");
   const [myCoins, setMyCoins] = useState(0);
+  const [userName, setUserName] = useState("");
   const [isChapterDropdownOpen, setIsChapterDropdownOpen] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [myStreak, setMyStreak] = useState(0);
@@ -89,21 +41,98 @@ export default function MultiplayerHubScreen() {
   const [completedChapterIds, setCompletedChapterIds] = useState<string[]>([]);
   const [isSubscribed, setIsSubscribed] = useState(false);
 
-  useEffect(() => {
+  // Helper to determine the single active journey theme:
+  // Class 1-4 -> "dragon" (2 Dragons fighting)
+  // Class 5-7 or scientist -> "science" (2 Scientists fighting)
+  // Class 8-12 or social_proof -> "social" (2 Gold Medalists fighting)
+  const resolveJourneyTheme = (tierKey?: string, childClassStr?: string): ShadowArenaTheme => {
+    if (tierKey === "scientist") return "science";
+    if (tierKey === "social_proof") return "social";
+    if (tierKey === "dragon") return "dragon";
+
+    if (childClassStr) {
+      const match = String(childClassStr).match(/\d+/);
+      const classNum = match ? parseInt(match[0], 10) : 1;
+      if (classNum >= 8) return "social";
+      if (classNum >= 5) return "science";
+      return "dragon";
+    }
+
+    return "dragon";
+  };
+
+  // Active Journey Duel Theme
+  const [arenaTheme, setArenaTheme] = useState<ShadowArenaTheme>(() => {
+    const urlTheme = searchParams.get("theme");
+    if (urlTheme && ["dragon", "science", "social"].includes(urlTheme)) return urlTheme as ShadowArenaTheme;
+
+    let cachedTier: string | undefined;
     try {
-      const cached = localStorage.getItem("user");
+      const cachedJ = getScopedItem("cachedJourneyData") || localStorage.getItem("cachedJourneyData");
+      if (cachedJ) {
+        const parsed = JSON.parse(cachedJ);
+        cachedTier = parsed.tierKey;
+      }
+    } catch (e) {
+      console.warn("Failed to parse cached journey:", e);
+    }
+
+    let cachedClass: string | undefined;
+    try {
+      const uStr = localStorage.getItem("userData") || localStorage.getItem("user");
+      if (uStr) {
+        const u = JSON.parse(uStr);
+        cachedClass = u.childClass;
+      }
+    } catch (e) {
+      console.warn("Failed to parse cached user:", e);
+    }
+
+    return resolveJourneyTheme(cachedTier, cachedClass);
+  });
+
+  useEffect(() => {
+    localStorage.removeItem("shadow_arena_theme_preview");
+
+    try {
+      const cached = localStorage.getItem("userData") || localStorage.getItem("user");
       if (cached) {
         const u = JSON.parse(cached);
         setIsSubscribed(Boolean(u.is_subscribed || u.isSubscribed));
+        if (u.name || u.childName) setUserName(u.name || u.childName);
+        if (u.childClass) {
+          setMyClass(u.childClass);
+          if (!searchParams.get("theme")) {
+            setArenaTheme(resolveJourneyTheme(undefined, u.childClass));
+          }
+        }
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn("Failed to parse cached user:", e);
+    }
 
     apiFetch("/api/users/me").then(r => r.json()).then(d => {
       if (d.success && d.data?.user) {
-        if (d.data.user.childClass) setMyClass(d.data.user.childClass);
-        setMyCoins(d.data.user.coins || 0);
-        setMyStreak(d.data.user.multiplayerStreak || 0);
-        setIsSubscribed(Boolean(d.data.user.is_subscribed || d.data.user.isSubscribed));
+        const u = d.data.user;
+        if (u.name || u.childName) setUserName(u.name || u.childName);
+        if (u.childClass) {
+          setMyClass(u.childClass);
+          if (!searchParams.get("theme")) {
+            setArenaTheme(resolveJourneyTheme(undefined, u.childClass));
+          }
+
+          apiFetch(`/api/journey/progress?classLevel=${encodeURIComponent(u.childClass)}`)
+            .then(res => res.json())
+            .then(jJson => {
+              if (jJson.success && jJson.data?.tierKey && !searchParams.get("theme")) {
+                setArenaTheme(resolveJourneyTheme(jJson.data.tierKey, u.childClass));
+              }
+            })
+            .catch(() => {});
+        }
+        setMyCoins(u.coins || 0);
+        setMyStreak(u.multiplayerStreak || 0);
+        setIsSubscribed(Boolean(u.is_subscribed || u.isSubscribed));
       }
     });
 
@@ -121,10 +150,17 @@ export default function MultiplayerHubScreen() {
         }
 
         if (subjData.success && subjData.data && subjData.data.length > 0) {
-          const allowedSubjects = subjData.data.filter((s: any) => !restricted[s.name]);
+          const allowedSubjects = subjData.data.filter((s: any) => 
+            !restricted[s.name] && 
+            (s.totalChapters === undefined || s.totalChapters > 0) && 
+            s.hasContent !== false && 
+            s.isactive !== 0
+          );
           setSubjects(allowedSubjects);
           if (allowedSubjects.length > 0) {
             setActiveSubject(allowedSubjects[0]);
+          } else {
+            setSubjects([]);
           }
         }
       });
@@ -153,8 +189,8 @@ export default function MultiplayerHubScreen() {
         const completedIds = pData.data
           .filter((p: any) => {
             const mCount = Array.isArray(p.completedMissions) ? p.completedMissions.length : 0;
-            if (mCount > 0 && mCount < 4) return false;
-            return mCount >= 4 || p.chapterCompleted || p.bossCompleted || (p.completed && mCount !== 0);
+            if (mCount > 0) return mCount >= 5 && p.chapterCompleted !== false;
+            return Boolean(p.chapterCompleted && p.completed && p.questionsCompleted);
           })
           .map((p: any) => String(p.chapterId).replace(/_hard$/, ""));
         setCompletedChapterIds(completedIds);
@@ -165,7 +201,7 @@ export default function MultiplayerHubScreen() {
       const chapterNames = fetchedChapters
         .map((c, idx) => {
           const num = c.order || c.chapter_number || c.chapterNumber || (idx + 1);
-          let rawName = c.name || c.title || c.chapter_name || "";
+          const rawName = c.name || c.title || c.chapter_name || "";
           if (!rawName || rawName.toLowerCase() === "chapter 1") {
             return `Chapter ${num}`;
           }
@@ -186,14 +222,15 @@ export default function MultiplayerHubScreen() {
     }).catch(() => {});
   }, [activeSubject, myClass]);
 
-  useEffect(() => {
-    if (error) {
-      const timer = setTimeout(() => {
-        setError("");
-      }, 5000);
-      return () => clearTimeout(timer);
+  const showNotice = (msg: string) => {
+    if (msg) {
+      showNotificationToast({
+        title: t('battle_notice', 'BATTLE NOTICE ⚔️'),
+        message: msg,
+        type: "warning"
+      });
     }
-  }, [error]);
+  };
 
   const [selectedChaptersList, setSelectedChaptersList] = useState<string[]>([]);
 
@@ -201,22 +238,41 @@ export default function MultiplayerHubScreen() {
     if (chName === "Mix Chapters" || chName === "Mix Chapters (All)") {
       return true;
     }
-    const computedIdx = idx !== undefined ? idx : chaptersList.indexOf(chName);
-    const targetChap = practiceChapters[computedIdx];
-    const chapId = targetChap ? String(targetChap._id || targetChap.chapterId || "").replace(/_hard$/, "") : "";
-    if (!chapId) return false;
-    return completedChapterIds.includes(chapId) || completedChapterIds.includes(`${chapId}_hard`);
+    const computedIdx = (idx !== undefined && idx >= 0)
+      ? idx
+      : chaptersList.findIndex(item => item === chName || item.startsWith(chName) || chName.startsWith(item));
+
+    if (computedIdx >= 0 && computedIdx < practiceChapters.length) {
+      const targetChap = practiceChapters[computedIdx];
+      const chapId = targetChap ? String(targetChap._id || targetChap.chapterId || targetChap.id || "").replace(/_hard$/, "") : "";
+      const rawName = targetChap ? (targetChap.name || targetChap.title || targetChap.chapter_name || "") : "";
+      if (chapId && (completedChapterIds.includes(chapId) || completedChapterIds.includes(`${chapId}_hard`))) {
+        return true;
+      }
+      if (rawName && completedChapterIds.some(id => id.toLowerCase() === rawName.toLowerCase())) {
+        return true;
+      }
+    }
+
+    // Fallback check against completedChapterIds matching chapter numbers or names
+    return completedChapterIds.some(id => 
+      id === chName || 
+      chName.toLowerCase().includes(id.toLowerCase()) || 
+      id.toLowerCase().includes(chName.toLowerCase())
+    );
   };
 
   const isChapterUnlocked = (chName: string, idx?: number) => {
     if (chName === "Mix Chapters" || chName === "Mix Chapters (All)") {
       return true;
     }
-    const computedIdx = idx !== undefined ? idx : chaptersList.indexOf(chName);
-    if (computedIdx === 0) {
-      return true;
-    }
-    return isSubscribed;
+    const computedIdx = (idx !== undefined && idx >= 0)
+      ? idx
+      : chaptersList.findIndex(item => item === chName || item.startsWith(chName) || chName.startsWith(item));
+
+    const isSubAllowed = computedIdx === 0 || isSubscribed;
+    const isCompleted = isChapterCompleted(chName, computedIdx);
+    return isSubAllowed && isCompleted;
   };
 
   const getMixChapterOrder = () => {
@@ -230,36 +286,37 @@ export default function MultiplayerHubScreen() {
   const entryFee = 100;
 
   const handleCreateRoom = async () => {
-    const unlockedChapters = isSubscribed ? chaptersList : (chaptersList.length > 0 ? [chaptersList[0]] : ["Chapter 1"]);
-    const effectiveSelectedChapters = selectedChaptersList.length > 0 ? selectedChaptersList : unlockedChapters;
-    const isValid = effectiveSelectedChapters.every((ch) => {
-      const idx = chaptersList.indexOf(ch);
-      return isChapterCompleted(ch, idx);
-    });
-
-    try {
-      const storedUser = localStorage.getItem("user");
-      const uid = storedUser ? JSON.parse(storedUser)._id : "unknown";
-      console.log("[DEBUG Battle Validation]", {
-        userId: uid,
-        selectedChapters: effectiveSelectedChapters,
-        unlockedChapters,
-        userCompletedChapters: completedChapterIds,
-        isValid
-      });
-    } catch (e) {}
-
+    // Verify chapter completion for creator prior to checking coin balance
     if (selectedChaptersList.length > 0) {
+      // Explicit chapters chosen: verify each chosen chapter is completed
       for (const ch of selectedChaptersList) {
         const idx = chaptersList.indexOf(ch);
-        if (!isChapterCompleted(ch, idx)) {
-          setError(t('chapter_missions_not_completed', 'You must complete all missions of this chapter first before playing it in Friendly Battle!'));
+        const isDone = isChapterCompleted(ch, idx);
+        if (!isDone) {
+          const formattedChapName = ch.includes(":") ? ch : `${ch}`;
+          showNotice(t('must_complete_specific_chapter', { 
+            chapter: formattedChapName, 
+            defaultValue: `You must complete ${formattedChapName} first before playing it in Shadow Arena!` 
+          }));
           return;
         }
       }
+    } else {
+      // "All Chapters" / "Mix Chapters" chosen: ensure user has completed at least Chapter 1 / one available chapter
+      const fallbackChap = chaptersList[0] || "Chapter 1";
+      const hasCompletedAtLeastOne = isChapterCompleted(fallbackChap, 0) || completedChapterIds.length > 0;
+      if (!hasCompletedAtLeastOne) {
+        const formattedChapName = fallbackChap.includes(":") ? fallbackChap : `${fallbackChap}`;
+        showNotice(t('must_complete_specific_chapter', { 
+          chapter: formattedChapName, 
+          defaultValue: `You must complete ${formattedChapName} in ${activeSubject?.name || "this subject"} first before playing it in Shadow Arena!` 
+        }));
+        return;
+      }
     }
+
     if (myCoins < entryFee) {
-      setError(t('not_enough_coins_arena', { entryFee, defaultValue: `Not enough coins! You need at least ${entryFee} coins to play Shadow Arena in this city.` }));
+      showNotice(t('not_enough_coins_arena', { entryFee, defaultValue: `Not enough coins! You need at least ${entryFee} coins to play Shadow Arena in this city.` }));
       return;
     }
     setLoading(true);
@@ -277,13 +334,13 @@ export default function MultiplayerHubScreen() {
       } else {
         const errMsg = data.message || "Failed to create room";
         if (errMsg.includes("Not enough coins")) {
-          setError(t('not_enough_coins_arena', { entryFee, defaultValue: errMsg }));
+          showNotice(t('not_enough_coins_arena', { entryFee, defaultValue: errMsg }));
         } else {
-          setError(errMsg);
+          showNotice(errMsg);
         }
       }
     } catch (e) {
-      setError(t('network_error', 'Network error'));
+      showNotice(t('network_error', 'Network error'));
     } finally {
       setLoading(false);
     }
@@ -291,15 +348,14 @@ export default function MultiplayerHubScreen() {
 
   const handleJoinRoom = async () => {
     if (myCoins < 100) {
-      setError("Not enough coins! You need at least 100 coins to join any Arena match.");
+      showNotice("Not enough coins! You need at least 100 coins to join any Arena match.");
       return;
     }
     if (joinCode.length < 6) {
-      setError("Code must be at least 6 characters");
+      showNotice("Code must be at least 6 characters");
       return;
     }
     setLoading(true);
-    setError("");
     try {
       const res = await apiFetch("/api/multiplayer/room/join", {
         method: "POST",
@@ -310,10 +366,10 @@ export default function MultiplayerHubScreen() {
       if (data.success && data.data) {
         navigate(`/multiplayer-room/${data.data.roomId}`);
       } else {
-        setError(data.message || "Invalid room code");
+        showNotice(data.message || "Invalid room code");
       }
     } catch (e) {
-      setError("Network error");
+      showNotice("Network error");
     } finally {
       setLoading(false);
     }
@@ -355,71 +411,38 @@ export default function MultiplayerHubScreen() {
       {/* MAIN GAME LOBBY CONTENT AREA (COMPACT NO-SCROLL LAYOUT) */}
       <main className="px-4 py-2 flex-1 flex flex-col justify-between max-w-[430px] mx-auto w-full z-10 overflow-y-auto overflow-x-hidden scrollbar-none">
         
-        {/* HERO 1V1 SHADOW BATTLE STAGE */}
-        <section className="flex flex-col items-center shrink-0">
-          <div className="w-full bg-gradient-to-b from-[#180C4F] to-[#2B1778] border-2 border-[#6C4DFF]/40 rounded-2xl p-2.5 relative shadow-[0_8px_20px_rgba(20,23,121,0.25)] overflow-hidden">
-            {/* Background Battle Grid Lines */}
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff10_1px,transparent_1px),linear-gradient(to_bottom,#ffffff10_1px,transparent_1px)] bg-[size:16px_16px]" />
-
-            {/* Fighter Duel Stage */}
-            <div className="relative flex items-center justify-between px-3 py-1">
-              {/* Player 1 Left */}
-              <div className="flex flex-col items-center">
-                <span className="text-[9px] font-extrabold uppercase tracking-wider text-white bg-[#6C4DFF] px-2 py-0.5 rounded-full border border-[#9C7CFF] mb-0.5 shadow-sm">
-                  {t('you', 'YOU')}
-                </span>
-                <FighterLeftSVG />
-              </div>
-
-              {/* Center VS Emblem */}
-              <div className="flex flex-col items-center z-10 mx-1">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#F4C95D] via-[#FF5252] to-[#6C4DFF] p-[2px] shadow-[0_0_16px_rgba(244,201,93,0.8)] animate-pulse">
-                  <div className="w-full h-full bg-[#120738] rounded-full flex items-center justify-center">
-                    <span className="text-xs font-black text-[#F4C95D] tracking-tighter italic">VS</span>
-                  </div>
-                </div>
-                <span className="text-[11px] font-black text-white tracking-widest mt-1 uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                  {t('arena_1v1', 'ARENA 1v1')}
-                </span>
-              </div>
-
-              {/* Player 2 Right */}
-              <div className="flex flex-col items-center">
-                <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#141779] bg-[#F4C95D] px-2 py-0.5 rounded-full border border-[#FFD700] mb-0.5 shadow-sm">
-                  {t('challenger', 'CHALLENGER')}
-                </span>
-                <FighterRightSVG />
-              </div>
-            </div>
-
-            {/* Subtitle tag */}
-            <p className="text-center text-[10px] font-bold text-[#EAE2FB] mt-0.5 tracking-tight">
-              {t('shadow_arena_desc', 'Challenge your friend • Answer faster • Win rewards')}
-            </p>
-          </div>
+        {/* HERO 1V1 SHADOW BATTLE STAGE (Strict Journey Duel: 2 Dragons, 2 Scientists, or 2 Gold Medalists) */}
+        <section className="flex flex-col items-center shrink-0 w-full">
+          <ShadowArenaDuelStage
+            theme={arenaTheme}
+            playerName={userName || t('you', 'YOU')}
+            opponentName={t('challenger', 'CHALLENGER')}
+          />
         </section>
 
         {/* BATTLE STATUS & STREAK REWARD BADGE */}
-        <section className="my-1.5 shrink-0">
-          <div className="bg-white border-2 border-[#E5DBFB] rounded-xl px-3 py-1.5 flex items-center justify-between shadow-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-[#FEF3C7] border border-[#F59E0B]/40 flex items-center justify-center shrink-0">
-                <Trophy size={14} className="text-[#D97706]" />
+        <section className="my-2.5 sm:my-3 shrink-0 w-full">
+          <div className="bg-white/95 backdrop-blur-sm border-2 border-[#E5DBFB] hover:border-[#D1C2F9] rounded-2xl px-4 py-3 sm:px-4.5 sm:py-3.5 flex items-center justify-between shadow-[0_2px_12px_rgba(108,77,255,0.06)] transition-all">
+            <div className="flex items-center gap-3 min-w-0 pr-2">
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-[#FEF3C7] to-[#FDE68A] border border-[#F59E0B]/35 flex items-center justify-center shrink-0 shadow-xs">
+                <Trophy size={20} className="text-[#D97706]" />
               </div>
-              <div className="text-left">
-                <p className="text-[10px] font-black text-[#141779] uppercase tracking-wider leading-none">
+              <div className="text-left min-w-0">
+                <p className="text-xs sm:text-[13px] font-black text-[#141779] uppercase tracking-wide leading-tight truncate">
                   {t('win_streak_challenge', '25 WIN STREAK CHALLENGE')}
                 </p>
-                <p className="text-[9px] font-bold text-[#6D28D9] mt-0.5 leading-none">
+                <p className="text-[11px] sm:text-xs font-bold text-[#6D28D9] mt-1 leading-normal truncate">
                   {myStreak > 0 ? t('current_streak_wins', { streak: myStreak, defaultValue: `Current Streak: ${myStreak} Wins 🏆` }) : t('win_25_matches_prize', 'Win 25 matches for physical prize!')}
                 </p>
               </div>
             </div>
 
             {/* Streak Progress Indicator */}
-            <div className="flex items-center gap-1 bg-[#F4EFF7] border border-[#E5DBFB] px-2 py-1 rounded-lg">
-              <span className="text-xs">🔥</span>
-              <span className="text-xs font-black text-[#141779]">{myStreak}/25</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 bg-gradient-to-r from-[#FAF5FF] to-[#F3E8FF] border border-[#DDD6FE] px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl shrink-0 shadow-xs">
+              <span className="text-base sm:text-lg select-none leading-none">🔥</span>
+              <span className="text-xs sm:text-sm font-black text-[#141779] tracking-wide">
+                {myStreak}<span className="text-[#7C3AED]/70 font-bold text-[11px] sm:text-xs">/25</span>
+              </span>
             </div>
           </div>
         </section>
@@ -442,7 +465,7 @@ export default function MultiplayerHubScreen() {
             onClick={() => setActiveTab("join")}
             className={`flex-1 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
               activeTab === "join"
-                ? "bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white shadow-md border border-[#FFD700]/50"
+                ? "bg-gradient-to-r from-[#6C4DFF] to-[#3520A8] text-white shadow-md border border-[#9C7CFF]/50"
                 : "text-[#6D28D9] hover:text-[#141779]"
             }`}
           >
@@ -450,19 +473,6 @@ export default function MultiplayerHubScreen() {
             <span>{t('join_with_code', 'JOIN WITH CODE')}</span>
           </button>
         </section>
-
-        {/* DYNAMIC ERROR TOAST */}
-        {error && (
-          <div className="fixed top-14 left-1/2 -translate-x-1/2 w-[90%] max-w-[400px] bg-white border-l-4 border-red-600 border-y border-r border-red-200 rounded-xl p-3 shadow-2xl backdrop-blur-md z-50 flex items-center justify-between gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
-            <div className="flex items-center gap-2">
-              <span className="text-base">⚠️</span>
-              <p className="text-xs font-bold text-[#141779] leading-tight">{error}</p>
-            </div>
-            <button onClick={() => setError("")} className="p-1 text-red-600 hover:bg-red-50 rounded-full">
-              <X size={16} />
-            </button>
-          </div>
-        )}
 
         {/* TAB 1: CREATE BATTLE SETUP */}
         {activeTab === "create" && (
@@ -580,11 +590,10 @@ export default function MultiplayerHubScreen() {
                                 }
                               } else {
                                 if (idx >= 1 && !isSubscribed) {
-                                  setError(t('premium_chapter_locked', 'Selecting Chapter 2+ in Friendly Battle requires a Premium subscription!'));
+                                  showNotice(t('premium_chapter_locked', 'Selecting Chapter 2+ in Friendly Battle requires a Premium subscription!'));
                                 } else {
-                                  setError(t('chapter_missions_not_completed', 'You must complete all missions of this chapter first before playing it in Friendly Battle!'));
+                                  showNotice(t('must_complete_specific_chapter', { chapter: c, defaultValue: `You must complete ${c} first before playing it in Shadow Arena!` }));
                                 }
-                                setTimeout(() => setError(""), 4000);
                               }
                             }}
                             className={`px-3.5 py-2.5 text-xs font-bold cursor-pointer transition-colors border-b border-[#F0EBFB] last:border-0 flex items-center justify-between ${
@@ -659,9 +668,14 @@ export default function MultiplayerHubScreen() {
                 type="text"
                 placeholder={t('enter_6digit_code', 'ENTER 6-DIGIT CODE')}
                 value={joinCode}
-                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 6);
+                  setJoinCode(val);
+                }}
                 maxLength={6}
-                className="w-full bg-[#F4EFF7] border-2 border-[#F59E0B] focus:border-[#D97706] rounded-xl py-3 px-4 text-center text-2xl font-black text-[#141779] tracking-[8px] focus:outline-none transition-all uppercase placeholder:text-gray-400 placeholder:tracking-normal placeholder:font-bold placeholder:text-xs"
+                className={`w-full bg-[#F4EFF7] border-2 border-[#E5DBFB] focus:border-[#6C4DFF] focus:ring-2 focus:ring-[#6C4DFF]/20 rounded-xl py-3 px-4 text-center font-black text-[#141779] focus:outline-none transition-all uppercase placeholder:text-center placeholder:text-gray-400 placeholder:font-bold placeholder:text-xs placeholder:tracking-normal ${
+                  joinCode ? 'text-2xl tracking-[8px] pl-[12px]' : 'text-sm tracking-normal'
+                }`}
               />
 
               <button
@@ -669,14 +683,18 @@ export default function MultiplayerHubScreen() {
                 disabled={loading || joinCode.length < 6}
                 className={`w-full py-3 rounded-xl flex flex-col items-center justify-center transition-all border ${
                   joinCode.length === 6 
-                    ? 'bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white border-[#FFD700] shadow-[0_4px_16px_rgba(245,158,11,0.4)] active:scale-[0.98]' 
+                    ? 'bg-gradient-to-r from-[#6C4DFF] via-[#512BE2] to-[#3520A8] hover:from-[#7C5DFF] hover:to-[#4529C8] text-white border-[#9C7CFF]/40 shadow-[0_4px_16px_rgba(108,77,255,0.35)] active:scale-[0.98]' 
                     : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
                 }`}
               >
                 <span className="text-sm font-black tracking-wider uppercase">
                   {loading ? t('joining_battle', 'JOINING BATTLE...') : t('join_battle_match', 'JOIN BATTLE MATCH')}
                 </span>
-                <span className="text-[10px] font-bold text-white/80">{t('battle_cost_sub', { cost: 100, defaultValue: 'Cost: 100 Coins' })}</span>
+                <span className={`text-[10px] font-bold mt-0.5 ${
+                  joinCode.length === 6 ? 'text-[#F4C95D]' : 'text-slate-600 font-extrabold'
+                }`}>
+                  {t('battle_cost_sub', { cost: 100, defaultValue: 'Cost: 100 Coins' })}
+                </span>
               </button>
             </div>
           </div>
@@ -684,37 +702,30 @@ export default function MultiplayerHubScreen() {
 
       </main>
 
-      {/* LEAVE CONFIRMATION MODAL */}
-      {showLeaveModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl p-5 w-full max-w-xs flex flex-col items-center text-center shadow-2xl border-2 border-[#E5DBFB] animate-in zoom-in-95 duration-200">
-            <div className="w-12 h-12 rounded-full bg-red-50 border border-red-200 flex items-center justify-center mb-3">
-              <Swords size={24} className="text-red-600" />
-            </div>
-            <h2 className="text-lg font-black text-[#141779] mb-1">{t('leave_shadow_arena_q', 'Leave Shadow Arena?')}</h2>
-            <p className="text-xs font-semibold text-[#6D28D9] mb-5">
-              {t('exit_lobby_confirm_desc', 'Are you sure you want to exit the battle lobby?')}
-            </p>
-            <div className="flex gap-2.5 w-full">
-              <button 
-                onClick={() => setShowLeaveModal(false)}
-                className="flex-1 bg-[#F4EFF7] text-[#141779] py-2.5 rounded-xl font-bold text-xs hover:bg-[#EAE2FB] transition-all border border-[#E5DBFB]"
-              >
-                {t('cancel', 'Cancel')}
-              </button>
-              <button 
-                onClick={() => {
-                  setShowLeaveModal(false);
-                  navigate("/home");
-                }}
-                className="flex-1 bg-gradient-to-r from-red-600 to-red-700 text-white py-2.5 rounded-xl font-bold text-xs hover:brightness-110 transition-all shadow-[0_4px_12px_rgba(239,68,68,0.3)]"
-              >
-                {t('leave_arena', 'Leave Arena')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* UNIFIED LEAVE CONFIRMATION MODAL */}
+      <UnifiedConfirmModal
+        isOpen={showLeaveModal}
+        onClose={() => setShowLeaveModal(false)}
+        onConfirm={() => {
+          setShowLeaveModal(false);
+          if ((window as any).ReactNativeWebView?.postMessage) {
+            try {
+              (window as any).ReactNativeWebView.postMessage(JSON.stringify({ type: "EXIT_TO_APP" }));
+            } catch (e) {}
+          }
+          if (window.history.length > 1) {
+            navigate(-1);
+          } else {
+            navigate("/home", { replace: true });
+          }
+        }}
+        title={t('leave_shadow_arena_q', 'Leave Shadow Arena?')}
+        message={t('exit_lobby_confirm_desc', 'Are you sure you want to exit the battle lobby?')}
+        confirmText={t('leave_arena', 'Leave Arena')}
+        cancelText={t('cancel', 'Cancel')}
+        variant="danger"
+        icon={<Swords size={30} className="text-rose-600" />}
+      />
     </div>
   );
 }

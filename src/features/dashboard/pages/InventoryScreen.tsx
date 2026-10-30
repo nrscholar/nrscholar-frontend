@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Coins, Zap, Shield, MapPin, Package, Star, Gift, PartyPopper, Lock, Sparkles, Trophy, ChevronRight, Compass, Flame } from "lucide-react";
+import { ArrowLeft, Coins, Zap, Shield, MapPin, Package, Star, Gift, PartyPopper, Lock, Sparkles, Trophy, ChevronRight, Compass, Flame, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
+import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
 
 // Stylized 3D Treasure Box Hero SVG
 const MysteryBoxHeroSVG = ({ type }: { type?: string }) => {
@@ -60,7 +61,7 @@ const MysteryBoxHeroSVG = ({ type }: { type?: string }) => {
 export default function InventoryScreen() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<"Mystery Boxes" | "Dragon Academy" | "Cities" | "Badges">("Mystery Boxes");
+  const [activeTab, setActiveTab] = useState<"Mystery Boxes" | "Dragon Academy" | "Journey" | "Badges">("Mystery Boxes");
 
   const [mysteryBoxes, setMysteryBoxes] = useState<any>({});
   const [dragons, setDragons] = useState<any[]>([]);
@@ -68,6 +69,7 @@ export default function InventoryScreen() {
   const [openingBox, setOpeningBox] = useState<string | null>(null);
   const [hatchingType, setHatchingType] = useState<string | null>(null);
   const [rewardData, setRewardData] = useState<any>(null);
+  useLockBodyScroll(Boolean(rewardData));
   const [subTab, setSubTab] = useState<"Journey" | "Lab">("Journey");
 
   const [xp, setXp] = useState(0);
@@ -75,6 +77,31 @@ export default function InventoryScreen() {
   const [userBadges, setUserBadges] = useState<any[]>([]);
   const [streakDays, setStreakDays] = useState(0);
   const [userLevel, setUserLevel] = useState(1);
+  const extractClassNum = (u: any): number => {
+    if (!u) return 1;
+    const rawClass = u.childClass 
+      || u.activeChild?.childClass 
+      || u.activeChild?.classLevel 
+      || u.children?.[0]?.childClass 
+      || u.children?.[0]?.classLevel 
+      || u.classLevel 
+      || u.grade 
+      || u.studentClass 
+      || u.standard;
+    const match = String(rawClass || "").match(/\d+/);
+    return match ? parseInt(match[0], 10) : 1;
+  };
+
+  const [studentClassNum, setStudentClassNum] = useState<number>(() => {
+    try {
+      const cached = localStorage.getItem("userData");
+      if (cached) {
+        return extractClassNum(JSON.parse(cached));
+      }
+    } catch (e) {}
+    return 1;
+  });
+  const [journeyData, setJourneyData] = useState<any>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -93,6 +120,7 @@ export default function InventoryScreen() {
         setUserBadges(u.badges || []);
         setStreakDays(u.streakDays || u.streak_days || u.streak || 0);
         setUserLevel(u.level || Math.max(1, Math.floor((u.xp || 0) / 500) + 1));
+        setStudentClassNum(extractClassNum(u));
         localStorage.setItem("userData", JSON.stringify(u));
       }
     } catch (e) {}
@@ -108,6 +136,7 @@ export default function InventoryScreen() {
         setUserBadges(u.badges || []);
         setStreakDays(u.streakDays || u.streak_days || u.streak || 0);
         setUserLevel(u.level || Math.max(1, Math.floor((u.xp || 0) / 500) + 1));
+        setStudentClassNum(extractClassNum(u));
       } catch(e) {}
     }
     
@@ -224,9 +253,39 @@ export default function InventoryScreen() {
   };
 
   const [citiesData, setCitiesData] = useState<any[]>([]);
+  const [journeyNodes, setJourneyNodes] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchCities = async () => {
+    const fetchCitiesAndJourney = async () => {
+      try {
+        let url = "/api/journey/progress";
+        const cached = localStorage.getItem("userData");
+        if (cached) {
+          try {
+            const u = JSON.parse(cached);
+            const params = new URLSearchParams();
+            if (u.childClass) params.append("classLevel", u.childClass);
+            if (u.childBoard) params.append("board", u.childBoard);
+            if (u.activeChildId) params.append("child_id", u.activeChildId);
+            const q = params.toString();
+            if (q) url += `?${q}`;
+          } catch (e) {}
+        }
+        const jRes = await apiFetch(url);
+        if (jRes.ok) {
+          const jData = await jRes.json();
+          if (jData.success && jData.data) {
+            setJourneyData(jData.data);
+            if (jData.data.classLevel) {
+              setStudentClassNum(Number(jData.data.classLevel));
+            }
+            if (jData.data.nodes?.length > 0) {
+              setJourneyNodes(jData.data.nodes);
+            }
+          }
+        }
+      } catch (e) {}
+
       try {
         const response = await apiFetch("/api/practice/cities");
         const data = await response.json();
@@ -235,37 +294,122 @@ export default function InventoryScreen() {
         } else {
           setCitiesData([
             { name: "Egg Village", requiredFuel: 0 },
-            { name: "Forest Kingdom", requiredFuel: 50 },
-            { name: "Magic Desert", requiredFuel: 250 },
-            { name: "Ice Kingdom", requiredFuel: 1000 },
-            { name: "Dragon Mountain", requiredFuel: 2500 },
+            { name: "Hatchling Haven", requiredFuel: 500 },
+            { name: "Forest Kingdom", requiredFuel: 1000 },
+            { name: "Magic Desert", requiredFuel: 2500 },
+            { name: "Ice Kingdom", requiredFuel: 5000 },
+            { name: "Dragon Mountain", requiredFuel: 10000 },
+            { name: "Cloud City", requiredFuel: 15000 },
+            { name: "Crystal Caves", requiredFuel: 20000 },
+            { name: "Underworld", requiredFuel: 30000 },
+            { name: "Galactic Core", requiredFuel: 50000 },
+            { name: "Stone Age Hunter", requiredFuel: 65000 },
+            { name: "Bronze Craftsman", requiredFuel: 80000 },
+            { name: "Civilization Leader", requiredFuel: 100000 },
           ]);
         }
       } catch (e) {}
     };
-    fetchCities();
+    fetchCitiesAndJourney();
   }, []);
 
-  const xpThresholds = [0, 1000, 2500, 5000, 10000, 15000, 20000, 30000, 40000, 50000];
-  const cities = citiesData.map((cityData, index) => {
-    const reqXp = xpThresholds[index] || 0;
-    const nextReqXp = xpThresholds[index + 1] || 99999;
-    const isUnlocked = xp >= reqXp;
-    const isCurrent = isUnlocked && (index === citiesData.length - 1 || xp < nextReqXp);
+  // Determine active standard for the student
+  const activeClassNum = Number(journeyData?.classLevel) 
+    || studentClassNum 
+    || Number(journeyNodes.find(n => n.unlocked && !n.completed && !n.isPriorClass)?.minClass)
+    || 1;
 
-    let status = t('status_locked', "Locked 🔒");
-    if (isCurrent) {
-      status = t('status_current_location', "Current Location 📍");
-    } else if (isUnlocked) {
-      status = t('status_completed', "Completed 🎉");
-    }
+  const xpThresholds = [0, 500, 1000, 2500, 5000, 10000, 15000, 20000, 30000, 50000, 65000, 80000, 100000];
+  const cities = journeyNodes.length > 0
+    ? journeyNodes.map((node, index) => {
+        const minClass = node.minClass || (index < 3 ? 1 : index < 6 ? 2 : index < 9 ? 3 : 4);
+        const isCurrentClass = minClass === activeClassNum;
+        const isFutureClass = minClass > activeClassNum;
+        const isPriorClass = minClass < activeClassNum;
 
-    return {
-      id: String(index),
-      name: cityData.name,
-      status
-    };
-  });
+        const isCompleted = Boolean(node.completed);
+        const stageProgPct = node.nodeProgressPercentage !== undefined 
+          ? Math.round(node.nodeProgressPercentage) 
+          : 0;
+
+        // Unlocked rule strictly identical to Dragon Journey (MapWorld.tsx):
+        // - Current class: unlocked if node.unlocked is true
+        // - Prior/other standards: unlocked ONLY IF progress > 0% or completed! If 0%, it stays locked.
+        // - Future standards: locked.
+        const isUnlocked = isCurrentClass
+          ? Boolean(node.unlocked)
+          : (isCompleted || stageProgPct > 0);
+
+        const isCurrent = isCurrentClass && isUnlocked && !isCompleted;
+        const isLocked = !isUnlocked;
+
+        let status = t('status_locked', "Locked 🔒");
+        if (isFutureClass) {
+          status = t('unlocks_at_class_short', { count: minClass, defaultValue: `Unlocks at Class ${minClass} 🔒` });
+        } else if (isCompleted) {
+          status = t('status_completed', "Completed 🎉");
+        } else if (isCurrent) {
+          status = t('status_current_location', "Current Location 📍");
+        } else if (isUnlocked && stageProgPct > 0) {
+          status = `${stageProgPct}% Progress 📍`;
+        } else if (isUnlocked) {
+          status = t('status_unlocked', "Unlocked 📍");
+        }
+
+        return {
+          id: String(index),
+          name: node.name || node.title,
+          minClass,
+          isCompleted,
+          isCurrent,
+          isUnlocked,
+          isLocked,
+          isFutureClass,
+          isPriorClass,
+          stageProgPct,
+          status
+        };
+      })
+    : citiesData.map((cityData, index) => {
+        const minClass = index < 3 ? 1 : index < 6 ? 2 : index < 9 ? 3 : 4;
+        const isCurrentClass = minClass === activeClassNum;
+        const isFutureClass = minClass > activeClassNum;
+        const isPriorClass = minClass < activeClassNum;
+        const reqXp = xpThresholds[index] || 0;
+        const nextReqXp = xpThresholds[index + 1] || 99999;
+        
+        const isCompleted = !isFutureClass && (xp >= nextReqXp);
+        const isCurrent = isCurrentClass && (xp >= reqXp && xp < nextReqXp);
+        const isUnlocked = isCurrentClass 
+          ? (index === citiesData.findIndex(c => (index < 3 ? 1 : index < 6 ? 2 : index < 9 ? 3 : 4) === activeClassNum) || xp >= reqXp)
+          : !isFutureClass && (isCompleted || xp > reqXp);
+        const isLocked = !isUnlocked;
+
+        let status = t('status_locked', "Locked 🔒");
+        if (isFutureClass) {
+          status = t('unlocks_at_class_short', { count: minClass, defaultValue: `Unlocks at Class ${minClass} 🔒` });
+        } else if (isCompleted) {
+          status = t('status_completed', "Completed 🎉");
+        } else if (isCurrent) {
+          status = t('status_current_location', "Current Location 📍");
+        } else if (isUnlocked) {
+          status = t('status_unlocked', "Unlocked 📍");
+        }
+
+        return {
+          id: String(index),
+          name: cityData.name,
+          minClass,
+          isCompleted,
+          isCurrent,
+          isUnlocked,
+          isLocked,
+          isFutureClass,
+          isPriorClass,
+          stageProgPct: 0,
+          status
+        };
+      });
 
   const translateBadgeText = (text: string, defaultVal: string) => {
     if (!text) return defaultVal || "";
@@ -370,10 +514,12 @@ export default function InventoryScreen() {
   // Dynamic Collection Statistics
   const totalBoxesOwned = (mysteryBoxes.common || 0) + (mysteryBoxes.rare || 0) + (mysteryBoxes.epic || 0);
   const totalDragonsHatched = dragons.length;
-  const totalCitiesUnlocked = cities.filter(c => !c.status.includes('Locked')).length;
+  const totalCitiesUnlocked = cities.filter(c => c.isUnlocked).length;
+  const totalCitiesCompleted = cities.filter(c => c.isCompleted).length;
   const totalBadgesEarned = badges.length;
 
-  const collectionScore = Math.min(100, Math.round(((totalBoxesOwned + totalDragonsHatched + totalCitiesUnlocked + totalBadgesEarned) / 25) * 100));
+  const collectionScore = Math.min(100, Math.round(((totalBoxesOwned + totalDragonsHatched + totalCitiesCompleted + totalBadgesEarned) / 25) * 100));
+  const currentCity = cities.find(c => c.isCurrent) || cities.find(c => c.isUnlocked) || cities[0];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#F4EFF7] via-[#F9F6FF] to-[#FFFFFF] text-[#141779] font-sans pb-24 relative selection:bg-[#6C4DFF] selection:text-white overflow-x-hidden">
@@ -395,7 +541,7 @@ export default function InventoryScreen() {
             <ArrowLeft size={18} className="text-[#141779]" />
           </button>
           
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center  gap-1.5">
             <Sparkles size={16} className="text-[#6C4DFF] animate-pulse" />
             <h1 className="text-[16px] font-black tracking-widest uppercase text-[#141779]">
               {t('my_treasure_vault', 'MY TREASURE VAULT')}
@@ -403,9 +549,6 @@ export default function InventoryScreen() {
           </div>
 
           <div className="w-9 flex justify-end">
-            <div className="w-8 h-8 rounded-full bg-[#FEF3C7] border border-[#F59E0B]/40 flex items-center justify-center">
-              <Trophy size={16} className="text-[#D97706]" />
-            </div>
           </div>
         </div>
       </header>
@@ -417,24 +560,24 @@ export default function InventoryScreen() {
             {/* Currency Badges Row */}
             <div className="flex items-center justify-between gap-3 mb-3">
               {/* Coins HUD */}
-              <div className="flex-1 bg-[#FFFBEB] border border-[#F59E0B]/40 rounded-xl px-3 py-2 flex items-center gap-2.5 shadow-sm">
+              <div className="flex-1 bg-[#FFFBEB] border border-[#F59E0B]/40 rounded-xl px-3 py-2.5 flex items-center gap-2.5 shadow-sm">
                 <div className="w-8 h-8 rounded-lg bg-[#F59E0B]/20 border border-[#F59E0B]/50 flex items-center justify-center shrink-0">
                   <Coins size={18} className="text-[#D97706]" />
                 </div>
-                <div>
-                  <p className="text-base font-black text-[#141779] leading-tight">{coins.toLocaleString()}</p>
-                  <p className="text-[9px] font-extrabold text-[#D97706] tracking-widest uppercase">{t('coins_upper', 'COINS')}</p>
+                <div className="flex items-baseline gap-1.5 min-w-0">
+                  <span className="text-base font-black text-[#141779] leading-none">{coins.toLocaleString()}</span>
+                  <span className="text-[12px] font-extrabold text-[#D97706] tracking-wider uppercase leading-none">{t('coins_upper', 'COINS')}</span>
                 </div>
               </div>
 
               {/* XP HUD */}
-              <div className="flex-1 bg-[#F0F9FF] border border-[#0EA5E9]/40 rounded-xl px-3 py-2 flex items-center gap-2.5 shadow-sm">
+              <div className="flex-1 bg-[#F0F9FF] border border-[#0EA5E9]/40 rounded-xl px-3 py-2.5 flex items-center gap-2.5 shadow-sm">
                 <div className="w-8 h-8 rounded-lg bg-[#0EA5E9]/20 border border-[#0EA5E9]/50 flex items-center justify-center shrink-0">
                   <Zap size={18} className="text-[#0284C7]" />
                 </div>
-                <div>
-                  <p className="text-base font-black text-[#141779] leading-tight">{xp.toLocaleString()}</p>
-                  <p className="text-[9px] font-extrabold text-[#0284C7] tracking-widest uppercase">{t('xp_power', 'XP POWER')}</p>
+                <div className="flex items-baseline gap-1.5 min-w-0">
+                  <span className="text-base font-black text-[#141779] leading-none">{xp.toLocaleString()}</span>
+                  <span className="text-[12px] font-extrabold text-[#0284C7] tracking-wider uppercase leading-none">{t('xp_upper', 'XP')}</span>
                 </div>
               </div>
             </div>
@@ -469,7 +612,7 @@ export default function InventoryScreen() {
             {[
               { id: "Mystery Boxes", label: t('boxes_tab', 'BOXES'), icon: Gift },
               { id: "Dragon Academy", label: t('dragons_tab', 'DRAGONS'), icon: Sparkles },
-              { id: "Cities", label: t('cities_tab', 'CITIES'), icon: MapPin },
+              { id: "Journey", label: t('journey_tab', 'JOURNEY'), icon: MapPin },
               { id: "Badges", label: t('badges_tab', 'BADGES'), icon: Trophy },
             ].map((tab) => {
               const Icon = tab.icon;
@@ -673,122 +816,296 @@ export default function InventoryScreen() {
             {/* Sub-Tab 2: Fragment Lab */}
             {subTab === "Lab" && (
               <div>
-                <div className="flex items-center justify-between mb-2 px-1">
-                  <span className="text-xs font-black text-[#141779] uppercase tracking-wider">
+                <div className="flex items-center justify-between mb-2.5 px-1">
+                  <span className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles size={14} className="text-[#6C4DFF]" />
                     {t('dragon_fragments', 'DRAGON FRAGMENTS')}
                   </span>
                 </div>
 
-                <div className="flex flex-col gap-2.5">
-                  {fragments.map((f: any) => {
-                    const getDragonType = (d: any) => {
-                      const dragId = String(d.id || "").toLowerCase();
-                      const skin = String(d.skin || "").toLowerCase();
-                      for (const t of ["fire", "water", "wind"]) {
-                        if (dragId.startsWith(t) || skin.startsWith(t)) return t;
-                      }
-                      return "fire";
-                    };
-                    const matchingDragon = dragons.find((d: any) => getDragonType(d) === f.type);
-                    const getUpgradeRequirement = (lvl: number) => {
-                      const costs: Record<number, number> = { 1: 5, 2: 10, 3: 15, 4: 25, 5: 50, 6: 75, 7: 100 };
-                      return costs[lvl] || 100;
-                    };
-                    const needed = matchingDragon ? getUpgradeRequirement(matchingDragon.level) : 10;
-                    const canCombine = f.count >= needed;
-                    const isHatching = hatchingType === f.type;
+                {(!fragments || fragments.length === 0) ? (
+                  <div className="bg-white border-2 border-dashed border-[#E5DBFB] rounded-2xl p-6 flex flex-col items-center justify-center text-center shadow-sm">
+                    <div className="w-14 h-14 rounded-2xl bg-[#F4EFF7] border border-[#E5DBFB] flex items-center justify-center mb-3 shadow-inner">
+                      <span className="text-2xl">🧪</span>
+                    </div>
+                    <h4 className="text-xs font-black text-[#141779] mb-1 uppercase tracking-wide">
+                      {t('no_fragments_yet', 'No Fragments Collected Yet')}
+                    </h4>
+                    <p className="text-[11px] font-semibold text-[#767683] max-w-[260px] leading-relaxed">
+                      {t('no_fragments_desc', 'Open Mystery Boxes & complete daily learning missions to collect rare dragon fragments!')}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2.5">
+                    {fragments.map((f: any) => {
+                      const getDragonType = (d: any) => {
+                        const dragId = String(d.id || "").toLowerCase();
+                        const skin = String(d.skin || "").toLowerCase();
+                        for (const t of ["fire", "water", "wind"]) {
+                          if (dragId.startsWith(t) || skin.startsWith(t)) return t;
+                        }
+                        return "fire";
+                      };
+                      const matchingDragon = dragons.find((d: any) => getDragonType(d) === f.type);
+                      const getUpgradeRequirement = (lvl: number) => {
+                        const costs: Record<number, number> = { 1: 5, 2: 10, 3: 15, 4: 25, 5: 50, 6: 75, 7: 100 };
+                        return costs[lvl] || 100;
+                      };
+                      const needed = matchingDragon ? getUpgradeRequirement(matchingDragon.level) : 10;
+                      const canCombine = f.count >= needed;
+                      const isHatching = hatchingType === f.type;
 
-                    return (
-                      <motion.div 
-                        key={f.type} 
-                        animate={isHatching ? {
-                          x: [-5, 5, -5, 5, 0],
-                          scale: [1, 1.03, 1]
-                        } : {}}
-                        transition={{ duration: 0.5, repeat: isHatching ? Infinity : 0 }}
-                        className="bg-white border-2 border-[#E5DBFB] rounded-2xl p-3 flex items-center justify-between shadow-sm"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-11 h-11 rounded-xl bg-[#F4EFF7] border border-[#E5DBFB] flex items-center justify-center">
-                            <span className="text-xl">🧩</span>
+                      return (
+                        <motion.div 
+                          key={f.type} 
+                          animate={isHatching ? {
+                            x: [-5, 5, -5, 5, 0],
+                            scale: [1, 1.03, 1]
+                          } : {}}
+                          transition={{ duration: 0.5, repeat: isHatching ? Infinity : 0 }}
+                          className="bg-white border-2 border-[#E5DBFB] rounded-2xl p-3 flex items-center justify-between shadow-sm"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-11 h-11 rounded-xl bg-[#F4EFF7] border border-[#E5DBFB] flex items-center justify-center">
+                              <span className="text-xl">🧩</span>
+                            </div>
+                            <div>
+                              <h3 className="text-xs font-black text-[#141779] capitalize">{t(f.type.toLowerCase() + '_fragments', { defaultValue: `${f.type} Fragments` })}</h3>
+                              <p className="text-[10px] font-bold text-[#6D28D9]">{t('fragments_needed', { count: f.count, needed, defaultValue: `${f.count} / ${needed} Needed` })}</p>
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="text-xs font-black text-[#141779] capitalize">{t(f.type.toLowerCase() + '_fragments', { defaultValue: `${f.type} Fragments` })}</h3>
-                            <p className="text-[10px] font-bold text-[#6D28D9]">{t('fragments_needed', { count: f.count, needed, defaultValue: `${f.count} / ${needed} Needed` })}</p>
-                          </div>
-                        </div>
 
-                        {canCombine ? (
-                          <button 
-                            onClick={() => combineFragments(f.type)}
-                            disabled={hatchingType !== null}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
-                              isHatching ? "bg-gray-400 text-white" : "bg-[#22C55E] text-white shadow-md active:scale-95"
-                            }`}
-                          >
-                            {isHatching ? t('hatching', 'HATCHING...') : (matchingDragon ? t('upgrade', 'UPGRADE') : t('hatch', 'HATCH!'))}
-                          </button>
-                        ) : (
-                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-100 px-2 py-1 rounded-lg">
-                            {t('need_more', 'NEED MORE')}
-                          </span>
-                        )}
-                      </motion.div>
-                    );
-                  })}
-                </div>
+                          {canCombine ? (
+                            <button 
+                              onClick={() => combineFragments(f.type)}
+                              disabled={hatchingType !== null}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                                isHatching ? "bg-gray-400 text-white" : "bg-[#22C55E] text-white shadow-md active:scale-95"
+                              }`}
+                            >
+                              {isHatching ? t('hatching', 'HATCHING...') : (matchingDragon ? t('upgrade', 'UPGRADE') : t('hatch', 'HATCH!'))}
+                            </button>
+                          ) : (
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-100 px-2 py-1 rounded-lg">
+                              {t('need_more', 'NEED MORE')}
+                            </span>
+                          )}
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </section>
         )}
 
-        {/* CATEGORY 3: CITIES WORLD DISCOVERY MAP */}
-        {activeTab === "Cities" && (
-          <section className="flex flex-col gap-3">
-            <div className="flex items-center justify-between px-1 mb-1">
-              <span className="text-xs font-black text-[#141779] uppercase tracking-wider flex items-center gap-1.5">
-                <MapPin size={14} className="text-[#6C4DFF]" />
-                {t('world_discovery_map', 'WORLD DISCOVERY MAP')}
-              </span>
-              <span className="text-[11px] font-bold text-[#6C4DFF]">
-                {t('cities_unlocked_count', { count: totalCitiesUnlocked, total: cities.length, defaultValue: `${totalCitiesUnlocked} / ${cities.length} UNLOCKED` })}
-              </span>
+        {/* CATEGORY 3: JOURNEY WORLD DISCOVERY MAP */}
+        {activeTab === "Journey" && (
+          <section className="flex flex-col gap-3.5">
+            {/* Gamified Hero Expedition Card */}
+            <div className="bg-gradient-to-r from-[#140C40] via-[#241468] to-[#3B1879] rounded-2xl p-4 border border-[#FFD45A]/40 text-white relative overflow-hidden shadow-lg">
+              {/* Background Glow */}
+              <div className="absolute top-0 right-0 w-36 h-36 bg-[#6C4DFF]/25 rounded-full blur-2xl pointer-events-none" />
+              <div className="absolute bottom-0 left-10 w-24 h-24 bg-[#FFD45A]/15 rounded-full blur-xl pointer-events-none" />
+
+              <div className="relative z-10 flex flex-col gap-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-[#F59E0B] text-slate-950 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+                      ⚡ CLASS {activeClassNum} SCHOLAR
+                    </span>
+                    <span className="text-[10px] font-extrabold text-[#EAE2FB] flex items-center gap-1">
+                      <Sparkles size={12} className="text-[#FFD45A]" />
+                      {activeClassNum <= 4 ? "Dragon World" : activeClassNum <= 7 ? "Scientist Lab" : "Apex Realm"}
+                    </span>
+                  </div>
+
+                  <span className="text-[10px] font-black text-[#FFD45A] bg-white/10 px-2 py-0.5 rounded-full border border-white/15">
+                    {totalCitiesUnlocked} / {cities.length} UNLOCKED
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 pt-1">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-bold text-white/70 uppercase tracking-wider">Current Location</p>
+                    <h2 className="text-base font-black text-white uppercase tracking-tight truncate flex items-center gap-1.5">
+                      <span>📍</span>
+                      <span>{currentCity?.name || "Active Realm"}</span>
+                    </h2>
+                  </div>
+
+                  <button
+                    onClick={() => navigate("/practice/journey-map", { state: { scrollTo: currentCity?.id } })}
+                    className="bg-gradient-to-r from-[#6C4DFF] to-[#4F27E9] text-white text-[11px] font-black px-3 py-2 rounded-xl border border-indigo-300/40 shadow-md hover:brightness-110 active:scale-95 transition-all flex items-center gap-1 shrink-0 cursor-pointer"
+                  >
+                    <span>OPEN MAP</span>
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <div className="flex flex-col relative pb-4 px-1">
-              {/* Vertical Connection Beam */}
-              <div className="absolute left-[31px] top-6 bottom-6 w-1 bg-[#E5DBFB] -z-10 rounded-full" />
-              
-              {cities.map((item, index) => {
-                const isLocked = item.status.includes('Locked');
-                const isCurrent = item.status.includes('Current');
+            {/* List of Realm Cards */}
+            <div className="flex flex-col gap-3.5">
+              {Array.from(new Set(cities.map(c => c.minClass))).sort((a, b) => a - b).map((cNum) => {
+                const classCities = cities.filter(c => c.minClass === cNum);
+                const isCurrentClass = cNum === activeClassNum;
+                const isPriorClass = cNum < activeClassNum;
+                const isFutureClass = cNum > activeClassNum;
+                const isAllCompleted = classCities.length > 0 && classCities.every(c => c.isCompleted);
+                const hasAnyProgress = classCities.some(c => c.isCompleted || c.stageProgPct > 0);
+
+                const classThemes: Record<number, { title: string; icon: string; border: string }> = {
+                  1: {
+                    title: "Class 1 • Hatchling Realm",
+                    icon: "🥚",
+                    border: isCurrentClass ? "border-[#6C4DFF] ring-2 ring-[#6C4DFF]/20" : isAllCompleted ? "border-emerald-300" : "border-[#E5DBFB]"
+                  },
+                  2: {
+                    title: "Class 2 • Desert Realm",
+                    icon: "🔥",
+                    border: isCurrentClass ? "border-[#6C4DFF] ring-2 ring-[#6C4DFF]/20" : isAllCompleted ? "border-emerald-300" : "border-[#E5DBFB]"
+                  },
+                  3: {
+                    title: "Class 3 • Cloud Realm",
+                    icon: "☁️",
+                    border: isCurrentClass ? "border-[#6C4DFF] ring-2 ring-[#6C4DFF]/20 shadow-md" : isAllCompleted ? "border-emerald-300" : "border-[#E5DBFB]"
+                  },
+                  4: {
+                    title: "Class 4 • Cosmos Realm",
+                    icon: "🌌",
+                    border: isCurrentClass ? "border-[#6C4DFF] ring-2 ring-[#6C4DFF]/20" : isAllCompleted ? "border-emerald-300" : "border-[#E5DBFB]"
+                  }
+                };
+
+                const theme = classThemes[cNum] || {
+                  title: `Class ${cNum} • Mystery Realm`,
+                  icon: "💎",
+                  border: isCurrentClass ? "border-[#6C4DFF] ring-2 ring-[#6C4DFF]/20" : "border-[#E5DBFB]"
+                };
+
                 return (
                   <div 
-                    key={item.id} 
-                    onClick={() => navigate("/practice/journey-map", { state: { scrollTo: index } })}
-                    className={`flex items-center gap-3.5 mb-4 relative cursor-pointer active:scale-98 transition-all ${isLocked ? 'opacity-60 grayscale-[0.4]' : ''}`}
+                    key={cNum} 
+                    className={`bg-white rounded-2xl border-2 ${theme.border} p-3.5 space-y-3 transition-all ${isCurrentClass ? "shadow-md" : "shadow-xs"}`}
                   >
-                    {/* Node Circle */}
-                    <div className={`w-12 h-12 rounded-full border-2 flex items-center justify-center shrink-0 z-10 transition-all ${
-                      isCurrent ? 'bg-[#6C4DFF] border-white text-white shadow-[0_4px_16px_rgba(108,77,255,0.4)] scale-110' : 
-                      isLocked ? 'bg-gray-100 border-white text-gray-400' : 'bg-[#3520A8] border-white text-white shadow-md'
-                    }`}>
-                      <MapPin size={20} className={isCurrent ? 'text-white' : isLocked ? 'text-gray-400' : 'text-white'} />
+                    <div className="flex items-center justify-between pb-2 border-b border-[#E5DBFB] gap-2 w-full">
+                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                        <span className="text-sm shrink-0">{theme.icon}</span>
+                        <h3 className="text-[12px] font-black text-[#141779] uppercase tracking-wide truncate">
+                          {theme.title}
+                        </h3>
+                      </div>
+
+                      <span className={`text-[9.5px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 whitespace-nowrap flex items-center gap-1 ${
+                        isCurrentClass 
+                          ? "bg-[#6C4DFF] text-white shadow-xs" 
+                          : isAllCompleted 
+                          ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                          : hasAnyProgress
+                          ? "bg-amber-100 text-amber-800 border border-amber-300"
+                          : "bg-slate-100 text-slate-500 border border-slate-200"
+                      }`}>
+                        {isCurrentClass ? (
+                          <>
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-300 animate-ping" />
+                            ⚡ Active Realm
+                          </>
+                        ) : isAllCompleted ? (
+                          "✓ Mastered"
+                        ) : hasAnyProgress ? (
+                          "⚡ In Progress"
+                        ) : (
+                          `🔒 Locked`
+                        )}
+                      </span>
                     </div>
 
-                    {/* Location Card */}
-                    <div className={`flex-1 rounded-2xl p-3.5 border-2 transition-all ${
-                      isCurrent 
-                        ? 'bg-[#F2ECFF] border-[#6C4DFF] shadow-sm' 
-                        : 'bg-white border-[#E5DBFB]'
-                    }`}>
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-xs font-black text-[#141779] uppercase tracking-wide">{t(item.name.toLowerCase().trim().replace(/\s+/g, '_'), { defaultValue: item.name })}</h3>
-                        <ChevronRight size={16} className="text-[#6D28D9]" />
-                      </div>
-                      <p className={`text-[9px] font-black uppercase tracking-wider mt-1 ${isCurrent ? 'text-[#6C4DFF]' : isLocked ? 'text-gray-400' : 'text-[#D97706]'}`}>
-                        {item.status}
-                      </p>
+                    <div className="space-y-2.5">
+                      {classCities.map((item) => {
+                        const isCurrent = item.isCurrent;
+                        const isCompleted = item.isCompleted;
+                        const isUnlocked = item.isUnlocked;
+                        const isLocked = !isUnlocked;
+
+                        return (
+                          <div 
+                            key={item.id} 
+                            onClick={isUnlocked ? () => navigate("/practice/journey-map", { state: { scrollTo: item.id } }) : undefined}
+                            className={`rounded-xl p-3 flex items-center justify-between border transition-all ${
+                              isCurrent 
+                                ? 'bg-gradient-to-r from-[#F4EFFF] via-[#FAF7FF] to-white border-2 border-[#6C4DFF] shadow-sm cursor-pointer hover:border-[#5835F5] active:scale-[0.99]' 
+                                : isCompleted 
+                                ? 'bg-emerald-50/25 border border-emerald-200/80 hover:border-emerald-400 shadow-2xs cursor-pointer active:scale-[0.99]' 
+                                : isUnlocked 
+                                ? 'bg-white border border-[#E5DBFB] hover:border-[#6C4DFF] shadow-2xs cursor-pointer active:scale-[0.99]' 
+                                : 'bg-slate-50/70 border border-slate-200/80 opacity-50 cursor-not-allowed pointer-events-none select-none'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
+                                isCurrent 
+                                  ? 'bg-gradient-to-tr from-[#6C4DFF] to-[#8C6DFF] text-white border-[#6C4DFF] shadow-xs relative' 
+                                  : isCompleted 
+                                  ? 'bg-emerald-600 text-white border-emerald-500 shadow-2xs' 
+                                  : isUnlocked 
+                                  ? 'bg-[#141779] text-white border-[#141779]' 
+                                  : 'bg-slate-200 text-slate-400 border-slate-300'
+                              }`}>
+                                {isCurrent ? (
+                                  <>
+                                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
+                                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 border border-white" />
+                                    <MapPin size={18} className="text-white" />
+                                  </>
+                                ) : isCompleted ? (
+                                  <Check size={18} className="stroke-[3]" />
+                                ) : isUnlocked ? (
+                                  <MapPin size={18} />
+                                ) : (
+                                  <Lock size={16} />
+                                )}
+                              </div>
+
+                              <div className="min-w-0 flex-1">
+                                <h4 className={`text-xs font-black uppercase tracking-wide truncate ${
+                                  isCurrent ? 'text-[#141779]' : isCompleted ? 'text-slate-800' : isUnlocked ? 'text-[#141779]' : 'text-slate-400'
+                                }`}>
+                                  {t(item.name.toLowerCase().trim().replace(/\s+/g, '_'), { defaultValue: item.name })}
+                                </h4>
+                                <p className={`text-[9.5px] font-black uppercase tracking-wider mt-0.5 ${
+                                  isCurrent ? 'text-[#6C4DFF]' : isCompleted ? 'text-emerald-600' : isUnlocked ? 'text-indigo-600' : 'text-slate-400'
+                                }`}>
+                                  {item.status}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="shrink-0 flex items-center gap-1.5 ml-2">
+                              {isCurrent ? (
+                                <span className="text-[10px] font-black bg-[#6C4DFF] text-white px-2.5 py-1 rounded-lg uppercase tracking-wider flex items-center gap-1 shadow-xs">
+                                  Current
+                                  <ChevronRight size={13} />
+                                </span>
+                              ) : isCompleted ? (
+                                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-lg border border-emerald-300">
+                                  ✓ Done
+                                </span>
+                              ) : isUnlocked ? (
+                                <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-lg border border-indigo-200 flex items-center gap-0.5">
+                                  Play
+                                  <ChevronRight size={13} />
+                                </span>
+                              ) : (
+                                <span className="text-[9.5px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200 flex items-center gap-1">
+                                  <Lock size={11} /> Locked
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -851,6 +1168,8 @@ export default function InventoryScreen() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            style={{ touchAction: "none" }}
+            onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
             className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
           >
             <motion.div 
@@ -858,6 +1177,7 @@ export default function InventoryScreen() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.6, opacity: 0 }}
               transition={{ type: "spring", damping: 15 }}
+              style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
               className="bg-white border-2 border-[#F59E0B] w-full max-w-xs rounded-3xl p-6 pt-9 text-center relative shadow-2xl mt-6"
             >
               <div className="absolute -top-10 left-1/2 -translate-x-1/2 z-10">

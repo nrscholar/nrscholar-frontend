@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Rocket, Star, Check, Sparkles, Brain, Lock, Trophy, BookOpen, TrendingUp, Users, Settings, Play, ArrowLeft, Home, BarChart2 } from "lucide-react";
+import { Rocket, Star, Check, Sparkles, Brain, Lock, Trophy, BookOpen, TrendingUp, Users, Settings, Play, ArrowLeft, Home, BarChart2, Bell, Heart } from "lucide-react";
 import { apiFetch } from "../../../api";
+import { getActiveUserContext } from "../../../utils/sessionCache";
 import { useTranslation } from "react-i18next";
 
 const IconMap: Record<string, any> = {
@@ -11,13 +12,17 @@ const IconMap: Record<string, any> = {
   Lock,
   Trophy,
   BookOpen,
-  Star
+  Star,
+  Heart,
+  Users
 };
 
 export default function ParentRoadmapScreen() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [contentHeight, setContentHeight] = useState(0);
   
   const cachedRoadmap = (() => {
     try {
@@ -27,80 +32,168 @@ export default function ParentRoadmapScreen() {
   })();
 
   const [roadmapData, setRoadmapData] = useState<any>(cachedRoadmap);
-  const [loading, setLoading] = useState(!cachedRoadmap);
+  const [loading, setLoading] = useState(true);
   const [profilePic, setProfilePic] = useState("");
   const [username, setUsername] = useState("Parent");
 
-  useEffect(() => {
-    async function fetchRoadmap() {
-      try {
-        const [resUser, resRoadmap] = await Promise.all([
-          apiFetch("/api/users/me").catch(() => null),
-          apiFetch("/api/parent/roadmap").catch(() => null)
-        ]);
+  const fetchRoadmap = useCallback(async () => {
+    try {
+      const ctx = getActiveUserContext();
+      const childParam = ctx.childId ? `childId=${encodeURIComponent(ctx.childId)}` : "";
+      const classParam = ctx.classLevel ? `classLevel=${encodeURIComponent(ctx.classLevel)}` : "";
+      const qParams = [childParam, classParam].filter(Boolean).join("&");
+      const [resUser, resRoadmap] = await Promise.all([
+        apiFetch("/api/users/me").catch(() => null),
+        apiFetch(`/api/parent/roadmap${qParams ? `?${qParams}` : ""}`).catch(() => null)
+      ]);
 
-        if (resUser) {
-          const jsonUser = await resUser.json();
-          if (jsonUser.success && jsonUser.data?.user) {
-            setUsername(jsonUser.data.user.parentName || jsonUser.data.user.username || "Parent");
-            setProfilePic(jsonUser.data.user.parentPhoto || "");
-          }
+      if (resUser) {
+        const jsonUser = await resUser.json();
+        if (jsonUser.success && jsonUser.data?.user) {
+          setUsername(jsonUser.data.user.parentName || jsonUser.data.user.username || "Parent");
+          setProfilePic(jsonUser.data.user.parentPhoto || "");
         }
-
-        if (resRoadmap) {
-          const json = await resRoadmap.json();
-          if (json.success && json.data) {
-            setRoadmapData(json.data);
-            sessionStorage.setItem("parent_roadmap_cache", JSON.stringify(json.data));
-          }
-        }
-      } catch (err) {
-        console.error("Failed to load roadmap", err);
-      } finally {
-        setLoading(false);
       }
+
+      if (resRoadmap) {
+        const json = await resRoadmap.json();
+        if (json.success && json.data) {
+          setRoadmapData(json.data);
+          sessionStorage.setItem("parent_roadmap_cache", JSON.stringify(json.data));
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load roadmap", err);
+    } finally {
+      setTimeout(() => setLoading(false), 350);
     }
-    fetchRoadmap();
   }, []);
+
+  useEffect(() => {
+    fetchRoadmap();
+
+    const handleUpdate = () => {
+      fetchRoadmap();
+    };
+    window.addEventListener("userDataUpdated", handleUpdate);
+    window.addEventListener("focus", handleUpdate);
+    return () => {
+      window.removeEventListener("userDataUpdated", handleUpdate);
+      window.removeEventListener("focus", handleUpdate);
+    };
+  }, [fetchRoadmap]);
+
+  useEffect(() => {
+    const updateHeight = () => {
+      if (contentRef.current) {
+        const h = contentRef.current.offsetHeight;
+        if (h > 0) {
+          setContentHeight(h);
+        }
+      }
+    };
+
+    updateHeight();
+    const timer = setTimeout(updateHeight, 300);
+
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined" && contentRef.current) {
+      ro = new ResizeObserver(() => updateHeight());
+      ro.observe(contentRef.current);
+    }
+
+    window.addEventListener("resize", updateHeight);
+    return () => {
+      clearTimeout(timer);
+      if (ro) ro.disconnect();
+      window.removeEventListener("resize", updateHeight);
+    };
+  }, [roadmapData, loading]);
+
+  const stagesCount = roadmapData?.stages?.length || 10;
+  const svgHeight = contentHeight > 0 ? contentHeight : Math.max(1200, stagesCount * 250);
+
+  const roadmapPathD = (() => {
+    const xPattern = [88, 168, 88, 168, 128];
+    const n = stagesCount;
+    const stageHeight = svgHeight / (n || 1);
+    
+    let d = "M128 0";
+    let prevX = 128;
+    let prevY = 0;
+
+    for (let i = 0; i < n; i++) {
+      const targetX = xPattern[i % xPattern.length];
+      const targetY = Math.round((i + 0.5) * stageHeight);
+      const cpY1 = prevY + (targetY - prevY) * 0.45;
+      const cpY2 = prevY + (targetY - prevY) * 0.55;
+      d += ` C ${prevX} ${cpY1}, ${targetX} ${cpY2}, ${targetX} ${targetY}`;
+      prevX = targetX;
+      prevY = targetY;
+    }
+
+    // Terminate path cleanly at the last level/stage card — do not draw trailing line below
+    return d;
+  })();
 
   const translateStageTitle = (title: string) => {
     if (!title) return "";
     const lower = title.toLowerCase().trim();
-    if (lower.includes("communication")) return t("communication", "સંદેશાવ્યવહાર");
-    if (lower.includes("anger")) return t("anger_management", "ગુસ્સાનું સંચાલન");
-    if (lower.includes("emotional")) return t("emotional_intelligence", "ભાવનાત્મક બુદ્ધિમત્તા");
-    if (lower.includes("focus")) return t("focus_skills", "એકાગ્રતા");
-    if (lower.includes("study")) return t("study_habits", "અભ્યાસની આદતો");
-    if (lower.includes("confidence")) return t("confidence_building", "આત્મવિશ્વાસ નિર્માણ");
-    if (lower.includes("digital")) return t("digital_parenting", "ડિજિટલ પેરેન્ટિંગ");
-    if (lower.includes("psychology")) return t("child_psychology", "બાળ મનોવિજ્ઞાન");
-    if (lower.includes("family")) return t("family_growth", "કૌટુંબિક વિકાસ");
-    if (lower.includes("advanced")) return t("advanced_parenting", "અદ્યતન પેરેન્ટિંગ");
+    if (lower.includes("communication")) return t("communication", title);
+    if (lower.includes("anger")) return t("anger_management", title);
+    if (lower.includes("emotional")) return t("emotional_intelligence", title);
+    if (lower.includes("focus")) return t("focus", t("focus_skills", title));
+    if (lower.includes("study")) return t("study_habits", title);
+    if (lower.includes("confidence")) return t("confidence_building", title);
+    if (lower.includes("digital")) return t("digital_parenting", title);
+    if (lower.includes("psychology")) return t("child_psychology", title);
+    if (lower.includes("family")) return t("family_growth", title);
+    if (lower.includes("advanced")) return t("advanced_parenting", title);
     return t(title, title);
   };
 
   const translateStageDesc = (desc: string) => {
     if (!desc) return "";
     const lower = desc.toLowerCase().trim();
-    if (lower.includes("improve your dialogs")) return t("desc_communication", "તમારા બાળક સાથે તમારા સંવાદો અને જવાબોમાં સુધારો કરો.");
-    if (lower.includes("keep a calm mind")) return t("desc_anger_management", "મુશ્કેલ ક્ષણોમાં શાંત મન રાખો.");
-    if (lower.includes("boost concentration")) return t("desc_focus", "એકાગ્રતા અને અભ્યાસ સમયનું ધ્યાન વધારો.");
-    if (lower.includes("instill long-term discipline")) return t("desc_study_habits", "લાંબા ગાળાનું શિસ્ત અને દિનચર્યા કેળવો.");
-    if (lower.includes("help your child believe")) return t("desc_confidence_building", "તમારા બાળકને તેમનામાં વિશ્વાસ રાખવામાં મદદ કરો.");
-    if (lower.includes("guide screen time")) return t("desc_digital_parenting", "સ્ક્રીન સમય અને ડિજિટલ ટેવોને સુરક્ષિત રીતે માર્ગદર્શન આપો.");
-    if (lower.includes("understand their developmental")) return t("desc_child_psychology", "તેમના વિકાસના તબક્કાઓને સમજો.");
-    if (lower.includes("build empathy")) return t("desc_emotional_intelligence", "સહાનુભૂતિ અને ભાવનાત્મક નિયમન કેળવો.");
-    if (lower.includes("create a peaceful")) return t("desc_family_growth", "શાંતિપૂર્ણ, શીખવા માટેનું ઘર વાતાવરણ બનાવો.");
-    if (lower.includes("master the art")) return t("desc_advanced_parenting", "હકારાત્મક કોચિંગની કળામાં પ્રભુત્વ મેળવો.");
+    if (lower.includes("dialog") || lower.includes("communication") || lower.includes("સંવાદ") || lower.includes("વાતચીત") || lower.includes("बातचीत")) {
+      return t("desc_communication", desc);
+    }
+    if (lower.includes("calm mind") || lower.includes("anger") || lower.includes("મુશ્કેલ ક્ષણો") || lower.includes("શાંત મન") || lower.includes("शांत मन")) {
+      return t("desc_anger_management", desc);
+    }
+    if (lower.includes("concentration") || lower.includes("focus") || lower.includes("અભ્યાસ સમયનું ધ્યાન") || lower.includes("એકાગ્રતા") || lower.includes("एकाग्रता")) {
+      return t("desc_focus", desc);
+    }
+    if (lower.includes("discipline") || lower.includes("routine") || lower.includes("habits") || lower.includes("લાંબા ગાળાનું શિસ્ત") || lower.includes("દિનચર્યા") || lower.includes("दिनचर्या")) {
+      return t("desc_study_habits", desc);
+    }
+    if (lower.includes("believe") || lower.includes("confidence") || lower.includes("વિશ્વાસ") || lower.includes("विश्वास")) {
+      return t("desc_confidence_building", desc);
+    }
+    if (lower.includes("screen time") || lower.includes("digital") || lower.includes("સ્ક્રીન") || lower.includes("स्क्रीन")) {
+      return t("desc_digital_parenting", desc);
+    }
+    if (lower.includes("developmental") || lower.includes("psychology") || lower.includes("વિકાસના તબક્કા") || lower.includes("विकास के चरण")) {
+      return t("desc_child_psychology", desc);
+    }
+    if (lower.includes("empathy") || lower.includes("emotional") || lower.includes("સહાનુભૂતિ") || lower.includes("सहानुभूति")) {
+      return t("desc_emotional_intelligence", desc);
+    }
+    if (lower.includes("peaceful") || lower.includes("home") || lower.includes("family") || lower.includes("વાતાવરણ") || lower.includes("वातावरण")) {
+      return t("desc_family_growth", desc);
+    }
+    if (lower.includes("coaching") || lower.includes("advanced") || lower.includes("master") || lower.includes("હકારાત્મક કોચિંગ") || lower.includes("કોચિંગ") || lower.includes("कोचिंग")) {
+      return t("desc_advanced_parenting", desc);
+    }
     return t(desc, desc);
   };
 
   const translateRewardLabel = (label: string) => {
     if (!label) return "";
-    if (/(\d+)\s*XP\s*(?:Reward|ઇનામ|ઈનામ)/i.test(label) || /(\d+)\s*XP/i.test(label)) {
-      const match = label.match(/(\d+)/);
-      const xp = match ? match[1] : "50";
-      return t("xp_reward_fmt", { xp, defaultValue: `${xp} XP ઈનામ` });
+    const match = label.match(/(\d+)/);
+    const xp = match ? match[1] : "50";
+    if (/xp/i.test(label) || /reward/i.test(label) || /ઇનામ/i.test(label) || /ઈનામ/i.test(label) || /पुरस्कार/i.test(label) || /इनाम/i.test(label)) {
+      return t("xp_reward_fmt", { xp, defaultValue: `${xp} XP Reward` });
     }
     return t(label, label);
   };
@@ -119,19 +212,50 @@ export default function ParentRoadmapScreen() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans overflow-hidden">
-        <header className="fixed top-0 w-full z-50 bg-[rgba(247,249,251,0.8)] backdrop-blur-xl border-b border-[rgba(199,197,212,0.3)] shadow-sm flex justify-between items-center px-6 h-16">
-          <div className="flex items-center gap-3 w-full">
-            <div className="w-10 h-10 bg-gray-200 animate-pulse rounded-full"></div>
-            <div className="w-10 h-10 bg-gray-200 animate-pulse rounded-full"></div>
-            <div className="h-6 w-32 bg-gray-200 animate-pulse rounded"></div>
+        {/* Top Header Skeleton */}
+        <header className="sticky top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 h-16 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] w-full">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full animate-skeleton shrink-0"></div>
+            <div className="h-6 w-36 rounded-lg animate-skeleton"></div>
+          </div>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full animate-skeleton shrink-0"></div>
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full animate-skeleton shrink-0"></div>
           </div>
         </header>
-        <main className="relative h-screen w-full flex flex-col items-center pt-24 pb-20">
-           <div className="flex flex-col gap-16">
-              <div className="bg-gray-200 animate-pulse rounded-[24px] h-32 w-48 -translate-x-6"></div>
-              <div className="bg-gray-200 animate-pulse rounded-[24px] h-40 w-56 translate-x-6"></div>
-              <div className="bg-gray-200 animate-pulse rounded-[24px] h-32 w-48 -translate-x-6"></div>
-           </div>
+
+        {/* Roadmap Path Stages Skeleton */}
+        <main className="relative min-h-screen w-full flex flex-col items-center pt-24 pb-28 px-6">
+          <div className="w-full max-w-md flex flex-col gap-12 items-center">
+            {/* Hero Stage Skeleton */}
+            <div className="w-full bg-white/70 backdrop-blur-xl rounded-[28px] p-6 border-2 border-white/50 shadow-sm space-y-4">
+              <div className="flex justify-between items-center">
+                <div className="space-y-2">
+                  <div className="h-3 w-24 rounded-md animate-skeleton"></div>
+                  <div className="h-6 w-40 rounded-xl animate-skeleton"></div>
+                </div>
+                <div className="w-12 h-12 rounded-full animate-skeleton"></div>
+              </div>
+              <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full w-2/3 rounded-full animate-skeleton"></div>
+              </div>
+            </div>
+
+            {/* ZigZag Stage Cards Skeleton */}
+            <div className="w-full space-y-8">
+              {[0, 1, 2, 3, 4].map((idx) => (
+                <div
+                  key={idx}
+                  className={`bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-slate-200/60 shadow-xs w-4/5 space-y-3 ${
+                    idx % 2 === 0 ? "-translate-x-2" : "translate-x-12"
+                  }`}
+                >
+                  <div className="h-4 w-32 rounded-md animate-skeleton"></div>
+                  <div className="h-3 w-48 rounded-md animate-skeleton"></div>
+                </div>
+              ))}
+            </div>
+          </div>
         </main>
       </div>
     );
@@ -141,7 +265,7 @@ export default function ParentRoadmapScreen() {
     <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans overflow-hidden selection:bg-[#57fae9]">
       <style>{`
         .glass-card {
-            background: rgba(255, 255, 255, 0.7);
+            background: #ffffff;
             backdrop-filter: blur(12px);
             border: 1.5px solid rgba(255, 255, 255, 0.8);
         }
@@ -167,156 +291,199 @@ export default function ParentRoadmapScreen() {
       `}</style>
 
       {/* TopAppBar Navigation */}
-      <header className="fixed top-0 w-full z-50 bg-[rgba(247,249,251,0.8)] backdrop-blur-xl border-b border-[rgba(199,197,212,0.3)] shadow-sm flex justify-between items-center px-6 h-16">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-1 hover:bg-[rgba(20,23,121,0.05)] rounded-full transition-colors active:scale-95">
-            <ArrowLeft size={24} color="#141779" />
+      <header className="sticky top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex justify-between items-center px-4 sm:px-6 h-16 w-full">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+          <button 
+            onClick={() => navigate(-1)} 
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("back", "Back")}
+          >
+            <ArrowLeft size={19} />
           </button>
-          <div className="w-10 h-10 rounded-full border-2 border-[#141779]/20 overflow-hidden bg-white shrink-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-slate-200/80 overflow-hidden bg-white shrink-0 shadow-2xs">
             <img 
               alt="User Profile" 
               className="w-full h-full object-cover"
               src={profilePic || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`}
             />
           </div>
-          <Rocket size={20} color="#141779" className="hidden sm:block" />
-          <h1 className="text-xl font-bold text-[#141779] whitespace-nowrap">{t("growth_journey") || "Growth Journey"}</h1>
+          <Rocket size={18} color="#141779" className="hidden sm:block shrink-0" />
+          <h1 className="text-base sm:text-lg font-black text-[#141779] whitespace-nowrap truncate leading-tight">{t("growth_journey") || "Growth Journey"}</h1>
+        </div>
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <button 
+            onClick={() => navigate('/parent/settings')}
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("settings", "Settings")}
+            title={t("settings", "Settings")}
+          >
+            <Settings size={18} />
+          </button>
+          <button
+            onClick={() => navigate('/notifications')}
+            className="relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("notifications", "Notifications")}
+            title={t("notifications", "Notifications")}
+          >
+            <Bell size={18} />
+          </button>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="relative h-screen w-full flex flex-col items-center justify-center pt-16 pb-20">
+      <main className="relative h-[calc(100vh-64px)] w-full flex flex-col items-center justify-center pt-2 pb-24">
         {/* Adventure Roadmap Container */}
-        <div ref={containerRef} className="relative w-full max-w-[430px] h-full flex flex-col items-center overflow-y-auto no-scrollbar py-12">
+        <div ref={containerRef} className="relative w-full max-w-[430px] h-full flex flex-col items-center overflow-y-auto no-scrollbar pt-6 pb-10 px-4 scroll-pt-24 scroll-pb-10">
           
           {/* Roadmap SVG Path (Visual Guide) */}
-          <svg className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-[1200px] pointer-events-none z-0 opacity-20" fill="none" viewBox="0 0 256 1200" xmlns="http://www.w3.org/2000/svg">
-            <path className="roadmap-path" d="M128 0 C 128 150, 200 150, 200 300 C 200 450, 56 450, 56 600 C 56 750, 200 750, 200 900 C 200 1050, 128 1050, 128 1200" stroke="#141779" strokeWidth="4"></path>
+          <svg
+            className="absolute top-0 left-1/2 -translate-x-1/2 w-64 pointer-events-none z-0 opacity-20"
+            style={{ height: `${svgHeight}px` }}
+            viewBox={`0 0 256 ${svgHeight}`}
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path className="roadmap-path" d={roadmapPathD} stroke="#141779" strokeWidth="4"></path>
           </svg>
 
-          {roadmapData?.stages?.map((stage: any, index: number) => {
-            const isCompleted = stage.status === "completed";
-            const isActive = stage.status === "active";
-            const isLocked = stage.status === "locked";
-            
-            const positionClasses = [
-              "-translate-x-12",
-              "translate-x-12",
-              "-translate-x-8",
-              "translate-x-12",
-              "0" // centered for last
-            ];
-            
-            const IconComp = IconMap[stage.icon] || Star;
-            const translateClass = positionClasses[index % positionClasses.length];
-            
-            if (isCompleted) {
-              return (
-                <div key={stage.id} className={`relative z-10 w-full mb-20 flex justify-center ${translateClass}`}>
-                  <div 
-                    onClick={() => navigate(`/parent/lessons?category=${encodeURIComponent(stage.title)}`)}
-                    className="glass-card p-4 rounded-xl w-48 shadow-sm flex flex-col items-center cursor-pointer hover:shadow-md hover:scale-105 active:scale-95 transition-all"
-                  >
-                    <div className="w-10 h-10 bg-[#006a62] rounded-full flex items-center justify-center mb-2 shadow-lg shadow-[#006a62]/20">
-                      <IconComp size={20} color="white" strokeWidth={3} />
+          <div ref={contentRef} className="w-full flex flex-col items-center relative z-10">
+            {roadmapData?.stages?.map((stage: any, index: number) => {
+              const isCompleted = stage.status === "completed";
+              const isActive = stage.status === "active";
+              const isLocked = stage.status === "locked";
+              
+              const positionClasses = [
+                "-translate-x-6",
+                "translate-x-6",
+                "-translate-x-6",
+                "translate-x-6",
+                "0" // centered for 5th and 10th
+              ];
+              
+              const IconComp = IconMap[stage.icon] || Star;
+              const translateClass = positionClasses[index % positionClasses.length];
+              
+              if (isCompleted) {
+                return (
+                  <div key={stage.id} className={`relative z-10 w-full mb-14 flex justify-center ${translateClass}`}>
+                    <div 
+                      onClick={() => navigate(`/parent/lessons?category=${encodeURIComponent(stage.title)}`)}
+                      className="glass-card bg-white p-4 rounded-2xl w-48 sm:w-52 shadow-sm flex flex-col items-center cursor-pointer hover:shadow-md hover:scale-105 active:scale-95 transition-all"
+                    >
+                      <div className="w-10 h-10 bg-[#006a62] rounded-full flex items-center justify-center mb-2 shadow-lg shadow-[#006a62]/20">
+                        <IconComp size={20} color="white" strokeWidth={3} />
+                      </div>
+                      <div className="flex items-center gap-1 mb-1 px-2.5 py-0.5 rounded-full bg-[#006a62]/10 text-[#006a62]">
+                        <Check size={12} strokeWidth={3} />
+                        <span className="text-xs font-black uppercase tracking-wider">
+                          {stage.totalLessons ? `${stage.totalLessons}/${stage.totalLessons} ${t("completed", "Completed")}` : t("completed", "Completed")}
+                        </span>
+                      </div>
+                      <h3 className="text-base font-bold text-[#191c1e] text-center">{translateStageTitle(stage.title)}</h3>
+                      {stage.rewards && (
+                        <div className="mt-2 text-xs text-[#006a62] font-bold flex flex-wrap justify-center gap-x-2 gap-y-1">
+                          {stage.rewards.map((rw: any, i: number) => {
+                            const RIcon = IconMap[rw.icon] || Star;
+                            return (
+                              <span key={i} className="flex items-center gap-1 bg-[#006a62]/10 px-2.5 py-0.5 rounded-full text-[11px] font-bold">
+                                <RIcon size={11} className="text-[#006a62]" /> {translateRewardLabel(rw.label)}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                    {stage.xpRequired > 0 ? (
-                      <div className="flex items-center gap-1 mb-1">
-                        <Star size={14} color="#006a62" />
-                        <span className="text-xs text-[#464652] font-bold uppercase">{stage.xpRequired} XP</span>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-[#006a62] font-bold uppercase tracking-wider mb-1">{t("unlocked", "Unlocked")}</span>
-                    )}
-                    <h3 className="text-base font-bold text-[#191c1e] text-center">{translateStageTitle(stage.title)}</h3>
-                    {stage.rewards && (
-                      <div className="mt-2 text-[10px] text-[#464652] grid grid-cols-2 gap-x-2 gap-y-1">
-                        {stage.rewards.map((rw: any, i: number) => {
-                          const RIcon = IconMap[rw.icon] || Star;
-                          return (
-                            <span key={i} className="flex items-center gap-1"><RIcon size={12} /> {translateRewardLabel(rw.label)}</span>
-                          );
-                        })}
-                      </div>
-                    )}
                   </div>
-                </div>
-              );
-            }
-            
-            if (isActive) {
-              return (
-                <div key={stage.id} className={`relative z-20 w-full mb-20 flex justify-center ${translateClass}`}>
-                  <div 
-                    onClick={() => navigate(`/parent/lessons?category=${encodeURIComponent(stage.title)}`)}
-                    className="glass-card p-5 rounded-2xl w-56 shadow-xl border-[#006a62] border-2 animate-pulse-teal flex flex-col items-center scale-105 bg-white/90 cursor-pointer hover:shadow-2xl active:scale-[1.02] transition-all"
-                  >
-                    <div className="w-12 h-12 bg-[#2d328f] rounded-full flex items-center justify-center mb-3 shadow-lg ring-4 ring-[#006a62]/30">
-                      <IconComp size={24} color="#9ba1ff" />
-                    </div>
-                    <div className="flex items-center gap-1 mb-1">
-                      <Star size={16} color="#006a62" />
-                      <span className="text-sm text-[#141779] font-bold uppercase">{stage.xpRequired} XP</span>
-                    </div>
-                    <h3 className="text-2xl font-bold text-[#141779] mb-2">{translateStageTitle(stage.title)}</h3>
-                    
-                    <div className="w-full bg-[#eceef0] rounded-full h-2 mb-1 overflow-hidden">
-                      <div className="bg-[#006a62] h-full rounded-full transition-all duration-1000" style={{ width: `${stage.progress}%` }}></div>
-                    </div>
-                    {stage.nextStageName && (
-                      <p className="text-[10px] text-[#464652] font-medium mb-3">
-                        {t("percent_to_target", { percent: stage.progress, target: translateStageTitle(stage.nextStageName), defaultValue: `${stage.progress}% to ${translateStageTitle(stage.nextStageName)}` })}
-                      </p>
-                    )}
-                    
-                    {stage.rewards && (
-                      <div className="mt-1 flex gap-3 text-[11px] text-[#464652] font-semibold bg-[#57fae9]/20 px-3 py-1 rounded-full">
-                        {stage.rewards.map((rw: any, i: number) => {
-                          const RIcon = IconMap[rw.icon] || Star;
-                          return (
-                            <span key={i} className="flex items-center gap-1"><RIcon size={14} /> {translateRewardLabel(rw.label)}</span>
-                          );
-                        })}
+                );
+              }
+              
+              if (isActive) {
+                return (
+                  <div key={stage.id} className={`relative z-20 w-full mb-14 flex justify-center ${translateClass}`}>
+                    <div 
+                      onClick={() => navigate(`/parent/lessons?category=${encodeURIComponent(stage.title)}`)}
+                      className="glass-card bg-white p-5 rounded-2xl w-52 sm:w-56 shadow-xl border-[#006a62] border-2 animate-pulse-teal flex flex-col items-center scale-105 cursor-pointer hover:shadow-2xl active:scale-[1.02] transition-all"
+                    >
+                      <div className="w-12 h-12 bg-[#2d328f] rounded-full flex items-center justify-center mb-3 shadow-lg ring-4 ring-[#006a62]/30">
+                        <IconComp size={24} color="#9ba1ff" />
                       </div>
-                    )}
-                  </div>
-                </div>
-              );
-            }
-            
-            if (isLocked) {
-              return (
-                <div key={stage.id} className={`relative z-10 w-full mb-20 flex justify-center ${translateClass} opacity-60 grayscale-[0.5]`}>
-                  <div className="bg-[#eceef0] p-4 rounded-xl w-48 shadow-sm flex flex-col items-center border border-[#767683]/10">
-                    <div className="w-10 h-10 bg-[#767683] rounded-full flex items-center justify-center mb-2">
-                      <IconComp size={20} color="white" />
-                    </div>
-                    <span className="text-xs text-[#767683] font-bold uppercase tracking-wider mb-1">{t("locked_caps", "LOCKED")}</span>
-                    <h3 className="text-base font-bold text-[#464652] text-center">{translateStageTitle(stage.title)}</h3>
-                    {stage.description && (
-                      <p className="text-[10px] text-center mt-1 text-[#767683]">{translateStageDesc(stage.description)}</p>
-                    )}
-                    {stage.rewards && (
-                      <div className="mt-2 text-[10px] text-[#767683] flex items-center gap-1">
-                        {stage.rewards.map((rw: any, i: number) => {
-                          const RIcon = IconMap[rw.icon] || Star;
-                          return (
-                            <span key={i} className="flex items-center gap-1"><RIcon size={12} /> {translateRewardLabel(rw.label)}</span>
-                          );
-                        })}
+                      <div className="flex items-center gap-1.5 mb-1 px-3 py-1 rounded-full bg-[#006a62]/10 text-[#006a62]">
+                        <BookOpen size={14} className="text-[#006a62]" />
+                        <span className="text-xs font-black uppercase tracking-wider">
+                          {stage.completedLessons !== undefined && stage.totalLessons !== undefined
+                            ? t("lessons_progress_fmt", { completed: stage.completedLessons, total: stage.totalLessons, defaultValue: `${stage.completedLessons}/${stage.totalLessons} Lessons` })
+                            : `${stage.progress}% ${t("completed", "Completed")}`}
+                        </span>
                       </div>
-                    )}
+                      <h3 className="text-2xl font-bold text-[#141779] mb-2">{translateStageTitle(stage.title)}</h3>
+                      
+                      <div className="w-full bg-[#eceef0] rounded-full h-2 mb-1 overflow-hidden">
+                        <div className="bg-[#006a62] h-full rounded-full transition-all duration-1000" style={{ width: `${stage.progress}%` }}></div>
+                      </div>
+                      {stage.nextStageName && (
+                        <p className="text-xs text-[#464652] font-bold mb-3">
+                          {t("percent_to_target", { percent: stage.progress, target: translateStageTitle(stage.nextStageName), defaultValue: `${stage.progress}% to ${translateStageTitle(stage.nextStageName)}` })}
+                        </p>
+                      )}
+                      
+                      {stage.rewards && (
+                        <div className="mt-1 flex gap-3 text-xs text-[#464652] font-black bg-[#57fae9]/20 px-3 py-1 rounded-full">
+                          {stage.rewards.map((rw: any, i: number) => {
+                            const RIcon = IconMap[rw.icon] || Star;
+                            return (
+                              <span key={i} className="flex items-center gap-1"><RIcon size={14} /> {translateRewardLabel(rw.label)}</span>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            }
-            
-            return null;
-          })}
+                );
+              }
+              
+              if (isLocked) {
+                return (
+                  <div key={stage.id} className={`relative z-10 w-full mb-14 flex justify-center ${translateClass}`}>
+                    <div className="bg-[#eceef0] p-4 rounded-2xl w-48 sm:w-52 shadow-sm flex flex-col items-center border border-[#767683]/15">
+                      <div className="w-full flex flex-col items-center opacity-80">
+                        <div className="w-10 h-10 bg-[#767683] rounded-full flex items-center justify-center mb-2 shadow-xs">
+                          <IconComp size={20} color="white" />
+                        </div>
+                        <span className="text-xs text-[#767683] font-bold uppercase tracking-wider mb-1">{t("locked_caps", "LOCKED")}</span>
+                        <h3 className="text-base font-bold text-[#464652] text-center">{translateStageTitle(stage.title)}</h3>
+                        {stage.description && (
+                          <p className="text-xs text-center mt-1 text-[#767683] leading-relaxed font-medium">{translateStageDesc(stage.description)}</p>
+                        )}
+                        {stage.rewards && (
+                          <div className="mt-2 text-xs text-[#767683] flex items-center gap-1 font-bold">
+                            {stage.rewards.map((rw: any, i: number) => {
+                              const RIcon = IconMap[rw.icon] || Star;
+                              return (
+                                <span key={i} className="flex items-center gap-1"><RIcon size={12} /> {translateRewardLabel(rw.label)}</span>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+              
+              return null;
+            })}
+          </div>
         </div>
 
         {/* Floating Action Button */}
-        <button onClick={() => navigate('/parent/lessons')} className="fixed bottom-24 right-6 w-14 h-14 bg-[#141779] text-white rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-transform z-40 hover:bg-[#30007f]">
+        <button 
+          onClick={() => {
+            const activeStage = roadmapData?.stages?.find((s: any) => s.status === "active");
+            navigate(activeStage ? `/parent/lessons?category=${encodeURIComponent(activeStage.title)}` : '/parent/lessons');
+          }} 
+          className="fixed bottom-24 right-5 w-14 h-14 bg-[#141779] text-white rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-transform z-40 hover:bg-[#30007f] cursor-pointer"
+          aria-label={t("start_learning", "Start Learning")}
+        >
           <Play size={24} fill="currentColor" />
         </button>
       </main>

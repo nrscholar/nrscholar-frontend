@@ -1,6 +1,6 @@
 let refreshPromise: Promise<any> | null = null;
 let userMeCache: { data: any; timestamp: number } | null = null;
-let lastParentReport: { data: any; timestamp: number } | null = null;
+let lastParentReport: { data: any; timestamp: number; lang?: string } | null = null;
 const CACHE_TTL = 600000; // 10 minutes cache TTL
 
 export function clearUserMeCache() {
@@ -14,19 +14,84 @@ export function clearParentReportCache() {
   lastParentReport = null;
   try {
     localStorage.removeItem("parentReportCache");
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith("parentReportCache")) {
+        localStorage.removeItem(key);
+      }
+    }
   } catch (e) {}
 }
 
 export function clearAuthSession() {
-  localStorage.removeItem("userToken");
-  localStorage.removeItem("refreshToken");
-  localStorage.removeItem("userData");
-  sessionStorage.clear();
-  clearUserMeCache();
-  clearParentReportCache();
+  try {
+    localStorage.removeItem("userToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("userData");
+    localStorage.removeItem("user");
+    localStorage.removeItem("isParentPinSet");
+    localStorage.removeItem("userPhoto");
+    localStorage.removeItem("scanHistory");
+
+    // Clean up scoped session keys and cached reports/skills while preserving user preferences (like language)
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith("nrs_") || key.startsWith("neuroplay_") || key.startsWith("parentReportCache"))) {
+        localStorage.removeItem(key);
+      }
+    }
+
+    sessionStorage.clear();
+    clearUserMeCache();
+    clearParentReportCache();
+  } catch (e) {
+    console.error("Error clearing auth session:", e);
+  }
 }
 
-function redirectToLogin() {
+/**
+ * Optimizes the logout flow:
+ * 1. Asynchronously attempts backend session invalidation bounded by a 600ms timeout
+ *    so network latency or offline status never stalls the user interface.
+ * 2. Purges all tokens, user sessions, reports, and scoped data cleanly.
+ * 3. Immediately transitions to the login screen.
+ */
+export async function logoutUser(navigate?: (path: string, options?: any) => void): Promise<void> {
+  const token = localStorage.getItem("userToken");
+
+  if (token) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 600);
+      const API_BASE = import.meta.env.VITE_API_URL || "";
+      const requestUrl = `${API_BASE ? API_BASE : ""}/api/users/logout`;
+
+      await fetch(requestUrl, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        signal: controller.signal
+      }).catch(() => {});
+
+      clearTimeout(timeoutId);
+    } catch {
+      // Backend error or timeout should never block client logout
+    }
+  }
+
+  // Guaranteed clean local auth state purge
+  clearAuthSession();
+
+  // Instant navigation to /login without history clutter
+  if (navigate) {
+    navigate("/login", { replace: true });
+  } else {
+    window.dispatchEvent(new Event("force-logout"));
+  }
+}
+
+export function redirectToLogin() {
   clearAuthSession();
   window.dispatchEvent(new Event("force-logout"));
 }
@@ -39,6 +104,21 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
   if (reqMethod !== "GET") {
     clearUserMeCache();
     clearParentReportCache();
+  }
+
+  // Auto-inject active child ID for notification endpoints if not explicitly provided
+  if (url.includes("/api/notifications") && !url.includes("childId=") && !url.includes("child_id=")) {
+    try {
+      const stored = localStorage.getItem("userData");
+      if (stored) {
+        const u = JSON.parse(stored);
+        const activeCid = u.activeChildId || u.children?.[0]?.childId || u.childId;
+        if (activeCid) {
+          const sep = url.includes("?") ? "&" : "?";
+          url = `${url}${sep}childId=${encodeURIComponent(activeCid)}`;
+        }
+      }
+    } catch (e) {}
   }
 
   // Check cache for /api/users/me GET requests
@@ -65,22 +145,24 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
     } catch (e) {}
   }
 
+  const currentLang = localStorage.getItem("i18nextLng") || "en";
+
   // Check cache for /api/parent/report GET requests
   const isReportRequest = (url.includes("/api/parent/report") || url.includes("parent/report")) && !url.includes("/report/download") && reqMethod === "GET";
   if (isReportRequest) {
     const now = Date.now();
-    if (lastParentReport && (now - lastParentReport.timestamp < CACHE_TTL)) {
+    if (lastParentReport && lastParentReport.lang === currentLang && (now - lastParentReport.timestamp < CACHE_TTL)) {
       return new Response(JSON.stringify(lastParentReport.data), {
         status: 200,
         headers: { "Content-Type": "application/json" }
       });
     }
     try {
-      const stored = localStorage.getItem("parentReportCache");
+      const stored = localStorage.getItem(`parentReportCache_${currentLang}`);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed && (now - parsed.timestamp < CACHE_TTL)) {
-          lastParentReport = parsed;
+          lastParentReport = { ...parsed, lang: currentLang };
           return new Response(JSON.stringify(parsed.data), {
             status: 200,
             headers: { "Content-Type": "application/json" }
@@ -104,13 +186,18 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
     headers.set("Expires", "0");
   }
 
-  // Add 15-second timeout using AbortController
+  // Add 30-second timeout using AbortController
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+  const API_BASE = import.meta.env.VITE_API_URL || "";
+  const requestUrl = (url.startsWith("http://") || url.startsWith("https://"))
+    ? url
+    : `${API_BASE}${url.startsWith("/") ? url : "/" + url}`;
 
   let response;
   try {
-    response = await fetch(url, { ...options, headers, signal: controller.signal });
+    response = await fetch(requestUrl, { ...options, headers, signal: controller.signal });
     clearTimeout(timeoutId);
   } catch (e) {
     clearTimeout(timeoutId);
@@ -118,8 +205,8 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
     // Automatic retry once for idle socket drops
     try {
       const retryController = new AbortController();
-      const retryTimeout = setTimeout(() => retryController.abort(), 15000);
-      response = await fetch(url, { ...options, headers, signal: retryController.signal });
+      const retryTimeout = setTimeout(() => retryController.abort(), 30000);
+      response = await fetch(requestUrl, { ...options, headers, signal: retryController.signal });
       clearTimeout(retryTimeout);
     } catch (retryErr) {
       console.error("Network error on retry", retryErr);
@@ -145,9 +232,9 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
       const clone = response.clone();
       const json = await clone.json();
       const now = Date.now();
-      lastParentReport = { data: json, timestamp: now };
+      lastParentReport = { data: json, timestamp: now, lang: currentLang };
       try {
-        localStorage.setItem("parentReportCache", JSON.stringify(lastParentReport));
+        localStorage.setItem(`parentReportCache_${currentLang}`, JSON.stringify(lastParentReport));
       } catch (e) {}
     } catch (e) {}
   }
@@ -160,8 +247,9 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
           refreshPromise = (async () => {
             const refreshController = new AbortController();
             const refreshTimeout = setTimeout(() => refreshController.abort(), 30000);
+            const refreshUrl = (API_BASE ? `${API_BASE}/api/users/refresh` : "/api/users/refresh");
             try {
-              const res = await fetch("/api/users/refresh", {
+              const res = await fetch(refreshUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ refreshToken }),
@@ -192,7 +280,7 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
           const retryController = new AbortController();
           const retryTimeout = setTimeout(() => retryController.abort(), 30000);
           try {
-            response = await fetch(url, { ...options, headers, signal: retryController.signal });
+            response = await fetch(requestUrl, { ...options, headers, signal: retryController.signal });
             clearTimeout(retryTimeout);
           } catch (e) {
             clearTimeout(retryTimeout);

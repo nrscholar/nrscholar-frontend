@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Copy, CheckCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
 import { copyToClipboard } from "../../../utils/clipboard";
+import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
 
 export default function MultiplayerRoomScreen() {
   const navigate = useNavigate();
@@ -12,25 +13,26 @@ export default function MultiplayerRoomScreen() {
   const [room, setRoom] = useState<any>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
-  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const isLeavingRef = useRef(false);
+  const isStartingBattleRef = useRef(false);
 
   const fetchRoomStatus = async () => {
-    if (roomId && sessionStorage.getItem(`left_battle_${roomId}`) === "true") return;
+    if (isLeavingRef.current) return;
     try {
       const res = await apiFetch(`/api/multiplayer/room/${roomId}`);
       const data = await res.json();
-      if (sessionStorage.getItem(`left_battle_${roomId}`) === "true") return;
+      if (isLeavingRef.current) return;
 
       if (data.success && data.data) {
         setRoom(data.data);
         if (data.data.status === "playing" || data.data.status === "ready") {
-          if (sessionStorage.getItem(`left_battle_${roomId}`) !== "true") {
-            if (data.data.status === "ready") {
-              apiFetch(`/api/multiplayer/room/${roomId}/start`, { method: "POST" })
-                .catch(err => console.error("Failed to auto-start room:", err));
-            }
-            navigate(`/multiplayer-battle/${roomId}`);
+          isStartingBattleRef.current = true;
+          isLeavingRef.current = true;
+          if (data.data.status === "ready") {
+            apiFetch(`/api/multiplayer/room/${roomId}/start`, { method: "POST" })
+              .catch(err => console.error("Failed to auto-start room:", err));
           }
+          navigate(`/multiplayer-battle/${roomId}`, { replace: true });
         }
       } else {
         setError(data.message || "Room not found");
@@ -41,44 +43,48 @@ export default function MultiplayerRoomScreen() {
   };
 
   useEffect(() => {
-    if (roomId && sessionStorage.getItem(`left_battle_${roomId}`) === "true") {
-      navigate("/multiplayer-hub", { replace: true });
-      return;
-    }
     fetchRoomStatus();
     const interval = setInterval(() => {
-      if (sessionStorage.getItem(`left_battle_${roomId}`) === "true") return;
+      if (isLeavingRef.current) return;
       fetchRoomStatus();
     }, 2000);
     return () => clearInterval(interval);
   }, [roomId, navigate]);
 
+  // Cleanly quit/cancel room on backend if user leaves or unmounts before battle starts
   useEffect(() => {
-    window.history.pushState(null, "", window.location.href);
-    const handlePopState = () => {
-      window.history.pushState(null, "", window.location.href);
-      setShowLeaveModal(true);
+    return () => {
+      if (!isStartingBattleRef.current && roomId && !isLeavingRef.current) {
+        apiFetch(`/api/multiplayer/room/${roomId}/quit`, { method: "POST" }).catch(() => {});
+      }
     };
-
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
+  }, [roomId]);
 
   const copyCode = async () => {
     if (room?.code) {
       await copyToClipboard(room.code);
       setCopied(true);
+      showNotificationToast({
+        title: "Code Copied",
+        message: "Room Code copied to clipboard! 📋",
+        type: "success"
+      });
       setTimeout(() => setCopied(false), 2000);
     }
   };
 
-  const handleLeaveRoom = () => {
+  const handleBackToArena = () => {
+    if (isLeavingRef.current) return;
+    isLeavingRef.current = true;
     if (roomId) {
-      sessionStorage.setItem(`left_battle_${roomId}`, "true");
+      apiFetch(`/api/multiplayer/room/${roomId}/quit`, { method: "POST" }).catch(console.error);
     }
-    setShowLeaveModal(false);
-    apiFetch(`/api/multiplayer/room/${roomId}/quit`, { method: "POST" }).catch(console.error);
-    navigate("/multiplayer-hub", { replace: true });
+    // Cleanly pop back to the Shadow Arena hub
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/multiplayer-hub", { replace: true });
+    }
   };
 
   if (error) {
@@ -107,7 +113,11 @@ export default function MultiplayerRoomScreen() {
       <div className="absolute bottom-[20%] right-[10%] w-64 h-64 bg-[#ffd700] rounded-full blur-[100px] opacity-10"></div>
 
       <header className="flex items-center justify-between px-5 py-6 relative z-10">
-        <button onClick={() => setShowLeaveModal(true)} className="p-2 bg-white border border-[#e0e0e0] shadow-sm rounded-full hover:bg-[#e8ddff] transition-colors">
+        <button 
+          onClick={handleBackToArena} 
+          className="p-2 bg-white border border-[#e0e0e0] shadow-sm rounded-full hover:bg-[#e8ddff] transition-colors"
+          aria-label={t('go_back', 'Go Back')}
+        >
           <ArrowLeft size={24} color="#141779" />
         </button>
         <h1 className="text-[18px] font-black text-[#141779] tracking-[2px] uppercase">{t('waiting_room', 'WAITING ROOM')}</h1>
@@ -172,32 +182,6 @@ export default function MultiplayerRoomScreen() {
 
         </div>
       </main>
-
-      {/* LEAVE CONFIRMATION MODAL */}
-      {showLeaveModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-[24px] p-6 w-full max-w-sm flex flex-col items-center text-center shadow-2xl border-2 border-[#e0e0e0] animate-in zoom-in-95 duration-200">
-            <h2 className="text-2xl font-black text-[#141779] mb-2">{t('leave_room_title', 'Leave Room?')}</h2>
-            <p className="text-[#464652] font-semibold mb-6">
-              {t('leave_room_confirm', 'Are you sure you want to leave this waiting room?')}
-            </p>
-            <div className="flex gap-3 w-full">
-              <button 
-                onClick={() => setShowLeaveModal(false)}
-                className="flex-grow bg-[#f4efff] text-[#141779] py-3 rounded-xl font-bold hover:bg-[#e8ddff] transition-all border-2 border-[#e0e0e0]"
-              >
-                {t('cancel', 'Cancel')}
-              </button>
-              <button 
-                onClick={handleLeaveRoom}
-                className="flex-grow bg-[#ba1a1a] text-white py-3 rounded-xl font-bold hover:bg-[#ba1a1a]/80 transition-all"
-              >
-                {t('leave', 'Leave')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

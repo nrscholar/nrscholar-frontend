@@ -4,6 +4,10 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
+import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
+import { getScopedItem } from "../../../utils/sessionCache";
+import { filterUniqueQuestions } from "../../../utils/quizQuestionUtils";
+import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
 
 // Hardcoded rapid fire questions for MVP multiplayer
 const BATTLE_QUESTIONS = [
@@ -37,6 +41,7 @@ export default function MultiplayerBattleScreen() {
   const [isFinished, setIsFinished] = useState(false);
   const [winnerId, setWinnerId] = useState<string | null>(null);
   const [showRewardModal, setShowRewardModal] = useState(false);
+  useLockBodyScroll(Boolean(showRewardModal));
   const [continuousWins, setContinuousWins] = useState(0);
   const [checkingReward, setCheckingReward] = useState(false);
   const [showQuitModal, setShowQuitModal] = useState(false);
@@ -155,6 +160,43 @@ export default function MultiplayerBattleScreen() {
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [waitTimer, setWaitTimer] = useState(0);
 
+  // Active Journey Theme ("dragon", "science", "social")
+  const [battleTheme, setBattleTheme] = useState<"dragon" | "science" | "social">(() => {
+    let cachedTier: string | undefined;
+    try {
+      const cachedJ = getScopedItem("cachedJourneyData") || localStorage.getItem("cachedJourneyData");
+      if (cachedJ) {
+        const parsed = JSON.parse(cachedJ);
+        cachedTier = parsed.tierKey;
+      }
+    } catch (e) {
+      console.warn("Failed to parse cached journey:", e);
+    }
+    if (cachedTier === "scientist") return "science";
+    if (cachedTier === "social_proof") return "social";
+    if (cachedTier === "dragon") return "dragon";
+
+    let cachedClass: string | undefined;
+    try {
+      const uStr = localStorage.getItem("userData") || localStorage.getItem("user");
+      if (uStr) {
+        const u = JSON.parse(uStr);
+        cachedClass = u.childClass;
+      }
+    } catch (e) {
+      console.warn("Failed to parse cached user:", e);
+    }
+    if (cachedClass) {
+      const match = String(cachedClass).match(/\d+/);
+      const classNum = match ? parseInt(match[0], 10) : 1;
+      if (classNum >= 8) return "social";
+      if (classNum >= 5) return "science";
+      return "dragon";
+    }
+
+    return "dragon";
+  });
+
   const isHost = room?.hostId === myId;
   const myAvatar = isHost ? room?.hostAvatar : room?.guestAvatar;
   const oppAvatar = isHost ? room?.guestAvatar : room?.hostAvatar;
@@ -173,7 +215,7 @@ export default function MultiplayerBattleScreen() {
         const res = await apiFetch(`/api/multiplayer/room/${roomId}/questions`);
         const data = await res.json();
         if (data.success && data.data && data.data.length > 0) {
-          setQuestions(data.data);
+          setQuestions(filterUniqueQuestions(data.data));
         }
       } catch (e) {
         console.error("Failed to load questions:", e);
@@ -193,9 +235,29 @@ export default function MultiplayerBattleScreen() {
             if (data.success && data.data && data.data.user) {
                 setQuitCount(data.data.user.multiplayerQuitCount || 0);
                 setMyStreak(data.data.user.multiplayerStreak || 0);
+                if (data.data.user.childClass) {
+                  const match = String(data.data.user.childClass).match(/\d+/);
+                  const classNum = match ? parseInt(match[0], 10) : 1;
+                  if (classNum >= 8) setBattleTheme("social");
+                  else if (classNum >= 5) setBattleTheme("science");
+                  else setBattleTheme("dragon");
+
+                  apiFetch(`/api/journey/progress?classLevel=${encodeURIComponent(data.data.user.childClass)}`)
+                    .then(r => r.json())
+                    .then(jd => {
+                      if (jd.success && jd.data?.tierKey) {
+                        if (jd.data.tierKey === "scientist") setBattleTheme("science");
+                        else if (jd.data.tierKey === "social_proof") setBattleTheme("social");
+                        else if (jd.data.tierKey === "dragon") setBattleTheme("dragon");
+                      }
+                    })
+                    .catch(() => {});
+                }
             }
         }).catch(console.error);
-      } catch(e) {}
+      } catch(e) {
+        console.warn("Failed to parse userData:", e);
+      }
     }
   }, []);
 
@@ -208,7 +270,7 @@ export default function MultiplayerBattleScreen() {
         setRoom(rData);
 
         if (rData.questions && rData.questions.length > 0) {
-          setQuestions(rData.questions);
+          setQuestions(filterUniqueQuestions(rData.questions));
         }
 
         const amHost = rData.hostId === myId;
@@ -437,7 +499,17 @@ export default function MultiplayerBattleScreen() {
           <button onClick={() => setShowQuitModal(true)} className="p-2 bg-[#f4efff] rounded-full hover:bg-[#e8ddff] border border-[#e0e0e0] transition-colors">
              <X size={20} color="#141779" />
           </button>
-          <span className="text-[#767683] text-xs font-bold uppercase tracking-widest">{t('live_battle', 'Live Battle')}</span>
+          
+          {/* Active Journey Theme Duel Badge */}
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#141779]/5 border border-[#141779]/15 shadow-xs">
+            <span className="text-sm">
+              {battleTheme === "dragon" ? "🐉" : battleTheme === "science" ? "🧪" : "🥇"}
+            </span>
+            <span className="text-[#141779] text-xs font-black uppercase tracking-wider">
+              {battleTheme === "dragon" ? t('dragon_duel', 'Dragon Duel (1v1)') : battleTheme === "science" ? t('science_duel', 'Science Duel (1v1)') : t('medalists_duel', 'Gold Medalists Duel (1v1)')}
+            </span>
+          </div>
+
           <div className="w-9" />
         </div>
         <div className="flex items-center justify-between gap-2 sm:gap-4 max-w-full">
@@ -445,7 +517,7 @@ export default function MultiplayerBattleScreen() {
           {/* MY SIDE */}
           <div className="flex-1 min-w-0 flex flex-col items-start gap-1.5">
             <div className="flex items-center gap-2 max-w-full">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-[#141779] overflow-hidden bg-white shadow-sm shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-[#141779] overflow-hidden bg-white shadow-sm shrink-0 relative">
                 <img 
                   src={myAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(myName || 'Me')}`} 
                   alt={myName || 'You'}
@@ -454,6 +526,9 @@ export default function MultiplayerBattleScreen() {
                     e.target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(myName || 'Me')}`;
                   }}
                 />
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white shadow-xs flex items-center justify-center text-[10px] border border-slate-200">
+                  {battleTheme === "dragon" ? "🐉" : battleTheme === "science" ? "🧪" : "🥇"}
+                </div>
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1">
@@ -501,7 +576,7 @@ export default function MultiplayerBattleScreen() {
                   <p className="text-[11px] font-bold text-[#767683]">{oppScore} {t('pts', 'PTS')}</p>
                 </div>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-[#ff9f43] overflow-hidden bg-white shadow-sm shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-[#ff9f43] overflow-hidden bg-white shadow-sm shrink-0 relative">
                 <img 
                   src={oppAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(oppName || 'Opponent')}`} 
                   alt={oppName || 'Opponent'}
@@ -510,6 +585,9 @@ export default function MultiplayerBattleScreen() {
                     e.target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(oppName || 'Opponent')}`;
                   }}
                 />
+                <div className="absolute -bottom-1 -left-1 w-5 h-5 rounded-full bg-white shadow-xs flex items-center justify-center text-[10px] border border-slate-200">
+                  {battleTheme === "dragon" ? "🐉" : battleTheme === "science" ? "🧪" : "🥇"}
+                </div>
               </div>
             </div>
             {/* Health/Progress Bar */}
@@ -522,10 +600,36 @@ export default function MultiplayerBattleScreen() {
       </header>
 
       {/* Main Battle Area */}
-      <main className="flex-1 flex flex-col px-6 py-8 relative z-10">
+      <main className="flex-1 flex flex-col px-6 py-6 relative z-10">
         {!isFinished ? (
           <div className="flex-1 flex flex-col">
-            <div className="mb-8 relative">
+            
+            {/* Active Theme Duel Clash Indicator */}
+            <div className="flex items-center justify-center mb-4">
+              {battleTheme === "dragon" && (
+                <div className="flex items-center gap-2 py-1 px-3 bg-gradient-to-r from-teal-500/10 via-amber-500/10 to-rose-500/10 rounded-full border border-teal-500/20 text-[11px] font-black text-[#141779] shadow-xs">
+                  <span>🐉 {t('dragon_left', 'Hero Dragon')}</span>
+                  <span className="text-orange-500 font-extrabold text-[10px] animate-pulse">🔥 CLASHING BREATH 🔥</span>
+                  <span>{t('dragon_right', 'Shadow Dragon')} 🐉</span>
+                </div>
+              )}
+              {battleTheme === "science" && (
+                <div className="flex items-center gap-2 py-1 px-3 bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-pink-500/10 rounded-full border border-cyan-500/20 text-[11px] font-black text-[#141779] shadow-xs">
+                  <span>🧪 {t('sci_left', 'Hero Scientist')}</span>
+                  <span className="text-cyan-600 font-extrabold text-[10px] animate-pulse">⚡ QUANTUM BEAM ⚡</span>
+                  <span>{t('sci_right', 'Rival Scientist')} 🧪</span>
+                </div>
+              )}
+              {battleTheme === "social" && (
+                <div className="flex items-center gap-2 py-1 px-3 bg-gradient-to-r from-amber-500/15 via-yellow-400/20 to-orange-500/15 rounded-full border border-amber-400/30 text-[11px] font-black text-[#141779] shadow-xs">
+                  <span>🥇 {t('fencer_left', 'Hero Medalist')}</span>
+                  <span className="text-amber-600 font-extrabold text-[10px] animate-pulse">⚔️ GOLDEN BLADES ⚔️</span>
+                  <span>{t('fencer_right', 'Rival Medalist')} 🥇</span>
+                </div>
+              )}
+            </div>
+
+            <div className="mb-6 relative">
                <div className="flex justify-between items-center mb-2">
                  <span className="text-[#141779] font-bold text-sm tracking-widest uppercase">{t('question_progress', { current: currentQ + 1, total: questions.length, defaultValue: `Question ${currentQ + 1}/${questions.length}` })}</span>
                  <span className={`font-black text-sm px-3 py-1 rounded-full border border-[#d0d0d0] ${timeLeft <= 5 ? 'bg-red-100 text-red-700 animate-pulse border-red-300' : 'bg-white text-[#141779]'}`}>
@@ -723,21 +827,28 @@ export default function MultiplayerBattleScreen() {
           </div>
         )}
       </main>
-
-
       {/* PHYSICAL REWARD MODAL */}
       <AnimatePresence>
         {showRewardModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm">
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm select-none"
+            style={{ touchAction: "none" }}
+            onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+          >
             <motion.div 
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="bg-gradient-to-b from-[#ffeed1] to-white rounded-[32px] p-8 w-full max-w-sm flex flex-col items-center text-center shadow-[0_0_40px_rgba(255,159,67,0.3)] border-4 border-[#ff9f43]"
+              initial={{ scale: 0.92, opacity: 0, y: 16 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              style={{ overscrollBehavior: "contain" }}
+              className="bg-white rounded-[32px] p-6 sm:p-8 w-full max-w-[360px] flex flex-col items-center text-center shadow-[0_20px_60px_rgba(20,23,121,0.18)] border border-slate-100 relative"
             >
-              <div className="text-[80px] mb-2">🎁</div>
-              <h2 className="text-3xl font-black text-[#141779] mb-2 uppercase">{t('incredible', 'Incredible!')}</h2>
-              <div className="bg-[#141779] text-white px-4 py-1 rounded-full text-xs font-bold tracking-widest mb-4">{t('25_wins_in_row', '25 WINS IN A ROW')}</div>
-              <p className="text-[#4b4b4b] font-bold mb-6">
+              <div className="w-20 h-20 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-4xl mb-3 shadow-xs">
+                🎁
+              </div>
+              <span className="bg-indigo-50 border border-indigo-100 text-[#141779] px-3.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-2">
+                {t('25_wins_in_row', '25 WINS IN A ROW')}
+              </span>
+              <h2 className="text-2xl font-black text-[#141779] mb-1.5 uppercase leading-snug">{t('incredible', 'Incredible!')}</h2>
+              <p className="text-xs sm:text-sm font-semibold text-slate-600 leading-relaxed mb-6">
                 {t('physical_reward_desc', 'You have reached 25 continuous wins! A physical reward box is being prepared by our team and will be shipped to your registered address!')}
               </p>
               
@@ -746,7 +857,7 @@ export default function MultiplayerBattleScreen() {
                   setShowRewardModal(false);
                   navigate("/multiplayer-hub");
                 }}
-                className="w-full bg-[#ff9f43] text-white py-4 rounded-xl font-black uppercase text-lg shadow-[0_4px_0_#d17e30] active:translate-y-[4px] active:shadow-none transition-all"
+                className="w-full bg-[#141779] hover:bg-[#101362] active:scale-95 text-white py-3.5 rounded-full font-black uppercase text-xs tracking-wider shadow-md shadow-[#141779]/20 transition-all flex items-center justify-center"
               >
                 {t('claim_my_prize', 'Claim My Prize!')}
               </button>
@@ -755,87 +866,55 @@ export default function MultiplayerBattleScreen() {
         )}
       </AnimatePresence>
 
-      {/* QUIT CONFIRMATION MODAL */}
-      <AnimatePresence>
-        {showQuitModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm">
-            <motion.div 
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              className="bg-white rounded-[24px] p-6 w-full max-w-sm flex flex-col items-center text-center shadow-2xl border-2 border-[#e0e0e0]"
-            >
-              <div className="w-16 h-16 rounded-full bg-[#ffebee] flex items-center justify-center mb-4 border border-[#ffb4ab]">
-                <X size={32} color="#ba1a1a" />
-              </div>
-              <h2 className="text-2xl font-black text-[#141779] mb-2">{t('are_you_sure', 'Are you sure?')}</h2>
-              <p className="text-[#464652] font-semibold mb-6">
-                {myStreak === 0
-                  ? t('quit_penalty_coins', 'If you leave now, you will lose the game and be penalized 100 coins!')
-                  : quitCount === 0 
-                  ? t('quit_warning_safe', 'If you leave now, you will lose the game! This is your first warning, so your streak is safe.')
-                  : quitCount === 1 
-                  ? t('quit_warning_streak_minus1', 'If you leave now, you will lose the game and your win streak will decrease by 1!')
-                  : t('quit_warning_streak_reset', 'If you leave now, you will lose the game and your win streak will be completely reset!')}
-              </p>
-              
-              <div className="flex gap-3 w-full">
-                <button 
-                  onClick={() => setShowQuitModal(false)}
-                  className="flex-grow bg-[#f4efff] text-[#141779] py-3 rounded-xl font-bold hover:bg-[#e8ddff] transition-all border-2 border-[#e0e0e0]"
-                >
-                  {t('cancel', 'Cancel')}
-                </button>
-                <button 
-                  onClick={async () => {
-                    setShowQuitModal(false);
-                    if (roomId) sessionStorage.setItem(`left_battle_${roomId}`, "true");
-                    try {
-                      await submitActivityLog(userAnswers);
-                      await apiFetch(`/api/multiplayer/room/${roomId}/quit`, { method: "POST" });
-                    } catch(e) {}
-                    navigate("/multiplayer-hub", { replace: true });
-                  }}
-                  className="flex-grow bg-[#ba1a1a] text-white py-3 rounded-xl font-bold hover:bg-[#ba1a1a]/80 transition-all"
-                >
-                  {t('yes_quit', 'Yes, Quit')}
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {/* UNIFIED QUIT CONFIRMATION MODAL */}
+      <UnifiedConfirmModal
+        isOpen={showQuitModal}
+        onClose={() => setShowQuitModal(false)}
+        onConfirm={async () => {
+          setShowQuitModal(false);
+          if (roomId) sessionStorage.setItem(`left_battle_${roomId}`, "true");
+          try {
+            await submitActivityLog(userAnswers);
+            await apiFetch(`/api/multiplayer/room/${roomId}/quit`, { method: "POST" });
+          } catch(e) {
+            console.warn("Error quitting battle:", e);
+          }
+          navigate("/multiplayer-hub", { replace: true });
+        }}
+        title={t('are_you_sure', 'Are you sure?')}
+        message={
+          myStreak === 0
+            ? t('quit_penalty_coins', 'If you leave now, you will lose the game and be penalized 100 coins!')
+            : quitCount === 0 
+            ? t('quit_warning_safe', 'If you leave now, you will lose the game! This is your first warning, so your streak is safe.')
+            : quitCount === 1 
+            ? t('quit_warning_streak_minus1', 'If you leave now, you will lose the game and your win streak will decrease by 1!')
+            : t('quit_warning_streak_reset', 'If you leave now, you will lose the game and your win streak will be completely reset!')
+        }
+        confirmText={t('yes_quit', 'Yes, Quit')}
+        cancelText={t('cancel', 'Cancel')}
+        variant="danger"
+        icon={<X size={30} className="text-rose-600" />}
+      />
 
-      {/* OPPONENT QUIT MODAL */}
-      <AnimatePresence>
-        {opponentQuit && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm">
-            <motion.div 
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="bg-white rounded-[24px] p-6 w-full max-w-sm flex flex-col items-center text-center shadow-2xl border-2 border-[#e0e0e0]"
-            >
-              <div className="text-[60px] mb-2">🏃‍♂️💨</div>
-              <h2 className="text-2xl font-black text-[#141779] mb-2 uppercase">{t('opponent_fled', 'Opponent Fled!')}</h2>
-              <p className="text-[#006a62] font-bold mb-6">
-                {t('opponent_left_you_win', 'Your opponent left the game. You win by default!')}
-              </p>
-              
-              <button 
-                onClick={() => {
-                  if (roomId) sessionStorage.setItem(`left_battle_${roomId}`, "true");
-                  navigate("/multiplayer-hub", { replace: true });
-                }}
-                className="w-full bg-[#141779] text-white py-3 rounded-xl font-black uppercase tracking-wider hover:bg-[#30007f] transition-all border-2 border-[#141779]"
-              >
-                {t('back_to_arena', 'BACK TO ARENA')}
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-
+      {/* UNIFIED OPPONENT QUIT MODAL */}
+      <UnifiedConfirmModal
+        isOpen={opponentQuit}
+        onClose={() => {
+          if (roomId) sessionStorage.setItem(`left_battle_${roomId}`, "true");
+          navigate("/multiplayer-hub", { replace: true });
+        }}
+        onConfirm={() => {
+          if (roomId) sessionStorage.setItem(`left_battle_${roomId}`, "true");
+          navigate("/multiplayer-hub", { replace: true });
+        }}
+        title={t('opponent_fled', 'Opponent Fled!')}
+        message={t('opponent_left_you_win', 'Your opponent left the game. You win by default!')}
+        confirmText={t('back_to_arena', 'BACK TO ARENA')}
+        showCancel={false}
+        variant="success"
+        icon={<span className="text-3xl">🏃‍♂️💨</span>}
+      />
     </div>
   );
 }

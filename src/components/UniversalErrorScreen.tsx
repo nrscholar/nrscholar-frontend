@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
 import {
   Rocket,
   ServerOff,
@@ -118,6 +117,41 @@ const getErrorConfig = (statusCode?: ErrorStatusCode): ErrorConfig => {
   };
 };
 
+/**
+ * Detects whether the user was in Parent Mode or Child Mode when the error occurred,
+ * returning the appropriate dashboard destination without destroying PIN verification state.
+ */
+export function getDynamicHomeRoute(): string {
+  try {
+    const isPinVerified = sessionStorage.getItem("parentPinVerified") === "true";
+    const currentPath = window.location.pathname || "";
+    const isParentPath = currentPath.startsWith("/parent");
+    const lastActivePortal = sessionStorage.getItem("last_active_portal");
+
+    // Check user data from localStorage
+    const rawUserData = localStorage.getItem("userData") || localStorage.getItem("user");
+    const user = rawUserData ? JSON.parse(rawUserData) : null;
+    const role = (user?.role || "").toLowerCase();
+    const isCoParent = Boolean(
+      user?.isSecondaryParent ||
+      user?.isCoParent ||
+      role === "co_parent" ||
+      role === "secondary_parent" ||
+      user?.primary_parent_id
+    );
+
+    // If on a parent path, or PIN was verified in this session, or last active portal was parent, or restricted co-parent
+    if (isParentPath || isPinVerified || lastActivePortal === "parent" || isCoParent) {
+      return "/parent/dashboard";
+    }
+
+    // Default to Student / Child Dashboard
+    return "/home";
+  } catch {
+    return "/home";
+  }
+}
+
 export default function UniversalErrorScreen({
   statusCode = 404,
   title: customTitle,
@@ -156,8 +190,13 @@ export default function UniversalErrorScreen({
   const handleHomeClick = () => {
     if (onHome) {
       onHome();
-    } else {
-      navigate("/home");
+      return;
+    }
+    const homeRoute = getDynamicHomeRoute();
+    try {
+      navigate(homeRoute);
+    } catch {
+      window.location.href = homeRoute;
     }
   };
 
@@ -207,11 +246,8 @@ export default function UniversalErrorScreen({
       {/* Background Ambient Radial Glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#141779]/5 rounded-full blur-[100px] pointer-events-none" />
 
-      <motion.div
-        initial={{ opacity: 0, y: 15, scale: 0.96 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.3, ease: "easeOut" }}
-        className="relative z-10 flex flex-col items-center max-w-md w-full"
+      <div
+        className="relative z-10 flex flex-col items-center max-w-md w-full animate-in fade-in zoom-in-95 duration-300"
       >
         {/* Rounded Icon Housing Container matching image aesthetic */}
         <div className="w-24 h-24 bg-[#eceef0] rounded-full flex items-center justify-center mb-6 shadow-sm border border-[#e2e5e9] relative transition-transform duration-300 hover:scale-105">
@@ -252,48 +288,9 @@ export default function UniversalErrorScreen({
             </button>
           )}
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }
 
-/**
- * Universal React Error Boundary Component
- * Wraps any component tree to catch runtime errors and render the 500 UniversalErrorScreen state cleanly.
- */
-export class UniversalErrorBoundary extends React.Component<
-  { children: React.ReactNode; fallback?: React.ReactNode },
-  { hasError: boolean; error?: Error }
-> {
-  constructor(props: { children: React.ReactNode; fallback?: React.ReactNode }) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("UniversalErrorBoundary caught a runtime error:", error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      if (this.props.fallback) {
-        return this.props.fallback;
-      }
-      return (
-        <UniversalErrorScreen
-          statusCode={500}
-          onRetry={() => {
-            this.setState({ hasError: false, error: undefined });
-            window.location.reload();
-          }}
-        />
-      );
-    }
-
-    return this.props.children;
-  }
-}
+export { UniversalErrorBoundary } from "./UniversalErrorBoundary";

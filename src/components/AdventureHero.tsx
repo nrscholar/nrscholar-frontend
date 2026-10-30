@@ -22,6 +22,7 @@ export interface AdventureThemeConfig {
   bgGradient: string;
   accentBorderColor: string;
   accentTextColor: string;
+  ctaGradient: string;
   bgDecorations: string[];
   pathColor: string;
 }
@@ -35,19 +36,20 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     missionTitle: "Complete today's learning quest to cross Dragon Valley",
     missionProgress: { current: 3, total: 5 },
     missionRewardText: "+50 XP & Dragon Scale",
-    currentLocationName: "Forest Kingdom",
-    destinationName: "Dragon Cave",
+    currentLocationName: "Egg Village",
+    destinationName: "Hatchling Haven",
     rewardName: "Dragon Egg",
     rewardIcon: "🥚",
     characterIcon: "🐉",
     characterName: "Flame Dragon",
     ctaTextKey: "continue_adventure",
     ctaText: "CONTINUE ADVENTURE →",
-    bgGradient: "from-emerald-700 via-teal-800 to-slate-900",
-    accentBorderColor: "border-amber-400",
-    accentTextColor: "text-amber-300",
+    bgGradient: "from-[#141779] via-[#1c1970] to-[#25218c]",
+    accentBorderColor: "border-indigo-400/60",
+    accentTextColor: "text-[#57fae9]",
+    ctaGradient: "from-[#141779] via-[#1c1970] to-[#25218c] border-indigo-300/40 shadow-[0_6px_20px_rgba(20,23,121,0.35)]",
     bgDecorations: ["☁️", "🏔️", "🏰", "🔥"],
-    pathColor: "#fbbf24",
+    pathColor: "#35E5D4",
   },
   science: {
     type: "science",
@@ -57,17 +59,18 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     missionTitle: "Complete 4 science challenges to ignite the lab furnace",
     missionProgress: { current: 2, total: 4 },
     missionRewardText: "+60 XP & Quantum Core",
-    currentLocationName: "Research Bench",
-    destinationName: "Quantum Lab",
+    currentLocationName: "Apprentice Lab",
+    destinationName: "Atom Academy",
     rewardName: "Advanced Lab",
     rewardIcon: "🔬",
     characterIcon: "🦉",
     characterName: "Scientist Owl",
     ctaTextKey: "enter_lab",
     ctaText: "ENTER LAB →",
-    bgGradient: "from-indigo-800 via-purple-900 to-slate-950",
-    accentBorderColor: "border-cyan-400",
-    accentTextColor: "text-cyan-300",
+    bgGradient: "from-[#0b0c3f] via-[#141779] to-[#0284c7]",
+    accentBorderColor: "border-cyan-400/60",
+    accentTextColor: "text-cyan-200",
+    ctaGradient: "from-[#0b0c3f] via-[#141779] to-[#0284c7] border-cyan-300/40 shadow-[0_6px_20px_rgba(2,132,199,0.35)]",
     bgDecorations: ["⚡", "⚛️", "🧪", "✨"],
     pathColor: "#38bdf8",
   },
@@ -79,19 +82,20 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     missionTitle: "Complete 3 daily habit challenges",
     missionProgress: { current: 1, total: 3 },
     missionRewardText: "+40 XP & Arena Star",
-    currentLocationName: "Training Grounds",
-    destinationName: "Victory Podium",
+    currentLocationName: "Bronze Novice",
+    destinationName: "Bronze Vanguard",
     rewardName: "Silver Medal",
     rewardIcon: "🥈",
     characterIcon: "🦁",
     characterName: "Champion Lion",
     ctaTextKey: "take_challenge",
     ctaText: "TAKE CHALLENGE →",
-    bgGradient: "from-amber-700 via-orange-800 to-slate-950",
-    accentBorderColor: "border-yellow-300",
-    accentTextColor: "text-yellow-200",
+    bgGradient: "from-[#1c1970] via-[#311075] to-[#4338ca]",
+    accentBorderColor: "border-indigo-300/60",
+    accentTextColor: "text-indigo-200",
+    ctaGradient: "from-[#1c1970] via-[#311075] to-[#4338ca] border-indigo-300/40 shadow-[0_6px_20px_rgba(79,70,229,0.35)]",
     bgDecorations: ["⭐", "🏆", "🚩", "✨"],
-    pathColor: "#facc15",
+    pathColor: "#818cf8",
   },
   space: {
     type: "space",
@@ -112,6 +116,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     bgGradient: "from-slate-950 via-indigo-950 to-purple-950",
     accentBorderColor: "border-purple-400",
     accentTextColor: "text-purple-300",
+    ctaGradient: "from-[#1e1035] via-[#2e1065] to-[#581c87] border-purple-300/40 shadow-[0_6px_20px_rgba(88,28,135,0.35)]",
     bgDecorations: ["🌌", "🪐", "✨", "☄️"],
     pathColor: "#c084fc",
   },
@@ -134,6 +139,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     bgGradient: "from-sky-800 via-cyan-900 to-slate-950",
     accentBorderColor: "border-teal-300",
     accentTextColor: "text-teal-200",
+    ctaGradient: "from-[#082f49] via-[#075985] to-[#0e7490] border-teal-300/40 shadow-[0_6px_20px_rgba(14,116,144,0.35)]",
     bgDecorations: ["🫧", "🐠", "🪸", "⚓"],
     pathColor: "#2dd4bf",
   },
@@ -156,6 +162,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     bgGradient: "from-amber-800 via-stone-900 to-slate-950",
     accentBorderColor: "border-amber-400",
     accentTextColor: "text-amber-300",
+    ctaGradient: "from-[#451a03] via-[#78350f] to-[#92400e] border-amber-300/40 shadow-[0_6px_20px_rgba(146,64,14,0.35)]",
     bgDecorations: ["🏛️", "📜", "🏺", "⌛"],
     pathColor: "#fbbf24",
   },
@@ -174,10 +181,12 @@ interface AdventureHeroProps {
   missionTitle?: string;
   missionProgress?: { current: number; total: number };
   missionRewardText?: string;
+  missionXpReward?: number;
+  missionCoinReward?: number;
   journeyData?: any;
 }
 
-export default function AdventureHero({
+function AdventureHero({
   themeKey = "dragon",
   xp = 1105,
   targetXp = 2500,
@@ -190,60 +199,95 @@ export default function AdventureHero({
   missionTitle,
   missionProgress,
   missionRewardText,
+  missionXpReward,
+  missionCoinReward,
   journeyData,
 }: AdventureHeroProps) {
   const { t } = useTranslation();
   const theme = ADVENTURE_THEMES[themeKey] || ADVENTURE_THEMES.dragon;
 
-  const rawStart = journeyData?.currentLocation || currentLocationName || "Egg Village";
-  const rawEnd = journeyData?.nextNodeName || destinationName || "Hatchling Haven";
-  const startName = rawStart === "Egg Village" ? t('egg_village', { defaultValue: "Egg Village" }) : rawStart;
-  const endName = rawEnd === "Hatchling Haven" ? t('hatchling_haven', { defaultValue: "Hatchling Haven" }) : rawEnd;
+  const displayXpReward = missionXpReward !== undefined ? missionXpReward : 140;
+  const displayCoinReward = missionCoinReward !== undefined ? missionCoinReward : 105;
+
+  const rawStart = journeyData?.currentLocation || currentLocationName || theme.currentLocationName;
+  const rawEnd = journeyData?.nextNodeName || destinationName || theme.destinationName;
+  const startName = t(rawStart.toLowerCase().replace(/ /g, '_'), { defaultValue: rawStart });
+  const endName = t(rawEnd.toLowerCase().replace(/ /g, '_'), { defaultValue: rawEnd });
 
   const displayMissionTitle = missionTitle || theme.missionTitle;
   const displayMissionProgress = missionProgress || theme.missionProgress;
-  const displayMissionRewardText = missionRewardText || theme.missionRewardText;
+  const currentClassNum = journeyData?.classLevel;
+  const activeClassNodes = currentClassNum
+    ? (journeyData?.nodes?.filter((n: any) => n.minClass === currentClassNum) || [])
+    : (journeyData?.nodes || []);
 
-  const legProgress = journeyData?.progressPercentage !== undefined 
-    ? journeyData.progressPercentage 
-    : (progressPercentage !== undefined ? progressPercentage : Math.min(100, Math.max(0, Math.round((xp / targetXp) * 100))));
+  const activeNode = activeClassNodes.find((n: any) => n.unlocked && !n.completed)
+    || activeClassNodes[0]
+    || journeyData?.nodes?.find((n: any) => n.unlocked && !n.completed)
+    || journeyData?.nodes?.[0];
+
+  const legProgress = activeNode?.nodeProgressPercentage !== undefined
+    ? Math.round(activeNode.nodeProgressPercentage)
+    : (journeyData?.currentClassProgress !== undefined
+      ? Math.round(journeyData.currentClassProgress)
+      : (journeyData?.progressPercentage !== undefined
+        ? Math.round(journeyData.progressPercentage)
+        : (progressPercentage !== undefined ? progressPercentage : 0)));
   const chaptersRemaining = journeyData?.chaptersNeededForNext !== undefined ? journeyData.chaptersNeededForNext : chaptersNeededForNext;
   const xpRemaining = Math.max(0, targetXp - xp);
+  const legProgressClamped = Math.min(100, Math.max(0, legProgress));
 
-  const pathD = "M 62 46 C 110 5, 215 65, 278 32";
-  const pathLength = 250;
-  const mascotLeftPercent = 20 + (legProgress / 100) * 59;
+  // Exact percentage-based coordinate mapping (viewBox 0 0 1000 100, preserveAspectRatio="none")
+  // Enhanced adventure winding curve connecting Start and Destination
+  const pathD = "M 140 48 C 320 6, 640 90, 860 48";
+  const pathLength = 790;
+
+  // Mascot parameter along the Bezier curve: starts at 0.16 (beside start pin) at 0%, reaches 0.86 (near destination) at 100%
+  const u = 0.16 + (legProgressClamped / 100) * 0.70;
+  const oneMinusU = 1 - u;
+  const b0 = oneMinusU * oneMinusU * oneMinusU;
+  const b1 = 3 * oneMinusU * oneMinusU * u;
+  const b2 = 3 * oneMinusU * u * u;
+  const b3 = u * u * u;
+
+  // Exact coordinates on the curve in percentages (0% - 100%)
+  const mascotXPercent = (b0 * 140 + b1 * 320 + b2 * 640 + b3 * 860) / 10;
+  const mascotYPercent = b0 * 48 + b1 * 6 + b2 * 90 + b3 * 48;
+
+  // Progress line connects along the curve directly to the mascot
+  const strokeProgress = legProgressClamped > 0 ? (u * pathLength) : 0;
+  const strokeDashoffset = pathLength - strokeProgress;
 
   return (
     <div className="w-full max-w-[430px] mx-auto flex flex-col gap-3 font-sans">
-      {/* 1. IMMERSIVE ENVIRONMENT HERO CARD (DARK GRADIENT) */}
+      {/* 1. IMMERSIVE ENVIRONMENT HERO CARD (DYNAMIC THEME & ANIMATED MASCOT) */}
       <div
-        className={`w-full rounded-[32px] bg-gradient-to-b ${theme.bgGradient} p-3.5 border-4 ${theme.accentBorderColor} shadow-[0_12px_32px_rgba(0,0,0,0.3)] relative overflow-hidden text-white flex flex-col gap-3 select-none`}
+        className={`w-full rounded-[28px] bg-gradient-to-r ${theme.bgGradient} p-4 border-4 ${theme.accentBorderColor} relative overflow-hidden text-white flex flex-col gap-3 select-none min-h-[260px]`}
       >
         {/* Ambient environmental particles / animations */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none overflow-hidden select-none">
           <motion.div
-            animate={{ x: [-60, 380] }}
-            transition={{ repeat: Infinity, duration: 24, ease: "linear" }}
-            className="absolute top-2 left-0 text-2xl opacity-30"
+            animate={{ x: [-40, 360] }}
+            transition={{ repeat: Infinity, duration: 28, ease: "linear" }}
+            className="absolute top-1 left-0 text-xl opacity-20 will-change-transform"
           >
             {theme.bgDecorations[0] || "☁️"}
           </motion.div>
           <motion.div
-            animate={{ x: [380, -60] }}
-            transition={{ repeat: Infinity, duration: 32, ease: "linear" }}
-            className="absolute top-8 left-0 text-xl opacity-20"
+            animate={{ x: [360, -40] }}
+            transition={{ repeat: Infinity, duration: 34, ease: "linear" }}
+            className="absolute top-7 left-0 text-lg opacity-15 will-change-transform"
           >
-            {theme.bgDecorations[0] || "☁️"}
+            {theme.bgDecorations[1] || "✨"}
           </motion.div>
 
           {Array.from({ length: 4 }).map((_, i) => (
             <motion.div
               key={i}
-              initial={{ y: 130, x: 40 + i * 85, opacity: 0, scale: 0.5 }}
-              animate={{ y: [130, 20], opacity: [0, 0.7, 0.7, 0], scale: [0.5, 1.1, 0.5] }}
+              initial={{ y: 110, x: 50 + i * 80, opacity: 0, scale: 0.5 }}
+              animate={{ y: [110, 15], opacity: [0, 0.6, 0.6, 0], scale: [0.5, 1, 0.5] }}
               transition={{ repeat: Infinity, duration: 3.5 + i, delay: i * 0.7 }}
-              className="absolute text-sm"
+              className="absolute text-xs will-change-transform"
             >
               {theme.bgDecorations[3] || "✨"}
             </motion.div>
@@ -258,28 +302,22 @@ export default function AdventureHero({
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/30 border border-white/10 backdrop-blur-md text-[10.5px] font-black text-amber-300">
-            <Zap size={13} className="text-amber-400 fill-amber-400" />
-            <span>🔥 {xp.toLocaleString()} XP</span>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/30 border border-amber-400/30 backdrop-blur-md text-[10.5px] font-black text-[#FFC83D]">
+            <Zap size={13} className="text-[#FFC83D] fill-[#FFC83D]" />
+            <span> {xp.toLocaleString()} XP</span>
           </div>
         </div>
 
         {/* LIVING ADVENTURE WORLD SCENE (Flying Mascot over path to destination) */}
-        <div className="relative w-full h-[76px] z-10 flex flex-col justify-between my-1">
-          <div className="absolute inset-0 flex justify-between items-end px-2 opacity-40 pointer-events-none">
-            <span className="text-4xl">{theme.bgDecorations[1] || "🏔️"}</span>
-            <span className="text-3xl mb-4">{theme.bgDecorations[0] || "☁️"}</span>
-            <span className="text-4xl">{theme.bgDecorations[2] || "🏰"}</span>
-          </div>
-
-          <div className="absolute inset-0 flex items-center justify-center">
-            <svg viewBox="0 0 330 70" className="w-full h-full overflow-visible">
+        <div className="relative w-full h-[88px] z-10 my-0.5">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <svg viewBox="0 0 1000 100" preserveAspectRatio="none" className="w-full h-full overflow-visible">
               <path
                 d={pathD}
                 fill="none"
                 stroke="rgba(255,255,255,0.25)"
                 strokeWidth="4"
-                strokeDasharray="6 6"
+                strokeDasharray="8 8"
                 strokeLinecap="round"
               />
               <path
@@ -288,76 +326,97 @@ export default function AdventureHero({
                 stroke={theme.pathColor}
                 strokeWidth="5"
                 strokeDasharray={pathLength}
-                strokeDashoffset={pathLength - (pathLength * legProgress) / 100}
+                strokeDashoffset={strokeDashoffset}
                 strokeLinecap="round"
                 className="transition-all duration-1000"
               />
             </svg>
+          </div>
 
-            {/* START NODE */}
-            <div className="absolute left-2 bottom-3 flex flex-col items-center z-10">
-              <div className="w-7 h-7 rounded-full bg-white border-2 border-slate-700 flex items-center justify-center text-xs shadow-md">
-                📍
+          {/* START NODE (Aligned at 14% Center) */}
+          <div
+            className="absolute top-1/2 flex flex-col items-center z-10 w-[86px] text-center pointer-events-none"
+            style={{ left: "14%", transform: "translate(-50%, -50%)" }}
+          >
+            <div className="w-8 h-8 rounded-full bg-white border-2 border-slate-700 flex items-center justify-center text-sm shadow-md shrink-0">
+              📍
+            </div>
+            <span
+              title={startName}
+              className="text-[9px] font-black text-slate-200 uppercase mt-1 tracking-tight bg-black/60 px-1.5 py-0.5 rounded backdrop-blur-xs w-full truncate block shadow-xs"
+            >
+              {startName}
+            </span>
+          </div>
+
+          {/* CHARACTER MASCOT (Rides mathematically on the curve path) */}
+          <div
+            className="absolute transition-all duration-1000 ease-out z-20 pointer-events-none"
+            style={{
+              left: `${mascotXPercent}%`,
+              top: `${mascotYPercent}%`,
+              transform: "translate(-50%, -50%)",
+            }}
+          >
+            <motion.div
+              animate={{ y: [-2, 2, -2], rotate: [-3, 3, -3] }}
+              transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
+              className="flex flex-col items-center group pointer-events-auto cursor-pointer will-change-transform"
+            >
+              <div className="text-4xl filter drop-shadow-[0_6px_12px_rgba(0,0,0,0.5)] select-none">
+                {journeyData?.characterEmoji || theme.characterIcon}
               </div>
-              <span className="text-[9px] font-black text-slate-200 uppercase mt-0.5 tracking-tighter bg-black/40 px-1.5 py-0.5 rounded backdrop-blur-xs">
-                {startName}
+              <span className="text-[9px] font-black bg-[#141779] text-white px-2 py-0.5 rounded-full uppercase shadow-md -mt-1 tracking-wider border border-indigo-300/50 whitespace-nowrap">
+                {t('you', { defaultValue: "YOU" })}
               </span>
-            </div>
+            </motion.div>
+          </div>
 
-            {/* CHARACTER MASCOT */}
-            <div className="absolute inset-x-0 inset-y-0 pointer-events-none z-20">
-              <div
-                className="h-full flex items-center transition-all duration-1000"
-                style={{ marginLeft: `calc(${mascotLeftPercent}% - 18px)` }}
-              >
-                <motion.div
-                  animate={{ y: [-4, 4, -4], rotate: [-4, 4, -4] }}
-                  transition={{ repeat: Infinity, duration: 1.6, ease: "easeInOut" }}
-                  className="flex flex-col items-center group cursor-pointer"
-                >
-                  <div className="text-4xl filter drop-shadow-[0_6px_12px_rgba(0,0,0,0.4)] select-none">
-                    {theme.characterIcon}
-                  </div>
-                  <span className="text-[9px] font-black bg-amber-400 text-slate-950 px-1.5 py-0.5 rounded-full uppercase shadow-md -mt-1 tracking-wider border border-amber-300">
-                    {t('you', { defaultValue: "YOU" })}
-                  </span>
-                </motion.div>
-              </div>
-            </div>
-
-            {/* DESTINATION NODE */}
-            <div className="absolute right-2 top-2 flex flex-col items-center z-10">
-              <motion.div
-                animate={{ scale: [1, 1.15, 1] }}
-                transition={{ repeat: Infinity, duration: 2 }}
-                className="w-10 h-10 rounded-2xl bg-amber-400/20 border-2 border-amber-300 flex items-center justify-center text-xl shadow-lg backdrop-blur-md relative"
-              >
-                <span className="select-none">{theme.rewardIcon}</span>
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full animate-ping" />
-              </motion.div>
-              <span className="text-[9px] font-black text-amber-300 uppercase mt-0.5 tracking-tighter bg-black/40 px-1.5 py-0.5 rounded backdrop-blur-xs">
-                {t(theme.rewardName.toLowerCase().replace(/ /g, '_'), { defaultValue: theme.rewardName })}
-              </span>
-            </div>
+          {/* DESTINATION NODE (Aligned at 86% Center) */}
+          <div
+            className="absolute top-1/2 flex flex-col items-center z-10 w-[86px] text-center pointer-events-none"
+            style={{ left: "86%", transform: "translate(-50%, -50%)" }}
+          >
+            <motion.div
+              animate={{ scale: [1, 1.08, 1] }}
+              transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+              className="w-10 h-10 rounded-2xl bg-white/15 border-2 border-indigo-200 flex items-center justify-center text-xl shadow-lg backdrop-blur-md relative shrink-0 will-change-transform"
+            >
+              <span className="select-none">{journeyData?.nextNodeEmoji || theme.rewardIcon}</span>
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-teal-400 rounded-full animate-ping" />
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-teal-400 rounded-full" />
+            </motion.div>
+            <span
+              title={endName}
+              className="text-[9px] font-black text-indigo-200 uppercase mt-1 tracking-tight bg-black/70 px-1.5 py-0.5 rounded backdrop-blur-xs w-full truncate block shadow-xs"
+            >
+              {endName}
+            </span>
           </div>
         </div>
 
         {/* PROGRESS SUPPORTING INDICATOR */}
         <div className="z-10 bg-black/30 border border-white/10 rounded-2xl p-2.5 flex flex-col gap-1 backdrop-blur-md">
           <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-200">
-            <span>{t('progress_to', { destination: endName, defaultValue: `Progress to ${endName}` })}</span>
-            <span className={theme.accentTextColor}>{t('completed_label', { percent: legProgress, defaultValue: `${legProgress}% COMPLETED` })}</span>
+            <span className="truncate max-w-[65%]" title={t('progress_to', { destination: endName, defaultValue: `Progress to ${endName}` })}>
+              {t('progress_to', { destination: endName, defaultValue: `Progress to ${endName}` })}
+            </span>
+            <span className="text-[#FFC83D] font-black shrink-0">
+              {t('completed_label', { percent: legProgressClamped, defaultValue: `${legProgressClamped}% COMPLETED` })}
+            </span>
           </div>
           <div className="w-full h-2 bg-white/15 rounded-full overflow-hidden p-0.5">
             <div
-              className="h-full bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 rounded-full transition-all duration-700 shadow-xs"
-              style={{ width: `${legProgress}%` }}
+              className="h-full bg-gradient-to-r from-[#35E5D4] via-[#14C8C6] to-[#006a62] rounded-full transition-all duration-700 shadow-xs"
+              style={{ width: `${legProgressClamped}%` }}
             />
           </div>
           <div className="flex justify-between items-center text-[9.5px] font-extrabold text-slate-300 mt-0.5">
-            <span>{t('unlock_label', { destination: endName, defaultValue: `${endName} Unlock` })}</span>
-            <span className="text-amber-300">
-              {chaptersRemaining !== undefined 
+            <span className="truncate max-w-[60%]" title={t('unlock_label', { destination: endName, defaultValue: `${endName} Unlock` })}>
+              {t('unlock_label', { destination: endName, defaultValue: `${endName} Unlock` })}
+            </span>
+            <span className="text-[#FFC83D] font-extrabold shrink-0">
+              {chaptersRemaining !== undefined
                 ? (chaptersRemaining > 0 ? t('chapters_remaining_count', { count: chaptersRemaining, defaultValue: `${chaptersRemaining} chapter(s) remaining` }) : t('stage_complete', { defaultValue: "Stage Complete!" }))
                 : (xpRemaining > 0 ? t('xp_remaining_count', { count: xpRemaining, defaultValue: `${xpRemaining} XP Remaining` }) : t('ready_to_unlock', { defaultValue: "Ready to Unlock!" }))}
             </span>
@@ -367,58 +426,65 @@ export default function AdventureHero({
         {/* PRIMARY ACTION CTA BUTTON */}
         <button
           onClick={onCtaClick}
-          className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-[0_6px_20px_rgba(245,158,11,0.4)] active:scale-95 transition-all border-2 border-amber-300 flex items-center justify-center gap-2 z-10"
+          className={`w-full py-3.5 rounded-2xl bg-gradient-to-r ${theme.ctaGradient} hover:brightness-110 text-white font-black text-xs uppercase tracking-wider active:scale-95 transition-all border-2 flex items-center justify-center gap-2 z-10 cursor-pointer`}
         >
           <span>{t(theme.ctaTextKey, { defaultValue: theme.ctaText })}</span>
         </button>
       </div>
 
-      {/* TODAY'S QUEST CARD */}
-      <div className="w-full bg-white rounded-3xl p-4 border-2 border-slate-100 shadow-sm flex flex-col gap-3">
-        <div className="flex justify-between items-center border-b border-slate-100 pb-2.5">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-200 shadow-xs">
-              <Target size={18} />
+      {/* 2. TODAY'S QUEST CARD (100% MATCHING SCREENSHOT) */}
+      <div className="w-full bg-white rounded-[28px] p-4 border border-slate-100 shadow-xs flex flex-col gap-3">
+        {/* Top Header Row */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="w-11 h-11 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center text-2xl shrink-0 shadow-2xs">
+              🎯
             </div>
-            <div>
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block leading-none">
+            <div className="min-w-0 flex-1">
+              <span className="text-[10px] font-black text-[#4f46e5] uppercase tracking-wider block">
                 {t('todays_quest', { defaultValue: "TODAY'S QUEST" })}
               </span>
-              <h4 className="text-xs font-black text-slate-900 mt-0.5 leading-snug">
-                {t(displayMissionTitle.toLowerCase().replace(/ /g, '_'), { defaultValue: displayMissionTitle })}
+              <h4 className="text-sm font-black text-[#1c1970] leading-tight truncate mt-0.5">
+                {t(displayMissionTitle.toLowerCase().replace(/ /g, '_'), { defaultValue: displayMissionTitle || "Win 7 Boss Battles" })}
               </h4>
+              <p className="text-[11px] font-semibold text-slate-400 truncate mt-0.5">
+                {t('defeat_boss_desc', { defaultValue: "Defeat 7 boss battles and earn rewards!" })}
+              </p>
             </div>
           </div>
-        </div>
 
-        <div className="flex items-center justify-between gap-2.5 sm:gap-3">
-          <div className="flex-1 flex flex-col gap-1 min-w-0">
-            <div className="flex justify-between text-[10px] font-black text-slate-600 uppercase gap-1">
-              <span className="whitespace-nowrap truncate">{t('mission_progress', { defaultValue: "Mission Progress" })}</span>
-              <span className="text-indigo-600 font-extrabold whitespace-nowrap">
-                {displayMissionProgress.current} / {displayMissionProgress.total}
-              </span>
-            </div>
-            <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200">
+          {/* Progress Meter on Right */}
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <span className="text-xs font-black text-[#4f46e5]">
+              {displayMissionProgress.current} / {displayMissionProgress.total}
+            </span>
+            <div className="w-20 h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/60 p-0.5">
               <div
-                className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full transition-all duration-500"
-                style={{ width: `${(displayMissionProgress.current / displayMissionProgress.total) * 100}%` }}
+                className="h-full bg-[#4f46e5] rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(100, (displayMissionProgress.current / displayMissionProgress.total) * 100)}%` }}
               />
             </div>
           </div>
-
-          <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-800 text-[9.5px] sm:text-[10.5px] font-black px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-xl shrink-0 whitespace-nowrap">
-            <span>🎁 {displayMissionRewardText}</span>
-          </div>
         </div>
 
-        <button
-          onClick={onMissionClick || onCtaClick}
-          className="w-full py-2.5 bg-gradient-to-r from-[#141779] to-[#30007f] hover:brightness-110 active:scale-95 text-white font-black text-[11px] uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5"
-        >
-          <span>{t('continue_quest', { defaultValue: "CONTINUE QUEST →" })}</span>
-        </button>
+        {/* Bottom Rewards & CTA Button Row */}
+        <div className="flex items-center justify-between gap-1.5 pt-1">
+          <span className="bg-[#fff0f3] text-[#f43f5e] font-black border border-rose-100 px-2.5 py-2 rounded-2xl text-[10.5px] sm:text-[11px] flex items-center justify-center gap-1 shadow-2xs whitespace-nowrap">
+            🎁 +{displayXpReward} XP
+          </span>
+          <span className="bg-[#fffbeb] text-[#d97706] font-black border border-amber-100 px-2.5 py-2 rounded-2xl text-[10.5px] sm:text-[11px] flex items-center justify-center gap-1 shadow-2xs whitespace-nowrap">
+            🪙 +{displayCoinReward} Coins
+          </span>
+          <button
+            onClick={onMissionClick || onCtaClick}
+            className="bg-[#1c1970] hover:bg-[#25218c] text-white font-black text-[11px] sm:text-xs uppercase tracking-wider px-3 py-2 rounded-2xl shadow-md transition-transform active:scale-95 flex items-center justify-center gap-1 shrink-0 whitespace-nowrap"
+          >
+            <span>{t('continue_quest', { defaultValue: "CONTINUE QUEST ->" })}</span>
+          </button>
+        </div>
       </div>
     </div>
   );
 }
+
+export default React.memo(AdventureHero);

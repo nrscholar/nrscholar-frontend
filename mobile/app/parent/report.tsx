@@ -387,9 +387,9 @@ export default function StudentReport() {
             </View>
             <View style={styles.verticalDivider} />
             <View style={styles.monthlyStatCell}>
-              <Text style={styles.monthlyStatLabel}>BOSSES</Text>
-              <Text style={[styles.monthlyStatNum, { color: C.error }]}>
-                {reportData?.monthlyStats?.bossesDefeated ?? 0}
+              <Text style={styles.monthlyStatLabel}>CHAPTERS</Text>
+              <Text style={[styles.monthlyStatNum, { color: C.primary }]}>
+                {reportData?.monthlyStats?.chaptersCompleted ?? reportData?.monthlyStats?.bossesDefeated ?? 0}
               </Text>
             </View>
           </View>

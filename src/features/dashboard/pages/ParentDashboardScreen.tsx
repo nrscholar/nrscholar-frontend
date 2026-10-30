@@ -1,11 +1,21 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Bell, BookOpen, Clock, Heart, ShieldAlert, Sparkles, TrendingUp, Trophy, Zap, ChevronRight, Download, Share2, Award, Calendar, CheckCircle, CheckCircle2, Target, BarChart2, Flame, UserCheck, RefreshCw, X, AlertTriangle, Users, BrainCircuit, Activity, Settings } from "lucide-react";
-import FamilyLinkModal from "../../../components/FamilyLinkModal";
+import { ArrowLeft, Bell, BookOpen, Clock, Heart, ShieldAlert, Sparkles, TrendingUp, Trophy, Zap, ChevronRight, ChevronDown, Download, Share2, Award, Calendar, CheckCircle, CheckCircle2, Target, BarChart2, Flame, UserCheck, RefreshCw, X, AlertTriangle, Users, BrainCircuit, Activity, Settings } from "lucide-react";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
+import { getActiveUserContext } from "../../../utils/sessionCache";
 import ChildSwitcherModal from "../../../components/ChildSwitcherModal";
 import { translateNotificationTitle, translateNotificationMessage } from "../../../utils/notificationTranslator";
+import { 
+  getSubjectChartColor, 
+  getCategorySubjectChartColor, 
+  isCategoryTrendMode, 
+  STRENGTH_GREEN_SHADES, 
+  RISK_AMBER_SHADES, 
+  WEAKNESS_RED_SHADES 
+} from "../../../utils/chartColors";
+import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
+import DynamicAiInsightCard from "../../../components/DynamicAiInsightCard";
 
 export default function ParentDashboardScreen() {
   const { t } = useTranslation();
@@ -13,45 +23,91 @@ export default function ParentDashboardScreen() {
 
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [childName, setChildName] = useState("Explorer");
-  const [parentPhoto, setParentPhoto] = useState("");
-  const [userLevel, setUserLevel] = useState(1);
-  const [xp, setXp] = useState(0);
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = useState<any>(() => {
+    try {
+      const cached = localStorage.getItem("userData") || localStorage.getItem("user");
+      return cached ? JSON.parse(cached) : null;
+    } catch (e) { return null; }
+  });
+  const [childName, setChildName] = useState(() => userData?.childName || "Explorer");
+  const cleanChildName = childName || "Explorer";
+  const [parentPhoto, setParentPhoto] = useState(() => userData?.parentPhoto || "");
+  const [userLevel, setUserLevel] = useState(() => userData?.parentLevel || 1);
+  const [xp, setXp] = useState(() => userData?.parentXp || 0);
   const [showSwitcher, setShowSwitcher] = useState(false);
 
+  const isCoParent = Boolean(
+    userData?.isSecondaryParent ||
+    userData?.isCoParent ||
+    userData?.role === "co_parent" ||
+    userData?.role === "secondary_parent" ||
+    userData?.primary_parent_id
+  );
+
+  const activeChild = (userData?.children || []).find((c: any) => c.childId === userData?.activeChildId);
+  const childClass = activeChild?.childClass || userData?.childClass || "";
+  const childPhoto = activeChild?.childPhoto || userData?.childPhoto || "";
+
+  const [reportData, setReportData] = useState<any>(null);
   const [modalType, setModalType] = useState<"strengths" | "weaknesses" | "risks" | "lastActivity" | "graph" | null>(null);
   const [strengths, setStrengths] = useState<string[]>([]);
   const [weaknesses, setWeaknesses] = useState<string[]>([]);
   const [risks, setRisks] = useState<string[]>([]);
+  const [strengthSubjects, setStrengthSubjects] = useState<any[]>([]);
+  const [weaknessSubjects, setWeaknessSubjects] = useState<any[]>([]);
+  const [riskSubjects, setRiskSubjects] = useState<any[]>([]);
   const [todayTime, setTodayTime] = useState(0);
   const [solvedToday, setSolvedToday] = useState(0);
   const [todayConfidenceScore, setTodayConfidenceScore] = useState(0);
 
   const [weeklyTrend, setWeeklyTrend] = useState<{ day: string, score: number }[]>([]);
-  const [subjectBreakdown, setSubjectBreakdown] = useState<{ subject: string, accuracy: number }[]>([]);
-  const [lastActivity, setLastActivity] = useState<string>("Exploring new quests...");
+  const [subjectBreakdown, setSubjectBreakdown] = useState<{
+    subject: string;
+    accuracy: number;
+    isStrength?: boolean;
+    isWeakness?: boolean;
+    isRisk?: boolean;
+    consecutiveDaysBelow70?: number;
+    chaptersCompleted?: number;
+    totalChapters?: number;
+    progress?: number;
+    correctAnswers?: number;
+    wrongAnswers?: number;
+    monthImprovement?: number | null;
+    prevMonthAccuracy?: number | null;
+    currentMonthAccuracy?: number | null;
+    timeline?: any[];
+    trend7Day?: any[];
+  }[]>([]);
+  const [lastActivity, setLastActivity] = useState<string>("");
   const [lastActivityDetails, setLastActivityDetails] = useState<any>(null);
   const [top3SubjectsTrend, setTop3SubjectsTrend] = useState<any[]>([]);
+  const [allSubjectsTrend, setAllSubjectsTrend] = useState<any[]>([]);
   const [hasEnoughData, setHasEnoughData] = useState(true);
   const [hasRiskAlert, setHasRiskAlert] = useState(false);
   const [riskTrend, setRiskTrend] = useState<{ day: string, score: number, isPredicted?: boolean }[]>([]);
+  const [mathTrend, setMathTrend] = useState<{ day: string, score: number, isPredicted?: boolean }[]>([]);
+  const [scienceTrend, setScienceTrend] = useState<{ day: string, score: number, isPredicted?: boolean }[]>([]);
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [dailyTipTitle, setDailyTipTitle] = useState<string | null>(null);
 
   const [showBreakdownModal, setShowBreakdownModal] = useState(false);
-  const [showFamilyModal, setShowFamilyModal] = useState(false);
   const [breakdownData, setBreakdownData] = useState<any>(null);
   const [loadingBreakdown, setLoadingBreakdown] = useState(false);
 
   const openBreakdown = async () => {
+    window.history.pushState({ parentBreakdownModal: true }, "");
     setShowBreakdownModal(true);
     setLoadingBreakdown(true);
     try {
       const tzOffset = -new Date().getTimezoneOffset();
-      const res = await apiFetch(`/api/parent/today-breakdown?tz_offset_minutes=${tzOffset}`);
+      const activeCtx = getActiveUserContext();
+      const classParam = activeCtx.classLevel ? `&classLevel=${encodeURIComponent(activeCtx.classLevel)}` : "";
+      const childParam = userData?.activeChildId ? `&childId=${encodeURIComponent(userData.activeChildId)}` : "";
+      const res = await apiFetch(`/api/parent/today-breakdown?tz_offset_minutes=${tzOffset}${childParam}${classParam}`);
       const json = await res.json();
       if (json.success && json.data) {
         setBreakdownData(json.data);
@@ -63,6 +119,14 @@ export default function ParentDashboardScreen() {
     }
   };
 
+  const closeBreakdown = () => {
+    if (window.history.state && window.history.state.parentBreakdownModal) {
+      window.history.back();
+    } else {
+      setShowBreakdownModal(false);
+    }
+  };
+
   const getActiveChildId = () => userData?.activeChildId || null;
 
   const loadData = useCallback(async () => {
@@ -71,7 +135,7 @@ export default function ParentDashboardScreen() {
       const tzOffset = -new Date().getTimezoneOffset();
       
       const userRes = await apiFetch("/api/users/me").catch(() => null);
-      let currentChildId = null;
+      let currentChildId = userData?.activeChildId || null;
 
       if (userRes && userRes.ok) {
         const json = await userRes.json();
@@ -82,26 +146,54 @@ export default function ParentDashboardScreen() {
           setParentPhoto(user.parentPhoto || "");
           setUserLevel(user.parentLevel || 1);
           setXp(user.parentXp || 0);
-          currentChildId = user.activeChildId || null;
+          currentChildId = user.activeChildId || currentChildId;
         }
       }
 
-      const childParam = currentChildId ? `&childId=${currentChildId}` : "";
+      if (!currentChildId) {
+        try {
+          const stored = localStorage.getItem("userData");
+          if (stored) {
+            const u = JSON.parse(stored);
+            currentChildId = u.activeChildId || u.children?.[0]?.childId || null;
+          }
+        } catch (e) {}
+      }
+
+      const activeCtx = getActiveUserContext();
+      const activeClass = activeCtx.classLevel;
+      const classParam = activeClass ? `&classLevel=${encodeURIComponent(activeClass)}` : "";
+      const childParam = currentChildId ? `&childId=${encodeURIComponent(currentChildId)}` : "";
       
-      const [reportRes, notifRes] = await Promise.all([
-        apiFetch(`/api/parent/report?tz_offset_minutes=${tzOffset}${childParam}`).catch(() => null),
-        apiFetch("/api/notifications").catch(() => null)
+      const tipParam = [childParam.replace("&", ""), classParam.replace("&", "")].filter(Boolean).join("&");
+      const [reportRes, notifRes, tipRes] = await Promise.all([
+        apiFetch(`/api/parent/report?tz_offset_minutes=${tzOffset}${childParam}${classParam}`).catch(() => null),
+        apiFetch(`/api/notifications?role=parent${childParam}${classParam}`).catch(() => null),
+        apiFetch(`/api/parent/daily-tip${tipParam ? `?${tipParam}` : ""}`).catch(() => null)
       ]);
+
+      if (tipRes && tipRes.ok) {
+        const tipJson = await tipRes.json();
+        if (tipJson.success && tipJson.data?.title) {
+          setDailyTipTitle(tipJson.data.title);
+        }
+      }
 
       if (reportRes && reportRes.ok) {
         const repJson = await reportRes.json();
         if (repJson.success && repJson.data) {
+          setReportData(repJson.data);
           if (repJson.data.hasEnoughData !== undefined) setHasEnoughData(Boolean(repJson.data.hasEnoughData));
           if (repJson.data.hasRiskAlert !== undefined) setHasRiskAlert(Boolean(repJson.data.hasRiskAlert));
           if (repJson.data.riskTrend) setRiskTrend(repJson.data.riskTrend);
+          if (repJson.data.mathTrend) setMathTrend(repJson.data.mathTrend);
+          if (repJson.data.scienceTrend) setScienceTrend(repJson.data.scienceTrend);
           if (repJson.data.strengths) setStrengths(repJson.data.strengths);
           if (repJson.data.weaknesses) setWeaknesses(repJson.data.weaknesses);
           if (repJson.data.risks) setRisks(repJson.data.risks);
+          if (repJson.data.strengthSubjects) setStrengthSubjects(repJson.data.strengthSubjects);
+          if (repJson.data.weaknessSubjects) setWeaknessSubjects(repJson.data.weaknessSubjects);
+          if (repJson.data.riskSubjects) setRiskSubjects(repJson.data.riskSubjects);
           if (repJson.data.todayTimeMinutes !== undefined) setTodayTime(repJson.data.todayTimeMinutes);
           if (repJson.data.todaySolved !== undefined) setSolvedToday(repJson.data.todaySolved);
           if (repJson.data.todayConfidenceScore !== undefined) setTodayConfidenceScore(repJson.data.todayConfidenceScore);
@@ -110,6 +202,7 @@ export default function ParentDashboardScreen() {
           if (repJson.data.lastActivity) setLastActivity(repJson.data.lastActivity);
           setLastActivityDetails(repJson.data.lastActivityDetails || null);
           if (repJson.data.top3SubjectsTrend) setTop3SubjectsTrend(repJson.data.top3SubjectsTrend);
+          if (repJson.data.allSubjectsTrend) setAllSubjectsTrend(repJson.data.allSubjectsTrend);
         }
       }
 
@@ -140,14 +233,64 @@ export default function ParentDashboardScreen() {
           setUserData(u);
         } catch (e) {}
       }
+      loadData();
     };
     window.addEventListener("userDataUpdated", handleUserDataUpdate);
     return () => window.removeEventListener("userDataUpdated", handleUserDataUpdate);
   }, [loadData]);
 
+  const modalTypeRef = useRef(modalType);
+  useEffect(() => {
+    modalTypeRef.current = modalType;
+  }, [modalType]);
+
+  const showBreakdownModalRef = useRef(showBreakdownModal);
+  useEffect(() => {
+    showBreakdownModalRef.current = showBreakdownModal;
+  }, [showBreakdownModal]);
+
+  // Lock background scrolling and touch interactions whenever any modal is active
+  useLockBodyScroll(Boolean(modalType || showBreakdownModal || showNotifications));
+
+  // Handle hardware / browser phone back button while modal is open to dismiss modal without leaving dashboard
+  useEffect(() => {
+    const handlePopState = () => {
+      if (modalTypeRef.current) {
+        setModalType(null);
+      } else if (showBreakdownModalRef.current) {
+        setShowBreakdownModal(false);
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
+
+  const handleOpenModal = (type: "strengths" | "weaknesses" | "risks") => {
+    window.history.pushState({ parentModal: type }, "");
+    setModalType(type);
+  };
+
+  const handleCloseModal = () => {
+    if (window.history.state && window.history.state.parentModal) {
+      window.history.back();
+    } else {
+      setModalType(null);
+    }
+  };
+
   const markAllRead = async () => {
     try {
-      await apiFetch("/api/notifications/mark-all-read?role=parent", { method: "POST" });
+      const activeCid = userData?.activeChildId || getActiveChildId() || (() => {
+        try {
+          const stored = localStorage.getItem("userData");
+          return stored ? JSON.parse(stored).activeChildId : null;
+        } catch (e) { return null; }
+      })();
+      const markParam = activeCid ? `&childId=${encodeURIComponent(activeCid)}` : "";
+      await apiFetch(`/api/notifications/mark-all-read?role=parent${markParam}`, { method: "POST" });
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
       setUnreadCount(0);
     } catch (e) { }
@@ -161,9 +304,18 @@ export default function ParentDashboardScreen() {
     const baseFinalScore = dataset[dataset.length - 1].score;
     const offset = (targetAcc !== undefined && (!customTrend || customTrend.length === 0)) ? targetAcc - baseFinalScore : 0;
 
+    let lastKnown = 0;
+    let started = false;
     const points = dataset.map((t, i) => {
       const x = (i / Math.max(1, (dataset.length - 1))) * width;
-      let score = t.score + offset;
+      let rawScore = typeof t.score === 'number' ? t.score : 0;
+      if (rawScore > 0) {
+        lastKnown = rawScore;
+        started = true;
+      } else if (started) {
+        rawScore = lastKnown;
+      }
+      let score = rawScore + offset;
       score = Math.max(0, Math.min(100, score)); // clamp
       const y = height - (score / 100) * height;
       return { x, y, score: Math.round(score), day: t.day };
@@ -268,6 +420,9 @@ export default function ParentDashboardScreen() {
       .replace(/needs attention with (\d+)% accuracy/g, (_, acc) =>
         t("insight_needs_attention", { acc, defaultValue: `${acc}% ચોકસાઈ સાથે વધુ ધ્યાન આપવાની જરૂર છે.` })
       )
+      .replace(/needs improvement with (\d+)% accuracy/g, (_, acc) =>
+        t("insight_needs_improvement", { acc, defaultValue: `${acc}% ચોકસાઈ સાથે સુધારાની જરૂર છે.` })
+      )
       .replace(/is maintaining good scores across all subjects/g,
         t("insight_maintaining_good", "તમામ વિષયોમાં સારું પ્રદર્શન જાળવી રહ્યું છે.")
       )
@@ -288,7 +443,7 @@ export default function ParentDashboardScreen() {
   };
 
   const formatNotifTitle = (title: string) => translateNotificationTitle(title, t);
-  const formatNotifMsg = (msg: string) => translateNotificationMessage(msg, t);
+  const formatNotifMsg = (msg: string) => translateNotificationMessage(msg, t, activeChild?.childName || userData?.childName);
 
   let highestSubject: string | null = null;
   let lowestSubject: string | null = null;
@@ -302,18 +457,65 @@ export default function ParentDashboardScreen() {
     lowestAcc = sorted[sorted.length - 1].accuracy;
   }
 
-  const cleanChildName = (!childName || childName === "999" || /^\d+$/.test(childName)) ? "your child" : childName;
-  const activeTrend = modalType === "risks" ? riskTrend : undefined;
-  const targetAcc = modalType === "strengths" ? (highestAcc ?? undefined) : modalType === "weaknesses" ? (lowestAcc ?? undefined) : undefined;
+  const maxAccuracy = subjectBreakdown.length > 0 ? Math.max(...subjectBreakdown.map(s => s.accuracy)) : 0;
+  
+  // Strength: strictly accuracy >= 70%
+  const rawStrengthList = Array.isArray(reportData?.strengthSubjects)
+    ? reportData.strengthSubjects
+    : (strengthSubjects.length > 0
+      ? strengthSubjects
+      : subjectBreakdown.filter(s => (s.accuracy ?? 0) >= 70 && (s.isStrength || s.accuracy === maxAccuracy)));
+  const actualStrengthSubjects = !hasEnoughData
+    ? []
+    : rawStrengthList.filter((s: any) => (s.accuracy ?? 0) >= 70);
+
+  const strengthSubNames = new Set(actualStrengthSubjects.map((s: any) => s.subject));
+
+  // Weakness: strictly accuracy < 70% and persistent (consecutiveDaysBelow70 >= 2 or isWeakness), strictly excluding Strength
+  const rawWeakList = Array.isArray(reportData?.weaknessSubjects)
+    ? reportData.weaknessSubjects
+    : (weaknessSubjects.length > 0
+      ? weaknessSubjects
+      : subjectBreakdown.filter(s => (s.accuracy ?? 0) < 70 && (s.isWeakness || (s.consecutiveDaysBelow70 !== undefined && s.consecutiveDaysBelow70 >= 2))));
+  const actualWeakSubjects = !hasEnoughData
+    ? []
+    : rawWeakList.filter((s: any) => (s.accuracy ?? 0) < 70 && !strengthSubNames.has(s.subject));
+
+  const weakSubNames = new Set(actualWeakSubjects.map((s: any) => s.subject));
+
+  // Risk: strictly accuracy < 70% (Day 1 below 70%), strictly excluding Strength and Weakness
+  const rawRiskList = Array.isArray(reportData?.riskSubjects)
+    ? reportData.riskSubjects
+    : (riskSubjects.length > 0
+      ? riskSubjects
+      : subjectBreakdown.filter(s => (s.accuracy ?? 0) < 70 && (s.isRisk || s.consecutiveDaysBelow70 === 1)));
+  const actualRiskSubjects = !hasEnoughData
+    ? []
+    : rawRiskList.filter((s: any) => (s.accuracy ?? 0) < 70 && !strengthSubNames.has(s.subject) && !weakSubNames.has(s.subject));
+
+  const activeTrend = modalType === "risks"
+    ? (riskTrend && riskTrend.length > 0 ? riskTrend : undefined)
+    : modalType === "weaknesses"
+    ? (scienceTrend && scienceTrend.length > 0 ? scienceTrend : undefined)
+    : modalType === "strengths"
+    ? (mathTrend && mathTrend.length > 0 ? mathTrend : undefined)
+    : undefined;
+  const targetAcc = modalType === "strengths"
+    ? (actualStrengthSubjects[0]?.accuracy ?? (maxAccuracy || undefined))
+    : modalType === "weaknesses"
+    ? (actualWeakSubjects.length > 0 ? Math.min(...actualWeakSubjects.map(s => s.accuracy)) : (lowestAcc ?? undefined))
+    : modalType === "risks"
+    ? (actualRiskSubjects.length > 0 ? Math.min(...actualRiskSubjects.map(s => s.accuracy)) : (lowestAcc ?? undefined))
+    : undefined;
   const translatedHighest = highestSubject ? translateSubjectName(highestSubject) : "";
   const translatedLowest = lowestSubject ? translateSubjectName(lowestSubject) : "";
 
   const chartTitle = modalType === "strengths"
-    ? (translatedHighest ? `${translatedHighest} ${t("trend", "Trend")}` : t("top_subject_trend", "Top Subject Trend"))
+    ? (actualStrengthSubjects.length > 0 ? `${actualStrengthSubjects.map(s => translateSubjectName(s.subject)).join(" & ")} ${t("trend", "Trend")}` : (translatedHighest ? `${translatedHighest} ${t("trend", "Trend")}` : t("top_subject_trend", "Top Subject Trend")))
     : modalType === "weaknesses"
-    ? (translatedLowest ? `${translatedLowest} ${t("focus_trend", "Focus Trend")}` : t("focus_area_trend", "Focus Area Trend"))
+    ? (actualWeakSubjects.length > 0 ? `${actualWeakSubjects.map(s => translateSubjectName(s.subject)).join(" & ")} ${t("focus_trend", "Focus Trend")}` : (translatedLowest ? `${translatedLowest} ${t("focus_trend", "Focus Trend")}` : t("focus_area_trend", "Focus Area Trend")))
     : modalType === "risks"
-    ? t("at_risk_subject_trend", "At-Risk Subject Trend")
+    ? (actualRiskSubjects.length > 0 ? `${actualRiskSubjects.map(s => translateSubjectName(s.subject)).join(" & ")} ${t("at_risk_subject_trend", "At-Risk Subject Trend")}` : t("at_risk_subject_trend", "At-Risk Subject Trend"))
     : t("overall_trend", "Overall Trend");
 
   const chart = generateChartData(activeTrend, targetAcc);
@@ -321,45 +523,685 @@ export default function ParentDashboardScreen() {
   const startScore = chart.points.length > 0 ? chart.points[0].score : 0;
   const diff = chart.points.length > 0 ? currentScore - startScore : 0;
   const diffStr = chart.points.length > 0 ? (diff >= 0 ? `+${diff}% ${t("this_week", "this week")}` : `${diff}% ${t("this_week", "this week")}`) : "";
-  const chartColor = (modalType === "weaknesses" || modalType === "risks") ? "#ba1a1a" : "#006a62";
+  const chartColor = modalType === "weaknesses" ? "#dc2626" : modalType === "risks" ? "#d97706" : "#006a62";
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f9fb] px-5 pt-[104px] flex flex-col gap-6 relative">
-        <header className="fixed top-0 left-0 right-0 flex items-center justify-between px-6 h-20 bg-white/60 backdrop-blur-xl border-b border-white/40 z-50">
-          <div className="flex items-center gap-3 w-full">
-            <div className="w-11 h-11 bg-gray-200 animate-pulse rounded-full"></div>
-            <div className="w-10 h-10 bg-gray-200 animate-pulse rounded-full"></div>
-            <div className="h-6 w-32 bg-gray-200 animate-pulse rounded"></div>
+      <div className="min-h-screen bg-[#f4f7fb] font-sans relative pb-4 overflow-hidden">
+        {/* Top App Bar Skeleton */}
+        <header className="sticky top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 h-16 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] w-full">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full animate-skeleton shrink-0" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full animate-skeleton shrink-0" />
+            <div className="h-5 w-28 rounded-md animate-skeleton" />
+          </div>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full animate-skeleton shrink-0" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full animate-skeleton shrink-0" />
           </div>
         </header>
-        <div className="bg-gray-200 animate-pulse rounded-[24px] h-64 w-full"></div>
-        <div className="flex flex-col gap-3">
-          <div className="h-5 w-40 bg-gray-200 animate-pulse rounded"></div>
-          <div className="bg-gray-200 animate-pulse rounded-[20px] h-20 w-full"></div>
-          <div className="bg-gray-200 animate-pulse rounded-[20px] h-20 w-full"></div>
-          <div className="bg-gray-200 animate-pulse rounded-[20px] h-20 w-full"></div>
+
+        {/* Main Content Skeleton */}
+        <div className="px-4 pt-4 max-w-lg mx-auto flex flex-col gap-4">
+          {/* Profile Card Skeleton */}
+          <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs space-y-2.5">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full animate-skeleton" />
+                <div className="h-5 w-36 rounded-md animate-skeleton" />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="h-6 w-16 rounded-full animate-skeleton" />
+                <div className="h-6 w-20 rounded-full animate-skeleton" />
+              </div>
+            </div>
+
+            {/* 2-Column Metrics Skeleton */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-slate-50/80 rounded-xl py-2 px-3 h-14 flex flex-col justify-center items-center border border-slate-200/60">
+                <div className="h-5 w-14 rounded-md animate-skeleton mb-1" />
+                <div className="h-2 w-16 rounded animate-skeleton" />
+              </div>
+              <div className="bg-slate-50/80 rounded-xl py-2 px-3 h-14 flex flex-col justify-center items-center border border-slate-200/60">
+                <div className="h-5 w-10 rounded-md animate-skeleton mb-1" />
+                <div className="h-2 w-16 rounded animate-skeleton" />
+              </div>
+            </div>
+
+            {/* Confidence Progress Skeleton */}
+            <div className="space-y-1 pt-0.5">
+              <div className="flex justify-between">
+                <div className="h-2.5 w-32 rounded animate-skeleton" />
+                <div className="h-2.5 w-6 rounded animate-skeleton" />
+              </div>
+              <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full w-3/4 rounded-full animate-skeleton" />
+              </div>
+            </div>
+          </div>
+
+          {/* Cognitive Cards Skeleton */}
+          <div className="space-y-2">
+            <div className="h-3 w-44 rounded animate-skeleton ml-1" />
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-2xl p-3 border border-slate-200/70 shadow-xs h-20 flex flex-col justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg animate-skeleton" />
+                  <div className="h-3.5 w-24 rounded animate-skeleton" />
+                </div>
+                <div className="h-2.5 w-3/4 rounded animate-skeleton" />
+              </div>
+            ))}
+          </div>
+
+          {/* Chart Skeleton */}
+          <div className="bg-white rounded-2xl p-4 border border-slate-200/70 shadow-xs h-44 animate-skeleton" />
+
+          {/* Recent Activity Skeleton */}
+          <div className="space-y-1.5">
+            <div className="h-3 w-28 rounded animate-skeleton ml-1" />
+            <div className="bg-white rounded-2xl p-3 border border-slate-200/70 shadow-xs h-14 animate-skeleton" />
+          </div>
+
+          {/* Parent Learning 2x2 Grid Skeleton */}
+          <div className="space-y-1.5">
+            <div className="h-3 w-28 rounded animate-skeleton ml-1" />
+            <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="bg-white rounded-2xl p-2.5 sm:p-3 border border-slate-200/70 shadow-xs flex flex-col justify-start">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="w-7 h-7 rounded-lg animate-skeleton" />
+                    <div className="h-4 w-10 rounded-full animate-skeleton" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-3 w-16 rounded animate-skeleton" />
+                    <div className="h-2 w-24 rounded animate-skeleton" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-[#f0f4f8] to-[#e6eef5] font-sans relative pb-24 overflow-x-hidden">
+  const renderTop3SubjectsGraphCard = () => {
 
-      {/* Dynamic Background Glows */}
-      <div className="absolute top-[5%] -right-[20%] w-[350px] h-[350px] rounded-full bg-[rgba(87,250,233,0.15)] blur-[80px] pointer-events-none" />
-      <div className="absolute bottom-[20%] -left-[20%] w-[400px] h-[400px] rounded-full bg-[rgba(20,23,121,0.08)] blur-[80px] pointer-events-none" />
+    const sourceSubjects: any[] = (allSubjectsTrend && allSubjectsTrend.length > 0)
+      ? allSubjectsTrend
+      : ((top3SubjectsTrend && top3SubjectsTrend.length > 0)
+        ? top3SubjectsTrend
+        : (subjectBreakdown && subjectBreakdown.length > 0 ? subjectBreakdown : []));
+
+    let displaySubjects: { subject: string; accuracy: number; color: string; bg: string; timeline: any[] }[] = [];
+
+    if (sourceSubjects.length > 0) {
+      displaySubjects = sourceSubjects.map((item: any, idx: number) => {
+        const matchingSb = subjectBreakdown.find(s => s.subject.toLowerCase() === item.subject.toLowerCase());
+        const acc = matchingSb ? matchingSb.accuracy : (item.accuracy !== undefined ? item.accuracy : 0);
+        const colorEntry = getSubjectChartColor(item.subject, idx);
+        return {
+          subject: item.subject,
+          accuracy: acc,
+          color: colorEntry.color,
+          bg: colorEntry.bg,
+          timeline: item.timeline || []
+        };
+      });
+    } else {
+      // Dynamic fallback based on child standard and educational board
+      const chClass = (userData?.childClass || "").toLowerCase();
+      const chBoard = (userData?.childBoard || "").toLowerCase();
+      let defaultSubjNames = ["Mathematics", "English", "Hindi"];
+      if (chBoard.includes("gseb") || chBoard.includes("guj")) {
+        defaultSubjNames = ["Gujarati", "Mathematics"];
+      } else if (chClass.includes("1") || chClass.includes("2")) {
+        defaultSubjNames = ["Mathematics", "English", "Hindi"];
+      } else {
+        defaultSubjNames = ["Mathematics", "Science", "English", "Hindi"];
+      }
+
+      displaySubjects = defaultSubjNames.map((sName, idx) => {
+        const colorEntry = getSubjectChartColor(sName, idx);
+        return {
+          subject: sName,
+          accuracy: 0,
+          color: colorEntry.color,
+          bg: colorEntry.bg,
+          timeline: [
+            { day: "Sat", score: 0 },
+            { day: "Sun", score: 0 },
+            { day: "Mon", score: 0 },
+            { day: "Tue", score: 0 },
+            { day: "Wed", score: 0 },
+            { day: "Thu", score: 0 },
+            { day: "Fri", score: 0 }
+          ]
+        };
+      });
+    }
+
+    let dayLabels: string[] = [];
+    if (displaySubjects[0]?.timeline?.length > 0) {
+      dayLabels = displaySubjects[0].timeline.map((t: any) => t.day);
+    } else if (weeklyTrend && weeklyTrend.length > 0) {
+      dayLabels = weeklyTrend.map(w => w.day);
+    }
+
+    if (dayLabels.length === 0) {
+      const daysAbbr = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
+      const now = new Date();
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        dayLabels.push(daysAbbr[d.getDay() % 7]);
+      }
+    }
+
+    const topY = 15;
+    const bottomY = 110;
+    const chartHeight = bottomY - topY;
+    const startX = 35;
+    const endX = 305;
+    const chartWidth = endX - startX;
+
+    const getX = (idx: number) => startX + (idx / Math.max(1, dayLabels.length - 1)) * chartWidth;
+    const getY = (val: number) => bottomY - (Math.max(0, Math.min(100, val)) / 100) * chartHeight;
+
+    return (
+      <div className="bg-white rounded-[22px] p-4 sm:p-5 shadow-[0_4px_20px_rgba(20,23,121,0.04)] border border-slate-200/70 flex flex-col gap-3 font-sans">
+        
+        {/* Header Title & Badge */}
+        <div className="flex items-start justify-between">
+          <div className="flex flex-col">
+            <span className="text-xs font-black uppercase tracking-wider text-slate-500 leading-none">
+              {t("subject_performance_label", "SUBJECT PERFORMANCE")}
+            </span>
+            <h3 className="text-base sm:text-lg font-extrabold text-[#141779] tracking-tight mt-1">
+              {t("top_subjects_daily_trend", "Top Subjects Daily Trend")}
+            </h3>
+            <p className="text-xs text-slate-500 font-semibold mt-0.5">
+              {t("performance_last_7_days", "Performance over the last 7 active days")}
+            </p>
+          </div>
+          <div className="bg-indigo-50/90 border border-indigo-100/90 px-3 py-1.5 rounded-xl flex items-center justify-center shrink-0">
+            <span className="text-xs font-extrabold text-[#141779] leading-none">7-DAY TREND</span>
+          </div>
+        </div>
+
+        {/* Dynamic Subject Pills Row - Single Line with Horizontal Scroll & Indicator Color */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 mt-0.5 -mx-1 px-1 scroll-smooth">
+          {displaySubjects.map((subItem, idx) => (
+            <div 
+              key={idx} 
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border shrink-0 whitespace-nowrap shadow-2xs transition-transform active:scale-95 ${subItem.bg}`}
+            >
+              <span 
+                className="w-2.5 h-2.5 rounded-full shrink-0 ring-2 ring-white/70" 
+                style={{ backgroundColor: subItem.color }} 
+              />
+              <span>{translateSubjectName(subItem.subject)} ({subItem.accuracy}%)</span>
+            </div>
+          ))}
+        </div>
+
+        {/* SVG Multi-Line Chart with Y-Axis Percentage Labels */}
+        <div className="w-full relative mt-2">
+          <svg viewBox="0 0 320 125" className="w-full h-auto overflow-visible">
+            {/* Horizontal Dashed Grid Lines & Percentage Scale Labels */}
+            {[100, 75, 50, 25].map((val, idx) => {
+              const y = getY(val);
+              return (
+                <g key={idx}>
+                  <text x={startX - 5} y={y + 3.5} textAnchor="end" className="text-[9px] fill-slate-400 font-bold">
+                    {val}%
+                  </text>
+                  <line x1={startX} y1={y} x2={endX} y2={y} stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3 3" />
+                </g>
+              );
+            })}
+
+            {/* Baseline 0% Axis Line & Label */}
+            <text x={startX - 5} y={bottomY + 3.5} textAnchor="end" className="text-[9px] fill-slate-400 font-bold">
+              0%
+            </text>
+            <line x1={startX} y1={bottomY} x2={endX} y2={bottomY} stroke="#e2e8f0" strokeWidth="1" />
+
+            {/* Dynamic Subject Lines & Points */}
+            {displaySubjects.map((subItem, subIdx) => {
+              const rawScores = subItem.timeline?.map((t: any) => (typeof t.score === 'number' ? t.score : 0)) || [];
+              
+              // Enforce strict 0% baseline prior to first activity, and forward-fill once established
+              let scores: number[] = [];
+              if (rawScores.length === dayLabels.length) {
+                scores = rawScores;
+              } else {
+                scores = dayLabels.map((_, i) => (typeof rawScores[i] === 'number' ? rawScores[i] : 0));
+              }
+
+              let lastKnownScore = 0;
+              let scoreStarted = false;
+              scores = scores.map((s: number) => {
+                if (s > 0) {
+                  lastKnownScore = s;
+                  scoreStarted = true;
+                  return s;
+                }
+                if (scoreStarted) {
+                  return lastKnownScore;
+                }
+                return 0;
+              });
+
+              const pts = scores.map((s: number, i: number) => ({ x: getX(i), y: getY(s) }));
+              const lineD = `M ${pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" L ")}`;
+
+              return (
+                <g key={subIdx}>
+                  <path 
+                    d={lineD} 
+                    fill="none" 
+                    stroke={subItem.color} 
+                    strokeWidth="2.5" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    opacity={scores.some(s => s > 0) ? 0.95 : 0.4}
+                  />
+                  {pts.map((p: any, i: number) => (
+                    <circle 
+                      key={i} 
+                      cx={p.x} 
+                      cy={p.y} 
+                      r="3.5" 
+                      fill="#ffffff" 
+                      stroke={subItem.color} 
+                      strokeWidth="2.5" 
+                    />
+                  ))}
+                </g>
+              );
+            })}
+          </svg>
+
+          {/* All 7 Days Date Labels */}
+          <div className="flex justify-between text-xs font-bold text-slate-500 pt-2" style={{ paddingLeft: `${startX}px`, paddingRight: `${320 - endX}px` }}>
+            {dayLabels.map((day, i) => (
+              <span key={i} className={i === dayLabels.length - 1 ? "font-extrabold text-[#141779]" : ""}>
+                {day}
+              </span>
+            ))}
+          </div>
+        </div>
+
+      </div>
+    );
+  };
+
+  const renderGraphCard = (
+    mode: "dashboard" | "strengths" | "weaknesses" | "risks" | "lastActivity" | "graph" | string
+  ) => {
+    // 1. New User State (No Data Available)
+    if (!hasEnoughData || subjectBreakdown.length === 0) {
+      return (
+        <div className="bg-white rounded-[24px] p-8 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-slate-100 flex flex-col items-center justify-center text-center gap-3 font-sans my-2 min-h-[200px]">
+          <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-2xl shadow-inner border border-slate-100">
+            📊
+          </div>
+          <div>
+            <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">
+              {t("no_data_available", "No data available")}
+            </h4>
+            <p className="text-xs text-slate-500 font-semibold mt-1 max-w-[280px] leading-relaxed">
+              {t("no_test_activity_yet", "No test data or activity recorded yet. Take quizzes or practice tests to unlock performance trend graphs!")}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // Category-specific empty state handling for users with activity
+    if (mode === "strengths" && actualStrengthSubjects.length === 0) {
+      return (
+        <div className="bg-white rounded-[24px] p-8 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-slate-100 flex flex-col items-center justify-center text-center gap-3 font-sans my-2 min-h-[200px]">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-2xl shadow-inner border border-emerald-100">
+            💪
+          </div>
+          <div>
+            <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">
+              {t("no_strengths_title", "No Strengths Yet")}
+            </h4>
+            <p className="text-xs text-slate-500 font-semibold mt-1 max-w-[280px] leading-relaxed">
+              {t("keep_playing_build_strengths", "Keep playing to build up strong subjects at or above 70%!")}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    if (mode === "weaknesses" && actualWeakSubjects.length === 0) {
+      return (
+        <div className="bg-white rounded-[24px] p-8 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-slate-100 flex flex-col items-center justify-center text-center gap-3 font-sans my-2 min-h-[200px]">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-2xl shadow-inner border border-emerald-100">
+            🎉
+          </div>
+          <div>
+            <h4 className="text-sm font-black text-emerald-900 uppercase tracking-wider">
+              {t("no_weaknesses_title", "No Weaknesses Detected")}
+            </h4>
+            <p className="text-xs text-emerald-700 font-semibold mt-1 max-w-[280px] leading-relaxed">
+              {t("no_weaknesses_desc", "Great job! All active subjects are performing consistently at or above 70%.")}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    if (mode === "risks" && actualRiskSubjects.length === 0) {
+      return (
+        <div className="bg-white rounded-[24px] p-8 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-slate-100 flex flex-col items-center justify-center text-center gap-3 font-sans my-2 min-h-[200px]">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-2xl shadow-inner border border-emerald-100">
+            ✅
+          </div>
+          <div>
+            <h4 className="text-sm font-black text-emerald-900 uppercase tracking-wider">
+              {t("no_risk_alerts", "No Risk Alerts")}
+            </h4>
+            <p className="text-xs text-emerald-700 font-semibold mt-1 max-w-[280px] leading-relaxed">
+              {t("no_risk_alerts_desc", { name: cleanChildName, defaultValue: `All clear! ${cleanChildName} has no subjects below 70% right now.` })}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    let dayLabels: string[] = [];
+    if (weeklyTrend && weeklyTrend.length > 0) {
+      dayLabels = weeklyTrend.map(w => w.day);
+    } else if (riskTrend && riskTrend.length > 0) {
+      dayLabels = riskTrend.map(r => r.day);
+    }
+
+    if (dayLabels.length === 0) {
+      const now = new Date();
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        const dd = String(d.getDate()).padStart(2, "0");
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        dayLabels.push(`${dd}/${mm}`);
+      }
+    }
+
+    const topY = 15;
+    const bottomY = 110;
+    const chartHeight = bottomY - topY;
+    const startX = 35;
+    const endX = 305;
+    const chartWidth = endX - startX;
+
+    const getX = (idx: number) => startX + (idx / Math.max(1, dayLabels.length - 1)) * chartWidth;
+    const getY = (val: number) => bottomY - (Math.max(0, Math.min(100, val)) / 100) * chartHeight;
+
+    // 1. Color Scheme & Mode Setup:
+    // Risk = Warning Yellow/Amber (#d97706)
+    // Weakness = Critical Red (#dc2626)
+    // Strength = Emerald Green (#006a62)
+    let activeSubjects: any[] = [];
+    let badgeText = "";
+    let themeColor = "#006a62";
+    let badgeBg = "bg-[#e6f4ea] text-[#137333] border-[#ceead6]";
+    let fillGradientId = "dashboardFillGrad";
+    let categoryPalette: string[] = [];
+
+    if (mode === "dashboard") {
+      activeSubjects = actualStrengthSubjects.length > 0
+        ? [actualStrengthSubjects[0]]
+        : [{ subject: highestSubject || "Overall", accuracy: highestAcc ?? 80 }];
+      themeColor = "#006a62";
+      badgeBg = "bg-[#e6f4ea] text-[#137333] border-[#ceead6]";
+      fillGradientId = "dashboardFillGrad";
+      categoryPalette = ["#006a62"];
+      badgeText = "+0% this week";
+    } else if (mode === "strengths") {
+      activeSubjects = actualStrengthSubjects.length > 0
+        ? actualStrengthSubjects
+        : [{ subject: highestSubject || "Overall", accuracy: highestAcc ?? 100 }];
+      themeColor = "#006a62";
+      badgeBg = "bg-[#e6f4ea] text-[#006a62] border-[#ceead6]";
+      fillGradientId = "strengthFillGrad";
+      categoryPalette = STRENGTH_GREEN_SHADES.map(s => s.color);
+      badgeText = t("top_performing_badge", "Top Performing (≥70%)");
+    } else if (mode === "weaknesses") {
+      activeSubjects = actualWeakSubjects.length > 0
+        ? actualWeakSubjects
+        : [{ subject: lowestSubject || "Overall", accuracy: lowestAcc ?? 65 }];
+      themeColor = "#dc2626"; // Critical Red Theme
+      badgeBg = "bg-rose-50 text-[#dc2626] border-rose-200";
+      fillGradientId = "weaknessFillGrad";
+      categoryPalette = WEAKNESS_RED_SHADES.map(s => s.color);
+      badgeText = t("needs_focus_badge", "Needs Focus (<70% for 2+ Days)");
+    } else {
+      // risks
+      activeSubjects = actualRiskSubjects.length > 0
+        ? actualRiskSubjects
+        : [{ subject: lowestSubject || "Overall", accuracy: lowestAcc ?? 52 }];
+      themeColor = "#d97706"; // Warning Yellow/Amber Theme
+      badgeBg = "bg-amber-50 text-[#b45309] border-amber-200";
+      fillGradientId = "riskFillGrad";
+      categoryPalette = RISK_AMBER_SHADES.map(s => s.color);
+      badgeText = t("at_risk_day1_badge", "At Risk (Day 1 <70%)");
+    }
+
+    // 2. Multi-Subject Series Computation with Dynamic Fluctuations (no flat lines)
+    const isCategoryMode = isCategoryTrendMode(mode);
+
+    const seriesList = activeSubjects.map((sItem: any, idx: number) => {
+      const subjName = sItem.subject || "Subject";
+      const targetAcc = typeof sItem.accuracy === "number" ? sItem.accuracy : 50;
+
+      // Categorical Color-Shading Rules for 7-Day Trend Graphs:
+      // Strengths -> Different shades of Green
+      // Risks -> Different shades of Yellow / Amber
+      // Weaknesses -> Different shades of Red
+      const colorEntry = isCategoryMode
+        ? getCategorySubjectChartColor(mode, idx)
+        : getSubjectChartColor(subjName, idx);
+      const lineColor = activeSubjects.length === 1 ? themeColor : colorEntry.color;
+
+      // Match 7-day timeline: prefer sItem.trend7Day (keyed to DD/MM) or matchedTrend.timeline
+      const matchedTrend = (top3SubjectsTrend || allSubjectsTrend || []).find(
+        (t: any) => t.subject?.toLowerCase() === subjName.toLowerCase()
+      );
+
+      let scores: number[] = [];
+      if (sItem.trend7Day && sItem.trend7Day.length > 0) {
+        scores = sItem.trend7Day.map((item: any) => (typeof item.score === "number" ? item.score : 0));
+      } else if (matchedTrend?.timeline && matchedTrend.timeline.length > 0) {
+        scores = matchedTrend.timeline.map((item: any) => (typeof item.score === "number" ? item.score : 0));
+      } else if (mode === "strengths" && mathTrend.length > 0 && idx === 0) {
+        scores = mathTrend.map((t: any) => (typeof t.score === "number" ? t.score : 0));
+      } else if (mode === "weaknesses" && scienceTrend.length > 0 && idx === 0) {
+        scores = scienceTrend.map((t: any) => (typeof t.score === "number" ? t.score : 0));
+      } else if (mode === "risks" && riskTrend.length > 0 && idx === 0) {
+        scores = riskTrend.map((t: any) => (typeof t.score === "number" ? t.score : 0));
+      }
+
+      // Enforce strict 0% baseline prior to first activity, and forward-fill once established
+      if (scores.length !== dayLabels.length) {
+        scores = dayLabels.map((_, i) => (typeof scores[i] === "number" ? scores[i] : 0));
+      }
+
+      let lastKnownSubjScore = 0;
+      let subjScoreStarted = false;
+      scores = scores.map((s: number) => {
+        if (s > 0) {
+          lastKnownSubjScore = s;
+          subjScoreStarted = true;
+          return s;
+        }
+        if (subjScoreStarted) {
+          return lastKnownSubjScore;
+        }
+        return 0;
+      });
+
+      const pts = scores.map((s, i) => ({ x: getX(i), y: getY(s), score: s }));
+      const lineD = `M ${pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" L ")}`;
+      const areaD = `M ${startX},${bottomY} L ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)} ${lineD.substring(1)} L ${pts[pts.length - 1].x.toFixed(1)},${bottomY} Z`;
+
+      return {
+        subject: subjName,
+        accuracy: targetAcc,
+        color: lineColor,
+        scores,
+        pts,
+        lineD,
+        areaD
+      };
+    });
+
+    const primaryScoreDisplay = activeSubjects.length === 1
+      ? activeSubjects[0].accuracy
+      : Math.round(activeSubjects.reduce((acc, s) => acc + (s.accuracy || 0), 0) / activeSubjects.length);
+
+    const upperSubject = activeSubjects.map(s => translateSubjectName(s.subject)).join(" & ").toUpperCase();
+
+    return (
+      <div className="bg-white rounded-[24px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-slate-100 flex flex-col gap-3 font-sans">
+        
+        {/* Subtitle Header */}
+        <span className="text-xs font-black text-slate-500 tracking-wider uppercase">
+          {upperSubject} TREND (7-DAY PERFORMANCE TREND)
+        </span>
+
+        {/* Large Score & Badge Row */}
+        <div className="flex items-center justify-between">
+          <span className="text-3xl sm:text-4xl font-extrabold tracking-tight" style={{ color: themeColor }}>
+            {primaryScoreDisplay}%
+          </span>
+          <span className={`px-3 py-1 rounded-xl text-xs font-bold border ${badgeBg}`}>
+            {badgeText}
+          </span>
+        </div>
+
+        {/* Multi-Subject Pill Legend with Dedicated Categorical Color Shades */}
+        {activeSubjects.length > 1 && (
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 mt-0.5 -mx-1 px-1 scroll-smooth">
+            {seriesList.map((item, idx) => {
+              const colorInfo = isCategoryMode
+                ? getCategorySubjectChartColor(mode, idx)
+                : getSubjectChartColor(item.subject, idx);
+              return (
+                <div 
+                  key={idx} 
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-2xl text-xs font-extrabold border shrink-0 whitespace-nowrap shadow-2xs transition-transform active:scale-95 ${colorInfo.bg}`}
+                >
+                  <span 
+                    className="w-2.5 h-2.5 rounded-full shrink-0 ring-2 ring-white/80 shadow-xs" 
+                    style={{ backgroundColor: item.color }} 
+                  />
+                  <span>{translateSubjectName(item.subject)}</span>
+                  <span className="font-black">({item.accuracy}%)</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* SVG Multi-Line Chart with Y-Axis Percentage Labels */}
+        <div className="w-full relative mt-2">
+          <svg viewBox="0 0 320 125" className="w-full h-auto overflow-visible">
+            <defs>
+              <linearGradient id={fillGradientId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={themeColor} stopOpacity="0.25" />
+                <stop offset="100%" stopColor={themeColor} stopOpacity="0.0" />
+              </linearGradient>
+            </defs>
+
+            {/* Horizontal Dashed Grid Lines & Y-Axis Percentage Labels */}
+            {[100, 75, 50, 25].map((val, idx) => {
+              const y = getY(val);
+              return (
+                <g key={idx}>
+                  <text x={startX - 5} y={y + 3.5} textAnchor="end" className="text-[9px] fill-slate-400 font-bold">
+                    {val}%
+                  </text>
+                  <line x1={startX} y1={y} x2={endX} y2={y} stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3 3" />
+                </g>
+              );
+            })}
+
+            {/* Baseline 0% Axis Line & Label */}
+            <text x={startX - 5} y={bottomY + 3.5} textAnchor="end" className="text-[9px] fill-slate-400 font-bold">
+              0%
+            </text>
+            <line x1={startX} y1={bottomY} x2={endX} y2={bottomY} stroke="#e2e8f0" strokeWidth="1" />
+
+            {/* Single Series Gradient Area Fill */}
+            {seriesList.length === 1 && (
+              <path d={seriesList[0].areaD} fill={`url(#${fillGradientId})`} />
+            )}
+
+            {/* Distinct Curve Lines & Hollow Points for Every Subject */}
+            {seriesList.map((item, subIdx) => (
+              <g key={subIdx}>
+                <path 
+                  d={item.lineD} 
+                  fill="none" 
+                  stroke={item.color} 
+                  strokeWidth="2.5" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                />
+                {item.pts.map((p, i) => (
+                  <circle 
+                    key={i} 
+                    cx={p.x} 
+                    cy={p.y} 
+                    r="3.5" 
+                    fill="#ffffff" 
+                    stroke={item.color} 
+                    strokeWidth="2.5" 
+                  />
+                ))}
+              </g>
+            ))}
+          </svg>
+
+          {/* All 7 Days Date Labels Spaced Across Bottom */}
+          <div className="flex justify-between text-xs font-bold text-slate-500 pt-2" style={{ paddingLeft: `${startX}px`, paddingRight: `${320 - endX}px` }}>
+            {dayLabels.map((day, i) => (
+              <span key={i} className={i === dayLabels.length - 1 ? "font-extrabold text-[#141779]" : ""}>
+                {day}
+              </span>
+            ))}
+          </div>
+        </div>
+
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-[#f4f7fb] font-sans relative pb-4">
 
       {/* Top App Bar */}
-      <header className="fixed top-0 left-0 right-0 flex items-center justify-between px-6 h-20 bg-white/95 backdrop-blur-md border-b border-slate-200 z-50 shadow-xs">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/home")} className="w-11 h-11 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 shadow-xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all">
-            <ArrowLeft size={22} className="text-[#141779]" />
-          </button>
+      <header className="sticky top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 h-16 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] w-full">
+        <div className="flex items-center gap-2.5 min-w-0">
+          {!isCoParent && (
+            <button 
+              onClick={() => navigate(-1)} 
+              className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+              aria-label="Back"
+            >
+              <ArrowLeft size={19} />
+            </button>
+          )}
           <button
             onClick={() => navigate('/parent/settings')}
-            className="w-10 h-10 rounded-full border-2 border-[rgba(20,23,121,0.2)] overflow-hidden bg-white shrink-0 hover:scale-105 active:scale-95 transition-all"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-slate-200/80 overflow-hidden bg-white shrink-0 hover:scale-105 active:scale-95 transition-all shadow-2xs cursor-pointer"
+            aria-label="Parent Profile"
           >
             <img
               src={parentPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData?.fullName || "Parent")}&background=random`}
@@ -367,497 +1209,548 @@ export default function ParentDashboardScreen() {
               className="w-full h-full object-cover"
             />
           </button>
-          <h1 className="text-2xl font-black text-[#141779]">{t("parent_space") || "Parent Space"}</h1>
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-sm sm:text-base font-black text-[#141779] tracking-tight truncate leading-tight">
+                {t("parent_space") || "Parent Space"}
+              </h1>
+              {isCoParent && (
+                <span className="text-xs uppercase tracking-wider font-black px-2.5 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-200 shrink-0">
+                  Co-Parent
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => setShowSwitcher(true)}
+              className="flex items-center gap-1 text-xs sm:text-[13px] font-bold text-indigo-700 hover:text-indigo-900 group cursor-pointer transition-colors text-left"
+              title={t("switch_child_profile", "Switch Student Profile")}
+            >
+              <Users size={12} className="text-indigo-600 shrink-0" />
+              <span className="truncate max-w-[100px] sm:max-w-[140px]">{cleanChildName}</span>
+              <span className="text-xs text-slate-500 group-hover:text-indigo-600 font-bold">• {t("switch", "Switch")}</span>
+              <ChevronDown size={12} className="text-slate-400 group-hover:text-indigo-600 shrink-0 transition-transform" />
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={() => setShowFamilyModal(true)} 
-            className="h-10 px-3 flex items-center gap-1.5 rounded-full bg-indigo-50 border border-indigo-200 text-[#141779] font-black text-xs hover:bg-indigo-100 active:scale-95 transition-all shadow-xs"
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <button
+            onClick={() => navigate('/parent/settings')}
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("settings", "Settings")}
+            title={t("settings", "Settings")}
           >
-            <Users size={16} />
-            <span className="hidden sm:inline">{t("family_code", "Family Code")}</span>
+            <Settings size={18} />
           </button>
-          <button onClick={() => { setShowNotifications(true); markAllRead(); }} className="relative w-11 h-11 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 shadow-xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all">
-            <Bell size={22} className="text-[#141779]" />
+          <button 
+            onClick={() => { setShowNotifications(true); markAllRead(); }} 
+            className="relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label="Notifications"
+            title={t("notifications", "Notifications")}
+          >
+            <Bell size={18} />
             {unreadCount > 0 && (
-              <span className="absolute top-2 right-2.5 w-4 h-4 bg-[#ba1a1a] rounded-full border-2 border-white flex items-center justify-center text-[8px] font-bold text-white">
-                {unreadCount}
+              <span className="absolute top-1 right-1 w-4 h-4 bg-[#ba1a1a] rounded-full border-2 border-white flex items-center justify-center text-[9px] font-bold text-white">
+                {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
           </button>
         </div>
       </header>
 
-      <FamilyLinkModal isOpen={showFamilyModal} onClose={() => setShowFamilyModal(false)} />
+      <main className="px-4 pt-4 max-w-lg mx-auto flex flex-col gap-3.5">
 
-      <main className="px-5 pt-[104px] flex flex-col gap-6">
-
-        {/* Child Selector Pills — instant switch with no reload */}
-        {userData?.children && userData.children.length > 1 && (
-          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
-            {userData.children.map((c: any) => {
-              const isActive = (userData.activeChildId || "child_1") === c.childId;
-              return (
-                <button
-                  key={c.childId}
-                  onClick={async () => {
-                    if (isActive) return;
-                    try {
-                      const res = await apiFetch("/api/users/active-child", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ childId: c.childId })
-                      });
-                      const json = await res.json();
-                      if (json.success && json.data?.user) {
-                        localStorage.setItem("userData", JSON.stringify(json.data.user));
-                        const pin = sessionStorage.getItem("parentPinVerified");
-                        sessionStorage.clear();
-                        if (pin) sessionStorage.setItem("parentPinVerified", pin);
-                        setUserData(json.data.user);
-                        setLoading(true);
-                        setRefreshKey(k => k + 1);
-                      }
-                    } catch (e) { console.error("Switch failed", e); }
-                  }}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 font-bold text-sm shrink-0 transition-all ${
-                    isActive
-                      ? "border-[#141779] bg-[#141779] text-white shadow-md"
-                      : "border-slate-200 bg-white text-[#141779] hover:border-[#141779] hover:bg-indigo-50"
-                  }`}
-                >
-                  <span className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-black overflow-hidden shrink-0">
-                    {c.childPhoto
-                      ? <img src={c.childPhoto} alt={c.childName} className="w-full h-full object-cover rounded-full" />
-                      : c.childName?.charAt(0).toUpperCase()}
+        {/* Full-width Kids Space Launcher Box (Primary Parent Only - Hidden for Co-Parents) */}
+        {!isCoParent && (
+          <button
+            onClick={() => navigate("/home")}
+            className="w-full bg-gradient-to-r from-indigo-50/90 via-sky-50/50 to-indigo-50/80 hover:from-indigo-100 hover:to-sky-100 p-3 sm:p-3.5 rounded-2xl sm:rounded-3xl border border-indigo-200/80 hover:border-indigo-300 shadow-[0_4px_20px_rgba(20,23,121,0.04)] flex items-center justify-between group cursor-pointer transition-all active:scale-[0.99] text-left"
+            title={t("kids_space", "Kids Space")}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-[#141779] to-[#2d328f] text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                <Sparkles size={19} className="text-amber-300" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm sm:text-base font-black text-[#141779] leading-tight">
+                    {t("kids_space", "Kids Space")}
                   </span>
-                  {c.childName}
-                  {isActive && <span className="text-[10px] opacity-70">✓</span>}
-                </button>
-              );
-            })}
-          </div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-indigo-100/90 text-[#141779] text-xs font-black uppercase tracking-wider">
+                    {t("kids_mode", "Kids Mode")}
+                  </span>
+                </div>
+                <p className="text-xs sm:text-[13px] text-indigo-700/80 font-medium truncate mt-0.5">
+                  {t("kids_space_sub", "Return directly to student learning dashboard")}
+                </p>
+              </div>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-white/80 border border-indigo-200/70 text-[#141779] flex items-center justify-center shrink-0 group-hover:translate-x-1 transition-all shadow-2xs ml-2">
+              <ChevronRight size={16} />
+            </div>
+          </button>
         )}
 
-        {/* Kids Space Link Card (Navigate back to Child Home page) */}
-        <button
-          onClick={() => navigate("/home")}
-          className="w-full bg-white rounded-[20px] p-3.5 flex justify-between items-center border-2 border-indigo-100 shadow-xs hover:bg-indigo-50/50 hover:border-indigo-200 transition-all group cursor-pointer"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center shrink-0 border border-indigo-100">
-              <Sparkles size={18} className="text-[#141779]" />
-            </div>
-            <div className="text-left">
-              <h3 className="text-xs font-black text-[#141779] flex items-center gap-1.5">
-                <span>{t('back_to_kids_home', 'Back to Kids Home')}</span>
-                <span className="text-[9px] bg-indigo-100 text-[#141779] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{t('kids_space', 'Kids Space')}</span>
-              </h3>
-              <p className="text-[10px] text-slate-500 font-semibold">{t('kids_space_sub', 'Return directly to student learning dashboard')}</p>
+        {/* 1. Student Profile, Journey, Metrics, and Confidence Score */}
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-[0_4px_20px_rgba(20,23,121,0.04)] flex flex-col gap-3.5">
+          {/* Identity Header Row */}
+          <div className="flex items-center justify-between gap-3">
+            <button
+              onClick={() => setShowSwitcher(true)}
+              className="flex items-center gap-3 min-w-0 flex-1 text-left group cursor-pointer"
+              title={t("switch_child_profile", "Click to switch student")}
+            >
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-gradient-to-tr from-[#141779] to-[#2d328f] text-white flex items-center justify-center text-sm sm:text-base font-black shrink-0 shadow-2xs overflow-hidden border border-white/60 group-hover:scale-105 transition-transform">
+                {childPhoto ? (
+                  <img src={childPhoto} alt={cleanChildName} className="w-full h-full object-cover" />
+                ) : (
+                  cleanChildName.charAt(0).toUpperCase()
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <h2 className="text-base sm:text-lg font-black text-[#141779] leading-tight truncate group-hover:text-indigo-800 transition-colors">
+                    {childName}'s {t("journey", "Journey")}
+                  </h2>
+                  <ChevronDown size={15} className="text-slate-400 group-hover:text-[#141779] shrink-0 transition-colors" />
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                  <span className="text-xs sm:text-[13px] font-black text-white bg-[#141779] px-3 py-1 rounded-full shrink-0 shadow-2xs">
+                    {t('lvl_explorer', { level: userLevel, defaultValue: `Lvl ${userLevel}` })}
+                  </span>
+                  {childClass && (
+                    <span className="text-xs sm:text-[13px] font-bold text-[#141779] bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full shrink-0">
+                      {childClass}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </button>
+
+            {/* Active profile status badge */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-xs sm:text-[13px] font-black shadow-2xs">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>{t("active_profile", "Active")}</span>
+              </span>
             </div>
           </div>
-          <ChevronRight size={20} className="text-[#141779] group-hover:translate-x-0.5 transition-transform" />
-        </button>
 
-        {/* Child Summary Hero */}
-        <div className="bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-[#006a62]/10 to-transparent rounded-bl-full pointer-events-none transition-transform group-hover:scale-110 duration-500" />
-          <div className="flex justify-between items-start mb-4 gap-2 relative z-10">
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-extrabold text-slate-500 tracking-[1.5px] mb-1">{t("student_profile", "STUDENT PROFILE")}</p>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-[22px] sm:text-[26px] font-black text-[#141779] leading-snug break-words">{childName}'s {t("journey", "Journey")}</h2>
+          {/* Today's Learning Metrics (Direct on card background with vertical divider) */}
+          <div className="py-1 flex items-center justify-between">
+            {/* Left Side: Today's Time */}
+            <div className="flex-1 flex flex-col items-center justify-center text-center">
+              <span className="text-2xl sm:text-3xl font-black text-[#006a62] leading-none mb-1">
+                {todayTime}<span className="text-sm sm:text-base font-bold ml-0.5">m</span>
+              </span>
+              <span className="text-xs font-black text-slate-500 uppercase tracking-wider text-center">
+                {t('todays_time', "TODAY'S TIME")}
+              </span>
+            </div>
+
+            {/* Subtle Vertical Divider */}
+            <div className="w-[1px] bg-slate-200/90 self-stretch my-1 shrink-0" />
+
+            {/* Right Side: Solved Today */}
+            <div className="flex-1 flex flex-col items-center justify-center text-center">
+              <span className="text-2xl sm:text-3xl font-black text-[#30007f] leading-none mb-1">
+                {solvedToday}
+              </span>
+              <span className="text-xs font-black text-slate-500 uppercase tracking-wider text-center">
+                {t('solved_today', 'SOLVED TODAY')}
+              </span>
+            </div>
+          </div>
+
+          {/* Daily Confidence Score with Progress Bar & Details Affordance */}
+          <div className="w-full pt-1">
+            <div className="flex justify-between items-center mb-1.5">
+              <div className="flex items-center gap-2">
+                <span className="text-xs sm:text-[13px] font-black text-[#141779] tracking-wider uppercase">
+                  {t('daily_confidence_score', 'DAILY CONFIDENCE SCORE')}
+                </span>
                 <button
-                  onClick={() => setShowSwitcher(true)}
-                  className="px-2.5 py-1 rounded-full bg-indigo-50 text-[#141779] border border-indigo-200 font-extrabold text-xs flex items-center gap-1 hover:bg-indigo-100 transition-colors shadow-2xs"
+                  onClick={openBreakdown}
+                  className="text-xs font-bold text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-full transition-colors flex items-center gap-0.5 cursor-pointer"
                 >
-                  <Users size={12} />
-                  <span>{t("switch", "Switch")}</span>
+                  <span>{t('details', 'Details')}</span>
+
                 </button>
               </div>
+              <span className="text-xs sm:text-sm font-black text-[#141779]">{todayConfidenceScore}%</span>
             </div>
-            <div className="bg-[#57fae9] px-3 py-1 rounded-full whitespace-nowrap shrink-0 border border-[#007168]/20 shadow-2xs">
-              <span className="text-xs font-black text-[#007168]">{t('lvl_explorer', { level: userLevel, defaultValue: `Lvl ${userLevel} Explorer` })}</span>
-            </div>
-          </div>
-
-          <div className="flex gap-3 mb-5 mt-2">
-            <div 
-              onClick={openBreakdown}
-              className="flex-1 bg-slate-50/80 rounded-[18px] p-4 flex flex-col items-center justify-center border border-slate-200/80 shadow-xs relative overflow-hidden hover:scale-[1.02] hover:border-[#141779] cursor-pointer transition-all group/card"
-            >
-              <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-[#006a62]/10 to-transparent rounded-bl-full" />
-              <span className="text-4xl font-black text-[#006a62] mb-1">{todayTime}<span className="text-xl">m</span></span>
-              <span className="text-[11px] font-extrabold text-slate-600 uppercase tracking-wider group-hover/card:text-[#141779]">{t('todays_time', "TODAY'S TIME")} 🔍</span>
-            </div>
-
-            <div 
-              onClick={openBreakdown}
-              className="flex-1 bg-slate-50/80 rounded-[18px] p-4 flex flex-col items-center justify-center border border-slate-200/80 shadow-xs relative overflow-hidden hover:scale-[1.02] hover:border-[#141779] cursor-pointer transition-all group/card"
-            >
-              <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-[#30007f]/10 to-transparent rounded-bl-full" />
-              <span className="text-4xl font-black text-[#30007f] mb-1">{solvedToday}</span>
-              <span className="text-[11px] font-extrabold text-slate-600 uppercase tracking-wider group-hover/card:text-[#141779]">{t('solved_today', 'SOLVED TODAY')} 🔍</span>
-            </div>
-          </div>
-
-          <div onClick={openBreakdown} className="w-full cursor-pointer group/score">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-[12px] font-extrabold text-[#141779] tracking-wider group-hover/score:underline flex items-center gap-1">
-                <span>{t('daily_confidence_score', 'DAILY CONFIDENCE SCORE')}</span>
-                <span className="text-[10px] bg-indigo-50 text-[#141779] px-2 py-0.5 rounded-full font-bold">{t('details', 'Details')} 🔍</span>
-              </span>
-              <span className="text-[15px] font-black text-[#141779]">{todayConfidenceScore}%</span>
-            </div>
-            <div className="h-3 bg-slate-100 rounded-full overflow-hidden mb-2 shadow-inner relative border border-slate-200/60">
+            <div className="h-2 sm:h-2.5 bg-slate-100 rounded-full overflow-hidden mb-1.5 border border-slate-200/60">
               <div
-                className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#141779] via-[#30007f] to-[#57fae9] transition-all duration-1000 ease-out"
-                style={{ width: `${todayConfidenceScore}%` }}
-              >
-                <div className="absolute top-0 right-0 bottom-0 w-12 bg-gradient-to-l from-white/30 to-transparent" />
-              </div>
+                className="h-full bg-gradient-to-r from-[#141779] to-[#2d328f] rounded-full transition-all duration-1000 ease-out"
+                style={{ width: `${Math.min(100, Math.max(0, todayConfidenceScore))}%` }}
+              />
             </div>
-            <p className="text-xs text-slate-600 font-bold">
-              {t('confidence_score_sub', { attempts: solvedToday, defaultValue: `Based on today's correct answers (${solvedToday} attempts) • Tap for time breakdown` })}
+            <p 
+              onClick={openBreakdown}
+              className="text-xs sm:text-[13px] text-slate-500 font-medium cursor-pointer hover:text-indigo-900 transition-colors truncate"
+            >
+              {t('confidence_score_sub', { attempts: solvedToday, defaultValue: `Based on today's correct answers (${solvedToday} attempts) • Tap for details` })}
             </p>
           </div>
         </div>
 
-        {/* Learning DNA */}
-        <div id="dna-section" className="flex flex-col gap-3">
+        {/* 2. Cognitive Strengths, Weaknesses, and Risk Alerts (Screenshot 2 content) */}
+        <div id="dna-section" className="flex flex-col gap-2.5">
           <div className="flex items-center justify-between px-1">
-            <h3 className="text-base font-extrabold text-slate-800">{t('cognitive_strengths_weaknesses', 'Cognitive Strengths & Weaknesses')}</h3>
+            <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-600">
+              {t('cognitive_strengths_weaknesses', 'Cognitive Strengths & Weaknesses')}
+            </h3>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="flex flex-col gap-2.5">
             {/* Strengths Card */}
             <button
-              onClick={() => setModalType("strengths")}
-              className="bg-white rounded-[20px] p-4 border border-slate-200/80 shadow-xs border-t-4 border-t-[#006a62] flex flex-col justify-between text-left hover:scale-[1.02] hover:shadow-md transition-all relative overflow-hidden group min-h-[110px]"
+              onClick={() => handleOpenModal("strengths")}
+              className="w-full bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col text-left hover:border-teal-300 hover:shadow-sm transition-all group cursor-pointer"
             >
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-base">💪</span>
-                    <h4 className="text-sm font-black text-[#006a62]">{t('strengths', 'Strengths')}</h4>
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-teal-50 border border-teal-100/80 flex items-center justify-center text-sm">
+                      💪
+                    </div>
+                    <h4 className="text-sm sm:text-base font-black text-[#006a62]">{t('strengths', 'Strengths')}</h4>
                   </div>
-                  <ChevronRight size={18} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                  <ChevronRight size={16} className="text-slate-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
                 </div>
-                {!hasEnoughData || strengths.length === 0 || strengths[0] === "No strength for now." || strengths[0]?.includes("Not enough Data") ? (
-                  <span className="inline-block text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full mt-1">
-                    {t('not_enough_data_for_now', 'Not enough data for now')}
+                {!hasEnoughData || subjectBreakdown.length === 0 ? (
+                  <span className="inline-block text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full whitespace-nowrap">
+                    {t('no_data_available', 'No data available')}
+                  </span>
+                ) : actualStrengthSubjects.length === 0 ? (
+                  <span className="inline-block text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full whitespace-nowrap">
+                    {t('no_strengths_yet', 'No strength for now.')}
                   </span>
                 ) : (
-                  <div className="space-y-1 mt-1">
-                    {strengths.slice(0, 2).map((s: string, i: number) => (
-                      <p key={i} className="text-xs text-slate-700 font-bold line-clamp-1 flex items-center gap-1">
-                        <CheckCircle size={12} className="text-green-600 shrink-0" />
-                        <span>{translateInsightText(s)}</span>
-                      </p>
+                  <div className="space-y-1.5 mt-0.5">
+                    {actualStrengthSubjects.map((ss, i) => (
+                      <div key={i} className="flex items-center gap-1.5 text-xs font-bold text-[#006a62] min-w-0 overflow-hidden">
+                        <CheckCircle size={13} className="text-[#006a62] shrink-0" />
+                        <span className="leading-snug truncate whitespace-nowrap">
+                          {translateInsightText(`${translateSubjectName(ss.subject)} is currently high performing with ${ss.accuracy}% accuracy.`)}
+                        </span>
+                      </div>
                     ))}
                   </div>
                 )}
               </div>
-              <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider mt-3">{t('fast_processor', 'Fast Processor 🔍')}</span>
             </button>
 
-            {/* Weaknesses Card */}
+            {/* Areas for Review (Weaknesses) Card */}
             <button
-              onClick={() => setModalType("weaknesses")}
-              className="bg-white rounded-[20px] p-4 border border-slate-200/80 shadow-xs border-t-4 border-t-[#ba1a1a] flex flex-col justify-between text-left hover:scale-[1.02] hover:shadow-md transition-all relative overflow-hidden group min-h-[110px]"
+              onClick={() => handleOpenModal("weaknesses")}
+              className="w-full bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col text-left hover:border-rose-300 hover:shadow-sm transition-all group cursor-pointer"
             >
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-base">⚠️</span>
-                    <h4 className="text-sm font-black text-[#ba1a1a]">{t('weaknesses', 'Weaknesses')}</h4>
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-rose-50 border border-rose-100/80 flex items-center justify-center text-sm">
+                      ⚠️
+                    </div>
+                    <h4 className="text-sm sm:text-base font-black text-[#ba1a1a]">{t('weaknesses', 'Areas to Improve')}</h4>
                   </div>
-                  <ChevronRight size={18} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                  <ChevronRight size={16} className="text-slate-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
                 </div>
-                {!hasEnoughData || weaknesses.length === 0 || weaknesses[0] === "No weakness for now." || weaknesses[0]?.includes("Not enough Data") ? (
-                  <span className="inline-block text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full mt-1">
-                    {t('not_enough_data_for_now', 'Not enough data for now')}
+                {!hasEnoughData || subjectBreakdown.length === 0 ? (
+                  <span className="inline-block text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full whitespace-nowrap">
+                    {t('no_data_available', 'No data available')}
+                  </span>
+                ) : actualWeakSubjects.length === 0 ? (
+                  <span className="inline-block text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100 whitespace-nowrap">
+                    {t('all_subjects_top_level', 'No weaknesses detected 🎉')}
                   </span>
                 ) : (
-                  <div className="space-y-1 mt-1">
-                    {weaknesses.slice(0, 2).map((w: string, i: number) => {
-                      const isRecovery = w.includes("right track") || w.includes("recovered") || w.includes("improved");
-                      return (
-                        <p key={i} className={`text-xs font-bold line-clamp-1 flex items-center gap-1 ${isRecovery ? 'text-emerald-700' : 'text-amber-800'}`}>
-                          <AlertTriangle size={12} className={`${isRecovery ? 'text-emerald-600' : 'text-amber-600'} shrink-0`} />
-                          <span>{translateInsightText(w)}</span>
-                        </p>
-                      );
-                    })}
+                  <div className="space-y-1.5 mt-0.5">
+                    {actualWeakSubjects.map((ws, i) => (
+                      <div key={i} className="flex items-center gap-1.5 text-xs font-bold text-[#ba1a1a] min-w-0 overflow-hidden">
+                        <AlertTriangle size={13} className="text-[#ba1a1a] shrink-0" />
+                        <span className="leading-snug truncate whitespace-nowrap">
+                          {translateInsightText(`${translateSubjectName(ws.subject)} needs improvement with ${ws.accuracy}% accuracy.`)}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
-              <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider mt-3">{t('review_needed', 'Review Needed 🔍')}</span>
             </button>
 
             {/* Risk Alerts Card */}
             <button
-              onClick={() => setModalType("risks")}
-              className="bg-white rounded-[20px] p-4 border border-slate-200/80 shadow-xs border-t-4 border-t-[#d97706] flex flex-col justify-between text-left hover:scale-[1.02] hover:shadow-md transition-all relative overflow-hidden group min-h-[110px]"
+              onClick={() => handleOpenModal("risks")}
+              className="w-full bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col text-left hover:border-amber-300 hover:shadow-sm transition-all group cursor-pointer"
             >
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-base">🔔</span>
-                    <h4 className="text-sm font-black text-[#d97706]">{t('risk_alerts', 'Risk Alerts')}</h4>
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-amber-50 border border-amber-100/80 flex items-center justify-center text-sm">
+                      🔔
+                    </div>
+                    <h4 className="text-sm sm:text-base font-black text-[#d97706]">{t('risk_alerts', 'Risk Alerts')}</h4>
                   </div>
-                  <ChevronRight size={18} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                  <ChevronRight size={16} className="text-slate-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
                 </div>
-                {!hasEnoughData || risks.length === 0 || risks[0] === "No risk for now." || risks[0]?.includes("Not enough Data") ? (
-                  <span className="inline-block text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full mt-1">
-                    {t('not_enough_data_for_now', 'Not enough data for now')}
+                {!hasEnoughData || subjectBreakdown.length === 0 ? (
+                  <span className="inline-block text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full whitespace-nowrap">
+                    {t('no_data_available', 'No data available')}
+                  </span>
+                ) : actualRiskSubjects.length === 0 ? (
+                  <span className="inline-block text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100 whitespace-nowrap">
+                    {t('no_risk_alerts_badge', '✅ No Risk Alerts')}
                   </span>
                 ) : (
-                  <div className="space-y-1 mt-1">
-                    {risks.slice(0, 2).map((r: string, i: number) => (
-                      <p key={i} className="text-xs text-rose-800 font-bold line-clamp-1 flex items-center gap-1">
-                        <AlertTriangle size={12} className="text-rose-600 shrink-0" />
-                        <span>{translateInsightText(r)}</span>
-                      </p>
+                  <div className="space-y-1.5 mt-0.5">
+                    {actualRiskSubjects.map((rs, i) => (
+                      <div key={i} className="flex items-center gap-1.5 text-xs font-semibold text-amber-800 min-w-0 overflow-hidden">
+                        <AlertTriangle size={13} className="text-amber-600 shrink-0" />
+                        <span className="leading-snug truncate whitespace-nowrap">
+                          {translateInsightText(`${translateSubjectName(rs.subject)} needs attention with ${rs.accuracy}% accuracy.`)}
+                        </span>
+                      </div>
                     ))}
                   </div>
                 )}
               </div>
-              <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider mt-3">{t('three_day_alerts', '3-Day Alerts 🔍')}</span>
             </button>
           </div>
         </div>
 
-        {/* Top 3 Subjects Trend Chart */}
-        <div className="w-full bg-white rounded-[24px] p-5 border border-slate-200/80 shadow-sm flex flex-col gap-3">
-          <div className="flex justify-between items-start">
-            <div>
-              <h3 className="text-sm font-black text-[#141779] uppercase tracking-wider">{t("top_subjects_daily_trend", "Top Subjects Daily Trend")}</h3>
-              <p className="text-[11px] text-slate-500 font-bold mt-0.5">{t("performance_last_7_days", "Performance over the last 7 active days")}</p>
-            </div>
-            <span className="text-[10px] bg-indigo-50 text-[#141779] px-2.5 py-1 rounded-full font-black uppercase tracking-wider border border-indigo-100">
-              {t("seven_day_graph", "7-Day Graph")}
-            </span>
+        {/* Performance Trend Chart */}
+        {renderTop3SubjectsGraphCard()}
+
+        {/* 3. Parent Learning Section — Compact & Polished (Moved Above Recent Activity) */}
+        <div className="flex flex-col gap-2 w-full">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-600">
+              {t("parent_learning", "Parent Learning")}
+            </h3>
           </div>
-
-          {!hasEnoughData || !top3SubjectsTrend || top3SubjectsTrend.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-6 bg-slate-50 border border-slate-200/80 rounded-2xl text-center">
-              <span className="text-2xl mb-1">📊</span>
-              <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">{t("not_enough_data_for_now", "Not Enough Data For Now")}</h4>
-              <p className="text-[11px] text-slate-500 font-bold mt-1">
-                {t("complete_2_3_chapters_unlock", "Complete 2 to 3 chapters to unlock daily trends and subject performance graphs!")}
-              </p>
-            </div>
-          ) : (
-            <>
-              {/* Graph Legend */}
-              <div className="flex flex-wrap items-center gap-3 mt-1 text-[11px] font-black">
-                {top3SubjectsTrend.map((t, idx) => {
-                  const colors = ["#006a62", "#141779", "#7b1fa2", "#d97706", "#2563eb", "#e11d48", "#059669"];
-                  const color = colors[idx % colors.length];
-                  const latestScore = t.timeline && t.timeline.length > 0 ? t.timeline[t.timeline.length - 1].score : 0;
-                  return (
-                    <div key={idx} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200/70" style={{ color }}>
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                      <span>{translateSubjectName(t.subject)}</span>
-                      <span className="text-[10px] opacity-75 font-bold">({latestScore}%)</span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* SVG Line Graph Container */}
-              <div className="w-full flex flex-col gap-2 mt-1">
-                <div className="relative w-full h-[140px] px-1 pt-1">
-                  <svg viewBox="0 0 300 130" className="w-full h-full overflow-visible" preserveAspectRatio="none">
-                    {/* Horizontal Grid Lines */}
-                    <line x1="0" y1="10" x2="300" y2="10" stroke="#f1f5f9" strokeWidth="1.5" strokeDasharray="4 4" />
-                    <line x1="0" y1="62.5" x2="300" y2="62.5" stroke="#f1f5f9" strokeWidth="1.5" strokeDasharray="4 4" />
-                    <line x1="0" y1="115" x2="300" y2="115" stroke="#f1f5f9" strokeWidth="1.5" strokeDasharray="4 4" />
-
-                    {top3SubjectsTrend.map((t, idx) => {
-                      const colors = ["#006a62", "#141779", "#7b1fa2", "#d97706", "#2563eb", "#e11d48", "#059669"];
-                      const color = colors[idx % colors.length];
-                      const points = (t.timeline || []).map((pt: any, i: number) => {
-                        const len = Math.max(1, (t.timeline.length - 1));
-                        const x = (i / len) * 300;
-                        const y = 115 - (pt.score / 100) * 105;
-                        return { x, y, score: pt.score };
-                      });
-                      const pathLine = points.length > 0 ? `M ${points.map((p: any) => `${p.x},${p.y}`).join(" L ")}` : "";
-                      return (
-                        <g key={idx}>
-                          <path d={pathLine} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                          {points.map((p: any, pIdx: number) => (
-                            <circle key={pIdx} cx={p.x} cy={p.y} r="4" fill="#ffffff" stroke={color} strokeWidth="2.5" />
-                          ))}
-                        </g>
-                      );
-                    })}
-                  </svg>
-                </div>
-
-                {/* Dedicated X Axis Labels */}
-                <div className="flex justify-between text-[10px] font-extrabold text-slate-500 px-1 pt-1 border-t border-slate-100">
-                  {top3SubjectsTrend[0]?.timeline ? (
-                    top3SubjectsTrend[0].timeline.map((pt: any, i: number) => (
-                      <span key={i}>{pt.day}</span>
-                    ))
-                  ) : (
-                    <span>Mon</span>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-
-        {/* Parent Learning Section */}
-        <div className="flex flex-col gap-3 w-full">
-          <h3 className="text-base font-extrabold text-slate-800 px-1">{t("parent_learning", "Parent Learning")}</h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
+            {/* Daily Tip */}
             <button
               onClick={() => navigate('/parent/daily-tip')}
-              className="bg-white rounded-[20px] p-4 flex flex-col justify-between h-36 border border-slate-200/80 shadow-sm text-left hover:scale-[1.02] hover:shadow-md transition-all relative overflow-hidden"
+              className="bg-white hover:bg-teal-50/30 rounded-2xl p-2.5 sm:p-3 border border-slate-200/80 hover:border-teal-300 shadow-2xs hover:shadow-xs transition-all text-left flex flex-col justify-start group cursor-pointer min-w-0 w-full"
             >
-              <div className="absolute -right-2 -top-2 w-16 h-16 bg-[#006a62]/5 rounded-full" />
-              <div className="w-10 h-10 rounded-full bg-[#006a62]/10 flex items-center justify-center mb-2 relative z-10">
-                <BrainCircuit size={20} color="#006a62" />
-              </div>
-              <div className="relative z-10">
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <h3 className="text-[15px] font-black text-[#141779] leading-tight">{t("daily_tip", "Daily Tip")}</h3>
-                  <span className="bg-[#006a62] text-white text-[9px] px-1.5 py-0.5 rounded-full uppercase font-bold tracking-tighter">{t("hot", "Hot")}</span>
+              <div className="flex items-center justify-between w-full mb-2">
+                <div className="w-7 h-7 rounded-lg bg-teal-50 border border-teal-100 text-[#006a62] flex items-center justify-center shrink-0">
+                  <BrainCircuit size={15} />
                 </div>
-                <p className="text-xs text-slate-600 font-bold leading-tight mt-1">{t("daily_tip_sub", "Quick family harmony ideas.")}</p>
+                <span className="bg-teal-50 text-teal-700 border border-teal-200/80 text-xs font-black uppercase px-2.5 py-0.5 rounded-full tracking-wider shrink-0">
+                  {t("hot", "Hot")}
+                </span>
+              </div>
+              <div className="w-full min-w-0">
+                <h4 className="text-xs sm:text-sm font-black text-[#141779] group-hover:text-teal-700 transition-colors leading-tight truncate">
+                  {t("daily_tip", "Daily Tip")}
+                </h4>
+                <p 
+                  className="text-xs sm:text-[13px] text-slate-500 font-medium truncate mt-0.5 leading-tight"
+                  title={dailyTipTitle || t("daily_tip_sub", "Quick family harmony ideas.")}
+                >
+                  {dailyTipTitle || t("daily_tip_sub", "Quick family harmony ideas.")}
+                </p>
               </div>
             </button>
 
+            {/* Lessons */}
             <button
               onClick={() => navigate('/parent/lessons')}
-              className="bg-white rounded-[20px] p-4 flex flex-col justify-between h-36 border border-slate-200/80 shadow-sm text-left hover:scale-[1.02] hover:shadow-md transition-all relative overflow-hidden"
+              className="bg-white hover:bg-indigo-50/30 rounded-2xl p-2.5 sm:p-3 border border-slate-200/80 hover:border-indigo-300 shadow-2xs hover:shadow-xs transition-all text-left flex flex-col justify-start group cursor-pointer min-w-0 w-full"
             >
-              <div className="absolute -right-2 -top-2 w-16 h-16 bg-[#141779]/5 rounded-full" />
-              <div className="w-10 h-10 rounded-full bg-[#141779]/10 flex items-center justify-center mb-2 relative z-10">
-                <BrainCircuit size={20} color="#141779" />
-              </div>
-              <div className="relative z-10">
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <h3 className="text-[15px] font-black text-[#141779] leading-tight">{t("lessons", "Lessons")}</h3>
-                  <span className="bg-[#30007f] text-white text-[9px] px-1.5 py-0.5 rounded-full uppercase font-bold tracking-tighter">{t("new", "New")}</span>
+              <div className="flex items-center justify-between w-full mb-2">
+                <div className="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-100 text-[#141779] flex items-center justify-center shrink-0">
+                  <BookOpen size={15} />
                 </div>
-                <p className="text-xs text-slate-600 font-bold leading-tight mt-1">{t("lessons_sub", "Bite-sized parent growth.")}</p>
+                <span className="bg-indigo-50 text-indigo-700 border border-indigo-200/80 text-xs font-black uppercase px-2.5 py-0.5 rounded-full tracking-wider shrink-0">
+                  {t("new", "New")}
+                </span>
+              </div>
+              <div className="w-full min-w-0">
+                <h4 className="text-xs sm:text-sm font-black text-[#141779] group-hover:text-indigo-700 transition-colors leading-tight truncate">
+                  {t("lessons", "Lessons")}
+                </h4>
+                <p className="text-xs sm:text-[13px] text-slate-500 font-medium truncate mt-0.5 leading-tight" title={t("lessons_sub", "Bite-sized parent growth.")}>
+                  {t("lessons_sub", "Bite-sized parent growth.")}
+                </p>
               </div>
             </button>
 
+            {/* Challenges */}
             <button
               onClick={() => navigate('/parent/challenges')}
-              className="bg-white rounded-[20px] p-4 flex flex-col justify-between h-36 border border-slate-200/80 shadow-sm text-left hover:scale-[1.02] hover:shadow-md transition-all relative overflow-hidden"
+              className="bg-white hover:bg-purple-50/30 rounded-2xl p-2.5 sm:p-3 border border-slate-200/80 hover:border-purple-300 shadow-2xs hover:shadow-xs transition-all text-left flex flex-col justify-start group cursor-pointer min-w-0 w-full"
             >
-              <div className="absolute -right-2 -top-2 w-16 h-16 bg-[#30007f]/5 rounded-full" />
-              <div className="w-10 h-10 rounded-full bg-[#30007f]/10 flex items-center justify-center mb-2 relative z-10">
-                <BrainCircuit size={20} color="#30007f" />
-              </div>
-              <div className="relative z-10">
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <h3 className="text-[13px] font-black text-[#141779] leading-tight">{t("challenges", "Challenges")}</h3>
-                  <span className="bg-[#ba1a1a] text-white text-[8px] px-1.5 py-0.5 rounded-full uppercase font-bold tracking-tighter">{t("live", "Live")}</span>
+              <div className="flex items-center justify-between w-full mb-2">
+                <div className="w-7 h-7 rounded-lg bg-purple-50 border border-purple-100 text-[#30007f] flex items-center justify-center shrink-0">
+                  <Target size={15} />
                 </div>
-                <p className="text-[10px] text-slate-600 font-extrabold leading-tight">{t("challenges_sub", "Build strong daily habits.")}</p>
+                <span className="bg-purple-50 text-purple-700 border border-purple-200/80 text-xs font-black uppercase px-2.5 py-0.5 rounded-full tracking-wider shrink-0">
+                  {t("live", "Live")}
+                </span>
+              </div>
+              <div className="w-full min-w-0">
+                <h4 className="text-xs sm:text-sm font-black text-[#141779] group-hover:text-purple-700 transition-colors leading-tight truncate">
+                  {t("challenges", "Challenges")}
+                </h4>
+                <p className="text-xs sm:text-[13px] text-slate-500 font-medium truncate mt-0.5 leading-tight" title={t("challenges_sub", "Build strong daily habits.")}>
+                  {t("challenges_sub", "Build strong daily habits.")}
+                </p>
               </div>
             </button>
 
+            {/* Rewards */}
             <button
               onClick={() => navigate('/parent/achievements')}
-              className="bg-white rounded-[20px] p-4 flex flex-col justify-between h-36 border border-slate-200/80 shadow-sm text-left hover:scale-[1.02] hover:shadow-md transition-all relative overflow-hidden"
+              className="bg-white hover:bg-emerald-50/30 rounded-2xl p-2.5 sm:p-3 border border-slate-200/80 hover:border-emerald-300 shadow-2xs hover:shadow-xs transition-all text-left flex flex-col justify-start group cursor-pointer min-w-0 w-full"
             >
-              <div className="absolute -right-2 -top-2 w-16 h-16 bg-[#007168]/5 rounded-full" />
-              <div className="w-10 h-10 rounded-full bg-[#007168]/10 flex items-center justify-center mb-2 relative z-10">
-                <Activity size={20} color="#007168" />
-              </div>
-              <div className="relative z-10">
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <h3 className="text-[13px] font-black text-[#141779] leading-tight">{t("rewards", "Rewards")}</h3>
-                  <span className="bg-[#007168] text-white text-[8px] px-1.5 py-0.5 rounded-full uppercase font-bold tracking-tighter">{t("badges", "Badges")}</span>
+              <div className="flex items-center justify-between w-full mb-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-50 border border-emerald-100 text-[#007168] flex items-center justify-center shrink-0">
+                  <Award size={15} />
                 </div>
-                <p className="text-[10px] text-slate-600 font-extrabold leading-tight">{t("rewards_sub", "View your milestones.")}</p>
+                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-xs font-black uppercase px-2.5 py-0.5 rounded-full tracking-wider shrink-0">
+                  {t("badges", "Badges")}
+                </span>
+              </div>
+              <div className="w-full min-w-0">
+                <h4 className="text-xs sm:text-sm font-black text-[#141779] group-hover:text-emerald-700 transition-colors leading-tight truncate">
+                  {t("rewards", "Rewards")}
+                </h4>
+                <p className="text-xs sm:text-[13px] text-slate-500 font-medium truncate mt-0.5 leading-tight" title={t("rewards_sub", "View your milestones.")}>
+                  {t("rewards_sub", "View your milestones.")}
+                </p>
               </div>
             </button>
           </div>
-        </div>
 
-        {/* Quick Actions */}
-        <div className="flex flex-col gap-3 mt-2">
-          <div className="flex gap-3">
-            <button
-              onClick={() => navigate('/parent/settings')}
-              className="flex-1 bg-white rounded-[20px] p-4 border border-slate-200/80 shadow-sm flex items-center gap-3 hover:bg-slate-50 hover:shadow-md transition-all"
-            >
-              <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
-                <Settings size={20} className="text-slate-700" />
-              </div>
-              <span className="text-[16px] font-extrabold text-[#141779]">{t("settings", "Settings")}</span>
-            </button>
-            <button
-              onClick={() => navigate('/parent/learning-dna')}
-              className="flex-1 bg-white rounded-[20px] p-4 border border-slate-200/80 shadow-sm flex items-center gap-3 hover:bg-slate-50 hover:shadow-md transition-all"
-            >
-              <div className="w-10 h-10 rounded-xl bg-[#ccf4f0] flex items-center justify-center">
-                <BrainCircuit size={20} className="text-[#006a62]" />
-              </div>
-              <span className="text-[16px] font-extrabold text-[#141779]">{t("dna", "DNA")}</span>
-            </button>
-          </div>
-
+          {/* Expanded Prominent DNA Horizontal Card */}
           <button
-            onClick={() => navigate('/parent/kids-activity')}
-            className="w-full bg-white rounded-[20px] p-5 border border-slate-200/80 shadow-sm flex justify-between items-center hover:bg-slate-50 hover:shadow-md transition-all group gap-3"
+            onClick={() => navigate('/parent/learning-dna')}
+            className="w-full bg-white hover:bg-teal-50/20 rounded-2xl py-3.5 sm:py-4 px-3.5 sm:px-4 border border-slate-200/80 hover:border-teal-300 shadow-2xs hover:shadow-xs transition-all flex items-center justify-between group cursor-pointer text-left mt-1"
           >
-            <div className="flex items-start gap-4 flex-1 min-w-0">
-              <div className="w-12 h-12 rounded-2xl bg-[#e6e0ff] flex items-center justify-center shrink-0">
-                <Clock size={24} className="text-[#30007f]" />
+            <div className="flex items-center gap-3.5 min-w-0 flex-1">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-teal-50 border border-teal-100 text-[#006a62] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
+                <BrainCircuit size={19} />
               </div>
-              <div className="text-left min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <h4 className="text-[16px] font-extrabold text-[#141779] leading-none">{t("kids_activity", "Kids Activity")}</h4>
-                  {lastActivityDetails && (
-                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                      lastActivityDetails.type === "reading" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
-                      lastActivityDetails.type === "battle" ? "bg-rose-50 text-rose-700 border border-rose-200" :
-                      lastActivityDetails.type === "multiplayer" ? "bg-purple-50 text-purple-700 border border-purple-200" :
-                      "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                    }`}>
-                      {lastActivityDetails.type === "reading" ? `📖 ${t("reading", "Reading")}` :
-                       lastActivityDetails.type === "battle" ? `🐉 ${t("boss", "Boss")}` :
-                       lastActivityDetails.type === "multiplayer" ? `⚔️ ${t("arena", "Arena")}` :
-                       `🎯 ${t("quiz", "Quiz")}`}
-                    </span>
-                  )}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm sm:text-base font-black text-[#141779] group-hover:text-teal-700 transition-colors leading-tight truncate">
+                    {t("learning_dna", "Learning DNA")}
+                  </h4>
+                  <span className="bg-teal-50 text-teal-700 border border-teal-200/80 text-[10px] sm:text-[11px] font-black uppercase px-2 py-0.5 rounded-full tracking-wider shrink-0">
+                    {t("dna", "DNA")}
+                  </span>
                 </div>
-                {lastActivityDetails ? (
-                  <div className="flex flex-col gap-0.5">
-                    <p className="text-sm font-bold text-slate-800 break-words leading-snug">{translateActivityTitle(lastActivityDetails.title)}</p>
-                    <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500 mt-0.5">
-                      {lastActivityDetails.timeTaken > 0 && (
-                        <span>⏱️ {Math.round(lastActivityDetails.timeTaken / 60) || 1}m</span>
-                      )}
-                      {lastActivityDetails.timeTaken > 0 && lastActivityDetails.totalQuestions > 0 && <span>•</span>}
-                      {lastActivityDetails.totalQuestions > 0 && (
-                        <span className="text-indigo-600 font-extrabold">
-                          🎯 {lastActivityDetails.correctQuestions}/{lastActivityDetails.totalQuestions} {t("correct", "Correct")}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-sm font-semibold text-slate-700 break-words line-clamp-2">{translateActivityTitle(lastActivity)}</p>
-                )}
+                <p className="text-xs sm:text-[13px] text-slate-500 font-medium truncate mt-1 leading-snug">
+                  {t("learning_dna_sub", "Cognitive profile, thinking habits & telemetry")}
+                </p>
               </div>
             </div>
-            <ChevronRight size={24} className="text-[#141779] group-hover:translate-x-1 transition-transform shrink-0 self-center" />
+            <div className="w-8 h-8 rounded-full bg-slate-50/90 border border-slate-100 text-slate-400 group-hover:text-teal-700 group-hover:bg-teal-50 flex items-center justify-center shrink-0 ml-2 group-hover:translate-x-0.5 transition-all shadow-2xs">
+              <ChevronRight size={16} />
+            </div>
           </button>
         </div>
+
+        {/* 4. Recent Kids Activity (Moved Below Parent Learning) */}
+        {(() => {
+          const actType = (lastActivityDetails?.type || "").toLowerCase();
+          const actTitle = (lastActivityDetails?.title || "").trim();
+          const lowerTitle = actTitle.toLowerCase();
+          const isMockTitle = !actTitle ||
+            lowerTitle.includes("exploring new quests") ||
+            lowerTitle === "activity logged" ||
+            lowerTitle === "no recent activity" ||
+            lowerTitle === "activity";
+
+          const isReadingType = actType === "reading" || actType === "chapter";
+          const isValidLastActivity = Boolean(
+            lastActivityDetails &&
+            !isMockTitle &&
+            (
+              (isReadingType && (lastActivityDetails.timeTaken >= 15 || lastActivityDetails.completed)) ||
+              (!isReadingType && (lastActivityDetails.totalQuestions > 0 || lastActivityDetails.timeTaken >= 15 || lastActivityDetails.completed))
+            )
+          );
+
+          return (
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between px-1">
+                <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-600">
+                  {t("recent_activity", "Recent Activity")}
+                </h3>
+                {isValidLastActivity && (
+                  <button
+                    onClick={() => navigate('/parent/kids-activity')}
+                    className="text-xs sm:text-[13px] font-bold text-indigo-700 hover:text-indigo-900 transition-colors cursor-pointer flex items-center gap-1 group"
+                  >
+                    <span>{t("view_all", "View All").replace(/[-–—]?\s*[>→›»]/g, "").replace(/->/g, "").trim()}</span>
+                    <ChevronRight size={13} className="group-hover:translate-x-0.5 transition-transform shrink-0" />
+                  </button>
+                )}
+              </div>
+
+              {isValidLastActivity ? (
+                <button
+                  onClick={() => navigate('/parent/kids-activity')}
+                  className="w-full bg-white rounded-2xl p-3 border border-slate-200/70 shadow-xs flex justify-between items-center hover:bg-slate-50 hover:shadow-sm transition-all group gap-3 cursor-pointer text-left"
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
+                      <Clock size={17} className="text-[#141779]" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-sm font-black text-[#141779] leading-tight truncate mb-1">
+                        {translateActivityTitle(lastActivityDetails.title)}
+                      </h4>
+                      <div className="flex items-center gap-2 text-xs font-medium text-slate-500 flex-nowrap overflow-hidden">
+                        <span className={`px-2 py-0.5 rounded-md text-[11px] font-black uppercase tracking-wider shrink-0 whitespace-nowrap ${
+                          lastActivityDetails.type === "reading" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
+                          lastActivityDetails.type === "battle" ? "bg-rose-50 text-rose-700 border border-rose-200" :
+                          lastActivityDetails.type === "multiplayer" ? "bg-purple-50 text-purple-700 border border-purple-200" :
+                          "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                        }`}>
+                          {lastActivityDetails.type === "reading" ? `📖 ${t("reading", "Reading")}` :
+                           lastActivityDetails.type === "battle" ? `🐉 ${t("boss", "Boss")}` :
+                           lastActivityDetails.type === "multiplayer" ? `⚔️ ${t("arena", "Arena")}` :
+                           `🎯 ${t("quiz", "Quiz")}`}
+                        </span>
+                        {lastActivityDetails.timeTaken > 0 && (
+                          <span className="shrink-0 whitespace-nowrap">⏱️ {Math.round(lastActivityDetails.timeTaken / 60) || 1}m</span>
+                        )}
+                        {lastActivityDetails?.timeTaken > 0 && lastActivityDetails?.totalQuestions > 0 && <span className="shrink-0 text-slate-400">•</span>}
+                        {lastActivityDetails?.totalQuestions > 0 && (
+                          <span className="text-indigo-600 font-bold shrink-0 whitespace-nowrap">
+                            🎯 {lastActivityDetails.correctQuestions}/{lastActivityDetails.totalQuestions} {t("correct", "Correct")}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight size={16} className="text-[#141779] group-hover:translate-x-0.5 transition-transform shrink-0" />
+                </button>
+              ) : (
+                <div className="w-full bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex items-center justify-between text-left">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center shrink-0 text-slate-400">
+                      <Activity size={18} />
+                    </div>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-600 leading-tight">
+                        {t("no_recent_activity_title", "No recent activity")}
+                      </h4>
+                      <p className="text-xs text-slate-500 font-medium mt-0.5">
+                        {t("child_hasnt_completed_activities", "Your child hasn't completed any activities yet.")}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
       </main>
 
@@ -865,11 +1758,26 @@ export default function ParentDashboardScreen() {
 
       {/* Graph Modal */}
       {modalType && (
-        <div className="fixed inset-0 bg-black/40 z-[100] flex justify-center items-end sm:items-center p-0 sm:p-5 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-[#f7f9fb] w-full sm:w-[400px] max-w-full rounded-t-3xl sm:rounded-3xl max-h-[90vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-10 duration-300">
+        <div 
+          onClick={handleCloseModal}
+          onTouchMove={(e) => {
+            if (e.target === e.currentTarget) e.preventDefault();
+          }}
+          className="fixed inset-0 bg-black/40 z-[100] flex justify-center items-end sm:items-center p-0 sm:p-5 backdrop-blur-sm animate-in fade-in duration-300 overscroll-contain select-none"
+          style={{ overscrollBehavior: "contain", touchAction: "none" }}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-[#f7f9fb] w-full sm:w-[400px] max-w-full rounded-t-3xl sm:rounded-3xl max-h-[90vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-10 duration-300 overscroll-contain select-text"
+            style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
+          >
             <div className="flex justify-between items-center p-5 border-b border-gray-100 shrink-0">
               <div className="flex items-center gap-3">
-                <button onClick={() => setModalType(null)} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors">
+                <button 
+                  onClick={handleCloseModal} 
+                  className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors cursor-pointer"
+                  aria-label="Back"
+                >
                   <ArrowLeft size={20} color="#141779" />
                 </button>
                 <h2 className="text-lg font-bold text-[#141779]">
@@ -879,251 +1787,403 @@ export default function ParentDashboardScreen() {
                       t("cognitive_profile_graph", "Cognitive Profile Graph")}
                 </h2>
               </div>
-              <button onClick={() => setModalType(null)} className="p-2 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">
+              <button 
+                onClick={handleCloseModal} 
+                className="p-2 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors cursor-pointer"
+                aria-label="Close"
+              >
                 <X size={20} color="#464652" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5 space-y-4">
-              {!hasEnoughData ? (
+            <div 
+              className="flex-1 overflow-y-auto p-5 pb-7 space-y-4 overscroll-contain"
+              style={{ overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}
+            >
+              {!hasEnoughData || subjectBreakdown.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-8 bg-slate-50 border border-slate-200/80 rounded-2xl text-center my-4">
                   <span className="text-4xl mb-2">📊</span>
-                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">{t("not_enough_data_for_now", "Not Enough Data For Now")}</h4>
+                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">{t("no_data_available", "No Data Available")}</h4>
                   <p className="text-xs text-slate-500 font-bold mt-2 leading-relaxed">
-                    {t("not_enough_data_desc", "Complete 2 to 3 chapters to unlock personalized cognitive strengths, weakness analysis, and 7-day trend graphs!")}
+                    {t("no_test_activity_yet", "No test data or activity recorded yet. Complete quizzes or tests to unlock personalized performance trend graphs!")}
                   </p>
                 </div>
-              ) : modalType === "risks" && (!hasRiskAlert || risks[0] === "No risk for now.") ? (
+              ) : modalType === "risks" && actualRiskSubjects.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-8 bg-emerald-50 border border-emerald-200 rounded-2xl text-center my-4">
                   <span className="text-4xl mb-2">✅</span>
                   <h4 className="text-sm font-black text-emerald-900 uppercase tracking-wider">{t("no_risk_alerts", "No Risk Alerts")}</h4>
                   <p className="text-xs text-emerald-700 font-bold mt-2 leading-relaxed">
-                    {t("no_risk_alerts_desc", { name: cleanChildName, defaultValue: `All clear! ${cleanChildName} is performing consistently with scores above 60% across all subjects.` })}
+                    {t("no_risk_alerts_desc", { name: cleanChildName, defaultValue: `All clear! ${cleanChildName} has no subjects below 70% right now.` })}
+                  </p>
+                </div>
+              ) : modalType === "weaknesses" && actualWeakSubjects.length === 0 ? (
+                <div className="flex flex-col items-center justify-center p-8 bg-emerald-50 border border-emerald-200 rounded-2xl text-center my-4">
+                  <span className="text-4xl mb-2">🎉</span>
+                  <h4 className="text-sm font-black text-emerald-900 uppercase tracking-wider">{t("no_weaknesses_title", "No Weaknesses Detected")}</h4>
+                  <p className="text-xs text-emerald-700 font-bold mt-2 leading-relaxed">
+                    {t("no_weaknesses_desc", {
+                      name: cleanChildName,
+                      defaultValue: `Great job! ${cleanChildName} has all active subjects performing consistently at or above 70%.`
+                    })}
+                  </p>
+                </div>
+              ) : modalType === "strengths" && actualStrengthSubjects.length === 0 ? (
+                <div className="flex flex-col items-center justify-center p-8 bg-slate-50 border border-slate-200 rounded-2xl text-center my-4">
+                  <span className="text-4xl mb-2">💪</span>
+                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">{t("no_strengths_title", "No Strengths Yet")}</h4>
+                  <p className="text-xs text-slate-500 font-bold mt-2 leading-relaxed">
+                    {t("keep_playing_build_strengths", "Keep playing to build up strong subjects at or above 70%!")}
                   </p>
                 </div>
               ) : (
                 <>
-                  <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-                    <div className="flex justify-between items-end mb-2">
-                      <div>
-                        <p className="text-[10px] font-bold text-[#767683] uppercase tracking-wider mb-1">{chartTitle} ({t("seven_day_trend", "7-Day Trend")})</p>
-                        {chart.points.length > 0 ? (
-                          <p className="text-3xl font-black" style={{ color: chartColor }}>{currentScore}%</p>
-                        ) : (
-                          <p className="text-3xl font-black text-slate-400">--%</p>
+                  {/* Modal-Specific Distinct Graph Card */}
+                  {modalType && renderGraphCard(modalType)}
+
+                  {/* Subject Breakdown / Weaknesses Section */}
+                  <div className="space-y-3">
+                    <h3 className="text-[13px] font-bold text-[#141779] border-b border-gray-100 pb-2">
+                      {modalType === "strengths"
+                        ? t("top_performing_subjects", "Top Performing Subject(s) (≥ 70%)")
+                        : modalType === "weaknesses"
+                        ? t("areas_for_review_title", "Areas for Improvement (< 70% for 2+ Days)")
+                        : modalType === "risks"
+                        ? t("at_risk_subjects_title", "At-Risk Subjects (Day 1 < 70%)")
+                        : t("performance_by_subject", "Performance by Subject")}
+                    </h3>
+
+                    {modalType === "weaknesses" ? (
+                      /* Enhanced Weaknesses Cards (consecutive days < 70%) */
+                      <div className="space-y-3">
+                        {actualWeakSubjects.map((sb, idx) => {
+                          const subjName = translateSubjectName(sb.subject);
+                          const isDeepRecovery = (sb.accuracy ?? 0) < 50;
+
+                          return (
+                            <div
+                              key={idx}
+                              className="bg-white rounded-2xl p-4 border border-rose-200/90 shadow-xs space-y-3"
+                            >
+                              <div className="flex justify-between items-center">
+                                <h4 className="text-sm font-black text-slate-800 flex items-center gap-1.5">
+                                  {actualWeakSubjects.length > 1 && (
+                                    <span 
+                                      className="w-2.5 h-2.5 rounded-full shrink-0 ring-2 ring-white shadow-2xs" 
+                                      style={{ backgroundColor: getCategorySubjectChartColor("weaknesses", idx).color }} 
+                                    />
+                                  )}
+                                  <span>{subjName}</span>
+                                  <span className="text-xs">⚠️</span>
+                                </h4>
+                                <span className="text-xs font-black px-2.5 py-1 rounded-full bg-rose-50 text-[#dc2626] border border-rose-200 flex items-center gap-1">
+                                  <span className="text-[10px]">●</span>
+                                  <span>{t("status_needs_improvement", "Needs Improvement")}</span>
+                                </span>
+                              </div>
+
+                              <div className="h-2.5 w-full bg-rose-100/70 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full rounded-full transition-all duration-700"
+                                  style={{ 
+                                    width: `${Math.min(100, Math.max(5, sb.accuracy))}%`,
+                                    backgroundColor: actualWeakSubjects.length > 1 ? getCategorySubjectChartColor("weaknesses", idx).color : "#dc2626"
+                                  }}
+                                />
+                              </div>
+
+                              {(sb.wrongAnswers !== undefined && sb.correctAnswers !== undefined && (sb.correctAnswers + sb.wrongAnswers > 0)) && (
+                                <div className="flex items-center gap-3 text-xs text-slate-500 font-semibold pt-0.5">
+                                  <span>{t("accuracy_label", "Accuracy")}: {sb.accuracy}%</span>
+                                  <span>•</span>
+                                  <span className="text-slate-600">{t("solved_count", { correct: sb.correctAnswers, total: sb.correctAnswers + sb.wrongAnswers, defaultValue: `${sb.correctAnswers}/${sb.correctAnswers + sb.wrongAnswers} correct` })}</span>
+                                  {sb.wrongAnswers > 0 && (
+                                    <>
+                                      <span>•</span>
+                                      <span className="text-[#dc2626]">{t("mistakes_count", { count: sb.wrongAnswers, defaultValue: `${sb.wrongAnswers} mistakes` })}</span>
+                                    </>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Dynamic AI Insight (LLM Mistake Pattern Analysis & 7-Day / 15-Day Structured Recovery Plan) */}
+                              {(() => {
+                                const normSubj = (sb.subject || "").toLowerCase();
+                                const subjectMistakes = (reportData?.mistakes || []).filter((m: any) => {
+                                  const mSubj = (m.subject || "").toLowerCase();
+                                  return mSubj === normSubj || mSubj.includes(normSubj) || normSubj.includes(mSubj);
+                                });
+                                return (
+                                  <DynamicAiInsightCard
+                                    mode="weakness"
+                                    subject={subjName}
+                                    accuracy={sb.accuracy}
+                                    mistakeCount={sb.wrongAnswers !== undefined ? sb.wrongAnswers : subjectMistakes.length}
+                                    correctCount={sb.correctAnswers ?? 0}
+                                    recentTrend={sb.trend7Day || sb.timeline || activeTrend}
+                                    incorrectQuestionLogs={subjectMistakes}
+                                    studentName={cleanChildName}
+                                  />
+                                );
+                              })()}
+                            </div>
+                          );
+                        })}
+
+                        {actualWeakSubjects.length === 0 && (
+                          <p className="text-xs text-[#006a62] font-semibold bg-[#006a62]/10 p-3.5 rounded-xl text-center">
+                            {t("no_weaknesses_desc", {
+                              name: cleanChildName,
+                              defaultValue: `🎉 Fantastic! ${cleanChildName} has all active subjects performing at or above 70%.`
+                            })}
+                          </p>
                         )}
                       </div>
-                      {chart.points.length > 0 && diffStr && (
-                        <div className={`px-2 py-1 rounded-md text-[10px] font-bold ${diff >= 0 ? 'bg-[#006a62]/10 text-[#006a62]' : 'bg-[#ba1a1a]/10 text-[#ba1a1a]'}`}>
-                          {t("this_week_change", { diff: diffStr, defaultValue: diffStr })}
-                        </div>
-                      )}
-                    </div>
+                    ) : modalType === "risks" ? (
+                      /* Enhanced Risks Cards (Day 1 below 70%) */
+                      <div className="space-y-3">
+                        {actualRiskSubjects.map((sb, idx) => {
+                          const subjName = translateSubjectName(sb.subject);
+                          return (
+                            <div
+                              key={idx}
+                              className="bg-white rounded-2xl p-4 border border-amber-200/90 shadow-xs space-y-2.5"
+                            >
+                              <div className="flex justify-between items-center">
+                                <h4 className="text-sm font-black text-slate-800 flex items-center gap-1.5">
+                                  {actualRiskSubjects.length > 1 && (
+                                    <span 
+                                      className="w-2.5 h-2.5 rounded-full shrink-0 ring-2 ring-white shadow-2xs" 
+                                      style={{ backgroundColor: getCategorySubjectChartColor("risks", idx).color }} 
+                                    />
+                                  )}
+                                  <span>{subjName}</span>
+                                  <span className="text-xs">🔔</span>
+                                </h4>
+                                <span className="text-xs font-black px-2.5 py-1 rounded-full bg-amber-50 text-[#b45309] border border-amber-200 flex items-center gap-1">
+                                  <span className="text-[10px]">●</span>
+                                  <span>{t("status_risk_day1", "At Risk (Day 1 <70%)")}</span>
+                                </span>
+                              </div>
 
-                    {/* Custom SVG Line Graph */}
-                    <div className="relative w-full h-[160px] mt-6">
-                      {chart.points.length === 0 ? (
-                        <div className="w-full h-[120px] bg-gray-50 border border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-center p-4">
-                          <Activity size={24} className="text-gray-400 mb-2 animate-pulse" />
-                          <p className="text-xs font-bold text-[#7c7d8a]">{t("weekly_trend_requires_quizzes", "Weekly trend requires completed quizzes.")}</p>
-                          <p className="text-[10px] text-gray-400 mt-1">{t("no_performance_data_yet", "No performance data recorded for this week yet.")}</p>
-                        </div>
-                      ) : (
-                        <>
-                          <svg viewBox="0 0 300 120" className="w-full h-full overflow-visible">
-                            <defs>
-                              <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor={chartColor} stopOpacity="0.4" />
-                                <stop offset="100%" stopColor={chartColor} stopOpacity="0" />
-                              </linearGradient>
-                            </defs>
+                              <div className="h-2.5 w-full bg-amber-100/70 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full rounded-full transition-all duration-700"
+                                  style={{ 
+                                    width: `${Math.min(100, Math.max(5, sb.accuracy))}%`,
+                                    backgroundColor: actualRiskSubjects.length > 1 ? getCategorySubjectChartColor("risks", idx).color : "#d97706"
+                                  }}
+                                />
+                              </div>
 
-                            {/* Grid Lines */}
-                            <line x1="0" y1="0" x2="300" y2="0" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
-                            <line x1="0" y1="60" x2="300" y2="60" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
-                            <line x1="0" y1="120" x2="300" y2="120" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="4 4" />
+                              {(sb.wrongAnswers !== undefined && sb.correctAnswers !== undefined && (sb.correctAnswers + sb.wrongAnswers > 0)) && (
+                                <div className="flex items-center gap-3 text-xs text-slate-500 font-semibold pt-0.5">
+                                  <span>{t("accuracy_label", "Accuracy")}: {sb.accuracy}%</span>
+                                  <span>•</span>
+                                  <span className="text-slate-600">{t("solved_count", { correct: sb.correctAnswers, total: sb.correctAnswers + sb.wrongAnswers, defaultValue: `${sb.correctAnswers}/${sb.correctAnswers + sb.wrongAnswers} correct` })}</span>
+                                </div>
+                              )}
 
-                            {/* Area Fill */}
-                            <path
-                              d={chart.pathArea}
-                              fill="url(#lineGradient)"
-                              className="animate-in fade-in duration-700"
-                            />
+                              {/* Dynamic AI Insight (Day 1 Recovery Protocol) */}
+                              {(() => {
+                                const normSubj = (sb.subject || "").toLowerCase();
+                                const subjectMistakes = (reportData?.mistakes || []).filter((m: any) => {
+                                  const mSubj = (m.subject || "").toLowerCase();
+                                  return mSubj === normSubj || mSubj.includes(normSubj) || normSubj.includes(mSubj);
+                                });
+                                return (
+                                  <DynamicAiInsightCard
+                                    mode="risk"
+                                    subject={subjName}
+                                    accuracy={sb.accuracy}
+                                    mistakeCount={sb.wrongAnswers !== undefined ? sb.wrongAnswers : subjectMistakes.length}
+                                    correctCount={sb.correctAnswers ?? 0}
+                                    recentTrend={sb.trend7Day || sb.timeline || activeTrend}
+                                    incorrectQuestionLogs={subjectMistakes}
+                                    studentName={cleanChildName}
+                                  />
+                                );
+                              })()}
+                            </div>
+                          );
+                        })}
 
-                            {/* The Line */}
-                            <path
-                              d={chart.pathLine}
-                              fill="none"
-                              stroke={chartColor}
-                              strokeWidth="3.5"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="drop-shadow-sm animate-in slide-in-from-left-4 duration-700"
-                            />
+                        {actualRiskSubjects.length === 0 && (
+                          <p className="text-xs text-[#006a62] font-semibold bg-[#006a62]/10 p-3.5 rounded-xl text-center">
+                            {t("no_risk_alerts_desc", { name: cleanChildName, defaultValue: `All clear! ${cleanChildName} has no subjects below 70% right now.` })}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      /* modalType === "strengths": Enhanced Strengths Cards (with ties displayed concurrently) */
+                      <div className="space-y-3">
+                        {actualStrengthSubjects.map((sb, idx) => {
+                          const subjName = translateSubjectName(sb.subject);
+                          return (
+                            <div
+                              key={idx}
+                              className="bg-white rounded-2xl p-4 border border-emerald-200/90 shadow-xs space-y-2.5"
+                            >
+                              <div className="flex justify-between items-center">
+                                <h4 className="text-sm font-black text-[#006a62] flex items-center gap-1.5">
+                                  {actualStrengthSubjects.length > 1 && (
+                                    <span 
+                                      className="w-2.5 h-2.5 rounded-full shrink-0 ring-2 ring-white shadow-2xs" 
+                                      style={{ backgroundColor: getCategorySubjectChartColor("strengths", idx).color }} 
+                                    />
+                                  )}
+                                  <span>{subjName}</span>
+                                  <span className="text-xs">🏆</span>
+                                </h4>
+                                <span className="text-xs font-black px-2.5 py-1 rounded-full bg-emerald-50 text-[#006a62] border border-emerald-200 flex items-center gap-1">
+                                  <span className="text-[10px]">●</span>
+                                  <span>{t("top_performing_badge", "Top Performing (≥70%)")}</span>
+                                </span>
+                              </div>
 
-                            {/* Data Points */}
-                            {chart.points.map((p, idx) => (
-                              <circle
-                                key={idx}
-                                cx={p.x}
-                                cy={p.y}
-                                r={idx === chart.points.length - 1 ? 5 : 4}
-                                fill={idx === chart.points.length - 1 ? chartColor : "#ffffff"}
-                                stroke={idx === chart.points.length - 1 ? "#ffffff" : chartColor}
-                                strokeWidth="2.5"
-                                className={idx === chart.points.length - 1 ? "animate-pulse" : ""}
+                              <div className="h-2.5 w-full bg-emerald-100/70 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full rounded-full transition-all duration-700"
+                                  style={{ 
+                                    width: `${Math.min(100, Math.max(5, sb.accuracy))}%`,
+                                    backgroundColor: actualStrengthSubjects.length > 1 ? getCategorySubjectChartColor("strengths", idx).color : "#006a62"
+                                  }}
+                                />
+                              </div>
+
+                              {(sb.correctAnswers !== undefined && sb.wrongAnswers !== undefined && (sb.correctAnswers + sb.wrongAnswers > 0)) && (
+                                <div className="flex items-center gap-3 text-xs text-slate-500 font-semibold pt-0.5">
+                                  <span>{t("accuracy_label", "Accuracy")}: {sb.accuracy}%</span>
+                                  <span>•</span>
+                                  <span className="text-slate-600">{t("solved_count", { correct: sb.correctAnswers, total: sb.correctAnswers + sb.wrongAnswers, defaultValue: `${sb.correctAnswers}/${sb.correctAnswers + sb.wrongAnswers} correct` })}</span>
+                                </div>
+                              )}
+
+                              {/* Interactive AI Insight Trigger Button (opens high-end Mastery Modal) */}
+                              <DynamicAiInsightCard
+                                mode="strengths"
+                                subject={subjName}
+                                accuracy={sb.accuracy}
+                                mistakeCount={sb.wrongAnswers ?? 0}
+                                correctCount={sb.correctAnswers ?? 0}
+                                recentTrend={sb.trend7Day || sb.timeline || activeTrend}
+                                incorrectQuestionLogs={[]}
+                                studentName={cleanChildName}
                               />
-                            ))}
-                          </svg>
-
-                          {/* X Axis Labels */}
-                          <div className="flex justify-between text-[10px] font-bold text-[#767683] mt-4 px-1">
-                            {chart.labels.map((lbl, idx) => (
-                              <span key={idx} style={{ color: idx === chart.labels.length - 1 ? chartColor : undefined }}>{lbl}</span>
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Subject Breakdown Bars */}
-                  <div className="space-y-4">
-                    <h3 className="text-[13px] font-bold text-[#141779] mb-3 border-b border-gray-100 pb-2">
-                      {modalType === "strengths" ? t("top_subjects_ge_60", "Top Subjects (≥ 60%)") : modalType === "weaknesses" ? t("needs_attention_lt_60", "Needs Attention (< 60%)") : modalType === "risks" ? t("at_risk_subjects_lt_60", "At-Risk Subjects (< 60%)") : t("performance_by_subject", "Performance by Subject")}
-                    </h3>
-                    {subjectBreakdown
-                      .slice()
-                      .filter(sb => {
-                        if (modalType === "strengths") return sb.accuracy >= 60;
-                        if (modalType === "weaknesses" || modalType === "risks") return sb.accuracy < 60;
-                        return true;
-                      })
-                      .sort((a, b) => {
-                        if (modalType === "weaknesses" || modalType === "risks") return a.accuracy - b.accuracy;
-                        return b.accuracy - a.accuracy;
-                      })
-                      .map((sb, idx) => {
-                        const isStrength = sb.accuracy >= 60;
-                        const barColor = isStrength ? "#006a62" : "#ba1a1a";
-                        const bgColor = isStrength ? "bg-[#006a62]/10" : "bg-[#ba1a1a]/10";
-
-                        return (
-                          <div key={idx}>
-                            <div className="flex justify-between text-xs font-bold mb-1.5">
-                              <span className={isStrength ? "text-[#006a62]" : "text-[#ba1a1a]"}>
-                                {translateSubjectName(sb.subject)} {isStrength ? "💪" : "⚠️"}
-                              </span>
-                              <span className={isStrength ? "text-[#006a62]" : "text-[#ba1a1a]"}>{sb.accuracy}%</span>
                             </div>
-                            <div className={`h-2.5 w-full ${bgColor} rounded-full overflow-hidden`}>
-                              <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${sb.accuracy}%`, backgroundColor: barColor }} />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    {subjectBreakdown.length === 0 && (
-                      <p className="text-xs text-[#767683]">{t("play_more_quests_breakdown", "Play more quests to see detailed subject breakdown!")}</p>
+                          );
+                        })}
+
+                        {actualStrengthSubjects.length === 0 && (
+                          <p className="text-xs text-[#767683] font-semibold bg-slate-100 p-3.5 rounded-xl text-center">
+                            {t("keep_playing_build_strengths", "Keep playing to build up strong subjects at or above 70%!")}
+                          </p>
+                        )}
+                      </div>
                     )}
-                    {subjectBreakdown.length > 0 &&
-                      (modalType === "weaknesses" || modalType === "risks") &&
-                      subjectBreakdown.every(sb => sb.accuracy >= 60) && (
-                        <p className="text-xs text-[#006a62] font-semibold bg-[#006a62]/10 p-3 rounded-lg text-center mt-2">
-                          {t("fantastic_no_subjects_below_60", { name: cleanChildName, defaultValue: `🎉 Fantastic! ${cleanChildName} has no subjects below 60% right now.` })}
-                        </p>
-                      )}
-                    {subjectBreakdown.length > 0 &&
-                      modalType === "strengths" &&
-                      subjectBreakdown.every(sb => sb.accuracy < 60) && (
-                        <p className="text-xs text-[#ba1a1a] font-semibold bg-[#ba1a1a]/10 p-3 rounded-lg text-center mt-2">
-                          {t("keep_playing_build_strengths", "Keep playing to build up strong subjects above 60%!")}
-                        </p>
-                      )}
-                  </div>
-
-                  <div className="bg-indigo-50 p-4 rounded-xl shadow-sm border border-indigo-100">
-                    <p className="text-xs text-[#141779] leading-relaxed">
-                      <span className="font-bold text-[#141779]">{t("actionable_insight", "Actionable Insight: ")} </span>
-                      {modalType === "risks" ? (
-                        risks && risks.length > 0 && risks[0] !== "No risk for now." ? (
-                          translateInsightText(risks.join(" "))
-                        ) : (
-                          <>{t("maintaining_good_scores", { name: cleanChildName, defaultValue: `${cleanChildName} is maintaining good scores across all subjects.` })}</>
-                        )
-                      ) : modalType === "weaknesses" ? (
-                        weaknesses && weaknesses.length > 0 && weaknesses[0] !== "No weakness for now." ? (
-                          translateInsightText(weaknesses.join(" "))
-                        ) : (
-                          <>{t("no_weak_subjects_identified", "No weak subjects identified right now.")}</>
-                        )
-                      ) : modalType === "strengths" ? (
-                        strengths && strengths.length > 0 && strengths[0] !== "No strength for now." ? (
-                          translateInsightText(strengths.join(" "))
-                        ) : (
-                          <>{t("showing_good_performance", { name: cleanChildName, defaultValue: `${cleanChildName} is showing good performance in active subjects.` })}</>
-                        )
-                      ) : (
-                        <>{t("no_trend_data_available", "No trend data available yet. Complete more quizzes to get personalized insights.")}</>
-                      )}
-                    </p>
                   </div>
                 </>
               )}
             </div>
-
-            {/* View Reports CTA */}
-            {hasEnoughData && (
-              <div className="p-5 pt-2 border-t border-slate-100 bg-white/50 shrink-0">
-                <button
-                  onClick={() => { setModalType(null); navigate('/parent/reports'); }}
-                  className="w-full flex items-center justify-center gap-2 bg-[#141779] text-white font-extrabold text-sm py-3 px-5 rounded-2xl hover:bg-[#1e23a0] active:scale-[0.98] transition-all shadow-md shadow-[#141779]/20"
-                >
-                  <span>📊</span>
-                  <span>
-                    {modalType === "weaknesses" ? t("review_mistakes_reports", "Review Mistakes & Reports") : t("view_subject_reports", "View Subject Reports")}
-                  </span>
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-            )}
           </div>
         </div>
       )}
 
-      {/* Notifications Side Panel / Modal */}
+      {/* Notifications Side Panel / Modal Drawer */}
       {showNotifications && (
-        <div className="fixed inset-0 bg-black/40 z-[100] flex justify-end">
-          <div className="w-full sm:w-[400px] h-full bg-[#f7f9fb] shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
-            <div className="flex justify-between items-center p-6 border-b border-gray-200 bg-white">
-              <h2 className="text-xl font-bold text-[#141779] flex items-center gap-2">
-                <Bell size={24} /> {t("notifications", "Notifications")}
-              </h2>
-              <button onClick={() => setShowNotifications(false)} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
-                <X size={20} color="#464652" />
+        <div 
+          onClick={() => setShowNotifications(false)}
+          onTouchMove={(e) => {
+            if (e.target === e.currentTarget) e.preventDefault();
+          }}
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[100] flex justify-end animate-in fade-in duration-200 overscroll-contain select-none"
+          style={{ overscrollBehavior: "contain", touchAction: "none" }}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="w-full sm:w-[420px] h-full bg-[#f7f9fb] shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 overscroll-contain select-text"
+            style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
+          >
+            {/* Header */}
+            <div className="flex justify-between items-center p-5 sm:p-6 border-b border-slate-200/80 bg-white">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779]">
+                  <Bell size={18} />
+                </div>
+                <h2 className="text-xl font-black text-[#141779]">
+                  {t("notifications", "Notifications")}
+                </h2>
+              </div>
+              <button 
+                onClick={() => setShowNotifications(false)} 
+                className="w-9 h-9 flex items-center justify-center bg-slate-100 rounded-full hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
+                aria-label="Close"
+              >
+                <X size={18} />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+
+            {/* List */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3.5">
               {notifications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center opacity-50">
-                  <Bell size={48} className="mb-4 text-gray-400" />
-                  <p className="text-gray-500 font-medium">{t("no_recent_activity", "No recent activity to show.")}</p>
+                <div className="flex flex-col items-center justify-center h-full text-center py-16 px-4">
+                  <div className="w-16 h-16 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779] mb-3 shadow-xs">
+                    <Bell size={28} className="opacity-70" />
+                  </div>
+                  <p className="text-base font-bold text-[#141779]">
+                    {t("no_notifications_yet", "No notifications yet!")}
+                  </p>
+                  <p className="text-xs font-medium text-slate-500 mt-1 max-w-[240px]">
+                    {t("no_recent_activity", "No recent activity to show.")}
+                  </p>
                 </div>
               ) : (
                 notifications.map((notif, idx) => {
-                  let icon = "🔔";
-                  let bg = "bg-white";
-                  if (notif.type === "gamification") icon = "🎮";
-                  if (notif.type === "habit") icon = "✨";
-                  if (notif.type === "learning") icon = "📚";
+                  let iconBadge = <Bell size={18} />;
+                  let badgeStyle = "bg-indigo-50 text-[#141779] border-indigo-100";
+                  
+                  if (notif.type === "gamification") {
+                    iconBadge = <Sparkles size={18} />;
+                    badgeStyle = "bg-teal-50 text-teal-700 border-teal-200";
+                  } else if (notif.type === "habit") {
+                    iconBadge = <Flame size={18} />;
+                    badgeStyle = "bg-amber-50 text-amber-700 border-amber-200";
+                  } else if (notif.type === "learning") {
+                    iconBadge = <BookOpen size={18} />;
+                    badgeStyle = "bg-indigo-50 text-[#141779] border-indigo-200";
+                  } else if (notif.type === "reward" || notif.type === "spin") {
+                    iconBadge = <Trophy size={18} />;
+                    badgeStyle = "bg-purple-50 text-purple-700 border-purple-200";
+                  } else if (notif.type === "warning" || notif.type === "risk") {
+                    iconBadge = <AlertTriangle size={18} />;
+                    badgeStyle = "bg-rose-50 text-rose-700 border-rose-200";
+                  }
                   
                   return (
-                    <div key={idx} className={`p-4 rounded-xl shadow-sm border border-gray-100 flex gap-4 ${bg} hover:shadow-md transition-shadow`}>
-                      <div className="text-2xl pt-1">{icon}</div>
-                      <div>
-                        <h4 className="text-[14px] font-bold text-[#141779] mb-1">{formatNotifTitle(notif.title)}</h4>
-                        <p className="text-[12px] text-[#464652] leading-tight">{formatNotifMsg(notif.message)}</p>
-                        <p className="text-[10px] text-gray-400 mt-2 font-medium">
-                          {new Date(notif.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    <div 
+                      key={notif._id || idx} 
+                      className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-[0_2px_8px_rgba(20,23,121,0.04)] hover:shadow-md hover:border-indigo-200/80 transition-all flex items-start gap-3.5 text-left"
+                    >
+                      <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs mt-0.5 ${badgeStyle}`}>
+                        {iconBadge}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <h4 className="text-[15px] font-bold text-[#141779] leading-snug">
+                            {formatNotifTitle(notif.title)}
+                          </h4>
+                          {notif.createdAt && (
+                            <span className="text-xs font-semibold text-slate-500 shrink-0 mt-0.5">
+                              {new Date(notif.createdAt).toLocaleString(undefined, { 
+                                month: 'short', 
+                                day: 'numeric', 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              })}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-base font-medium text-[#191c1e] leading-relaxed mt-1">
+                          {formatNotifMsg(notif.message)}
                         </p>
                       </div>
                     </div>
@@ -1137,8 +2197,19 @@ export default function ParentDashboardScreen() {
 
       {/* Today's Time & Attempt Breakdown Modal */}
       {showBreakdownModal && (
-        <div className="fixed inset-0 bg-[#0f114a]/75 backdrop-blur-md z-[99999] flex items-center justify-center p-3 sm:p-4 font-sans animate-in fade-in duration-200">
-          <div className="bg-white rounded-[24px] sm:rounded-[32px] max-w-lg w-full max-h-[90vh] flex flex-col p-5 sm:p-6 shadow-2xl relative border border-white/60">
+        <div 
+          onClick={closeBreakdown}
+          onTouchMove={(e) => {
+            if (e.target === e.currentTarget) e.preventDefault();
+          }}
+          className="fixed inset-0 bg-[#0f114a]/75 backdrop-blur-md z-[99999] flex items-center justify-center p-3 sm:p-4 font-sans animate-in fade-in duration-200 overscroll-contain select-none"
+          style={{ overscrollBehavior: "contain", touchAction: "none" }}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-[24px] sm:rounded-[32px] max-w-lg w-full max-h-[90vh] flex flex-col p-5 sm:p-6 shadow-2xl relative border border-white/60 overscroll-contain select-text"
+            style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
+          >
             
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-3 border-b border-gray-100 shrink-0 mb-4">
@@ -1147,13 +2218,14 @@ export default function ParentDashboardScreen() {
                   <span>⏱️</span>
                   <span>{t("todays_time_breakdown_title", "Today's Time Breakdown")}</span>
                 </h3>
-                <p className="text-[11px] sm:text-xs text-slate-500 font-bold mt-0.5">
+                <p className="text-xs sm:text-[13px] text-slate-500 font-bold mt-0.5">
                   {t("detailed_calc_for", { name: childName, defaultValue: `Detailed calculation for ${childName}` })}
                 </p>
               </div>
               <button 
-                onClick={() => setShowBreakdownModal(false)}
-                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors shrink-0"
+                onClick={closeBreakdown}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors shrink-0 cursor-pointer"
+                aria-label="Close"
               >
                 <X size={18} />
               </button>
@@ -1170,25 +2242,25 @@ export default function ParentDashboardScreen() {
                 {/* 3 Summary Stats */}
                 <div className="grid grid-cols-3 gap-2 sm:gap-3">
                   <div className="bg-emerald-50/80 border border-emerald-200/80 p-3 rounded-2xl text-center">
-                    <span className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider block">{t("total_time", "Total Time")}</span>
+                    <span className="text-xs font-black text-emerald-800 uppercase tracking-wider block">{t("total_time", "Total Time")}</span>
                     <span className="text-lg sm:text-xl font-black text-emerald-700">{formatTimeFormatted(breakdownData?.totalTimeFormatted || "0m")}</span>
                   </div>
 
                   <div className="bg-indigo-50/80 border border-indigo-200/80 p-3 rounded-2xl text-center">
-                    <span className="text-[10px] font-extrabold text-indigo-800 uppercase tracking-wider block">{t("questions", "Questions")}</span>
+                    <span className="text-xs font-black text-indigo-800 uppercase tracking-wider block">{t("questions", "Questions")}</span>
                     <span className="text-lg sm:text-xl font-black text-[#141779]">{breakdownData?.totalSolved || 0}</span>
-                    <span className="text-[10px] text-indigo-600 font-bold block">{t("num_correct", { count: breakdownData?.totalCorrect || 0, defaultValue: `${breakdownData?.totalCorrect || 0} correct!` })}</span>
+                    <span className="text-xs text-indigo-600 font-bold block">{t("num_correct", { count: breakdownData?.totalCorrect || 0, defaultValue: `${breakdownData?.totalCorrect || 0} correct!` })}</span>
                   </div>
 
                   <div className="bg-purple-50/80 border border-purple-200/80 p-3 rounded-2xl text-center">
-                    <span className="text-[10px] font-extrabold text-purple-800 uppercase tracking-wider block">{t("confidence", "Confidence")}</span>
+                    <span className="text-xs font-black text-purple-800 uppercase tracking-wider block">{t("confidence", "Confidence")}</span>
                     <span className="text-lg sm:text-xl font-black text-purple-700">{breakdownData?.confidenceScore || 0}%</span>
                   </div>
                 </div>
 
                 {/* Mode Breakdown Cards */}
                 <div>
-                  <h4 className="text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2">{t("time_spent_by_mode", "Time Spent by Mode")}</h4>
+                  <h4 className="text-xs sm:text-sm font-black text-slate-700 uppercase tracking-wider mb-2">{t("time_spent_by_mode", "Time Spent by Mode")}</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     {breakdownData?.modeBreakdown && Object.entries(breakdownData.modeBreakdown).map(([key, m]: [string, any]) => (
                       <div key={key} className="bg-slate-50 border border-slate-200/80 p-3 rounded-xl flex items-center justify-between gap-2">
@@ -1197,7 +2269,7 @@ export default function ParentDashboardScreen() {
                             <span>{m.icon}</span>
                             <span className="truncate">{translateModeName(m.name.split('/')[0])}</span>
                           </p>
-                          <p className="text-[10px] text-slate-500 font-bold">{m.count} {t("questions", "questions")}</p>
+                          <p className="text-xs text-slate-500 font-bold">{m.count} {t("questions", "questions")}</p>
                         </div>
                         <span className="text-xs font-black text-[#141779] bg-white px-2 py-1 rounded-lg border border-slate-200 shrink-0">
                           {Math.floor(m.timeSec / 60)}{t("min_short", "m")} {m.timeSec % 60}{t("sec_short", "s")}
@@ -1209,15 +2281,15 @@ export default function ParentDashboardScreen() {
 
                 {/* Itemized Question & Answer List */}
                 <div>
-                  <h4 className="text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2 flex items-center justify-between">
+                  <h4 className="text-xs sm:text-sm font-black text-slate-700 uppercase tracking-wider mb-2 flex items-center justify-between">
                     <span>{t("todays_question_attempts", "Today's Question Attempts")}</span>
-                    <span className="text-[10px] font-bold text-slate-500">({breakdownData?.attempts?.length || 0} {t("items_upper", "ITEMS")})</span>
+                    <span className="text-xs font-bold text-slate-500">({breakdownData?.attempts?.length || 0} {t("items_upper", "ITEMS")})</span>
                   </h4>
 
                   {(!breakdownData?.attempts || breakdownData.attempts.length === 0) ? (
                     <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 text-center">
                       <p className="text-xs font-bold text-slate-500">{t("no_question_attempts_logged", "No question attempts logged today yet.")}</p>
-                      <p className="text-[11px] text-slate-400 mt-1">{t("play_quiz_shadow_arena", "Play a Quiz, Shadow Arena battle, or AI quest to record live time!")}</p>
+                      <p className="text-xs text-slate-400 mt-1">{t("play_quiz_shadow_arena", "Play a Quiz, Shadow Arena battle, or AI quest to record live time!")}</p>
                     </div>
                   ) : (
                     <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
@@ -1229,10 +2301,10 @@ export default function ParentDashboardScreen() {
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5 mb-1">
                               <span className="text-xs">{att.modeIcon}</span>
-                              <span className="text-[10px] font-bold text-slate-600 bg-white px-2 py-0.5 rounded-full border border-slate-200">
+                              <span className="text-xs font-bold text-slate-600 bg-white px-2 py-0.5 rounded-full border border-slate-200">
                                 {translateModeName(att.mode)}
                               </span>
-                              <span className="text-[10px] text-slate-400 font-bold ml-auto">{att.timestamp}</span>
+                              <span className="text-xs text-slate-400 font-bold ml-auto">{att.timestamp}</span>
                             </div>
                             <p className="text-xs font-bold text-slate-800 truncate">{att.questionText}</p>
                           </div>
@@ -1241,7 +2313,7 @@ export default function ParentDashboardScreen() {
                             <span className="text-xs font-mono font-extrabold text-slate-600 bg-slate-200/60 px-2 py-1 rounded-lg">
                               ⏱️ {formatTimeFormatted(att.timeFormatted)}
                             </span>
-                            <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full border ${
+                            <span className={`text-xs font-black px-2.5 py-1 rounded-full border ${
                               att.isCorrect 
                                 ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
                                 : "bg-rose-50 text-rose-700 border-rose-200"

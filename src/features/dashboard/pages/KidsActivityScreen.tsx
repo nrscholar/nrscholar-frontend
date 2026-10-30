@@ -1,8 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Clock, CheckCircle2, ShieldAlert, Star, TrendingUp, Search, Calendar, FileText, Activity, X, ChevronDown, ChevronUp, BookOpen, Layers, ChevronRight } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle2, ShieldAlert, Star, TrendingUp, Search, Calendar, FileText, Activity, X, ChevronDown, ChevronUp, BookOpen, Layers, ChevronRight, Settings, Bell } from "lucide-react";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
+import { getScopedItem, setScopedItem, removeScopedItem, getActiveUserContext } from "../../../utils/sessionCache";
+import { filterUniqueQuestions } from "../../../utils/quizQuestionUtils";
+import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
 
 export default function KidsActivityScreen() {
   const { t } = useTranslation();
@@ -10,16 +13,62 @@ export default function KidsActivityScreen() {
 
   const cached = (() => {
     try {
-      const raw = sessionStorage.getItem("kids_activities_cache");
+      const raw = getScopedItem("kids_activities_cache");
       return raw ? JSON.parse(raw) : null;
     } catch (e) { return null; }
   })();
 
+  const isActivityValid = (act: any) => {
+    if (!act) return false;
+    const title = (act.title || "").trim();
+    const lowerTitle = title.toLowerCase();
+    if (
+      !title ||
+      lowerTitle.includes("exploring new quests") ||
+      lowerTitle === "activity logged" ||
+      lowerTitle === "no recent activity" ||
+      lowerTitle === "activity"
+    ) {
+      return false;
+    }
+
+    const actType = (act.type || act.activityType || "").toLowerCase();
+    const time = act.timeTaken || 0;
+    const tq = act.totalQuestions || 0;
+    const hasDetails = Array.isArray(act.details) && act.details.length > 0;
+    const isCompleted = Boolean(act.completed || act.readingCompleted);
+    if (actType === "reading" || actType === "chapter") {
+      return time >= 15 || isCompleted;
+    }
+    if (actType === "quiz" || actType === "practice" || actType === "battle" || actType === "mission") {
+      return tq > 0 || hasDetails || time >= 15 || isCompleted;
+    }
+    return isCompleted || time >= 15 || tq > 0 || hasDetails;
+  };
+
   const [loading, setLoading] = useState(!cached);
-  const [activities, setActivities] = useState<any[]>(cached?.activities || []);
+  const [activities, setActivities] = useState<any[]>(
+    cached?.activities ? cached.activities.filter(isActivityValid) : []
+  );
   const [engagementHours, setEngagementHours] = useState(cached?.engagementHours || "0");
   const [engagementTrend, setEngagementTrend] = useState<number | null>(cached?.engagementTrend !== undefined ? cached.engagementTrend : null);
   const [selectedActivity, setSelectedActivity] = useState<any>(null);
+
+  useLockBodyScroll(Boolean(selectedActivity));
+
+  const modalUniqueDetails = useMemo(() => {
+    if (!selectedActivity || !Array.isArray(selectedActivity.details)) return [];
+    return filterUniqueQuestions(selectedActivity.details);
+  }, [selectedActivity?.details]);
+
+  const modalTotalQuestions = modalUniqueDetails.length > 0 
+    ? modalUniqueDetails.length 
+    : (selectedActivity?.totalQuestions || 0);
+
+  const modalCorrectQuestions = modalUniqueDetails.length > 0
+    ? modalUniqueDetails.filter((d: any) => d.isCorrect).length
+    : (selectedActivity?.correctQuestions || 0);
+
   const [openDateLabel, setOpenDateLabel] = useState<string | null>(null);
   const [userData, setUserData] = useState<any>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -27,60 +76,66 @@ export default function KidsActivityScreen() {
   const translateSubjectName = (subj: string) => {
     if (!subj) return "";
     const lower = subj.toLowerCase();
-    if (lower.includes("gujarati")) return t("gujarati", "ગુજરાતી");
-    if (lower.includes("math")) return t("maths", "ગણિત");
-    if (lower.includes("english")) return t("english_subject", "અંગ્રેજી");
-    if (lower.includes("science")) return t("science", "વિજ્ઞાન");
-    if (lower.includes("social")) return t("social_studies", "સામાજિક વિજ્ઞાન");
-    if (lower.includes("hindi")) return t("hindi_subject", "હિન્દી");
+    if (lower.includes("gujarati")) return t("gujarati", "Gujarati");
+    if (lower.includes("math")) return t("maths", "Maths");
+    if (lower.includes("english")) return t("english_subject", "English");
+    if (lower.includes("science")) return t("science", "Science");
+    if (lower.includes("social")) return t("social_studies", "Social Science");
+    if (lower.includes("hindi")) return t("hindi_subject", "Hindi");
     return t(subj, subj);
   };
 
   const translateActivityTitle = (title: string) => {
-    if (!title) return t("practice_session", "પ્રેક્ટિસ સત્ર");
+    if (!title) return t("practice_session", "Practice Session");
     if (title.includes("1v1 Live Battle vs") || title.includes("1v1 Battle vs")) {
       const opp = title.replace(/1v1 (?:Live )?Battle vs\s*/i, "").trim();
-      return `${t("live_battle_vs", "1v1 લાઈવ બેટલ")} વિ ${opp}`;
+      return `${t("live_battle_vs", "1v1 Live Battle")} vs ${opp}`;
     }
     if (title === "Exploring new quests..." || title.includes("Exploring new quests")) {
-      return t("exploring_new_quests", "નવા ક્વેસ્ટ્સ શોધવામાં આવે છે...");
+      return t("exploring_new_quests", "Exploring new quests...");
     }
-    if (title === "Practice Session") return t("practice_session", "પ્રેક્ટિસ સત્ર");
-    if (title === "Reading Session") return t("reading_session", "વાંચન સત્ર");
-    if (title === "Shadow Arena Battle" || title.includes("Shadow Arena")) return t("shadow_arena_battle", "શેડો એરેના યુદ્ધ");
-    if (title === "Quiz") return t("quiz", "ક્વિઝ");
+    if (title === "Practice Session") return t("practice_session", "Practice Session");
+    if (title === "Reading Session") return t("reading_session", "Reading Session");
+    if (title === "Shadow Arena Battle" || title.includes("Shadow Arena")) return t("shadow_arena_battle", "Shadow Arena Battle");
+    if (title === "Quiz") return t("quiz", "Quiz");
     if (title.startsWith("Completed reading:")) {
       const rest = title.replace("Completed reading:", "").trim();
-      return `${t("completed_reading", "વાંચન પૂર્ણ કર્યું")}: ${t(rest, rest)}`;
+      return `${t("completed_reading", "Completed Reading")}: ${t(rest, rest)}`;
     }
     if (title.startsWith("Completed Chapter")) {
       const chapNum = title.replace(/Completed Chapter\s*/i, "").trim();
-      return t("completed_chapter_num", { num: chapNum, defaultValue: `અધ્યાય ${chapNum} પૂર્ણ કર્યો` });
+      return t("completed_chapter_num", { num: chapNum, defaultValue: `Completed Chapter ${chapNum}` });
     }
     if (title.startsWith("Completed")) {
       const rest = title.replace("Completed", "").trim();
-      return `${t("completed", "પૂર્ણ કર્યું")} ${t(rest, rest)}`;
+      return `${t("completed", "Completed")} ${t(rest, rest)}`;
     }
     return t(title, title);
   };
 
   const formatTime = (seconds: number) => {
-    if (seconds === undefined || seconds === null) return `0 ${t("sec", "સેકન્ડ")}`;
-    if (seconds < 60) return `${seconds} ${t("sec", "સેકન્ડ")}`;
+    if (seconds === undefined || seconds === null) return `0 ${t("sec", "sec")}`;
+    if (seconds < 60) return `${seconds} ${t("sec", "sec")}`;
     const mins = Math.floor(seconds / 60);
-    if (mins < 60) return `${mins} ${t("mins", "મિનિટ")}`;
+    const remainingSecs = seconds % 60;
+    if (mins < 60) {
+      if (remainingSecs > 0) {
+        return `${mins} ${t("mins", "mins")} ${remainingSecs} ${t("sec", "sec")}`;
+      }
+      return `${mins} ${t("mins", "mins")}`;
+    }
     const hours = Math.floor(mins / 60);
     const remainingMins = mins % 60;
-    const hourStr = hours === 1 ? t("hr", "કલાક") : t("hrs", "કલાક");
+    const hourStr = hours === 1 ? t("hr", "hr") : t("hrs", "hrs");
     if (remainingMins === 0) return `${hours} ${hourStr}`;
-    return `${hours} ${hourStr} ${remainingMins} ${t("mins", "મિનિટ")}`;
+    return `${hours} ${hourStr} ${remainingMins} ${t("mins", "mins")}`;
   };
 
   const formatEngagementHours = (str: string) => {
-    if (!str) return `0 ${t("mins", "મિનિટ")}`;
+    if (!str) return `0 ${t("mins", "mins")}`;
     return str
-      .replace(/(\d+)\s*hrs?/gi, (_, h) => `${h} ${t("hrs", "કલાક")}`)
-      .replace(/(\d+)\s*mins?/gi, (_, m) => `${m} ${t("mins", "મિનિટ")}`);
+      .replace(/(\d+)\s*hrs?/gi, (_, h) => `${h} ${t("hrs", "hrs")}`)
+      .replace(/(\d+)\s*mins?/gi, (_, m) => `${m} ${t("mins", "mins")}`);
   };
 
   useEffect(() => {
@@ -88,19 +143,23 @@ export default function KidsActivityScreen() {
       try {
         if (!cached) setLoading(true);
         const tzOffset = -new Date().getTimezoneOffset();
+        const ctx = getActiveUserContext();
+        const childParam = ctx.childId ? `&childId=${encodeURIComponent(ctx.childId)}` : "";
+        const classParam = ctx.classLevel ? `&classLevel=${encodeURIComponent(ctx.classLevel)}` : "";
         const [res, userRes] = await Promise.all([
-          apiFetch(`/api/parent/activities?tz_offset_minutes=${tzOffset}`),
+          apiFetch(`/api/parent/activities?tz_offset_minutes=${tzOffset}${childParam}${classParam}`),
           apiFetch("/api/users/me").catch(() => null)
         ]);
 
         if (res.ok) {
           const json = await res.json();
           if (json.success && json.data) {
-            setActivities(json.data.activities || []);
+            const validActs = (json.data.activities || []).filter(isActivityValid);
+            setActivities(validActs);
             setEngagementHours(json.data.engagementHours || "0");
             setEngagementTrend(json.data.engagementTrend !== undefined ? json.data.engagementTrend : null);
-            sessionStorage.setItem("kids_activities_cache", JSON.stringify({
-              activities: json.data.activities || [],
+            setScopedItem("kids_activities_cache", JSON.stringify({
+              activities: validActs,
               engagementHours: json.data.engagementHours || "0",
               engagementTrend: json.data.engagementTrend !== undefined ? json.data.engagementTrend : null
             }));
@@ -136,19 +195,40 @@ export default function KidsActivityScreen() {
     <div className="bg-gradient-to-b from-[#f0f4f8] to-[#e6eef5] text-[#141779] flex flex-col min-h-screen w-full relative overflow-x-hidden font-sans">
       
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs flex items-center px-6 h-16 gap-3">
-        <button 
-          onClick={() => navigate("/parent/dashboard")} 
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 hover:bg-slate-100 active:scale-95 transition-all"
-        >
-          <ArrowLeft size={20} className="text-[#141779]" />
-        </button>
-        <h1 className="text-xl font-black text-[#141779] tracking-tight">
-          {t("recent_activity", "Recent Activity")}
-        </h1>
+      <header className="sticky top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex items-center justify-between px-4 sm:px-6 h-16 w-full">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+          <button 
+            onClick={() => navigate(-1)} 
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("back", "Back")}
+          >
+            <ArrowLeft size={19} />
+          </button>
+          <h1 className="text-base sm:text-lg font-black text-[#141779] tracking-tight truncate leading-tight">
+            {t("recent_activity", "Recent Activity")}
+          </h1>
+        </div>
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <button 
+            onClick={() => navigate('/parent/settings')}
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("settings", "Settings")}
+            title={t("settings", "Settings")}
+          >
+            <Settings size={18} />
+          </button>
+          <button
+            onClick={() => navigate('/notifications')}
+            className="relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("notifications", "Notifications")}
+            title={t("notifications", "Notifications")}
+          >
+            <Bell size={18} />
+          </button>
+        </div>
       </header>
 
-      <main className="w-full max-w-lg mx-auto pt-20 pb-32 px-5 relative z-10">
+      <main className="w-full max-w-lg mx-auto pt-4 pb-4 px-5 relative z-10">
         
         {/* Child Selector Pills — instant switch without reload */}
         {userData?.children && userData.children.length > 1 && (
@@ -169,7 +249,7 @@ export default function KidsActivityScreen() {
                       const json = await res.json();
                       if (json.success && json.data?.user) {
                         localStorage.setItem("userData", JSON.stringify(json.data.user));
-                        sessionStorage.removeItem("kids_activities_cache");
+                        removeScopedItem("kids_activities_cache");
                         setUserData(json.data.user);
                         setLoading(true);
                         setRefreshKey(k => k + 1);
@@ -188,7 +268,7 @@ export default function KidsActivityScreen() {
                       : c.childName?.charAt(0).toUpperCase()}
                   </span>
                   {c.childName}
-                  {isActive && <span className="text-[10px] opacity-70">✓</span>}
+                  {isActive && <span className="text-xs opacity-70">✓</span>}
                 </button>
               );
             })}
@@ -196,33 +276,72 @@ export default function KidsActivityScreen() {
         )}
 
         {/* Analytics Summary Card */}
-        {loading ? (
-          <div className="bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md mb-5 flex items-center justify-between animate-pulse">
-            <div className="flex-1">
-              <div className="h-3 w-32 bg-slate-200 rounded mb-3"></div>
-              <div className="h-8 w-24 bg-slate-200 rounded"></div>
-            </div>
-            <div className="w-14 h-14 rounded-full bg-slate-200"></div>
-          </div>
-        ) : (
-          <div className="bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md mb-5 flex items-center justify-between">
-            <div>
-              <h2 className="text-xs font-black text-slate-500 uppercase tracking-wider mb-1">{t("weekly_engagement", "Weekly Engagement")}</h2>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-black text-[#141779]">{formatEngagementHours(engagementHours)}</span>
+        {(() => {
+          const weeklyActivitiesSecs = activities.reduce((acc, act) => {
+            const actDt = act.createdAt ? new Date(act.createdAt).getTime() : 0;
+            const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+            if (actDt >= sevenDaysAgo && act.timeTaken) {
+              return acc + act.timeTaken;
+            }
+            return acc;
+          }, 0);
+
+          const backendMins = (() => {
+            let total = 0;
+            const hrMatch = engagementHours.match(/(\d+)\s*hrs?/i);
+            const minMatch = engagementHours.match(/(\d+)\s*mins?/i);
+            if (hrMatch) total += parseInt(hrMatch[1], 10) * 60;
+            if (minMatch) total += parseInt(minMatch[1], 10);
+            return total;
+          })();
+
+          const calculatedMins = Math.floor(weeklyActivitiesSecs / 60);
+          const finalEngagementDisplay = (calculatedMins > backendMins)
+            ? formatTime(weeklyActivitiesSecs)
+            : formatEngagementHours(engagementHours);
+
+          if (loading) {
+            return (
+              <div className="bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md mb-5 flex items-center justify-between animate-pulse">
+                <div className="flex-1">
+                  <div className="h-3 w-32 bg-slate-200 rounded mb-3"></div>
+                  <div className="h-8 w-24 bg-slate-200 rounded"></div>
+                </div>
+                <div className="w-14 h-14 rounded-full bg-slate-200"></div>
+              </div>
+            );
+          }
+
+          return (
+            <div className="bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md mb-5 flex items-center justify-between">
+              <div>
+                <h2 className="text-xs font-black text-slate-500 uppercase tracking-wider mb-1">{t("weekly_engagement", "Weekly Engagement")}</h2>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-[#141779]">{finalEngagementDisplay}</span>
                 {engagementTrend !== null && engagementTrend !== undefined && (
-                  <span className={`text-sm font-black flex items-center gap-1 ${engagementTrend >= 0 ? 'text-[#006a62]' : 'text-red-600'}`}>
-                    {engagementTrend >= 0 ? <TrendingUp size={16} /> : <TrendingUp size={16} className="rotate-180" />} 
-                    {engagementTrend >= 0 ? '+' : ''}{engagementTrend}%
+                  <span className={`text-sm font-black flex items-center gap-1 ${
+                    engagementTrend > 0
+                      ? 'text-[#006a62]'
+                      : engagementTrend < 0
+                      ? 'text-red-600'
+                      : 'text-slate-500'
+                  }`}>
+                    {engagementTrend > 0 ? (
+                      <TrendingUp size={16} />
+                    ) : engagementTrend < 0 ? (
+                      <TrendingUp size={16} className="rotate-180" />
+                    ) : null} 
+                    {engagementTrend > 0 ? '+' : ''}{engagementTrend}%
                   </span>
                 )}
               </div>
             </div>
-            <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779] shadow-xs">
-              <Clock size={28} />
+              <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779] shadow-xs">
+                <Clock size={28} />
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Timeline */}
         {loading ? (
@@ -316,48 +435,50 @@ export default function KidsActivityScreen() {
                               {/* Content Card */}
                               <div 
                                 onClick={() => setSelectedActivity(activity)}
-                                className="ml-6 bg-white rounded-[20px] p-4 border border-slate-200/80 shadow-xs hover:shadow-md transition-all cursor-pointer hover:scale-[1.01]"
+                                className="ml-5 sm:ml-6 bg-white rounded-[20px] p-3.5 sm:p-4 border border-slate-200/80 shadow-xs hover:shadow-md transition-all cursor-pointer hover:scale-[1.01]"
                               >
-                                <div className="flex justify-between items-start mb-1.5">
-                                  <h3 className="text-sm font-black text-[#141779] pr-3 leading-tight">{activityTitle}</h3>
-                                  <div className="flex flex-col items-end gap-1 shrink-0">
-                                    <span className="text-[10px] font-black text-slate-500 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                                      <Clock size={10} /> {activity.time || (activity.createdAt ? new Date(activity.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : t("just_now", "Just now"))}
-                                    </span>
-                                  </div>
+                                <div className="flex justify-between items-start gap-2 mb-1.5">
+                                  <h3 className="text-sm font-black text-[#141779] leading-tight min-w-0 flex-1">{activityTitle}</h3>
+                                  <span className="text-[11px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0 whitespace-nowrap">
+                                    <Clock size={11} /> {activity.time || (activity.createdAt ? new Date(activity.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : t("just_now", "Just now"))}
+                                  </span>
                                 </div>
 
                                 {activity.description && (
-                                  <p className="text-xs text-slate-700 font-bold leading-snug mb-2">
+                                  <p className="text-xs text-slate-700 font-bold leading-snug mb-1.5">
                                     {activity.description}
                                   </p>
                                 )}
                                 
-                                <div className="flex flex-wrap items-center gap-2 mt-2">
-                                  {activity.correctQuestions !== undefined && activity.totalQuestions !== undefined && (
-                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-teal-50 border border-teal-200 text-[#006a62]">
-                                      <CheckCircle2 size={12} />
-                                      <span className="text-xs font-black tracking-wide">
-                                        {activity.correctQuestions}/{activity.totalQuestions}
+                                <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                                  {activity.attemptNumber && (
+                                    <span className="text-[11px] font-black text-amber-800 bg-amber-100/90 border border-amber-300 px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">
+                                      {t("attempt_number", { num: activity.attemptNumber, defaultValue: `Attempt #${activity.attemptNumber}` })}
+                                    </span>
+                                  )}
+
+                                  {Boolean(activity.totalQuestions && activity.totalQuestions > 0) && (
+                                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-[#006a62] shrink-0 whitespace-nowrap">
+                                      <CheckCircle2 size={11} />
+                                      <span className="text-[11px] font-black tracking-wide">
+                                        {activity.correctQuestions || 0}/{activity.totalQuestions}
                                       </span>
                                     </div>
                                   )}
                                   
                                   {activity.timeTaken !== undefined && (
-                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-[#141779]">
-                                      <Clock size={12} />
-                                      <span className="text-xs font-black tracking-wide">
+                                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-[#141779] shrink-0 whitespace-nowrap">
+                                      <Clock size={11} />
+                                      <span className="text-[11px] font-black tracking-wide">
                                         {formatTime(activity.timeTaken)}
                                       </span>
                                     </div>
                                   )}
                                   
                                   {activity.subject && (
-                                    <div className="ml-auto flex items-center gap-2">
-                                      <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700">
-                                        <Layers size={10} />
-                                        <span className="text-[10px] font-black uppercase tracking-wide truncate max-w-[100px]">{translateSubjectName(activity.subject)}</span>
-                                      </div>
+                                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 shrink-0 whitespace-nowrap ml-auto">
+                                      <Layers size={10} />
+                                      <span className="text-[11px] font-black uppercase tracking-wide truncate max-w-[120px]">{translateSubjectName(activity.subject)}</span>
                                     </div>
                                   )}
                                 </div>
@@ -366,20 +487,20 @@ export default function KidsActivityScreen() {
                                   <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs font-black">
                                     <span className="flex items-center gap-1 text-slate-600 font-bold">
                                       <BookOpen size={12} className="text-slate-500" />
-                                      {activity.type === 'reading' ? t("reading_session", "વાંચન સત્ર") : `0 ${t("questions_plural", "પ્રશ્નો")}`}
+                                      {activity.type === 'reading' ? t("reading_session", "Reading Session") : `0 ${t("questions_plural", "questions")}`}
                                     </span>
                                     <span className="flex items-center gap-0.5 text-[#141779] font-black hover:underline transition-all">
-                                      {activity.type === 'reading' ? t("view_details", "વિગતો જુઓ") : t("show_more", "વધુ જુઓ")} <ChevronRight size={14} className="mt-[0.5px]" />
+                                      {activity.type === 'reading' ? t("view_details", "View Details") : t("show_more", "View More")} <ChevronRight size={14} className="mt-[0.5px]" />
                                     </span>
                                   </div>
                                 ) : (
                                   <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs font-black">
                                     <span className="flex items-center gap-1 text-slate-600 font-bold">
                                       <BookOpen size={12} className="text-slate-500" />
-                                      {activity.details.length} {activity.details.length === 1 ? t("question_singular", "પ્રશ્ન") : t("questions_plural", "પ્રશ્નો")}
+                                      {activity.details.length} {activity.details.length === 1 ? t("question_singular", "question") : t("questions_plural", "questions")}
                                     </span>
                                     <span className="flex items-center gap-0.5 text-[#141779] font-black hover:underline transition-all">
-                                      {t("show_more", "વધુ જુઓ")} <ChevronRight size={14} className="mt-[0.5px]" />
+                                      {t("show_more", "View More")} <ChevronRight size={14} className="mt-[0.5px]" />
                                     </span>
                                   </div>
                                 )}
@@ -400,20 +521,45 @@ export default function KidsActivityScreen() {
 
       {/* Details Modal */}
       {selectedActivity && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-6 animate-in fade-in duration-200">
-          <div className="bg-white w-full sm:max-w-md rounded-t-[32px] sm:rounded-[24px] max-h-[90vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-5">
+        <div 
+          onClick={() => setSelectedActivity(null)}
+          onTouchMove={(e) => {
+            if (e.target === e.currentTarget) e.preventDefault();
+          }}
+          className="fixed inset-0 z-[100] bg-slate-900/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-6 animate-in fade-in duration-200 overscroll-contain select-none"
+          style={{ overscrollBehavior: "contain", touchAction: "none" }}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white w-full sm:max-w-md rounded-t-[32px] sm:rounded-[24px] max-h-[90vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-5 overscroll-contain select-text"
+            style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
+          >
             
             {/* Modal Header */}
             <div className="px-6 py-5 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white z-10 rounded-t-[32px] sm:rounded-[24px]">
-              <div>
-                <h2 className="text-lg font-black text-[#141779]">{translateActivityTitle(selectedActivity.title)}</h2>
-                <div className="flex gap-3 mt-1">
-                  <span className="text-xs font-black text-[#006a62] flex items-center gap-1">
-                    <CheckCircle2 size={14} /> {selectedActivity.correctQuestions}/{selectedActivity.totalQuestions}
-                  </span>
-                  <span className="text-xs font-black text-[#141779] flex items-center gap-1">
-                    <Clock size={14} /> {formatTime(selectedActivity.timeTaken)}
-                  </span>
+              <div className="min-w-0 flex-1 pr-3">
+                <h2 className="text-lg font-black text-[#141779] leading-tight">{translateActivityTitle(selectedActivity.title)}</h2>
+                <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                  {selectedActivity.attemptNumber && (
+                    <span className="text-xs font-black text-amber-800 bg-amber-100/90 border border-amber-300 px-2.5 py-0.5 rounded-full shrink-0 whitespace-nowrap">
+                      {t("attempt_number", { num: selectedActivity.attemptNumber, defaultValue: `Attempt #${selectedActivity.attemptNumber}` })}
+                    </span>
+                  )}
+                  {Boolean(modalTotalQuestions > 0) && (
+                    <span className="text-xs font-black text-[#006a62] bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full flex items-center gap-1 shrink-0 whitespace-nowrap">
+                      <CheckCircle2 size={13} /> {modalCorrectQuestions}/{modalTotalQuestions}
+                    </span>
+                  )}
+                  {selectedActivity.timeTaken !== undefined && (
+                    <span className="text-xs font-black text-[#141779] bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full flex items-center gap-1 shrink-0 whitespace-nowrap">
+                      <Clock size={13} /> {formatTime(selectedActivity.timeTaken)}
+                    </span>
+                  )}
+                  {selectedActivity.subject && (
+                    <span className="text-xs font-black text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-full flex items-center gap-1 shrink-0 uppercase whitespace-nowrap">
+                      <Layers size={11} /> {translateSubjectName(selectedActivity.subject)}
+                    </span>
+                  )}
                 </div>
               </div>
               <button 
@@ -425,16 +571,19 @@ export default function KidsActivityScreen() {
             </div>
             
             {/* Modal Body */}
-            <div className="p-6 overflow-y-auto flex-1 bg-slate-50">
+            <div 
+              className="p-6 overflow-y-auto flex-1 bg-slate-50 overscroll-contain"
+              style={{ overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}
+            >
               <h3 className="text-xs font-black text-slate-500 uppercase tracking-wider mb-4">
                 {selectedActivity.type === 'reading' ? t('session_details', 'Session Details') : t('question_breakdown', 'Question Breakdown')}
               </h3>
               
               <div className="flex flex-col gap-3">
-                {Array.isArray(selectedActivity.details) && selectedActivity.details.length > 0 ? (
-                  selectedActivity.details.map((detail: any, idx: number) => {
+                {modalUniqueDetails.length > 0 ? (
+                  modalUniqueDetails.map((detail: any, idx: number) => {
                     const rawText = detail.questionText || "";
-                    const isGeneric = !rawText || rawText.trim() === "" || rawText.toLowerCase().includes("practice question");
+                    const isGeneric = !rawText || rawText.trim() === "" || rawText.toLowerCase().includes("practice question") || rawText.toLowerCase().startsWith("que ") || rawText.toLowerCase().startsWith("question #");
                     const qTitle = isGeneric
                       ? t('question_number', { num: idx + 1, number: idx + 1, defaultValue: `Question #${idx + 1}` })
                       : rawText;
@@ -444,8 +593,14 @@ export default function KidsActivityScreen() {
                         <div className={`mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${detail.isCorrect ? 'bg-teal-50 border border-teal-200 text-[#006a62]' : 'bg-red-50 border border-red-200 text-red-600'}`}>
                           {detail.isCorrect ? <CheckCircle2 size={16} strokeWidth={3} /> : <X size={16} strokeWidth={3} />}
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <p className="text-sm font-extrabold text-slate-800 mb-2 leading-snug">{qTitle}</p>
+                          {detail.selectedOption && (
+                            <p className="text-xs font-semibold text-slate-600 mb-2 truncate">
+                              <span className="text-slate-400 font-bold">{t('your_answer', 'Your answer')}: </span>
+                              <span className={detail.isCorrect ? "text-teal-700 font-bold" : "text-rose-600 font-bold"}>{detail.selectedOption}</span>
+                            </p>
+                          )}
                           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600">
                             <Clock size={12} />
                             <span className="text-xs font-black">

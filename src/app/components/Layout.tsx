@@ -1,48 +1,152 @@
-import { Link, useLocation, Outlet } from "react-router-dom";
+import { useNavigate, useLocation, Navigate, Outlet } from "react-router-dom";
 import { Home, MessageSquare, BookOpen, BarChart2, User } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useState, useEffect, Suspense } from "react";
+import { startNavigationProgress } from "../../components/NavigationProgressBar";
+import RouteSkeletonLoader from "../../components/RouteSkeletonLoader";
+
+// Dynamic prefetchers for 0ms instantaneous route transitions
+const routePreloaders: Record<string, () => Promise<any>> = {
+  "/home": () => import("../../features/dashboard/pages/HomeScreen"),
+  "/chat": () => import("../../features/dashboard/pages/ChatScreen"),
+  "/practice/chapters": () => import("../../features/dashboard/pages/ChaptersScreen"),
+  "/progress": () => import("../../features/dashboard/pages/ProgressScreen"),
+  "/profile": () => import("../../features/users/pages/ProfileScreen"),
+};
 
 export default function Layout() {
+  const navigate = useNavigate();
   const location = useLocation();
   const currentPath = location.pathname;
   const { t } = useTranslation();
 
+  const currentUser = (() => {
+    try {
+      const raw = localStorage.getItem("userData");
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  })();
+  const isCoParent = Boolean(
+    currentUser?.isSecondaryParent ||
+    currentUser?.isCoParent ||
+    currentUser?.role === "co_parent" ||
+    currentUser?.role === "secondary_parent" ||
+    currentUser?.primary_parent_id
+  );
+
+  if (isCoParent) {
+    const isPinVerified = sessionStorage.getItem("parentPinVerified") === "true";
+    return <Navigate to={isPinVerified ? "/parent/dashboard" : "/parent/gate"} replace />;
+  }
+
+  // Optimistic tab tracking for 0ms lag-free tab switching
+  const [activePath, setActivePath] = useState(currentPath);
+
+  useEffect(() => {
+    setActivePath(location.pathname);
+  }, [location.pathname]);
+
+  // Proactively preload tab chunks during browser idle time
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      Object.values(routePreloaders).forEach((loader) => {
+        try { loader(); } catch (e) {}
+      });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, []);
+
   const navItems = [
-    { path: "/home", label: t('home'), icon: Home },
-    { path: "/chat", label: t('ai_chat_nav'), icon: MessageSquare },
-    { path: "/practice/chapters", label: t('library'), icon: BookOpen },
-    { path: "/progress", label: t('progress'), icon: BarChart2 },
-    { path: "/profile", label: t('profile'), icon: User },
+    { path: "/home", label: t('home', 'Home'), icon: Home },
+    { path: "/chat", label: t('ai_chat_nav', 'AI Chat'), icon: MessageSquare },
+    { path: "/practice/chapters", label: t('library', 'Library'), icon: BookOpen },
+    { path: "/progress", label: t('progress', 'Progress'), icon: BarChart2 },
+    { path: "/profile", label: t('profile', 'Profile'), icon: User },
   ];
+
+  const preloadRoute = (path: string) => {
+    const loader = routePreloaders[path];
+    if (loader) {
+      try { loader(); } catch (e) {}
+    }
+  };
+
+  const handleTabClick = (path: string) => {
+    if (activePath === path && location.pathname === path) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    // 1. Instant optimistic tab state update (0ms immediate feedback)
+    setActivePath(path);
+
+    // 2. Trigger top glowing progress bar immediately
+    startNavigationProgress();
+
+    // 3. Instant synchronous route change (no waiting for background transitions)
+    navigate(path);
+  };
+
+  const activeIndex = navItems.findIndex(
+    (item) => activePath === item.path || (item.path !== "/home" && activePath.startsWith(item.path))
+  );
 
   return (
     <div className="min-h-screen bg-[#f7f9fb] flex flex-col">
-      {/* Content wrapper with bottom padding to ensure content doesn't get hidden behind the floating custom tab bar */}
-      <div className="flex-1 pb-24">
-        <Outlet />
+      {/* Main Content Area with Isolated Suspense boundary to prevent navbar unmounting */}
+      <div className="flex-1 pb-24 relative">
+        <Suspense fallback={<RouteSkeletonLoader />}>
+          <Outlet />
+        </Suspense>
       </div>
 
-      {/* Floating Bottom Glassmorphic Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center px-4 py-3 bg-[rgba(247,249,251,0.65)] backdrop-blur-lg border-t-[1.5px] border-[rgba(255,255,255,0.4)] rounded-t-[24px] shadow-[0_-8px_32px_rgba(0,0,0,0.05)]">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = currentPath === item.path || (item.path !== "/home" && currentPath.startsWith(item.path));
+      {/* Floating Bottom Glassmorphic Navigation Bar with Horizontal Spring Pill */}
+      <nav className="fixed bottom-3 left-4 right-4 max-w-md mx-auto z-50 p-1.5 bg-white/95 backdrop-blur-2xl border border-slate-200/90 rounded-2xl shadow-[0_12px_40px_rgba(20,23,121,0.12)]">
+        <div className="relative flex items-center justify-between w-full">
+          {/* Pure horizontal sliding active capsule pill (strictly horizontal within footer bar) */}
+          {activeIndex >= 0 && (
+            <div
+              style={{
+                width: `${100 / navItems.length}%`,
+                transform: `translateX(${activeIndex * 100}%)`,
+              }}
+              className="absolute top-0 bottom-0 left-0 bg-[#1c1970] rounded-xl shadow-md shadow-[#1c1970]/30 z-0 transition-transform duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] will-change-transform"
+            />
+          )}
 
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`flex flex-col items-center justify-center gap-1 h-[56px] min-w-[64px] px-2 rounded-2xl transition-all duration-300 ${
-                isActive
-                  ? "bg-[#57fae9] text-[#007168] shadow-sm scale-105"
-                  : "text-[#464652] hover:text-[#007168]"
-              }`}
-            >
-              <Icon size={20} strokeWidth={isActive ? 2.5 : 2} className="shrink-0" />
-              <span className="text-[10px] font-bold tracking-wide whitespace-nowrap">{item.label}</span>
-            </Link>
-          );
-        })}
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activePath === item.path || (item.path !== "/home" && activePath.startsWith(item.path));
+
+            return (
+              <button
+                key={item.path}
+                type="button"
+                onClick={() => handleTabClick(item.path)}
+                onMouseEnter={() => preloadRoute(item.path)}
+                onPointerDown={() => preloadRoute(item.path)}
+                className="relative flex-1 flex flex-col items-center justify-center py-2 px-1 gap-1 rounded-xl select-none touch-none focus:outline-none transition-colors z-10"
+              >
+                <Icon
+                  size={19}
+                  strokeWidth={isActive ? 2.5 : 2}
+                  className={`shrink-0 transition-colors duration-150 ${
+                    isActive ? "text-white" : "text-[#787a91]"
+                  }`}
+                />
+                <span
+                  className={`text-[10px] tracking-tight whitespace-nowrap leading-none transition-colors duration-150 ${
+                    isActive ? "text-white font-bold" : "text-[#787a91] font-medium"
+                  }`}
+                >
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </nav>
     </div>
   );

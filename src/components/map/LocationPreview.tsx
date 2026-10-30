@@ -2,6 +2,7 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Target, Sparkles, ChevronRight, Award, Shield } from "lucide-react";
 import { LandmarkData } from "./MapLandmark";
+import { useLockBodyScroll } from "../../utils/useLockBodyScroll";
 
 interface LocationPreviewProps {
   landmark: LandmarkData | null;
@@ -10,15 +11,26 @@ interface LocationPreviewProps {
 }
 
 export default function LocationPreview({ landmark, onClose, onEnter }: LocationPreviewProps) {
+  useLockBodyScroll(Boolean(landmark));
+
   if (!landmark) return null;
 
   const isLocked = landmark.status === "locked";
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 backdrop-blur-sm p-0 sm:p-4">
+      <div 
+        className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 backdrop-blur-sm p-0 sm:p-4"
+        style={{ touchAction: "none" }}
+        onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+      >
         {/* Backdrop Tap dismiss */}
-        <div className="absolute inset-0" onClick={onClose} />
+        <div 
+          className="absolute inset-0" 
+          onClick={onClose} 
+          style={{ touchAction: "none" }}
+          onTouchMove={(e) => e.preventDefault()}
+        />
 
         {/* Bottom Sheet Modal */}
         <motion.div
@@ -26,6 +38,7 @@ export default function LocationPreview({ landmark, onClose, onEnter }: Location
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: "100%", opacity: 0 }}
           transition={{ type: "spring", damping: 25, stiffness: 220 }}
+          style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
           className="relative z-10 w-full max-w-[430px] bg-slate-900 border-t-4 border-amber-400 rounded-t-[36px] sm:rounded-[36px] p-6 text-white shadow-[0_-12px_40px_rgba(0,0,0,0.6)] flex flex-col gap-4 overflow-hidden select-none"
         >
           {/* Top Grab Handle */}
@@ -141,7 +154,7 @@ export default function LocationPreview({ landmark, onClose, onEnter }: Location
             className={`w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all mt-1 ${
               isLocked
                 ? "bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed"
-                : "bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 text-slate-950 hover:from-amber-500 hover:to-orange-600 active:scale-95 border-2 border-amber-300 shadow-amber-500/30"
+                : "bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white hover:brightness-110 active:scale-95 border-2 border-indigo-300/40 shadow-lg shadow-indigo-950/40"
             }`}
           >
             <span>{isLocked ? "LOCATION LOCKED" : `ENTER ${landmark.name.toUpperCase()} ⚔️`}</span>

@@ -13,8 +13,19 @@ export default function ForgotPasswordScreen() {
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!mobile.trim()) {
+    const cleanMobile = mobile.replace(/\D/g, "");
+    if (!cleanMobile) {
       setErrorMsg("Please enter your registered mobile number.");
+      setMsg("");
+      return;
+    }
+    if (cleanMobile.length !== 10) {
+      setErrorMsg("Mobile number must be exactly 10 digits.");
+      setMsg("");
+      return;
+    }
+    if (!/^[6-9]/.test(cleanMobile)) {
+      setErrorMsg("Mobile number must start with 6, 7, 8, or 9.");
       setMsg("");
       return;
     }
@@ -100,9 +111,13 @@ export default function ForgotPasswordScreen() {
             <AtSign size={20} color="#767683" className="absolute left-4" />
             <input
               type="tel"
-              placeholder="Enter Mobile Number"
+              placeholder="Enter 10-digit mobile number"
               value={mobile}
-              onChange={(e) => setMobile(e.target.value)}
+              maxLength={10}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                setMobile(val);
+              }}
               className="w-full h-14 bg-[#eceef0] rounded-full pl-12 pr-4 text-base font-medium text-[#191c1e] focus:outline-none focus:ring-2 focus:ring-[#141779] transition-shadow placeholder:text-[#767683]"
               required
             />

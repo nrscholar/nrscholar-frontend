@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { apiFetch } from "../../../api";
+import { filterUniqueQuestions } from "../../../utils/quizQuestionUtils";
 
 const OPTION_LABELS = ["A", "B", "C", "D"];
 
@@ -73,7 +74,7 @@ export default function WeeklyTestQuestionsScreen() {
                 correct: newCorrect !== -1 ? newCorrect : q.correct
               };
             });
-            setQuestionsData(shuffledQs);
+            setQuestionsData(filterUniqueQuestions(shuffledQs));
             setTipsData(json.data.tips || []);
           }
         } catch (e) {}

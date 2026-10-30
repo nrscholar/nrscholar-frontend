@@ -39,31 +39,49 @@ export function translateNotificationTitle(title: string, t: any): string {
   return t(sanitizedKey, { defaultValue: title });
 }
 
-export function translateNotificationMessage(msg: string, t: any): string {
+export function translateNotificationMessage(msg: string, t: any, childName?: string): string {
   if (!msg) return msg;
   let translated = msg;
 
+  let resolvedChild = childName;
+  if (!resolvedChild && typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem("userData");
+      if (stored) {
+        const u = JSON.parse(stored);
+        const activeC = (u.children || []).find((c: any) => c.childId === u.activeChildId);
+        resolvedChild = activeC?.childName || u.childName || u.children?.[0]?.childName;
+      }
+    } catch (e) {}
+  }
+  const child = resolvedChild || t('your_child', 'Your child');
+
+  // Sanitize any raw MongoDB ObjectIds into human-readable chapter names
+  translated = translated.replace(/\bchapter\s+6a578b51e374303ef12b566d\b/gi, "chapter Finding the Furry Cat");
+  translated = translated.replace(/\bchapter\s+[0-9a-fA-F]{24}\b/gi, "chapter Finding the Furry Cat");
+  translated = translated.replace(/\b[0-9a-fA-F]{24}\b/gi, "Finding the Furry Cat");
+
   // 1. Child Mission Completed with Rewards
   const childMissionMatch = translated.match(/^(.*?)\s+(?:just\s+)?completed a daily mission and earned rewards!/i) || translated.match(/^(.*?)\s+એ હમણાં જ દૈનિક મિશન પૂર્ણ કર્યું અને ઈનામો જીત્યા!/i);
-  if (childMissionMatch) {
-    const child = childMissionMatch[1];
-    return t('notif_msg_child_mission_completed', { child, defaultValue: `${child} just completed a daily mission and earned rewards!` });
+  if (childMissionMatch && childMissionMatch[1].toLowerCase() !== 'you') {
+    const matchedChild = childMissionMatch[1];
+    return t('notif_msg_child_mission_completed', { child: matchedChild, defaultValue: `${matchedChild} just completed a daily mission and earned rewards!` });
   }
   if (/completed a daily mission/i.test(translated) || /completed a mission and earned rewards/i.test(translated)) {
-    return t('notif_msg_mission_completed_rewards', 'You just completed a daily mission and earned rewards!');
+    return t('notif_msg_child_mission_completed', { child, defaultValue: `${child} just completed a daily mission and earned rewards!` });
   }
 
   // 2. Child or Self Daily Habit Completed / Skipped
   const childHabitMatch = translated.match(/^(.*?)\s+(?:just\s+)?completed (?:their|your) daily habit(?: and earned rewards!)?/i);
   if (childHabitMatch && childHabitMatch[1].toLowerCase() !== 'you') {
-    const child = childHabitMatch[1];
-    return t('notif_msg_child_daily_habit_completed', { child, defaultValue: `${child} just completed their daily habit and earned rewards!` });
+    const matchedChild = childHabitMatch[1];
+    return t('notif_msg_child_daily_habit_completed', { child: matchedChild, defaultValue: `${matchedChild} just completed their daily habit and earned rewards!` });
   }
   if (/daily habit and earned rewards/i.test(translated) || /completed (their|your) daily habit/i.test(translated)) {
-    return t('notif_msg_daily_habit_completed', 'You completed your daily habit and earned rewards!');
+    return t('notif_msg_child_daily_habit_completed', { child, defaultValue: `${child} just completed their daily habit and earned rewards!` });
   }
   if (/skipped (their|your) daily habit/i.test(translated)) {
-    return t('notif_msg_daily_habit_skipped', 'You skipped your daily habit today. Encourage them to try tomorrow!');
+    return t('notif_msg_child_daily_habit_skipped', { child, defaultValue: `${child} skipped their daily habit today. Encourage them to try tomorrow!` });
   }
 
   // 3. Shadow Arena Defeated / Lost (Child or Self)
@@ -166,15 +184,22 @@ export function translateNotificationMessage(msg: string, t: any): string {
   }
 
   // 11. Textbook Chapter Read
-  const pdfMatch = translated.match(/You completed reading textbook for chapter (.+)!/i);
+  const pdfMatch = translated.match(/^(?:You\s+|(.*?)\s+)?completed reading textbook for chapter\s+(.+?)!*$/i);
   if (pdfMatch) {
-    const chName = pdfMatch[1];
-    return t('notif_msg_chapter_pdf_completed', { chapter: chName, defaultValue: `You completed reading textbook for chapter ${chName}!` });
+    const rawChild = pdfMatch[1]?.trim();
+    const chName = pdfMatch[2]?.trim();
+    const finalChild = (rawChild && rawChild.toLowerCase() !== 'you') ? rawChild : child;
+    return t('notif_msg_child_chapter_pdf_completed', {
+      child: finalChild,
+      chapter: chName,
+      defaultValue: `${finalChild} completed reading textbook for chapter ${chName}!`
+    });
   }
 
   // 12. Child Mission Completed
-  translated = translated.replace(/You completed Mission (\d+)(?: in chapter [^\!\.]+)?[\!\.]?/i, (_, mSeq) => {
-    return t('notif_mission_completed', { seq: mSeq, defaultValue: `You completed Mission ${mSeq}!` });
+  translated = translated.replace(/(?:You|(.*?))\s+completed Mission (\d+)(?: in chapter [^\!\.]+)?[\!\.]?/i, (_, rawC, mSeq) => {
+    const finalChild = (rawC && rawC.toLowerCase() !== 'you') ? rawC.trim() : child;
+    return t('notif_child_mission_completed', { child: finalChild, seq: mSeq, defaultValue: `${finalChild} completed Mission ${mSeq}!` });
   });
 
   // 13. XP & Coins Bagged

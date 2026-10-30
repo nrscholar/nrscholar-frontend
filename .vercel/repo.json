@@ -1,0 +1,11 @@
+{
+  "remoteName": "origin",
+  "projects": [
+    {
+      "id": "prj_HuwOcrgcgjhkLUkcsACwGfqqLYsE",
+      "name": "nrscholar-frontend",
+      "directory": ".",
+      "orgId": "team_yIU0cZGoJVxV3Ubq6cQgPtpk"
+    }
+  ]
+}

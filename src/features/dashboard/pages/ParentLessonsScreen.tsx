@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, Search, BookOpen, TrendingUp, Users, Settings, Plus, PlayCircle, ArrowLeft, Lock, ChevronDown } from "lucide-react";
+import { Menu, Search, BookOpen, TrendingUp, Users, Settings, Plus, PlayCircle, ArrowLeft, Lock, ChevronDown, Globe, CheckCircle, Bell } from "lucide-react";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
 
@@ -27,21 +27,25 @@ export default function ParentLessonsScreen() {
     return Math.floor(250 * Math.pow(1.5, lvl - 3));
   }
 
-  useEffect(() => {
-    const fetchLibrary = async () => {
-      try {
-        setLoading(true);
-        const res = await apiFetch('/api/parent/learning-library');
-        const data = await res.json();
-        if (data.success) {
-          setAllTopics(data.data.topics);
-        }
-      } catch (e) {
-        console.error("Failed to fetch dashboard topics", e);
-      } finally {
-        setLoading(false);
+  const fetchLibrary = async (langOverride?: string) => {
+    try {
+      setLoading(true);
+      const targetLang = langOverride || contentLanguage;
+      const res = await apiFetch('/api/parent/learning-library', {
+        headers: { "accept-language": targetLang }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAllTopics(data.data.topics);
       }
-    };
+    } catch (e) {
+      console.error("Failed to fetch dashboard topics", e);
+    } finally {
+      setTimeout(() => setLoading(false), 350);
+    }
+  };
+
+  useEffect(() => {
     const fetchUser = async () => {
       try {
         const res = await apiFetch('/api/users/me');
@@ -61,31 +65,44 @@ export default function ParentLessonsScreen() {
         const res = await apiFetch('/api/parent/controls');
         const json = await res.json();
         if (json.success && json.data?.parentControls?.contentLanguage) {
-          setContentLanguage(json.data.parentControls.contentLanguage);
+          const storedLang = json.data.parentControls.contentLanguage;
+          setContentLanguage(storedLang);
+          fetchLibrary(storedLang);
+        } else {
+          fetchLibrary();
         }
       } catch (e) {
-        console.error(e);
+        fetchLibrary();
       }
     };
-    fetchLibrary();
     fetchUser();
     fetchControls();
+
+    const handleUserDataUpdate = () => {
+      fetchUser();
+      fetchLibrary();
+    };
+    window.addEventListener("userDataUpdated", handleUserDataUpdate);
+    return () => {
+      window.removeEventListener("userDataUpdated", handleUserDataUpdate);
+    };
   }, []);
 
-  const unlockedTopicIds = new Set<string>();
-  const seenCategories = new Set<string>();
-  allTopics.forEach(topic => {
-    if (topic.status !== "completed") {
-      const cat = topic.category || "Other";
-      if (!seenCategories.has(cat)) {
-        seenCategories.add(cat);
-        unlockedTopicIds.add(topic.topicId);
-      }
-    }
-  });
+  const handleLanguageChange = async (newLang: string) => {
+    setContentLanguage(newLang);
+    setLangDropdownOpen(false);
+    try {
+      await apiFetch('/api/parent/controls', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contentLanguage: newLang })
+      });
+    } catch (e) {}
+    fetchLibrary(newLang);
+  };
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans pb-24 overflow-x-hidden relative">
+    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans pb-4 overflow-x-hidden relative">
       <style>{`
         .glass-card {
             background: rgba(255, 255, 255, 0.7);
@@ -105,36 +122,89 @@ export default function ParentLessonsScreen() {
       `}</style>
 
       {/* TopAppBar Navigation */}
-      <header className="bg-[rgba(247,249,251,0.8)] backdrop-blur-lg border-b border-white/20 w-full top-0 z-50 flex justify-between items-center px-6 py-4 sticky gap-4">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <button onClick={() => navigate('/parent/dashboard')} className="p-1 -ml-1 hover:bg-[rgba(20,23,121,0.05)] rounded-full transition-colors flex-shrink-0">
-            <ArrowLeft size={24} color="#141779" />
+      <header className="sticky top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex justify-between items-center px-4 sm:px-6 h-16 w-full">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+          <button 
+            onClick={() => navigate(-1)} 
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("back", "Back")}
+          >
+            <ArrowLeft size={19} />
           </button>
-          <div className="w-9 h-9 rounded-full border-2 border-[#2d328f] overflow-hidden bg-white flex-shrink-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-slate-200/80 overflow-hidden bg-white shrink-0 shadow-2xs">
             <img
               alt="Parent Avatar"
               src={profilePic || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`}
               className="w-full h-full object-cover"
             />
           </div>
-          <h1 className="text-lg font-bold text-[#141779] truncate">{t("lessons") || "Daily Parenting Lessons"}</h1>
+          <h1 className="text-base sm:text-lg font-black text-[#141779] truncate leading-tight">{t("lessons") || "Daily Parenting Lessons"}</h1>
+        </div>
+
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Dedicated Lesson Language Selector */}
+          <div className="relative shrink-0">
+            <button
+              onClick={() => setLangDropdownOpen(!langDropdownOpen)}
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-slate-50/90 border border-slate-200/80 text-[#141779] font-bold text-xs shadow-2xs hover:bg-slate-100 active:scale-95 transition-all cursor-pointer"
+            >
+              <Globe size={14} className="text-[#006a62]" />
+              <span className="hidden sm:inline">{contentLanguage === "hi" ? "हिन्दी" : contentLanguage === "gu" ? "ગુજરાતી" : "English"}</span>
+              <ChevronDown size={14} />
+            </button>
+
+            {langDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-32 bg-white rounded-2xl shadow-xl border border-slate-100 py-1 z-50 animate-in fade-in zoom-in duration-200">
+                {[
+                  { code: "en", label: "English" },
+                  { code: "hi", label: "हिन्दी" },
+                  { code: "gu", label: "ગુજરાતી" }
+                ].map(lang => (
+                  <button
+                    key={lang.code}
+                    onClick={() => handleLanguageChange(lang.code)}
+                    className={`w-full text-left px-4 py-2 text-xs font-bold transition-colors ${contentLanguage === lang.code ? 'bg-[#141779] text-white' : 'text-slate-700 hover:bg-slate-50'}`}
+                  >
+                    {lang.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <button 
+            onClick={() => navigate('/parent/settings')}
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("settings", "Settings")}
+            title={t("settings", "Settings")}
+          >
+            <Settings size={18} />
+          </button>
+          <button
+            onClick={() => navigate('/notifications')}
+            className="relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("notifications", "Notifications")}
+            title={t("notifications", "Notifications")}
+          >
+            <Bell size={18} />
+          </button>
         </div>
       </header>
 
       <main className="flex-1 flex flex-col">
         {/* Growth Tracker */}
-        <section className="px-6 pt-6 pb-4">
-          <div className="glass-card rounded-2xl p-5 glow-teal">
+        <section className="px-5 sm:px-6 pt-2.5 sm:pt-3 pb-1">
+          <div className="glass-card rounded-2xl p-4 sm:p-4.5 glow-teal">
             <div className="flex justify-between items-end mb-2">
               <div>
                 <p className="text-xs font-bold text-[#006a62] uppercase tracking-wider">
                   {contentLanguage === "hi" ? "विकास की स्थिति" : contentLanguage === "gu" ? "વિકાસ સ્થિતિ" : "Growth Status"}
                 </p>
-                <h2 className="text-2xl font-bold text-[#141779]">
+                <h2 className="text-xl sm:text-2xl font-black text-[#141779]">
                   {contentLanguage === "hi" ? `स्तर ${level} अभिभावक` : contentLanguage === "gu" ? `સ્તર ${level} વાલી` : `Level ${level} Parent`}
                 </h2>
               </div>
-              <span className="text-[#141779] font-bold text-base">
+              <span className="text-[#141779] font-black text-sm sm:text-base">
                 {xp} / {getXpForLevel(level + 1)} XP
               </span>
             </div>
@@ -144,12 +214,12 @@ export default function ParentLessonsScreen() {
                 ? Math.min(100, Math.round((xp / xpEnd) * 100))
                 : 100;
               return (
-                <div className="w-full h-3 rounded-full overflow-hidden bg-[rgba(20,23,121,0.10)] mt-1">
+                <div className="w-full h-2.5 rounded-full overflow-hidden bg-[rgba(20,23,121,0.10)] mt-1">
                   <div
                     className="h-full rounded-full transition-all duration-700"
                     style={{
                       width: `${pct}%`,
-                      background: "linear-gradient(to right, #141779, #57fae9)"
+                      background: "linear-gradient(to right, #141779, #2d328f)"
                     }}
                   />
                 </div>
@@ -159,8 +229,8 @@ export default function ParentLessonsScreen() {
         </section>
 
         {/* Categories Chips */}
-        <section className="py-4">
-          <div className="flex overflow-x-auto no-scrollbar gap-3 px-6">
+        <section className="pt-2 pb-2">
+          <div className="flex overflow-x-auto no-scrollbar gap-2 px-5 sm:px-6">
             {[
               { id: "For You", label: contentLanguage === "hi" ? "आपके लिए" : contentLanguage === "gu" ? "તમારા માટે" : "For You" },
               { id: "Completed", label: contentLanguage === "hi" ? "पूर्ण पाठ" : contentLanguage === "gu" ? "પૂર્ણ થયેલા પાઠ" : "Completed" },
@@ -178,7 +248,7 @@ export default function ParentLessonsScreen() {
               <button 
                 key={filter.id}
                 onClick={() => setActiveFilter(filter.id)}
-                className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap active:scale-95 transition-all ${activeFilter === filter.id ? 'bg-[#141779] text-white' : 'bg-[#e6e8ea] text-[#464652] hover:bg-[#e0e3e5]'}`}
+                className={`px-4 py-2 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap active:scale-95 transition-all ${activeFilter === filter.id ? 'bg-[#141779] text-white shadow-xs' : 'bg-[#e6e8ea] text-[#464652] hover:bg-[#e0e3e5]'}`}
               >
                 {filter.label}
               </button>
@@ -187,18 +257,18 @@ export default function ParentLessonsScreen() {
         </section>
 
         {/* First Row: Recommended */}
-        <section className="mt-4">
-          <div className="px-6 flex justify-between items-center mb-4 gap-2">
-            <h3 className="text-[20px] font-bold text-[#191c1e] leading-normal flex-1 min-w-0 py-1">
+        <section className="mt-2.5 sm:mt-3">
+          <div className="px-5 sm:px-6 flex justify-between items-center mb-2.5 sm:mb-3 gap-2">
+            <h3 className="text-lg sm:text-xl font-black text-[#191c1e] leading-normal flex-1 min-w-0">
               {activeFilter === "Completed" 
                 ? (contentLanguage === "hi" ? "पूर्ण किए गए पाठ" : contentLanguage === "gu" ? "પૂર્ણ થયેલા પાઠ" : "Completed Lessons") 
                 : (contentLanguage === "hi" ? "आपके लिए अनुशंसित" : contentLanguage === "gu" ? "તમારા માટે ભલામણ કરેલ" : "Recommended for You")}
             </h3>
-            <button onClick={() => navigate('/parent/learning-library')} className="text-[#006a62] font-bold text-sm hover:underline">
+            <button onClick={() => navigate('/parent/learning-library')} className="text-[#006a62] font-bold text-xs sm:text-sm hover:underline">
               {contentLanguage === "hi" ? "सभी देखें" : contentLanguage === "gu" ? "બધું જુઓ" : "See All"}
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-4 px-6 pb-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 px-5 sm:px-6 pb-4">
             {(() => {
               if (loading) {
                 return Array.from({ length: 4 }).map((_, idx) => (
@@ -212,10 +282,13 @@ export default function ParentLessonsScreen() {
                 ));
               }
 
-
               const filtered = allTopics.filter(t => {
                 if (activeFilter === "Completed") {
                   return t.status === "completed";
+                }
+                // Exclude completed lessons from main page / "For You" / Category tabs
+                if (t.status === "completed") {
+                  return false;
                 }
                 const matchesCategory = activeFilter === "For You" ||
                   t.category === activeFilter ||
@@ -236,10 +309,10 @@ export default function ParentLessonsScreen() {
                           : "No Completed Lessons Yet"
                       ) : (
                         contentLanguage === "hi" 
-                          ? "कोई पाठ उपलब्ध नहीं" 
+                          ? "सभी पाठ पूर्ण हो चुके हैं!" 
                           : contentLanguage === "gu" 
-                          ? "કોઈ પાઠ ઉપલબ્ધ નથી" 
-                          : "No Lessons Available"
+                          ? "બધા પાઠ પૂર્ણ થયા!" 
+                          : "All Lessons Completed!"
                       )}
                     </p>
                     <p className="text-xs font-semibold text-slate-500 mt-2 max-w-[280px] leading-relaxed">
@@ -251,10 +324,10 @@ export default function ParentLessonsScreen() {
                           : "You haven't completed any lessons yet. Start learning from the 'For You' tab to see them here!"
                       ) : (
                         contentLanguage === "hi"
-                          ? "इस श्रेणी में वर्तमान में कोई पाठ उपलब्ध नहीं है।"
+                          ? "आपने इस अनुभाग के सभी पाठ पूर्ण कर लिए हैं। अपने पूर्ण पाठों की समीक्षा करने के लिए 'पूर्ण पाठ' टैब पर जाएं!"
                           : contentLanguage === "gu"
-                          ? "આ શ્રેણીમાં હાલમાં કોઈ પાઠ ઉપલબ્ધ નથી."
-                          : "There are currently no lessons available in this category."
+                          ? "તમે આ વિભાગના બધા પાઠ પૂર્ણ કર્યા છે. તમારા પૂર્ણ થયેલા પાઠની સમીક્ષા કરવા માટે 'પૂર્ણ થયેલા પાઠ' ટેબ પર જાઓ!"
+                          : "You have completed all lessons in this section. Visit the 'Completed' tab to re-read them anytime!"
                       )}
                     </p>
                     {activeFilter === "Completed" && (
@@ -270,6 +343,7 @@ export default function ParentLessonsScreen() {
               }
 
               return filtered.map((topic, index) => {
+                const isCompleted = topic.status === "completed";
                 const isLocked = topic.status === "locked";
                 return (
                   <div
@@ -284,8 +358,15 @@ export default function ParentLessonsScreen() {
                         className={`w-full h-full object-cover ${!isLocked ? 'group-hover:scale-110' : ''} transition-transform duration-700`}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                      <div className="absolute top-2 left-2 bg-[#57fae9] text-[#007168] px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm">+{topic.xp || 30} XP</div>
-                      <div className="absolute bottom-2 right-2 bg-black/40 backdrop-blur-md text-white px-2 py-0.5 rounded-full text-[10px]">{topic.duration || 3} min</div>
+                      {isCompleted ? (
+                        <div className="absolute top-2 left-2 bg-[#006a62]/90 backdrop-blur-md text-white px-2.5 py-0.5 rounded-full text-xs font-black shadow-sm border border-white/20 flex items-center gap-1">
+                          <CheckCircle size={12} className="text-[#57fae9]" />
+                          <span>+{topic.xp || 30} XP ({contentLanguage === "hi" ? "पूर्ण" : contentLanguage === "gu" ? "પૂર્ણ" : "Completed"})</span>
+                        </div>
+                      ) : (
+                        <div className="absolute top-2 left-2 bg-[#141779] text-white px-2.5 py-0.5 rounded-full text-xs font-black shadow-sm border border-white/20">+{topic.xp || 30} XP</div>
+                      )}
+                      <div className="absolute bottom-2 right-2 bg-black/40 backdrop-blur-md text-white px-2 py-0.5 rounded-full text-xs font-bold">{topic.duration || 3} min</div>
                       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                         {!isLocked && <PlayCircle size={48} className="text-white drop-shadow-lg" />}
                       </div>
@@ -298,9 +379,9 @@ export default function ParentLessonsScreen() {
                     <div className="p-3 bg-white/50 backdrop-blur-md flex-1 flex flex-col justify-between">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[#006a62] text-[9px] font-bold uppercase tracking-widest">{topic.category}</span>
+                          <span className="text-[#006a62] text-xs font-black uppercase tracking-wider">{topic.category}</span>
                         </div>
-                        <h4 className="text-[14px] font-bold text-[#141779] leading-[1.6] pt-2 pb-1">{topic.title}</h4>
+                        <h4 className="text-sm sm:text-base font-black text-[#141779] leading-snug pt-1 pb-1">{topic.title}</h4>
                       </div>
                     </div>
                   </div>
@@ -310,8 +391,6 @@ export default function ParentLessonsScreen() {
           </div>
         </section>
       </main>
-
-
     </div>
   );
 }

@@ -1,7 +1,16 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { X, CheckCircle } from "lucide-react";
-import * as Icons from "lucide-react";
+import { 
+  X, CheckCircle, Check, Star, Clock, BrainCircuit, MessageSquare, CheckSquare, 
+  Heart, Eye, Award, Smartphone, ShieldCheck, Flame, BookOpen, Sparkles, 
+  Ear, VolumeX, Lightbulb, Target, Zap, Shield, Trophy, MonitorOff
+} from "lucide-react";
+
+const LessonIcons: Record<string, any> = {
+  Star, Clock, BrainCircuit, MessageSquare, CheckSquare, 
+  Heart, Eye, Award, Smartphone, ShieldCheck, Flame, BookOpen, Sparkles, 
+  Ear, VolumeX, Lightbulb, Target, Zap, Shield, Trophy, X, CheckCircle, Check, MonitorOff
+};
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
 
@@ -69,7 +78,10 @@ export default function ParentLessonPlayerScreen() {
     if (completing) return;
     setCompleting(true);
     try {
-      await apiFetch('/api/parent/learning-library/complete', {
+      // Invalidate session cache immediately
+      sessionStorage.removeItem("parent_learning_library_cache");
+      sessionStorage.removeItem("parent_roadmap_cache");
+      const res = await apiFetch('/api/parent/learning-library/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -77,10 +89,18 @@ export default function ParentLessonPlayerScreen() {
           acceptMission: missionAccepted
         })
       });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data?.user) {
+          localStorage.setItem("userData", JSON.stringify(json.data.user));
+        }
+      }
+      window.dispatchEvent(new Event("userDataUpdated"));
     } catch (e) {
       console.error(e);
+      window.dispatchEvent(new Event("userDataUpdated"));
     }
-    navigate('/parent/lessons');
+    navigate(-1);
   };
 
   const handleOptionSelect = (option: string, isCorrect: boolean) => {
@@ -101,7 +121,7 @@ export default function ParentLessonPlayerScreen() {
   );
 
   const renderSlide = (slide: any) => {
-    const IconComponent = slide.icon ? (Icons as any)[slide.icon] : null;
+    const IconComponent = slide.icon ? (LessonIcons[slide.icon] || Sparkles) : null;
 
     if (slide.type === 'metadata_intro') {
       return (
@@ -112,8 +132,8 @@ export default function ParentLessonPlayerScreen() {
           <h4 className="text-[#006a62] font-bold tracking-widest uppercase mb-3 text-sm">{slide.category}</h4>
           <h2 className="text-3xl font-bold text-[#141779] mb-4">{slide.title}</h2>
           <div className="flex items-center justify-center gap-6 text-[#767683] font-medium mt-4">
-            {slide.xp && <span className="flex items-center gap-1"><Icons.Star size={18} className="text-[#ffb300]" /> {slide.xp} XP</span>}
-            {slide.duration && <span className="flex items-center gap-1"><Icons.Clock size={18} /> {slide.duration} min</span>}
+            {slide.xp && <span className="flex items-center gap-1"><Star size={18} className="text-[#ffb300]" /> {slide.xp} XP</span>}
+            {slide.duration && <span className="flex items-center gap-1"><Clock size={18} /> {slide.duration} min</span>}
           </div>
         </div>
       );
@@ -208,7 +228,7 @@ export default function ParentLessonPlayerScreen() {
             {slide.items?.map((item: string, idx: number) => (
               <div key={idx} className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${slide.themeBg || 'bg-[#006a62]/10'} ${slide.themeText || 'text-[#006a62]'}`}>
-                  <Icons.Check size={16} />
+                  <Check size={16} />
                 </div>
                 <span className="font-bold text-lg text-[#191c1e]">{item}</span>
               </div>
@@ -237,7 +257,7 @@ export default function ParentLessonPlayerScreen() {
             className={`mx-auto flex items-center gap-3 px-6 py-4 rounded-full border-2 transition-all ${missionAccepted ? `border-[#006a62] bg-[#57fae9]/20 text-[#006a62]` : 'border-[#c7c5d4] text-[#767683] hover:bg-gray-50'}`}
           >
             <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 ${missionAccepted ? 'border-[#006a62] bg-[#006a62] text-white' : 'border-[#c7c5d4]'}`}>
-              {missionAccepted && <Icons.Check size={14} strokeWidth={3} />}
+              {missionAccepted && <Check size={14} strokeWidth={3} />}
             </div>
             <span className="font-bold text-lg">{slide.buttonText || t("i_accept", "I Accept")}</span>
           </button>
@@ -268,16 +288,21 @@ export default function ParentLessonPlayerScreen() {
 
   return (
     <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans flex flex-col">
-      <header className="px-6 py-4 flex items-center justify-between z-50 sticky top-0 bg-[rgba(247,249,251,0.9)] backdrop-blur-md">
-        <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-[rgba(20,23,121,0.05)] transition-colors">
-          <X size={24} className="text-[#141779]" />
+      <header className="sticky top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex items-center justify-between px-4 sm:px-6 h-16 w-full">
+        <button 
+          onClick={() => navigate(-1)} 
+          className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+          aria-label="Close"
+        >
+          <X size={19} />
         </button>
-        <div className="flex-1 mx-4 bg-[#e0e3e5] rounded-full h-1.5 overflow-hidden">
+        <div className="flex-1 mx-4 bg-slate-200 rounded-full h-2 overflow-hidden">
           <div 
             className="bg-[#141779] h-full rounded-full transition-all duration-500 ease-out"
             style={{ width: `${progress}%` }}
           ></div>
         </div>
+        <div className="w-9 sm:w-10 shrink-0" />
       </header>
 
       <main className="flex-1 px-6 pb-32 flex flex-col justify-center relative z-10">
@@ -294,7 +319,7 @@ export default function ParentLessonPlayerScreen() {
         ) : !slides.length ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <IllustrationBlock bg="bg-gray-200" text="text-gray-500">
-              <Icons.MonitorOff size={48} />
+              <MonitorOff size={48} />
             </IllustrationBlock>
             <h2 className="text-2xl font-bold text-gray-800 mb-2">{t("content_coming_soon", "Content Coming Soon")}</h2>
             <p className="text-gray-500 font-medium px-4">

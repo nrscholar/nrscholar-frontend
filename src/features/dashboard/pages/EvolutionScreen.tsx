@@ -1,8 +1,9 @@
 import { Sparkles, ArrowLeft } from "lucide-react";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
-import InteractiveCompanion from "../../../components/InteractiveCompanion";
+
+const InteractiveCompanion = lazy(() => import("../../../components/InteractiveCompanion"));
 
 export default function EvolutionScreen() {
   const navigate = useNavigate();
@@ -124,7 +125,15 @@ export default function EvolutionScreen() {
           {/* Avatar Container */}
           <div className={`w-64 h-64 rounded-full overflow-hidden bg-gradient-to-br ${bgGradient} flex items-center justify-center text-9xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] relative z-10 border-4 border-white ${stage >= 5 ? 'animate-pulse' : ''}`}>
             <div className="absolute inset-0 flex items-center justify-center p-2 rounded-full overflow-hidden">
-              <InteractiveCompanion scale={dragonScale} url={modelUrl} fallbackImage={fallbackUrl} />
+              <Suspense fallback={
+                <img 
+                  src={fallbackUrl} 
+                  alt="Dragon Companion Fallback" 
+                  className="w-full h-full object-cover rounded-full select-none pointer-events-none" 
+                />
+              }>
+                <InteractiveCompanion scale={dragonScale} url={modelUrl} fallbackImage={fallbackUrl} />
+              </Suspense>
             </div>
             
             {stage >= 3 && (

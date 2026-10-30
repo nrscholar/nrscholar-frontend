@@ -2,18 +2,35 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Lightbulb, Flame, ShieldCheck,
-  Brain, CheckCircle, Star, Zap, ArrowLeft, Trophy, Target
+  Brain, CheckCircle, CheckCircle2, Star, Zap, ArrowLeft, Trophy, Target, Bell, Settings
 } from "lucide-react";
 import { apiFetch } from "../../../api";
+import { getActiveUserContext } from "../../../utils/sessionCache";
 import { useTranslation } from "react-i18next";
+import ChildSwitcherModal from "../../../components/ChildSwitcherModal";
 
 interface Tip {
+  // Structured JSON fields
+  dayBadge?: string;
+  categoryTag?: string;
+  subjectFocus?: string | null;
+  tipTitle?: string;
+  tipDescription?: string;
+  actionStep?: string;
+  whyItMatters?: string;
+  xpReward?: number;
+  recommendedRoute?: string;
+
+  // Backward-compatible fields
   instead?: string;
   try?: string;
   benefit?: string;
   title?: string;
   description?: string;
   rewardPoints?: number;
+  category?: string;
+  status?: string;
+  subject?: string;
 }
 
 interface Milestone {
@@ -49,13 +66,15 @@ export default function ParentDailyTipScreen() {
   const [accuracy, setAccuracy] = useState(cachedTip?.accuracy || 0);
   const [childCity, setChildCity] = useState(cachedTip?.childCity || "Egg Village");
 
-  // Daily tip from backend
-  const [tip, setTip] = useState<Tip | null>(cachedTip?.tip || {
-    title: t("model_self_regulation", "Model Self-Regulation"),
-    description: t("model_self_regulation_desc", "When you feel frustrated, speak your coping strategy aloud: 'I'm feeling a bit overwhelmed, so I'm going to take three deep breaths.'"),
-    benefit: t("model_self_regulation_benefit", "Teaches emotional control by example."),
-  });
-  const [tipLoading, setTipLoading] = useState(!cachedTip);
+  // Daily tip from backend (no fake static tip fallback)
+  const [tip, setTip] = useState<Tip | null>(cachedTip?.tip || null);
+  const [tipLoading, setTipLoading] = useState(!cachedTip?.tip);
+  const [metrics, setMetrics] = useState<any>(cachedTip?.metrics || null);
+
+  // Header notifications & child switcher modal
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [userData, setUserData] = useState<any>(null);
+  const [showSwitcher, setShowSwitcher] = useState(false);
 
   // ── Level XP thresholds ──────────────────────────────────────────────────
   function getXpForLevel(lvl: number): number {
@@ -78,18 +97,69 @@ export default function ParentDailyTipScreen() {
     ? Math.min(100, Math.round(((xp - xpForCurrentLevel) / (xpForNextLevel - xpForCurrentLevel)) * 100))
     : 100;
 
-  // ── Dynamic Growth Rate Calculation ─────────────────────────────────────
-  const baseGrowthFromXp = Math.min(100, Math.round((roadmapXp / 2500) * 100));
-  const accuracyContribution = accuracy > 0 ? accuracy : 75;
-  const growthScore = Math.min(100, Math.max(15, Math.round((baseGrowthFromXp * 0.5) + (accuracyContribution * 0.5))));
+  // ── Growth Score Starting Rule & Badge Mapping ────────────────────────────
+  // New users/parents start at 0% Growth Score.
+  // Complete Score Range & Badge Mapping:
+  // 0% - 30%: Tag = "New Parent" (Indigo Pill), Subtitle = "Begin your journey — complete lessons to grow! 🌱"
+  // 31% - 50%: Tag = "Active Parent" (Indigo/Blue Pill), Subtitle = "Good progress! Every day counts. 💪"
+  // 51% - 70%: Tag = "Mindful Parent" (Emerald / Teal), Subtitle = "You're soaring! Keep the momentum going! 🚀"
+  // 71% - 85%: Tag = "Growth Coach" (Amber / Gold), Subtitle = "Phenomenal dedication! You are inspiring your child. ⭐"
+  // 86% - 100%: Tag = "Master Parent" (Purple / Violet), Subtitle = "Outstanding! You're in the top 5% of dedicated parents! 🏆"
 
-  // Dynamic growth message based on score
-  const growthMessage =
-    growthScore >= 80 ? t("growth_msg_80", "Outstanding! You're in the top tier of parents! 🏆") :
-    growthScore >= 60 ? t("growth_msg_60", "You're soaring! Keep the momentum going! 🚀") :
-    growthScore >= 40 ? t("growth_msg_40", "Good progress! Every day counts. 💪") :
-    growthScore >= 20 ? t("growth_msg_20", "Getting started — consistency is your superpower! 🌱") :
-    t("growth_msg_0", "Begin your journey — complete lessons to grow! ✨");
+  const hasRealData = metrics?.hasRealData ?? (totalTests > 0 || accuracy > 0);
+  const rawGrowthScore = (metrics?.growthScore !== undefined && metrics?.growthScore !== null)
+    ? Number(metrics.growthScore)
+    : 0;
+
+  const growthScore = Math.min(100, Math.max(0, rawGrowthScore));
+
+  const getGrowthBadgeInfo = (score: number) => {
+    if (score <= 30) {
+      return {
+        tag: t("tag_new_parent", "New Parent"),
+        subtitle: t("growth_subtitle_0_30", "Begin your journey — complete lessons to grow! 🌱"),
+        pillClass: "bg-indigo-50 border-indigo-200 text-indigo-700",
+        dialColorClass: "text-[#141779]",
+        textColorClass: "text-[#141779]",
+      };
+    } else if (score <= 50) {
+      return {
+        tag: t("tag_active_parent", "Active Parent"),
+        subtitle: t("growth_subtitle_31_50", "Good progress! Every day counts. 💪"),
+        pillClass: "bg-blue-50 border-blue-200 text-blue-700",
+        dialColorClass: "text-blue-600",
+        textColorClass: "text-blue-700",
+      };
+    } else if (score <= 70) {
+      return {
+        tag: t("tag_mindful_parent", "Mindful Parent"),
+        subtitle: t("growth_subtitle_51_70", "You're soaring! Keep the momentum going! 🚀"),
+        pillClass: "bg-teal-50 border-teal-200 text-[#006a62]",
+        dialColorClass: "text-[#006a62]",
+        textColorClass: "text-[#006a62]",
+      };
+    } else if (score <= 85) {
+      return {
+        tag: t("tag_growth_coach", "Growth Coach"),
+        subtitle: t("growth_subtitle_71_85", "Phenomenal dedication! You are inspiring your child. ⭐"),
+        pillClass: "bg-amber-50 border-amber-200 text-amber-700",
+        dialColorClass: "text-amber-500",
+        textColorClass: "text-amber-600",
+      };
+    } else {
+      return {
+        tag: t("tag_master_parent", "Master Parent"),
+        subtitle: t("growth_subtitle_86_100", "Outstanding! You're in the top 5% of dedicated parents! 🏆"),
+        pillClass: "bg-purple-50 border-purple-200 text-purple-700",
+        dialColorClass: "text-purple-600",
+        textColorClass: "text-purple-700",
+      };
+    }
+  };
+
+  const badgeInfo = getGrowthBadgeInfo(growthScore);
+  const displayGrowthTag = metrics?.growthTag || badgeInfo.tag;
+  const displayGrowthSubtitle = metrics?.growthSubtitle || badgeInfo.subtitle;
 
   // ── Dynamic Milestones built from real User & Report Data ─────────────────
   const milestones: Milestone[] = [
@@ -113,19 +183,23 @@ export default function ParentDailyTipScreen() {
     },
     {
       icon: <Star size={22} />,
-      title: totalStars >= 50 || xp >= 500 ? t("milestones_50", "50+ Learning Milestones! ⭐") : t("points_earned_progress", { count: Math.min(50, totalStars || Math.round(xp / 10)), defaultValue: `${Math.min(50, totalStars || Math.round(xp / 10))}/50 Points Earned` }),
-      subtitle: totalStars >= 50 || xp >= 500 ? t("rising_star_family", "Rising star family!") : t("complete_lessons_stars", "Complete lessons & quests to earn milestone stars"),
-      completed: totalStars >= 50 || xp >= 500,
-      progress: Math.min(100, Math.round((Math.max(totalStars, xp / 10) / 50) * 100)),
+      title: totalStars >= 50 ? t("milestones_50", "50+ Learning Milestones! ⭐") : t("points_earned_progress", { count: totalStars, defaultValue: `${totalStars}/50 Points Earned` }),
+      subtitle: totalStars >= 50 ? t("rising_star_family", "Rising star family!") : t("complete_lessons_stars", "Complete lessons & quests to earn milestone stars"),
+      completed: totalStars >= 50,
+      progress: Math.min(100, Math.round((totalStars / 50) * 100)),
       iconBg: "bg-amber-100",
       iconColor: "text-amber-600",
     },
     {
       icon: <Brain size={22} />,
-      title: accuracy >= 70 || xp >= 1200 ? t("cognitive_mastery_70", "70%+ Cognitive Mastery! 🧠") : t("cognitive_accuracy_fmt", { acc: accuracy || 70, defaultValue: `${accuracy || 70}% Cognitive Accuracy` }),
-      subtitle: accuracy >= 70 || xp >= 1200 ? t("high_reasoning_perf", "High reasoning & logic performance!") : t("keep_practicing_boost", "Keep practicing to boost cognitive score"),
-      completed: accuracy >= 70 || xp >= 1200,
-      progress: Math.min(100, Math.max(20, accuracy || Math.round((xp / 1200) * 100))),
+      title: hasRealData
+        ? (accuracy >= 70 ? t("cognitive_mastery_70", "70%+ Cognitive Mastery! 🧠") : t("cognitive_accuracy_fmt", { acc: accuracy, defaultValue: `${accuracy}% Cognitive Accuracy` }))
+        : t("cognitive_baseline", "Cognitive Baseline 🧠"),
+      subtitle: hasRealData
+        ? (accuracy >= 70 ? t("high_reasoning_perf", "High reasoning & logic performance!") : t("keep_practicing_boost", "Keep practicing to boost cognitive score"))
+        : t("awaiting_first_mission", "Complete 1st quest to calculate cognitive accuracy"),
+      completed: hasRealData && accuracy >= 70,
+      progress: hasRealData ? Math.min(100, accuracy) : 0,
       iconBg: "bg-emerald-100",
       iconColor: "text-emerald-700",
     },
@@ -136,12 +210,36 @@ export default function ParentDailyTipScreen() {
     window.scrollTo(0, 0);
     async function fetchAll() {
       const nextCache: any = cachedTip ? { ...cachedTip } : {};
+      const ctx = getActiveUserContext();
+      const childParam = ctx.childId ? `childId=${encodeURIComponent(ctx.childId)}` : "";
+      const classParam = ctx.classLevel ? `classLevel=${encodeURIComponent(ctx.classLevel)}` : "";
+      const qParams = [childParam, classParam].filter(Boolean).join("&");
 
-      const tipPromise = apiFetch("/api/parent/daily-tip")
+      const tipPromise = apiFetch(`/api/parent/daily-tip${qParams ? `?${qParams}` : ""}`)
         .then(res => res.json())
         .then(tJson => {
           if (tJson.success && tJson.data) {
             setTip(tJson.data);
+            if (tJson.data.childName) {
+              setChildName(tJson.data.childName);
+            }
+            if (tJson.data.metrics) {
+              setMetrics(tJson.data.metrics);
+              nextCache.metrics = tJson.data.metrics;
+              if (tJson.data.metrics.accuracy !== null && tJson.data.metrics.accuracy !== undefined) {
+                setAccuracy(tJson.data.metrics.accuracy);
+                nextCache.accuracy = tJson.data.metrics.accuracy;
+              }
+              if (tJson.data.metrics.streak !== undefined) {
+                setStreak(tJson.data.metrics.streak);
+              }
+              if (tJson.data.metrics.totalStars !== undefined) {
+                setTotalStars(tJson.data.metrics.totalStars);
+              }
+              if (tJson.data.metrics.totalTests !== undefined) {
+                setTotalTests(tJson.data.metrics.totalTests);
+              }
+            }
             nextCache.tip = tJson.data;
           }
         })
@@ -163,22 +261,23 @@ export default function ParentDailyTipScreen() {
               const u = uJson.data.user;
               const childObj = (u.children && u.children[0]) || {};
 
-              const effectiveXp = Math.max(u.xp || 0, u.parentXp || 0, childObj.xp || 0);
-              const effectiveLevel = Math.max(u.level || 1, u.parentLevel || 1, childObj.level || 1, 1);
-              const effectiveStars = Math.max((u.parentStars || 0) + (u.totalStars || 0) + (u.stars || 0), childObj.coins || 0);
-              const effectiveStreak = Math.max(u.streakDays || 0, u.parentStreak || 0, childObj.streakDays || 0);
+              const parentXpVal = u.parentXp !== undefined ? u.parentXp : 0;
+              const parentLevelVal = u.parentLevel !== undefined ? u.parentLevel : 1;
+              const effectiveStars = (u.parentStars || 0) + (u.totalStars || 0) + (u.stars || 0);
+              const effectiveStreak = u.parentStreak !== undefined ? u.parentStreak : 0;
 
+              setUserData(u);
               setChildName(u.childName || childObj.childName || "Explorer");
-              setParentLevel(effectiveLevel);
+              setParentLevel(parentLevelVal);
               setChildLevel(childObj.level || u.level || 1);
-              setXp(effectiveXp);
+              setXp(parentXpVal);
               setTotalStars(effectiveStars);
               setStreak(effectiveStreak);
 
               nextCache.childName = u.childName || childObj.childName || "Explorer";
-              nextCache.parentLevel = effectiveLevel;
+              nextCache.parentLevel = parentLevelVal;
               nextCache.childLevel = childObj.level || u.level || 1;
-              nextCache.xp = effectiveXp;
+              nextCache.xp = parentXpVal;
               nextCache.totalStars = effectiveStars;
               nextCache.streak = effectiveStreak;
             }
@@ -195,12 +294,16 @@ export default function ParentDailyTipScreen() {
           if (rRes) {
             const rJson = await rRes.json();
             if (rJson.success && rJson.data) {
-              const tests = Math.max(rJson.data.totalTests || 0, rJson.data.totalChaptersCompleted || 0, rJson.data.todaySolved > 0 ? 1 : 0);
-              const acc = rJson.data.overallAccuracy || rJson.data.weeklyConfidenceScore || 0;
-              setTotalTests(tests);
-              setAccuracy(acc);
+              const tests = rJson.data.totalChaptersCompleted || 0;
+              const acc = (rJson.data.overallAccuracy !== undefined && rJson.data.overallAccuracy !== null)
+                ? rJson.data.overallAccuracy
+                : (rJson.data.weeklyConfidenceScore || 0);
+              setTotalTests(prev => Math.max(prev, tests));
+              if (acc > 0) {
+                setAccuracy(acc);
+                nextCache.accuracy = acc;
+              }
               nextCache.totalTests = tests;
-              nextCache.accuracy = acc;
             }
           }
 
@@ -217,11 +320,30 @@ export default function ParentDailyTipScreen() {
         }
       })();
 
-      await Promise.all([tipPromise, statsPromise]);
+      const notifPromise = apiFetch("/api/notifications?role=parent")
+        .then(res => res.json())
+        .then(nJson => {
+          if (nJson.success && Array.isArray(nJson.data)) {
+            setUnreadCount(nJson.data.filter((n: any) => !n.isRead).length);
+          }
+        })
+        .catch(() => {});
+
+      await Promise.all([tipPromise, statsPromise, notifPromise]);
       sessionStorage.setItem("parent_daily_tip_cache", JSON.stringify(nextCache));
     }
 
     fetchAll();
+
+    const handleUserDataUpdate = () => {
+      sessionStorage.removeItem("parent_daily_tip_cache");
+      fetchAll();
+    };
+    window.addEventListener("userDataUpdated", handleUserDataUpdate);
+    return () => {
+      window.removeEventListener("userDataUpdated", handleUserDataUpdate);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const translateTipField = (text?: string) => {
@@ -230,24 +352,35 @@ export default function ParentDailyTipScreen() {
 
     // 1. Screen-Free Dinner Table
     if (/Screen-Free Dinner Table/i.test(trimmed)) {
-      return t("tip_screen_free_table", "સ્ક્રીન મુક્ત ડિનર ટેબલ");
+      return t("tip_screen_free_table", "Screen-Free Dinner Table");
     }
     if (/Designate the dinner table as a screen-free zone/i.test(trimmed)) {
-      return t("tip_screen_free_table_desc", "દરેક માટે ડિનર ટેબલને સ્ક્રીન-મુક્ત ઝોન તરીકે નક્કી કરો. આ સમયનો ઉપયોગ કૌટુંબિક વાતચીત માટે કરો.");
+      return t("tip_screen_free_table_desc", "Designate the dinner table as a screen-free zone for everyone. Use this time for family conversation.");
     }
     if (/Strengthens family connections and social habits/i.test(trimmed)) {
-      return t("tip_screen_free_table_benefit", "કૌટુંબિક સંબંધો અને સામાજિક આદતોને મજબૂત બનાવે છે.");
+      return t("tip_screen_free_table_benefit", "Strengthens family connections and social habits.");
     }
 
     // 2. Model Self-Regulation
     if (/Model Self-Regulation/i.test(trimmed)) {
-      return t("model_self_regulation", "સ્વ-નિયમનનું મોડેલ બનાવો");
+      return t("model_self_regulation", "Model Self-Regulation");
     }
     if (/When you feel frustrated, speak your coping strategy/i.test(trimmed)) {
-      return t("model_self_regulation_desc", "જ્યારે તમને નિરાશા અનુભવાય, ત્યારે તમારી સામનો કરવાની વ્યૂહરચના મોટેથી બોલો: 'હું થોડો અતિશય અનુભવ કરી રહ્યો છું, તેથી હું ત્રણ ઊંડા શ્વાસ લઈશ.'");
+      return t("model_self_regulation_desc", "When you feel frustrated, speak your coping strategy aloud: 'I'm feeling a bit overwhelmed, so I'm going to take three deep breaths.'");
     }
     if (/Teaches emotional control by example/i.test(trimmed)) {
-      return t("model_self_regulation_benefit", "ઉદાહરણ દ્વારા ભાવનાત્મક નિયંત્રણ શીખવે છે.");
+      return t("model_self_regulation_benefit", "Teaches emotional control by example.");
+    }
+
+    // 3. Establish Bedtime Routines
+    if (/Establish Bedtime Routines/i.test(trimmed)) {
+      return t("tip_bedtime_routines", "Establish Bedtime Routines");
+    }
+    if (/Create a consistent bedtime routine/i.test(trimmed)) {
+      return t("tip_bedtime_routines_desc", "Create a consistent bedtime routine. Clear structures help children feel safe and reduce transition anxiety.");
+    }
+    if (/Improves sleep quality/i.test(trimmed)) {
+      return t("tip_bedtime_routines_benefit", "Improves sleep quality and emotional stability.");
     }
 
     const direct = t(trimmed, "");
@@ -257,79 +390,177 @@ export default function ParentDailyTipScreen() {
   };
 
   return (
-    <div className="bg-gradient-to-b from-[#f0f4f8] to-[#e6eef5] text-[#141779] flex flex-col min-h-screen w-full relative overflow-x-hidden font-sans">
+    <div className="bg-[#f7f9fb] text-[#141779] flex flex-col min-h-screen w-full relative overflow-x-hidden font-sans max-w-md mx-auto">
 
-      {/* ── Top Header ── */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs flex items-center px-6 h-16 gap-3">
-        <button onClick={() => navigate(-1)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 hover:bg-slate-100 active:scale-95 transition-all">
-          <ArrowLeft size={20} className="text-[#141779]" />
-        </button>
-        <h1 className="text-xl font-black text-[#141779] tracking-tight">{t("daily_parenting_tip", "Daily Parenting Tip")}</h1>
+      {/* ── Top Header matching Parent Space Header exactly ── */}
+      <header className="sticky top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 h-16 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] w-full">
+        {/* Left Side: Back button + Title */}
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+          <button 
+            onClick={() => navigate(-1)} 
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("back", "Back")}
+          >
+            <ArrowLeft size={19} />
+          </button>
+          <div className="flex flex-col min-w-0 justify-center">
+            <h1 className="text-base sm:text-lg font-black text-[#141779] leading-tight truncate">
+              {t("daily_parenting_tip", "Daily Parenting Tip")}
+            </h1>
+            <span className="text-xs sm:text-[13px] text-slate-500 font-semibold truncate mt-0.5">
+              {childName ? `${childName} • ` : ""}{t("parent_guidance", "Parent Guidance")}
+            </span>
+          </div>
+        </div>
+
+        {/* Right Side: Settings & Notification Indicators */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <button
+            onClick={() => navigate('/parent/settings')}
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("settings", "Settings")}
+            title={t("settings", "Settings")}
+          >
+            <Settings size={18} />
+          </button>
+          <button
+            onClick={() => navigate("/notifications")}
+            className="relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
+            aria-label={t("notifications", "Notifications")}
+            title={t("notifications", "Notifications")}
+          >
+            <Bell size={18} />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 w-4 h-4 bg-[#ba1a1a] rounded-full border-2 border-white flex items-center justify-center text-[9px] font-bold text-white">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+        </div>
       </header>
 
-      {/* ── Main Content Container with Clearance ── */}
-      <main className="flex-1 pt-20 pb-32 px-5 flex flex-col gap-6 relative z-10 max-w-lg mx-auto w-full">
+      {/* ── Main Content Container with Clearance for Bottom Navigation ── */}
+      <main className="flex-1 px-4 pt-3.5 pb-4 flex flex-col gap-3.5 relative z-10 max-w-md mx-auto w-full">
 
-        {/* ── Today's Tip Card ── */}
-        <section className="w-full bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center">
-                <Lightbulb className="text-[#006a62]" size={20} fill="currentColor" />
+        {/* ── 1. Today's Parenting Tip Card (Primary Focus) ── */}
+        <section className="w-full bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-[0_4px_20px_rgba(20,23,121,0.04)] flex flex-col gap-3.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-8.5 h-8.5 rounded-xl bg-teal-50 border border-teal-100/80 flex items-center justify-center text-[#006a62] shrink-0">
+                <Lightbulb size={18} fill="currentColor" />
               </div>
-              <h2 className="text-[#141779] font-black text-lg">{t("todays_parenting_tip", "Today's Parenting Tip")}</h2>
+              <h2 className="text-[#141779] font-black text-base sm:text-lg truncate">
+                {t("todays_parenting_tip", "Today's Parenting Tip")}
+              </h2>
             </div>
-            <span className="text-[11px] font-black text-slate-500 bg-slate-100 px-3 py-1 rounded-full uppercase tracking-wider">
-              {t("day_num", { day: new Date().getDate(), defaultValue: `Day ${new Date().getDate()}` })}
-            </span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {(tip?.categoryTag || tip?.category) && (
+                <span className={`text-xs sm:text-[13px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider border ${
+                  (tip.categoryTag || tip.category) === "TARGETED SUPPORT"
+                    ? "text-amber-700 bg-amber-50 border-amber-200/80"
+                    : (tip.categoryTag || tip.category) === "MASTERY CELEBRATION"
+                    ? "text-purple-700 bg-purple-50 border-purple-200/80"
+                    : (tip.categoryTag || tip.category) === "GROWTH MINDSET"
+                    ? "text-[#006a62] bg-teal-50 border-teal-200/80"
+                    : "text-indigo-700 bg-indigo-50 border-indigo-200/80"
+                }`}>
+                  {tip.categoryTag || tip.category}
+                </span>
+              )}
+              <span className="text-xs sm:text-[13px] font-black text-slate-500 bg-slate-100 border border-slate-200/60 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                {tip?.dayBadge || (streak > 0 ? `DAY ${streak}` : "DAY 1")}
+              </span>
+            </div>
           </div>
 
           {tipLoading ? (
-            <div className="animate-pulse flex flex-col gap-3">
-              <div className="h-4 bg-slate-200 rounded w-3/4"></div>
-              <div className="h-4 bg-slate-200 rounded w-full"></div>
-              <div className="h-4 bg-slate-200 rounded w-5/6"></div>
+            <div className="space-y-2.5 py-2">
+              <div className="h-4 bg-slate-200/60 animate-skeleton rounded-lg w-3/4"></div>
+              <div className="h-4 bg-slate-200/60 animate-skeleton rounded-lg w-full"></div>
+              <div className="h-4 bg-slate-200/60 animate-skeleton rounded-lg w-5/6"></div>
             </div>
           ) : tip ? (
             <>
+              {(tip.subjectFocus || tip.subject) && (
+                <div className="flex items-center gap-1.5 self-start bg-indigo-50/80 text-[#141779] border border-indigo-200/70 px-2.5 py-0.5 rounded-full text-xs font-black">
+                  <span>🎯 {t("focus_subject", "Subject Focus")}: {tip.subjectFocus || tip.subject}</span>
+                </div>
+              )}
+
               {tip.instead ? (
-                <div className="bg-slate-50 rounded-2xl p-4 flex flex-col gap-3 border border-slate-200/80">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">{t("instead_of", "Instead of:")}</span>
-                    <p className="text-slate-600 font-semibold italic text-sm">{translateTipField(tip.instead)}</p>
+                <div className="bg-slate-50/90 rounded-2xl p-3.5 flex flex-col gap-2.5 border border-slate-200/70">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-black text-slate-500 uppercase tracking-wider">{t("instead_of", "Instead of:")}</span>
+                    <p className="text-slate-600 font-semibold italic text-xs sm:text-sm leading-relaxed">{translateTipField(tip.instead)}</p>
                   </div>
-                  <div className="h-[1px] w-full bg-slate-200"></div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[10px] font-black text-[#006a62] uppercase tracking-wider">{t("try_this", "Try:")}</span>
-                    <p className="text-[#141779] font-bold text-sm leading-relaxed">{translateTipField(tip.try)}</p>
+                  <div className="h-[1px] w-full bg-slate-200/80" />
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-black text-[#006a62] uppercase tracking-wider">{t("try_this", "Try:")}</span>
+                    <p className="text-[#141779] font-bold text-xs sm:text-sm leading-relaxed">{translateTipField(tip.try)}</p>
                   </div>
                 </div>
               ) : (
-                <div className="bg-gradient-to-br from-indigo-50/80 to-teal-50/50 rounded-2xl p-5 border border-indigo-100/80 shadow-2xs">
-                  {tip.title && <p className="text-[#141779] font-black text-base mb-2">💡 {translateTipField(tip.title)}</p>}
-                  <p className="text-slate-800 font-bold text-sm leading-relaxed tracking-tight">{translateTipField(tip.description)}</p>
+                <div className="bg-gradient-to-br from-indigo-50/80 via-white to-teal-50/40 rounded-2xl p-4 border border-indigo-100/80 shadow-2xs">
+                  {(tip.tipTitle || tip.title) && (
+                    <h3 className="text-[#141779] font-black text-sm sm:text-base mb-1.5">
+                      💡 {translateTipField(tip.tipTitle || tip.title)}
+                    </h3>
+                  )}
+                  <p className="text-slate-800 font-semibold text-xs sm:text-sm leading-relaxed">
+                    {translateTipField(tip.tipDescription || tip.description)}
+                  </p>
                 </div>
               )}
 
-              {tip.benefit && (
-                <div className="flex items-start gap-2.5 text-[#006a62] bg-teal-50/60 p-3 rounded-xl border border-teal-100/80">
-                  <CheckCircle size={18} className="shrink-0 mt-0.5" />
-                  <p className="text-xs font-extrabold text-[#006a62] leading-snug">{translateTipField(tip.benefit)}</p>
+              {/* Suggested Action Step */}
+              {tip.actionStep && (
+                <div className="flex items-start gap-2.5 text-indigo-950 bg-indigo-50/70 p-3 rounded-2xl border border-indigo-100/90 shadow-2xs">
+                  <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 mt-0.5">
+                    <Target size={15} />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-black uppercase tracking-wider text-indigo-600 leading-tight">{t("action_step", "Action Step")}</span>
+                    <p className="text-xs font-bold text-indigo-950 leading-snug mt-0.5">{translateTipField(tip.actionStep)}</p>
+                  </div>
                 </div>
               )}
 
-              {tip.rewardPoints && (
-                <div className="flex items-center gap-1.5 self-start bg-teal-50 border border-teal-200 text-[#006a62] px-3 py-1 rounded-full">
+              {/* Expected Learning or Communication Benefit */}
+              {(tip.whyItMatters || tip.benefit) && (
+                <div className="flex items-start gap-2.5 text-[#006a62] bg-teal-50/70 p-3 rounded-2xl border border-teal-100/90 shadow-2xs">
+                  <div className="w-7 h-7 rounded-lg bg-teal-100 text-[#006a62] flex items-center justify-center shrink-0 mt-0.5">
+                    <CheckCircle2 size={15} />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-black uppercase tracking-wider text-[#006a62] leading-tight">{t("why_it_matters", "Why It Matters")}</span>
+                    <p className="text-xs font-extrabold text-[#006a62] leading-snug mt-0.5">{translateTipField(tip.whyItMatters || tip.benefit)}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* XP Reward for applying tip */}
+              {(tip.xpReward || tip.rewardPoints) && (
+                <div className="flex items-center gap-1.5 self-start bg-teal-50 border border-teal-200/80 text-[#006a62] px-2.5 py-1 rounded-full text-xs font-black shadow-2xs">
                   <Star size={12} fill="currentColor" />
-                  <span className="text-xs font-black">+{tip.rewardPoints} XP {t("for_applying_tip", "for applying this tip")}</span>
+                  <span>+{(tip.xpReward || tip.rewardPoints)} XP {t("for_applying_tip", "for applying this tip")}</span>
                 </div>
               )}
 
+              {/* Action Button */}
               <button
-                onClick={() => navigate("/parent/lessons")}
-                className="w-full bg-[#141779] text-white py-3 rounded-full font-black text-sm hover:bg-[#1e23a0] active:scale-95 transition-all shadow-md mt-1"
+                onClick={() => navigate(tip.recommendedRoute || "/parent/lessons")}
+                className="w-full bg-[#141779] text-white py-2.5 sm:py-3 rounded-2xl font-black text-xs sm:text-sm hover:bg-[#1e23a0] active:scale-95 transition-all shadow-md cursor-pointer flex items-center justify-center gap-1.5 mt-0.5"
               >
-                {t("explore_related_lessons", "Explore Related Lessons →")}
+                <span>
+                  {tip.recommendedRoute === "/parent/activity"
+                    ? t("view_student_activity", "View Student Activity")
+                    : tip.recommendedRoute === "/parent/challenges"
+                    ? t("view_parent_challenges", "View Growth Challenges")
+                    : tip.recommendedRoute === "/parent/roadmap"
+                    ? t("view_growth_roadmap", "View Growth Roadmap")
+                    : t("explore_related_lessons", "Explore Related Lessons")}
+                </span>
+                <span>→</span>
               </button>
             </>
           ) : (
@@ -337,135 +568,203 @@ export default function ParentDailyTipScreen() {
           )}
         </section>
 
-        {/* ── Dynamic Growth Score Ring ── */}
-        <section className="w-full bg-white rounded-[24px] p-6 border border-slate-200/80 shadow-md flex flex-col items-center justify-center text-center">
-          <div className="relative w-44 h-44 flex items-center justify-center mb-2">
-            <div className="absolute inset-0 bg-[#57fae9]/20 rounded-full blur-2xl animate-pulse"></div>
-            <div
-              className="w-40 h-40 rounded-full flex items-center justify-center relative p-1.5 shadow-md"
-              style={{ background: `conic-gradient(from 0deg, #006a62 0%, #57fae9 ${growthScore}%, #e2e8f0 ${growthScore}%)` }}
-            >
-              <div className="w-full h-full rounded-full bg-white flex flex-col items-center justify-center shadow-inner">
-                <span className="text-[#006a62] font-black text-[42px] leading-none">{growthScore}%</span>
-                <span className="text-slate-600 font-extrabold text-[11px] uppercase tracking-wider mt-1">{t("growth_score", "Growth Score")}</span>
+        {/* ── 2. Growth Score and Streak Section (Compact & Balanced) ── */}
+        <section className="w-full bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-[0_4px_20px_rgba(20,23,121,0.04)] flex flex-col gap-3.5">
+          {/* Growth Score Gauge & Badge */}
+          <div className="flex items-center gap-3.5">
+            <div className="relative w-20 h-20 sm:w-22 sm:h-22 flex items-center justify-center shrink-0">
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                <path
+                  className="text-slate-100"
+                  strokeWidth="3.5"
+                  stroke="currentColor"
+                  fill="none"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
+                <path
+                  className={`${badgeInfo.dialColorClass} transition-all duration-1000 ease-out`}
+                  strokeDasharray={`${Math.min(100, Math.max(0, growthScore))}, 100`}
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                  stroke="currentColor"
+                  fill="none"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className={`${badgeInfo.textColorClass} font-black text-lg sm:text-xl leading-none`}>
+                  {growthScore}%
+                </span>
+                <span className="text-[10px] sm:text-xs font-black uppercase text-slate-400 tracking-wider mt-0.5">
+                  {t("growth_score", "Score")}
+                </span>
               </div>
             </div>
-          </div>
-          <p className="text-slate-800 font-black text-base px-2 leading-snug mt-1">{growthMessage}</p>
-          <div className="mt-3 bg-indigo-50 border border-indigo-100 text-[#141779] px-4 py-1.5 rounded-full text-xs font-black">
-            {stageName} · {t("roadmap_stage", "Roadmap Stage")}
-          </div>
-        </section>
 
-        {/* ── Streak + Combo Badge ── */}
-        <section className="w-full bg-white rounded-[24px] p-5 border border-slate-200/80 shadow-sm flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${streak > 0 ? "bg-rose-100 text-rose-600" : "bg-slate-100 text-slate-400"}`}>
-              <Flame size={24} />
-            </div>
-            <div>
-              <h3 className="text-[#141779] font-black text-base">
-                {streak > 0 ? t("day_streak_fire", { streak, defaultValue: `${streak} Day Streak 🔥` }) : t("no_active_streak", "No Active Streak")}
-              </h3>
-              <p className="text-slate-600 font-bold text-xs">
-                {streak === 0 ? t("log_in_daily_streak", "Log in daily to build your streak!") : t("consecutive_active_days", { streak, defaultValue: `${streak} consecutive active days!` })}
+            <div className="min-w-0 flex-1 flex flex-col gap-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs sm:text-sm font-black text-[#141779] uppercase tracking-wider">
+                  {t("growth_score", "Growth Score")}
+                </span>
+                <span className={`px-2 py-0.5 rounded-full border text-xs font-black ${badgeInfo.pillClass}`}>
+                  {displayGrowthTag}
+                </span>
+              </div>
+              <p className="text-slate-700 font-bold text-xs sm:text-sm leading-snug">
+                {displayGrowthSubtitle}
               </p>
             </div>
           </div>
-          <div className="flex flex-col items-end">
-            <div className="flex items-center gap-1 text-[#141779] font-black text-base">
-              <span>P{parentLevel}+C{childLevel}</span>
-              <Zap size={16} fill="currentColor" className="text-amber-500" />
+
+          {/* Streak & Combo Mini-grid */}
+          <div className="grid grid-cols-2 gap-2.5 pt-1 border-t border-slate-100">
+            {/* Streak */}
+            <div className="bg-slate-50/80 rounded-2xl p-2.5 sm:p-3 border border-slate-200/70 flex items-center gap-2.5 shadow-2xs">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${streak > 0 ? "bg-rose-100 text-rose-600" : "bg-slate-100 text-slate-400"}`}>
+                <Flame size={18} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="text-xs sm:text-sm font-black text-[#141779] truncate leading-tight">
+                  {streak > 0 ? t("day_streak_fire", { streak, defaultValue: `${streak} Day Streak 🔥` }) : t("no_active_streak", "0 Day Streak")}
+                </h4>
+                <p className="text-xs text-slate-500 font-semibold truncate mt-0.5">
+                  {streak === 0 ? t("log_in_daily_streak", "Start today") : t("active_days", { streak, defaultValue: `${streak} active days` })}
+                </p>
+              </div>
             </div>
-            <span className="text-[10px] text-slate-500 font-black uppercase tracking-wider">{t("combo_level", "Combo Level")}</span>
+
+            {/* Combo Level */}
+            <div className="bg-slate-50/80 rounded-2xl p-2.5 sm:p-3 border border-slate-200/70 flex items-center gap-2.5 shadow-2xs">
+              <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center shrink-0">
+                <Zap size={18} fill="currentColor" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="text-xs sm:text-sm font-black text-[#141779] truncate leading-tight">
+                  P{parentLevel}+C{childLevel}
+                </h4>
+                <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider truncate mt-0.5">
+                  {t("combo_level", "Combo Level")}
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* ── Parent + Child Split Cards ── */}
-        <section className="w-full grid grid-cols-2 gap-4">
-          <div className="bg-white rounded-[24px] p-4 border border-slate-200/80 shadow-sm flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[#141779] font-black text-[10px] uppercase tracking-wider">{t("parent_caps", "PARENT")}</span>
-              <ShieldCheck className="text-[#141779]" size={16} />
+        {/* ── 3. Family Context & Profile Identity Section ── */}
+        <section className="w-full bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 border border-slate-200/80 shadow-[0_4px_20px_rgba(20,23,121,0.04)] flex items-center justify-between gap-3">
+          {/* Parent Info */}
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-indigo-50 border border-indigo-200/80 flex items-center justify-center text-base shrink-0 shadow-2xs">
+              👨‍👩‍👦
             </div>
-            <div className="flex flex-col items-center text-center">
-              <div className="w-12 h-12 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center text-xl mb-1 shadow-xs">
-                👨‍👩‍👦
-              </div>
-              <h4 className="text-[#141779] font-black text-sm leading-tight">{stageName}</h4>
-              <p className="text-slate-500 font-extrabold text-[11px] mb-2">{t("lvl_upper", { lvl: parentLevel, defaultValue: `LVL ${parentLevel}` })}</p>
-              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200/60">
+            <div className="min-w-0 flex-1">
+              <span className="text-xs font-black uppercase tracking-wider text-[#141779] block">
+                {t("parent", "Parent")} · Lvl {parentLevel}
+              </span>
+              <p className="text-xs sm:text-sm font-black text-slate-800 truncate leading-tight">
+                {stageName}
+              </p>
+              <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200/60 mt-1 max-w-[120px]">
                 <div
                   className="h-full bg-gradient-to-r from-[#141779] to-[#30007f] rounded-full transition-all duration-700"
                   style={{ width: `${levelProgress}%` }}
                 />
               </div>
-              <p className="text-slate-600 text-[10px] font-extrabold mt-1">{xp} / {xpForNextLevel} XP</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-[24px] p-4 border border-slate-200/80 shadow-sm flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[#006a62] font-black text-[10px] uppercase tracking-wider">{t("child_caps", "CHILD")}</span>
-              <span className="material-symbols-outlined text-[#006a62] text-[16px]">child_care</span>
+          <div className="h-8 w-[1px] bg-slate-200 shrink-0" />
+
+          {/* Child Info with Switch Affordance */}
+          <button
+            onClick={() => setShowSwitcher(true)}
+            className="flex items-center gap-2.5 min-w-0 flex-1 text-left group cursor-pointer hover:opacity-90 transition-opacity"
+            title={t("switch_child_profile", "Switch Student Profile")}
+          >
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-teal-50 border border-teal-200/80 flex items-center justify-center text-base shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
+              🐉
             </div>
-            <div className="flex flex-col items-center text-center">
-              <div className="w-12 h-12 rounded-full bg-teal-50 border border-teal-200 flex items-center justify-center text-xl mb-1 shadow-xs">
-                🐉
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1">
+                <span className="text-xs font-black uppercase tracking-wider text-[#006a62] block truncate">
+                  {t("child", "Child")} · Lvl {childLevel}
+                </span>
+                <span className="text-xs text-slate-400 group-hover:text-indigo-600 font-bold">▾</span>
               </div>
-              <h4 className="text-[#141779] font-black text-sm leading-tight truncate w-full">{childName}</h4>
-              <p className="text-slate-500 font-extrabold text-[11px] mb-2">{t("lvl_upper", { lvl: childLevel, defaultValue: `LVL ${childLevel}` })}</p>
-              <div className="flex items-center gap-1 text-[#006a62] text-[10px] font-bold">
-                <span className="material-symbols-outlined text-[12px]">location_on</span>
-                <span className="truncate max-w-[90px]">{childCity}</span>
-              </div>
+              <p className="text-xs sm:text-sm font-black text-slate-800 truncate leading-tight group-hover:text-indigo-900 transition-colors">
+                {childName}
+              </p>
+              <span className="text-xs font-bold text-slate-400 truncate block mt-0.5">
+                📍 {childCity}
+              </span>
             </div>
-          </div>
+          </button>
         </section>
 
-        {/* ── Family Milestones Section (with extra clearance) ── */}
-        <section className="w-full flex flex-col gap-3 pb-8">
+        {/* ── 4. Family Milestones Section ── */}
+        <section className="w-full flex flex-col gap-2.5 pb-2">
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-[#141779] font-black text-lg tracking-tight">{t("family_milestones", "Family Milestones")}</h2>
-            <span className="text-[10px] font-black text-[#006a62] bg-teal-50 border border-teal-200 px-3 py-1 rounded-full uppercase tracking-wider">
+            <h2 className="text-[#141779] font-black text-sm sm:text-base tracking-tight">
+              {t("family_milestones", "Family Milestones")}
+            </h2>
+            <span className="text-xs font-black text-[#006a62] bg-teal-50 border border-teal-200/80 px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-2xs">
               {milestones.filter(m => m.completed).length}/{milestones.length} {t("done", "Done")}
             </span>
           </div>
 
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             {milestones.map((m, i) => (
               <div
                 key={i}
-                className={`flex items-center gap-4 p-4 rounded-[20px] shadow-xs border transition-all ${
+                className={`flex items-center gap-3 p-3 sm:p-3.5 rounded-2xl border transition-all shadow-2xs ${
                   m.completed
                     ? "bg-white border-teal-200/80"
-                    : "bg-white border-slate-200/80"
+                    : "bg-white border-slate-200/80 hover:border-slate-300"
                 }`}
               >
-                <div className={`w-11 h-11 ${m.iconBg} ${m.iconColor} rounded-2xl flex items-center justify-center shrink-0 shadow-2xs`}>
+                <div className={`w-9 h-9 sm:w-10 sm:h-10 ${m.iconBg} ${m.iconColor} rounded-xl flex items-center justify-center shrink-0 shadow-2xs`}>
                   {m.icon}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h5 className="text-[#141779] font-black text-sm">{m.title}</h5>
-                  <p className="text-slate-600 font-bold text-xs mt-0.5">{m.subtitle}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <h5 className="text-[#141779] font-black text-xs sm:text-sm truncate">{m.title}</h5>
+                    {m.completed ? (
+                      <span className="px-2.5 py-0.5 rounded-full bg-teal-50 text-[#006a62] border border-teal-200 text-xs font-black shrink-0">
+                        ✓ {t("completed", "Completed")}
+                      </span>
+                    ) : (
+                      <span className="text-xs font-bold text-slate-400 shrink-0">
+                        {m.progress}%
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-slate-500 font-semibold text-xs sm:text-[13px] mt-0.5 leading-snug">{m.subtitle}</p>
                   {!m.completed && m.progress !== undefined && (
-                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mt-2 border border-slate-200/60">
+                    <div className="w-full bg-slate-100 h-1.5 sm:h-2 rounded-full overflow-hidden mt-1.5 border border-slate-200/60">
                       <div
                         className="h-full bg-gradient-to-r from-[#006a62] to-[#57fae9] rounded-full transition-all duration-700"
-                        style={{ width: `${m.progress}%` }}
+                        style={{ width: `${Math.min(100, Math.max(0, m.progress))}%` }}
                       />
                     </div>
                   )}
                 </div>
-                {m.completed
-                  ? <CheckCircle className="text-[#006a62] shrink-0" size={22} />
-                  : <Target className="text-slate-300 shrink-0" size={22} />
-                }
               </div>
             ))}
           </div>
         </section>
       </main>
+
+      {/* Child Switcher Modal */}
+      <ChildSwitcherModal
+        isOpen={showSwitcher}
+        onClose={() => setShowSwitcher(false)}
+        user={userData}
+        onUserUpdated={(u) => setUserData(u)}
+        onSwitched={() => {
+          sessionStorage.removeItem("parent_daily_tip_cache");
+          window.location.reload();
+        }}
+      />
     </div>
   );
 }
