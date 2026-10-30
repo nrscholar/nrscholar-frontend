@@ -33,6 +33,7 @@ export default function SetsPanel({ detail, onChanged }: { detail: ChapterDetail
   const short = DIFFICULTIES.filter((d) => pool.available[d] < pool.required[d])
     .map((d) => `${pool.required[d] - pool.available[d]} ${d}`)
     .join(", ");
+  const inPool = DIFFICULTIES.reduce((n, d) => n + pool.available[d], 0);
 
   return (
     <div className="space-y-4">
@@ -73,9 +74,11 @@ export default function SetsPanel({ detail, onChanged }: { detail: ChapterDetail
           <Layers className="h-4 w-4" /> Build Set {nextNumber}
         </Button>
         <span className="text-xs text-slate-500">
-          {pool.canBuild
-            ? "Picks unused approved questions from the pool and publishes them to Quiz, Boss and Shadow."
-            : `Pool needs ${short} more approved question(s). Generate and approve them in steps 2–3.`}
+          {!pool.canBuild
+            ? "Approve at least one question in steps 2–3 to build a set."
+            : pool.complete
+              ? "Picks unused approved questions from the pool and publishes them to Quiz, Boss and Shadow."
+              : `Builds a smaller set from the ${inPool} approved question(s) in the pool. A full ${tierInfo.tier} set would need ${short} more.`}
         </span>
       </div>
       <ErrorNote message={error} />
@@ -90,6 +93,7 @@ export default function SetsPanel({ detail, onChanged }: { detail: ChapterDetail
               </span>
               <span className="flex items-center gap-2 text-xs text-slate-500">
                 {s.readyAt && new Date(s.readyAt).toLocaleDateString()}
+                {s.partial && <Badge tone="amber">Partial</Badge>}
                 <Badge tone={s.status === "ready" ? "green" : "amber"}>{s.status === "ready" ? "Ready for students" : "Building"}</Badge>
               </span>
             </li>

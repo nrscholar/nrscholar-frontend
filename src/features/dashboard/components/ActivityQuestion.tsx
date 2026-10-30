@@ -33,7 +33,7 @@ export function OptionList({ question, options, selected, confirmed, isTimeout =
 }) {
   const pictures = options.some((o) => optionImage(question, o));
   return (
-    <div className={`mb-6 ${pictures ? "grid grid-cols-2 gap-3" : "flex flex-col gap-3"}`}>
+    <div className={pictures ? "grid grid-cols-2 gap-2.5" : "flex flex-col gap-2.5"}>
       {options.map((opt, idx) => {
         const isSelected = selected === idx;
         const isCorrect = sameAnswer(opt, question.answer);
@@ -53,8 +53,8 @@ export function OptionList({ question, options, selected, confirmed, isTimeout =
         );
         return pictures ? (
           <button key={idx} type="button" disabled={confirmed} onClick={() => !confirmed && onSelect(idx)}
-            className={`relative flex flex-col items-center gap-2 rounded-2xl border p-3 font-semibold text-base shadow-xs transition-all ${style}`}>
-            <span className="flex h-20 w-20 items-center justify-center rounded-xl bg-white">
+            className={`relative flex flex-col items-center gap-1.5 rounded-2xl border p-2.5 font-semibold text-sm shadow-xs transition-all sm:text-base ${style}`}>
+            <span className="flex h-14 w-14 items-center justify-center rounded-xl bg-white sm:h-16 sm:w-16">
               <Pic img={optionImage(question, opt)} className="h-full w-full" />
             </span>
             <span className="break-words text-center">{opt}</span>
@@ -62,7 +62,7 @@ export function OptionList({ question, options, selected, confirmed, isTimeout =
           </button>
         ) : (
           <button key={idx} type="button" disabled={confirmed} onClick={() => !confirmed && onSelect(idx)}
-            className={`w-full p-4 rounded-2xl border text-left font-semibold text-base transition-all flex items-center justify-between shadow-xs ${style}`}>
+            className={`w-full px-4 py-3 rounded-2xl border text-left font-semibold text-[15px] transition-all flex items-center justify-between shadow-xs ${style}`}>
             <span className="flex-1 mr-4 break-words text-left">{opt}</span>
             {marks}
           </button>
@@ -102,15 +102,15 @@ function MatchPairs({ pairs, confirmed, onChange }: { pairs: { left: QuestionIma
   }, [chosen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="mb-6 grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-2 gap-2.5">
       {pairs.map((p, i) => {
         const ok = sameAnswer(chosen[i], p.right);
         return (
-          <div key={i} className={`flex flex-col items-center gap-2 rounded-2xl border p-3 shadow-xs ${cellTone(confirmed, ok)}`}>
-            <Pic img={p.left} className="h-20 w-20" />
+          <div key={i} className={`flex flex-col items-center gap-1.5 rounded-2xl border p-2.5 shadow-xs ${cellTone(confirmed, ok)}`}>
+            <Pic img={p.left} className="h-14 w-14 sm:h-16 sm:w-16" />
             <select value={chosen[i]} disabled={confirmed}
               onChange={(e) => setChosen((c) => c.map((v, j) => (j === i ? e.target.value : v)))}
-              className="w-full rounded-xl border border-gray-300 bg-white px-2 py-2 text-base font-semibold text-[#141779] outline-none focus:border-[#141779]">
+              className="w-full rounded-xl border border-gray-300 bg-white px-2 py-1.5 text-base font-semibold text-[#141779] outline-none focus:border-[#141779]">
               <option value="">Choose…</option>
               {words.map((w) => <option key={w} value={w}>{w}</option>)}
             </select>
@@ -135,20 +135,20 @@ function FillLetters({ items, confirmed, onChange }: { items: { label: string; p
     setLetters((all) => all.map((row, r) => (r === i ? row.map((x, c) => (c === j ? v.slice(-1).toLowerCase() : x)) : row)));
 
   return (
-    <div className="mb-6 flex flex-col gap-3">
+    <div className="flex flex-col gap-2">
       {items.map((it, i) => {
         const ok = sameAnswer(word(i), it.answer);
         return (
-          <div key={i} className={`flex items-center gap-3 rounded-2xl border p-3 shadow-xs ${cellTone(confirmed, ok)}`}>
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#141779] text-sm font-black text-white">{it.label}</span>
-            <div className="flex flex-wrap items-end gap-1 text-2xl font-black tracking-wide text-[#141779]">
+          <div key={i} className={`flex items-center gap-3 rounded-2xl border px-3 py-2 shadow-xs ${cellTone(confirmed, ok)}`}>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#141779] text-xs font-black text-white">{it.label}</span>
+            <div className="flex flex-wrap items-end gap-1 text-xl font-black tracking-wide text-[#141779]">
               {[...it.pattern].map((ch, j) =>
                 ch === "_" ? (
                   <input key={j} value={letters[i][j]} disabled={confirmed} maxLength={2} autoCapitalize="off" autoComplete="off"
                     onChange={(e) => setLetter(i, j, e.target.value)}
-                    className="h-10 w-9 rounded-lg border-b-4 border-[#141779] bg-indigo-50 text-center text-2xl font-black text-[#141779] outline-none disabled:opacity-90" />
+                    className="h-9 w-8 rounded-lg border-b-4 border-[#141779] bg-indigo-50 text-center text-xl font-black text-[#141779] outline-none disabled:opacity-90" />
                 ) : (
-                  <span key={j} className="w-6 text-center">{ch}</span>
+                  <span key={j} className="w-5 text-center">{ch}</span>
                 ),
               )}
             </div>
@@ -171,19 +171,19 @@ function Ordering({ items, confirmed, onChange }: { items: { text: string; image
   const toggle = (d: number) => setPicked((p) => (p.includes(d) ? p.filter((x) => x !== d) : [...p, d]));
 
   return (
-    <div className="mb-6 flex flex-col gap-3">
-      <p className="text-xs font-bold uppercase tracking-wider text-[#767683]">Tap the steps in order. Tap again to undo.</p>
+    <div className="flex flex-col gap-2">
+      <p className="text-[11px] font-bold uppercase tracking-wider text-[#767683]">Tap the steps in order. Tap again to undo.</p>
       {display.map((it, d) => {
         const pos = picked.indexOf(d) + 1;
         const ok = pos === it.correct;
         return (
           <button key={d} type="button" disabled={confirmed} onClick={() => toggle(d)}
-            className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left shadow-xs transition-all ${cellTone(confirmed, ok)} ${!confirmed && pos ? "border-[#141779] ring-2 ring-[#141779]/20" : ""}`}>
-            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base font-black ${pos ? "bg-[#141779] text-white" : "border-2 border-dashed border-gray-300 text-gray-300"}`}>
+            className={`flex w-full items-center gap-2.5 rounded-2xl border px-3 py-2 text-left shadow-xs transition-all ${cellTone(confirmed, ok)} ${!confirmed && pos ? "border-[#141779] ring-2 ring-[#141779]/20" : ""}`}>
+            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-black ${pos ? "bg-[#141779] text-white" : "border-2 border-dashed border-gray-300 text-gray-300"}`}>
               {pos || "?"}
             </span>
-            <Pic img={it.image} className="h-12 w-12 shrink-0" />
-            <span className="flex-1 text-base font-semibold text-[#191c1e]">{it.text}</span>
+            <Pic img={it.image} className="h-10 w-10 shrink-0" />
+            <span className="flex-1 text-sm font-semibold leading-snug text-[#191c1e] sm:text-base">{it.text}</span>
             {confirmed && !ok && <span className="text-sm font-bold text-emerald-700">✓ {it.correct}</span>}
           </button>
         );

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-  AlertTriangle, ArrowLeft, Check, ChevronDown, ExternalLink, Eye, FileText, Pencil, ShieldCheck, Sparkles, X,
+  AlertTriangle, ArrowLeft, Check, ChevronDown, ExternalLink, FileText, Pencil, ShieldCheck, Sparkles, X,
 } from "lucide-react";
 import {
   adminApi, type ChapterDetail, type Difficulty, type Draft, type DraftEdits, type DraftStatus, type Job, type RoundName,
@@ -205,12 +205,6 @@ export default function ChapterReviewScreen() {
                 })}
               </div>
               <div className="flex flex-wrap items-center gap-1">
-                {(tab === "pending" || tab === "approved") && shown.length > 0 && (
-                  <button onClick={() => navigate(`/admin/question-bank/${chapterId}/student-view?status=${tab}`)}
-                    className="mr-2 flex items-center gap-1 rounded-full bg-[#141779] px-3 py-1 text-xs font-semibold text-white hover:bg-[#101362]">
-                    <Eye className="h-3.5 w-3.5" /> Play as student
-                  </button>
-                )}
                 {(["", ...DIFFICULTIES] as (Difficulty | "")[]).map((d) => (
                   <button key={d || "all"} onClick={() => setDifficulty(d)}
                     className={`rounded-full px-3 py-1 text-xs font-semibold ${difficulty === d ? "bg-primary text-white" : "bg-slate-100 text-slate-600"}`}>
@@ -382,7 +376,6 @@ function DraftCard({ draft, onChanged, onShowPage }: { draft: Draft; onChanged: 
   const pending = draft.status === "pending";
   const activity = activityType(draft);
   const hasPictures = !!(activity || draft.image || draft.optionImages);
-  const navigate = useNavigate();
 
   return (
     <div className="rounded-2xl border border-slate-200 p-4">
@@ -485,12 +478,6 @@ function DraftCard({ draft, onChanged, onShowPage }: { draft: Draft; onChanged: 
             </>
           )}
         </div>
-      )}
-      {draft.status !== "rejected" && (
-        <button type="button" onClick={() => navigate(`/admin/question-bank/${draft.chapterId}/student-view?status=${draft.status}&q=${draft.id}`)}
-          className="mt-3 flex items-center gap-1 text-xs font-semibold text-blue-700 hover:underline">
-          <Eye className="h-3.5 w-3.5" /> Open in student view
-        </button>
       )}
     </div>
   );
