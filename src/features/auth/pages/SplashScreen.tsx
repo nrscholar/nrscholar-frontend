@@ -209,14 +209,18 @@ export default function SplashScreen() {
             </span>
           </div>
 
-          <button
-            onClick={handleSkip}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold text-slate-500 hover:text-[#141779] hover:bg-slate-200/60 active:scale-95 transition-all"
-            aria-label="Skip onboarding"
-          >
-            <span>{isLast ? "Sign In" : "Skip"}</span>
-            <ChevronRight size={14} />
-          </button>
+          {!isLast ? (
+            <button
+              onClick={handleSkip}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold text-slate-500 hover:text-[#141779] hover:bg-slate-200/60 active:scale-95 transition-all"
+              aria-label="Skip onboarding"
+            >
+              <span>Skip</span>
+              <ChevronRight size={14} />
+            </button>
+          ) : (
+            <div className="h-7 w-12" />
+          )}
         </header>
 
         {/* 2. Visual Center Carousel Frame with Touch Gesture Drag */}
