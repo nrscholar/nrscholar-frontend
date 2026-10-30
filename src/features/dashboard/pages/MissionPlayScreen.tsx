@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -22,7 +22,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "../../../api";
 import QuestionContext from "../components/QuestionContext";
 import { ActivityQuestion, OptionList } from "../components/ActivityQuestion";
-import { activityType, sameAnswer } from "../components/questionTypes";
+import { activityType, imageSrc, optionImage, sameAnswer } from "../components/questionTypes";
 import { showInteractiveNotification } from "../../../services/pushNotificationService";
 
 type StepPhase = "INTRO" | "QUIZ" | "MINI_REWARD" | "BOSS" | "SUMMARY";
@@ -475,6 +475,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     fetchMission();
   }, [chapterId, missionSeq]);
 
+  // The timer ticks every second; keep it in a ref so it is saved with the draft without re-triggering the sync.
+  const totalSessionSecRef = useRef(totalSessionSec);
+  totalSessionSecRef.current = totalSessionSec;
+
   // Auto-sync active mission draft state to backend database (Solution 1)
   useEffect(() => {
     if (!isDraftRestored || isReplay || !phase || phase === "INTRO" || phase === "SUMMARY" || loading) return;
@@ -493,7 +497,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           bossDamageCount,
           wrongAnswerCount,
           currentBossIndex,
-          totalSessionSec
+          totalSessionSec: totalSessionSecRef.current
         })
       }).catch((err) => console.error("Failed to sync draft to server:", err));
     }, 500);
@@ -510,7 +514,6 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     bossDamageCount,
     wrongAnswerCount,
     currentBossIndex,
-    totalSessionSec,
     chapterId,
     missionSeq,
     isReplay,
@@ -542,17 +545,16 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
   const quizQuestions = useMemo(() => shuffleQuestionOptions(rawQuiz), [rawQuiz]);
 
-  const rawBoss = (missionData?.bossQuestions && missionData.bossQuestions.length > 0)
-    ? missionData.bossQuestions
-    : (() => {
-        const half = Math.ceil(quizQuestions.length / 2);
-        return [...quizQuestions.slice(half), ...quizQuestions.slice(0, half)];
-      })();
-
+  const apiBoss = missionData?.bossQuestions;
   const bossQuestions = useMemo(() => {
-    const list = rawBoss.length > 0 ? rawBoss : (quizQuestions.length > 0 ? quizQuestions : defaultQuiz);
-    return shuffleQuestionOptions(list);
-  }, [rawBoss, quizQuestions]);
+    // A partial set may have no boss questions; then the quiz questions are reused, rotated by half.
+    const half = Math.ceil(quizQuestions.length / 2);
+    const fallback = [...quizQuestions.slice(half), ...quizQuestions.slice(0, half)];
+    const source = apiBoss && apiBoss.length > 0 ? apiBoss : fallback;
+    // The boss arena only plays multiple choice (match / fill letters / ordering stay in the quiz).
+    const playable = source.filter((q: any) => !activityType(q));
+    return shuffleQuestionOptions(playable.length > 0 ? playable : defaultQuiz);
+  }, [apiBoss, quizQuestions]);
 
   const bossMaxHp = 3;
   const bossHearts = Math.max(0, bossMaxHp - bossDamageCount);
@@ -1024,8 +1026,9 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     );
   }
 
+  // overflow-x-clip, not hidden: hidden makes this a scroll container and the sticky CHECK button would scroll away.
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans overflow-x-hidden flex flex-col justify-between">
+    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans overflow-x-clip flex flex-col justify-between">
       <header className="sticky top-0 z-40 bg-[rgba(247,249,251,0.85)] backdrop-blur-md border-b border-gray-200 px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between shadow-xs">
         <button
           onClick={async () => {
@@ -1132,7 +1135,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       )}
 
       {phase === "QUIZ" && (
-        <main className="px-6 py-6 flex-1 flex flex-col justify-between max-w-md mx-auto w-full">
+        <main className="px-4 sm:px-6 pt-4 flex-1 flex flex-col gap-3 max-w-md mx-auto w-full">
           <div>
             <div className="flex justify-between items-center text-xs font-bold text-[#767683] mb-2">
               <span className="flex items-center gap-1.5 font-extrabold text-[#141779]">
@@ -1150,14 +1153,17 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             </div>
           </div>
 
-          <QuestionContext question={currentQ} previous={safeQuizIndex > 0 ? quizQuestions[safeQuizIndex - 1] : null} />
-          <div className="my-4 bg-white border border-gray-200 rounded-3xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.06)] relative">
-            <span className="text-xs font-bold text-[#006a62] uppercase tracking-wider block mb-2">
+          <QuestionContext part="passage" question={currentQ} previous={safeQuizIndex > 0 ? quizQuestions[safeQuizIndex - 1] : null} />
+
+          {/* The question, with its picture underneath, in one card. */}
+          <div className="bg-white border border-gray-200 rounded-3xl px-4 py-4 sm:px-5 shadow-[0_4px_20px_rgba(0,0,0,0.06)] relative">
+            <span className="text-[11px] font-bold text-[#006a62] uppercase tracking-wider block mb-1.5">
               {t('question_number', { num: currentQuizIndex + 1, defaultValue: `Question #${currentQuizIndex + 1}` })} {isDragObjects ? t('drag_drop_tag', '• Drag & Drop') : ""}
             </span>
-            <h3 className="text-lg font-bold text-[#141779] leading-snug">
+            <h3 className="text-base sm:text-lg font-bold text-[#141779] leading-snug">
               {currentQ?.question?.normalize("NFD").replace(/[\u0300-\u036f]/g, "")}
             </h3>
+            <QuestionContext part="image" question={currentQ} />
           </div>
 
           {isDragObjects ? (
@@ -1262,7 +1268,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
               confirmed={quizConfirmed} isTimeout={isTimeout} onSelect={setQuizSelected} />
           )}
 
-          <div className="flex flex-col gap-3">
+          {/* Stays at the bottom of the screen, above the iPhone home indicator. */}
+          <div className="sticky bottom-0 mt-auto -mx-4 sm:-mx-6 px-4 sm:px-6 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))] bg-[#f7f9fb]">
 
             <button
               disabled={!quizReady && !quizConfirmed}
@@ -1323,7 +1330,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       })()}
 
       {phase === "BOSS" && (
-        <main className="px-5 sm:px-6 py-6 flex-1 flex flex-col justify-between max-w-md mx-auto w-full">
+        <main className="px-4 sm:px-6 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex-1 flex flex-col gap-3 max-w-md mx-auto w-full">
           {/* Top Outer Light Yellow/Cream Boss Stage Header Card with Premium Visual Aesthetics */}
           <div className="bg-gradient-to-b from-[#FFFDF2] via-[#FFFBEB] to-[#F4F4FC] rounded-[32px] p-4.5 pt-5 mb-4 shadow-[0_10px_30px_rgba(20,23,121,0.08)] border-2 border-[#E2E4FA] relative backdrop-blur-md">
             
@@ -1400,9 +1407,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             </div>
           </div>
 
-          <QuestionContext question={activeBossQ} previous={safeBossIndex > 0 ? bossQuestions[safeBossIndex - 1] : null} />
-          {/* Question Box Card with Soft Floating Elevation */}
-          <div className="my-3 bg-white border-2 border-[#E2E4FA] rounded-[28px] p-5 sm:p-6 shadow-[0_8px_25px_rgba(20,23,121,0.06)] relative">
+          <QuestionContext part="passage" question={activeBossQ} previous={safeBossIndex > 0 ? bossQuestions[safeBossIndex - 1] : null} />
+
+          {/* Question Box Card with Soft Floating Elevation; the picture sits under the question */}
+          <div className="bg-white border-2 border-[#E2E4FA] rounded-[28px] px-4 py-4 sm:px-5 shadow-[0_8px_25px_rgba(20,23,121,0.06)] relative">
             <span className="text-xs font-black text-[#006a62] uppercase tracking-wider block mb-2 flex items-center gap-1.5">
               <span>⚔️ BOSS STRIKE #{safeBossIndex + 1}</span>
               <span>•</span>
@@ -1411,6 +1419,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             <h3 className="text-base sm:text-lg font-black text-[#141779] leading-snug">
               {activeBossQ?.question?.replace(/^(Boss\s+)?(Challenge|Question)(\s*#\d+)?(\s*\([^)]+\))?:\s*/i, "").trim().replace(/^\w/, c => c.toUpperCase()).normalize("NFD").replace(/[\u0300-\u036f]/g, "")}
             </h3>
+            <QuestionContext part="image" question={activeBossQ} />
           </div>
 
           {/* Answer options / drag section with Enhanced UI */}
@@ -1508,8 +1517,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
               </button>
             </div>
           ) : (
-            <div className="flex flex-col gap-3 mb-4">
-              <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2.5">
+              <div className="flex flex-col gap-2.5">
                 {activeBossOptions.map((opt: string, idx: number) => {
                   const isSelected = bossSelected === idx;
                   const isCorrect = String(opt).trim().toLowerCase() === String(activeBossQ?.answer).trim().toLowerCase();
@@ -1545,7 +1554,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                       whileTap={!bossConfirmed ? { scale: 0.98 } : undefined}
                       disabled={bossConfirmed}
                       onClick={() => handleBossAnswer(idx)}
-                      className={`w-full p-4 rounded-2xl border text-left font-bold text-sm sm:text-base transition-all flex items-center justify-between active:scale-98 ${style}`}
+                      className={`w-full px-4 py-3 rounded-2xl border text-left font-bold text-sm sm:text-base transition-all flex items-center justify-between active:scale-98 ${style}`}
                     >
                       <div className="flex items-center gap-3">
                         <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0 transition-colors ${
@@ -1555,6 +1564,9 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                         }`}>
                           {String.fromCharCode(65 + idx)}
                         </span>
+                        {imageSrc(optionImage(activeBossQ, opt)) && (
+                          <img src={imageSrc(optionImage(activeBossQ, opt))} alt="" className="h-10 w-10 shrink-0 rounded-lg bg-white object-contain" />
+                        )}
                         <span>{opt}</span>
                       </div>
                       {bossConfirmed && isCorrect && <CheckCircle2 size={20} className="text-white shrink-0 animate-bounce" />}

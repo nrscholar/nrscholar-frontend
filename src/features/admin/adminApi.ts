@@ -34,7 +34,10 @@ export interface PoolStatus {
   available: ByDifficulty;
   pending: ByDifficulty;
   toGenerate: ByDifficulty;
+  /** Any approved question in the pool: a set can be built (partial when not `complete`). */
   canBuild: boolean;
+  /** The pool fills a whole set of the chapter's tier. */
+  complete: boolean;
 }
 
 export interface QuestionSet {
@@ -42,6 +45,8 @@ export interface QuestionSet {
   setNumber: number;
   tier: Tier;
   status: "building" | "ready";
+  /** Built from fewer questions than a full set of its tier. */
+  partial?: boolean;
   counts?: Record<RoundName, number>;
   createdBy: string;
   readyAt?: string;
@@ -59,7 +64,7 @@ export interface ChapterRow {
   latestJob: Job | null;
   tier: Tier;
   setsReady: number;
-  pool: { available: ByDifficulty; required: ByDifficulty; canBuild: boolean };
+  pool: { available: ByDifficulty; required: ByDifficulty; canBuild: boolean; complete: boolean };
 }
 
 export interface Verification {
@@ -152,6 +157,25 @@ export interface QuestionStats {
   kinds: Record<string, number>;
   byClass: { classLevel: string; total: number; picture: number; quiz: number; boss: number; shadow: number }[];
   drafts: Record<string, { total: number; picture: number }>;
+}
+
+/** One picture question in the stats drill-down (live, or waiting for review). */
+export interface PictureQuestion {
+  id: string;
+  round: RoundName;
+  kind: string;
+  board?: string;
+  classLevel?: string;
+  subject?: string;
+  chapterId: string;
+  chapterName?: string;
+  difficulty?: Difficulty;
+  question: string;
+  options: string[];
+  answer: string;
+  image?: QuestionImage;
+  optionImages?: QuestionImage[];
+  interaction?: { type: string; details: any };
 }
 
 export interface DraftEdits {
@@ -362,6 +386,13 @@ export const adminApi = {
     if (board) q.set("board", board);
     if (classLevel) q.set("classLevel", classLevel);
     return request<{ data: QuestionStats }>(`${BASE}/stats?${q}`).then((r) => r.data);
+  },
+
+  pictureQuestions: (source: "live" | "pending", board?: string, classLevel?: string) => {
+    const q = new URLSearchParams({ source });
+    if (board) q.set("board", board);
+    if (classLevel) q.set("classLevel", classLevel);
+    return request<{ data: { total: number; questions: PictureQuestion[] } }>(`${BASE}/stats/picture-questions?${q}`).then((r) => r.data);
   },
 
   chapters: (subjectId: string) =>
