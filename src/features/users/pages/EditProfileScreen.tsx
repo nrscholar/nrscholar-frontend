@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, UserRound, GraduationCap, Cake, BookOpen, Save, Camera, ChevronDown, Check, Lock, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
-import { apiFetch } from "../../../api";
+import { apiFetch, uploadProfilePhoto } from "../../../api";
 import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
 
 const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect, placeholder }: any) => {
@@ -112,13 +112,13 @@ export default function EditProfileScreen() {
   const [childBoard, setChildBoard] = useState("");
   const [childPhoto, setChildPhoto] = useState("");
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setChildPhoto(event.target?.result as string);
-      };
-      reader.readAsDataURL(e.target.files[0]);
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setChildPhoto(await uploadProfilePhoto(file));
+    } catch (err: any) {
+      setMsg(err?.message || "Photo upload failed");
     }
   };
 
