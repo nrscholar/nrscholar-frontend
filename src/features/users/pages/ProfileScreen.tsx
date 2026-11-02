@@ -282,11 +282,15 @@ export default function ProfileScreen() {
               <span className="text-xs font-bold text-[#141779]">{xp.toLocaleString()} XP</span>
             </div>
             {/* 3px Height Track Fill */}
-            <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden p-0.5 shadow-2xs">
-              <div 
-                style={{ width: `${levelInfo.percent}%` }}
-                className="h-full bg-gradient-to-r from-[#141779] to-[#57fae9] rounded-full shadow-2xs transition-all duration-700 ease-out"
-              />
+            <div className={`w-full h-3 bg-slate-100 rounded-full overflow-hidden p-0.5 shadow-2xs ${xp === 0 ? 'flex items-center' : ''}`}>
+              {xp === 0 ? (
+                <div className="w-1.5 h-1.5 rounded-full bg-[#141779] shrink-0" />
+              ) : (
+                <div 
+                  style={{ width: `${levelInfo.percent}%` }}
+                  className="h-full bg-gradient-to-r from-[#141779] to-[#57fae9] rounded-full shadow-2xs transition-all duration-700 ease-out"
+                />
+              )}
             </div>
             <p className="text-[10px] font-medium text-slate-400 mt-1.5 text-right tracking-tight">
               {xpNeeded > 0 ? t('xp_to_next_level', { xp: xpNeeded.toLocaleString(), nextLevel: userLevel + 1, defaultValue: `${xpNeeded.toLocaleString()} XP to Level ${userLevel + 1}` }) : t('max_level_reached', 'Max Level Reached!')}
