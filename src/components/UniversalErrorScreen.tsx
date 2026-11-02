@@ -292,5 +292,3 @@ export default function UniversalErrorScreen({
     </div>
   );
 }
-
-export { UniversalErrorBoundary } from "./UniversalErrorBoundary";
