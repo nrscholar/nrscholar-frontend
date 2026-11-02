@@ -94,7 +94,7 @@ export default function ScanAndLearn() {
   return (
     <div className="min-h-screen bg-[#fbfaee] font-sans">
       {/* Header */}
-      <header className="flex items-center justify-between px-5 py-3.5 bg-[#fffde7] rounded-b-[20px] shadow-[0_2px_8px_rgba(0,0,0,0.06)] relative z-50">
+      <header className="sticky top-0 z-50 flex items-center justify-between px-5 py-3.5 bg-[#fffde7] shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
         <button onClick={() => navigate(-1)} className="flex items-center gap-1 hover:opacity-80">
           <ArrowLeft size={20} color="#735c00" />
           <span className="text-[15px] font-semibold text-[#735c00]">Back</span>

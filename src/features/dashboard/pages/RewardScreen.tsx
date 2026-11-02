@@ -218,7 +218,7 @@ export default function RewardScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-[#07051a] relative overflow-hidden font-sans">
+    <div className="min-h-screen bg-[#07051a] relative overflow-x-clip font-sans">
       
       {/* Dynamic Magical Background Effects */}
       <div className="absolute top-[-20%] left-[-10%] w-[400px] h-[400px] bg-[#7b2cbf] rounded-full blur-[120px] opacity-40 pointer-events-none" />
@@ -255,7 +255,7 @@ export default function RewardScreen() {
       ))}
 
       {/* Header */}
-      <header className="flex items-center justify-between px-6 pt-10 relative z-10 h-16">
+      <header className="sticky top-0 z-40 flex items-center justify-between px-6 pt-10 h-16">
         <div className="w-6" /> {/* Spacer for symmetry */}
         
         {isRevealed && (

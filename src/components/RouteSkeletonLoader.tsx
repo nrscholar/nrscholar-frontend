@@ -1,6 +1,6 @@
 export default function RouteSkeletonLoader() {
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-[#141779] font-sans relative overflow-x-hidden pb-8 max-w-md mx-auto px-4 pt-3">
+    <div className="min-h-screen bg-[#f7f9fb] text-[#141779] font-sans relative overflow-x-clip pb-8 max-w-md mx-auto px-4 pt-3">
       {/* Top Header Skeleton Bar */}
       <div className="flex items-center justify-between py-2 mb-4">
         <div className="flex items-center gap-3">

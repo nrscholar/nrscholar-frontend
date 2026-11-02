@@ -119,7 +119,7 @@ export default function WeeklyTestResultsScreen() {
         </button>
       </header>
 
-      <main className="px-6 pt-3 flex flex-col items-center overflow-x-hidden">
+      <main className="px-6 pt-3 flex flex-col items-center overflow-x-clip">
         {/* Hero Celebration */}
         <div className="flex flex-col items-center w-full relative mb-8">
           {/* Glow Blobs */}

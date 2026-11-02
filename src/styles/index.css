@@ -2,9 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+html, body {
+  overflow-x: clip;
+}
+.overflow-x-hidden {
+  overflow-x: clip !important;
+}
 body {
   font-family: 'Quicksand', sans-serif;
-  overflow-x: hidden;
   background-color: #f7f9fb;
 }
 .glass-card {

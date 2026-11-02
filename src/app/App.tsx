@@ -6,6 +6,7 @@ const AnimatedStackContainer = lazy(() => import("./components/AnimatedStackCont
 const ScreenTimeTracker = lazy(() => import("./components/ScreenTimeTracker"));
 
 // Auth feature pages (Lazy loaded)
+const SplashScreen = lazy(() => import("../features/auth/pages/SplashScreen"));
 const ForgotPasswordScreen = lazy(() => import("../features/auth/pages/ForgotPasswordScreen"));
 const LoginScreen = lazy(() => import("../features/auth/pages/LoginScreen"));
 const NotFoundScreen = lazy(() => import("./NotFoundScreen"));
@@ -110,6 +111,12 @@ const StackLayout = () => {
 };
 
 const RootRedirect = () => {
+  const token = localStorage.getItem("userToken");
+  if (!token) {
+    const hasSeenSplash = localStorage.getItem("hasSeenSplash") === "true";
+    return <Navigate to={hasSeenSplash ? "/login" : "/splash"} replace />;
+  }
+
   const currentUser = (() => {
     try {
       const raw = localStorage.getItem("userData");
@@ -192,6 +199,8 @@ function PinGuard() {
             <Route path="/" element={<RootRedirect />} />
             
             {/* Public Routes */}
+            <Route path="/splash" element={<SplashScreen />} />
+            <Route path="/welcome" element={<SplashScreen />} />
             <Route path="/login" element={<LoginScreen />} />
             <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
             <Route path="/signup-step1" element={<SignupStep1Screen />} />

@@ -76,7 +76,7 @@ export default function HabitsScreen() {
   const currentDay = habit?.currentDay || 1;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFF] bg-gradient-to-b from-[#F0F4FF] via-[#F8FAFF] to-[#FFFFFF] text-slate-900 w-full flex flex-col items-center overflow-x-hidden font-sans relative pb-12">
+    <div className="min-h-screen bg-[#F8FAFF] bg-gradient-to-b from-[#F0F4FF] via-[#F8FAFF] to-[#FFFFFF] text-slate-900 w-full flex flex-col items-center overflow-x-clip font-sans relative pb-12">
       {/* Soft ambient background glows */}
       <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[320px] h-[180px] bg-[#12D6D1]/8 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute top-48 right-2 w-[220px] h-[220px] bg-[#8C68F6]/6 rounded-full blur-3xl pointer-events-none" />

@@ -193,13 +193,13 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
       onTouchMove={(e) => {
         if (e.target === e.currentTarget) e.preventDefault();
       }}
-      className="fixed inset-0 bg-[#0f114a]/80 backdrop-blur-md z-[99999] flex items-center justify-center p-3 sm:p-4 font-sans animate-in fade-in duration-200 overscroll-contain select-none"
-      style={{ overscrollBehavior: "contain", touchAction: "none" }}
+      className="fixed inset-0 bg-[#0f114a]/80 backdrop-blur-md z-[99999] flex items-center justify-center p-3 pb-24 sm:p-4 font-sans animate-in fade-in duration-200 overscroll-contain select-none"
+      style={{ zIndex: 99999, overscrollBehavior: "contain", touchAction: "none" }}
     >
       <div 
         onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-2xl max-w-sm w-full max-h-[90vh] flex flex-col p-4 sm:p-5 shadow-2xl relative border border-white/60 overscroll-contain select-text"
-        style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
+        className="bg-white rounded-2xl max-w-sm w-full max-h-[85vh] flex flex-col p-4 sm:p-5 shadow-2xl relative border border-white/60 overscroll-contain select-text"
+        style={{ zIndex: 100000, overscrollBehavior: "contain", touchAction: "pan-y" }}
       >
         
         {/* Header */}

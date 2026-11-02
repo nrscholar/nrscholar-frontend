@@ -522,7 +522,7 @@ export default function InventoryScreen() {
   const currentCity = cities.find(c => c.isCurrent) || cities.find(c => c.isUnlocked) || cities[0];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#F4EFF7] via-[#F9F6FF] to-[#FFFFFF] text-[#141779] font-sans pb-24 relative selection:bg-[#6C4DFF] selection:text-white overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-[#F4EFF7] via-[#F9F6FF] to-[#FFFFFF] text-[#141779] font-sans pb-24 relative selection:bg-[#6C4DFF] selection:text-white overflow-x-clip">
       {/* Background Soft Glow Accents */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[35%] rounded-full bg-[#6C4DFF]/10 blur-[80px]" />

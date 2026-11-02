@@ -152,10 +152,10 @@ export default function ProfileScreen() {
   const currentLang = (i18n?.language || localStorage.getItem('i18nextLng') || 'en').slice(0, 2);
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-slate-900 font-sans pb-28 max-w-md mx-auto relative overflow-x-hidden selection:bg-[#141779] selection:text-white">
+    <div className="min-h-screen bg-[#f7f9fb] text-slate-900 font-sans pb-28 max-w-md mx-auto relative overflow-x-clip selection:bg-[#141779] selection:text-white">
       
       {/* TOP APP BAR (Sticky Standard Header - 100% Unified) */}
-      <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex items-center justify-between px-4 pt-3 pb-3 bg-white/95 backdrop-blur-md border-b border-slate-100 rounded-b-2xl shadow-[0_4px_16px_rgba(20,23,121,0.05)] gap-2">
+      <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex items-center justify-between px-4 pt-3 pb-3 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-[0_4px_16px_rgba(20,23,121,0.05)] gap-2">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <div className="w-10 h-10 rounded-full border-2 border-indigo-100 overflow-hidden bg-slate-100 shrink-0 shadow-2xs">
             {user.childPhoto ? (

@@ -447,16 +447,23 @@ export const DynamicAiInsightCard: React.FC<DynamicAiInsightCardProps> = ({
       {/* 2. Premium Deep AI Insight Modal / Dialog */}
       {isOpen && (
         <div 
-          className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-md flex items-end sm:items-center justify-center p-3 pb-[92px] sm:p-4 animate-in fade-in duration-200 overscroll-contain select-none"
+          style={{
+            zIndex: 60,
+            paddingBottom: "calc(5.75rem + env(safe-area-inset-bottom, 0px))"
+          }}
           onClick={() => setIsOpen(false)}
         >
           {/* Modal Container */}
           <div 
-            className="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-100 flex flex-col max-h-[88vh] overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200"
+            className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 flex flex-col max-h-[72vh] sm:max-h-[82vh] overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 mb-1 sm:mb-0 select-text"
+            style={{
+              maxHeight: "min(72vh, calc(100dvh - 128px - env(safe-area-inset-bottom, 0px)))"
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Mobile Touch Grab Bar */}
-            <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-2 sm:hidden shrink-0" />
+            <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-2.5 sm:hidden shrink-0" />
 
             {/* Modal Header */}
             <div className={`px-4 sm:px-5 py-3.5 border-b flex items-center justify-between shrink-0 ${
@@ -540,7 +547,10 @@ export const DynamicAiInsightCard: React.FC<DynamicAiInsightCardProps> = ({
             </div>
 
             {/* Scrollable Insight Content */}
-            <div className="p-4 sm:p-5 space-y-3 sm:space-y-3.5 overflow-y-auto max-h-[calc(88vh-135px)]">
+            <div
+              className="flex-1 min-h-0 p-4 sm:p-5 pb-8 sm:pb-8 space-y-3 sm:space-y-3.5 overflow-y-auto overscroll-contain scroll-smooth"
+              style={{ WebkitOverflowScrolling: "touch" }}
+            >
               {loading ? (
                 /* Shimmer Skeleton Loader */
                 <div className="space-y-3 animate-pulse">

@@ -152,7 +152,7 @@ export default function JourneyMapScreen() {
         <div className="relative w-full max-w-[430px] h-screen bg-gradient-to-b from-[#EEF2FF] via-[#F5F3FF] to-[#FFFFFF] flex flex-col overflow-hidden shadow-2xl animate-pulse">
           
           {/* Header Skeleton */}
-          <header className="shrink-0 w-full z-50 flex items-center justify-between px-3 py-2.5 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-xs">
+          <header className="sticky top-0 shrink-0 w-full z-50 flex items-center justify-between px-3 py-2.5 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-xs">
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <div className="w-8 h-8 rounded-full bg-slate-200 shrink-0" />
               <div className="w-8 h-8 rounded-full bg-indigo-200 shrink-0" />
@@ -331,7 +331,7 @@ export default function JourneyMapScreen() {
       <div className="relative w-full max-w-[430px] h-screen bg-[#F7F9FB] flex flex-col overflow-hidden shadow-2xl">
         
         {/* Header */}
-        <header className="shrink-0 w-full z-50 flex items-center justify-between px-3 py-2.5 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs gap-1.5 sm:gap-2">
+        <header className="sticky top-0 shrink-0 w-full z-50 flex items-center justify-between px-3 py-2.5 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs gap-1.5 sm:gap-2">
           {/* Left: Back Button, Avatar, Title/Subtitle */}
           <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
             <button 

@@ -17,7 +17,7 @@ export default function AnimatedStackContainer() {
   const isPush = navigationType === "PUSH";
 
   return (
-    <div className="w-full h-full relative overflow-y-auto overflow-x-hidden bg-[#f7f9fb]">
+    <div className="w-full h-full relative overflow-y-auto overflow-x-clip bg-[#f7f9fb]">
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={location.pathname}
