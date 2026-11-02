@@ -388,8 +388,12 @@ export default function ProfileScreen() {
               <span className="text-[10px] font-semibold text-slate-800 truncate w-full">{t('math_ace', 'Math Ace')}</span>
             </div>
             <div 
-              onClick={() => setShowStreakModal(true)}
-              className={`bg-white border rounded-2xl p-2.5 flex flex-col items-center text-center shadow-xs transition-all cursor-pointer active:scale-95 ${isStreakUnlocked ? 'border-slate-100' : 'border-slate-100 opacity-45'}`}
+              onClick={() => {
+                if (isStreakUnlocked) {
+                  setShowStreakModal(true);
+                }
+              }}
+              className={`bg-white border rounded-2xl p-2.5 flex flex-col items-center text-center shadow-xs transition-all ${isStreakUnlocked ? 'cursor-pointer active:scale-95 border-slate-100' : 'border-slate-100 opacity-45'}`}
             >
               <span className="text-lg mb-0.5">🔥</span>
               <span className="text-[10px] font-semibold text-slate-800 truncate w-full">{t('streak', 'Streak')}</span>

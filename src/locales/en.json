@@ -1303,6 +1303,8 @@
     "no_coparents_linked": "No secondary co-parent accounts linked yet.",
     "save_profiles": "Save Profiles",
     "saving_profiles": "Saving Profiles...",
+    "settings_saved": "Settings Saved",
+    "all_profiles_updated_successfully": "All profiles updated successfully! 🎉",
     "view_only_mode": "View-Only Mode",
     "primary_parent_notice": "To add a new child or modify family settings, please log in using the Primary Parent account.",
     "child_device_code": "Child Device Code (Scholar Login)",

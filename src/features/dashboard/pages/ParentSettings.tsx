@@ -782,8 +782,8 @@ export default function ParentSettings() {
       }
 
       showNotificationToast({
-        title: "Settings Saved",
-        message: "All profiles updated successfully! 🎉",
+        title: t("settings_saved", "Settings Saved"),
+        message: t("all_profiles_updated_successfully", "All profiles updated successfully! 🎉"),
         type: "success"
       });
 
