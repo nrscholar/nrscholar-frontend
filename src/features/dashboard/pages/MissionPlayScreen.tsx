@@ -2719,14 +2719,28 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                               className={`p-4 rounded-2xl border bg-white shadow-2xs ${isCorrect ? "border-emerald-200" : "border-rose-200"
                                 }`}
                             >
-                              <div className="flex items-start justify-between gap-2 mb-2">
-                                <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${isCorrect ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-rose-50 text-rose-700 border border-rose-200"
-                                  }`}>
-                                  {isCorrect ? "✅ " + t('correct', 'Correct') : "❌ " + t('incorrect', 'Mistake')}
-                                </span>
-                                <span className="text-[10px] font-bold text-gray-400">
+                              <div className="flex items-center justify-between w-full mb-2">
+                                {/* 1. LEFT SIDE: Question Number */}
+                                <span className="text-xs font-bold text-slate-400 tracking-wider">
                                   #{idx + 1}
                                 </span>
+
+                                {/* 2. RIGHT SIDE: Result Status Pill */}
+                                {isCorrect ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 tracking-wider uppercase whitespace-nowrap">
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    {t('correct', 'CORRECT!')}
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 tracking-wider uppercase whitespace-nowrap">
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                    {t('incorrect', 'MISTAKE')}
+                                  </span>
+                                )}
                               </div>
 
                               <p className="text-xs font-bold text-[#141779] leading-snug mb-2">

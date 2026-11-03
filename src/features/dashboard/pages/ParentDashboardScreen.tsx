@@ -6,16 +6,17 @@ import { useTranslation } from "react-i18next";
 import { getActiveUserContext } from "../../../utils/sessionCache";
 import ChildSwitcherModal from "../../../components/ChildSwitcherModal";
 import { translateNotificationTitle, translateNotificationMessage } from "../../../utils/notificationTranslator";
-import { 
-  getSubjectChartColor, 
-  getCategorySubjectChartColor, 
-  isCategoryTrendMode, 
-  STRENGTH_GREEN_SHADES, 
-  RISK_AMBER_SHADES, 
-  WEAKNESS_RED_SHADES 
+import {
+  getSubjectChartColor,
+  getCategorySubjectChartColor,
+  isCategoryTrendMode,
+  STRENGTH_GREEN_SHADES,
+  RISK_AMBER_SHADES,
+  WEAKNESS_RED_SHADES
 } from "../../../utils/chartColors";
 import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
 import DynamicAiInsightCard from "../../../components/DynamicAiInsightCard";
+import QuestionFeedbackItem from "../../../components/QuestionFeedbackItem";
 
 export default function ParentDashboardScreen() {
   const { t } = useTranslation();
@@ -98,10 +99,29 @@ export default function ParentDashboardScreen() {
   const [breakdownData, setBreakdownData] = useState<any>(null);
   const [loadingBreakdown, setLoadingBreakdown] = useState(false);
 
-  const openBreakdown = async () => {
+  const openBreakdown = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     window.history.pushState({ parentBreakdownModal: true }, "");
     setShowBreakdownModal(true);
-    setLoadingBreakdown(true);
+
+    // If no cached breakdown data yet, optimistically populate from available dashboard metrics
+    // to guarantee an instant, 0ms flicker-free transition
+    if (!breakdownData) {
+      setBreakdownData({
+        totalTimeFormatted: `${todayTime || 0}m`,
+        totalSolved: solvedToday || 0,
+        totalCorrect: Math.round(((solvedToday || 0) * (todayConfidenceScore || 0)) / 100),
+        confidenceScore: todayConfidenceScore || 0,
+        modeBreakdown: {},
+        attempts: []
+      });
+      setLoadingBreakdown(true);
+    }
+
+    // Stale-while-revalidate background refresh without flashing or wiping the view
     try {
       const tzOffset = -new Date().getTimezoneOffset();
       const activeCtx = getActiveUserContext();
@@ -133,7 +153,7 @@ export default function ParentDashboardScreen() {
     try {
       setLoading(true);
       const tzOffset = -new Date().getTimezoneOffset();
-      
+
       const userRes = await apiFetch("/api/users/me").catch(() => null);
       let currentChildId = userData?.activeChildId || null;
 
@@ -157,14 +177,14 @@ export default function ParentDashboardScreen() {
             const u = JSON.parse(stored);
             currentChildId = u.activeChildId || u.children?.[0]?.childId || null;
           }
-        } catch (e) {}
+        } catch (e) { }
       }
 
       const activeCtx = getActiveUserContext();
       const activeClass = activeCtx.classLevel;
       const classParam = activeClass ? `&classLevel=${encodeURIComponent(activeClass)}` : "";
       const childParam = currentChildId ? `&childId=${encodeURIComponent(currentChildId)}` : "";
-      
+
       const tipParam = [childParam.replace("&", ""), classParam.replace("&", "")].filter(Boolean).join("&");
       const [reportRes, notifRes, tipRes] = await Promise.all([
         apiFetch(`/api/parent/report?tz_offset_minutes=${tzOffset}${childParam}${classParam}`).catch(() => null),
@@ -204,6 +224,20 @@ export default function ParentDashboardScreen() {
           if (repJson.data.top3SubjectsTrend) setTop3SubjectsTrend(repJson.data.top3SubjectsTrend);
           if (repJson.data.allSubjectsTrend) setAllSubjectsTrend(repJson.data.allSubjectsTrend);
         }
+
+        // Silently prefetch today-breakdown in background for instant 0ms modal opening
+        const tzOffset = -new Date().getTimezoneOffset();
+        const activeCtx = getActiveUserContext();
+        const classParam = activeCtx.classLevel ? `&classLevel=${encodeURIComponent(activeCtx.classLevel)}` : "";
+        const childParam = currentChildId ? `&childId=${encodeURIComponent(currentChildId)}` : "";
+        apiFetch(`/api/parent/today-breakdown?tz_offset_minutes=${tzOffset}${childParam}${classParam}`)
+          .then(r => r.json())
+          .then(json => {
+            if (json.success && json.data) {
+              setBreakdownData(json.data);
+            }
+          })
+          .catch(() => { });
       }
 
       if (notifRes && notifRes.ok) {
@@ -231,7 +265,7 @@ export default function ParentDashboardScreen() {
         try {
           const u = JSON.parse(stored);
           setUserData(u);
-        } catch (e) {}
+        } catch (e) { }
       }
       loadData();
     };
@@ -325,6 +359,22 @@ export default function ParentDashboardScreen() {
     const pathArea = `M 0,${height} L 0,${points[0].y} ${pathLine.substring(1)} L ${width},${height} Z`;
 
     return { pathLine, pathArea, points, labels: dataset.map(t => t.day) };
+  };
+
+  const formatSubjectTitle = (subj: string) => {
+    if (!subj) return "";
+    const translated = translateSubjectName(subj);
+    const cleaned = translated.replace(/\.{2,}/g, "").trim();
+    if (/[\u0A80-\u0AFF\u0900-\u097F]/.test(cleaned)) {
+      return cleaned;
+    }
+    return cleaned
+      .replace(/[_-]+/g, " ")
+      .toLowerCase()
+      .split(" ")
+      .filter(Boolean)
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
   };
 
   const translateSubjectName = (subj: string) => {
@@ -458,7 +508,7 @@ export default function ParentDashboardScreen() {
   }
 
   const maxAccuracy = subjectBreakdown.length > 0 ? Math.max(...subjectBreakdown.map(s => s.accuracy)) : 0;
-  
+
   // Strength: strictly accuracy >= 70%
   const rawStrengthList = Array.isArray(reportData?.strengthSubjects)
     ? reportData.strengthSubjects
@@ -496,27 +546,27 @@ export default function ParentDashboardScreen() {
   const activeTrend = modalType === "risks"
     ? (riskTrend && riskTrend.length > 0 ? riskTrend : undefined)
     : modalType === "weaknesses"
-    ? (scienceTrend && scienceTrend.length > 0 ? scienceTrend : undefined)
-    : modalType === "strengths"
-    ? (mathTrend && mathTrend.length > 0 ? mathTrend : undefined)
-    : undefined;
+      ? (scienceTrend && scienceTrend.length > 0 ? scienceTrend : undefined)
+      : modalType === "strengths"
+        ? (mathTrend && mathTrend.length > 0 ? mathTrend : undefined)
+        : undefined;
   const targetAcc = modalType === "strengths"
     ? (actualStrengthSubjects[0]?.accuracy ?? (maxAccuracy || undefined))
     : modalType === "weaknesses"
-    ? (actualWeakSubjects.length > 0 ? Math.min(...actualWeakSubjects.map(s => s.accuracy)) : (lowestAcc ?? undefined))
-    : modalType === "risks"
-    ? (actualRiskSubjects.length > 0 ? Math.min(...actualRiskSubjects.map(s => s.accuracy)) : (lowestAcc ?? undefined))
-    : undefined;
+      ? (actualWeakSubjects.length > 0 ? Math.min(...actualWeakSubjects.map(s => s.accuracy)) : (lowestAcc ?? undefined))
+      : modalType === "risks"
+        ? (actualRiskSubjects.length > 0 ? Math.min(...actualRiskSubjects.map(s => s.accuracy)) : (lowestAcc ?? undefined))
+        : undefined;
   const translatedHighest = highestSubject ? translateSubjectName(highestSubject) : "";
   const translatedLowest = lowestSubject ? translateSubjectName(lowestSubject) : "";
 
   const chartTitle = modalType === "strengths"
     ? (actualStrengthSubjects.length > 0 ? `${actualStrengthSubjects.map(s => translateSubjectName(s.subject)).join(" & ")} ${t("trend", "Trend")}` : (translatedHighest ? `${translatedHighest} ${t("trend", "Trend")}` : t("top_subject_trend", "Top Subject Trend")))
     : modalType === "weaknesses"
-    ? (actualWeakSubjects.length > 0 ? `${actualWeakSubjects.map(s => translateSubjectName(s.subject)).join(" & ")} ${t("focus_trend", "Focus Trend")}` : (translatedLowest ? `${translatedLowest} ${t("focus_trend", "Focus Trend")}` : t("focus_area_trend", "Focus Area Trend")))
-    : modalType === "risks"
-    ? (actualRiskSubjects.length > 0 ? `${actualRiskSubjects.map(s => translateSubjectName(s.subject)).join(" & ")} ${t("at_risk_subject_trend", "At-Risk Subject Trend")}` : t("at_risk_subject_trend", "At-Risk Subject Trend"))
-    : t("overall_trend", "Overall Trend");
+      ? (actualWeakSubjects.length > 0 ? `${actualWeakSubjects.map(s => translateSubjectName(s.subject)).join(" & ")} ${t("focus_trend", "Focus Trend")}` : (translatedLowest ? `${translatedLowest} ${t("focus_trend", "Focus Trend")}` : t("focus_area_trend", "Focus Area Trend")))
+      : modalType === "risks"
+        ? (actualRiskSubjects.length > 0 ? `${actualRiskSubjects.map(s => translateSubjectName(s.subject)).join(" & ")} ${t("at_risk_subject_trend", "At-Risk Subject Trend")}` : t("at_risk_subject_trend", "At-Risk Subject Trend"))
+        : t("overall_trend", "Overall Trend");
 
   const chart = generateChartData(activeTrend, targetAcc);
   const currentScore = chart.points.length > 0 ? chart.points[chart.points.length - 1].score : 0;
@@ -711,7 +761,7 @@ export default function ParentDashboardScreen() {
 
     return (
       <div className="bg-white rounded-[22px] p-4 sm:p-5 shadow-[0_4px_20px_rgba(20,23,121,0.04)] border border-slate-200/70 flex flex-col gap-3 font-sans">
-        
+
         {/* Header Title & Badge */}
         <div className="flex items-start justify-between">
           <div className="flex flex-col">
@@ -733,13 +783,13 @@ export default function ParentDashboardScreen() {
         {/* Dynamic Subject Pills Row - Single Line with Horizontal Scroll & Indicator Color */}
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 mt-0.5 -mx-1 px-1 scroll-smooth">
           {displaySubjects.map((subItem, idx) => (
-            <div 
-              key={idx} 
+            <div
+              key={idx}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border shrink-0 whitespace-nowrap shadow-2xs transition-transform active:scale-95 ${subItem.bg}`}
             >
-              <span 
-                className="w-2.5 h-2.5 rounded-full shrink-0 ring-2 ring-white/70" 
-                style={{ backgroundColor: subItem.color }} 
+              <span
+                className="w-2.5 h-2.5 rounded-full shrink-0 ring-2 ring-white/70"
+                style={{ backgroundColor: subItem.color }}
               />
               <span>{translateSubjectName(subItem.subject)} ({subItem.accuracy}%)</span>
             </div>
@@ -771,7 +821,7 @@ export default function ParentDashboardScreen() {
             {/* Dynamic Subject Lines & Points */}
             {displaySubjects.map((subItem, subIdx) => {
               const rawScores = subItem.timeline?.map((t: any) => (typeof t.score === 'number' ? t.score : 0)) || [];
-              
+
               // Enforce strict 0% baseline prior to first activity, and forward-fill once established
               let scores: number[] = [];
               if (rawScores.length === dayLabels.length) {
@@ -799,24 +849,24 @@ export default function ParentDashboardScreen() {
 
               return (
                 <g key={subIdx}>
-                  <path 
-                    d={lineD} 
-                    fill="none" 
-                    stroke={subItem.color} 
-                    strokeWidth="2.5" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
+                  <path
+                    d={lineD}
+                    fill="none"
+                    stroke={subItem.color}
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                     opacity={scores.some(s => s > 0) ? 0.95 : 0.4}
                   />
                   {pts.map((p: any, i: number) => (
-                    <circle 
-                      key={i} 
-                      cx={p.x} 
-                      cy={p.y} 
-                      r="3.5" 
-                      fill="#ffffff" 
-                      stroke={subItem.color} 
-                      strokeWidth="2.5" 
+                    <circle
+                      key={i}
+                      cx={p.x}
+                      cy={p.y}
+                      r="3.5"
+                      fill="#ffffff"
+                      stroke={subItem.color}
+                      strokeWidth="2.5"
                     />
                   ))}
                 </g>
@@ -1069,7 +1119,7 @@ export default function ParentDashboardScreen() {
 
     return (
       <div className="bg-white rounded-[24px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-slate-100 flex flex-col gap-3 font-sans">
-        
+
         {/* Subtitle Header */}
         <span className="text-xs font-black text-slate-500 tracking-wider uppercase">
           {upperSubject} TREND (7-DAY PERFORMANCE TREND)
@@ -1093,13 +1143,13 @@ export default function ParentDashboardScreen() {
                 ? getCategorySubjectChartColor(mode, idx)
                 : getSubjectChartColor(item.subject, idx);
               return (
-                <div 
-                  key={idx} 
+                <div
+                  key={idx}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-2xl text-xs font-extrabold border shrink-0 whitespace-nowrap shadow-2xs transition-transform active:scale-95 ${colorInfo.bg}`}
                 >
-                  <span 
-                    className="w-2.5 h-2.5 rounded-full shrink-0 ring-2 ring-white/80 shadow-xs" 
-                    style={{ backgroundColor: item.color }} 
+                  <span
+                    className="w-2.5 h-2.5 rounded-full shrink-0 ring-2 ring-white/80 shadow-xs"
+                    style={{ backgroundColor: item.color }}
                   />
                   <span>{translateSubjectName(item.subject)}</span>
                   <span className="font-black">({item.accuracy}%)</span>
@@ -1146,23 +1196,23 @@ export default function ParentDashboardScreen() {
             {/* Distinct Curve Lines & Hollow Points for Every Subject */}
             {seriesList.map((item, subIdx) => (
               <g key={subIdx}>
-                <path 
-                  d={item.lineD} 
-                  fill="none" 
-                  stroke={item.color} 
-                  strokeWidth="2.5" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
+                <path
+                  d={item.lineD}
+                  fill="none"
+                  stroke={item.color}
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
                 {item.pts.map((p, i) => (
-                  <circle 
-                    key={i} 
-                    cx={p.x} 
-                    cy={p.y} 
-                    r="3.5" 
-                    fill="#ffffff" 
-                    stroke={item.color} 
-                    strokeWidth="2.5" 
+                  <circle
+                    key={i}
+                    cx={p.x}
+                    cy={p.y}
+                    r="3.5"
+                    fill="#ffffff"
+                    stroke={item.color}
+                    strokeWidth="2.5"
                   />
                 ))}
               </g>
@@ -1190,8 +1240,8 @@ export default function ParentDashboardScreen() {
       <header className="sticky top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 h-16 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 shadow-[0_12px_40px_rgba(20,23,121,0.14)] w-full">
         <div className="flex items-center gap-2.5 min-w-0">
           {!isCoParent && (
-            <button 
-              onClick={() => navigate(-1)} 
+            <button
+              onClick={() => navigate(-1)}
               className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
               aria-label="Back"
             >
@@ -1241,8 +1291,8 @@ export default function ParentDashboardScreen() {
           >
             <Settings size={18} />
           </button>
-          <button 
-            onClick={() => { setShowNotifications(true); markAllRead(); }} 
+          <button
+            onClick={() => { setShowNotifications(true); markAllRead(); }}
             className="relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
             aria-label="Notifications"
             title={t("notifications", "Notifications")}
@@ -1293,32 +1343,41 @@ export default function ParentDashboardScreen() {
         {/* 1. Student Profile, Journey, Metrics, and Confidence Score */}
         <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-[0_4px_20px_rgba(20,23,121,0.04)] flex flex-col gap-3.5">
           {/* Identity Header Row */}
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center justify-between w-full gap-3">
             <button
               onClick={() => setShowSwitcher(true)}
               className="flex items-center gap-3 min-w-0 flex-1 text-left group cursor-pointer"
               title={t("switch_child_profile", "Click to switch student")}
             >
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-gradient-to-tr from-[#141779] to-[#2d328f] text-white flex items-center justify-center text-sm sm:text-base font-black shrink-0 shadow-2xs overflow-hidden border border-white/60 group-hover:scale-105 transition-transform">
+              {/* User Avatar */}
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#1b237e] text-white flex items-center justify-center font-bold text-base shrink-0 shadow-2xs overflow-hidden border border-white/60 group-hover:scale-105 transition-transform">
                 {childPhoto ? (
                   <img src={childPhoto} alt={cleanChildName} className="w-full h-full object-cover" />
                 ) : (
                   cleanChildName.charAt(0).toUpperCase()
                 )}
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <h2 className="text-base sm:text-lg font-black text-[#141779] leading-tight truncate group-hover:text-indigo-800 transition-colors">
+
+              {/* User Info & Badges Column */}
+              <div className="flex flex-col justify-center min-w-0">
+                {/* Row 1: Name & Dropdown */}
+                <div className="flex items-center gap-1.5 cursor-pointer">
+                  <span className="font-bold text-base text-[#101840] leading-tight truncate group-hover:text-indigo-800 transition-colors">
                     {childName}'s {t("journey", "Journey")}
-                  </h2>
-                  <ChevronDown size={15} className="text-slate-400 group-hover:text-[#141779] shrink-0 transition-colors" />
-                </div>
-                <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                  <span className="text-xs sm:text-[13px] font-black text-white bg-[#141779] px-3 py-1 rounded-full shrink-0 shadow-2xs">
-                    {t('lvl_explorer', { level: userLevel, defaultValue: `Lvl ${userLevel}` })}
                   </span>
+                  <ChevronDown size={14} className="text-[#101840] group-hover:text-[#1b237e] shrink-0 transition-colors" />
+                </div>
+
+                {/* Row 2: BOTH BADGES IN ONE HORIZONTAL ROW */}
+                <div className="flex items-center gap-2 mt-1 whitespace-nowrap">
+                  {/* Badge 1: Level */}
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#1b237e] text-white whitespace-nowrap shrink-0">
+                    {t('lvl_explorer', { level: userLevel, defaultValue: `Lvl ${userLevel} Explorer` })}
+                  </span>
+
+                  {/* Badge 2: Class (Directly Beside Level) */}
                   {childClass && (
-                    <span className="text-xs sm:text-[13px] font-bold text-[#141779] bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full shrink-0">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#f0f4ff] text-[#2c3e91] border border-[#dbe4ff] whitespace-nowrap shrink-0">
                       {childClass}
                     </span>
                   )}
@@ -1326,12 +1385,10 @@ export default function ParentDashboardScreen() {
               </div>
             </button>
 
-            {/* Active profile status badge */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-xs sm:text-[13px] font-black shadow-2xs">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span>{t("active_profile", "Active")}</span>
-              </span>
+            {/* Right Side: Active Status Badge */}
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-100 whitespace-nowrap shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>{t("active_profile", "Active")}</span>
             </div>
           </div>
 
@@ -1369,11 +1426,15 @@ export default function ParentDashboardScreen() {
                   {t('daily_confidence_score', 'DAILY CONFIDENCE SCORE')}
                 </span>
                 <button
-                  onClick={openBreakdown}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openBreakdown(e);
+                  }}
                   className="text-xs font-bold text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-full transition-colors flex items-center gap-0.5 cursor-pointer"
                 >
                   <span>{t('details', 'Details')}</span>
-
                 </button>
               </div>
               <span className="text-xs sm:text-sm font-black text-[#141779]">{todayConfidenceScore}%</span>
@@ -1384,8 +1445,12 @@ export default function ParentDashboardScreen() {
                 style={{ width: `${Math.min(100, Math.max(0, todayConfidenceScore))}%` }}
               />
             </div>
-            <p 
-              onClick={openBreakdown}
+            <p
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openBreakdown(e);
+              }}
               className="text-xs sm:text-[13px] text-slate-500 font-medium cursor-pointer hover:text-indigo-900 transition-colors truncate"
             >
               {t('confidence_score_sub', { attempts: solvedToday, defaultValue: `Based on today's correct answers (${solvedToday} attempts) • Tap for details` })}
@@ -1394,44 +1459,74 @@ export default function ParentDashboardScreen() {
         </div>
 
         {/* 2. Cognitive Strengths, Weaknesses, and Risk Alerts (Screenshot 2 content) */}
-        <div id="dna-section" className="flex flex-col gap-2.5">
+        <div id="dna-section" className="flex flex-col gap-3">
           <div className="flex items-center justify-between px-1">
             <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-600">
               {t('cognitive_strengths_weaknesses', 'Cognitive Strengths & Weaknesses')}
             </h3>
           </div>
 
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-3">
             {/* Strengths Card */}
             <button
+              type="button"
               onClick={() => handleOpenModal("strengths")}
-              className="w-full bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col text-left hover:border-teal-300 hover:shadow-sm transition-all group cursor-pointer"
+              className="w-full bg-white rounded-2xl p-4 sm:p-[18px] border border-slate-200/80 shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:border-emerald-300 hover:shadow-[0_4px_16px_rgba(4,120,87,0.08)] transition-all duration-200 group cursor-pointer flex flex-col justify-between min-h-[118px] text-left"
             >
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-teal-50 border border-teal-100/80 flex items-center justify-center text-sm">
-                      💪
+              <div className="w-full">
+                <div className="flex justify-between items-center mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#ECFDF5] border border-emerald-200/60 flex items-center justify-center shrink-0">
+                      <Trophy size={18} className="text-[#047857]" />
                     </div>
-                    <h4 className="text-sm sm:text-base font-black text-[#006a62]">{t('strengths', 'Strengths')}</h4>
+                    <div>
+                      <h4 className="text-sm sm:text-base font-bold text-[#047857] leading-tight">
+                        {t('strengths', 'Strengths')}
+                      </h4>
+                      <p className="text-[11px] text-slate-400 font-medium">
+                        {t('strengths_subtitle', 'Mastery & top accuracy')}
+                      </p>
+                    </div>
                   </div>
-                  <ChevronRight size={16} className="text-slate-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
+                  <ChevronRight size={18} className="text-slate-400 group-hover:translate-x-0.5 group-hover:text-slate-600 transition-all shrink-0 ml-auto" />
                 </div>
+
                 {!hasEnoughData || subjectBreakdown.length === 0 ? (
-                  <span className="inline-block text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full whitespace-nowrap">
-                    {t('no_data_available', 'No data available')}
-                  </span>
+                  <div className="pt-0.5">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-slate-50 border border-slate-200/70 px-3 py-1 rounded-full">
+                      <Clock size={12} className="text-slate-400 shrink-0" />
+                      <span>{t('no_data_available', 'No data available yet')}</span>
+                    </span>
+                  </div>
                 ) : actualStrengthSubjects.length === 0 ? (
-                  <span className="inline-block text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full whitespace-nowrap">
-                    {t('no_strengths_yet', 'No strength for now.')}
-                  </span>
+                  <div className="pt-0.5">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200/70 px-3 py-1 rounded-full">
+                      <Target size={12} className="text-slate-400 shrink-0" />
+                      <span>{t('no_active_strengths', 'No active strengths recorded yet')}</span>
+                    </span>
+                  </div>
                 ) : (
-                  <div className="space-y-1.5 mt-0.5">
+                  <div className="flex flex-col gap-2">
                     {actualStrengthSubjects.map((ss, i) => (
-                      <div key={i} className="flex items-center gap-1.5 text-xs font-bold text-[#006a62] min-w-0 overflow-hidden">
-                        <CheckCircle size={13} className="text-[#006a62] shrink-0" />
-                        <span className="leading-snug truncate whitespace-nowrap">
-                          {translateInsightText(`${translateSubjectName(ss.subject)} is currently high performing with ${ss.accuracy}% accuracy.`)}
+                      <div
+                        key={i}
+                        className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-[#ECFDF5]/50 border border-emerald-100/70 transition-colors"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-6 h-6 rounded-lg bg-emerald-100/70 flex items-center justify-center shrink-0">
+                            <CheckCircle2 size={13} className="text-[#047857]" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs sm:text-[13px] font-bold text-slate-800 truncate">
+                              {formatSubjectTitle(ss.subject)}
+                            </p>
+                            <p className="text-[10px] sm:text-[11px] font-medium text-emerald-700/90 truncate">
+                              {t('high_performance_context', 'High performance')}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#ECFDF5] border border-emerald-200 text-[#047857] shrink-0">
+                          {ss.accuracy}%
                         </span>
                       </div>
                     ))}
@@ -1442,34 +1537,64 @@ export default function ParentDashboardScreen() {
 
             {/* Areas for Review (Weaknesses) Card */}
             <button
+              type="button"
               onClick={() => handleOpenModal("weaknesses")}
-              className="w-full bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col text-left hover:border-rose-300 hover:shadow-sm transition-all group cursor-pointer"
+              className="w-full bg-white rounded-2xl p-4 sm:p-[18px] border border-slate-200/80 shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:border-rose-300 hover:shadow-[0_4px_16px_rgba(190,18,60,0.08)] transition-all duration-200 group cursor-pointer flex flex-col justify-between min-h-[118px] text-left"
             >
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-rose-50 border border-rose-100/80 flex items-center justify-center text-sm">
-                      ⚠️
+              <div className="w-full">
+                <div className="flex justify-between items-center mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#FFF1F2] border border-rose-200/60 flex items-center justify-center shrink-0">
+                      <AlertTriangle size={18} className="text-[#BE123C]" />
                     </div>
-                    <h4 className="text-sm sm:text-base font-black text-[#ba1a1a]">{t('weaknesses', 'Areas to Improve')}</h4>
+                    <div>
+                      <h4 className="text-sm sm:text-base font-bold text-[#BE123C] leading-tight">
+                        {t('weaknesses', 'Areas to Improve')}
+                      </h4>
+                      <p className="text-[11px] text-slate-400 font-medium">
+                        {t('weaknesses_subtitle', 'Targeted review needed')}
+                      </p>
+                    </div>
                   </div>
-                  <ChevronRight size={16} className="text-slate-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
+                  <ChevronRight size={18} className="text-slate-400 group-hover:translate-x-0.5 group-hover:text-slate-600 transition-all shrink-0 ml-auto" />
                 </div>
+
                 {!hasEnoughData || subjectBreakdown.length === 0 ? (
-                  <span className="inline-block text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full whitespace-nowrap">
-                    {t('no_data_available', 'No data available')}
-                  </span>
+                  <div className="pt-0.5">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-slate-50 border border-slate-200/70 px-3 py-1 rounded-full">
+                      <Clock size={12} className="text-slate-400 shrink-0" />
+                      <span>{t('no_data_available', 'No data available yet')}</span>
+                    </span>
+                  </div>
                 ) : actualWeakSubjects.length === 0 ? (
-                  <span className="inline-block text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100 whitespace-nowrap">
-                    {t('all_subjects_top_level', 'No weaknesses detected 🎉')}
-                  </span>
+                  <div className="pt-0.5">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#047857] bg-[#ECFDF5] border border-emerald-200/70 px-3 py-1 rounded-full">
+                      <CheckCircle2 size={13} className="text-[#047857]" />
+                      <span>{t('no_weaknesses_detected', 'No critical weaknesses detected')}</span>
+                    </span>
+                  </div>
                 ) : (
-                  <div className="space-y-1.5 mt-0.5">
+                  <div className="flex flex-col gap-2">
                     {actualWeakSubjects.map((ws, i) => (
-                      <div key={i} className="flex items-center gap-1.5 text-xs font-bold text-[#ba1a1a] min-w-0 overflow-hidden">
-                        <AlertTriangle size={13} className="text-[#ba1a1a] shrink-0" />
-                        <span className="leading-snug truncate whitespace-nowrap">
-                          {translateInsightText(`${translateSubjectName(ws.subject)} needs improvement with ${ws.accuracy}% accuracy.`)}
+                      <div
+                        key={i}
+                        className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-[#FFF1F2]/60 border border-rose-100/80 transition-colors"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-6 h-6 rounded-lg bg-rose-100/70 flex items-center justify-center shrink-0">
+                            <AlertTriangle size={13} className="text-[#BE123C]" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs sm:text-[13px] font-bold text-slate-800 truncate">
+                              {formatSubjectTitle(ws.subject)}
+                            </p>
+                            <p className="text-[10px] sm:text-[11px] font-medium text-rose-700/90 truncate">
+                              {t('needs_improvement_context', 'Needs improvement')}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#FFF1F2] border border-rose-200 text-[#BE123C] shrink-0">
+                          {ws.accuracy}%
                         </span>
                       </div>
                     ))}
@@ -1480,34 +1605,64 @@ export default function ParentDashboardScreen() {
 
             {/* Risk Alerts Card */}
             <button
+              type="button"
               onClick={() => handleOpenModal("risks")}
-              className="w-full bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col text-left hover:border-amber-300 hover:shadow-sm transition-all group cursor-pointer"
+              className="w-full bg-white rounded-2xl p-4 sm:p-[18px] border border-slate-200/80 shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:border-amber-300 hover:shadow-[0_4px_16px_rgba(180,83,9,0.08)] transition-all duration-200 group cursor-pointer flex flex-col justify-between min-h-[118px] text-left"
             >
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-amber-50 border border-amber-100/80 flex items-center justify-center text-sm">
-                      🔔
+              <div className="w-full">
+                <div className="flex justify-between items-center mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#FFFBEB] border border-amber-200/60 flex items-center justify-center shrink-0">
+                      <ShieldAlert size={18} className="text-[#B45309]" />
                     </div>
-                    <h4 className="text-sm sm:text-base font-black text-[#d97706]">{t('risk_alerts', 'Risk Alerts')}</h4>
+                    <div>
+                      <h4 className="text-sm sm:text-base font-bold text-[#B45309] leading-tight">
+                        {t('risk_alerts', 'Risk Alerts')}
+                      </h4>
+                      <p className="text-[11px] text-slate-400 font-medium">
+                        {t('risk_alerts_subtitle', 'Early dip warnings')}
+                      </p>
+                    </div>
                   </div>
-                  <ChevronRight size={16} className="text-slate-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
+                  <ChevronRight size={18} className="text-slate-400 group-hover:translate-x-0.5 group-hover:text-slate-600 transition-all shrink-0 ml-auto" />
                 </div>
+
                 {!hasEnoughData || subjectBreakdown.length === 0 ? (
-                  <span className="inline-block text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full whitespace-nowrap">
-                    {t('no_data_available', 'No data available')}
-                  </span>
+                  <div className="pt-0.5">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-slate-50 border border-slate-200/70 px-3 py-1 rounded-full">
+                      <Clock size={12} className="text-slate-400 shrink-0" />
+                      <span>{t('no_data_available', 'No data available yet')}</span>
+                    </span>
+                  </div>
                 ) : actualRiskSubjects.length === 0 ? (
-                  <span className="inline-block text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100 whitespace-nowrap">
-                    {t('no_risk_alerts_badge', '✅ No Risk Alerts')}
-                  </span>
+                  <div className="pt-0.5">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#047857] bg-[#ECFDF5] border border-emerald-200/70 px-3 py-1 rounded-full">
+                      <CheckCircle2 size={13} className="text-[#047857]" />
+                      <span>{t('no_risk_alerts_badge', 'No risk alerts detected')}</span>
+                    </span>
+                  </div>
                 ) : (
-                  <div className="space-y-1.5 mt-0.5">
+                  <div className="flex flex-col gap-2">
                     {actualRiskSubjects.map((rs, i) => (
-                      <div key={i} className="flex items-center gap-1.5 text-xs font-semibold text-amber-800 min-w-0 overflow-hidden">
-                        <AlertTriangle size={13} className="text-amber-600 shrink-0" />
-                        <span className="leading-snug truncate whitespace-nowrap">
-                          {translateInsightText(`${translateSubjectName(rs.subject)} needs attention with ${rs.accuracy}% accuracy.`)}
+                      <div
+                        key={i}
+                        className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-[#FFFBEB]/60 border border-amber-100/80 transition-colors"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-6 h-6 rounded-lg bg-amber-100/70 flex items-center justify-center shrink-0">
+                            <AlertTriangle size={13} className="text-[#B45309]" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs sm:text-[13px] font-bold text-slate-800 truncate">
+                              {formatSubjectTitle(rs.subject)}
+                            </p>
+                            <p className="text-[10px] sm:text-[11px] font-medium text-amber-700/90 truncate">
+                              {t('needs_attention_context', 'Needs attention')}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#FFFBEB] border border-amber-200 text-[#B45309] shrink-0">
+                          {rs.accuracy}%
                         </span>
                       </div>
                     ))}
@@ -1529,29 +1684,25 @@ export default function ParentDashboardScreen() {
             </h3>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
-            {/* Daily Tip */}
+            {/* 1. Daily Tip */}
             <button
               type="button"
               onClick={() => navigate('/parent/daily-tip')}
-              className="bg-white hover:bg-slate-50/80 rounded-2xl sm:rounded-3xl p-3 sm:p-3.5 border border-slate-200/90 hover:border-teal-300 shadow-2xs hover:shadow-xs transition-all text-left flex flex-col justify-between group cursor-pointer min-w-0 w-full min-h-[105px] active:scale-[0.98]"
+              className="bg-white hover:bg-slate-50/80 rounded-2xl p-3 sm:p-3.5 border border-slate-200/90 hover:border-teal-300 shadow-2xs hover:shadow-xs transition-all text-left flex flex-col justify-between group cursor-pointer min-w-0 w-full min-h-[105px] active:scale-[0.98]"
             >
               <div className="flex items-center justify-between w-full mb-2">
                 <div className="w-8 h-8 rounded-xl bg-teal-50 border border-teal-200/70 text-[#006a62] flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
                   <BrainCircuit size={16} />
                 </div>
-                <span className="bg-amber-50 text-amber-800 border border-amber-200/80 text-[10px] sm:text-xs font-black uppercase px-2 py-0.5 rounded-full tracking-wider shrink-0 flex items-center gap-1 shadow-2xs">
-                  <Sparkles size={10} className="text-amber-600" />
-                  <span>{t("hot", "Hot")}</span>
+                <span className="bg-amber-50 text-amber-800 border border-amber-200/80 text-[10px] sm:text-xs font-black uppercase px-2 py-0.5 rounded-full tracking-wider shrink-0 shadow-2xs">
+                  {t("hot", "Hot")}
                 </span>
               </div>
               <div className="w-full min-w-0">
-                <div className="flex items-center justify-between gap-1">
-                  <h4 className="text-xs sm:text-sm font-black text-[#141779] group-hover:text-[#006a62] transition-colors leading-tight truncate">
-                    {t("daily_tip", "Daily Tip")}
-                  </h4>
-                  <ChevronRight size={13} className="text-slate-400 group-hover:text-[#006a62] group-hover:translate-x-0.5 transition-all shrink-0" />
-                </div>
-                <p 
+                <h4 className="text-xs sm:text-sm font-black text-[#141779] group-hover:text-[#006a62] transition-colors leading-tight truncate">
+                  {t("daily_tip", "Daily Tip")}
+                </h4>
+                <p
                   className="text-xs sm:text-[13px] text-slate-500 font-medium truncate mt-0.5 leading-tight"
                   title={dailyTipTitle || t("daily_tip_sub", "Quick family harmony ideas.")}
                 >
@@ -1560,16 +1711,17 @@ export default function ParentDashboardScreen() {
               </div>
             </button>
 
-            {/* Lessons */}
+            {/* 2. Lessons */}
             <button
+              type="button"
               onClick={() => navigate('/parent/lessons')}
-              className="bg-white hover:bg-indigo-50/30 rounded-2xl p-2.5 sm:p-3 border border-slate-200/80 hover:border-indigo-300 shadow-2xs hover:shadow-xs transition-all text-left flex flex-col justify-start group cursor-pointer min-w-0 w-full"
+              className="bg-white hover:bg-slate-50/80 rounded-2xl p-3 sm:p-3.5 border border-slate-200/90 hover:border-indigo-300 shadow-2xs hover:shadow-xs transition-all text-left flex flex-col justify-between group cursor-pointer min-w-0 w-full min-h-[105px] active:scale-[0.98]"
             >
               <div className="flex items-center justify-between w-full mb-2">
-                <div className="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-100 text-[#141779] flex items-center justify-center shrink-0">
-                  <BookOpen size={15} />
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-200/70 text-[#141779] flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
+                  <BookOpen size={16} />
                 </div>
-                <span className="bg-indigo-50 text-indigo-700 border border-indigo-200/80 text-xs font-black uppercase px-2.5 py-0.5 rounded-full tracking-wider shrink-0">
+                <span className="bg-indigo-50 text-indigo-700 border border-indigo-200/80 text-[10px] sm:text-xs font-black uppercase px-2 py-0.5 rounded-full tracking-wider shrink-0 shadow-2xs">
                   {t("new", "New")}
                 </span>
               </div>
@@ -1577,22 +1729,26 @@ export default function ParentDashboardScreen() {
                 <h4 className="text-xs sm:text-sm font-black text-[#141779] group-hover:text-indigo-700 transition-colors leading-tight truncate">
                   {t("lessons", "Lessons")}
                 </h4>
-                <p className="text-xs sm:text-[13px] text-slate-500 font-medium truncate mt-0.5 leading-tight" title={t("lessons_sub", "Bite-sized parent growth.")}>
+                <p
+                  className="text-xs sm:text-[13px] text-slate-500 font-medium truncate mt-0.5 leading-tight"
+                  title={t("lessons_sub", "Bite-sized parent growth.")}
+                >
                   {t("lessons_sub", "Bite-sized parent growth.")}
                 </p>
               </div>
             </button>
 
-            {/* Challenges */}
+            {/* 3. Challenges */}
             <button
+              type="button"
               onClick={() => navigate('/parent/challenges')}
-              className="bg-white hover:bg-purple-50/30 rounded-2xl p-2.5 sm:p-3 border border-slate-200/80 hover:border-purple-300 shadow-2xs hover:shadow-xs transition-all text-left flex flex-col justify-start group cursor-pointer min-w-0 w-full"
+              className="bg-white hover:bg-slate-50/80 rounded-2xl p-3 sm:p-3.5 border border-slate-200/90 hover:border-purple-300 shadow-2xs hover:shadow-xs transition-all text-left flex flex-col justify-between group cursor-pointer min-w-0 w-full min-h-[105px] active:scale-[0.98]"
             >
               <div className="flex items-center justify-between w-full mb-2">
-                <div className="w-7 h-7 rounded-lg bg-purple-50 border border-purple-100 text-[#30007f] flex items-center justify-center shrink-0">
-                  <Target size={15} />
+                <div className="w-8 h-8 rounded-xl bg-purple-50 border border-purple-200/70 text-[#30007f] flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
+                  <Target size={16} />
                 </div>
-                <span className="bg-purple-50 text-purple-700 border border-purple-200/80 text-xs font-black uppercase px-2.5 py-0.5 rounded-full tracking-wider shrink-0">
+                <span className="bg-purple-50 text-purple-700 border border-purple-200/80 text-[10px] sm:text-xs font-black uppercase px-2 py-0.5 rounded-full tracking-wider shrink-0 shadow-2xs">
                   {t("live", "Live")}
                 </span>
               </div>
@@ -1600,22 +1756,26 @@ export default function ParentDashboardScreen() {
                 <h4 className="text-xs sm:text-sm font-black text-[#141779] group-hover:text-purple-700 transition-colors leading-tight truncate">
                   {t("challenges", "Challenges")}
                 </h4>
-                <p className="text-xs sm:text-[13px] text-slate-500 font-medium truncate mt-0.5 leading-tight" title={t("challenges_sub", "Build strong daily habits.")}>
+                <p
+                  className="text-xs sm:text-[13px] text-slate-500 font-medium truncate mt-0.5 leading-tight"
+                  title={t("challenges_sub", "Build strong daily habits.")}
+                >
                   {t("challenges_sub", "Build strong daily habits.")}
                 </p>
               </div>
             </button>
 
-            {/* Rewards */}
+            {/* 4. Rewards */}
             <button
+              type="button"
               onClick={() => navigate('/parent/achievements')}
-              className="bg-white hover:bg-emerald-50/30 rounded-2xl p-2.5 sm:p-3 border border-slate-200/80 hover:border-emerald-300 shadow-2xs hover:shadow-xs transition-all text-left flex flex-col justify-start group cursor-pointer min-w-0 w-full"
+              className="bg-white hover:bg-slate-50/80 rounded-2xl p-3 sm:p-3.5 border border-slate-200/90 hover:border-emerald-300 shadow-2xs hover:shadow-xs transition-all text-left flex flex-col justify-between group cursor-pointer min-w-0 w-full min-h-[105px] active:scale-[0.98]"
             >
               <div className="flex items-center justify-between w-full mb-2">
-                <div className="w-7 h-7 rounded-lg bg-emerald-50 border border-emerald-100 text-[#007168] flex items-center justify-center shrink-0">
-                  <Award size={15} />
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200/70 text-[#007168] flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
+                  <Award size={16} />
                 </div>
-                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-xs font-black uppercase px-2.5 py-0.5 rounded-full tracking-wider shrink-0">
+                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[10px] sm:text-xs font-black uppercase px-2 py-0.5 rounded-full tracking-wider shrink-0 shadow-2xs">
                   {t("badges", "Badges")}
                 </span>
               </div>
@@ -1623,7 +1783,10 @@ export default function ParentDashboardScreen() {
                 <h4 className="text-xs sm:text-sm font-black text-[#141779] group-hover:text-emerald-700 transition-colors leading-tight truncate">
                   {t("rewards", "Rewards")}
                 </h4>
-                <p className="text-xs sm:text-[13px] text-slate-500 font-medium truncate mt-0.5 leading-tight" title={t("rewards_sub", "View your milestones.")}>
+                <p
+                  className="text-xs sm:text-[13px] text-slate-500 font-medium truncate mt-0.5 leading-tight"
+                  title={t("rewards_sub", "View your milestones.")}
+                >
                   {t("rewards_sub", "View your milestones.")}
                 </p>
               </div>
@@ -1632,6 +1795,7 @@ export default function ParentDashboardScreen() {
 
           {/* Expanded Prominent DNA Horizontal Card */}
           <button
+            type="button"
             onClick={() => navigate('/parent/learning-dna')}
             className="w-full bg-white hover:bg-teal-50/20 rounded-2xl py-3.5 sm:py-4 px-3.5 sm:px-4 border border-slate-200/80 hover:border-teal-300 shadow-2xs hover:shadow-xs transition-all flex items-center justify-between group cursor-pointer text-left mt-1"
           >
@@ -1660,710 +1824,753 @@ export default function ParentDashboardScreen() {
         </div>
 
         {/* 4. Recent Kids Activity (Moved Below Parent Learning) */}
-        {(() => {
-          const actType = (lastActivityDetails?.type || "").toLowerCase();
-          const actTitle = (lastActivityDetails?.title || "").trim();
-          const lowerTitle = actTitle.toLowerCase();
-          const isMockTitle = !actTitle ||
-            lowerTitle.includes("exploring new quests") ||
-            lowerTitle === "activity logged" ||
-            lowerTitle === "no recent activity" ||
-            lowerTitle === "activity";
+        {
+          (() => {
+            const actType = (lastActivityDetails?.type || "").toLowerCase();
+            const actTitle = (lastActivityDetails?.title || "").trim();
+            const lowerTitle = actTitle.toLowerCase();
+            const isMockTitle = !actTitle ||
+              lowerTitle.includes("exploring new quests") ||
+              lowerTitle === "activity logged" ||
+              lowerTitle === "no recent activity" ||
+              lowerTitle === "activity";
 
-          const isReadingType = actType === "reading" || actType === "chapter";
-          const isValidLastActivity = Boolean(
-            lastActivityDetails &&
-            !isMockTitle &&
-            (
-              (isReadingType && (lastActivityDetails.timeTaken >= 15 || lastActivityDetails.completed)) ||
-              (!isReadingType && (lastActivityDetails.totalQuestions > 0 || lastActivityDetails.timeTaken >= 15 || lastActivityDetails.completed))
-            )
-          );
+            const isReadingType = actType === "reading" || actType === "chapter";
+            const isValidLastActivity = Boolean(
+              lastActivityDetails &&
+              !isMockTitle &&
+              (
+                (isReadingType && (lastActivityDetails.timeTaken >= 15 || lastActivityDetails.completed)) ||
+                (!isReadingType && (lastActivityDetails.totalQuestions > 0 || lastActivityDetails.timeTaken >= 15 || lastActivityDetails.completed))
+              )
+            );
 
-          return (
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between px-1">
-                <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-600">
-                  {t("recent_activity", "Recent Activity")}
-                </h3>
-                {isValidLastActivity && (
+            return (
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between px-1">
+                  <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-600">
+                    {t("recent_activity", "Recent Activity")}
+                  </h3>
+                  {isValidLastActivity && (
+                    <button
+                      onClick={() => navigate('/parent/kids-activity')}
+                      className="text-xs sm:text-[13px] font-bold text-indigo-700 hover:text-indigo-900 transition-colors cursor-pointer flex items-center gap-1 group"
+                    >
+                      <span>{t("view_all", "View All").replace(/[-–—]?\s*[>→›»]/g, "").replace(/->/g, "").trim()}</span>
+                      <ChevronRight size={13} className="group-hover:translate-x-0.5 transition-transform shrink-0" />
+                    </button>
+                  )}
+                </div>
+
+                {isValidLastActivity ? (
                   <button
                     onClick={() => navigate('/parent/kids-activity')}
-                    className="text-xs sm:text-[13px] font-bold text-indigo-700 hover:text-indigo-900 transition-colors cursor-pointer flex items-center gap-1 group"
+                    className="w-full bg-white rounded-2xl p-3 border border-slate-200/70 shadow-xs flex justify-between items-center hover:bg-slate-50 hover:shadow-sm transition-all group gap-3 cursor-pointer text-left"
                   >
-                    <span>{t("view_all", "View All").replace(/[-–—]?\s*[>→›»]/g, "").replace(/->/g, "").trim()}</span>
-                    <ChevronRight size={13} className="group-hover:translate-x-0.5 transition-transform shrink-0" />
-                  </button>
-                )}
-              </div>
-
-              {isValidLastActivity ? (
-                <button
-                  onClick={() => navigate('/parent/kids-activity')}
-                  className="w-full bg-white rounded-2xl p-3 border border-slate-200/70 shadow-xs flex justify-between items-center hover:bg-slate-50 hover:shadow-sm transition-all group gap-3 cursor-pointer text-left"
-                >
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
-                      <Clock size={17} className="text-[#141779]" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-sm font-black text-[#141779] leading-tight truncate mb-1">
-                        {translateActivityTitle(lastActivityDetails.title)}
-                      </h4>
-                      <div className="flex items-center gap-2 text-xs font-medium text-slate-500 flex-nowrap overflow-hidden">
-                        <span className={`px-2 py-0.5 rounded-md text-[11px] font-black uppercase tracking-wider shrink-0 whitespace-nowrap ${
-                          lastActivityDetails.type === "reading" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
-                          lastActivityDetails.type === "battle" ? "bg-rose-50 text-rose-700 border border-rose-200" :
-                          lastActivityDetails.type === "multiplayer" ? "bg-purple-50 text-purple-700 border border-purple-200" :
-                          "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                        }`}>
-                          {lastActivityDetails.type === "reading" ? `📖 ${t("reading", "Reading")}` :
-                           lastActivityDetails.type === "battle" ? `🐉 ${t("boss", "Boss")}` :
-                           lastActivityDetails.type === "multiplayer" ? `⚔️ ${t("arena", "Arena")}` :
-                           `🎯 ${t("quiz", "Quiz")}`}
-                        </span>
-                        {lastActivityDetails.timeTaken > 0 && (
-                          <span className="shrink-0 whitespace-nowrap">⏱️ {Math.round(lastActivityDetails.timeTaken / 60) || 1}m</span>
-                        )}
-                        {lastActivityDetails?.timeTaken > 0 && lastActivityDetails?.totalQuestions > 0 && <span className="shrink-0 text-slate-400">•</span>}
-                        {lastActivityDetails?.totalQuestions > 0 && (
-                          <span className="text-indigo-600 font-bold shrink-0 whitespace-nowrap">
-                            🎯 {lastActivityDetails.correctQuestions}/{lastActivityDetails.totalQuestions} {t("correct", "Correct")}
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
+                        <Clock size={17} className="text-[#141779]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-sm font-black text-[#141779] leading-tight truncate mb-1">
+                          {translateActivityTitle(lastActivityDetails.title)}
+                        </h4>
+                        <div className="flex items-center gap-2 text-xs font-medium text-slate-500 flex-nowrap overflow-hidden">
+                          <span className={`px-2 py-0.5 rounded-md text-[11px] font-black uppercase tracking-wider shrink-0 whitespace-nowrap ${lastActivityDetails.type === "reading" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
+                            lastActivityDetails.type === "battle" ? "bg-rose-50 text-rose-700 border border-rose-200" :
+                              lastActivityDetails.type === "multiplayer" ? "bg-purple-50 text-purple-700 border border-purple-200" :
+                                "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                            }`}>
+                            {lastActivityDetails.type === "reading" ? `📖 ${t("reading", "Reading")}` :
+                              lastActivityDetails.type === "battle" ? `🐉 ${t("boss", "Boss")}` :
+                                lastActivityDetails.type === "multiplayer" ? `⚔️ ${t("arena", "Arena")}` :
+                                  `🎯 ${t("quiz", "Quiz")}`}
                           </span>
-                        )}
+                          {lastActivityDetails.timeTaken > 0 && (
+                            <span className="shrink-0 whitespace-nowrap">⏱️ {Math.round(lastActivityDetails.timeTaken / 60) || 1}m</span>
+                          )}
+                          {lastActivityDetails?.timeTaken > 0 && lastActivityDetails?.totalQuestions > 0 && <span className="shrink-0 text-slate-400">•</span>}
+                          {lastActivityDetails?.totalQuestions > 0 && (
+                            <span className="text-indigo-600 font-bold shrink-0 whitespace-nowrap">
+                              🎯 {lastActivityDetails.correctQuestions}/{lastActivityDetails.totalQuestions} {t("correct", "Correct")}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronRight size={16} className="text-[#141779] group-hover:translate-x-0.5 transition-transform shrink-0" />
+                  </button>
+                ) : (
+                  <div className="w-full bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex items-center justify-between text-left">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center shrink-0 text-slate-400">
+                        <Activity size={18} />
+                      </div>
+                      <div>
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-600 leading-tight">
+                          {t("no_recent_activity_title", "No recent activity")}
+                        </h4>
+                        <p className="text-xs text-slate-500 font-medium mt-0.5">
+                          {t("child_hasnt_completed_activities", "Your child hasn't completed any activities yet.")}
+                        </p>
                       </div>
                     </div>
                   </div>
-                  <ChevronRight size={16} className="text-[#141779] group-hover:translate-x-0.5 transition-transform shrink-0" />
-                </button>
-              ) : (
-                <div className="w-full bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex items-center justify-between text-left">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center shrink-0 text-slate-400">
-                      <Activity size={18} />
-                    </div>
-                    <div>
-                      <h4 className="text-xs sm:text-sm font-bold text-slate-600 leading-tight">
-                        {t("no_recent_activity_title", "No recent activity")}
-                      </h4>
-                      <p className="text-xs text-slate-500 font-medium mt-0.5">
-                        {t("child_hasnt_completed_activities", "Your child hasn't completed any activities yet.")}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })()}
+                )}
+              </div>
+            );
+          })()
+        }
 
       </main>
 
 
 
       {/* Graph Modal */}
-      {modalType && (
-        <div 
-          onClick={handleCloseModal}
-          onTouchMove={(e) => {
-            if (e.target === e.currentTarget) e.preventDefault();
-          }}
-          className="fixed inset-0 bg-black/40 z-[9999] flex justify-center items-end sm:items-center p-3 pb-24 sm:p-5 backdrop-blur-sm animate-in fade-in duration-300 overscroll-contain select-none"
-          style={{ zIndex: 9999, overscrollBehavior: "contain", touchAction: "none" }}
-        >
-          <div 
-            onClick={(e) => e.stopPropagation()}
-            className="bg-[#f7f9fb] w-full sm:w-[400px] max-w-full rounded-3xl max-h-[85vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-10 duration-300 overscroll-contain select-text mb-1 sm:mb-0"
-            style={{ zIndex: 10000, overscrollBehavior: "contain", touchAction: "pan-y" }}
+      {
+        modalType && (
+          <div
+            onClick={handleCloseModal}
+            onTouchMove={(e) => {
+              if (e.target === e.currentTarget) e.preventDefault();
+            }}
+            className="fixed inset-0 bg-black/40 z-[9999] flex justify-center items-end sm:items-center p-3 pb-24 sm:p-5 backdrop-blur-sm animate-in fade-in duration-300 overscroll-contain select-none"
+            style={{ zIndex: 9999, overscrollBehavior: "contain", touchAction: "none" }}
           >
-            <div className="flex justify-between items-center p-5 border-b border-gray-100 shrink-0">
-              <div className="flex items-center gap-3">
-                <button 
-                  onClick={handleCloseModal} 
-                  className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors cursor-pointer"
-                  aria-label="Back"
-                >
-                  <ArrowLeft size={20} color="#141779" />
-                </button>
-                <h2 className="text-lg font-bold text-[#141779]">
-                  {modalType === "strengths" ? t("cognitive_strengths_modal_title", "💪 Cognitive Strengths") :
-                    modalType === "weaknesses" ? t("areas_for_review_modal_title", "⚠️ Areas for Review") :
-                    modalType === "risks" ? t("risk_alerts_modal_title", "🔔 Risk Alerts") :
-                      t("cognitive_profile_graph", "Cognitive Profile Graph")}
-                </h2>
-              </div>
-              <button 
-                onClick={handleCloseModal} 
-                className="p-2 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors cursor-pointer"
-                aria-label="Close"
-              >
-                <X size={20} color="#464652" />
-              </button>
-            </div>
-
-            <div 
-              className="flex-1 overflow-y-auto p-5 pb-7 space-y-4 overscroll-contain"
-              style={{ overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#f7f9fb] w-full sm:w-[400px] max-w-full rounded-3xl max-h-[85vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-10 duration-300 overscroll-contain select-text mb-1 sm:mb-0"
+              style={{ zIndex: 10000, overscrollBehavior: "contain", touchAction: "pan-y" }}
             >
-              {!hasEnoughData || subjectBreakdown.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-8 bg-slate-50 border border-slate-200/80 rounded-2xl text-center my-4">
-                  <span className="text-4xl mb-2">📊</span>
-                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">{t("no_data_available", "No Data Available")}</h4>
-                  <p className="text-xs text-slate-500 font-bold mt-2 leading-relaxed">
-                    {t("no_test_activity_yet", "No test data or activity recorded yet. Complete quizzes or tests to unlock personalized performance trend graphs!")}
-                  </p>
+              <div className="flex justify-between items-center p-5 border-b border-gray-100 shrink-0">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleCloseModal}
+                    className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors cursor-pointer"
+                    aria-label="Back"
+                  >
+                    <ArrowLeft size={20} color="#141779" />
+                  </button>
+                  <h2 className="text-lg font-bold text-[#141779]">
+                    {modalType === "strengths" ? t("cognitive_strengths_modal_title", "💪 Cognitive Strengths") :
+                      modalType === "weaknesses" ? t("areas_for_review_modal_title", "⚠️ Areas for Review") :
+                        modalType === "risks" ? t("risk_alerts_modal_title", "🔔 Risk Alerts") :
+                          t("cognitive_profile_graph", "Cognitive Profile Graph")}
+                  </h2>
                 </div>
-              ) : modalType === "risks" && actualRiskSubjects.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-8 bg-emerald-50 border border-emerald-200 rounded-2xl text-center my-4">
-                  <span className="text-4xl mb-2">✅</span>
-                  <h4 className="text-sm font-black text-emerald-900 uppercase tracking-wider">{t("no_risk_alerts", "No Risk Alerts")}</h4>
-                  <p className="text-xs text-emerald-700 font-bold mt-2 leading-relaxed">
-                    {t("no_risk_alerts_desc", { name: cleanChildName, defaultValue: `All clear! ${cleanChildName} has no subjects below 70% right now.` })}
-                  </p>
-                </div>
-              ) : modalType === "weaknesses" && actualWeakSubjects.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-8 bg-emerald-50 border border-emerald-200 rounded-2xl text-center my-4">
-                  <span className="text-4xl mb-2">🎉</span>
-                  <h4 className="text-sm font-black text-emerald-900 uppercase tracking-wider">{t("no_weaknesses_title", "No Weaknesses Detected")}</h4>
-                  <p className="text-xs text-emerald-700 font-bold mt-2 leading-relaxed">
-                    {t("no_weaknesses_desc", {
-                      name: cleanChildName,
-                      defaultValue: `Great job! ${cleanChildName} has all active subjects performing consistently at or above 70%.`
-                    })}
-                  </p>
-                </div>
-              ) : modalType === "strengths" && actualStrengthSubjects.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-8 bg-slate-50 border border-slate-200 rounded-2xl text-center my-4">
-                  <span className="text-4xl mb-2">💪</span>
-                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">{t("no_strengths_title", "No Strengths Yet")}</h4>
-                  <p className="text-xs text-slate-500 font-bold mt-2 leading-relaxed">
-                    {t("keep_playing_build_strengths", "Keep playing to build up strong subjects at or above 70%!")}
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {/* Modal-Specific Distinct Graph Card */}
-                  {modalType && renderGraphCard(modalType)}
-
-                  {/* Subject Breakdown / Weaknesses Section */}
-                  <div className="space-y-3">
-                    <h3 className="text-[13px] font-bold text-[#141779] border-b border-gray-100 pb-2">
-                      {modalType === "strengths"
-                        ? t("top_performing_subjects", "Top Performing Subject(s) (≥ 70%)")
-                        : modalType === "weaknesses"
-                        ? t("areas_for_review_title", "Areas for Improvement (< 70% for 2+ Days)")
-                        : modalType === "risks"
-                        ? t("at_risk_subjects_title", "At-Risk Subjects (Day 1 < 70%)")
-                        : t("performance_by_subject", "Performance by Subject")}
-                    </h3>
-
-                    {modalType === "weaknesses" ? (
-                      /* Enhanced Weaknesses Cards (consecutive days < 70%) */
-                      <div className="space-y-3">
-                        {actualWeakSubjects.map((sb, idx) => {
-                          const subjName = translateSubjectName(sb.subject);
-                          const isDeepRecovery = (sb.accuracy ?? 0) < 50;
-
-                          return (
-                            <div
-                              key={idx}
-                              className="bg-white rounded-2xl p-4 border border-rose-200/90 shadow-xs space-y-3"
-                            >
-                              <div className="flex justify-between items-center">
-                                <h4 className="text-sm font-black text-slate-800 flex items-center gap-1.5">
-                                  {actualWeakSubjects.length > 1 && (
-                                    <span 
-                                      className="w-2.5 h-2.5 rounded-full shrink-0 ring-2 ring-white shadow-2xs" 
-                                      style={{ backgroundColor: getCategorySubjectChartColor("weaknesses", idx).color }} 
-                                    />
-                                  )}
-                                  <span>{subjName}</span>
-                                  <span className="text-xs">⚠️</span>
-                                </h4>
-                                <span className="text-xs font-black px-2.5 py-1 rounded-full bg-rose-50 text-[#dc2626] border border-rose-200 flex items-center gap-1">
-                                  <span className="text-[10px]">●</span>
-                                  <span>{t("status_needs_improvement", "Needs Improvement")}</span>
-                                </span>
-                              </div>
-
-                              <div className="h-2.5 w-full bg-rose-100/70 rounded-full overflow-hidden">
-                                <div
-                                  className="h-full rounded-full transition-all duration-700"
-                                  style={{ 
-                                    width: `${Math.min(100, Math.max(5, sb.accuracy))}%`,
-                                    backgroundColor: actualWeakSubjects.length > 1 ? getCategorySubjectChartColor("weaknesses", idx).color : "#dc2626"
-                                  }}
-                                />
-                              </div>
-
-                              {(sb.wrongAnswers !== undefined && sb.correctAnswers !== undefined && (sb.correctAnswers + sb.wrongAnswers > 0)) && (
-                                <div className="flex items-center gap-3 text-xs text-slate-500 font-semibold pt-0.5">
-                                  <span>{t("accuracy_label", "Accuracy")}: {sb.accuracy}%</span>
-                                  <span>•</span>
-                                  <span className="text-slate-600">{t("solved_count", { correct: sb.correctAnswers, total: sb.correctAnswers + sb.wrongAnswers, defaultValue: `${sb.correctAnswers}/${sb.correctAnswers + sb.wrongAnswers} correct` })}</span>
-                                  {sb.wrongAnswers > 0 && (
-                                    <>
-                                      <span>•</span>
-                                      <span className="text-[#dc2626]">{t("mistakes_count", { count: sb.wrongAnswers, defaultValue: `${sb.wrongAnswers} mistakes` })}</span>
-                                    </>
-                                  )}
-                                </div>
-                              )}
-
-                              {/* Dynamic AI Insight (LLM Mistake Pattern Analysis & 7-Day / 15-Day Structured Recovery Plan) */}
-                              {(() => {
-                                const normSubj = (sb.subject || "").toLowerCase();
-                                const subjectMistakes = (reportData?.mistakes || []).filter((m: any) => {
-                                  const mSubj = (m.subject || "").toLowerCase();
-                                  return mSubj === normSubj || mSubj.includes(normSubj) || normSubj.includes(mSubj);
-                                });
-                                return (
-                                  <DynamicAiInsightCard
-                                    mode="weakness"
-                                    subject={subjName}
-                                    accuracy={sb.accuracy}
-                                    mistakeCount={sb.wrongAnswers !== undefined ? sb.wrongAnswers : subjectMistakes.length}
-                                    correctCount={sb.correctAnswers ?? 0}
-                                    recentTrend={sb.trend7Day || sb.timeline || activeTrend}
-                                    incorrectQuestionLogs={subjectMistakes}
-                                    studentName={cleanChildName}
-                                  />
-                                );
-                              })()}
-                            </div>
-                          );
-                        })}
-
-                        {actualWeakSubjects.length === 0 && (
-                          <p className="text-xs text-[#006a62] font-semibold bg-[#006a62]/10 p-3.5 rounded-xl text-center">
-                            {t("no_weaknesses_desc", {
-                              name: cleanChildName,
-                              defaultValue: `🎉 Fantastic! ${cleanChildName} has all active subjects performing at or above 70%.`
-                            })}
-                          </p>
-                        )}
-                      </div>
-                    ) : modalType === "risks" ? (
-                      /* Enhanced Risks Cards (Day 1 below 70%) */
-                      <div className="space-y-3">
-                        {actualRiskSubjects.map((sb, idx) => {
-                          const subjName = translateSubjectName(sb.subject);
-                          return (
-                            <div
-                              key={idx}
-                              className="bg-white rounded-2xl p-4 border border-amber-200/90 shadow-xs space-y-2.5"
-                            >
-                              <div className="flex justify-between items-center">
-                                <h4 className="text-sm font-black text-slate-800 flex items-center gap-1.5">
-                                  {actualRiskSubjects.length > 1 && (
-                                    <span 
-                                      className="w-2.5 h-2.5 rounded-full shrink-0 ring-2 ring-white shadow-2xs" 
-                                      style={{ backgroundColor: getCategorySubjectChartColor("risks", idx).color }} 
-                                    />
-                                  )}
-                                  <span>{subjName}</span>
-                                  <span className="text-xs">🔔</span>
-                                </h4>
-                                <span className="text-xs font-black px-2.5 py-1 rounded-full bg-amber-50 text-[#b45309] border border-amber-200 flex items-center gap-1">
-                                  <span className="text-[10px]">●</span>
-                                  <span>{t("status_risk_day1", "At Risk (Day 1 <70%)")}</span>
-                                </span>
-                              </div>
-
-                              <div className="h-2.5 w-full bg-amber-100/70 rounded-full overflow-hidden">
-                                <div
-                                  className="h-full rounded-full transition-all duration-700"
-                                  style={{ 
-                                    width: `${Math.min(100, Math.max(5, sb.accuracy))}%`,
-                                    backgroundColor: actualRiskSubjects.length > 1 ? getCategorySubjectChartColor("risks", idx).color : "#d97706"
-                                  }}
-                                />
-                              </div>
-
-                              {(sb.wrongAnswers !== undefined && sb.correctAnswers !== undefined && (sb.correctAnswers + sb.wrongAnswers > 0)) && (
-                                <div className="flex items-center gap-3 text-xs text-slate-500 font-semibold pt-0.5">
-                                  <span>{t("accuracy_label", "Accuracy")}: {sb.accuracy}%</span>
-                                  <span>•</span>
-                                  <span className="text-slate-600">{t("solved_count", { correct: sb.correctAnswers, total: sb.correctAnswers + sb.wrongAnswers, defaultValue: `${sb.correctAnswers}/${sb.correctAnswers + sb.wrongAnswers} correct` })}</span>
-                                </div>
-                              )}
-
-                              {/* Dynamic AI Insight (Day 1 Recovery Protocol) */}
-                              {(() => {
-                                const normSubj = (sb.subject || "").toLowerCase();
-                                const subjectMistakes = (reportData?.mistakes || []).filter((m: any) => {
-                                  const mSubj = (m.subject || "").toLowerCase();
-                                  return mSubj === normSubj || mSubj.includes(normSubj) || normSubj.includes(mSubj);
-                                });
-                                return (
-                                  <DynamicAiInsightCard
-                                    mode="risk"
-                                    subject={subjName}
-                                    accuracy={sb.accuracy}
-                                    mistakeCount={sb.wrongAnswers !== undefined ? sb.wrongAnswers : subjectMistakes.length}
-                                    correctCount={sb.correctAnswers ?? 0}
-                                    recentTrend={sb.trend7Day || sb.timeline || activeTrend}
-                                    incorrectQuestionLogs={subjectMistakes}
-                                    studentName={cleanChildName}
-                                  />
-                                );
-                              })()}
-                            </div>
-                          );
-                        })}
-
-                        {actualRiskSubjects.length === 0 && (
-                          <p className="text-xs text-[#006a62] font-semibold bg-[#006a62]/10 p-3.5 rounded-xl text-center">
-                            {t("no_risk_alerts_desc", { name: cleanChildName, defaultValue: `All clear! ${cleanChildName} has no subjects below 70% right now.` })}
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      /* modalType === "strengths": Enhanced Strengths Cards (with ties displayed concurrently) */
-                      <div className="space-y-3">
-                        {actualStrengthSubjects.map((sb, idx) => {
-                          const subjName = translateSubjectName(sb.subject);
-                          return (
-                            <div
-                              key={idx}
-                              className="bg-white rounded-2xl p-4 border border-emerald-200/90 shadow-xs space-y-2.5"
-                            >
-                              <div className="flex justify-between items-center">
-                                <h4 className="text-sm font-black text-[#006a62] flex items-center gap-1.5">
-                                  {actualStrengthSubjects.length > 1 && (
-                                    <span 
-                                      className="w-2.5 h-2.5 rounded-full shrink-0 ring-2 ring-white shadow-2xs" 
-                                      style={{ backgroundColor: getCategorySubjectChartColor("strengths", idx).color }} 
-                                    />
-                                  )}
-                                  <span>{subjName}</span>
-                                  <span className="text-xs">🏆</span>
-                                </h4>
-                                <span className="text-xs font-black px-2.5 py-1 rounded-full bg-emerald-50 text-[#006a62] border border-emerald-200 flex items-center gap-1">
-                                  <span className="text-[10px]">●</span>
-                                  <span>{t("top_performing_badge", "Top Performing (≥70%)")}</span>
-                                </span>
-                              </div>
-
-                              <div className="h-2.5 w-full bg-emerald-100/70 rounded-full overflow-hidden">
-                                <div
-                                  className="h-full rounded-full transition-all duration-700"
-                                  style={{ 
-                                    width: `${Math.min(100, Math.max(5, sb.accuracy))}%`,
-                                    backgroundColor: actualStrengthSubjects.length > 1 ? getCategorySubjectChartColor("strengths", idx).color : "#006a62"
-                                  }}
-                                />
-                              </div>
-
-                              {(sb.correctAnswers !== undefined && sb.wrongAnswers !== undefined && (sb.correctAnswers + sb.wrongAnswers > 0)) && (
-                                <div className="flex items-center gap-3 text-xs text-slate-500 font-semibold pt-0.5">
-                                  <span>{t("accuracy_label", "Accuracy")}: {sb.accuracy}%</span>
-                                  <span>•</span>
-                                  <span className="text-slate-600">{t("solved_count", { correct: sb.correctAnswers, total: sb.correctAnswers + sb.wrongAnswers, defaultValue: `${sb.correctAnswers}/${sb.correctAnswers + sb.wrongAnswers} correct` })}</span>
-                                </div>
-                              )}
-
-                              {/* Interactive AI Insight Trigger Button (opens high-end Mastery Modal) */}
-                              <DynamicAiInsightCard
-                                mode="strengths"
-                                subject={subjName}
-                                accuracy={sb.accuracy}
-                                mistakeCount={sb.wrongAnswers ?? 0}
-                                correctCount={sb.correctAnswers ?? 0}
-                                recentTrend={sb.trend7Day || sb.timeline || activeTrend}
-                                incorrectQuestionLogs={[]}
-                                studentName={cleanChildName}
-                              />
-                            </div>
-                          );
-                        })}
-
-                        {actualStrengthSubjects.length === 0 && (
-                          <p className="text-xs text-[#767683] font-semibold bg-slate-100 p-3.5 rounded-xl text-center">
-                            {t("keep_playing_build_strengths", "Keep playing to build up strong subjects at or above 70%!")}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Notifications Side Panel / Modal Drawer */}
-      {showNotifications && (
-        <div 
-          onClick={() => setShowNotifications(false)}
-          onTouchMove={(e) => {
-            if (e.target === e.currentTarget) e.preventDefault();
-          }}
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[9999] flex justify-end animate-in fade-in duration-200 overscroll-contain select-none"
-          style={{ zIndex: 9999, overscrollBehavior: "contain", touchAction: "none" }}
-        >
-          <div 
-            onClick={(e) => e.stopPropagation()}
-            className="w-full sm:w-[420px] h-full bg-[#f7f9fb] shadow-2xl flex flex-col pb-24 sm:pb-0 animate-in slide-in-from-right duration-300 overscroll-contain select-text"
-            style={{ zIndex: 10000, overscrollBehavior: "contain", touchAction: "pan-y" }}
-          >
-            {/* Header */}
-            <div className="flex justify-between items-center p-5 sm:p-6 border-b border-slate-200/80 bg-white">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779]">
-                  <Bell size={18} />
-                </div>
-                <h2 className="text-xl font-black text-[#141779]">
-                  {t("notifications", "Notifications")}
-                </h2>
+                <button
+                  onClick={handleCloseModal}
+                  className="p-2 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors cursor-pointer"
+                  aria-label="Close"
+                >
+                  <X size={20} color="#464652" />
+                </button>
               </div>
-              <button 
-                onClick={() => setShowNotifications(false)} 
-                className="w-9 h-9 flex items-center justify-center bg-slate-100 rounded-full hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
-                aria-label="Close"
-              >
-                <X size={18} />
-              </button>
-            </div>
 
-            {/* List */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3.5">
-              {notifications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center py-16 px-4">
-                  <div className="w-16 h-16 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779] mb-3 shadow-xs">
-                    <Bell size={28} className="opacity-70" />
+              <div
+                className="flex-1 overflow-y-auto p-5 pb-7 space-y-4 overscroll-contain"
+                style={{ overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}
+              >
+                {!hasEnoughData || subjectBreakdown.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center p-8 bg-slate-50 border border-slate-200/80 rounded-2xl text-center my-4">
+                    <span className="text-4xl mb-2">📊</span>
+                    <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">{t("no_data_available", "No Data Available")}</h4>
+                    <p className="text-xs text-slate-500 font-bold mt-2 leading-relaxed">
+                      {t("no_test_activity_yet", "No test data or activity recorded yet. Complete quizzes or tests to unlock personalized performance trend graphs!")}
+                    </p>
                   </div>
-                  <p className="text-base font-bold text-[#141779]">
-                    {t("no_notifications_yet", "No notifications yet!")}
-                  </p>
-                  <p className="text-xs font-medium text-slate-500 mt-1 max-w-[240px]">
-                    {t("no_recent_activity", "No recent activity to show.")}
-                  </p>
-                </div>
-              ) : (
-                notifications.map((notif, idx) => {
-                  let iconBadge = <Bell size={18} />;
-                  let badgeStyle = "bg-indigo-50 text-[#141779] border-indigo-100";
-                  
-                  if (notif.type === "gamification") {
-                    iconBadge = <Sparkles size={18} />;
-                    badgeStyle = "bg-teal-50 text-teal-700 border-teal-200";
-                  } else if (notif.type === "habit") {
-                    iconBadge = <Flame size={18} />;
-                    badgeStyle = "bg-amber-50 text-amber-700 border-amber-200";
-                  } else if (notif.type === "learning") {
-                    iconBadge = <BookOpen size={18} />;
-                    badgeStyle = "bg-indigo-50 text-[#141779] border-indigo-200";
-                  } else if (notif.type === "reward" || notif.type === "spin") {
-                    iconBadge = <Trophy size={18} />;
-                    badgeStyle = "bg-purple-50 text-purple-700 border-purple-200";
-                  } else if (notif.type === "warning" || notif.type === "risk") {
-                    iconBadge = <AlertTriangle size={18} />;
-                    badgeStyle = "bg-rose-50 text-rose-700 border-rose-200";
-                  }
-                  
-                  return (
-                    <div 
-                      key={notif._id || idx} 
-                      className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-[0_2px_8px_rgba(20,23,121,0.04)] hover:shadow-md hover:border-indigo-200/80 transition-all flex items-start gap-3.5 text-left"
-                    >
-                      <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs mt-0.5 ${badgeStyle}`}>
-                        {iconBadge}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2 mb-1">
-                          <h4 className="text-[15px] font-bold text-[#141779] leading-snug">
-                            {formatNotifTitle(notif.title)}
-                          </h4>
-                          {notif.createdAt && (
-                            <span className="text-xs font-semibold text-slate-500 shrink-0 mt-0.5">
-                              {new Date(notif.createdAt).toLocaleString(undefined, { 
-                                month: 'short', 
-                                day: 'numeric', 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
+                ) : modalType === "risks" && actualRiskSubjects.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center p-8 bg-emerald-50 border border-emerald-200 rounded-2xl text-center my-4">
+                    <span className="text-4xl mb-2">✅</span>
+                    <h4 className="text-sm font-black text-emerald-900 uppercase tracking-wider">{t("no_risk_alerts", "No Risk Alerts")}</h4>
+                    <p className="text-xs text-emerald-700 font-bold mt-2 leading-relaxed">
+                      {t("no_risk_alerts_desc", { name: cleanChildName, defaultValue: `All clear! ${cleanChildName} has no subjects below 70% right now.` })}
+                    </p>
+                  </div>
+                ) : modalType === "weaknesses" && actualWeakSubjects.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center p-8 bg-emerald-50 border border-emerald-200 rounded-2xl text-center my-4">
+                    <span className="text-4xl mb-2">🎉</span>
+                    <h4 className="text-sm font-black text-emerald-900 uppercase tracking-wider">{t("no_weaknesses_title", "No Weaknesses Detected")}</h4>
+                    <p className="text-xs text-emerald-700 font-bold mt-2 leading-relaxed">
+                      {t("no_weaknesses_desc", {
+                        name: cleanChildName,
+                        defaultValue: `Great job! ${cleanChildName} has all active subjects performing consistently at or above 70%.`
+                      })}
+                    </p>
+                  </div>
+                ) : modalType === "strengths" && actualStrengthSubjects.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center p-8 bg-slate-50 border border-slate-200 rounded-2xl text-center my-4">
+                    <span className="text-4xl mb-2">💪</span>
+                    <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">{t("no_strengths_title", "No Strengths Yet")}</h4>
+                    <p className="text-xs text-slate-500 font-bold mt-2 leading-relaxed">
+                      {t("keep_playing_build_strengths", "Keep playing to build up strong subjects at or above 70%!")}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Modal-Specific Distinct Graph Card */}
+                    {modalType && renderGraphCard(modalType)}
+
+                    {/* Subject Breakdown / Weaknesses Section */}
+                    <div className="space-y-3">
+                      <h3 className="text-[13px] font-bold text-[#141779] border-b border-gray-100 pb-2">
+                        {modalType === "strengths"
+                          ? t("top_performing_subjects", "Top Performing Subject(s) (≥ 70%)")
+                          : modalType === "weaknesses"
+                            ? t("areas_for_review_title", "Areas for Improvement (< 70% for 2+ Days)")
+                            : modalType === "risks"
+                              ? t("at_risk_subjects_title", "At-Risk Subjects (Day 1 < 70%)")
+                              : t("performance_by_subject", "Performance by Subject")}
+                      </h3>
+
+                      {modalType === "weaknesses" ? (
+                        /* Enhanced Weaknesses Cards (consecutive days < 70%) */
+                        <div className="space-y-3">
+                          {actualWeakSubjects.map((sb, idx) => {
+                            const subjName = formatSubjectTitle(sb.subject);
+                            const isDeepRecovery = (sb.accuracy ?? 0) < 50;
+
+                            return (
+                              <div
+                                key={idx}
+                                className="bg-white rounded-2xl p-4 border border-rose-200/90 shadow-xs space-y-3"
+                              >
+                                <div className="flex justify-between items-center">
+                                  <h4 className="text-sm font-black text-slate-800 flex items-center gap-1.5">
+                                    {actualWeakSubjects.length > 1 && (
+                                      <span
+                                        className="w-2.5 h-2.5 rounded-full shrink-0 ring-2 ring-white shadow-2xs"
+                                        style={{ backgroundColor: getCategorySubjectChartColor("weaknesses", idx).color }}
+                                      />
+                                    )}
+                                    <span>{subjName}</span>
+                                    <span className="text-xs">⚠️</span>
+                                  </h4>
+                                  <span className="text-xs font-black px-2.5 py-1 rounded-full bg-rose-50 text-[#dc2626] border border-rose-200 flex items-center gap-1">
+                                    <span className="text-[10px]">●</span>
+                                    <span>{t("status_needs_improvement", "Needs Improvement")}</span>
+                                  </span>
+                                </div>
+
+                                <div className="h-2.5 w-full bg-rose-100/70 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full rounded-full transition-all duration-700"
+                                    style={{
+                                      width: `${Math.min(100, Math.max(5, sb.accuracy))}%`,
+                                      backgroundColor: actualWeakSubjects.length > 1 ? getCategorySubjectChartColor("weaknesses", idx).color : "#dc2626"
+                                    }}
+                                  />
+                                </div>
+
+                                {(sb.wrongAnswers !== undefined && sb.correctAnswers !== undefined && (sb.correctAnswers + sb.wrongAnswers > 0)) && (
+                                  <div className="flex items-center gap-3 text-xs text-slate-500 font-semibold pt-0.5">
+                                    <span>{t("accuracy_label", "Accuracy")}: {sb.accuracy}%</span>
+                                    <span>•</span>
+                                    <span className="text-slate-600">{t("solved_count", { correct: sb.correctAnswers, total: sb.correctAnswers + sb.wrongAnswers, defaultValue: `${sb.correctAnswers}/${sb.correctAnswers + sb.wrongAnswers} correct` })}</span>
+                                    {sb.wrongAnswers > 0 && (
+                                      <>
+                                        <span>•</span>
+                                        <span className="text-[#dc2626]">{t("mistakes_count", { count: sb.wrongAnswers, defaultValue: `${sb.wrongAnswers} mistakes` })}</span>
+                                      </>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Dynamic AI Insight (LLM Mistake Pattern Analysis & 7-Day / 15-Day Structured Recovery Plan) */}
+                                {(() => {
+                                  const normSubj = (sb.subject || "").toLowerCase();
+                                  const subjectMistakes = (reportData?.mistakes || []).filter((m: any) => {
+                                    const mSubj = (m.subject || "").toLowerCase();
+                                    return mSubj === normSubj || mSubj.includes(normSubj) || normSubj.includes(mSubj);
+                                  });
+                                  return (
+                                    <DynamicAiInsightCard
+                                      mode="weakness"
+                                      subject={subjName}
+                                      accuracy={sb.accuracy}
+                                      mistakeCount={sb.wrongAnswers !== undefined ? sb.wrongAnswers : subjectMistakes.length}
+                                      correctCount={sb.correctAnswers ?? 0}
+                                      recentTrend={sb.trend7Day || sb.timeline || activeTrend}
+                                      incorrectQuestionLogs={subjectMistakes}
+                                      studentName={cleanChildName}
+                                    />
+                                  );
+                                })()}
+                              </div>
+                            );
+                          })}
+
+                          {actualWeakSubjects.length === 0 && (
+                            <p className="text-xs text-[#006a62] font-semibold bg-[#006a62]/10 p-3.5 rounded-xl text-center">
+                              {t("no_weaknesses_desc", {
+                                name: cleanChildName,
+                                defaultValue: `🎉 Fantastic! ${cleanChildName} has all active subjects performing at or above 70%.`
                               })}
-                            </span>
+                            </p>
                           )}
                         </div>
-                        <p className="text-base font-medium text-[#191c1e] leading-relaxed mt-1">
-                          {formatNotifMsg(notif.message)}
-                        </p>
-                      </div>
+                      ) : modalType === "risks" ? (
+                        /* Enhanced Risks Cards (Day 1 below 70%) */
+                        <div className="space-y-3">
+                          {actualRiskSubjects.map((sb, idx) => {
+                            const subjName = formatSubjectTitle(sb.subject);
+                            return (
+                              <div
+                                key={idx}
+                                className="bg-white rounded-2xl p-4 border border-amber-200/90 shadow-xs space-y-2.5"
+                              >
+                                <div className="flex justify-between items-center">
+                                  <h4 className="text-sm font-black text-slate-800 flex items-center gap-1.5">
+                                    {actualRiskSubjects.length > 1 && (
+                                      <span
+                                        className="w-2.5 h-2.5 rounded-full shrink-0 ring-2 ring-white shadow-2xs"
+                                        style={{ backgroundColor: getCategorySubjectChartColor("risks", idx).color }}
+                                      />
+                                    )}
+                                    <span>{subjName}</span>
+                                    <span className="text-xs">🔔</span>
+                                  </h4>
+                                  <span className="text-xs font-black px-2.5 py-1 rounded-full bg-amber-50 text-[#b45309] border border-amber-200 flex items-center gap-1">
+                                    <span className="text-[10px]">●</span>
+                                    <span>{t("status_risk_day1", "At Risk (Day 1 <70%)")}</span>
+                                  </span>
+                                </div>
+
+                                <div className="h-2.5 w-full bg-amber-100/70 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full rounded-full transition-all duration-700"
+                                    style={{
+                                      width: `${Math.min(100, Math.max(5, sb.accuracy))}%`,
+                                      backgroundColor: actualRiskSubjects.length > 1 ? getCategorySubjectChartColor("risks", idx).color : "#d97706"
+                                    }}
+                                  />
+                                </div>
+
+                                {(sb.wrongAnswers !== undefined && sb.correctAnswers !== undefined && (sb.correctAnswers + sb.wrongAnswers > 0)) && (
+                                  <div className="flex items-center gap-3 text-xs text-slate-500 font-semibold pt-0.5">
+                                    <span>{t("accuracy_label", "Accuracy")}: {sb.accuracy}%</span>
+                                    <span>•</span>
+                                    <span className="text-slate-600">{t("solved_count", { correct: sb.correctAnswers, total: sb.correctAnswers + sb.wrongAnswers, defaultValue: `${sb.correctAnswers}/${sb.correctAnswers + sb.wrongAnswers} correct` })}</span>
+                                  </div>
+                                )}
+
+                                {/* Dynamic AI Insight (Day 1 Recovery Protocol) */}
+                                {(() => {
+                                  const normSubj = (sb.subject || "").toLowerCase();
+                                  const subjectMistakes = (reportData?.mistakes || []).filter((m: any) => {
+                                    const mSubj = (m.subject || "").toLowerCase();
+                                    return mSubj === normSubj || mSubj.includes(normSubj) || normSubj.includes(mSubj);
+                                  });
+                                  return (
+                                    <DynamicAiInsightCard
+                                      mode="risk"
+                                      subject={subjName}
+                                      accuracy={sb.accuracy}
+                                      mistakeCount={sb.wrongAnswers !== undefined ? sb.wrongAnswers : subjectMistakes.length}
+                                      correctCount={sb.correctAnswers ?? 0}
+                                      recentTrend={sb.trend7Day || sb.timeline || activeTrend}
+                                      incorrectQuestionLogs={subjectMistakes}
+                                      studentName={cleanChildName}
+                                    />
+                                  );
+                                })()}
+                              </div>
+                            );
+                          })}
+
+                          {actualRiskSubjects.length === 0 && (
+                            <p className="text-xs text-[#006a62] font-semibold bg-[#006a62]/10 p-3.5 rounded-xl text-center">
+                              {t("no_risk_alerts_desc", { name: cleanChildName, defaultValue: `All clear! ${cleanChildName} has no subjects below 70% right now.` })}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        /* modalType === "strengths": Enhanced Strengths Cards (with ties displayed concurrently) */
+                        <div className="space-y-3">
+                          {actualStrengthSubjects.map((sb, idx) => {
+                            const subjName = formatSubjectTitle(sb.subject);
+                            return (
+                              <div
+                                key={idx}
+                                className="bg-white rounded-2xl p-4 border border-emerald-200/90 shadow-xs space-y-2.5"
+                              >
+                                <div className="flex justify-between items-center">
+                                  <h4 className="text-sm font-black text-[#006a62] flex items-center gap-1.5">
+                                    {actualStrengthSubjects.length > 1 && (
+                                      <span
+                                        className="w-2.5 h-2.5 rounded-full shrink-0 ring-2 ring-white shadow-2xs"
+                                        style={{ backgroundColor: getCategorySubjectChartColor("strengths", idx).color }}
+                                      />
+                                    )}
+                                    <span>{subjName}</span>
+                                    <span className="text-xs">🏆</span>
+                                  </h4>
+                                  <span className="text-xs font-black px-2.5 py-1 rounded-full bg-emerald-50 text-[#006a62] border border-emerald-200 flex items-center gap-1">
+                                    <span className="text-[10px]">●</span>
+                                    <span>{t("top_performing_badge", "Top Performing (≥70%)")}</span>
+                                  </span>
+                                </div>
+
+                                <div className="h-2.5 w-full bg-emerald-100/70 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full rounded-full transition-all duration-700"
+                                    style={{
+                                      width: `${Math.min(100, Math.max(5, sb.accuracy))}%`,
+                                      backgroundColor: actualStrengthSubjects.length > 1 ? getCategorySubjectChartColor("strengths", idx).color : "#006a62"
+                                    }}
+                                  />
+                                </div>
+
+                                {(sb.correctAnswers !== undefined && sb.wrongAnswers !== undefined && (sb.correctAnswers + sb.wrongAnswers > 0)) && (
+                                  <div className="flex items-center gap-3 text-xs text-slate-500 font-semibold pt-0.5">
+                                    <span>{t("accuracy_label", "Accuracy")}: {sb.accuracy}%</span>
+                                    <span>•</span>
+                                    <span className="text-slate-600">{t("solved_count", { correct: sb.correctAnswers, total: sb.correctAnswers + sb.wrongAnswers, defaultValue: `${sb.correctAnswers}/${sb.correctAnswers + sb.wrongAnswers} correct` })}</span>
+                                  </div>
+                                )}
+
+                                {/* Interactive AI Insight Trigger Button (opens high-end Mastery Modal) */}
+                                <DynamicAiInsightCard
+                                  mode="strengths"
+                                  subject={subjName}
+                                  accuracy={sb.accuracy}
+                                  mistakeCount={sb.wrongAnswers ?? 0}
+                                  correctCount={sb.correctAnswers ?? 0}
+                                  recentTrend={sb.trend7Day || sb.timeline || activeTrend}
+                                  incorrectQuestionLogs={[]}
+                                  studentName={cleanChildName}
+                                />
+                              </div>
+                            );
+                          })}
+
+                          {actualStrengthSubjects.length === 0 && (
+                            <p className="text-xs text-[#767683] font-semibold bg-slate-100 p-3.5 rounded-xl text-center">
+                              {t("keep_playing_build_strengths", "Keep playing to build up strong subjects at or above 70%!")}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  );
-                })
-              )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
+
+      {/* Notifications Side Panel / Modal Drawer */}
+      {
+        showNotifications && (
+          <div
+            onClick={() => setShowNotifications(false)}
+            onTouchMove={(e) => {
+              if (e.target === e.currentTarget) e.preventDefault();
+            }}
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[9999] flex justify-end animate-in fade-in duration-200 overscroll-contain select-none"
+            style={{ zIndex: 9999, overscrollBehavior: "contain", touchAction: "none" }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="w-full sm:w-[420px] h-full bg-[#f7f9fb] shadow-2xl flex flex-col pb-24 sm:pb-0 animate-in slide-in-from-right duration-300 overscroll-contain select-text"
+              style={{ zIndex: 10000, overscrollBehavior: "contain", touchAction: "pan-y" }}
+            >
+              {/* Header */}
+              <div className="flex justify-between items-center p-5 sm:p-6 border-b border-slate-200/80 bg-white">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779]">
+                    <Bell size={18} />
+                  </div>
+                  <h2 className="text-xl font-black text-[#141779]">
+                    {t("notifications", "Notifications")}
+                  </h2>
+                </div>
+                <button
+                  onClick={() => setShowNotifications(false)}
+                  className="w-9 h-9 flex items-center justify-center bg-slate-100 rounded-full hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
+                  aria-label="Close"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* List */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3.5">
+                {notifications.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center py-16 px-4">
+                    <div className="w-16 h-16 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779] mb-3 shadow-xs">
+                      <Bell size={28} className="opacity-70" />
+                    </div>
+                    <p className="text-base font-bold text-[#141779]">
+                      {t("no_notifications_yet", "No notifications yet!")}
+                    </p>
+                    <p className="text-xs font-medium text-slate-500 mt-1 max-w-[240px]">
+                      {t("no_recent_activity", "No recent activity to show.")}
+                    </p>
+                  </div>
+                ) : (
+                  notifications.map((notif, idx) => {
+                    let iconBadge = <Bell size={18} />;
+                    let badgeStyle = "bg-indigo-50 text-[#141779] border-indigo-100";
+
+                    if (notif.type === "gamification") {
+                      iconBadge = <Sparkles size={18} />;
+                      badgeStyle = "bg-teal-50 text-teal-700 border-teal-200";
+                    } else if (notif.type === "habit") {
+                      iconBadge = <Flame size={18} />;
+                      badgeStyle = "bg-amber-50 text-amber-700 border-amber-200";
+                    } else if (notif.type === "learning") {
+                      iconBadge = <BookOpen size={18} />;
+                      badgeStyle = "bg-indigo-50 text-[#141779] border-indigo-200";
+                    } else if (notif.type === "reward" || notif.type === "spin") {
+                      iconBadge = <Trophy size={18} />;
+                      badgeStyle = "bg-purple-50 text-purple-700 border-purple-200";
+                    } else if (notif.type === "warning" || notif.type === "risk") {
+                      iconBadge = <AlertTriangle size={18} />;
+                      badgeStyle = "bg-rose-50 text-rose-700 border-rose-200";
+                    }
+
+                    return (
+                      <div
+                        key={notif._id || idx}
+                        className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-[0_2px_8px_rgba(20,23,121,0.04)] hover:shadow-md hover:border-indigo-200/80 transition-all flex items-start gap-3.5 text-left"
+                      >
+                        <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs mt-0.5 ${badgeStyle}`}>
+                          {iconBadge}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <h4 className="text-[15px] font-bold text-[#141779] leading-snug">
+                              {formatNotifTitle(notif.title)}
+                            </h4>
+                            {notif.createdAt && (
+                              <span className="text-xs font-semibold text-slate-500 shrink-0 mt-0.5">
+                                {new Date(notif.createdAt).toLocaleString(undefined, {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-base font-medium text-[#191c1e] leading-relaxed mt-1">
+                            {formatNotifMsg(notif.message)}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      }
 
       {/* Today's Time & Attempt Breakdown Modal */}
-      {showBreakdownModal && (
-        <div 
-          onClick={closeBreakdown}
-          onTouchMove={(e) => {
-            if (e.target === e.currentTarget) e.preventDefault();
-          }}
-          className="fixed inset-0 bg-[#0f114a]/75 backdrop-blur-md z-[99999] flex items-end sm:items-center justify-center p-3 pb-[92px] sm:p-4 font-sans animate-in fade-in duration-200 overscroll-contain select-none"
-          style={{
-            zIndex: 99999,
-            overscrollBehavior: "contain",
-            touchAction: "none",
-            paddingBottom: "calc(5.75rem + env(safe-area-inset-bottom, 0px))"
-          }}
-        >
-          <div 
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-[24px] sm:rounded-[32px] max-w-lg w-full max-h-[72vh] sm:max-h-[85vh] flex flex-col p-5 sm:p-6 shadow-2xl relative border border-white/60 overscroll-contain select-text mb-1 sm:mb-0"
+      {
+        showBreakdownModal && (
+          <div
+            onClick={closeBreakdown}
+            onTouchMove={(e) => {
+              if (e.target === e.currentTarget) e.preventDefault();
+            }}
+            className="fixed inset-0 bg-[#0f114a]/75 backdrop-blur-md z-[99999] flex items-end sm:items-center justify-center p-3 pb-[92px] sm:p-4 font-sans animate-in fade-in duration-200 overscroll-contain select-none"
             style={{
-              zIndex: 100000,
+              zIndex: 99999,
               overscrollBehavior: "contain",
-              touchAction: "pan-y",
-              maxHeight: "min(72vh, calc(100dvh - 128px - env(safe-area-inset-bottom, 0px)))"
+              touchAction: "none",
+              paddingBottom: "calc(5.75rem + env(safe-area-inset-bottom, 0px))"
             }}
           >
-            
-            {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100 shrink-0 mb-4">
-              <div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-[#141779] flex items-center gap-2">
-                  <span>⏱️</span>
-                  <span>{t("todays_time_breakdown_title", "Today's Time Breakdown")}</span>
-                </h3>
-                <p className="text-xs sm:text-[13px] text-slate-500 font-bold mt-0.5">
-                  {t("detailed_calc_for", { name: childName, defaultValue: `Detailed calculation for ${childName}` })}
-                </p>
-              </div>
-              <button 
-                onClick={closeBreakdown}
-                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors shrink-0 cursor-pointer"
-                aria-label="Close"
-              >
-                <X size={18} />
-              </button>
-            </div>
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-[24px] sm:rounded-[32px] max-w-lg w-full max-h-[72vh] sm:max-h-[85vh] flex flex-col p-5 sm:p-6 shadow-2xl relative border border-white/60 overscroll-contain select-text mb-1 sm:mb-0"
+              style={{
+                zIndex: 100000,
+                overscrollBehavior: "contain",
+                touchAction: "pan-y",
+                maxHeight: "min(72vh, calc(100dvh - 128px - env(safe-area-inset-bottom, 0px)))"
+              }}
+            >
 
-            {loadingBreakdown ? (
-              <div className="flex flex-col items-center justify-center py-12 gap-3 text-slate-400">
-                <div className="w-8 h-8 border-3 border-[#141779] border-t-transparent rounded-full animate-spin" />
-                <span className="text-xs font-bold text-slate-500">{t("calculating_todays_time", "Calculating today's time & attempts...")}</span>
-              </div>
-            ) : (
-              <div className="flex-1 overflow-y-auto pr-0.5 pb-6 sm:pb-6 space-y-4">
-                
-                {/* 3 Summary Stats */}
-                <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                  <div className="bg-emerald-50/80 border border-emerald-200/80 p-3 rounded-2xl text-center">
-                    <span className="text-xs font-black text-emerald-800 uppercase tracking-wider block">{t("total_time", "Total Time")}</span>
-                    <span className="text-lg sm:text-xl font-black text-emerald-700">{formatTimeFormatted(breakdownData?.totalTimeFormatted || "0m")}</span>
-                  </div>
-
-                  <div className="bg-indigo-50/80 border border-indigo-200/80 p-3 rounded-2xl text-center">
-                    <span className="text-xs font-black text-indigo-800 uppercase tracking-wider block">{t("questions", "Questions")}</span>
-                    <span className="text-lg sm:text-xl font-black text-[#141779]">{breakdownData?.totalSolved || 0}</span>
-                    <span className="text-xs text-indigo-600 font-bold block">{t("num_correct", { count: breakdownData?.totalCorrect || 0, defaultValue: `${breakdownData?.totalCorrect || 0} correct!` })}</span>
-                  </div>
-
-                  <div className="bg-purple-50/80 border border-purple-200/80 p-3 rounded-2xl text-center">
-                    <span className="text-xs font-black text-purple-800 uppercase tracking-wider block">{t("confidence", "Confidence")}</span>
-                    <span className="text-lg sm:text-xl font-black text-purple-700">{breakdownData?.confidenceScore || 0}%</span>
-                  </div>
-                </div>
-
-                {/* Mode Breakdown Cards */}
+              {/* Modal Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100 shrink-0 mb-4">
                 <div>
-                  <h4 className="text-xs sm:text-sm font-black text-slate-700 uppercase tracking-wider mb-2">{t("time_spent_by_mode", "Time Spent by Mode")}</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    {breakdownData?.modeBreakdown && Object.entries(breakdownData.modeBreakdown).map(([key, m]: [string, any]) => (
-                      <div key={key} className="bg-slate-50 border border-slate-200/80 p-3 rounded-xl flex items-center justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="text-xs font-extrabold text-slate-800 flex items-center gap-1">
-                            <span>{m.icon}</span>
-                            <span className="truncate">{translateModeName(m.name.split('/')[0])}</span>
-                          </p>
-                          <p className="text-xs text-slate-500 font-bold">{m.count} {t("questions", "questions")}</p>
-                        </div>
-                        <span className="text-xs font-black text-[#141779] bg-white px-2 py-1 rounded-lg border border-slate-200 shrink-0">
-                          {Math.floor(m.timeSec / 60)}{t("min_short", "m")} {m.timeSec % 60}{t("sec_short", "s")}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                  <h3 className="text-lg sm:text-xl font-extrabold text-[#141779] flex items-center gap-2">
+                    <span>⏱️</span>
+                    <span>{t("todays_time_breakdown_title", "Today's Time Breakdown")}</span>
+                  </h3>
+                  <p className="text-xs sm:text-[13px] text-slate-500 font-bold mt-0.5">
+                    {t("detailed_calc_for", { name: childName, defaultValue: `Detailed calculation for ${childName}` })}
+                  </p>
                 </div>
+                <button
+                  onClick={closeBreakdown}
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors shrink-0 cursor-pointer"
+                  aria-label="Close"
+                >
+                  <X size={18} />
+                </button>
+              </div>
 
-                {/* Itemized Question & Answer List */}
-                <div>
-                  <h4 className="text-xs sm:text-sm font-black text-slate-700 uppercase tracking-wider mb-2 flex items-center justify-between">
-                    <span>{t("todays_question_attempts", "Today's Question Attempts")}</span>
-                    <span className="text-xs font-bold text-slate-500">({breakdownData?.attempts?.length || 0} {t("items_upper", "ITEMS")})</span>
-                  </h4>
-
-                  {(!breakdownData?.attempts || breakdownData.attempts.length === 0) ? (
-                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 text-center">
-                      <p className="text-xs font-bold text-slate-500">{t("no_question_attempts_logged", "No question attempts logged today yet.")}</p>
-                      <p className="text-xs text-slate-400 mt-1">{t("play_quiz_shadow_arena", "Play a Quiz, Shadow Arena battle, or AI quest to record live time!")}</p>
+              {loadingBreakdown && !breakdownData ? (
+                <div className="flex-1 overflow-y-auto pr-0.5 pb-6 space-y-4 animate-pulse">
+                  {/* 3 Summary Stats Skeleton */}
+                  <div className="grid grid-cols-3 gap-1.5 sm:gap-2 w-full">
+                    <div className="bg-emerald-50/50 border border-emerald-100 p-2.5 rounded-2xl h-[94px] flex flex-col items-center justify-center gap-1.5">
+                      <div className="h-3 w-16 bg-emerald-200/60 rounded" />
+                      <div className="h-6 w-12 bg-emerald-200/80 rounded" />
+                      <div className="h-2.5 w-14 bg-emerald-200/50 rounded" />
                     </div>
-                  ) : (
-                    <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
-                      {breakdownData.attempts.map((att: any, idx: number) => (
-                        <div 
-                          key={att.id || idx}
-                          className="p-3 bg-slate-50 hover:bg-slate-100/80 rounded-xl border border-slate-200/80 flex items-center justify-between gap-3 transition-colors"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5 mb-1">
-                              <span className="text-xs">{att.modeIcon}</span>
-                              <span className="text-xs font-bold text-slate-600 bg-white px-2 py-0.5 rounded-full border border-slate-200">
-                                {translateModeName(att.mode)}
-                              </span>
-                              <span className="text-xs text-slate-400 font-bold ml-auto">{att.timestamp}</span>
-                            </div>
-                            <p className="text-xs font-bold text-slate-800 truncate">{att.questionText}</p>
-                          </div>
+                    <div className="bg-indigo-50/50 border border-indigo-100 p-2.5 rounded-2xl h-[94px] flex flex-col items-center justify-center gap-1.5">
+                      <div className="h-3 w-16 bg-indigo-200/60 rounded" />
+                      <div className="h-6 w-10 bg-indigo-200/80 rounded" />
+                      <div className="h-2.5 w-14 bg-indigo-200/50 rounded" />
+                    </div>
+                    <div className="bg-purple-50/50 border border-purple-100 p-2.5 rounded-2xl h-[94px] flex flex-col items-center justify-center gap-1.5">
+                      <div className="h-3 w-16 bg-purple-200/60 rounded" />
+                      <div className="h-6 w-12 bg-purple-200/80 rounded" />
+                      <div className="h-2.5 w-14 bg-purple-200/50 rounded" />
+                    </div>
+                  </div>
 
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-xs font-mono font-extrabold text-slate-600 bg-slate-200/60 px-2 py-1 rounded-lg">
-                              ⏱️ {formatTimeFormatted(att.timeFormatted)}
-                            </span>
-                            <span className={`text-xs font-black px-2.5 py-1 rounded-full border ${
-                              att.isCorrect 
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
-                                : "bg-rose-50 text-rose-700 border-rose-200"
-                            }`}>
-                              {att.isCorrect ? t("correct_check", "Correct ✓") : t("incorrect_cross", "Incorrect ✕")}
-                            </span>
+                  {/* Mode Breakdown Skeleton */}
+                  <div>
+                    <div className="h-4 w-32 bg-slate-200 rounded mb-2" />
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <div className="h-14 bg-slate-100 rounded-xl" />
+                      <div className="h-14 bg-slate-100 rounded-xl" />
+                      <div className="h-14 bg-slate-100 rounded-xl" />
+                    </div>
+                  </div>
+                  {/* Attempts Skeleton */}
+                  <div>
+                    <div className="h-4 w-40 bg-slate-200 rounded mb-2" />
+                    <div className="space-y-2">
+                      <div className="h-16 bg-slate-100 rounded-xl" />
+                      <div className="h-16 bg-slate-100 rounded-xl" />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex-1 overflow-y-auto pr-0.5 pb-6 sm:pb-6 space-y-4">
+
+                  {/* 3 Summary Stats - Equalized Sizing, Tight Gap & Controlled Vertical Spacing */}
+                  <div className="grid grid-cols-3 gap-1.5 sm:gap-2 w-full">
+                    <div className="bg-emerald-50/80 border border-emerald-200/80 p-2 sm:p-2.5 rounded-2xl flex flex-col items-center justify-center text-center w-full min-h-[92px] sm:min-h-[96px] shadow-2xs">
+                      <span className="text-[10px] sm:text-[11px] font-bold tracking-wider uppercase leading-none whitespace-nowrap mb-1 text-emerald-800">
+                        {t("total_time", "Total Time")}
+                      </span>
+                      <div className="text-base sm:text-lg font-black leading-none my-1 whitespace-nowrap text-emerald-700 tracking-tight">
+                        {formatTimeFormatted(breakdownData?.totalTimeFormatted || "0m")}
+                      </div>
+                      <span className="text-[9.5px] sm:text-[10px] font-medium leading-tight whitespace-nowrap mt-0.5 text-emerald-600/90">
+                        {t("active_today", "Active today")}
+                      </span>
+                    </div>
+
+                    <div className="bg-indigo-50/80 border border-indigo-200/80 p-2 sm:p-2.5 rounded-2xl flex flex-col items-center justify-center text-center w-full min-h-[92px] sm:min-h-[96px] shadow-2xs">
+                      <span className="text-[10px] sm:text-[11px] font-bold tracking-wider uppercase leading-none whitespace-nowrap mb-1 text-indigo-800">
+                        {t("questions", "Questions")}
+                      </span>
+                      <div className="text-base sm:text-lg font-black leading-none my-1 whitespace-nowrap text-[#141779] tracking-tight">
+                        {breakdownData?.totalSolved || 0}
+                      </div>
+                      <span className="text-[9.5px] sm:text-[10px] font-medium leading-tight whitespace-nowrap mt-0.5 text-indigo-600">
+                        {t("num_correct", { count: breakdownData?.totalCorrect || 0, defaultValue: `${breakdownData?.totalCorrect || 0} correct!` })}
+                      </span>
+                    </div>
+
+                    <div className="bg-purple-50/80 border border-purple-200/80 p-2 sm:p-2.5 rounded-2xl flex flex-col items-center justify-center text-center w-full min-h-[92px] sm:min-h-[96px] shadow-2xs">
+                      <span className="text-[10px] sm:text-[11px] font-bold tracking-wider uppercase leading-none whitespace-nowrap mb-1 text-purple-800">
+                        {t("confidence", "Confidence")}
+                      </span>
+                      <div className="text-base sm:text-lg font-black leading-none my-1 whitespace-nowrap text-purple-700 tracking-tight">
+                        {breakdownData?.confidenceScore || 0}%
+                      </div>
+                      <span className="text-[9.5px] sm:text-[10px] font-medium leading-tight whitespace-nowrap mt-0.5 text-purple-600/90">
+                        {t("accuracy_score", "Accuracy score")}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Mode Breakdown Cards */}
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-black text-slate-700 uppercase tracking-wider mb-2">{t("time_spent_by_mode", "Time Spent by Mode")}</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {breakdownData?.modeBreakdown && Object.entries(breakdownData.modeBreakdown).map(([key, m]: [string, any]) => (
+                        <div key={key} className="bg-slate-50 border border-slate-200/80 p-3 rounded-xl flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-xs font-extrabold text-slate-800 flex items-center gap-1">
+                              <span>{m.icon}</span>
+                              <span className="truncate">{translateModeName(m.name.split('/')[0])}</span>
+                            </p>
+                            <p className="text-xs text-slate-500 font-bold">{m.count} {t("questions", "questions")}</p>
                           </div>
+                          <span className="text-xs font-black text-[#141779] bg-white px-2 py-1 rounded-lg border border-slate-200 shrink-0">
+                            {Math.floor(m.timeSec / 60)}{t("min_short", "m")} {m.timeSec % 60}{t("sec_short", "s")}
+                          </span>
                         </div>
                       ))}
                     </div>
-                  )}
+                  </div>
+
+                  {/* Itemized Question & Answer List */}
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-black text-slate-700 uppercase tracking-wider mb-2 flex items-center justify-between">
+                      <span>{t("todays_question_attempts", "Today's Question Attempts")}</span>
+                      <span className="text-xs font-bold text-slate-500">({breakdownData?.attempts?.length || 0} {t("items_upper", "ITEMS")})</span>
+                    </h4>
+
+                    {(!breakdownData?.attempts || breakdownData.attempts.length === 0) ? (
+                      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 text-center">
+                        <p className="text-xs font-bold text-slate-500">{t("no_question_attempts_logged", "No question attempts logged today yet.")}</p>
+                        <p className="text-xs text-slate-400 mt-1">{t("play_quiz_shadow_arena", "Play a Quiz, Shadow Arena battle, or AI quest to record live time!")}</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+                        {breakdownData.attempts.map((att: any, idx: number) => (
+                          <QuestionFeedbackItem
+                            key={att.id || idx}
+                            modeIcon={att.modeIcon}
+                            modeLabel={translateModeName(att.mode)}
+                            timestamp={att.timestamp}
+                            duration={formatTimeFormatted(att.timeFormatted)}
+                            isCorrect={att.isCorrect}
+                            compactSymbolOnly={true}
+                            questionText={att.questionText}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Calculation Summary Box */}
+                  <div className="bg-indigo-50/80 border border-indigo-100 p-3 rounded-2xl text-xs sm:text-sm text-[#141779] font-bold flex items-center justify-between gap-2">
+                    <span className="whitespace-nowrap shrink-0">{t("total_calculated_time", "Total Calculated Time:")}</span>
+                    <span className="text-xs sm:text-sm font-black text-[#141779] bg-white px-2.5 sm:px-3 py-1 rounded-xl border border-indigo-200 shadow-2xs shrink-0 whitespace-nowrap">
+                      {formatTimeFormatted(breakdownData?.totalTimeFormatted || "0m")} ({breakdownData?.totalSolved || 0} {t("attempts", "attempts")})
+                    </span>
+                  </div>
+
                 </div>
+              )}
 
-                {/* Calculation Summary Box */}
-                <div className="bg-indigo-50/80 border border-indigo-100 p-3 rounded-2xl text-xs text-[#141779] font-bold flex items-center justify-between">
-                  <span>{t("total_calculated_time", "Total Calculated Time:")}</span>
-                  <span className="text-sm font-black text-[#141779] bg-white px-3 py-1 rounded-xl border border-indigo-200 shadow-2xs">
-                    {formatTimeFormatted(breakdownData?.totalTimeFormatted || "0m")} ({breakdownData?.totalSolved || 0} {t("attempts", "attempts")})
-                  </span>
-                </div>
-
-              </div>
-            )}
-
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <ChildSwitcherModal 
-        isOpen={showSwitcher} 
-        onClose={() => setShowSwitcher(false)} 
-        user={userData} 
+      <ChildSwitcherModal
+        isOpen={showSwitcher}
+        onClose={() => setShowSwitcher(false)}
+        user={userData}
         onUserUpdated={(u) => setUserData(u)}
         onSwitched={() => { setLoading(true); setRefreshKey(k => k + 1); }}
       />
     </div>
   );
 }
+
