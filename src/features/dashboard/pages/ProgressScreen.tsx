@@ -65,6 +65,18 @@ function matchSubject(item: any, activeSub: any) {
 export default function ProgressScreen() {
   const navigate = useNavigate();
   const { t } = useTranslation();
+
+  const translateSubjectName = (subj: string) => {
+    if (!subj) return "";
+    const lower = subj.toLowerCase();
+    if (lower.includes("gujarati")) return t("gujarati", "Gujarati");
+    if (lower.includes("math")) return t("mathematics", t("maths", "Mathematics"));
+    if (lower.includes("english")) return t("english_subject", "English");
+    if (lower.includes("social")) return t("social_science", t("social_studies", "Social Science"));
+    if (lower.includes("science")) return t("science", "Science");
+    if (lower.includes("hindi")) return t("hindi_subject", "Hindi");
+    return t(subj.toLowerCase().replace(/ /g, '_'), { defaultValue: subj });
+  };
   const cachedUserData = (() => {
     try {
       const raw = localStorage.getItem("userData");
@@ -541,7 +553,7 @@ export default function ProgressScreen() {
           <div className="flex overflow-x-auto hide-scrollbar py-1 gap-2.5">
             {subjects.map((sub) => {
               const isActive = activeSubject?._id === sub._id;
-              const translatedSubName = t(sub.name.toLowerCase().replace(/ /g, '_'), { defaultValue: sub.name });
+              const translatedSubName = translateSubjectName(sub.name);
               const growthItem = weeklyGrowth.find((g: any) => matchSubject(g, sub));
               const tabEmoji = (() => {
                 const check = `${sub.icon || ''} ${sub.name || ''}`.toLowerCase();
@@ -616,7 +628,7 @@ export default function ProgressScreen() {
                 {displayedGrowth.map((item: any, idx: number) => {
                   const delta = item.growthDelta !== undefined ? item.growthDelta : (item.thisWeekAccuracy - item.lastWeekAccuracy);
                   const isPositive = delta >= 0;
-                  const translatedSubName = t(item.name.toLowerCase().replace(/ /g, '_'), { defaultValue: item.name });
+                  const translatedSubName = translateSubjectName(item.name);
 
                   const getIcon = (iconStr?: string, nameStr?: string) => {
                     const check = `${iconStr || ''} ${nameStr || ''}`.toLowerCase();
@@ -847,7 +859,7 @@ export default function ProgressScreen() {
                           </span>
                           {activeChapter && (
                             <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-3 py-0.5 rounded-full">
-                              Active: <strong className="text-slate-700">{activeChapter.chapterName || activeChapter.name || activeChapter.title || "Chapter 1"}</strong>
+                              {t('active_label', 'Active')}: <strong className="text-slate-700">{activeChapter.chapterName || activeChapter.name || activeChapter.title || "Chapter 1"}</strong>
                             </span>
                           )}
                         </div>

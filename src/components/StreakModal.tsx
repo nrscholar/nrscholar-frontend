@@ -123,7 +123,7 @@ export default function StreakModal({
 
             <button
               onClick={onClose}
-              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#57fae9] to-[#00c9b7] text-[#141779] font-black text-xs shadow-[0_4px_15px_rgba(87,250,233,0.3)] uppercase tracking-wider active:scale-95 transition-all mt-4 z-10 border-0"
+              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#57fae9] via-[#00f2fe] to-[#4facfe] text-[#141779] font-black text-xs shadow-[0_0_25px_rgba(87,250,233,0.5)] uppercase tracking-wider active:scale-95 transition-all mt-4 z-10 border-0"
             >
               Awesome!
             </button>
