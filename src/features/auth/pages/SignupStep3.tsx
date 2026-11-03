@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { NRScholarNavBrand } from "../../../components/NRScholarNavBrand";
 import { Rocket, ArrowLeft, User, Lock, Shield, Eye, EyeOff, CheckCircle2, Circle } from "lucide-react";
 import { apiFetch } from "../../../api";
 
@@ -16,17 +17,14 @@ export default function SignupStep3Screen() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  const isMinLength = password.length >= 8;
+  const hasMinLength = password.length >= 8;
   const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  const isMatching = confirmPassword.length > 0 && password === confirmPassword;
+  const isFormValid = hasMinLength && hasSpecialChar && isMatching;
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isMinLength || !hasSpecialChar) {
-      setErrorMsg("Please meet all password requirements");
-      return;
-    }
-    if (password !== confirmPassword) {
-      setErrorMsg("Passwords do not match");
+    if (!isFormValid) {
       return;
     }
     setErrorMsg("");
@@ -95,38 +93,32 @@ export default function SignupStep3Screen() {
 
       {/* Header */}
       <header className="flex items-center px-6 py-4 bg-[rgba(247,249,251,0.8)] border-b border-[rgba(255,255,255,0.2)] sticky top-0 z-40 backdrop-blur-md">
-        <div className="flex items-center gap-2">
-          <button onClick={() => navigate(`/signup-step2?${searchParams.toString()}`)} className="w-10 h-10 -ml-2 rounded-full bg-[#e0e0ff] flex items-center justify-center hover:opacity-80 transition-opacity">
-            <ArrowLeft size={24} color="#141779" />
-          </button>
-          <Rocket size={28} color="#141779" />
-          <h1 className="text-[22px] font-bold text-[#141779] tracking-[-0.5px]">NR Scholar</h1>
-        </div>
+        <NRScholarNavBrand onBack={() => navigate(`/signup-step2?${searchParams.toString()}`)} />
       </header>
 
       <main className="px-6 pt-8 flex flex-col items-center w-full max-w-[430px] mx-auto relative z-10">
         
         {/* Step Indicator */}
-        <div className="w-full mb-12">
+        <div className="w-full mb-8">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-xs font-bold text-[#141779] tracking-[1px]">STEP 3 OF 3</span>
-            <span className="text-xs font-bold text-[#141779]">100%</span>
+            <span className="text-xs font-bold text-[#006a62] tracking-[1px]">STEP 3 OF 3</span>
+            <span className="text-xs font-bold text-[#006a62]">100%</span>
           </div>
-          <div className="w-full h-2 bg-[#e0e3e5] rounded-full overflow-hidden">
+          <div className="w-full h-2 bg-[#eceef0] rounded-full overflow-hidden">
             <div className="h-full bg-[#57fae9] rounded-full w-full" />
           </div>
         </div>
 
         <div className="flex flex-col items-center mb-6 w-full text-center">
-          <h2 className="text-[28px] font-bold text-[#141779] tracking-[-0.5px] mb-2">Secure Your Cockpit</h2>
-          <p className="text-base text-[#464652] font-medium">Set your access codes for the cosmic journey ahead.</p>
+          <h2 className="text-xl font-bold text-[#1e255e] text-center">
+            Create Your Password
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-500 text-center mt-1.5 max-w-xs mx-auto">
+            Choose a strong password to keep your account safe and secure.
+          </p>
         </div>
 
-        {errorMsg && (
-          <div className="w-full bg-[#ffdad6] text-[#ba1a1a] text-sm font-semibold p-3 rounded-xl mb-4 text-center">
-            {errorMsg}
-          </div>
-        )}
+        
 
         {/* Glass Form Card */}
         <div className="w-full bg-[rgba(255,255,255,0.7)] rounded-3xl p-6 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_2px_10px_rgba(0,0,0,0.05)]">
@@ -183,7 +175,7 @@ export default function SignupStep3Screen() {
           {/* Password Validation Rules */}
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2 px-2">
-              {isMinLength ? (
+              {hasMinLength ? (
                 <CheckCircle2 size={20} color="#007168" className="fill-transparent" />
               ) : (
                 <Circle size={20} color="#c7c5d4" />
@@ -198,15 +190,28 @@ export default function SignupStep3Screen() {
               )}
               <span className="text-xs font-bold text-[#464652]">Include a special symbol</span>
             </div>
+            <div className="flex items-center gap-2 px-2">
+              {isMatching ? (
+                <CheckCircle2 size={20} color="#007168" className="fill-transparent" />
+              ) : (
+                <Circle size={20} color="#c7c5d4" />
+              )}
+              <span className="text-xs font-bold text-[#464652]">Passwords match</span>
+            </div>
           </div>
         </div>
 
         {/* Submit Button */}
         <div className="w-full mt-6">
+          {errorMsg && errorMsg !== "Passwords do not match" && (
+            <div className="w-full bg-[#ffdad6] text-[#ba1a1a] text-sm font-semibold p-3 rounded-xl mb-4 text-center animate-fadeIn">
+              {errorMsg}
+            </div>
+          )}
           <button
             onClick={handleSignup}
-            disabled={!isMinLength || !hasSpecialChar || !confirmPassword || loading}
-            className={`w-full h-[60px] bg-[#141779] rounded-full flex items-center justify-center gap-3 shadow-[0_6px_15px_rgba(20,23,121,0.3)] transition-opacity ${(!isMinLength || !hasSpecialChar || !confirmPassword || loading) ? 'opacity-70 cursor-not-allowed' : 'hover:opacity-90'}`}
+            disabled={!isFormValid || loading}
+            className={`w-full h-[60px] bg-[#141779] rounded-full flex items-center justify-center gap-3 shadow-[0_6px_15px_rgba(20,23,121,0.3)] transition-opacity ${(!isFormValid || loading) ? 'opacity-70 cursor-not-allowed' : 'hover:opacity-90'}`}
           >
             {loading ? (
               <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />

@@ -450,7 +450,7 @@ export default function SessionScreen() {
           <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7} onPress={() => router.back()}>
             <MaterialIcons name="arrow-back" size={24} color={C.primary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>NR Scholar</Text>
+          <Text style={styles.headerTitle}>N R Scholar</Text>
           <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7}>
             <MaterialIcons name="track-changes" size={24} color={C.primary} />
           </TouchableOpacity>

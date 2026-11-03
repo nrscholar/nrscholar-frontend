@@ -495,39 +495,63 @@ export default function ParentAchievementsScreen() {
           )}
 
           {/* Filters Bar */}
-          <div className="col-span-2 flex items-center justify-between mt-1 mb-0.5 px-0.5">
-            <span className="text-base font-black text-[#141779]">{t("achievement_wall", "Achievement Wall")}</span>
-            <div className="flex bg-slate-200/80 p-1 rounded-xl border border-slate-300/60 gap-1">
-              <button 
-                type="button"
-                onClick={() => setFilter("all")} 
-                className={`text-xs font-black px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${filter === "all" ? "bg-[#141779] text-white shadow-2xs" : "text-slate-700 hover:text-[#141779] hover:bg-white/50"}`}
-              >
-                <span>{t("all", "All")}</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${filter === "all" ? "bg-white/20 text-white" : "bg-slate-300/80 text-slate-700"}`}>
-                  {achievements.length}
-                </span>
-              </button>
-              <button 
-                type="button"
-                onClick={() => setFilter("unlocked")} 
-                className={`text-xs font-black px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${filter === "unlocked" ? "bg-[#141779] text-white shadow-2xs" : "text-slate-700 hover:text-[#141779] hover:bg-white/50"}`}
-              >
-                <span>{t("unlocked", "Unlocked")}</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${filter === "unlocked" ? "bg-white/20 text-white" : "bg-teal-100 text-[#006a62]"}`}>
-                  {badgesEarned}
-                </span>
-              </button>
-              <button 
-                type="button"
-                onClick={() => setFilter("locked")} 
-                className={`text-xs font-black px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${filter === "locked" ? "bg-[#141779] text-white shadow-2xs" : "text-slate-700 hover:text-[#141779] hover:bg-white/50"}`}
-              >
-                <span>{t("locked", "Locked")}</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${filter === "locked" ? "bg-white/20 text-white" : "bg-slate-300/80 text-slate-700"}`}>
-                  {Math.max(0, achievements.length - badgesEarned)}
-                </span>
-              </button>
+          <div className="col-span-2 flex flex-col gap-2.5 mt-2 mb-1 px-0.5">
+            {/* Title Row - Guaranteed Single Line */}
+            <div className="flex items-center justify-between">
+              <h3 className="text-base sm:text-lg font-black text-[#141779] whitespace-nowrap tracking-tight">
+                {t("achievement_wall", "Achievement Wall")}
+              </h3>
+              <span className="text-xs font-bold text-slate-500 whitespace-nowrap">
+                {badgesEarned} / {achievements.length} {t("unlocked", "Unlocked")}
+              </span>
+            </div>
+
+            {/* Filter Tabs Row - Placed Neatly Below */}
+            <div className="w-full">
+              <div className="grid grid-cols-3 bg-slate-200/80 p-1 rounded-xl border border-slate-300/60 gap-1 w-full">
+                <button 
+                  type="button"
+                  onClick={() => setFilter("all")} 
+                  className={`text-xs font-black py-2 px-2.5 sm:px-3.5 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                    filter === "all" ? "bg-[#141779] text-white shadow-2xs" : "text-slate-700 hover:text-[#141779] hover:bg-white/50"
+                  }`}
+                >
+                  <span>{t("all", "All")}</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                    filter === "all" ? "bg-white/20 text-white" : "bg-slate-300/80 text-slate-700"
+                  }`}>
+                    {achievements.length}
+                  </span>
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setFilter("unlocked")} 
+                  className={`text-xs font-black py-2 px-2.5 sm:px-3.5 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                    filter === "unlocked" ? "bg-[#141779] text-white shadow-2xs" : "text-slate-700 hover:text-[#141779] hover:bg-white/50"
+                  }`}
+                >
+                  <span>{t("unlocked", "Unlocked")}</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                    filter === "unlocked" ? "bg-white/20 text-white" : "bg-teal-100 text-[#006a62]"
+                  }`}>
+                    {badgesEarned}
+                  </span>
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setFilter("locked")} 
+                  className={`text-xs font-black py-2 px-2.5 sm:px-3.5 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                    filter === "locked" ? "bg-[#141779] text-white shadow-2xs" : "text-slate-700 hover:text-[#141779] hover:bg-white/50"
+                  }`}
+                >
+                  <span>{t("locked", "Locked")}</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                    filter === "locked" ? "bg-white/20 text-white" : "bg-slate-300/80 text-slate-700"
+                  }`}>
+                    {Math.max(0, achievements.length - badgesEarned)}
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
 

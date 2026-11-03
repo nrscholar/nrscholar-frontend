@@ -2,6 +2,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
+import { NRScholarLogo } from "./components/NRScholarLogo";
 import {
   ActivityIndicator,
   Dimensions,
@@ -21,6 +22,12 @@ import { authApi, saveToken } from "./services/api";
 
 const { height } = Dimensions.get("window");
 const TOP_SECTION_HEIGHT = height * 0.4; // 40% for top section
+
+const formatPhoneNumber = (value: string): string => {
+  const cleanDigits = value.replace(/\D/g, '').slice(0, 10);
+  if (cleanDigits.length <= 5) return cleanDigits;
+  return `${cleanDigits.slice(0, 5)} - ${cleanDigits.slice(5)}`;
+};
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -44,7 +51,7 @@ export default function LoginScreen() {
     }
     try {
       setLoading(true);
-      const res = await authApi.login(mobile.trim(), password);
+      const res = await authApi.login(cleanMobile, password);
       if (res.success && res.data) {
         await saveToken(res.data.token);
         showToast("Login Successful!", "success");
@@ -73,11 +80,6 @@ export default function LoginScreen() {
           colors={["transparent", "rgba(247, 249, 251, 0.5)", "#f7f9fb"]}
           style={styles.gradientOverlay}
         />
-        
-        {/* Floating Cosmic Element */}
-        <View style={styles.floatingElement}>
-          <MaterialIcons name="rocket-launch" size={24} color="#141779" />
-        </View>
       </View>
 
       {/* Bottom 60%: Login Card wrapped in KeyboardAvoidingView for responsiveness */}
@@ -92,10 +94,10 @@ export default function LoginScreen() {
         >
           {/* Brand Identity */}
           <View style={styles.brandContainer}>
-            <View style={styles.logoBox}>
-              <MaterialIcons name="menu-book" size={32} color="#ffffff" />
+            <View style={styles.inlineBrandRow}>
+              <NRScholarLogo size={28} />
+              <Text style={styles.titleText}>N R Scholar</Text>
             </View>
-            <Text style={styles.titleText}>NR Scholar</Text>
             <Text style={styles.subtitleText}>Welcome back</Text>
           </View>
 
@@ -105,7 +107,7 @@ export default function LoginScreen() {
               <MaterialIcons name="phone" size={22} color="#767683" style={styles.inputIconLeft} />
               <TextInput
                 style={styles.input}
-                placeholder="Enter Mobile Number"
+                placeholder="Enter your mobile number"
                 placeholderTextColor="#767683"
                 value={mobile}
                 onChangeText={setMobile}
@@ -234,19 +236,12 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     width: "100%",
   },
-  logoBox: {
-    width: 64,
-    height: 64,
-    backgroundColor: "#141779",
-    borderRadius: 16,
+  inlineBrandRow: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 12,
-    shadowColor: "#57fae9",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
+    gap: 8,
+    marginBottom: 6,
   },
   titleText: {
     fontSize: 26,
