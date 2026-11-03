@@ -678,13 +678,18 @@ export default function ParentDailyTipScreen() {
   const cachedTip = (() => {
     try {
       const ctx = getActiveUserContext();
-      const raw = sessionStorage.getItem(`parent_daily_tip_cache_${ctx.childId || "default"}`);
-      return raw ? JSON.parse(raw) : null;
+      const stored = localStorage.getItem("userData");
+      const currentUid = stored ? (JSON.parse(stored)?._id || JSON.parse(stored)?.id) : "";
+      const raw = sessionStorage.getItem(`parent_daily_tip_cache_${currentUid || "u"}_${ctx.childId || "default"}`);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (currentUid && parsed.userId && parsed.userId !== currentUid) return null;
+      return parsed;
     } catch (e) { return null; }
   })();
 
   // User data state
-  const [childName, setChildName] = useState(cachedTip?.childName || "Explorer");
+  const [childName, setChildName] = useState(cachedTip?.childName || "");
   const [parentLevel, setParentLevel] = useState(cachedTip?.parentLevel || 1);
   const [childLevel, setChildLevel] = useState(cachedTip?.childLevel || 1);
   const [xp, setXp] = useState(cachedTip?.xp || 0);
@@ -692,11 +697,12 @@ export default function ParentDailyTipScreen() {
   const [streak, setStreak] = useState(cachedTip?.streak || 0);
   const [totalTests, setTotalTests] = useState(cachedTip?.totalTests || 0);
   const [accuracy, setAccuracy] = useState(cachedTip?.accuracy || 0);
-  const [childCity, setChildCity] = useState(cachedTip?.childCity || "Egg Village");
+  const [childCity, setChildCity] = useState(cachedTip?.childCity || "");
   const [childShadowFights, setChildShadowFights] = useState<number>(cachedTip?.childShadowFights || 0);
   const [childNeuroPlayCount, setChildNeuroPlayCount] = useState<number>(cachedTip?.childNeuroPlayCount || 0);
   const [parentLessonsCount, setParentLessonsCount] = useState<number>(cachedTip?.parentLessonsCount || 0);
   const [parentChallengesCount, setParentChallengesCount] = useState<number>(cachedTip?.parentChallengesCount || 0);
+  const [loading, setLoading] = useState<boolean>(!cachedTip);
 
   // Daily tip from backend (no fake static tip fallback)
   const [tip, setTip] = useState<Tip | null>(cachedTip?.tip || null);
@@ -1084,16 +1090,25 @@ export default function ParentDailyTipScreen() {
         })
         .catch(() => {});
 
-      await Promise.all([tipPromise, statsPromise, notifPromise]);
-      const cacheKey = `parent_daily_tip_cache_${ctx.childId || "default"}`;
-      sessionStorage.setItem(cacheKey, JSON.stringify(nextCache));
+      try {
+        await Promise.all([tipPromise, statsPromise, notifPromise]);
+        const stored = localStorage.getItem("userData");
+        const currentUid = stored ? (JSON.parse(stored)?._id || JSON.parse(stored)?.id) : "";
+        const cacheKey = `parent_daily_tip_cache_${currentUid || "u"}_${ctx.childId || "default"}`;
+        nextCache.userId = currentUid;
+        sessionStorage.setItem(cacheKey, JSON.stringify(nextCache));
+      } finally {
+        setLoading(false);
+      }
     }
 
     fetchAll();
 
     const handleUserDataUpdate = () => {
       const ctx = getActiveUserContext();
-      sessionStorage.removeItem(`parent_daily_tip_cache_${ctx.childId || "default"}`);
+      const stored = localStorage.getItem("userData");
+      const currentUid = stored ? (JSON.parse(stored)?._id || JSON.parse(stored)?.id) : "";
+      sessionStorage.removeItem(`parent_daily_tip_cache_${currentUid || "u"}_${ctx.childId || "default"}`);
       fetchAll();
     };
     window.addEventListener("userDataUpdated", handleUserDataUpdate);
@@ -1166,8 +1181,75 @@ export default function ParentDailyTipScreen() {
 
       {/* ── Main Content Container with Clearance for Bottom Navigation ── */}
       <main className="flex-1 px-4 pt-3.5 pb-4 flex flex-col gap-3.5 relative z-10 max-w-md mx-auto w-full">
+        {loading ? (
+          <div className="flex flex-col gap-3.5 animate-pulse select-none">
+            {/* 1. Dynamic LLM Priority Insight Card Skeleton */}
+            <div className="w-full bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-[0_4px_24px_rgba(20,23,121,0.05)] flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-slate-200 shrink-0" />
+                <div className="space-y-2 flex-1">
+                  <div className="h-5 w-44 bg-slate-200 rounded-md" />
+                  <div className="h-3.5 w-60 bg-slate-100 rounded-md" />
+                </div>
+              </div>
 
-        {/* ── 1. Dynamic LLM Priority Insight Card (Unified High-End Container) ── */}
+              {/* Priority Tabs Skeleton */}
+              <div className="grid grid-cols-3 gap-2 p-1 bg-slate-100/80 rounded-2xl">
+                <div className="h-9 rounded-xl bg-white shadow-2xs border border-slate-200/60" />
+                <div className="h-9 rounded-xl bg-slate-200/60" />
+                <div className="h-9 rounded-xl bg-slate-200/60" />
+              </div>
+
+              {/* Insight Card Box Skeleton */}
+              <div className="p-4 rounded-2xl border border-slate-200/80 bg-slate-50/50 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div className="h-6 w-24 bg-slate-200 rounded-full" />
+                  <div className="h-6 w-20 bg-slate-200 rounded-full" />
+                </div>
+                <div className="h-5 w-3/4 bg-slate-200 rounded-md" />
+                <div className="h-4 w-1/2 bg-slate-200 rounded-md" />
+                <div className="h-16 w-full bg-slate-100 rounded-xl mt-1" />
+              </div>
+            </div>
+
+            {/* 2. Growth Score Card Skeleton */}
+            <div className="w-full bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-[0_4px_24px_rgba(20,23,121,0.05)] flex items-center gap-4">
+              <div className="w-[76px] h-[76px] rounded-full border-4 border-slate-200 bg-slate-50 shrink-0 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full bg-slate-200/70" />
+              </div>
+              <div className="flex-1 space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-28 bg-slate-200 rounded" />
+                  <div className="h-5 w-24 bg-slate-100 rounded-full" />
+                </div>
+                <div className="h-3.5 w-52 bg-slate-100 rounded" />
+                <div className="h-3 w-36 bg-slate-100 rounded" />
+              </div>
+            </div>
+
+            {/* 3. Family Milestones Section Skeleton */}
+            <div className="w-full bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-[0_4px_24px_rgba(20,23,121,0.05)] flex flex-col gap-3.5">
+              <div className="flex items-center justify-between">
+                <div className="h-5 w-36 bg-slate-200 rounded-md" />
+                <div className="h-4 w-24 bg-slate-100 rounded-full" />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 rounded-2xl border border-slate-100 bg-slate-50/60">
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-200 shrink-0" />
+                    <div className="flex-1 space-y-1.5">
+                      <div className="h-3.5 w-28 bg-slate-200 rounded" />
+                      <div className="h-2.5 w-36 bg-slate-100 rounded" />
+                    </div>
+                    <div className="w-7 h-5 rounded-full bg-slate-200 shrink-0" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* ── 1. Dynamic LLM Priority Insight Card (Unified High-End Container) ── */}
         <section className="w-full bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-[0_4px_24px_rgba(20,23,121,0.05)] flex flex-col gap-4">
           
           {/* Card Header: AI Priority Insights Title & Subtitle */}
@@ -2036,6 +2118,8 @@ export default function ParentDailyTipScreen() {
             </div>
           </div>
         </section>
+          </>
+        )}
       </main>
 
       {/* Child Switcher Modal */}
@@ -2050,6 +2134,7 @@ export default function ParentDailyTipScreen() {
               sessionStorage.removeItem(k);
             }
           });
+          setLoading(true);
           window.location.reload();
         }}
       />

@@ -41,6 +41,7 @@ export default function HomeScreen() {
   const [todayCompletedCount, setTodayCompletedCount] = useState(0);
 
   const [missions, setMissions] = useState<any[]>([]);
+  const [isMissionsLoading, setIsMissionsLoading] = useState(true);
   const [retentionStreak, setRetentionStreak] = useState<any>(null);
   const [retentionTrigger] = useState(0);
 
@@ -57,7 +58,11 @@ export default function HomeScreen() {
           setTodayCompletedCount(msData.today_completed_count || 0);
         }
       }
-    } catch (e) { }
+    } catch (e) {
+      console.error("Failed to fetch missions", e);
+    } finally {
+      setIsMissionsLoading(false);
+    }
   };
 
 
@@ -175,9 +180,14 @@ export default function HomeScreen() {
   const [citiesData, setCitiesData] = useState<any[]>([]);
   const [journeyData, setJourneyData] = useState<any>(() => {
     try {
-      const raw = getScopedItem("cachedJourneyData") || localStorage.getItem("cachedJourneyData");
+      const raw = getScopedItem("cachedJourneyData");
       return raw ? JSON.parse(raw) : null;
     } catch { return null; }
+  });
+  const [isJourneyLoading, setIsJourneyLoading] = useState<boolean>(() => {
+    try {
+      return !getScopedItem("cachedJourneyData");
+    } catch { return true; }
   });
   const [continueLearningProgress, setContinueLearningProgress] = useState<{ completed: number; total: number; percent: number }>(() => {
     try {
@@ -185,11 +195,21 @@ export default function HomeScreen() {
       return raw ? JSON.parse(raw) : { completed: 0, total: 0, percent: 0 };
     } catch { return { completed: 0, total: 0, percent: 0 }; }
   });
+  const [isContinueLearningLoading, setIsContinueLearningLoading] = useState<boolean>(() => {
+    try {
+      return !getScopedItem("cached_continue_learning_progress");
+    } catch { return true; }
+  });
   const [neuroPlayProgress, setNeuroPlayProgress] = useState<{ completed: number; total: number; percent: number }>(() => {
     try {
       const raw = getScopedItem("cached_neuroplay_progress");
       return raw ? JSON.parse(raw) : { completed: 0, total: 0, percent: 0 };
     } catch { return { completed: 0, total: 0, percent: 0 }; }
+  });
+  const [isNeuroPlayLoading, setIsNeuroPlayLoading] = useState<boolean>(() => {
+    try {
+      return !getScopedItem("cached_neuroplay_progress");
+    } catch { return true; }
   });
   const [dailyHabitData, setDailyHabitData] = useState<any>(() => {
     try {
@@ -217,6 +237,11 @@ export default function HomeScreen() {
       }
     } catch (e) { }
     return { completed: 0, total: 100, percent: 0 };
+  });
+  const [isShadowArenaLoading, setIsShadowArenaLoading] = useState<boolean>(() => {
+    try {
+      return !getScopedItem("cached_shadow_arena_progress");
+    } catch { return true; }
   });
 
   useEffect(() => {
@@ -271,6 +296,8 @@ export default function HomeScreen() {
       }
     } catch (e) {
       console.error("Failed to fetch journey progress", e);
+    } finally {
+      setIsJourneyLoading(false);
     }
   };
 
@@ -331,6 +358,8 @@ export default function HomeScreen() {
       } catch (e) { }
     } catch (e) {
       console.error("Failed to fetch continue learning progress", e);
+    } finally {
+      setIsContinueLearningLoading(false);
     }
   }, [userData]);
 
@@ -370,6 +399,8 @@ export default function HomeScreen() {
       } catch (e) { }
     } catch (e) {
       console.error("Failed to fetch neuroplay progress", e);
+    } finally {
+      setIsNeuroPlayLoading(false);
     }
   }, [userData]);
 
@@ -408,6 +439,8 @@ export default function HomeScreen() {
       } catch (e) { }
     } catch (e) {
       console.error("Failed to fetch shadow arena progress", e);
+    } finally {
+      setIsShadowArenaLoading(false);
     }
   }, [userData]);
 
@@ -486,6 +519,10 @@ export default function HomeScreen() {
               if (spinRes.ok) {
                 const spinData = await spinRes.json();
                 if (spinData && spinData.balances) {
+                  try {
+                    sessionStorage.setItem("spin_wheel_cached_balances", JSON.stringify(spinData.balances));
+                    localStorage.setItem("spin_wheel_cached_balances", JSON.stringify(spinData.balances));
+                  } catch (_) {}
                   const dailyCount = spinData.balances.daily_spins_balance || 0;
                   const hasSpin = dailyCount > 0 || (spinData.balances.event_spins_balance || 0) > 0;
                   setHasFreeSpin(hasSpin);
@@ -642,13 +679,9 @@ export default function HomeScreen() {
   }, [missions]);
 
   const displayMissions = useMemo(() => {
-    const rawList = (missions && missions.length > 0 ? missions : [
-      { seq: 1, id: "seq_1", title: t('answer_10_questions', 'Answer 10 Questions'), coin_reward: 10, xp_reward: 20, current_progress: 0, target_progress: 10, status: "pending", mission_type: "answer_questions" },
-      { seq: 2, id: "seq_2", title: t('win_1_boss_battle', 'Win 1 Boss Battle'), coin_reward: 15, xp_reward: 20, current_progress: 0, target_progress: 1, status: "pending", mission_type: "boss_win" },
-      { seq: 3, id: "seq_3", title: t('win_1_shadow_arena', 'Win 1 Shadow Arena Battle'), coin_reward: 50, xp_reward: 50, current_progress: 0, target_progress: 1, status: "pending", mission_type: "shadow_arena_win" }
-    ]);
+    if (!missions || missions.length === 0) return [];
 
-    const filteredList = rawList.filter((m) => {
+    const filteredList = missions.filter((m) => {
       const isDone = m.status === "completed";
       if (questTab === 'completed') return isDone;
       if (questTab === 'active') return !isDone;
@@ -668,7 +701,7 @@ export default function HomeScreen() {
     });
 
     return sortedList.slice(0, 3);
-  }, [missions, questTab, t]);
+  }, [missions, questTab]);
 
   const effectiveTheme = useMemo(() => {
     const themeParam = searchParams.get("theme");
@@ -735,7 +768,7 @@ export default function HomeScreen() {
             {/* Line 2: Class Badge, Level & Switch Pill Button */}
             <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
               <span className="text-[10px] text-[#4f46e5] bg-[#eef2ff] font-black px-1.5 py-0.5 rounded-full border border-indigo-100 shrink-0 whitespace-nowrap">
-                {userData?.childClass || t('class_10', { defaultValue: "Class 10" })}
+                {userData?.childClass || getActiveUserContext().classLevel || ""}
               </span>
               <span className="text-[10.5px] text-slate-400 font-extrabold whitespace-nowrap">
                 Lvl {userLevel}
@@ -794,13 +827,17 @@ export default function HomeScreen() {
           themeKey={effectiveTheme}
           xp={xp}
           targetXp={1000}
-          currentLocationName={journeyData?.currentLocation || "Egg Village"}
-          destinationName={journeyData?.nextNodeName || "Forest Kingdom"}
+          currentLocationName={journeyData?.currentLocation}
+          destinationName={journeyData?.nextNodeName}
           journeyData={journeyData}
           onCtaClick={handleCtaClick}
           onMissionClick={handleMissionClick}
+          isLoadingMission={isMissionsLoading && !activeMission}
           missionTitle={activeMission?.title}
-          missionProgress={activeMission ? { current: activeMission.current_progress ?? activeMission.currentProgress ?? 0, total: activeMission.target_progress ?? activeMission.targetProgress ?? 10 } : undefined}
+          missionProgress={activeMission ? {
+            current: activeMission.current_progress ?? activeMission.currentProgress ?? 0,
+            total: activeMission.target_progress ?? activeMission.targetProgress ?? 0
+          } : undefined}
           missionRewardText={activeMission ? `+${activeMission.xp_reward ?? activeMission.xpReward ?? 20} XP & ${activeMission.coin_reward ?? activeMission.coinReward ?? 10} Coins` : undefined}
           missionXpReward={activeMission ? (activeMission.xp_reward ?? activeMission.xpReward ?? activeMission.xp) : undefined}
           missionCoinReward={activeMission ? (activeMission.coin_reward ?? activeMission.coinReward ?? activeMission.coins) : undefined}
@@ -810,6 +847,7 @@ export default function HomeScreen() {
         <section className="grid grid-cols-2 gap-3">
           {/* Continue Learning */}
           {(() => {
+            const isLoading = isContinueLearningLoading && !continueLearningProgress.total;
             const classCurriculumTotal = journeyData?.totalCurrentClassChapters ?? journeyData?.totalTierChapters;
             const totalCh = classCurriculumTotal || continueLearningProgress.total || 0;
             const completedCh = continueLearningProgress.completed;
@@ -832,14 +870,26 @@ export default function HomeScreen() {
                 <div className="mt-2">
                   <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('continue_learning')}</h3>
                   <p className="text-[11px] text-[#525266] font-bold leading-relaxed mb-2 truncate">{t('math_science_quests')}</p>
-                  <div className="space-y-1">
-                    <div className="text-[9.5px] font-extrabold text-[#141779] truncate">
-                      {progressText}
+                  {isLoading ? (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-[#141779]/70">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#141779] animate-pulse shrink-0" />
+                        <span className="animate-pulse truncate">{t('loading', 'Loading...')}</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-[#c7c7ff]/70 rounded-full overflow-hidden">
+                        <div className="h-full bg-[#141779]/40 rounded-full animate-pulse transition-all duration-500" style={{ width: '0%' }} />
+                      </div>
                     </div>
-                    <div className="w-full h-1.5 bg-[#c7c7ff]/70 rounded-full overflow-hidden">
-                      <div className="h-full bg-[#141779] rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                  ) : (
+                    <div className="space-y-1">
+                      <div className="text-[9.5px] font-extrabold text-[#141779] truncate">
+                        {progressText}
+                      </div>
+                      <div className="w-full h-1.5 bg-[#c7c7ff]/70 rounded-full overflow-hidden">
+                        <div className="h-full bg-[#141779] rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </button>
             );
@@ -910,6 +960,7 @@ export default function HomeScreen() {
 
           {/* Journey */}
           {(() => {
+            const isLoading = isJourneyLoading && !journeyData;
             const activeClassNum = (() => {
               const raw = getActiveUserContext().classLevel || userData?.childClass || "Class 1";
               const m = String(raw).match(/\d+/);
@@ -953,17 +1004,29 @@ export default function HomeScreen() {
                 <div className="mt-2">
                   <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('journey', 'Journey')}</h3>
                   <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-2 truncate">{t('explorer_map', 'Explorer Map & Stages')}</p>
-                  <div className="space-y-1">
-                    <div className="text-[9.5px] font-extrabold text-[#0d9488] truncate flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#0d9488] shrink-0" />
-                      <span className="truncate">
-                        {journeyProgressText}
-                      </span>
+                  {isLoading ? (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-[#0d9488]/70">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#0d9488] animate-pulse shrink-0" />
+                        <span className="animate-pulse truncate">{t('loading', 'Loading...')}</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-[#ccfbf1]/80 rounded-full overflow-hidden">
+                        <div className="h-full bg-[#0d9488]/40 rounded-full animate-pulse transition-all duration-500" style={{ width: '0%' }} />
+                      </div>
                     </div>
-                    <div className="w-full h-1.5 bg-[#ccfbf1] rounded-full overflow-hidden">
-                      <div className="h-full bg-[#0d9488] rounded-full transition-all duration-500" style={{ width: `${journeyPct}%` }} />
+                  ) : (
+                    <div className="space-y-1">
+                      <div className="text-[9.5px] font-extrabold text-[#0d9488] truncate flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#0d9488] shrink-0" />
+                        <span className="truncate">
+                          {journeyProgressText}
+                        </span>
+                      </div>
+                      <div className="w-full h-1.5 bg-[#ccfbf1] rounded-full overflow-hidden">
+                        <div className="h-full bg-[#0d9488] rounded-full transition-all duration-500" style={{ width: `${journeyPct}%` }} />
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </button>
             );
@@ -1002,6 +1065,7 @@ export default function HomeScreen() {
 
           {/* Neuro Play */}
           {(() => {
+            const isLoading = isNeuroPlayLoading && !neuroPlayProgress.total;
             const skillsCompleted = neuroPlayProgress.completed;
             const totalSkills = neuroPlayProgress.total;
             const pct = neuroPlayProgress.percent;
@@ -1023,15 +1087,27 @@ export default function HomeScreen() {
                 <div className="mt-2">
                   <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('neuro_play', 'Neuro Play')}</h3>
                   <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-2 truncate">{t('brain_skill_lab', 'Brain Skill Lab & Quests')}</p>
-                  <div className="space-y-1">
-                    <div className="text-[9.5px] font-extrabold text-[#7c3aed] truncate flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#7c3aed] shrink-0" />
-                      <span className="truncate">{neuroPlayText}</span>
+                  {isLoading ? (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-[#7c3aed]/70">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#7c3aed] animate-pulse shrink-0" />
+                        <span className="animate-pulse truncate">{t('loading', 'Loading...')}</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-[#ede9fe]/80 rounded-full overflow-hidden">
+                        <div className="h-full bg-[#8b5cf6]/40 rounded-full animate-pulse transition-all duration-500" style={{ width: '0%' }} />
+                      </div>
                     </div>
-                    <div className="w-full h-1.5 bg-[#ede9fe] rounded-full overflow-hidden">
-                      <div className="h-full bg-[#8b5cf6] rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                  ) : (
+                    <div className="space-y-1">
+                      <div className="text-[9.5px] font-extrabold text-[#7c3aed] truncate flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#7c3aed] shrink-0" />
+                        <span className="truncate">{neuroPlayText}</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-[#ede9fe] rounded-full overflow-hidden">
+                        <div className="h-full bg-[#8b5cf6] rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </button>
             );
@@ -1039,6 +1115,7 @@ export default function HomeScreen() {
 
           {/* Shadow Arena */}
           {(() => {
+            const isLoading = isShadowArenaLoading && !shadowArenaProgress.completed;
             const fightsCompleted = Number(shadowArenaProgress.completed || 0);
             const targetFights = 100;
             const fightsPct = Math.min(100, Math.max(0, Math.round((fightsCompleted / targetFights) * 100)));
@@ -1065,15 +1142,27 @@ export default function HomeScreen() {
                 <div className="mt-2">
                   <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('shadow_arena', 'Shadow Arena')}</h3>
                   <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-2 truncate">{t('challenge_friends_short', 'Challenge friends in real...')}</p>
-                  <div className="space-y-1">
-                    <div className="text-[9.5px] font-extrabold text-[#059669] truncate flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] shrink-0" />
-                      <span className="truncate">{fightsText}</span>
+                  {isLoading ? (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-[#059669]/70">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse shrink-0" />
+                        <span className="animate-pulse truncate">{t('loading', 'Loading...')}</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-[#d1fae5]/80 rounded-full overflow-hidden">
+                        <div className="h-full bg-[#10b981]/40 rounded-full animate-pulse transition-all duration-500" style={{ width: '0%' }} />
+                      </div>
                     </div>
-                    <div className="w-full h-1.5 bg-[#d1fae5] rounded-full overflow-hidden">
-                      <div className="h-full bg-[#10b981] rounded-full transition-all duration-500" style={{ width: `${fightsBarWidth}%` }} />
+                  ) : (
+                    <div className="space-y-1">
+                      <div className="text-[9.5px] font-extrabold text-[#059669] truncate flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] shrink-0" />
+                        <span className="truncate">{fightsText}</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-[#d1fae5] rounded-full overflow-hidden">
+                        <div className="h-full bg-[#10b981] rounded-full transition-all duration-500" style={{ width: `${fightsBarWidth}%` }} />
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </button>
             );
@@ -1192,6 +1281,25 @@ export default function HomeScreen() {
                   style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
                 >
                   {(() => {
+                    if (isMissionsLoading && (!missions || missions.length === 0)) {
+                      return (
+                        <div className="flex flex-col gap-2.5 animate-pulse">
+                          {[1, 2, 3].map((i) => (
+                            <div key={i} className="p-3 sm:p-3.5 rounded-2xl border-2 border-slate-100 bg-slate-50 flex items-center justify-between gap-3 shrink-0">
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <div className="w-11 h-11 rounded-2xl bg-slate-200 shrink-0" />
+                                <div className="min-w-0 flex-1 space-y-1.5">
+                                  <div className="h-4 w-36 bg-slate-200 rounded" />
+                                  <div className="h-3 w-48 bg-slate-100 rounded" />
+                                </div>
+                              </div>
+                              <div className="h-8 w-16 bg-slate-200 rounded-xl shrink-0" />
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    }
+
                     if (displayMissions.length === 0) {
                       return (
                         <div className="py-8 text-center text-slate-500 font-bold text-sm">

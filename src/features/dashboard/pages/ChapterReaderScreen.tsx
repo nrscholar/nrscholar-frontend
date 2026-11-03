@@ -560,7 +560,7 @@ export default function ChapterReaderScreen() {
                 paddingLeft: Math.max(0, Math.floor((availW - currentWidth) / 2)),
                 paddingRight: Math.max(0, Math.floor((availW - currentWidth) / 2)),
                 paddingTop: '0.75rem',
-                paddingBottom: '11rem',
+                paddingBottom: '13rem',
                 backgroundColor: '#ffffff',
                 boxSizing: 'border-box',
               }}
@@ -608,42 +608,39 @@ export default function ChapterReaderScreen() {
           </div>
         )}
 
-        {/* ── Floating controls ─────────────────────────────────────────────── */}
-        {pdfUrl && numPages && (
-          <div className="absolute bottom-5 sm:bottom-4 left-0 right-0 flex flex-col items-center gap-2 pointer-events-none z-30 px-4">
-
-            {/* Mark complete overlay button on final page */}
-            {!loading && pageNumber === numPages && (
-              <button
-                onClick={handleReadingComplete}
-                disabled={markingComplete}
-                className="pointer-events-auto bg-[#141779] hover:bg-[#0f1159] active:scale-95 transition-all text-white font-black py-3 px-6 rounded-2xl shadow-xl border-2 border-indigo-300/40 text-sm uppercase tracking-wider mb-1 flex items-center gap-2 animate-bounce"
-              >
-                {markingComplete ? "Saving..." : "✓ Mark Reading Complete"}
-              </button>
-            )}
-
+        {/* ── Floating zoom & pagination controls (clean horizontal bar positioned safely above bottom actions) ── */}
+        {pdfUrl && Boolean(numPages) && (
+          <div
+            className={`absolute left-0 right-0 flex items-center justify-center gap-2.5 flex-wrap pointer-events-none z-30 px-4 transition-all duration-300 ${
+              !loading && pageNumber === numPages
+                ? 'bottom-[76px] sm:bottom-[82px]'
+                : 'bottom-4 sm:bottom-5'
+            }`}
+          >
             {/* Zoom pill */}
-            <div className="bg-white/95 backdrop-blur-xl shadow-[0_4px_20px_rgb(0,0,0,0.12)] border border-slate-200/80 px-4 py-1.5 rounded-full flex items-center gap-3 pointer-events-auto">
+            <div className="bg-white/95 backdrop-blur-xl shadow-[0_4px_20px_rgb(0,0,0,0.12)] border border-slate-200/80 px-3 sm:px-4 py-1.5 rounded-full flex items-center gap-2 sm:gap-3 pointer-events-auto shrink-0">
               <button
+                type="button"
                 onClick={zoomOut}
                 disabled={scale <= MIN_SCALE}
-                className="p-1.5 text-[#141779] hover:bg-[#141779]/10 active:scale-95 rounded-full disabled:opacity-30 transition-all"
+                className="p-1.5 text-[#141779] hover:bg-[#141779]/10 active:scale-95 rounded-full disabled:opacity-30 transition-all cursor-pointer"
                 title="Zoom Out"
               >
                 <ZoomOut size={18} />
               </button>
               <button
+                type="button"
                 onClick={resetZoom}
-                className="text-xs font-black text-[#141779] px-2 hover:bg-[#141779]/10 rounded-full py-1 transition-all min-w-[44px] text-center"
+                className="text-xs font-black text-[#141779] px-1 sm:px-2 hover:bg-[#141779]/10 rounded-full py-1 transition-all min-w-[40px] text-center cursor-pointer"
                 title="Reset Zoom to 100%"
               >
                 {Math.round(scale * 100)}%
               </button>
               <button
+                type="button"
                 onClick={zoomIn}
                 disabled={scale >= MAX_SCALE}
-                className="p-1.5 text-[#141779] hover:bg-[#141779]/10 active:scale-95 rounded-full disabled:opacity-30 transition-all"
+                className="p-1.5 text-[#141779] hover:bg-[#141779]/10 active:scale-95 rounded-full disabled:opacity-30 transition-all cursor-pointer"
                 title="Zoom In"
               >
                 <ZoomIn size={18} />
@@ -651,31 +648,56 @@ export default function ChapterReaderScreen() {
             </div>
 
             {/* Page navigation pill */}
-            <div className="bg-white/95 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-slate-200/80 px-5 py-2 rounded-full flex items-center justify-between gap-5 pointer-events-auto min-w-[180px]">
+            <div className="bg-white/95 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-slate-200/80 px-4 sm:px-5 py-1.5 sm:py-2 rounded-full flex items-center justify-between gap-4 sm:gap-5 pointer-events-auto min-w-[160px] sm:min-w-[180px] shrink-0">
               <button
+                type="button"
                 disabled={pageNumber <= 1}
                 onClick={goToPrevPage}
-                className="p-1.5 text-[#141779] hover:bg-[#141779]/10 active:scale-95 rounded-full disabled:opacity-30 transition-all"
+                className="p-1.5 text-[#141779] hover:bg-[#141779]/10 active:scale-95 rounded-full disabled:opacity-30 transition-all cursor-pointer"
                 title="Previous Page"
               >
-                <ChevronLeft size={24} />
+                <ChevronLeft size={22} />
               </button>
-              <span className="font-extrabold text-[#141779] text-base tracking-wide">
+              <span className="font-extrabold text-[#141779] text-sm sm:text-base tracking-wide select-none">
                 {pageNumber} <span className="opacity-40 mx-1 font-normal">/</span> {numPages}
               </span>
               <button
-                disabled={pageNumber >= numPages}
+                type="button"
+                disabled={Boolean(numPages && pageNumber >= numPages)}
                 onClick={goToNextPage}
-                className="p-1.5 text-[#141779] hover:bg-[#141779]/10 active:scale-95 rounded-full disabled:opacity-30 transition-all"
+                className="p-1.5 text-[#141779] hover:bg-[#141779]/10 active:scale-95 rounded-full disabled:opacity-30 transition-all cursor-pointer"
                 title="Next Page"
               >
-                <ChevronRight size={24} />
+                <ChevronRight size={22} />
               </button>
             </div>
-
           </div>
         )}
       </main>
+
+      {/* ── Sticky / Fixed Bottom Action Bar for "MARK READING COMPLETE" ── */}
+      {!loading && pdfUrl && pageNumber === numPages && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-md border-t border-slate-200/80 px-4 py-3 sm:py-3.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_24px_rgba(20,23,121,0.08)] flex items-center justify-center transition-all duration-300">
+          <button
+            type="button"
+            onClick={handleReadingComplete}
+            disabled={markingComplete}
+            className="w-full max-w-md bg-[#141779] hover:bg-[#0f1159] active:scale-[0.98] transition-all text-white font-black py-3.5 px-6 rounded-2xl shadow-lg border-2 border-indigo-300/40 text-sm uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {markingComplete ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              <>
+                <span className="text-base font-black">✓</span>
+                <span>Mark Reading Complete</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
