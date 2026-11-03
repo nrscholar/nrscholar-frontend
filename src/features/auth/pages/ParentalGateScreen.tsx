@@ -1,4 +1,3 @@
-import { NRScholarNavBrand } from "../../../components/NRScholarNavBrand";
 import { AlertCircle, ArrowLeft, CheckCircle, Delete } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -266,7 +265,12 @@ export default function ParentalGateScreen() {
     return (
       <div className="min-h-screen bg-[#f7f9fb] font-sans flex flex-col relative overflow-x-clip">
         <header className="sticky top-0 z-50 flex items-center justify-between px-5 py-4 bg-[#f7f9fb]/90 backdrop-blur-md">
-          <NRScholarNavBrand onBack={handleBack} />
+          <div className="flex items-center gap-3">
+            <button onClick={handleBack} className="p-1 hover:opacity-80 transition-opacity" aria-label="Back">
+              <ArrowLeft size={24} color="#141779" />
+            </button>
+            <h1 className="text-2xl font-bold text-[#141779] tracking-tight">NR Scholar</h1>
+          </div>
         </header>
         <main className="flex-1 flex flex-col items-center justify-center px-6 pb-12 z-10">
           <div className="h-7 w-44 rounded-xl animate-skeleton mb-3"></div>
@@ -298,8 +302,13 @@ export default function ParentalGateScreen() {
 
       {/* Header */}
       <header className="sticky top-0 z-50 flex items-center justify-between px-5 py-4 bg-[#f7f9fb]/90 backdrop-blur-md">
-          <NRScholarNavBrand onBack={handleBack} />
-        </header>
+        <div className="flex items-center gap-3">
+          <button onClick={handleBack} className="p-1 hover:opacity-80 transition-opacity" aria-label="Back">
+            <ArrowLeft size={24} color="#141779" />
+          </button>
+          <h1 className="text-2xl font-bold text-[#141779] tracking-tight">NR Scholar</h1>
+        </div>
+      </header>
 
       {/* Content */}
       <main className="flex-1 flex flex-col items-center justify-center px-6 pb-12 z-10">

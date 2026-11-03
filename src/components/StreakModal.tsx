@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X } from "lucide-react";
 import { apiFetch } from "../api";
 import { useLockBodyScroll } from "../utils/useLockBodyScroll";
 
@@ -63,30 +62,16 @@ export default function StreakModal({
           onTouchMove={(e) => {
             if (e.target === e.currentTarget) e.preventDefault();
           }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) onClose();
-          }}
-          className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-white/40 backdrop-blur-md transition-all duration-300 overscroll-contain select-none"
+          className="fixed inset-0 z-[110] bg-[#f7f9fb]/90 backdrop-blur-md flex flex-col items-center justify-center p-6 overscroll-contain select-none"
           style={{ overscrollBehavior: "contain", touchAction: "none" }}
         >
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.8, opacity: 0 }}
-            onClick={(e) => e.stopPropagation()}
             className="bg-gradient-to-br from-[#111453]/95 via-[#141779]/95 to-[#0b0c3f]/95 text-white border border-white/10 w-full max-w-sm rounded-[32px] p-8 text-center relative shadow-[0_20px_50px_rgba(20,23,121,0.5)] flex flex-col items-center justify-between gap-6 overflow-hidden overscroll-contain select-text"
             style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
           >
-            {/* Top-Right Close Button */}
-            <button
-              type="button"
-              onClick={onClose}
-              className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-90 flex items-center justify-center text-white/80 hover:text-white transition-all cursor-pointer border border-white/10"
-              aria-label="Close"
-            >
-              <X size={18} strokeWidth={2.5} />
-            </button>
-
             <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-teal-400/20 blur-2xl pointer-events-none" />
             <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-orange-500/20 blur-2xl pointer-events-none" />
 

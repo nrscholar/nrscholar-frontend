@@ -107,10 +107,10 @@ export default function HabitsScreen() {
         
         {/* Main Title Section */}
         <div className="text-center space-y-1">
-          <h2 className="text-2xl sm:text-[26px] font-black text-[#1E255E] tracking-tight">
+          <h2 className="text-2xl sm:text-[26px] font-black text-[#2D328F] tracking-tight">
             {t('daily_habit_journey', 'Daily Habit Journey')}
           </h2>
-          <p className="text-[11px] sm:text-xs font-black text-[#1E255E] uppercase tracking-wider flex items-center justify-center gap-1">
+          <p className="text-[11px] sm:text-xs font-black text-[#12D6D1] uppercase tracking-wider flex items-center justify-center gap-1">
             <span>{t('build_smart_habits_desc', 'BUILD SMART HABITS, GAIN GOLD STARS!')}</span>
             <span className="text-[#FBBF24]">⭐</span>
           </p>

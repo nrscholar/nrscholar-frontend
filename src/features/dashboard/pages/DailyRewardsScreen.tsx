@@ -740,55 +740,28 @@ export default function DailyRewardsScreen() {
               </div>
             </div>
           ) : (isSpinning || showModal) ? (
-            /* State 3: Spinning / In-Progress State */
             <button
               disabled={true}
-              className="w-full py-4 rounded-full font-black text-lg tracking-wider uppercase flex items-center justify-center gap-2 border border-teal-200/40 bg-[#00A89F]/80 text-white opacity-80 cursor-wait scale-95 shadow-md transition-all duration-300 select-none"
+              className="w-full py-4 rounded-full font-black text-lg tracking-wider uppercase flex items-center justify-center gap-2 border bg-[#141779]/80 text-white opacity-90 cursor-not-allowed border-indigo-300/30 shadow-md"
             >
-              <Sparkles className="w-5 h-5 text-white animate-spin shrink-0" />
-              <span>{t('spinning', 'SPINNING')}</span>
-              <span className="inline-flex gap-0.5 tracking-normal">
-                <span className="animate-bounce [animation-delay:0ms]">.</span>
-                <span className="animate-bounce [animation-delay:150ms]">.</span>
-                <span className="animate-bounce [animation-delay:300ms]">.</span>
-              </span>
+              {t('spinning', '🌀 Spinning...')}
             </button>
           ) : getSpinBalance() > 0 ? (
-            /* State 1 & 2: Idle / Ready State & Press Micro-Interaction */
             <button
-              type="button"
               onClick={startSpin}
               disabled={isSpinning || isBuying}
-              className="relative overflow-hidden w-full py-4 rounded-full font-black text-lg tracking-wider uppercase flex items-center justify-center gap-2 border border-teal-300/40 bg-gradient-to-r from-[#00A89F] via-[#00BFA5] to-[#00C49F] hover:brightness-105 hover:scale-[1.02] text-white cursor-pointer shadow-lg shadow-[#00A89F]/35 hover:shadow-cyan-500/40 spin-btn-breathe select-none active:scale-95 duration-150"
+              className="w-full py-4 rounded-full font-black text-lg tracking-wider uppercase transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 border bg-[#141779] hover:bg-[#0f1159] hover:scale-[1.01] hover:shadow-[0_0_25px_rgba(20,23,121,0.5)] text-white border-indigo-300/40 animate-pulse cursor-pointer shadow-lg"
             >
-              {/* Translucent Shimmer Sweep Overlay */}
-              <div className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden rounded-full">
-                <div className="w-1/2 h-full bg-gradient-to-r from-transparent via-white/30 to-transparent spin-shimmer-sweep" />
-              </div>
-
-              <span className="relative z-10 flex items-center justify-center gap-2">
-                <span>{t('spin', 'SPIN')}</span>
-                <span className="text-base">✨</span>
-              </span>
+              {t('spin', 'SPIN')}
             </button>
           ) : (
-            /* State 4: Disabled State (0 Attempts Left) + Buy Option */
-            <div className="w-full space-y-2.5">
-              <button
-                disabled={true}
-                className="w-full py-4 rounded-full font-black text-lg tracking-wider uppercase flex items-center justify-center gap-2 bg-slate-300 text-slate-500 shadow-none cursor-not-allowed select-none transition-all duration-200 border border-slate-300"
-              >
-                {t('spin', 'SPIN')}
-              </button>
-              <button
-                type="button"
-                onClick={handleOpenBuyConfirm}
-                disabled={isSpinning || isBuying}
-                className="w-full py-3.5 rounded-full font-black text-sm sm:text-base tracking-wider uppercase transition-all duration-150 transform active:scale-95 flex items-center justify-center gap-2 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] hover:brightness-110 text-white shadow-md border border-indigo-300/40 cursor-pointer"
-              >
-                <span>{isBuying ? t('purchasing', 'Purchasing...') : t('buy_spin', { cost: (spinType === "daily" || spinType === "boss_revival") ? 100 : 150, defaultValue: `🛒 Buy 1 Spin (${(spinType === "daily" || spinType === "boss_revival") ? "100 🪙" : "150 🪙"})` })}</span>
-              </button>
-            </div>
+            <button
+              onClick={handleOpenBuyConfirm}
+              disabled={isSpinning || isBuying}
+              className="w-full py-4 rounded-full font-black text-base sm:text-lg tracking-wider uppercase transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] hover:brightness-110 text-white shadow-lg border border-indigo-300/40 cursor-pointer"
+            >
+              <span>{isBuying ? t('purchasing', 'Purchasing...') : t('buy_spin', { cost: (spinType === "daily" || spinType === "boss_revival") ? 100 : 150, defaultValue: `🛒 Buy 1 Spin (${(spinType === "daily" || spinType === "boss_revival") ? "100 🪙" : "150 🪙"})` })}</span>
+            </button>
           )}
 
           {!loading && (

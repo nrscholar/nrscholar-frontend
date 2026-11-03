@@ -14,7 +14,6 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { NRScholarLogo } from "./components/NRScholarLogo";
 import Toast from "react-native-toast-message";
 import { authApi, saveToken } from "./services/api";
 
@@ -29,10 +28,8 @@ export default function SignupStep3Screen() {
   
   const [loading, setLoading] = useState(false);
 
-  const hasMinLength = password.length >= 8;
+  const isMinLength = password.length >= 8;
   const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-  const isMatching = confirmPassword.length > 0 && password === confirmPassword;
-  const isFormValid = hasMinLength && hasSpecialChar && isMatching;
 
   const showToast = (message: string, type: 'success' | 'error' = 'error') => {
     Toast.show({
@@ -43,7 +40,12 @@ export default function SignupStep3Screen() {
   };
 
   const handleSignup = async () => {
-    if (!isFormValid) {
+    if (!isMinLength || !hasSpecialChar) {
+      showToast("Please meet all password requirements");
+      return;
+    }
+    if (password !== confirmPassword) {
+      showToast("Passwords do not match");
       return;
     }
 
@@ -95,8 +97,8 @@ export default function SignupStep3Screen() {
       {/* Header (TopAppBar) */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <NRScholarLogo size={28} />
-          <Text style={styles.headerTitle}>N R Scholar</Text>
+          <MaterialIcons name="rocket-launch" size={28} color="#141779" />
+          <Text style={styles.headerTitle}>NR Scholar</Text>
         </View>
         <TouchableOpacity 
           style={styles.profileIcon}
@@ -127,8 +129,8 @@ export default function SignupStep3Screen() {
           </View>
 
           <View style={styles.titlesContainer}>
-            <Text style={styles.mainTitle}>Create Your Password</Text>
-            <Text style={styles.subTitle}>Choose a strong password to keep your account safe and secure.</Text>
+            <Text style={styles.mainTitle}>Secure Your Cockpit</Text>
+            <Text style={styles.subTitle}>Set your access codes for the cosmic journey ahead.</Text>
           </View>
 
           {/* Glass Form Card */}
@@ -177,15 +179,16 @@ export default function SignupStep3Screen() {
                     <MaterialIcons name={showConfirmPassword ? "visibility" : "visibility-off"} size={22} color="#767683" />
                   </TouchableOpacity>
                 </View>
+              </View>
             </View>
 
             {/* Password Validation Rules */}
             <View style={styles.validationSection}>
               <View style={styles.validationRow}>
                 <MaterialIcons 
-                  name={hasMinLength ? "check-circle" : "radio-button-unchecked"} 
+                  name={isMinLength ? "check-circle" : "radio-button-unchecked"} 
                   size={20} 
-                  color={hasMinLength ? "#007168" : "#c7c5d4"} 
+                  color={isMinLength ? "#007168" : "#c7c5d4"} 
                 />
                 <Text style={styles.validationText}>At least 8 characters</Text>
               </View>
@@ -197,14 +200,6 @@ export default function SignupStep3Screen() {
                 />
                 <Text style={styles.validationText}>Include a special symbol</Text>
               </View>
-              <View style={styles.validationRow}>
-                <MaterialIcons 
-                  name={isMatching ? "check-circle" : "radio-button-unchecked"} 
-                  size={20} 
-                  color={isMatching ? "#007168" : "#c7c5d4"} 
-                />
-                <Text style={styles.validationText}>Passwords match</Text>
-              </View>
             </View>
           </View>
 
@@ -213,10 +208,10 @@ export default function SignupStep3Screen() {
             <TouchableOpacity 
               style={[
                 styles.submitButton, 
-                (!isFormValid || loading) && { opacity: 0.7 }
+                (!isMinLength || !hasSpecialChar || !confirmPassword || loading) && { opacity: 0.7 }
               ]}
               onPress={handleSignup}
-              disabled={!isFormValid || loading}
+              disabled={!isMinLength || !hasSpecialChar || !confirmPassword || loading}
               activeOpacity={0.8}
             >
               {loading ? (
@@ -317,18 +312,18 @@ const styles = StyleSheet.create({
   stepLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#006a62',
+    color: '#141779',
     letterSpacing: 1,
   },
   stepPercent: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#006a62',
+    color: '#141779',
   },
   progressTrack: {
     height: 8,
     width: '100%',
-    backgroundColor: '#eceef0',
+    backgroundColor: '#e0e3e5',
     borderRadius: 9999,
     overflow: 'hidden',
   },
@@ -346,14 +341,14 @@ const styles = StyleSheet.create({
   mainTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#1e255e',
+    color: '#141779',
     letterSpacing: -0.5,
     marginBottom: 8,
     textAlign: 'center',
   },
   subTitle: {
     fontSize: 16,
-    color: '#64748b',
+    color: '#464652',
     fontWeight: '500',
     textAlign: 'center',
   },
