@@ -1,20 +1,13 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Rocket, ArrowLeft, User, Phone } from "lucide-react";
-import { NRScholarNavBrand } from "../../../components/NRScholarNavBrand";
 import { apiFetch } from "../../../api";
-
-const formatPhoneNumber = (value: string): string => {
-  const cleanDigits = value.replace(/\D/g, '').slice(0, 10);
-  if (cleanDigits.length <= 5) return cleanDigits;
-  return `${cleanDigits.slice(0, 5)} - ${cleanDigits.slice(5)}`;
-};
 
 export default function SignupStep1Screen() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [fullName, setFullName] = useState(searchParams.get("fullName") || "");
-  const [mobile, setMobile] = useState(formatPhoneNumber(searchParams.get("mobile") || ""));
+  const [mobile, setMobile] = useState(searchParams.get("mobile") || "");
   const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -22,30 +15,6 @@ export default function SignupStep1Screen() {
     // Check for exactly 10 digits starting with 6, 7, 8, or 9
     const regex = /^[6-9]\d{9}$/;
     return regex.test(mobile);
-  };
-
-  const handleMobileKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Backspace") {
-      const input = e.currentTarget;
-      const { selectionStart, selectionEnd } = input;
-      // If cursor is right after separator " - " (positions 6, 7, 8) without active selection
-      if (
-        selectionStart !== null &&
-        selectionStart === selectionEnd &&
-        selectionStart > 5 &&
-        selectionStart <= 8
-      ) {
-        e.preventDefault();
-        const clean = mobile.replace(/\D/g, '');
-        // Delete the 5th digit (at index 4)
-        const newDigits = clean.slice(0, 4) + clean.slice(5);
-        const formatted = formatPhoneNumber(newDigits);
-        setMobile(formatted);
-        setTimeout(() => {
-          input.setSelectionRange(4, 4);
-        }, 0);
-      }
-    }
   };
 
   const handleNext = async (e: React.FormEvent) => {
@@ -75,7 +44,7 @@ export default function SignupStep1Screen() {
       const response = await apiFetch("/api/users/check-mobile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mobile: cleanMobile })
+        body: JSON.stringify({ mobile })
       });
       const data = await response.json();
       setLoading(false);
@@ -88,7 +57,7 @@ export default function SignupStep1Screen() {
       if (data.exists) {
         setErrorMsg("Mobile number already registered");
       } else {
-        navigate(`/signup-step2?fullName=${encodeURIComponent(fullName.trim())}&mobile=${encodeURIComponent(cleanMobile)}`);
+        navigate(`/signup-step2?fullName=${encodeURIComponent(fullName)}&mobile=${encodeURIComponent(mobile)}`);
       }
     } catch (e) {
       setLoading(false);
@@ -101,7 +70,13 @@ export default function SignupStep1Screen() {
       
       {/* Header */}
       <header className="flex items-center px-6 py-4 bg-[rgba(255,255,255,0.8)] border-b border-[rgba(255,255,255,0.2)] sticky top-0 z-40">
-        <NRScholarNavBrand onBack={() => navigate("/login")} />
+        <div className="flex items-center gap-2">
+          <button onClick={() => navigate("/login")} className="w-10 h-10 -ml-2 rounded-full bg-[#e0e0ff] flex items-center justify-center hover:opacity-80 transition-opacity">
+            <ArrowLeft size={24} color="#141779" />
+          </button>
+          <Rocket size={28} color="#141779" />
+          <h1 className="text-[22px] font-bold text-[#141779] tracking-[-0.5px]">NR Scholar</h1>
+        </div>
       </header>
 
       <main className="px-6 pt-8 flex flex-col items-center w-full max-w-[430px] mx-auto">
@@ -138,39 +113,34 @@ export default function SignupStep1Screen() {
             {/* Parent Name */}
             <div className="flex flex-col gap-2">
               <label className="text-sm font-semibold text-[#767683] ml-1">Parent Name</label>
-              <div className="relative w-full flex items-center">
-                {/* Leading Icon (Left side, primary blue #1E255E) */}
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-[#1E255E]">
-                  <User size={20} strokeWidth={2} className="text-[#1E255E]" />
-                </div>
+              <div className="relative flex items-center">
                 <input
                   type="text"
                   placeholder="Enter Your Name"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full h-14 bg-white rounded-full pl-11 pr-4 text-base font-medium text-[#191c1e] border border-[#c7c5d4] focus:outline-none focus:ring-2 focus:ring-[#1E255E]/20 focus:border-[#1E255E] transition-all placeholder:text-[#c7c5d4]"
+                  className="w-full h-14 bg-white rounded-full pl-6 pr-14 text-base font-medium text-[#191c1e] border border-[#c7c5d4] focus:outline-none focus:border-[#141779] transition-colors placeholder:text-[#c7c5d4]"
                 />
+                <User size={22} color="#c7c5d4" className="absolute right-5" />
               </div>
             </div>
 
             {/* Mobile Number */}
             <div className="flex flex-col gap-2">
               <label className="text-sm font-semibold text-[#767683] ml-1">Mobile Number</label>
-              <div className="relative w-full flex items-center">
-                {/* Leading Icon (Left side, primary blue #1E255E) */}
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-[#1E255E]">
-                  <Phone size={20} strokeWidth={2} className="text-[#1E255E]" />
-                </div>
+              <div className="relative flex items-center">
                 <input
                   type="tel"
-                  inputMode="numeric"
                   placeholder="Enter Mobile Number"
                   value={mobile}
-                  maxLength={13}
-                  onChange={(e) => setMobile(formatPhoneNumber(e.target.value))}
-                  onKeyDown={handleMobileKeyDown}
-                  className="w-full h-14 bg-white rounded-full pl-11 pr-4 text-base font-medium text-[#191c1e] border border-[#c7c5d4] focus:outline-none focus:ring-2 focus:ring-[#1E255E]/20 focus:border-[#1E255E] transition-all placeholder:text-[#c7c5d4]"
+                  maxLength={10}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setMobile(val);
+                  }}
+                  className="w-full h-14 bg-white rounded-full pl-6 pr-14 text-base font-medium text-[#191c1e] border border-[#c7c5d4] focus:outline-none focus:border-[#141779] transition-colors placeholder:text-[#c7c5d4]"
                 />
+                <Phone size={22} color="#c7c5d4" className="absolute right-5" />
               </div>
             </div>
             
@@ -180,8 +150,8 @@ export default function SignupStep1Screen() {
           {/* Primary Action */}
           <button
             onClick={handleNext}
-            disabled={!fullName.trim() || mobile.replace(/\D/g, "").length !== 10 || loading}
-            className={`w-full h-14 bg-[#141779] rounded-full flex items-center justify-center gap-3 shadow-[0_4px_15px_rgba(20,23,121,0.3)] transition-opacity ${(!fullName.trim() || mobile.replace(/\D/g, '').length !== 10 || loading) ? 'opacity-70 cursor-not-allowed' : 'hover:opacity-90'}`}
+            disabled={!fullName || !mobile || loading}
+            className={`w-full h-14 bg-[#141779] rounded-full flex items-center justify-center gap-3 shadow-[0_4px_15px_rgba(20,23,121,0.3)] transition-opacity ${(!fullName || !mobile || loading) ? 'opacity-70 cursor-not-allowed' : 'hover:opacity-90'}`}
           >
             {loading ? (
               <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />

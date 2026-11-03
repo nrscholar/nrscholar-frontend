@@ -1,4 +1,4 @@
 export const APP_CONFIG = {
-  brandName: 'N R Scholar',
+  brandName: 'NRScholar',
   supportEmail: 'support@nrscholar.com'
 };

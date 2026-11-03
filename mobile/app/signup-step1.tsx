@@ -14,7 +14,6 @@ import {
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { NRScholarLogo } from "./components/NRScholarLogo";
 
 export default function SignupStep1Screen() {
   const router = useRouter();
@@ -44,8 +43,8 @@ export default function SignupStep1Screen() {
       {/* Header (TopAppBar) */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <NRScholarLogo size={28} />
-          <Text style={styles.headerTitle}>N R Scholar</Text>
+          <MaterialIcons name="rocket-launch" size={28} color="#141779" />
+          <Text style={styles.headerTitle}>NR Scholar</Text>
         </View>
         {/* Close/Back button for focused task */}
         <TouchableOpacity 
