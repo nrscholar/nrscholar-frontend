@@ -682,17 +682,24 @@ export default function HomeScreen() {
     if (!missions || missions.length === 0) return [];
 
     const filteredList = missions.filter((m) => {
-      const isDone = m.status === "completed";
-      if (questTab === 'completed') return isDone;
-      if (questTab === 'active') return !isDone;
+      const isClaimed = m.status === "completed" || m.status === "claimed";
+      const isUnclaimed = m.status === "ready_to_claim" || (Number(m.current_progress || 0) >= Number(m.target_progress || 1) && !isClaimed);
+      const isCompleted = isClaimed || isUnclaimed;
+      const isActive = !isCompleted;
+
+      if (questTab === 'completed') return isCompleted;
+      if (questTab === 'active') return isActive;
       return true;
     });
 
     const sortedList = [...filteredList].sort((a, b) => {
-      const isDoneA = a.status === "completed";
-      const isReadyA = a.status === "ready_to_claim" || (a.current_progress >= (a.target_progress || 1) && !isDoneA);
-      const isDoneB = b.status === "completed";
-      const isReadyB = b.status === "ready_to_claim" || (b.current_progress >= (b.target_progress || 1) && !isDoneB);
+      const isClaimedA = a.status === "completed" || a.status === "claimed";
+      const isReadyA = a.status === "ready_to_claim" || (Number(a.current_progress || 0) >= Number(a.target_progress || 1) && !isClaimedA);
+      const isDoneA = isClaimedA;
+
+      const isClaimedB = b.status === "completed" || b.status === "claimed";
+      const isReadyB = b.status === "ready_to_claim" || (Number(b.current_progress || 0) >= Number(b.target_progress || 1) && !isClaimedB);
+      const isDoneB = isClaimedB;
 
       const orderA = isReadyA ? 0 : isDoneA ? 2 : 1;
       const orderB = isReadyB ? 0 : isDoneB ? 2 : 1;
@@ -700,7 +707,7 @@ export default function HomeScreen() {
       return (a.seq || 0) - (b.seq || 0);
     });
 
-    return sortedList.slice(0, 3);
+    return sortedList;
   }, [missions, questTab]);
 
   const effectiveTheme = useMemo(() => {
@@ -843,7 +850,7 @@ export default function HomeScreen() {
           missionCoinReward={activeMission ? (activeMission.coin_reward ?? activeMission.coinReward ?? activeMission.coins) : undefined}
         />
 
-        {/* 2. SIX QUICK ACTION BENTO GRID (2x3 Cards with Continue Learning, Good Habits, Journey, My Collections, Brain Quest, Shadow Arena) */}
+        {/* 2. FIVE QUICK ACTION BENTO GRID (2+2+1 Cards: Continue Learning, Good Habits, My Collections, Neuro Play, Shadow Arena) */}
         <section className="grid grid-cols-2 gap-3">
           {/* Continue Learning */}
           {(() => {
@@ -958,80 +965,6 @@ export default function HomeScreen() {
             );
           })()}
 
-          {/* Journey */}
-          {(() => {
-            const isLoading = isJourneyLoading && !journeyData;
-            const activeClassNum = (() => {
-              const raw = getActiveUserContext().classLevel || userData?.childClass || "Class 1";
-              const m = String(raw).match(/\d+/);
-              return m ? parseInt(m[0], 10) : 1;
-            })();
-
-            const currentClassNodes = Array.isArray(journeyData?.nodes)
-              ? journeyData.nodes.filter((n: any) => n.minClass === activeClassNum)
-              : [];
-            const totalLevels = currentClassNodes.length || (activeClassNum >= 4 ? 4 : 3);
-            const completedLevels = currentClassNodes.filter((n: any) => Boolean(n.completed)).length;
-
-            const journeyCompleted = journeyData?.completedCurrentClassChapters ?? journeyData?.completedChapters ?? 0;
-            const journeyTotal = journeyData?.totalCurrentClassChapters ?? journeyData?.totalTierChapters ?? 0;
-            const journeyPct = typeof journeyData?.currentClassProgress === "number"
-              ? Math.min(100, Math.max(0, Math.round(journeyData.currentClassProgress)))
-              : (typeof journeyData?.journeyProgress === "number"
-                ? Math.min(100, Math.max(0, Math.round(journeyData.journeyProgress)))
-                : (typeof journeyData?.progressPercentage === "number"
-                  ? Math.min(100, Math.max(0, Math.round(journeyData.progressPercentage)))
-                  : (journeyTotal > 0 ? Math.min(100, Math.max(0, Math.round((journeyCompleted / journeyTotal) * 100))) : 0)));
-
-            const journeyProgressText = t('levels_progress_ratio', {
-              completed: completedLevels,
-              total: totalLevels,
-              pct: journeyPct,
-              defaultValue: `${completedLevels}/${totalLevels} Levels (${journeyPct}%)`
-            });
-
-            return (
-              <button
-                onClick={() => navigate("/practice/journey-map")}
-                className="bg-[#e6fbf7] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#b2f5ea]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
-              >
-                <div className="w-9 h-9 rounded-full bg-[#ccfbf1] flex items-center justify-center">
-                  <BookOpen size={18} className="text-[#0d9488]" />
-                </div>
-                <div className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
-                  <ChevronRight size={14} />
-                </div>
-                <div className="mt-2">
-                  <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('journey', 'Journey')}</h3>
-                  <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-2 truncate">{t('explorer_map', 'Explorer Map & Stages')}</p>
-                  {isLoading ? (
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-[#0d9488]/70">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#0d9488] animate-pulse shrink-0" />
-                        <span className="animate-pulse truncate">{t('loading', 'Loading...')}</span>
-                      </div>
-                      <div className="w-full h-1.5 bg-[#ccfbf1]/80 rounded-full overflow-hidden">
-                        <div className="h-full bg-[#0d9488]/40 rounded-full animate-pulse transition-all duration-500" style={{ width: '0%' }} />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      <div className="text-[9.5px] font-extrabold text-[#0d9488] truncate flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#0d9488] shrink-0" />
-                        <span className="truncate">
-                          {journeyProgressText}
-                        </span>
-                      </div>
-                      <div className="w-full h-1.5 bg-[#ccfbf1] rounded-full overflow-hidden">
-                        <div className="h-full bg-[#0d9488] rounded-full transition-all duration-500" style={{ width: `${journeyPct}%` }} />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </button>
-            );
-          })()}
-
           {/* My Collections */}
           <button
             onClick={() => navigate("/practice/collections")}
@@ -1131,38 +1064,40 @@ export default function HomeScreen() {
             return (
               <button
                 onClick={() => navigate("/multiplayer-hub")}
-                className="bg-[#e8fdf5] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#b7f4d8]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
+                className="col-span-2 bg-[#e8fdf5] rounded-[24px] p-4 flex items-center justify-between border border-[#b7f4d8]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
               >
-                <div className="w-9 h-9 rounded-full bg-[#d1fae5] flex items-center justify-center">
-                  <Swords size={18} className="text-[#059669]" />
+                <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                  <div className="w-10 h-10 rounded-full bg-[#d1fae5] flex items-center justify-center shrink-0">
+                    <Swords size={20} className="text-[#059669]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm font-black text-slate-900 leading-snug mb-0.5">{t('shadow_arena', 'Shadow Arena')}</h3>
+                    <p className="text-[11px] text-slate-500 font-bold leading-relaxed truncate">{t('challenge_friends_in_battles', 'Challenge friends in battles')}</p>
+                    {isLoading ? (
+                      <div className="space-y-1 mt-1">
+                        <div className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-[#059669]/70">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse shrink-0" />
+                          <span className="animate-pulse truncate">{t('loading', 'Loading...')}</span>
+                        </div>
+                        <div className="w-full max-w-[120px] h-1.5 bg-[#d1fae5]/80 rounded-full overflow-hidden">
+                          <div className="h-full bg-[#10b981]/40 rounded-full animate-pulse transition-all duration-500" style={{ width: '0%' }} />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-1 mt-1">
+                        <div className="text-[10px] font-black text-[#059669] truncate flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] shrink-0" />
+                          <span className="truncate">{fightsText}</span>
+                        </div>
+                        <div className="w-full max-w-[140px] h-1.5 bg-[#d1fae5] rounded-full overflow-hidden">
+                          <div className="h-full bg-[#10b981] rounded-full transition-all duration-500" style={{ width: `${fightsBarWidth}%` }} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
+                <div className="w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform shrink-0 ml-2">
                   <ChevronRight size={14} />
-                </div>
-                <div className="mt-2">
-                  <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('shadow_arena', 'Shadow Arena')}</h3>
-                  <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-2 truncate">{t('challenge_friends_short', 'Challenge friends in real...')}</p>
-                  {isLoading ? (
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-[#059669]/70">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse shrink-0" />
-                        <span className="animate-pulse truncate">{t('loading', 'Loading...')}</span>
-                      </div>
-                      <div className="w-full h-1.5 bg-[#d1fae5]/80 rounded-full overflow-hidden">
-                        <div className="h-full bg-[#10b981]/40 rounded-full animate-pulse transition-all duration-500" style={{ width: '0%' }} />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      <div className="text-[9.5px] font-extrabold text-[#059669] truncate flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] shrink-0" />
-                        <span className="truncate">{fightsText}</span>
-                      </div>
-                      <div className="w-full h-1.5 bg-[#d1fae5] rounded-full overflow-hidden">
-                        <div className="h-full bg-[#10b981] rounded-full transition-all duration-500" style={{ width: `${fightsBarWidth}%` }} />
-                      </div>
-                    </div>
-                  )}
                 </div>
               </button>
             );
@@ -1305,14 +1240,16 @@ export default function HomeScreen() {
                         <div className="py-8 text-center text-slate-500 font-bold text-sm">
                           {questTab === 'completed'
                             ? t('no_completed_quests', 'No completed quests yet!')
-                            : t('no_active_quests', 'No active quests remaining!')}
+                            : questTab === 'active'
+                              ? t('no_active_quests', 'No active quests remaining!')
+                              : t('no_quests_found', 'No quests found!')}
                         </div>
                       );
                     }
 
                     return displayMissions.map((mission) => {
-                      const isDone = mission.status === "completed";
-                      const isReady = mission.status === "ready_to_claim" || (mission.current_progress >= (mission.target_progress || 1) && !isDone);
+                      const isDone = mission.status === "completed" || mission.status === "claimed";
+                      const isReady = mission.status === "ready_to_claim" || (Number(mission.current_progress || 0) >= Number(mission.target_progress || 1) && !isDone);
                       const cur = mission.current_progress || 0;
                       const target = mission.target_progress || 1;
 
@@ -1560,7 +1497,7 @@ export default function HomeScreen() {
 
                   <div className="flex justify-between w-full px-1 gap-1.5">
                     {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day, idx) => {
-                      const isActive = Boolean(retentionStreak?.streakDaysOfWeek?.[idx]);
+                      const isActive = currentStreakVal > 0 && Boolean(retentionStreak?.streakDaysOfWeek?.[idx]);
 
                       return (
                         <div key={idx} className="flex flex-col items-center gap-1 flex-1">
@@ -1594,7 +1531,7 @@ export default function HomeScreen() {
                       navigate("/practice/chapters");
                     }
                   }}
-                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#57fae9] to-[#00c9b7] text-[#141779] font-black text-xs shadow-[0_4px_15px_rgba(87,250,233,0.3)] uppercase tracking-wider active:scale-95 transition-all mt-2 z-10 border-0 cursor-pointer"
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#57fae9] via-[#00f2fe] to-[#4facfe] text-[#141779] font-black text-xs shadow-[0_0_25px_rgba(87,250,233,0.5)] uppercase tracking-wider active:scale-95 transition-all mt-2 z-10 border-0 cursor-pointer"
                 >
                   {btnText}
                 </button>
