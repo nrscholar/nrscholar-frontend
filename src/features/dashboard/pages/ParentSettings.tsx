@@ -2,7 +2,7 @@ import { AnimatePresence, motion, Variants } from "framer-motion";
 import { ArrowLeft, Bell, BookOpen, Camera, Save, ShieldCheck, Timer, Trash2, UserRound, GraduationCap, Cake, ChevronDown, Check, Plus, Globe, LogOut, Edit3, RefreshCw, X, Lock, Sparkles, Flame, Trophy, AlertTriangle, Phone, Eye, EyeOff, Users, CheckCircle2, User, Circle, Shield, Loader2, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiFetch, clearAuthSession, logoutUser } from "../../../api";
+import { apiFetch, clearAuthSession, logoutUser, uploadProfilePhoto } from "../../../api";
 import { useTranslation } from "react-i18next";
 import { translateNotificationTitle, translateNotificationMessage } from "../../../utils/notificationTranslator";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
@@ -640,34 +640,27 @@ export default function ParentSettings() {
     return () => window.removeEventListener("userDataUpdated", handleUserDataUpdate);
   }, []);
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setParentPhoto(event.target?.result as string);
-      };
-      reader.readAsDataURL(e.target.files[0]);
+  const uploadPhoto = async (file: File, setPhoto: (url: string) => void) => {
+    try {
+      setPhoto(await uploadProfilePhoto(file));
+    } catch (err: any) {
+      showNotificationToast({ title: "Photo Upload Failed", message: err?.message || "Please try another image.", type: "error" });
     }
+  };
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) uploadPhoto(file, setParentPhoto);
   };
 
   const handleChild1PhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setChild1Photo(event.target?.result as string);
-      };
-      reader.readAsDataURL(e.target.files[0]);
-    }
+    const file = e.target.files?.[0];
+    if (file) uploadPhoto(file, setChild1Photo);
   };
 
   const handleChild2PhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setChild2Photo(event.target?.result as string);
-      };
-      reader.readAsDataURL(e.target.files[0]);
-    }
+    const file = e.target.files?.[0];
+    if (file) uploadPhoto(file, setChild2Photo);
   };
 
   const handleSaveProfiles = async () => {

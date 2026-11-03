@@ -63,7 +63,7 @@ export async function logoutUser(navigate?: (path: string, options?: any) => voi
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 600);
       const API_BASE = import.meta.env.VITE_API_URL || "";
-      const requestUrl = (API_BASE ? `${API_BASE}/api/users/logout` : "/api/users/logout");
+      const requestUrl = `${API_BASE ? API_BASE : ""}/api/users/logout`;
 
       await fetch(requestUrl, {
         method: "POST",
@@ -308,4 +308,16 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
   }
 
   return response;
+}
+
+/** Uploads a parent/child photo (stored in S3 by the backend) and returns its URL. */
+export async function uploadProfilePhoto(file: File): Promise<string> {
+  const body = new FormData();
+  body.append("file", file);
+  const res = await apiFetch("/api/users/photo", { method: "POST", body });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || !json?.data?.url) {
+    throw new Error(json?.message || "Photo upload failed");
+  }
+  return json.data.url;
 }
