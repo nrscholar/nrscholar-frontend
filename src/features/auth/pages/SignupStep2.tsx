@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { NRScholarNavBrand } from "../../../components/NRScholarNavBrand";
 import { Rocket, ArrowLeft, Sparkles, UserRound, GraduationCap, Cake, ChevronDown, Check, BookOpen, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -14,15 +15,15 @@ const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full h-14 bg-[rgba(255,255,255,0.5)] rounded-full pl-10 pr-8 sm:pl-12 sm:pr-10 text-sm sm:text-base font-medium text-[#191c1e] border-2 border-white flex items-center justify-start text-left relative"
+        className="w-full h-14 bg-[rgba(255,255,255,0.5)] rounded-full pl-11 pr-8 sm:pl-12 sm:pr-10 text-sm sm:text-base font-medium text-[#191c1e] border-2 border-white flex items-center justify-start text-left relative focus:outline-none focus:ring-2 focus:ring-[#1E255E]/20"
       >
-        <div className="absolute left-3 sm:left-4 z-10 flex items-center h-full top-0">
-          <Icon size={20} className="sm:w-[22px] sm:h-[22px]" color={iconColor} />
+        <div className="absolute left-3.5 sm:left-4 z-10 flex items-center h-full top-0 pointer-events-none text-[#1E255E]">
+          <Icon size={20} strokeWidth={2} color={iconColor || "#1E255E"} className="text-[#1E255E]" />
         </div>
         <span className={`block flex-1 min-w-0 truncate ${value ? "text-[#191c1e]" : "text-[#c7c5d4]"}`}>
           {value || placeholder}
         </span>
-        <ChevronDown size={20} className="absolute right-2 sm:right-3 sm:w-[24px] sm:h-[24px]" color="#767683" />
+        <ChevronDown size={20} className="absolute right-3.5 sm:right-4 text-[#767683] pointer-events-none" />
       </button>
 
       <AnimatePresence>
@@ -124,13 +125,7 @@ export default function SignupStep2Screen() {
 
       {/* Header */}
       <header className="flex items-center px-6 py-4 bg-[rgba(255,255,255,0.8)] border-b border-[rgba(255,255,255,0.2)] sticky top-0 z-40 backdrop-blur-md">
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={() => navigate(`/signup-step1?${searchParams.toString()}`)} className="w-10 h-10 -ml-2 rounded-full bg-[#e0e0ff] flex items-center justify-center hover:opacity-80 transition-opacity">
-            <ArrowLeft size={24} color="#141779" />
-          </button>
-          <Rocket size={28} color="#141779" />
-          <h1 className="text-[22px] font-bold text-[#141779] tracking-[-0.5px]">NR Scholar</h1>
-        </div>
+        <NRScholarNavBrand onBack={() => navigate(`/signup-step1?${searchParams.toString()}`)} />
       </header>
 
       <main className="px-6 pt-8 flex flex-col items-center w-full max-w-[430px] mx-auto relative z-10">
@@ -161,15 +156,18 @@ export default function SignupStep2Screen() {
             {/* Child's Name */}
             <div className="flex flex-col gap-2">
               <label className="text-sm font-semibold text-[#767683] ml-4">Child's Name</label>
-              <div className="relative flex items-center">
+              <div className="relative w-full flex items-center">
+                {/* Leading Icon (Left side, primary blue #1E255E) */}
+                <div className="absolute inset-y-0 left-0 pl-3.5 sm:pl-4 flex items-center pointer-events-none text-[#1E255E]">
+                  <UserRound size={20} strokeWidth={2} className="text-[#1E255E]" />
+                </div>
                 <input
                   type="text"
                   placeholder="Enter Child Name"
                   value={childName}
                   onChange={(e) => setChildName(e.target.value)}
-                  className="w-full h-14 bg-[rgba(255,255,255,0.5)] rounded-full pl-12 pr-6 text-base font-medium text-[#191c1e] border-2 border-white focus:outline-none focus:border-[#141779] transition-colors placeholder:text-[#c7c5d4]"
+                  className="w-full h-14 bg-[rgba(255,255,255,0.5)] rounded-full pl-11 sm:pl-12 pr-5 text-base font-medium text-[#191c1e] border-2 border-white focus:outline-none focus:border-[#1E255E] focus:ring-2 focus:ring-[#1E255E]/20 transition-all placeholder:text-[#c7c5d4]"
                 />
-                <UserRound size={22} color="#006a62" className="absolute left-4" />
               </div>
             </div>
 
@@ -178,7 +176,7 @@ export default function SignupStep2Screen() {
               <CustomDropdown
                 label="Education Board"
                 icon={BookOpen}
-                iconColor="#006a62"
+                iconColor="#1E255E"
                 value={selectedBoard}
                 options={boards}
                 onSelect={setSelectedBoard}
@@ -191,7 +189,7 @@ export default function SignupStep2Screen() {
               <CustomDropdown
                 label="Class/Grade"
                 icon={GraduationCap}
-                iconColor="#30007f"
+                iconColor="#1E255E"
                 value={selectedClass}
                 options={classes}
                 onSelect={setSelectedClass}
@@ -200,7 +198,7 @@ export default function SignupStep2Screen() {
               <CustomDropdown
                 label="Age"
                 icon={Cake}
-                iconColor="#141779"
+                iconColor="#1E255E"
                 value={age}
                 options={ages}
                 onSelect={setAge}

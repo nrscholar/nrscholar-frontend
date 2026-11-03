@@ -14,6 +14,7 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { NRScholarLogo } from "./components/NRScholarLogo";
 import Toast from "react-native-toast-message";
 import { authApi, saveToken } from "./services/api";
 
@@ -28,8 +29,10 @@ export default function SignupStep3Screen() {
   
   const [loading, setLoading] = useState(false);
 
-  const isMinLength = password.length >= 8;
+  const hasMinLength = password.length >= 8;
   const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  const isMatching = confirmPassword.length > 0 && password === confirmPassword;
+  const isFormValid = hasMinLength && hasSpecialChar && isMatching;
 
   const showToast = (message: string, type: 'success' | 'error' = 'error') => {
     Toast.show({
@@ -40,12 +43,7 @@ export default function SignupStep3Screen() {
   };
 
   const handleSignup = async () => {
-    if (!isMinLength || !hasSpecialChar) {
-      showToast("Please meet all password requirements");
-      return;
-    }
-    if (password !== confirmPassword) {
-      showToast("Passwords do not match");
+    if (!isFormValid) {
       return;
     }
 
@@ -97,8 +95,8 @@ export default function SignupStep3Screen() {
       {/* Header (TopAppBar) */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <MaterialIcons name="rocket-launch" size={28} color="#141779" />
-          <Text style={styles.headerTitle}>NR Scholar</Text>
+          <NRScholarLogo size={28} />
+          <Text style={styles.headerTitle}>N R Scholar</Text>
         </View>
         <TouchableOpacity 
           style={styles.profileIcon}
@@ -129,8 +127,8 @@ export default function SignupStep3Screen() {
           </View>
 
           <View style={styles.titlesContainer}>
-            <Text style={styles.mainTitle}>Secure Your Cockpit</Text>
-            <Text style={styles.subTitle}>Set your access codes for the cosmic journey ahead.</Text>
+            <Text style={styles.mainTitle}>Create Your Password</Text>
+            <Text style={styles.subTitle}>Choose a strong password to keep your account safe and secure.</Text>
           </View>
 
           {/* Glass Form Card */}
@@ -179,16 +177,15 @@ export default function SignupStep3Screen() {
                     <MaterialIcons name={showConfirmPassword ? "visibility" : "visibility-off"} size={22} color="#767683" />
                   </TouchableOpacity>
                 </View>
-              </View>
             </View>
 
             {/* Password Validation Rules */}
             <View style={styles.validationSection}>
               <View style={styles.validationRow}>
                 <MaterialIcons 
-                  name={isMinLength ? "check-circle" : "radio-button-unchecked"} 
+                  name={hasMinLength ? "check-circle" : "radio-button-unchecked"} 
                   size={20} 
-                  color={isMinLength ? "#007168" : "#c7c5d4"} 
+                  color={hasMinLength ? "#007168" : "#c7c5d4"} 
                 />
                 <Text style={styles.validationText}>At least 8 characters</Text>
               </View>
@@ -200,6 +197,14 @@ export default function SignupStep3Screen() {
                 />
                 <Text style={styles.validationText}>Include a special symbol</Text>
               </View>
+              <View style={styles.validationRow}>
+                <MaterialIcons 
+                  name={isMatching ? "check-circle" : "radio-button-unchecked"} 
+                  size={20} 
+                  color={isMatching ? "#007168" : "#c7c5d4"} 
+                />
+                <Text style={styles.validationText}>Passwords match</Text>
+              </View>
             </View>
           </View>
 
@@ -208,10 +213,10 @@ export default function SignupStep3Screen() {
             <TouchableOpacity 
               style={[
                 styles.submitButton, 
-                (!isMinLength || !hasSpecialChar || !confirmPassword || loading) && { opacity: 0.7 }
+                (!isFormValid || loading) && { opacity: 0.7 }
               ]}
               onPress={handleSignup}
-              disabled={!isMinLength || !hasSpecialChar || !confirmPassword || loading}
+              disabled={!isFormValid || loading}
               activeOpacity={0.8}
             >
               {loading ? (
@@ -312,18 +317,18 @@ const styles = StyleSheet.create({
   stepLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#141779',
+    color: '#006a62',
     letterSpacing: 1,
   },
   stepPercent: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#141779',
+    color: '#006a62',
   },
   progressTrack: {
     height: 8,
     width: '100%',
-    backgroundColor: '#e0e3e5',
+    backgroundColor: '#eceef0',
     borderRadius: 9999,
     overflow: 'hidden',
   },
@@ -341,14 +346,14 @@ const styles = StyleSheet.create({
   mainTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#141779',
+    color: '#1e255e',
     letterSpacing: -0.5,
     marginBottom: 8,
     textAlign: 'center',
   },
   subTitle: {
     fontSize: 16,
-    color: '#464652',
+    color: '#64748b',
     fontWeight: '500',
     textAlign: 'center',
   },

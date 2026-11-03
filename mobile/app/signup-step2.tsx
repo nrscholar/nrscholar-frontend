@@ -15,6 +15,7 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { NRScholarLogo } from "./components/NRScholarLogo";
 
 // Custom Dropdown Component
 const CustomDropdown = ({ label, icon, iconColor, value, options, onSelect, placeholder }: any) => {
@@ -123,8 +124,8 @@ export default function SignupStep2Screen() {
       {/* Header (TopAppBar) */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <MaterialIcons name="rocket-launch" size={28} color="#141779" />
-          <Text style={styles.headerTitle}>NR Scholar</Text>
+          <NRScholarLogo size={28} />
+          <Text style={styles.headerTitle}>N R Scholar</Text>
         </View>
         {/* Close/Back button */}
         <TouchableOpacity 

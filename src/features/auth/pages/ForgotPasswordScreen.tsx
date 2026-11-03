@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { BookOpen, Phone, Lock, Eye, EyeOff, ArrowRight, ArrowLeft, RefreshCw } from "lucide-react";
+import { Phone, Lock, Eye, EyeOff, ArrowRight, RefreshCw } from "lucide-react";
+import { NRScholarLogo } from "../../../components/NRScholarLogo";
 import { apiFetch } from "../../../api";
 
 type Step = "mobile" | "otp" | "password" | "success";
@@ -234,6 +235,20 @@ export default function ForgotPasswordScreen() {
     }
   };
 
+  const handleBack = () => {
+    if (step === "otp") {
+      setStep("mobile");
+      setErrorMsg("");
+      setSuccessMsg("");
+    } else if (step === "password") {
+      setStep("otp");
+      setErrorMsg("");
+      setSuccessMsg("");
+    } else {
+      navigate("/login");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#f7f9fb] font-sans flex flex-col relative overflow-hidden">
       
@@ -249,23 +264,13 @@ export default function ForgotPasswordScreen() {
         {/* Responsive Mobile-friendly Back Button */}
         <button
           type="button"
-          onClick={() => {
-            if (step === "otp") {
-              setStep("mobile");
-              setErrorMsg("");
-              setSuccessMsg("");
-            } else if (step === "password") {
-              setStep("otp");
-              setErrorMsg("");
-              setSuccessMsg("");
-            } else {
-              navigate("/login");
-            }
-          }}
-          className="absolute top-5 left-5 z-20 w-10 h-10 rounded-full bg-white/90 shadow-md flex items-center justify-center text-[#141779] hover:bg-white active:scale-95 transition-all"
+          onClick={handleBack}
+          className="absolute top-5 left-5 z-20 w-10 h-10 rounded-full bg-white/90 shadow-md flex items-center justify-center text-[#1E255E] hover:bg-white active:scale-95 transition-all cursor-pointer"
           aria-label="Back"
         >
-          <ArrowLeft size={20} />
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
         </button>
       </div>
 
@@ -274,10 +279,14 @@ export default function ForgotPasswordScreen() {
         
         {/* Brand Identity */}
         <div className="flex flex-col items-center mb-5 text-center">
-          <div className="w-13 h-13 bg-[#141779] rounded-2xl flex items-center justify-center mb-1.5 shadow-md">
-            <BookOpen size={26} color="white" />
+          <div className="inline-flex items-center gap-2 select-none mb-1">
+            <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center">
+              <NRScholarLogo size={28} className="w-7 h-7" />
+            </div>
+            <span className="font-bold text-base md:text-lg text-[#1E255E] tracking-tight whitespace-nowrap">
+              N R Scholar
+            </span>
           </div>
-          <h1 className="text-xl font-black text-[#141779] tracking-tight">NR Scholar</h1>
           <p className="text-xs text-[#767683] font-semibold max-w-[280px] mt-0.5">
             {getSubtitle()}
           </p>
@@ -348,8 +357,7 @@ export default function ForgotPasswordScreen() {
                 <button
                   type="button"
                   onClick={() => navigate("/login")}
-                  className="text-xs font-black text-[#141779] hover:underline"
-                >
+                  className="text-xs font-black text-[#1E255E] hover:underline">
                   Back to Login
                 </button>
               </div>
@@ -374,7 +382,7 @@ export default function ForgotPasswordScreen() {
                     setErrorMsg("");
                     setSuccessMsg("");
                   }}
-                  className="text-xs font-bold text-[#006a62] hover:underline"
+                  className="text-xs font-bold text-[#1E255E] hover:underline"
                 >
                   Change Number
                 </button>
@@ -456,16 +464,29 @@ export default function ForgotPasswordScreen() {
               <div className="flex justify-center items-center">
                 {resendTimer > 0 ? (
                   <span className="text-xs text-[#767683] font-semibold">
-                    Resend OTP in <span className="text-[#141779] font-bold">{resendTimer}s</span>
+                    Resend OTP in <span className="text-[#1E255E] font-bold">{resendTimer}s</span>
                   </span>
                 ) : (
                   <button
                     type="button"
                     onClick={handleResendOtp}
                     disabled={resending}
-                    className="text-xs font-bold text-[#006a62] hover:underline flex items-center gap-1.5"
+                    className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-[#1E255E] hover:opacity-80 transition-opacity"
                   >
-                    <RefreshCw size={12} className={resending ? "animate-spin" : ""} />
+                    {/* Circular Refresh Icon inheriting primary blue via currentColor */}
+                    <svg
+                      className={`w-3.5 h-3.5 text-[#1E255E] ${resending ? "animate-spin" : ""}`}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.2"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
                     <span>Resend OTP</span>
                   </button>
                 )}
@@ -476,7 +497,7 @@ export default function ForgotPasswordScreen() {
                 <button
                   type="button"
                   onClick={() => navigate("/login")}
-                  className="text-xs font-black text-[#141779] hover:underline"
+                  className="text-xs font-black text-[#1E255E] hover:underline"
                 >
                   Back to Login
                 </button>
@@ -589,8 +610,7 @@ export default function ForgotPasswordScreen() {
                 <button
                   type="button"
                   onClick={() => navigate("/login")}
-                  className="text-xs font-black text-[#141779] hover:underline"
-                >
+                  className="text-xs font-black text-[#1E255E] hover:underline">
                   Back to Login
                 </button>
               </div>
