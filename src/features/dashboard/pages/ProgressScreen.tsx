@@ -6,34 +6,9 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
 import StreakModal from "../../../components/StreakModal";
 import { getScopedItem, setScopedItem } from "../../../utils/sessionCache";
+import { useUserStatsStore, getLevelInfo } from "../../../services/userStatsStore";
 
-// Math-aligned level thresholds matching backend:
-// Level 1: 0 XP
-// Level 2: 100 XP
-// Level 3: 250 XP
-// Level >= 4: 250 * 1.5^(level - 3)
-function getLevelInfo(xp: number) {
-  if (xp < 100) {
-    return { level: 1, percent: Math.round((xp / 100) * 100), nextXp: 100, currentXp: 0 };
-  }
-  if (xp < 250) {
-    return { level: 2, percent: Math.round(((xp - 100) / 150) * 100), nextXp: 250, currentXp: 100 };
-  }
-  
-  let lvl = 3;
-  while (true) {
-    const currentThreshold = Math.floor(250 * Math.pow(1.5, lvl - 3));
-    const nextThreshold = Math.floor(250 * Math.pow(1.5, (lvl + 1) - 3));
-    if (xp >= nextThreshold) {
-      lvl++;
-    } else {
-      const range = nextThreshold - currentThreshold;
-      const progress = xp - currentThreshold;
-      const percent = Math.min(100, Math.max(0, Math.round((progress / range) * 100)));
-      return { level: lvl, percent, nextXp: nextThreshold, currentXp: currentThreshold };
-    }
-  }
-}
+// Level thresholds handled authoritatively by useUserStatsStore
 
 function getCanonicalSubject(s: string) {
   if (!s) return "";
@@ -65,6 +40,18 @@ function matchSubject(item: any, activeSub: any) {
 export default function ProgressScreen() {
   const navigate = useNavigate();
   const { t } = useTranslation();
+
+  const translateSubjectName = (subj: string) => {
+    if (!subj) return "";
+    const lower = subj.toLowerCase();
+    if (lower.includes("gujarati")) return t("gujarati", "Gujarati");
+    if (lower.includes("math")) return t("mathematics", t("maths", "Mathematics"));
+    if (lower.includes("english")) return t("english_subject", "English");
+    if (lower.includes("social")) return t("social_science", t("social_studies", "Social Science"));
+    if (lower.includes("science")) return t("science", "Science");
+    if (lower.includes("hindi")) return t("hindi_subject", "Hindi");
+    return t(subj.toLowerCase().replace(/ /g, '_'), { defaultValue: subj });
+  };
   const cachedUserData = (() => {
     try {
       const raw = localStorage.getItem("userData");
@@ -83,6 +70,16 @@ export default function ProgressScreen() {
   const [userPhoto, setUserPhoto] = useState(cachedUserData?.childPhoto || cachedUserData?.photo || "");
   const [unreadCount, setUnreadCount] = useState(0);
   const [badges, setBadges] = useState<any[]>(cachedUserData?.badges || []);
+  const { 
+    level: storeLevel, 
+    xp: storeXp, 
+    coins: storeCoins, 
+    streakDays: storeStreak, 
+    childName: storeChildName, 
+    childPhoto: storeChildPhoto,
+    badges: storeBadges,
+    syncFromUserData
+  } = useUserStatsStore();
 
   const [subjects, setSubjects] = useState<any[]>([]);
   const [activeSubject, setActiveSubject] = useState<any>(null);
@@ -151,6 +148,7 @@ export default function ProgressScreen() {
       if (cached) {
         try {
           const u = JSON.parse(cached);
+          syncFromUserData(u);
           setXp(u.xp || 0);
           setCoins(u.coins || 0);
           setUserData(u);
@@ -325,7 +323,7 @@ export default function ProgressScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F5F6FB] font-sans pb-28 animate-pulse flex flex-col max-w-lg mx-auto">
+      <div className="min-h-screen bg-[#F5F6FB] font-sans pb-4 animate-pulse flex flex-col max-w-lg mx-auto">
         <header className="sticky top-0 z-50 flex items-center justify-between px-4 py-4 bg-white/80 backdrop-blur-md border-b border-[#E0E3E5]">
           <div className="flex items-center gap-3 w-full">
             <div className="w-8 h-8 bg-gray-200 rounded-full shrink-0" />
@@ -372,7 +370,7 @@ export default function ProgressScreen() {
     : (weeklyGrowth.length > 0 ? [weeklyGrowth[0]] : []);
 
   return (
-    <div className="min-h-screen bg-[#F7F9FB] text-[#17177F] font-sans pb-28 max-w-lg mx-auto relative selection:bg-[#4D4BFF] selection:text-white overflow-x-clip">
+    <div className="min-h-screen bg-[#F7F9FB] text-[#17177F] font-sans pb-4 max-w-lg mx-auto relative selection:bg-[#4D4BFF] selection:text-white overflow-x-clip">
       {/* Background Soft Glow Accents */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[55%] h-[40%] rounded-full bg-[#17177F]/8 blur-[100px]" />
@@ -541,7 +539,7 @@ export default function ProgressScreen() {
           <div className="flex overflow-x-auto hide-scrollbar py-1 gap-2.5">
             {subjects.map((sub) => {
               const isActive = activeSubject?._id === sub._id;
-              const translatedSubName = t(sub.name.toLowerCase().replace(/ /g, '_'), { defaultValue: sub.name });
+              const translatedSubName = translateSubjectName(sub.name);
               const growthItem = weeklyGrowth.find((g: any) => matchSubject(g, sub));
               const tabEmoji = (() => {
                 const check = `${sub.icon || ''} ${sub.name || ''}`.toLowerCase();
@@ -616,7 +614,7 @@ export default function ProgressScreen() {
                 {displayedGrowth.map((item: any, idx: number) => {
                   const delta = item.growthDelta !== undefined ? item.growthDelta : (item.thisWeekAccuracy - item.lastWeekAccuracy);
                   const isPositive = delta >= 0;
-                  const translatedSubName = t(item.name.toLowerCase().replace(/ /g, '_'), { defaultValue: item.name });
+                  const translatedSubName = translateSubjectName(item.name);
 
                   const getIcon = (iconStr?: string, nameStr?: string) => {
                     const check = `${iconStr || ''} ${nameStr || ''}`.toLowerCase();
@@ -847,7 +845,7 @@ export default function ProgressScreen() {
                           </span>
                           {activeChapter && (
                             <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-3 py-0.5 rounded-full">
-                              Active: <strong className="text-slate-700">{activeChapter.chapterName || activeChapter.name || activeChapter.title || "Chapter 1"}</strong>
+                              {t('active_label', 'Active')}: <strong className="text-slate-700">{activeChapter.chapterName || activeChapter.name || activeChapter.title || "Chapter 1"}</strong>
                             </span>
                           )}
                         </div>

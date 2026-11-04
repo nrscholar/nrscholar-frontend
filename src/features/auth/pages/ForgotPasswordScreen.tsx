@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useLayoutEffect } from "react";
+import { formatMobileDisplay, parseMobileInput, maskMobileDisplay } from "../../../utils/mobileFormatter";
 import { useNavigate } from "react-router-dom";
-import { BookOpen, Phone, Lock, Eye, EyeOff, ArrowRight, ArrowLeft, RefreshCw } from "lucide-react";
+import { Phone, Lock, Eye, EyeOff, ArrowRight, RefreshCw } from "lucide-react";
+import { NRScholarLogo } from "../../../components/NRScholarLogo";
 import { apiFetch } from "../../../api";
 
 type Step = "mobile" | "otp" | "password" | "success";
@@ -11,6 +13,7 @@ export default function ForgotPasswordScreen() {
   // Form State
   const [step, setStep] = useState<Step>("mobile");
   const [mobile, setMobile] = useState("");
+  const [maskedMobile, setMaskedMobile] = useState("");
   const [otp, setOtp] = useState("");
   const [reqId, setReqId] = useState("");
   const [isOtpFocused, setIsOtpFocused] = useState(false);
@@ -27,8 +30,18 @@ export default function ForgotPasswordScreen() {
   const [successMsg, setSuccessMsg] = useState("");
   const [resendTimer, setResendTimer] = useState(30);
 
-  // OTP Input reference
+  // OTP and Mobile Input references
   const otpInputRef = useRef<HTMLInputElement | null>(null);
+  const mobileInputRef = useRef<HTMLInputElement | null>(null);
+  const nextMobileCursorPosRef = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    if (nextMobileCursorPosRef.current !== null && mobileInputRef.current) {
+      const pos = nextMobileCursorPosRef.current;
+      mobileInputRef.current.setSelectionRange(pos, pos);
+      nextMobileCursorPosRef.current = null;
+    }
+  });
 
   // 30s Countdown timer for OTP resend
   useEffect(() => {
@@ -86,6 +99,7 @@ export default function ForgotPasswordScreen() {
       if (data.success) {
         setSuccessMsg(data.message || "OTP sent successfully to your mobile number.");
         if (data.reqId) setReqId(data.reqId);
+        if (data.maskedMobile) setMaskedMobile(data.maskedMobile); else setMaskedMobile("");
         setOtp("");
         setStep("otp");
         setResendTimer(30);
@@ -158,6 +172,7 @@ export default function ForgotPasswordScreen() {
       if (data.success) {
         setSuccessMsg(data.message || "OTP resent successfully to your mobile number.");
         if (data.reqId) setReqId(data.reqId);
+        if (data.maskedMobile) setMaskedMobile(data.maskedMobile); else setMaskedMobile("");
         setResendTimer(30);
         setOtp("");
         otpInputRef.current?.focus();
@@ -226,11 +241,25 @@ export default function ForgotPasswordScreen() {
       case "mobile":
         return "Enter your registered mobile number to reset password";
       case "otp":
-        return `Enter the 6-digit verification code sent to +91 ${mobile}`;
+        return `Enter the 6-digit verification code sent to +91 ${maskedMobile || maskMobileDisplay(mobile)}`;
       case "password":
         return "Create a new password for your account";
       case "success":
         return "Password reset completed successfully";
+    }
+  };
+
+  const handleBack = () => {
+    if (step === "otp") {
+      setStep("mobile");
+      setErrorMsg("");
+      setSuccessMsg("");
+    } else if (step === "password") {
+      setStep("otp");
+      setErrorMsg("");
+      setSuccessMsg("");
+    } else {
+      navigate("/login");
     }
   };
 
@@ -249,23 +278,13 @@ export default function ForgotPasswordScreen() {
         {/* Responsive Mobile-friendly Back Button */}
         <button
           type="button"
-          onClick={() => {
-            if (step === "otp") {
-              setStep("mobile");
-              setErrorMsg("");
-              setSuccessMsg("");
-            } else if (step === "password") {
-              setStep("otp");
-              setErrorMsg("");
-              setSuccessMsg("");
-            } else {
-              navigate("/login");
-            }
-          }}
-          className="absolute top-5 left-5 z-20 w-10 h-10 rounded-full bg-white/90 shadow-md flex items-center justify-center text-[#141779] hover:bg-white active:scale-95 transition-all"
+          onClick={handleBack}
+          className="absolute top-5 left-5 z-20 w-10 h-10 rounded-full bg-white/90 shadow-md flex items-center justify-center text-[#1E255E] hover:bg-white active:scale-95 transition-all cursor-pointer"
           aria-label="Back"
         >
-          <ArrowLeft size={20} />
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
         </button>
       </div>
 
@@ -274,10 +293,14 @@ export default function ForgotPasswordScreen() {
         
         {/* Brand Identity */}
         <div className="flex flex-col items-center mb-5 text-center">
-          <div className="w-13 h-13 bg-[#141779] rounded-2xl flex items-center justify-center mb-1.5 shadow-md">
-            <BookOpen size={26} color="white" />
+          <div className="inline-flex items-center gap-2 select-none mb-1">
+            <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center">
+              <NRScholarLogo size={28} className="w-7 h-7" />
+            </div>
+            <span className="font-bold text-base md:text-lg text-[#1E255E] tracking-tight whitespace-nowrap">
+              N R Scholar
+            </span>
           </div>
-          <h1 className="text-xl font-black text-[#141779] tracking-tight">NR Scholar</h1>
           <p className="text-xs text-[#767683] font-semibold max-w-[280px] mt-0.5">
             {getSubtitle()}
           </p>
@@ -309,13 +332,19 @@ export default function ForgotPasswordScreen() {
               <div className="relative flex items-center">
                 <Phone size={20} className="text-slate-400 absolute left-4 pointer-events-none" />
                 <input
+                  ref={mobileInputRef}
                   type="tel"
-                  placeholder="Enter 10-digit mobile number"
-                  value={mobile}
-                  maxLength={10}
+                  placeholder="Enter mobile number"
+                  value={formatMobileDisplay(mobile)}
+                  maxLength={11}
                   onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, "").slice(0, 10);
-                    setMobile(val);
+                    const { clean, nextCursor } = parseMobileInput(
+                      e.target.value,
+                      mobile,
+                      e.target.selectionStart ?? e.target.value.length
+                    );
+                    setMobile(clean);
+                    nextMobileCursorPosRef.current = nextCursor;
                     setErrorMsg("");
                   }}
                   className="w-full h-14 bg-slate-50 rounded-2xl pl-12 pr-4 text-sm font-bold text-[#141779] border border-slate-200/90 focus:outline-none focus:ring-2 focus:ring-[#141779]/20 focus:border-[#141779] focus:bg-white transition-all placeholder:text-slate-400 placeholder:font-medium"
@@ -348,8 +377,7 @@ export default function ForgotPasswordScreen() {
                 <button
                   type="button"
                   onClick={() => navigate("/login")}
-                  className="text-xs font-black text-[#141779] hover:underline"
-                >
+                  className="text-xs font-black text-[#1E255E] hover:underline">
                   Back to Login
                 </button>
               </div>
@@ -374,7 +402,7 @@ export default function ForgotPasswordScreen() {
                     setErrorMsg("");
                     setSuccessMsg("");
                   }}
-                  className="text-xs font-bold text-[#006a62] hover:underline"
+                  className="text-xs font-bold text-[#1E255E] hover:underline"
                 >
                   Change Number
                 </button>
@@ -456,16 +484,29 @@ export default function ForgotPasswordScreen() {
               <div className="flex justify-center items-center">
                 {resendTimer > 0 ? (
                   <span className="text-xs text-[#767683] font-semibold">
-                    Resend OTP in <span className="text-[#141779] font-bold">{resendTimer}s</span>
+                    Resend OTP in <span className="text-[#1E255E] font-bold">{resendTimer}s</span>
                   </span>
                 ) : (
                   <button
                     type="button"
                     onClick={handleResendOtp}
                     disabled={resending}
-                    className="text-xs font-bold text-[#006a62] hover:underline flex items-center gap-1.5"
+                    className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-[#1E255E] hover:opacity-80 transition-opacity"
                   >
-                    <RefreshCw size={12} className={resending ? "animate-spin" : ""} />
+                    {/* Circular Refresh Icon inheriting primary blue via currentColor */}
+                    <svg
+                      className={`w-3.5 h-3.5 text-[#1E255E] ${resending ? "animate-spin" : ""}`}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.2"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
                     <span>Resend OTP</span>
                   </button>
                 )}
@@ -476,7 +517,7 @@ export default function ForgotPasswordScreen() {
                 <button
                   type="button"
                   onClick={() => navigate("/login")}
-                  className="text-xs font-black text-[#141779] hover:underline"
+                  className="text-xs font-black text-[#1E255E] hover:underline"
                 >
                   Back to Login
                 </button>
@@ -589,8 +630,7 @@ export default function ForgotPasswordScreen() {
                 <button
                   type="button"
                   onClick={() => navigate("/login")}
-                  className="text-xs font-black text-[#141779] hover:underline"
-                >
+                  className="text-xs font-black text-[#1E255E] hover:underline">
                   Back to Login
                 </button>
               </div>

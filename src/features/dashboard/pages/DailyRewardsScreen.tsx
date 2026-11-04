@@ -601,7 +601,7 @@ export default function DailyRewardsScreen() {
       )}
 
       {/* Main Canvas */}
-      <main className="relative flex-1 w-full max-w-[430px] flex flex-col items-center justify-center px-6 pt-6 pb-24 gap-6 z-10">
+      <main className="relative flex-1 w-full max-w-[430px] flex flex-col items-center justify-center px-6 pt-6 pb-6 gap-6 z-10">
         
         {/* Reward Info Header */}
         <div className="text-center space-y-1.5">
@@ -740,28 +740,68 @@ export default function DailyRewardsScreen() {
               </div>
             </div>
           ) : (isSpinning || showModal) ? (
+            /* State 3: Spinning / In-Progress State */
             <button
               disabled={true}
-              className="w-full py-4 rounded-full font-black text-lg tracking-wider uppercase flex items-center justify-center gap-2 border bg-[#141779]/80 text-white opacity-90 cursor-not-allowed border-indigo-300/30 shadow-md"
+              className="w-full py-4 rounded-full font-black text-lg tracking-wider uppercase flex items-center justify-center gap-2.5 bg-[#1E255E]/85 text-white cursor-wait scale-95 shadow-md transition-all duration-200 select-none border border-indigo-400/30"
             >
-              {t('spinning', '🌀 Spinning...')}
+              {/* Exactly 1 Single Rotating Spinner Icon */}
+              <svg
+                className="animate-spin w-5 h-5 text-white shrink-0"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v8H4z"
+                />
+              </svg>
+              <span>{t('spinning', 'SPINNING...')}</span>
             </button>
           ) : getSpinBalance() > 0 ? (
+            /* State 1 & 2: Idle / Ready State & Press Micro-Interaction */
             <button
+              type="button"
               onClick={startSpin}
               disabled={isSpinning || isBuying}
-              className="w-full py-4 rounded-full font-black text-lg tracking-wider uppercase transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 border bg-[#141779] hover:bg-[#0f1159] hover:scale-[1.01] hover:shadow-[0_0_25px_rgba(20,23,121,0.5)] text-white border-indigo-300/40 animate-pulse cursor-pointer shadow-lg"
+              className="relative overflow-hidden w-full py-4 rounded-full font-black text-lg tracking-wider uppercase flex items-center justify-center gap-2 border border-indigo-400/40 bg-gradient-to-r from-[#1E255E] to-[#2B3585] hover:brightness-110 hover:scale-[1.02] text-white cursor-pointer shadow-lg shadow-[#1E255E]/30 spin-btn-breathe select-none active:scale-95 duration-150"
             >
-              {t('spin', 'SPIN')}
+              {/* Translucent Shimmer Sweep Overlay */}
+              <div className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden rounded-full">
+                <div className="w-1/2 h-full bg-gradient-to-r from-transparent via-white/25 to-transparent spin-shimmer-sweep" />
+              </div>
+
+              <span className="relative z-10 flex items-center justify-center">
+                <span>{t('spin', 'SPIN')}</span>
+              </span>
             </button>
           ) : (
-            <button
-              onClick={handleOpenBuyConfirm}
-              disabled={isSpinning || isBuying}
-              className="w-full py-4 rounded-full font-black text-base sm:text-lg tracking-wider uppercase transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] hover:brightness-110 text-white shadow-lg border border-indigo-300/40 cursor-pointer"
-            >
-              <span>{isBuying ? t('purchasing', 'Purchasing...') : t('buy_spin', { cost: (spinType === "daily" || spinType === "boss_revival") ? 100 : 150, defaultValue: `🛒 Buy 1 Spin (${(spinType === "daily" || spinType === "boss_revival") ? "100 🪙" : "150 🪙"})` })}</span>
-            </button>
+            /* State 4: Disabled State (0 Attempts Left) + Buy Option */
+            <div className="w-full space-y-2.5">
+              <button
+                disabled={true}
+                className="w-full py-4 rounded-full font-black text-lg tracking-wider uppercase flex items-center justify-center gap-2 bg-slate-300 text-slate-500 shadow-none cursor-not-allowed select-none transition-all duration-200 border border-slate-300"
+              >
+                {t('spin', 'SPIN')}
+              </button>
+              <button
+                type="button"
+                onClick={handleOpenBuyConfirm}
+                disabled={isSpinning || isBuying}
+                className="w-full py-3.5 rounded-full font-black text-sm sm:text-base tracking-wider uppercase transition-all duration-150 transform active:scale-95 flex items-center justify-center gap-2 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] hover:brightness-110 text-white shadow-md border border-indigo-300/40 cursor-pointer"
+              >
+                <span>{isBuying ? t('purchasing', 'Purchasing...') : t('buy_spin', { cost: (spinType === "daily" || spinType === "boss_revival") ? 100 : 150, defaultValue: `🛒 Buy 1 Spin (${(spinType === "daily" || spinType === "boss_revival") ? "100 🪙" : "150 🪙"})` })}</span>
+              </button>
+            </div>
           )}
 
           {!loading && (

@@ -97,7 +97,7 @@ export default function ParentLayout() {
   return (
     <div className="min-h-screen bg-[#f7f9fb] flex flex-col">
       {/* Content wrapper with Isolated Suspense boundary to prevent navbar unmounting */}
-      <div className="flex-1 pb-24 relative">
+      <div className="flex-1 pb-20 relative">
         <Suspense fallback={<RouteSkeletonLoader />}>
           <Outlet />
         </Suspense>

@@ -218,13 +218,14 @@ export default function ParentLearningDNAScreen() {
 
   const translateDnaDescription = (desc: string) => {
     if (!desc) return "";
-    if (desc.includes("hands-on learner who thrives on interaction")) {
+    const lower = desc.toLowerCase();
+    if (lower.includes("hands-on") || lower.includes("kinesthetic") || lower.includes("interaction")) {
       return t("desc_kinesthetic_learner", "Your child is a hands-on learner who thrives on interaction, physical activity, and drag-and-drop challenges. They learn best by doing and experimenting.");
     }
-    if (desc.includes("spatial concepts dynamically")) {
+    if (lower.includes("spatial") || lower.includes("visual") || lower.includes("diagrams")) {
       return t("desc_visual_learner", "Processes spatial concepts dynamically, resolving math and science models through interactive games rather than plain text descriptions.");
     }
-    if (desc.includes("reading texts") || desc.includes("word problems") || desc.includes("textual instructions")) {
+    if (lower.includes("reading") || lower.includes("text") || lower.includes("written information") || lower.includes("word problems")) {
       return t("desc_reading_learner", "Your child processes information best through reading texts and writing answers. They show strong retention with word problems and textual instructions.");
     }
     return t(desc, desc);
@@ -232,60 +233,103 @@ export default function ParentLearningDNAScreen() {
 
   const translateCoachTitle = (title: string) => {
     if (!title) return "";
-    if (title.includes("Hands-on quizzes")) return t("coach_hands_on_quizzes", "Hands-on quizzes");
-    if (title.includes("Write down summaries") || title.includes("summaries")) return t("coach_write_summaries", "Write down summaries");
-    if (title.includes("diagrams") || title.includes("visual")) return t("coach_use_diagrams", "Use more diagrams");
-    if (title.includes("chunks")) return t("coach_short_chunks", "Short text chunks");
-    if (title.includes("breaks")) return t("coach_frequent_breaks", "Frequent active breaks");
-    if (title.includes("read aloud")) return t("coach_read_aloud", "Read aloud");
+    const lower = title.toLowerCase();
+    if (lower.includes("structured reading") || lower.includes("reading focus")) return t("coach_reading_focus", "Structured Reading Focus");
+    if (lower.includes("hands-on") || lower.includes("quizzes")) return t("coach_hands_on_quizzes", "Hands-on quizzes");
+    if (lower.includes("write down summaries") || lower.includes("summaries")) return t("coach_write_summaries", "Write down summaries");
+    if (lower.includes("diagram") || lower.includes("visual")) return t("coach_use_diagrams", "Use more diagrams");
+    if (lower.includes("chunk") || lower.includes("short")) return t("coach_short_chunks", "Short text chunks");
+    if (lower.includes("break") || lower.includes("rest")) return t("coach_frequent_breaks", "Frequent active breaks");
+    if (lower.includes("read aloud")) return t("coach_read_aloud", "Read aloud");
     return t(title, title);
   };
 
   const translateCoachDesc = (desc: string) => {
     if (!desc) return "";
-    if (desc.includes("Incorporate interactive/drag-and-drop practice games")) {
+    const lower = desc.toLowerCase();
+    if (lower.includes("reading modality") || lower.includes("written materials") || lower.includes("reading tasks")) {
+      return t("desc_coach_reading_modality", "Capitalize on their strong reading modality by providing clear, concise written materials and short focused segments with guided prompts.");
+    }
+    if (lower.includes("interactive") || lower.includes("drag-and-drop")) {
       return t("desc_coach_interactive_games", "Incorporate interactive/drag-and-drop practice games to keep engagement high.");
     }
-    if (desc.includes("summarize their learning in a journal")) {
+    if (lower.includes("summarize") || lower.includes("journal")) {
       return t("desc_coach_summaries", "Encourage the child to summarize their learning in a journal or notepad.");
     }
-    if (desc.includes("diagrams") || desc.includes("visual connection")) {
+    if (lower.includes("diagram") || lower.includes("visual connection")) {
       return t("desc_coach_diagrams", "Try drawing out concepts when explaining complex problems. Visual connection helps retain memory.");
     }
-    if (desc.includes("short visual bullet points")) {
+    if (lower.includes("bullet points") || lower.includes("short visual")) {
       return t("desc_coach_short_chunks", "Break down text-heavy explanations into short visual bullet points.");
     }
-    if (desc.includes("2-minute stretch")) {
+    if (lower.includes("stretch") || lower.includes("movement break")) {
       return t("desc_coach_frequent_breaks", "Encourage taking a 2-minute stretch or movement break between chapters.");
     }
-    if (desc.includes("read word problems out loud")) {
+    if (lower.includes("word problems out loud") || lower.includes("read aloud")) {
       return t("desc_coach_read_aloud", "Let them read word problems out loud to boost comprehension.");
     }
     return t(desc, desc);
   };
 
   const translateActivityName = (name: string) => {
-    if (name === "Build It" || name.includes("Build")) return t("act_build_it", name);
-    if (name === "Practice Together" || name.includes("Team")) return t("act_practice_together", name);
-    if (name === "Draw It" || name.includes("Sketch")) return t("act_draw_it", name);
-    if (name === "Watch It" || name.includes("Videos")) return t("act_watch_it", name);
+    if (!name) return "";
+    const lower = name.toLowerCase();
+    if (lower.includes("read aloud")) return t("act_read_aloud_drills", "Read Aloud Drills");
+    if (lower.includes("summary journaling") || lower.includes("journaling")) return t("act_summary_journaling", "Summary Journaling");
+    if (lower.includes("visual concept") || lower.includes("concept notes")) return t("act_visual_concept_notes", "Visual Concept Notes");
+    if (lower.includes("vocabulary sorting") || lower.includes("sorting")) return t("act_vocabulary_sorting", "Vocabulary Sorting");
+    if (lower.includes("build & solve") || lower.includes("solve puzzles")) return t("act_build_solve_puzzles", "Build & Solve Puzzles");
+    if (lower.includes("team battles")) return t("act_interactive_team_battles", "Interactive Team Battles");
+    if (lower.includes("concept sketching")) return t("act_concept_sketching", "Concept Sketching");
+    if (lower.includes("roadmap card")) return t("act_roadmap_card_drills", "Roadmap Card Drills");
+    if (lower.includes("diagram modeling")) return t("act_visual_diagram_modeling", "Visual Diagram Modeling");
+    if (lower.includes("animated concept")) return t("act_animated_concept_videos", "Animated Concept Videos");
+    if (lower.includes("spatial block")) return t("act_spatial_block_puzzles", "Spatial Block Puzzles");
+    if (lower.includes("flashcard")) return t("act_flashcard_drills", "Flashcard Drills");
+    if (lower.includes("build")) return t("act_build_it", name);
+    if (lower.includes("practice")) return t("act_practice_together", name);
+    if (lower.includes("draw")) return t("act_draw_it", name);
+    if (lower.includes("watch")) return t("act_watch_it", name);
     return t(name, name);
   };
 
   const translateActivityDesc = (desc: string) => {
-    if (desc.includes("spatial drag-and-drop actions")) return t("desc_act_build_it_spatial", desc);
-    if (desc.includes("multiplayer quiz and compete")) return t("desc_act_practice_multiplayer", desc);
-    if (desc.includes("shapes and concepts")) return t("desc_act_draw_math", desc);
-    if (desc.includes("concept video cards")) return t("desc_act_watch_roadmap", desc);
-    if (desc.includes("word problems aloud")) return t("desc_act_practice_aloud", desc);
-    if (desc.includes("reader summaries")) return t("desc_act_watch_summaries", desc);
-    if (desc.includes("diagrams associated")) return t("desc_act_draw_text", desc);
-    if (desc.includes("word sorting games")) return t("desc_act_build_sorting", desc);
-    if (desc.includes("concepts and models")) return t("desc_act_draw_models", desc);
-    if (desc.includes("animations of math")) return t("desc_act_watch_animations", desc);
-    if (desc.includes("block puzzles")) return t("desc_act_build_blocks", desc);
-    if (desc.includes("flashcard visual drills")) return t("desc_act_practice_flashcards", desc);
+    if (!desc) return "";
+    const lower = desc.toLowerCase();
+    if (lower.includes("word problems aloud")) return t("desc_act_practice_aloud", "Collaboratively read word problems aloud.");
+    if (lower.includes("chapter reader key takeaways") || lower.includes("reader summaries")) return t("desc_act_summary_journaling", "Review chapter reader key takeaways on the dashboard.");
+    if (lower.includes("concise text summaries with diagrams") || lower.includes("diagrams associated with text")) return t("desc_act_visual_concept_notes", "Create concise text summaries with diagrams.");
+    if (lower.includes("word matching and classification") || lower.includes("word sorting games")) return t("desc_act_vocabulary_sorting", "Solve word matching and classification games.");
+    if (lower.includes("drag-and-drop math challenges") || lower.includes("spatial drag-and-drop")) return t("desc_act_build_solve", "Hands-on spatial & drag-and-drop math challenges.");
+    if (lower.includes("multiplayer practice sessions") || lower.includes("multiplayer quiz")) return t("desc_act_team_battles", "Compete in live multiplayer practice sessions.");
+    if (lower.includes("science diagrams visually") || lower.includes("shapes and concepts")) return t("desc_act_concept_sketching", "Draw & map out science diagrams visually.");
+    if (lower.includes("roadmap milestone cards") || lower.includes("concept video cards")) return t("desc_act_roadmap_drills", "Explore animated visual roadmap milestone cards.");
+    if (lower.includes("visual math & science models") || lower.includes("concepts and models")) return t("desc_act_diagram_modeling", "Process visual math & science models.");
+    if (lower.includes("chapter animations") || lower.includes("animations of math")) return t("desc_act_animated_videos", "Watch step-by-step visual chapter animations.");
+    if (lower.includes("spatial block models") || lower.includes("block puzzles")) return t("desc_act_spatial_puzzles", "Construct 3D spatial block models in practice games.");
+    if (lower.includes("visual flashcards")) return t("desc_act_flashcards_together", "Run interactive visual flashcards together.");
     return t(desc, desc);
+  };
+
+  const translateBadgeName = (name: string) => {
+    if (!name) return "";
+    const lower = name.toLowerCase().replace(/ /g, "_").replace(/-/g, "_");
+    if (lower.includes("focus")) return t("focus_master", t("badge_focus_master", "Focus Master"));
+    if (lower.includes("streak")) return t("seven_day_streak", t("badge_7day_streak", "7-Day Streak"));
+    if (lower.includes("curious")) return t("curious_mind", t("badge_curious_mind", "Curious Mind"));
+    if (lower.includes("fast") || lower.includes("learner") || lower.includes("speed")) return t("fast_learner", t("badge_fast_learner", "Fast Learner"));
+    return t(lower, name);
+  };
+
+  const translateBadgeProgress = (txt: string) => {
+    if (!txt) return "";
+    return txt
+      .replace(/(\d+)%\s*Focus\s*\((\d+)%\s*Acc\)/i, (_, f, a) => t("badge_focus_acc", { focus: f, acc: a, defaultValue: `${f}% Focus (${a}% Acc)` }))
+      .replace(/(\d+)\/(\d+)\s*Day\s*Streak/i, (_, c, tot) => t("badge_day_streak_ratio", { current: c, total: tot, defaultValue: `${c}/${tot} Day Streak` }))
+      .replace(/(\d+)\/(\d+)\s*Chapters\s*Explored/i, (_, c, tot) => t("badge_chapters_explored", { current: c, total: tot, defaultValue: `${c}/${tot} Chapters Explored` }))
+      .replace(/(\d+)%\s*Speed\s*\((\d+)%\s*Acc\)/i, (_, s, a) => t("badge_speed_acc", { speed: s, acc: a, defaultValue: `${s}% Speed (${a}% Acc)` }))
+      .replace(/(\d+)\/(\d+)\s*Quizzes/i, (_, c, tot) => t("badge_quizzes_ratio", { current: c, total: tot, defaultValue: `${c}/${tot} Quizzes` }))
+      .replace(/(\d+)%\s*Curiosity/i, (_, c) => t("badge_curiosity_val", { val: c, defaultValue: `${c}% Curiosity` }));
   };
 
   // Dynamic Weekly Trend graph coordinates based on weeklyTrend telemetry array from backend
@@ -649,8 +693,8 @@ export default function ParentLearningDNAScreen() {
                       : "bg-gray-50/50 border-dashed border-gray-200 opacity-50"
                   }`}>
                     {renderIcon(b.icon, 20, b.unlocked ? "text-[#141779]" : "text-gray-400")}
-                    <h4 className="text-sm font-black text-[#191c1e]">{t(b.name.toLowerCase().replace(/ /g, "_"), { defaultValue: String(b.name) })}</h4>
-                    <span className="text-xs font-bold text-[#7c7d8a]">{b.unlocked ? t("unlocked", "Unlocked") : (b.progressText ? String(b.progressText) : t("locked", "Locked"))}</span>
+                    <h4 className="text-sm font-black text-[#191c1e]">{translateBadgeName(b.name)}</h4>
+                    <span className="text-xs font-bold text-[#7c7d8a]">{b.unlocked ? t("unlocked", "Unlocked") : (b.progressText ? translateBadgeProgress(String(b.progressText)) : t("locked", "Locked"))}</span>
                   </div>
                 ))
               ) : (

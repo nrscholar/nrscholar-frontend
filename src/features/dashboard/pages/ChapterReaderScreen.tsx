@@ -1,9 +1,9 @@
 import { ArrowLeft, Maximize2, Minimize2, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import { Document, Page, pdfjs } from 'react-pdf';
-import { getOrFetchPdfUrl, getCachedPdfUrl } from "../../../utils/pdfCache";
+import { getOrFetchPdfChunk, getCachedPdfChunk, CHUNK_PAGES } from "../../../utils/pdfCache";
 import { getScopedItem, setScopedItem, getActiveUserContext } from "../../../utils/sessionCache";
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -18,6 +18,8 @@ const pdfOptions = {
   cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
   cMapPacked: true,
   standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
+  // Required by pdf.js 5.x to decode JPEG2000 / ICC-profiled images
+  wasmUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/wasm/`,
 };
 
 const MIN_SCALE = 1.0;
@@ -33,7 +35,7 @@ export default function ChapterReaderScreen() {
   const title = searchParams.get("title") || "Chapter Reader";
   const subjectName = searchParams.get("subjectName") || "";
 
-  const initialCachedUrl = getCachedPdfUrl(chapterId || "");
+  const initialCachedChunk = getCachedPdfChunk(chapterId || "", 0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [markingComplete, setMarkingComplete] = useState(false);
 
@@ -93,11 +95,21 @@ export default function ChapterReaderScreen() {
     };
   }, [scale, activeSlot, slotAScale, slotBScale]);
 
-  const [pdfUrl, setPdfUrl] = useState<string | null>(initialCachedUrl);
-  const [loading, setLoading] = useState(!initialCachedUrl);
+  // PDF is delivered from S3 in CHUNK_PAGES-page chunks; chunks[i] holds the bytes of chunk i
+  const [chunks, setChunks] = useState<Record<number, ArrayBuffer>>(
+    initialCachedChunk ? { 0: initialCachedChunk.data } : {}
+  );
+  const [loading, setLoading] = useState(!initialCachedChunk);
   const [pdfError, setPdfError] = useState<string | null>(null);
-  const [numPages, setNumPages] = useState<number>();
+  const [numPages, setNumPages] = useState<number | undefined>(initialCachedChunk?.totalPages);
+  const [chunkCount, setChunkCount] = useState<number>(initialCachedChunk?.chunkCount || 1);
   const [pageNumber, setPageNumber] = useState<number>(1);
+
+  const currentChunk = Math.floor((pageNumber - 1) / CHUNK_PAGES);
+  const localPage = ((pageNumber - 1) % CHUNK_PAGES) + 1;
+  const pdfData: ArrayBuffer | null = chunks[currentChunk] || null;
+  // pdf.js transfers (detaches) the buffer to its worker, so hand it a fresh copy and keep the cached original intact
+  const pdfFile = useMemo(() => (pdfData ? { data: new Uint8Array(pdfData.slice(0)) } : null), [pdfData]);
 
   // ─── Reading time ──────────────────────────────────────────────────────────
   const logReadingTime = async () => {
@@ -131,30 +143,55 @@ export default function ChapterReaderScreen() {
     };
   }, []);
 
+  const loadChunk = async (idx: number) => {
+    if (!chapterId) return;
+    const c = await getOrFetchPdfChunk(chapterId, idx);
+    setChunks((prev) => (prev[idx] ? prev : { ...prev, [idx]: c.data }));
+    setNumPages(c.totalPages);
+    setChunkCount(c.chunkCount);
+    return c;
+  };
+
+  // Load the first chunk, then quietly load the remaining chunks in order in the background.
   const loadPdf = async () => {
     if (!chapterId) {
       setPdfError("No chapter ID provided");
       setLoading(false);
       return;
     }
-    if (!initialCachedUrl) {
-      setLoading(true);
-    }
+    if (!initialCachedChunk) setLoading(true);
     setPdfError(null);
     try {
-      const url = await getOrFetchPdfUrl(chapterId);
-      setPdfUrl(url);
+      const first = await loadChunk(0);
+      setLoading(false);
+      for (let i = 1; first && i < first.chunkCount; i++) {
+        if (cancelledRef.current) return;
+        try { await loadChunk(i); } catch { /* retried on demand when the reader reaches that chunk */ }
+      }
     } catch (error: any) {
       console.error("Error loading PDF:", error);
       setPdfError(error.message || "Failed to load PDF document");
-    } finally {
       setLoading(false);
     }
   };
 
+  const cancelledRef = useRef(false);
   useEffect(() => {
+    cancelledRef.current = false;
     loadPdf();
+    return () => { cancelledRef.current = true; };
   }, [chapterId]);
+
+  // If the reader reaches a chunk that hasn't arrived yet, wait for it (shares the in-flight request).
+  useEffect(() => {
+    if (!chapterId || chunks[currentChunk] || currentChunk >= chunkCount) return;
+    let alive = true;
+    setLoading(true);
+    loadChunk(currentChunk)
+      .catch((e: any) => { if (alive) setPdfError(e?.message || "Failed to load PDF document"); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [currentChunk, chunks, chunkCount, chapterId]);
 
   useEffect(() => {
     const handleFsChange = () => {
@@ -430,7 +467,7 @@ export default function ChapterReaderScreen() {
       >
         <Page
           key={`page-${pageNumber}-${slotKey}-${slotScale}`}
-          pageNumber={pageNumber}
+          pageNumber={localPage}
           width={slotW}
           renderTextLayer={false}
           renderAnnotationLayer={false}
@@ -508,7 +545,7 @@ export default function ChapterReaderScreen() {
 
       {/* ── Reader: Clean white background, no purple gradient ──────────────── */}
       <main className="flex-1 relative w-full bg-white overflow-hidden">
-        {loading && !pdfUrl ? (
+        {loading && !pdfData ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-white z-10">
             <div className="w-12 h-12 border-4 border-slate-200 border-t-[#141779] rounded-full animate-spin shadow-md" />
             <p className="text-[#141779] font-extrabold tracking-wide text-lg drop-shadow-sm">Loading Magic Book...</p>
@@ -531,7 +568,7 @@ export default function ChapterReaderScreen() {
               </button>
             </div>
           </div>
-        ) : pdfUrl ? (
+        ) : pdfData ? (
           /* Scroll container: full width, clean white, allows full vertical & horizontal scrolling and panning */
           <div
             ref={scrollContainerRef}
@@ -576,10 +613,9 @@ export default function ChapterReaderScreen() {
                 }}
               >
                 <Document
-                  file={pdfUrl}
+                  file={pdfFile}
                   options={pdfOptions}
-                  onLoadSuccess={({ numPages: n }) => {
-                    setNumPages(n);
+                  onLoadSuccess={() => {
                     setPdfError(null);
                   }}
                   onLoadError={(err: Error) => {
@@ -609,7 +645,7 @@ export default function ChapterReaderScreen() {
         )}
 
         {/* ── Floating zoom & pagination controls (clean horizontal bar positioned safely above bottom actions) ── */}
-        {pdfUrl && Boolean(numPages) && (
+        {pdfData && Boolean(numPages) && (
           <div
             className={`absolute left-0 right-0 flex items-center justify-center gap-2.5 flex-wrap pointer-events-none z-30 px-4 transition-all duration-300 ${
               !loading && pageNumber === numPages
@@ -676,7 +712,7 @@ export default function ChapterReaderScreen() {
       </main>
 
       {/* ── Sticky / Fixed Bottom Action Bar for "MARK READING COMPLETE" ── */}
-      {!loading && pdfUrl && pageNumber === numPages && (
+      {!loading && pdfData && pageNumber === numPages && (
         <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-md border-t border-slate-200/80 px-4 py-3 sm:py-3.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_24px_rgba(20,23,121,0.08)] flex items-center justify-center transition-all duration-300">
           <button
             type="button"

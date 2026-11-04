@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
 import StreakModal from "../../../components/StreakModal";
 import { startNavigationProgress } from "../../../components/NavigationProgressBar";
+import { useUserStatsStore } from "../../../services/userStatsStore";
 
 type Message = {
   id: string;
@@ -58,6 +59,15 @@ export default function ChatScreen() {
     } catch (e) { return null; }
   });
   const [unreadCount, setUnreadCount] = useState(0);
+  const { 
+    level: userLevel, 
+    childName: storeChildName, 
+    childClass: storeChildClass, 
+    childPhoto: storeChildPhoto,
+    streakDays: storeStreakDays, 
+    coins: storeCoins, 
+    syncFromUserData 
+  } = useUserStatsStore();
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -69,6 +79,7 @@ export default function ChatScreen() {
         const res = await apiFetch("/api/users/me");
         const json = await res.json();
         if (json.success && json.data?.user) {
+          syncFromUserData(json.data.user);
           setUserData(json.data.user);
           localStorage.setItem("userData", JSON.stringify(json.data.user));
         }
@@ -135,7 +146,7 @@ export default function ChatScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] font-sans flex flex-col relative pb-32 max-w-md mx-auto">
+    <div className="min-h-screen bg-[#f7f9fb] font-sans flex flex-col relative pb-6 max-w-md mx-auto">
       
       {/* Sticky Header */}
       <header className="sticky top-0 left-0 right-0 w-full max-w-md mx-auto z-50 bg-white border-b border-slate-100 shadow-xs pb-1 select-none">
@@ -167,7 +178,7 @@ export default function ChatScreen() {
               {/* Line 2: Level */}
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="text-[11.5px] text-slate-400 font-extrabold whitespace-nowrap">
-                  {t('explorer_level', { defaultValue: "Explorer Level" })} {userData?.level || 1}
+                  {t('explorer_level', { defaultValue: "Explorer Level" })} {userLevel}
                 </span>
               </div>
             </div>

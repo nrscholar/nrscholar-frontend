@@ -1,0 +1,482 @@
+import type { QuestionImage } from "../dashboard/components/questionTypes";
+// Admin session is kept separate from the student/parent session in api.ts.
+const TOKEN_KEY = "adminToken";
+const USER_KEY = "adminUser";
+const BASE = "/api/admin/question-pipeline";
+
+export type Difficulty = "Easy" | "Medium" | "Hard";
+export type DraftStatus = "pending" | "approving" | "approved" | "rejected";
+export type CountsByStatus = Partial<Record<DraftStatus, Partial<Record<Difficulty, number>>>>;
+
+export interface AdminUser {
+  email: string;
+  name: string;
+  role: string;
+}
+
+export type Tier = "large" | "medium" | "small";
+export type RoundName = "quiz" | "boss" | "shadow";
+type ByDifficulty = Record<Difficulty, number>;
+
+export interface RoundStatus {
+  required: ByDifficulty;
+  available: ByDifficulty;
+  pending: ByDifficulty;
+  toGenerate: ByDifficulty;
+  ready: boolean;
+}
+
+export interface PoolStatus {
+  tier: Tier;
+  rounds: Record<RoundName, RoundStatus>;
+  currentRound: RoundName | null;
+  required: ByDifficulty;
+  available: ByDifficulty;
+  pending: ByDifficulty;
+  toGenerate: ByDifficulty;
+  /** Any approved question in the pool: a set can be built (partial when not `complete`). */
+  canBuild: boolean;
+  /** The pool fills a whole set of the chapter's tier. */
+  complete: boolean;
+}
+
+export interface QuestionSet {
+  id: string;
+  setNumber: number;
+  tier: Tier;
+  status: "building" | "ready";
+  /** Built from fewer questions than a full set of its tier. */
+  partial?: boolean;
+  counts?: Record<RoundName, number>;
+  createdBy: string;
+  readyAt?: string;
+}
+
+export interface ChapterRow {
+  id: string;
+  name: string;
+  order: number;
+  hasPdf: boolean;
+  pdfFilename: string;
+  verificationStatus: string;
+  verificationScore: number | null;
+  draftCounts: CountsByStatus;
+  latestJob: Job | null;
+  tier: Tier;
+  setsReady: number;
+  pool: { available: ByDifficulty; required: ByDifficulty; canBuild: boolean; complete: boolean };
+}
+
+export interface Verification {
+  status: string;
+  method?: string;
+  score?: number;
+  message?: string;
+  officialUrl?: string;
+  matchedPages?: [number, number] | null;
+  checkedAt?: string;
+  checkedBy?: string;
+}
+
+export interface Rejection {
+  question: string;
+  difficulty: Difficulty;
+  stage: "rules" | "verifier";
+  reasons: string[];
+}
+
+export interface Job {
+  id: string;
+  status: "queued" | "running" | "completed" | "partial" | "failed";
+  message: string;
+  targets: Record<Difficulty, number>;
+  accepted: Record<Difficulty, number>;
+  rejectedCount?: number;
+  rejections?: Rejection[];
+  round?: number;
+  sourceTextMethod?: string;
+  model?: string;
+  verifierModel?: string;
+  createdAt?: string;
+}
+
+export interface ChapterDetail {
+  chapter: { id: string; name: string; title?: string; order: number };
+  board: string;
+  classLevel: string;
+  subject: string;
+  subjectId: string;
+  s3Key: string | null;
+  pdfViewUrl: string | null;
+  verification: Verification | null;
+  plan: Record<Difficulty, number>;
+  remaining: Record<Difficulty, number>;
+  tierInfo: { tier: Tier; source: "auto" | "override"; autoTier: Tier; pageCount: number | null };
+  tiers: Record<Tier, { label: string; rounds: Record<RoundName, Partial<ByDifficulty>>; required: ByDifficulty }>;
+  pool: PoolStatus;
+  sets: QuestionSet[];
+  draftCounts: CountsByStatus;
+  latestJob: Job | null;
+}
+
+export interface Draft {
+  id: string;
+  chapterId: string;
+  status: DraftStatus;
+  difficulty: Difficulty;
+  // multiple_choice (default), match_pairs, fill_letters or ordering.
+  type?: string;
+  image?: QuestionImage;
+  optionImages?: QuestionImage[];
+  interaction?: { type?: string; details?: any };
+  question: string;
+  options: string[];
+  answer: string;
+  explanation: string;
+  sourceQuote: string;
+  sourcePage: number;
+  passageId?: string;
+  passage?: string;
+  quoteScore: number | null;
+  sourceTextMethod: string;
+  verification: { chosen_option: string; correct_option_count: number; answerable_from_chapter: boolean; difficulty: Difficulty; issues: string } | null;
+  generator?: string;
+  setNumber?: number;
+  round?: RoundName;
+  targetRound?: RoundName;
+  editedByHuman?: boolean;
+  rejectReason?: string;
+  reviewedBy?: string;
+}
+
+/** Live questions per round, picture questions (picture MCQ + match / fill / order) and the review queue. */
+export interface QuestionStats {
+  total: number;
+  picture: number;
+  rounds: Record<RoundName, { total: number; picture: number }>;
+  kinds: Record<string, number>;
+  byClass: { classLevel: string; total: number; picture: number; quiz: number; boss: number; shadow: number }[];
+  drafts: Record<string, { total: number; picture: number }>;
+}
+
+/** One picture question in the stats drill-down (live, or waiting for review). */
+export interface PictureQuestion {
+  id: string;
+  round: RoundName;
+  kind: string;
+  board?: string;
+  classLevel?: string;
+  subject?: string;
+  chapterId: string;
+  chapterName?: string;
+  difficulty?: Difficulty;
+  question: string;
+  options: string[];
+  answer: string;
+  image?: QuestionImage;
+  optionImages?: QuestionImage[];
+  interaction?: { type: string; details: any };
+}
+
+export interface DraftEdits {
+  question?: string;
+  options?: string[];
+  answer?: string;
+  explanation?: string;
+  difficulty?: Difficulty;
+}
+
+export interface ClaudeContext {
+  chapterId: string;
+  chapter: string;
+  board: string;
+  classLevel: string;
+  subject: string;
+  pdfUrl: string | null;
+  remaining: Record<Difficulty, number>;
+  askNow: Record<Difficulty, number>;
+  currentRound: RoundName | null;
+  setNumber: number;
+  avoidQuestions: string[];
+}
+
+export interface ImportResult {
+  acceptedCount: number;
+  accepted: Record<Difficulty, number>;
+  rejected: { index: number; question: string; difficulty?: string; reasons: string[] }[];
+  round: RoundName;
+  quoteCheckable: boolean;
+  remaining: Record<Difficulty, number>;
+}
+
+export type CatalogStatus = "pending" | "pool" | "in_set" | "rejected";
+
+export interface CatalogItem {
+  id: string;
+  question: string;
+  options: string[];
+  answer: string;
+  difficulty: Difficulty;
+  statusLabel: CatalogStatus;
+  setNumber?: number;
+  round?: RoundName;
+  targetRound?: RoundName;
+  chapterId: string;
+  chapterName: string;
+  board: string;
+  classLevel: string;
+  subject: string;
+  createdAt?: string;
+}
+
+export interface DuplicatePair {
+  chapterId: string;
+  chapterName: string;
+  similarity: number;
+  a: { id: string; question: string; status: CatalogStatus };
+  b: { id: string; question: string; status: CatalogStatus };
+}
+
+export interface Catalog {
+  total: number;
+  shown: number;
+  items: CatalogItem[];
+  checkedQuestions: number;
+  duplicates: DuplicatePair[];
+  duplicateIds: string[];
+}
+
+export interface DriveFile {
+  name: string;
+  url: string;
+  isFolder: boolean;
+}
+
+export interface FolderMatch {
+  subjectId: string;
+  subjectName: string;
+  description: string;
+  suggested: DriveFile | null;
+  confidence: "high" | "low" | "none";
+  candidates: DriveFile[];
+  currentUrl: string | null;
+}
+
+
+export type RevisionVerdict = "ATTACH_PASSAGE" | "STANDALONE" | "NEEDS_IMAGE" | "REJECT";
+export type RevisionStatus = "pending" | "approved" | "rejected";
+
+export interface Revision {
+  id: string;
+  originalDraftId: string;
+  board: string;
+  classLevel: string;
+  subject: string;
+  chapterName: string;
+  verdict: RevisionVerdict;
+  originalType: string;
+  original: { question: string; options: string[]; answer: string };
+  passage: string;
+  passageGroupId: string;
+  passagePages: string;
+  proposed: { question: string; options: string[]; answer: string };
+  image: { type: string; spec: string; svg: string };
+  reason: string;
+  status: RevisionStatus;
+  editedByHuman?: boolean;
+  reviewedBy?: string;
+  reviewNote?: string;
+}
+
+export interface RevisionEdits {
+  question?: string;
+  options?: string[];
+  answer?: string;
+  passage?: string;
+}
+
+export interface RevisionList {
+  total: number;
+  page: number;
+  limit: number;
+  items: Revision[];
+}
+
+export interface RevisionSummaryRow {
+  board: string;
+  classLevel: string;
+  verdict: RevisionVerdict;
+  status: RevisionStatus;
+  count: number;
+}
+
+const REV = "/api/admin/question-revisions";
+
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
+export const adminSession = {
+  token: () => localStorage.getItem(TOKEN_KEY),
+  user: (): AdminUser | null => {
+    try {
+      return JSON.parse(localStorage.getItem(USER_KEY) || "null");
+    } catch {
+      return null;
+    }
+  },
+  save: (token: string, user: AdminUser) => {
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  },
+  clear: () => {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+  },
+};
+
+async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
+  const headers = new Headers(options.headers || {});
+  const token = adminSession.token();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  if (options.body) headers.set("Content-Type", "application/json");
+
+  let res: Response;
+  try {
+    res = await fetch(url, { ...options, headers });
+  } catch {
+    throw new ApiError("Cannot reach the server. Is the backend running?", 0);
+  }
+  const json = await res.json().catch(() => ({}));
+  if (res.status === 401) {
+    adminSession.clear();
+    window.dispatchEvent(new Event("admin-logout"));
+  }
+  if (!res.ok) {
+    const detail = json.detail ?? json.message ?? `Request failed (${res.status})`;
+    throw new ApiError(typeof detail === "string" ? detail : JSON.stringify(detail), res.status);
+  }
+  return json as T;
+}
+
+const post = <T>(url: string, body: unknown = {}) => request<T>(url, { method: "POST", body: JSON.stringify(body) });
+
+export const adminApi = {
+  login: async (email: string, password: string) => {
+    const res = await post<{ token: string; user: AdminUser }>("/api/admin/auth/login", { email, password });
+    adminSession.save(res.token, res.user);
+    return res.user;
+  },
+
+  filters: (board?: string, classLevel?: string) => {
+    const q = new URLSearchParams();
+    if (board) q.set("board", board);
+    if (classLevel) q.set("classLevel", classLevel);
+    return request<{ data: { boards: string[]; classLevels: string[]; subjects: { id: string; name: string }[] } }>(
+      `${BASE}/filters?${q}`
+    ).then((r) => r.data);
+  },
+
+  stats: (board?: string, classLevel?: string) => {
+    const q = new URLSearchParams();
+    if (board) q.set("board", board);
+    if (classLevel) q.set("classLevel", classLevel);
+    return request<{ data: QuestionStats }>(`${BASE}/stats?${q}`).then((r) => r.data);
+  },
+
+  pictureQuestions: (source: "live" | "pending", board?: string, classLevel?: string) => {
+    const q = new URLSearchParams({ source });
+    if (board) q.set("board", board);
+    if (classLevel) q.set("classLevel", classLevel);
+    return request<{ data: { total: number; questions: PictureQuestion[] } }>(`${BASE}/stats/picture-questions?${q}`).then((r) => r.data);
+  },
+
+  chapters: (subjectId: string) =>
+    request<{ data: { chapters: ChapterRow[]; officialSource: { url: string } | null } }>(
+      `${BASE}/chapters?subjectId=${encodeURIComponent(subjectId)}`
+    ).then((r) => r.data),
+
+  chapter: (chapterId: string) => request<{ data: ChapterDetail }>(`${BASE}/chapters/${chapterId}`).then((r) => r.data),
+
+  verify: (chapterId: string, officialUrl?: string) =>
+    post<{ data: Verification }>(`${BASE}/chapters/${chapterId}/verify`, { officialUrl: officialUrl || null }).then((r) => r.data),
+
+  verifyManually: (chapterId: string, note: string) =>
+    post<{ data: Verification }>(`${BASE}/chapters/${chapterId}/verify-manual`, { note }).then((r) => r.data),
+
+  setOfficialSource: (subjectId: string, url: string) =>
+    request(`${BASE}/subjects/${subjectId}/official-source`, { method: "PUT", body: JSON.stringify({ url }) }),
+
+  generate: (chapterId: string, round?: RoundName | null) =>
+    post<{ data: Job }>(`${BASE}/chapters/${chapterId}/generate${round ? `?round=${round}` : ""}`).then((r) => r.data),
+
+  claudeContext: (chapterId: string, round?: RoundName | null) =>
+    request<{ data: ClaudeContext }>(`${BASE}/chapters/${chapterId}/claude-context${round ? `?round=${round}` : ""}`).then((r) => r.data),
+
+  officialFolder: (board: string, classLevel: string) =>
+    request<{ data: { url: string | null } }>(
+      `${BASE}/official-sources/folder?board=${encodeURIComponent(board)}&classLevel=${encodeURIComponent(classLevel)}`
+    ).then((r) => r.data.url),
+
+  matchFolder: (folderUrl: string, board: string, classLevel: string) =>
+    post<{ data: { files: DriveFile[]; matches: FolderMatch[] } }>(`${BASE}/official-sources/folder-match`, { folderUrl, board, classLevel }).then((r) => r.data),
+
+  saveOfficialSources: (items: { subjectId: string; url: string }[], folderUrl: string, board: string, classLevel: string) =>
+    post(`${BASE}/official-sources/bulk`, { items, folderUrl, board, classLevel }),
+
+  allQuestions: (params: Record<string, string>) => {
+    const q = new URLSearchParams(Object.entries(params).filter(([, v]) => v));
+    return request<{ data: Catalog }>(`${BASE}/all-questions?${q}`).then((r) => r.data);
+  },
+
+  buildSet: (chapterId: string) => post<{ data: QuestionSet }>(`${BASE}/chapters/${chapterId}/sets`).then((r) => r.data),
+
+  setTier: (chapterId: string, tier: Tier | null) =>
+    request(`${BASE}/chapters/${chapterId}/tier`, { method: "PUT", body: JSON.stringify({ tier }) }),
+
+  importQuestions: (chapterId: string, questions: unknown[], round: RoundName | null) =>
+    post<{ data: ImportResult }>(`${BASE}/chapters/${chapterId}/import`, { questions, generator: "claude-app", round }).then((r) => r.data),
+
+  job: (jobId: string) => request<{ data: Job }>(`${BASE}/jobs/${jobId}`).then((r) => r.data),
+
+  drafts: (chapterId: string, status: DraftStatus | "all") =>
+    request<{ data: Draft[] }>(`${BASE}/drafts?chapterId=${chapterId}&status=${status}`).then((r) => r.data),
+
+  updateDraft: (draftId: string, edits: DraftEdits) =>
+    request<{ data: Draft }>(`${BASE}/drafts/${draftId}`, { method: "PUT", body: JSON.stringify(edits) }).then((r) => r.data),
+
+  approve: (draftId: string, edits?: DraftEdits) =>
+    post<{ data: Draft }>(`${BASE}/drafts/${draftId}/approve`, { edits: edits || null }).then((r) => r.data),
+
+  reject: (draftId: string, reason: string) =>
+    post<{ data: Draft }>(`${BASE}/drafts/${draftId}/reject`, { reason }).then((r) => r.data),
+
+  revisionFilters: (board?: string, classLevel?: string) => {
+    const q = new URLSearchParams();
+    if (board) q.set("board", board);
+    if (classLevel) q.set("classLevel", classLevel);
+    return request<{ data: { boards: string[]; classLevels: string[]; subjects: string[]; chapters: string[] } }>(`${REV}/filters?${q}`).then((r) => r.data);
+  },
+
+  revisionSummary: () => request<{ data: RevisionSummaryRow[] }>(`${REV}/summary`).then((r) => r.data),
+
+  revisions: (params: Record<string, string>) => {
+    const q = new URLSearchParams(Object.entries(params).filter(([, v]) => v));
+    return request<{ data: RevisionList }>(`${REV}?${q}`).then((r) => r.data);
+  },
+
+  editRevision: (id: string, edits: RevisionEdits) =>
+    request<{ data: Revision }>(`${REV}/${id}`, { method: "PUT", body: JSON.stringify(edits) }).then((r) => r.data),
+
+  approveRevision: (id: string, edits?: RevisionEdits) =>
+    post<{ data: Revision }>(`${REV}/${id}/approve`, { edits: edits || null }).then((r) => r.data),
+
+  rejectRevision: (id: string, note = "") =>
+    post<{ data: Revision }>(`${REV}/${id}/reject`, { note }).then((r) => r.data),
+
+  resetRevision: (id: string) => post<{ success: boolean }>(`${REV}/${id}/reset`),
+};

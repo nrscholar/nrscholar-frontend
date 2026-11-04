@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -25,8 +25,11 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "../../../api";
+import QuestionContext from "../components/QuestionContext";
+import { ActivityQuestion, OptionList } from "../components/ActivityQuestion";
+import { activityType, imageSrc, optionImage, sameAnswer } from "../components/questionTypes";
 import { getScopedItem, setScopedItem, removeScopedItem, getActiveUserContext } from "../../../utils/sessionCache";
-import { showInteractiveNotification } from "../../../services/pushNotificationService";
+import { triggerDevicePushNotification } from "../../../services/pushNotificationService";
 import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
@@ -300,6 +303,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     return 0;
   });
   const [quizSelected, setQuizSelected] = useState<number | null>(null);
+  // Answer string of a match / fill-letters / ordering question; null until every part is done.
+  const [activityValue, setActivityValue] = useState<string | null>(null);
   const [quizCorrectCount, setQuizCorrectCount] = useState(() => {
     if (isFreshReplay) return 0;
     const saved = getScopedItem(`quiz_correct_${chapterId}_${missionSeq}`);
@@ -799,6 +804,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     fetchMission();
   }, [chapterId, missionSeq, navigate]);
 
+  // The timer ticks every second; keep it in a ref so it is saved with the draft without re-triggering the sync.
+  const totalSessionSecRef = useRef(totalSessionSec);
+  totalSessionSecRef.current = totalSessionSec;
+
   // Auto-sync active mission draft state to backend database (Solution 1)
   useEffect(() => {
     if (!isDraftRestored || isQuitting || !phase || phase === "INTRO" || phase === "SUMMARY" || loading) return;
@@ -817,7 +826,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           bossDamageCount,
           wrongAnswerCount,
           currentBossIndex,
-          totalSessionSec,
+          totalSessionSec: totalSessionSecRef.current,
           classLevel: getActiveUserContext().classLevel
         })
       }).catch((err) => console.error("Failed to sync draft to server:", err));
@@ -837,7 +846,6 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     bossDamageCount,
     wrongAnswerCount,
     currentBossIndex,
-    totalSessionSec,
     chapterId,
     missionSeq,
     isReplay,
@@ -851,7 +859,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     const rawBoss = (missionData?.bossQuestions && missionData.bossQuestions.length > 0)
       ? missionData.bossQuestions
       : DEFAULT_BOSS;
-    return filterCrossUniqueQuestions(rawQuiz, rawBoss);
+    return filterCrossUniqueQuestions<any>(rawQuiz, rawBoss);
   }, [missionData?.quizQuestions, missionData?.bossQuestions]);
 
   const recordUniqueAnswer = useCallback((prevAnswers: any[], newAns: any) => {
@@ -914,6 +922,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
   const currentQ = quizQuestions[safeQuizIndex] || quizQuestions[0];
   const interactionType = currentQ?.interaction?.type || currentQ?.type || "multiple_choice";
   const isDragObjects = interactionType === "drag_objects";
+  const currentActivity = activityType(currentQ);
+  const quizReady = isDragObjects || (currentActivity ? activityValue !== null : quizSelected !== null);
 
   const dragDetails = currentQ?.interaction?.details || {};
   const targetCount = dragDetails.targetCount ?? (parseInt(currentQ?.answer) || 3);
@@ -928,6 +938,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     }
     setQuizConfirmed(false);
     setQuizSelected(null);
+    setActivityValue(null);
     setSelectedDragValue(null);
   }, [safeQuizIndex, currentQ?._id]);
 
@@ -994,7 +1005,9 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           timeTakenSec: totalSessionSec,
           livesRemaining: Math.max(0, 3 - finalChildDamage),
           answers: sanitizedAnswers,
-          classLevel: getActiveUserContext().classLevel
+          classLevel: getActiveUserContext().classLevel,
+          xpEarned: xpEarned,
+          coinsEarned: coinsEarned
         })
       });
       const json = await res.json();
@@ -1046,13 +1059,15 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
         window.dispatchEvent(new Event("userDataUpdated"));
 
-        // Trigger Interactive Desktop Push Notification & Floating Banner Toast
-        showInteractiveNotification(
-          "🧩 MYSTERY SOLVED!",
-          `You bagged ${json.data.earnedXp || 20} XP & ${json.data.earnedCoins || 50} Coins! Your dragon egg is glowing 🐉`,
-          "/home",
-          "gamification"
-        );
+        // Trigger Device Push Notification strictly on first-time 65%+ completion without floating Toast UI
+        if (json.data.isFirstTimeCompletion) {
+          const finalAcc = json.data.accuracy ?? json.data.runAccuracy ?? 100;
+          triggerDevicePushNotification(
+            "🎉 MISSION COMPLETED!",
+            `You completed ${missionTitle || `Mission ${missionSeq}`} with ${finalAcc}% accuracy! Bagged ${json.data.earnedXp ?? json.data.xpEarned ?? xpEarned} XP & ${json.data.earnedCoins ?? json.data.coinsEarned ?? coinsEarned} Coins! 🚀`,
+            `/practice/chapters`
+          );
+        }
         const oldStr = json.data.oldStreak !== undefined ? json.data.oldStreak : (json.data.streak || 1);
         setDisplayedStreak(oldStr);
         setStreakDaysOfWeek(json.data.streakDaysOfWeek || [false, false, false, false, false, false, false]);
@@ -1083,6 +1098,15 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
         };
         setCompletionResult(fallbackRes);
         setScopedItem(`completion_result_${chapterId}_${missionSeq}`, JSON.stringify(fallbackRes));
+
+        // Trigger Device Push Notification for fallback strictly on first-time 65%+ completion without floating Toast UI
+        if (currentAcc >= 65 && !isReplay) {
+          triggerDevicePushNotification(
+            "🎉 MISSION COMPLETED!",
+            `You completed ${missionTitle || `Mission ${missionSeq}`} with ${currentAcc}% accuracy! Bagged ${fallbackRes.earnedXp} XP & ${fallbackRes.earnedCoins} Coins! 🚀`,
+            `/practice/chapters`
+          );
+        }
       }
     } catch (e) {
       console.error("Failed to complete mission:", e);
@@ -1183,7 +1207,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     removeScopedItem(`is_replay_${chapterId}_${missionSeq}`);
 
     try {
-      // Call backend retreat endpoint to apply XP deduction & reset hearts
+      // Call backend retreat endpoint to reset hearts without XP deduction
       await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/retreat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1233,8 +1257,6 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       // Wrong Answer -> Dragon/Hero is Crying!
       setDragonCrying(true);
       setBossAngry(false);
-      setXpEarned((prev) => Math.max(0, prev - 25));
-      setCoinsEarned((prev) => Math.max(0, prev - 20));
       const newWrongCount = wrongAnswerCount + 1;
       setWrongAnswerCount(newWrongCount);
 
@@ -1332,60 +1354,71 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     }));
   }, [userAnswers, quizQuestions, bossQuestions]);
 
-  const handleQuizConfirm = () => {
-    if (!quizConfirmed) {
-      let isCorrect = false;
-      if (isDragObjects) {
-        if (isLanguageDrag) {
-          isCorrect = String(selectedDragValue).trim().toLowerCase() === String(currentQ?.answer).trim().toLowerCase();
-        } else {
-          isCorrect = (basketCount === targetCount || String(basketCount) === String(currentQ?.answer));
-        }
-      } else {
-        if (quizSelected === null) return;
-        const selectedOpt = currentQ?.options?.[quizSelected];
-        isCorrect = String(selectedOpt).trim().toLowerCase() === String(currentQ?.answer).trim().toLowerCase();
-      }
-
-      setQuizConfirmed(true);
-      setQuizIsCorrect(isCorrect);
-
-      const selectedValue = isDragObjects
-        ? (isLanguageDrag ? String(selectedDragValue) : String(basketCount))
-        : (quizSelected !== null ? String(currentQ?.options?.[quizSelected]) : "");
-      const newAns = {
-        questionId: currentQ?._id,
-        questionText: currentQ?.question || currentQ?.text || currentQ?.title || "",
-        isCorrect: isCorrect,
-        selectedAnswer: selectedValue,
-        correctAnswer: currentQ?.answer || currentQ?.correctAnswer || "",
-        explanation: getQuestionExplanation(currentQ) || "",
-        imageUrl: getQuestionImage(currentQ) || "",
-        timeSpent: QUESTION_TIME_LIMIT - questionTimeLeft
-      };
-      setUserAnswers((prev) => recordUniqueAnswer(prev, newAns));
-
-      if (isCorrect) {
-        setQuizCorrectCount((prev) => prev + 1);
-        setXpEarned((prev) => prev + 15);
-        setCoinsEarned((prev) => prev + 10);
-        setStreak((prev) => prev + 1);
-      } else {
-        setXpEarned((prev) => Math.max(0, prev - 15));
-        setCoinsEarned((prev) => Math.max(0, prev - 10));
-        setStreak(1);
-      }
+  const handleGoToNextQuizQuestion = useCallback(() => {
+    setQuizConfirmed(false);
+    setQuizSelected(null);
+    setSelectedDragValue(null);
+    setBasketCount(0);
+    setQuestionTimeLeft(QUESTION_TIME_LIMIT);
+    setIsTimeout(false);
+    if (currentQuizIndex + 1 < quizQuestions.length) {
+      setCurrentQuizIndex((prev) => prev + 1);
     } else {
-      setQuizConfirmed(false);
-      setQuizSelected(null);
-      setBasketCount(0);
-      setQuestionTimeLeft(QUESTION_TIME_LIMIT);
-      setIsTimeout(false);
-      if (currentQuizIndex + 1 < quizQuestions.length) {
-        setCurrentQuizIndex((prev) => prev + 1);
+      setPhase("MINI_REWARD");
+    }
+  }, [currentQuizIndex, quizQuestions.length]);
+
+  const handleQuizAnswer = (idx: number) => {
+    if (quizConfirmed) return;
+    setQuizSelected(idx);
+  };
+
+  const handleQuizConfirm = () => {
+    if (quizConfirmed) return;
+
+    let isCorrect = false;
+    if (isDragObjects) {
+      if (isLanguageDrag) {
+        isCorrect = String(selectedDragValue).trim().toLowerCase() === String(currentQ?.answer).trim().toLowerCase();
       } else {
-        setPhase("MINI_REWARD");
+        isCorrect = (basketCount === targetCount || String(basketCount) === String(currentQ?.answer));
       }
+    } else if (currentActivity) {
+      if (activityValue === null) return;
+      isCorrect = sameAnswer(activityValue, currentQ?.answer);
+    } else {
+      if (quizSelected === null) return;
+      const selectedOpt = currentQ?.options?.[quizSelected];
+      isCorrect = String(selectedOpt).trim().toLowerCase() === String(currentQ?.answer).trim().toLowerCase();
+    }
+
+    setQuizConfirmed(true);
+    setQuizIsCorrect(isCorrect);
+
+    const selectedValue = isDragObjects
+      ? (isLanguageDrag ? String(selectedDragValue) : String(basketCount))
+      : currentActivity
+        ? String(activityValue)
+        : (quizSelected !== null ? String(currentQ?.options?.[quizSelected]) : "");
+    const newAns = {
+      questionId: currentQ?._id,
+      questionText: currentQ?.question || currentQ?.text || currentQ?.title || "",
+      isCorrect: isCorrect,
+      selectedAnswer: selectedValue,
+      correctAnswer: currentQ?.answer || currentQ?.correctAnswer || "",
+      explanation: getQuestionExplanation(currentQ) || "",
+      imageUrl: getQuestionImage(currentQ) || "",
+      timeSpent: QUESTION_TIME_LIMIT - questionTimeLeft
+    };
+    setUserAnswers((prev) => recordUniqueAnswer(prev, newAns));
+
+    if (isCorrect) {
+      setQuizCorrectCount((prev) => prev + 1);
+      setXpEarned((prev) => prev + 15);
+      setCoinsEarned((prev) => prev + 10);
+      setStreak((prev) => prev + 1);
+    } else {
+      setStreak(1);
     }
   };
 
@@ -1470,12 +1503,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     if (isCompleting) return;
     if (phase === "QUIZ" && !quizConfirmed) {
       if (questionTimeLeft <= 0) {
-        // Auto-fail on 30s timeout
+        // Auto-fail on 30s timeout: apply in-mission penalty (floored at 0 for in-game session score)
         setIsTimeout(true);
         setQuizConfirmed(true);
         setQuizIsCorrect(false);
-        setXpEarned((prev) => Math.max(0, prev - 15));
-        setCoinsEarned((prev) => Math.max(0, prev - 10));
         setStreak(1);
 
         const newAns = {
@@ -1525,6 +1556,16 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     }
   }, [phase, questionTimeLeft, quizConfirmed, bossSelected, bossConfirmed, bossAngry, dragonCrying, executeBossAttack, currentQ?._id, activeBossQ?._id, userAnswers, isCompleting]);
 
+  // 3-second auto-transition to next question upon quiz answer or timeout
+  useEffect(() => {
+    if (phase === "QUIZ" && quizConfirmed && !isCompleting) {
+      const timer = setTimeout(() => {
+        handleGoToNextQuizQuestion();
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [phase, quizConfirmed, isCompleting, handleGoToNextQuizQuestion]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f7f9fb] text-[#141779] flex flex-col items-center justify-center p-6 font-sans">
@@ -1538,6 +1579,11 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     );
   }
 
+  const isCountdownPhase = phase === "QUIZ" || phase === "BOSS";
+  const isUrgent = isCountdownPhase && questionTimeLeft <= 5 && questionTimeLeft > 0;
+  const isTimeUp = isCountdownPhase && questionTimeLeft === 0;
+
+  // overflow-x-clip, not hidden: hidden makes this a scroll container and the sticky CHECK button would scroll away.
   return (
     <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans overflow-x-clip flex flex-col justify-between">
       <header className="sticky top-0 z-40 bg-[rgba(247,249,251,0.85)] backdrop-blur-md border-b border-gray-200 px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between shadow-xs">
@@ -1629,20 +1675,55 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             </button>
           )}
 
-          <div className={`flex items-center gap-1 sm:gap-1.5 border px-2 sm:px-3.5 py-1 rounded-full font-mono font-extrabold text-[10px] sm:text-xs shadow-2xs transition-all shrink-0 whitespace-nowrap ${(phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5
-            ? "bg-rose-50 border-rose-300 text-rose-700 animate-pulse ring-2 ring-rose-400/40"
-            : "bg-slate-100/90 border-slate-200 text-slate-800"
-            }`}>
+          {/* Countdown Timer Pill with Child-Friendly Urgent Pop/Blink Animation */}
+          <div
+            className={`flex items-center gap-1.5 border px-2.5 sm:px-3.5 py-1 rounded-full font-mono font-extrabold text-[11px] sm:text-xs transition-all duration-200 shrink-0 whitespace-nowrap select-none ${
+              isUrgent
+                ? "bg-gradient-to-r from-rose-500 via-rose-600 to-amber-500 text-white border-rose-300 ring-2 ring-rose-400/50 shadow-md shadow-rose-500/35 animate-timer-pop"
+                : isTimeUp
+                ? "bg-rose-600 text-white border-rose-700 shadow-sm scale-95"
+                : "bg-slate-100/90 border-slate-200 text-slate-800 shadow-2xs"
+            }`}
+          >
             <div className="relative flex items-center justify-center">
-              <Clock size={12} className={(phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5 ? "text-rose-600 animate-bounce" : "text-indigo-600"} />
-              <span className={`absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ${(phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5 ? "bg-rose-500 animate-ping" : "bg-emerald-500 animate-ping"
-                }`} />
+              <Clock
+                size={13}
+                className={
+                  isUrgent
+                    ? "text-white animate-bounce"
+                    : isTimeUp
+                    ? "text-white"
+                    : "text-indigo-600"
+                }
+              />
+              <span
+                className={`absolute -top-0.5 -right-0.5 rounded-full ${
+                  isUrgent
+                    ? "w-2 h-2 bg-amber-300 animate-ping"
+                    : isTimeUp
+                    ? "w-1.5 h-1.5 bg-rose-300"
+                    : "w-1.5 h-1.5 bg-emerald-500 animate-ping"
+                }`}
+              />
             </div>
-            <span>
-              {phase === "QUIZ" || phase === "BOSS"
-                ? `${questionTimeLeft}s`
-                : `${Math.floor(totalSessionSec / 60).toString().padStart(2, '0')}:${(totalSessionSec % 60).toString().padStart(2, '0')}`}
-            </span>
+            {isCountdownPhase ? (
+              <span
+                key={questionTimeLeft}
+                className={`inline-flex items-center gap-0.5 ${
+                  isUrgent ? "animate-in zoom-in-75 duration-150 font-black" : ""
+                }`}
+              >
+                <span>{questionTimeLeft}s</span>
+                {isUrgent && <span className="text-[10px] animate-pulse">⚡</span>}
+              </span>
+            ) : (
+              <span>
+                {Math.floor(totalSessionSec / 60)
+                  .toString()
+                  .padStart(2, "0")}
+                :{(totalSessionSec % 60).toString().padStart(2, "0")}
+              </span>
+            )}
           </div>
         </div>
       </header>
@@ -1693,7 +1774,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       )}
 
       {phase === "QUIZ" && (
-        <main className="px-6 py-6 flex-1 flex flex-col justify-between max-w-md mx-auto w-full">
+        <main className="px-4 sm:px-6 pt-4 flex-1 flex flex-col gap-3 max-w-md mx-auto w-full">
           <div>
             <div className="flex justify-between items-center text-xs font-bold text-[#767683] mb-2">
               <span className="flex items-center gap-1.5 font-extrabold text-[#141779]">
@@ -1711,11 +1792,14 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             </div>
           </div>
 
-          <div className="my-4 bg-white border border-gray-200 rounded-3xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.06)] relative">
-            <span className="text-xs font-bold text-[#006a62] uppercase tracking-wider block mb-2">
+          <QuestionContext part="passage" question={currentQ} previous={safeQuizIndex > 0 ? quizQuestions[safeQuizIndex - 1] : null} />
+
+          {/* The question, with its picture underneath, in one card. */}
+          <div className="bg-white border border-gray-200 rounded-3xl px-4 py-4 sm:px-5 shadow-[0_4px_20px_rgba(0,0,0,0.06)] relative">
+            <span className="text-[11px] font-bold text-[#006a62] uppercase tracking-wider block mb-1.5">
               {t('question_number', { num: currentQuizIndex + 1, defaultValue: `Question #${currentQuizIndex + 1}` })} {isDragObjects ? t('drag_drop_tag', '• Drag & Drop') : ""}
             </span>
-            <h3 className="text-lg font-bold text-[#141779] leading-snug">
+            <h3 className="text-base sm:text-lg font-bold text-[#141779] leading-snug">
               {currentQ?.question?.normalize("NFD").replace(/[\u0300-\u036f]/g, "")}
             </h3>
 
@@ -1742,6 +1826,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                 </div>
               </div>
             )}
+            <QuestionContext part="image" question={currentQ} />
           </div>
 
           {isDragObjects ? (
@@ -1846,12 +1931,12 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
                 let style = "bg-white border-gray-200 text-[#191c1e] hover:border-[#141779]";
                 if (quizConfirmed) {
-                  if (isTimeout) {
-                    style = "bg-white border-gray-200 text-[#191c1e] opacity-60";
-                  } else if (isCorrect) {
-                    style = "bg-emerald-500 border-emerald-600 text-white font-bold";
+                  if (isCorrect) {
+                    style = "bg-emerald-500 border-emerald-600 text-white font-bold ring-2 ring-emerald-400";
                   } else if (isSelected) {
-                    style = "bg-red-500 border-red-600 text-white font-bold";
+                    style = "bg-red-500 border-red-600 text-white font-bold ring-2 ring-red-400";
+                  } else {
+                    style = "bg-white border-gray-200 text-[#191c1e] opacity-50";
                   }
                 } else if (isSelected) {
                   style = "bg-indigo-50 border-[#141779] text-[#141779] font-bold ring-2 ring-[#141779]/20";
@@ -1861,12 +1946,12 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                   <button
                     key={idx}
                     disabled={quizConfirmed}
-                    onClick={() => !quizConfirmed && setQuizSelected(idx)}
+                    onClick={() => handleQuizAnswer(idx)}
                     className={`w-full p-4 rounded-2xl border text-left font-semibold text-base transition-all flex items-center justify-between shadow-xs ${style}`}
                   >
                     <span className="flex-1 mr-4 break-words text-left">{opt}</span>
-                    {quizConfirmed && !isTimeout && isCorrect && <CheckCircle2 size={20} className="text-white" />}
-                    {quizConfirmed && !isTimeout && isSelected && !isCorrect && <XCircle size={20} className="text-white" />}
+                    {quizConfirmed && isCorrect && <CheckCircle2 size={20} className="text-white" />}
+                    {quizConfirmed && isSelected && !isCorrect && <XCircle size={20} className="text-white" />}
                   </button>
                 );
               })}
@@ -1896,23 +1981,21 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             </motion.div>
           )}
 
-          <div className="flex flex-col gap-3">
-
-            <button
-              disabled={!isDragObjects && quizSelected === null && !quizConfirmed}
-              onClick={handleQuizConfirm}
-              className={`w-full py-4 rounded-2xl font-black text-base shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all ${!isDragObjects && quizSelected === null && !quizConfirmed
-                ? "bg-gray-300 text-gray-500 cursor-not-allowed shadow-none"
-                : !quizConfirmed
-                  ? "bg-[#141779] text-white hover:bg-[#101362]"
-                  : quizIsCorrect
-                    ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                    : "bg-red-600 text-white hover:bg-red-700"
-                }`}
-            >
-              <span>{quizConfirmed ? t('continue_btn', 'CONTINUE →') : t('check_answer', 'CHECK ANSWER')}</span>
-            </button>
-          </div>
+          {/* Stays at the bottom of the screen, above the iPhone home indicator. */}
+          {!quizConfirmed && (
+            <div className="sticky bottom-0 mt-auto -mx-4 sm:-mx-6 px-4 sm:px-6 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))] bg-[#f7f9fb]">
+              <button
+                disabled={!quizReady}
+                onClick={handleQuizConfirm}
+                className={`w-full py-4 rounded-2xl font-black text-base shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all ${!quizReady
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed shadow-none"
+                  : "bg-[#141779] text-white hover:bg-[#101362]"
+                  }`}
+              >
+                <span>{t('check_answer', 'CHECK ANSWER')}</span>
+              </button>
+            </div>
+          )}
         </main>
       )}
 
@@ -1959,10 +2042,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       })()}
 
       {phase === "BOSS" && (
-        <main className="px-3 sm:px-6 py-4 sm:py-6 flex-1 flex flex-col justify-between max-w-md mx-auto w-full">
-          {/* Top Outer Indigo/Lavender Boss Stage Header Card with Premium Visual Aesthetics */}
-          <div className="bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] rounded-[28px] sm:rounded-[32px] p-3 sm:p-5 pt-4 pb-3.5 mb-4 shadow-[0_10px_30px_rgba(20,23,121,0.08)] border-2 border-indigo-200/80 relative backdrop-blur-md overflow-hidden">
-
+        <main className="px-4 sm:px-6 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex-1 flex flex-col gap-3 max-w-md mx-auto w-full">
+          {/* Top Outer Light Yellow/Cream Boss Stage Header Card with Premium Visual Aesthetics */}
+          <div className="bg-gradient-to-b from-[#FFFDF2] via-[#FFFBEB] to-[#F4F4FC] rounded-[32px] p-4.5 pt-5 mb-4 shadow-[0_10px_30px_rgba(20,23,121,0.08)] border-2 border-[#E2E4FA] relative backdrop-blur-md">
+            
             {/* Top Bar: Hero vs Boss Header */}
             <div className="flex items-center justify-between mb-3 relative z-10 px-0.5 gap-1">
 
@@ -2036,8 +2119,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             </div>
           </div>
 
-          {/* Question Box Card with Soft Floating Elevation */}
-          <div className="my-3 bg-white border-2 border-[#E2E4FA] rounded-[24px] sm:rounded-[28px] p-5 sm:p-6 shadow-[0_8px_25px_rgba(20,23,121,0.06)] relative">
+          <QuestionContext part="passage" question={activeBossQ} previous={safeBossIndex > 0 ? bossQuestions[safeBossIndex - 1] : null} />
+
+          {/* Question Box Card with Soft Floating Elevation; the picture sits under the question */}
+          <div className="bg-white border-2 border-[#E2E4FA] rounded-[24px] sm:rounded-[28px] px-4 py-4 sm:px-5 shadow-[0_8px_25px_rgba(20,23,121,0.06)] relative">
             <div className="flex items-center gap-2 mb-2.5 flex-wrap">
               <span className="text-[10px] font-black text-[#006a62] uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-teal-50 border border-teal-200/80 shadow-2xs">
                 ⚔️ BOSS STRIKE #{safeBossIndex + 1}
@@ -2049,6 +2134,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             <h3 className="text-base sm:text-lg font-black text-[#141779] leading-snug">
               {activeBossQ?.question?.replace(/^(Boss\s+)?(Challenge|Question)(\s*#\d+)?(\s*\([^)]+\))?:\s*/i, "").trim().replace(/^\w/, c => c.toUpperCase()).normalize("NFD").replace(/[\u0300-\u036f]/g, "")}
             </h3>
+            <QuestionContext part="image" question={activeBossQ} />
 
             {/* Optional Boss Question Image */}
             {getQuestionImage(activeBossQ) && (
@@ -2169,8 +2255,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
               </button>
             </div>
           ) : (
-            <div className="flex flex-col gap-3 mb-4">
-              <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2.5">
+              <div className="flex flex-col gap-2.5">
                 {activeBossOptions.map((opt: string, idx: number) => {
                   const isSelected = bossSelected === idx;
                   const isCorrect = String(opt).trim().toLowerCase() === String(activeBossQ?.answer).trim().toLowerCase();
@@ -2206,7 +2292,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                       whileTap={!bossConfirmed ? { scale: 0.98 } : undefined}
                       disabled={bossConfirmed}
                       onClick={() => handleBossAnswer(idx)}
-                      className={`w-full p-4 rounded-2xl border text-left font-bold text-sm sm:text-base transition-all flex items-center justify-between active:scale-98 ${style}`}
+                      className={`w-full px-4 py-3 rounded-2xl border text-left font-bold text-sm sm:text-base transition-all flex items-center justify-between active:scale-98 ${style}`}
                     >
                       <div className="flex items-center gap-3">
                         <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0 transition-colors ${bossConfirmed && isCorrect ? "bg-white/20 text-white" :
@@ -2215,6 +2301,9 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                           }`}>
                           {String.fromCharCode(65 + idx)}
                         </span>
+                        {imageSrc(optionImage(activeBossQ, opt)) && (
+                          <img src={imageSrc(optionImage(activeBossQ, opt))} alt="" className="h-10 w-10 shrink-0 rounded-lg bg-white object-contain" />
+                        )}
                         <span>{opt}</span>
                       </div>
                       {bossConfirmed && isCorrect && <CheckCircle2 size={20} className="text-white shrink-0 animate-bounce" />}
@@ -2719,14 +2808,28 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                               className={`p-4 rounded-2xl border bg-white shadow-2xs ${isCorrect ? "border-emerald-200" : "border-rose-200"
                                 }`}
                             >
-                              <div className="flex items-start justify-between gap-2 mb-2">
-                                <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${isCorrect ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-rose-50 text-rose-700 border border-rose-200"
-                                  }`}>
-                                  {isCorrect ? "✅ " + t('correct', 'Correct') : "❌ " + t('incorrect', 'Mistake')}
-                                </span>
-                                <span className="text-[10px] font-bold text-gray-400">
+                              <div className="flex items-center justify-between w-full mb-2">
+                                {/* 1. LEFT SIDE: Question Number */}
+                                <span className="text-xs font-bold text-slate-400 tracking-wider">
                                   #{idx + 1}
                                 </span>
+
+                                {/* 2. RIGHT SIDE: Result Status Pill */}
+                                {isCorrect ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 tracking-wider uppercase whitespace-nowrap">
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    {t('correct', 'CORRECT!')}
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 tracking-wider uppercase whitespace-nowrap">
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                    {t('incorrect', 'MISTAKE')}
+                                  </span>
+                                )}
                               </div>
 
                               <p className="text-xs font-bold text-[#141779] leading-snug mb-2">

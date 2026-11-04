@@ -1,8 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useLayoutEffect } from "react";
+import { formatMobileDisplay, parseMobileInput } from "../../../utils/mobileFormatter";
+import { clearSignupState } from "../signupState";
 import { useNavigate } from "react-router-dom";
-import { Rocket, BookOpen, Phone, Lock, Eye, EyeOff, ArrowRight, ShieldCheck } from "lucide-react";
+import { Phone, Lock, Eye, EyeOff, ArrowRight, ShieldCheck } from "lucide-react";
+import { NRScholarLogo } from "../../../components/NRScholarLogo";
 import { motion } from "framer-motion";
 import { apiFetch } from "../../../api";
+import { showInteractiveNotification, registerPushNotificationToken } from "../../../services/pushNotificationService";
+
+const formatPhoneNumber = (value: string): string => {
+  const cleanDigits = value.replace(/\D/g, '').slice(0, 10);
+  if (cleanDigits.length <= 5) return cleanDigits;
+  return `${cleanDigits.slice(0, 5)} - ${cleanDigits.slice(5)}`;
+};
 
 export default function LoginScreen() {
   const navigate = useNavigate();
@@ -12,6 +22,63 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const mobileInputRef = useRef<HTMLInputElement>(null);
+  const nextCursorPosRef = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    if (nextCursorPosRef.current !== null && mobileInputRef.current) {
+      const pos = nextCursorPosRef.current;
+      mobileInputRef.current.setSelectionRange(pos, pos);
+      nextCursorPosRef.current = null;
+    }
+  });
+
+  // When user lands on Login screen, reset any previous signup session data and redirect if already authenticated
+  useEffect(() => {
+    const token = localStorage.getItem("userToken");
+    if (token) {
+      const storedUser = (() => {
+        try {
+          const raw = localStorage.getItem("userData");
+          return raw ? JSON.parse(raw) : null;
+        } catch { return null; }
+      })();
+      const isCoParentUser = Boolean(
+        storedUser?.isSecondaryParent ||
+        storedUser?.isCoParent ||
+        storedUser?.role === "co_parent" ||
+        storedUser?.role === "secondary_parent" ||
+        storedUser?.primary_parent_id
+      );
+      const isParent = localStorage.getItem("deviceRole") === "parent" || isCoParentUser;
+      const target = isParent ? "/parent/dashboard" : "/home";
+      navigate(target, { replace: true });
+      return;
+    }
+    clearSignupState();
+  }, [navigate]);
+
+  const handleMobileKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace") {
+      const input = e.currentTarget;
+      const { selectionStart, selectionEnd } = input;
+      if (
+        selectionStart !== null &&
+        selectionStart === selectionEnd &&
+        selectionStart > 5 &&
+        selectionStart <= 8
+      ) {
+        e.preventDefault();
+        const clean = mobile.replace(/\D/g, '');
+        const newDigits = clean.slice(0, 4) + clean.slice(5);
+        const formatted = formatPhoneNumber(newDigits);
+        setMobile(formatted);
+        setTimeout(() => {
+          input.setSelectionRange(4, 4);
+        }, 0);
+      }
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,7 +147,27 @@ export default function LoginScreen() {
         }
 
         localStorage.setItem("deviceRole", deviceRole);
-        navigate(targetRoute);
+
+        // Immediate Post-Login Success Toast & Push Notification Dispatcher
+        const isParent = Boolean(loginAsParent || isCoParentUser || targetRoute.startsWith("/parent"));
+        const parentName = data.data.user?.fullName || "Superparent";
+        const childName = data.data.user?.childName || "Scholar";
+        const toastTitle = isParent ? "Parent Login Successful 🛡️" : "Login Successful! 🎉";
+        const toastMessage = isParent
+          ? `Welcome back, ${parentName}! Accessing parent dashboard.`
+          : `Login successful! Welcome back, ${childName}! 🚀`;
+
+        showInteractiveNotification(
+          toastTitle,
+          toastMessage,
+          targetRoute,
+          "success"
+        );
+
+        // Register push notification token in background
+        registerPushNotificationToken().catch(() => {});
+
+        navigate(targetRoute, { replace: true });
       } else {
         setErrorMsg(data.detail || data.message || "Invalid mobile number or password.");
       }
@@ -101,14 +188,6 @@ export default function LoginScreen() {
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#f7f9fb] via-[rgba(247,249,251,0.5)] to-transparent" />
-        
-        <motion.div
-          animate={{ y: [0, -8, 0] }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-10 left-6 bg-white/80 rounded-full p-3 border border-white/50 backdrop-blur-sm shadow-md"
-        >
-          <Rocket size={24} color="#141779" />
-        </motion.div>
       </div>
 
       {/* Bottom 65%: Login Card */}
@@ -116,18 +195,18 @@ export default function LoginScreen() {
         
         {/* Brand Identity */}
         <div className="flex flex-col items-center mb-5 text-center">
-          <div className="w-13 h-13 bg-[#141779] rounded-2xl flex items-center justify-center mb-1.5 shadow-md">
-            <BookOpen size={26} color="white" />
+          <div className="inline-flex items-center gap-2 select-none mb-1">
+            <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center">
+              <NRScholarLogo size={28} className="w-7 h-7" />
+            </div>
+            <span className="font-bold text-base md:text-lg text-[#1E255E] tracking-tight whitespace-nowrap">
+              N R Scholar
+            </span>
           </div>
-          <h1 className="text-xl font-black text-[#141779] tracking-tight">NR Scholar</h1>
           <p className="text-xs text-[#767683] font-semibold">Welcome back! Sign in to continue</p>
         </div>
 
-        {errorMsg && (
-          <div className="w-full max-w-[350px] bg-red-50 border border-red-200 text-red-600 text-xs font-bold p-3 rounded-xl mb-4 text-center">
-            {errorMsg}
-          </div>
-        )}
+        
 
         {/* STREAMLINED UNIFIED LOGIN FORM */}
         <form onSubmit={handleLogin} className="w-full max-w-[350px] flex flex-col gap-4 mb-6">
@@ -140,13 +219,19 @@ export default function LoginScreen() {
             <div className="relative flex items-center">
               <Phone size={20} className="text-slate-400 absolute left-4 pointer-events-none" />
               <input
+                ref={mobileInputRef}
                 type="tel"
-                placeholder="Enter 10-digit mobile number"
-                value={mobile}
-                maxLength={10}
+                placeholder="Enter mobile number"
+                value={formatMobileDisplay(mobile)}
+                maxLength={11}
                 onChange={(e) => {
-                  const val = e.target.value.replace(/\D/g, "").slice(0, 10);
-                  setMobile(val);
+                  const { clean, nextCursor } = parseMobileInput(
+                    e.target.value,
+                    mobile,
+                    e.target.selectionStart ?? e.target.value.length
+                  );
+                  setMobile(clean);
+                  nextCursorPosRef.current = nextCursor;
                 }}
                 className="w-full h-14 bg-slate-50 rounded-2xl pl-12 pr-4 text-sm font-bold text-[#141779] border border-slate-200/90 focus:outline-none focus:ring-2 focus:ring-[#141779]/20 focus:border-[#141779] focus:bg-white transition-all placeholder:text-slate-400 placeholder:font-medium"
                 required
@@ -165,8 +250,11 @@ export default function LoginScreen() {
                 type={showPassword ? "text" : "password"}
                 placeholder="Enter password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full h-14 bg-slate-50 rounded-2xl pl-12 pr-12 text-sm font-bold text-[#141779] border border-slate-200/90 focus:outline-none focus:ring-2 focus:ring-[#141779]/20 focus:border-[#141779] focus:bg-white transition-all placeholder:text-slate-400 placeholder:font-medium"
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (errorMsg) setErrorMsg("");
+                }}
+                className={`w-full h-14 bg-slate-50 rounded-2xl pl-12 pr-12 text-sm font-bold text-[#141779] border ${errorMsg ? 'border-rose-400' : 'border-slate-200/90'} focus:outline-none focus:ring-2 focus:ring-[#141779]/20 focus:border-[#141779] focus:bg-white transition-all placeholder:text-slate-400 placeholder:font-medium`}
                 required
               />
               <button
@@ -178,8 +266,20 @@ export default function LoginScreen() {
                 {showPassword ? <Eye size={18} className="text-slate-500" /> : <EyeOff size={18} className="text-slate-500" />}
               </button>
             </div>
+
+            {/* Inline Error Message below Password Field */}
+            {errorMsg && (
+              <div className="flex items-center gap-1.5 mt-1.5 px-1 text-xs font-semibold text-rose-600 animate-fadeIn">
+                <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="10" strokeWidth="2" />
+                  <path strokeLinecap="round" strokeWidth="2" d="M12 8v4m0 4h.01" />
+                </svg>
+                <span>{errorMsg}</span>
+              </div>
+            )}
+
             <div className="flex justify-end px-1 mt-0.5">
-              <button type="button" onClick={() => navigate("/forgot-password")} className="text-xs font-bold text-[#006a62] hover:underline">
+              <button type="button" onClick={() => navigate("/forgot-password")} className="text-xs font-bold text-[#141779] hover:underline">
                 Forgot Password?
               </button>
             </div>
@@ -227,7 +327,7 @@ export default function LoginScreen() {
 
             <div className="flex justify-center items-center gap-1">
               <span className="text-xs text-[#767683] font-semibold">Don't have an account? </span>
-              <button type="button" onClick={() => navigate("/signup-step1")} className="text-xs font-black text-[#141779] hover:underline">
+              <button type="button" onClick={() => { clearSignupState(); navigate("/signup-step1"); }} className="text-xs font-black text-[#141779] hover:underline">
                 Sign up
               </button>
             </div>

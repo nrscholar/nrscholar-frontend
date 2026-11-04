@@ -4,6 +4,7 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import DragonCharacter from "../../../components/DragonCharacter";
+import QuestionContext from "../components/QuestionContext";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 import { getScopedItem, setScopedItem, getActiveUserContext } from "../../../utils/sessionCache";
 import { filterUniqueQuestions } from "../../../utils/quizQuestionUtils";
@@ -389,7 +390,7 @@ export default function ChapterQuestionsScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col pb-24 relative overflow-hidden">
+      <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col pb-6 relative overflow-hidden">
         <header className="flex items-center justify-between px-5 py-4 bg-[#f4efff] sticky top-0 z-40 animate-pulse">
           <div className="flex items-center gap-3 w-full">
             <div className="w-8 h-8 bg-gray-200 rounded-full shrink-0" />
@@ -440,7 +441,7 @@ export default function ChapterQuestionsScreen() {
     : "SEE RESULTS 🏆";
 
   return (
-    <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col pb-24 relative overflow-hidden">
+    <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col pb-6 relative overflow-hidden">
       
       {/* ✨ Magic Sparkle Burst on Correct Answer (Dynamically loaded) */}
       {showSparkle && (
@@ -521,6 +522,9 @@ export default function ChapterQuestionsScreen() {
             />
           </div>
         </div>
+
+        {/* Passage / illustration for this question (only when it has one) */}
+        <QuestionContext question={q} previous={currentQ > 0 ? questionsData[currentQ - 1] : null} />
 
         {/* Mascot Question Area (Duolingo Style) */}
         <div className="flex items-end gap-4 mb-8 mt-4 px-2 relative z-10">

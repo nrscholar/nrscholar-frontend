@@ -34,6 +34,9 @@ export function translateNotificationTitle(title: string, t: any): string {
   if (cleanTitle.includes("friendly duel alert")) return t('notif_title_friendly_duel', '⚔️ Friendly Duel Alert!');
   if (cleanTitle.includes("major milestone")) return t('notif_title_major_milestone', '🎉 Major Milestone!');
   if (cleanTitle.includes("revenge battle")) return t('notif_title_revenge_battle', '🛡️ REVENGE BATTLE!');
+  if (cleanTitle.includes("settings saved") || cleanTitle.includes("સેટિંગ્સ સાચવ્યા") || cleanTitle.includes("सेटिंग्स सहेजी गईं")) return t('settings_saved', 'Settings Saved');
+  if (cleanTitle.includes("neuroplay")) return t('notif_title_neuroplay_completed', title);
+  if (cleanTitle.includes("lesson completed") || cleanTitle.includes("academy lesson")) return t('notif_title_lesson_completed', title);
 
   const sanitizedKey = cleanTitle.replace(/[^\w\s]/gi, '').trim().replace(/\s+/g, '_');
   return t(sanitizedKey, { defaultValue: title });
@@ -267,6 +270,11 @@ export function translateNotificationMessage(msg: string, t: any, childName?: st
   // 23. Sunday Scholar Test
   if (/test your skills today|sunday scholar test/i.test(translated)) {
     return t('notif_msg_sunday_test', "Test your skills today to climb to Class Rank #1 & win 1000 Coins! 🏆");
+  }
+
+  // 24. Settings Saved / Profiles Updated
+  if (/all profiles updated successfully/i.test(translated) || /બધી પ્રોફાઇલ સફળતાપૂર્વક અપડેટ થઈ/i.test(translated) || /सभी प्रोफाइल सफलतापूर्वक अपडेट/i.test(translated)) {
+    return t('all_profiles_updated_successfully', 'All profiles updated successfully! 🎉');
   }
 
   return translated;

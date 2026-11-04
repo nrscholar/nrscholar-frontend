@@ -609,22 +609,23 @@ function getPriorityInsights(
 
   // Fallback defaults if a tab has no subjects
   const isGu = lang === "gu";
+  const isHi = lang === "hi";
   if (result.urgent.length === 0) {
     result.urgent.push({
       id: "urgent-fallback",
       priority: "urgent",
-      title: isGu ? "તમામ વિષયો સુરક્ષિત છે" : "All Subjects Secure",
-      observation: isGu ? `${child} ના તમામ વિષયોમાં પરિણામ સારું છે. કોઈ તાત્કાલિક જોખમ નથી.` : `All evaluated subjects for ${child} are performing above risk thresholds.`,
-      actionStep: isGu ? "નિયમિત પ્રેક્ટિસ ચાલુ રાખો." : "Keep up the daily practice routine.",
-      whyItMatters: isGu ? "રોજિંદો અભ્યાસ જ્ઞાનને સ્થિર રાખે છે." : "Consistent habits maintain learning momentum.",
+      title: isGu ? "તમામ વિષયો સુરક્ષિત છે" : isHi ? "सभी विषय सुरक्षित हैं" : "All Subjects Secure",
+      observation: isGu ? `${child} ના તમામ વિષયોમાં પરિણામ સારું છે. કોઈ તાત્કાલિક જોખમ નથી.` : isHi ? `${child} के सभी मूल्यांकन किए गए विषयों में प्रदर्शन जोखिम सीमा से ऊपर और सुरक्षित है।` : `All evaluated subjects for ${child} are performing above risk thresholds.`,
+      actionStep: isGu ? "નિયમિત પ્રેક્ટિસ ચાલુ રાખો." : isHi ? "दैनिक अभ्यास की दिनचर्या जारी रखें।" : "Keep up the daily practice routine.",
+      whyItMatters: isGu ? "રોજિંદો અભ્યાસ જ્ઞાનને સ્થિર રાખે છે." : isHi ? "निरंतर आदतें सीखने की गति को बनाए रखती हैं।" : "Consistent habits maintain learning momentum.",
       badgeTag: t("priority_urgent", "Urgent Priority"),
       badgeBg: "bg-rose-50",
       badgeBorder: "border-rose-200",
       badgeText: "text-rose-700",
       iconBg: "bg-rose-100",
       iconColor: "text-rose-700",
-      headline: isGu ? "✅ કોઈ તાત્કાલિક ચેતવણી નથી" : "✅ No Urgent Warnings",
-      quickTakeaway: isGu ? "બધા વિષયોમાં પરિણામ સંતોષકારક છે." : "All subjects are performing at a healthy level."
+      headline: isGu ? "✅ કોઈ તાત્કાલિક ચેતવણી નથી" : isHi ? "✅ कोई जरूरी चेतावनी नहीं" : "✅ No Urgent Warnings",
+      quickTakeaway: isGu ? "બધા વિષયોમાં પરિણામ સંતોષકારક છે." : isHi ? "सभी विषयों में प्रदर्शन स्वस्थ स्तर पर है।" : "All subjects are performing at a healthy level."
     });
   }
 
@@ -632,18 +633,18 @@ function getPriorityInsights(
     result.moderate.push({
       id: "mod-habit",
       priority: "moderate",
-      title: isGu ? "દૈનિક અભ્યાસની સુનિશ્ચિતતા" : "Daily Study Rhythm",
-      observation: isGu ? `શાળા પછી રોજના 10 મિનિટનો નિશ્ચિત સમય બાળકનો ઉત્સાહ વધારે છે.` : `Predictable daily study windows reduce hesitation for ${child}.`,
-      actionStep: isGu ? "રોજ સાંજે 10 મિનિટ એકસાથે બેસીને વાતો કે અભ્યાસ કરો." : "Agree on a fixed, pressure-free 10-minute daily learning window.",
-      whyItMatters: isGu ? "નિયમિત ટેવ બાળકના મગજને સક્રિય રાખે છે." : "Consistent routines eliminate daily study friction.",
+      title: isGu ? "દૈનિક અભ્યાસની સુનિશ્ચિતતા" : isHi ? "दैनिक अध्ययन की निरंतरता" : "Daily Study Rhythm",
+      observation: isGu ? `શાળા પછી રોજના 10 મિનિટનો નિશ્ચિત સમય બાળકનો ઉત્સાહ વધારે છે.` : isHi ? `दैनिक 10 मिनट का निश्चित समय ${child} के लिए अध्ययन की झिझक कम करता है।` : `Predictable daily study windows reduce hesitation for ${child}.`,
+      actionStep: isGu ? "રોજ સાંજે 10 મિનિટ એકસાથે બેસીને વાતો કે અભ્યાસ કરો." : isHi ? "रोजाना 10 मिनट का तनावमुक्त अध्ययन समय निर्धारित करें।" : "Agree on a fixed, pressure-free 10-minute daily learning window.",
+      whyItMatters: isGu ? "નિયમિત ટેવ બાળકના મગજને સક્રિય રાખે છે." : isHi ? "नियमित दिनचर्या से पढ़ाई का तनाव खत्म होता है।" : "Consistent routines eliminate daily study friction.",
       badgeTag: t("priority_moderate", "Moderate Focus"),
       badgeBg: "bg-amber-50",
       badgeBorder: "border-amber-200",
       badgeText: "text-amber-800",
       iconBg: "bg-amber-100",
       iconColor: "text-amber-700",
-      headline: isGu ? "⚡ દૈનિક અભ્યાસ લય જાળવો" : "⚡ Maintain Daily Study Rhythm",
-      quickTakeaway: isGu ? "રોજ 10 મિનિટનો સમય બાળકના ઉત્સાહમાં વધારો કરે છે." : "A fixed daily time window builds lasting study habits."
+      headline: isGu ? "⚡ દૈનિક અભ્યાસ લય જાળવો" : isHi ? "⚡ दैनिक अध्ययन की लय बनाए रखें" : "⚡ Maintain Daily Study Rhythm",
+      quickTakeaway: isGu ? "રોજ 10 મિનિટનો સમય બાળકના ઉત્સાહમાં વધારો કરે છે." : isHi ? "नियमित समय निर्धारित करने से स्थायी अध्ययन की आदतें बनती हैं।" : "A fixed daily time window builds lasting study habits."
     });
   }
 
@@ -651,18 +652,18 @@ function getPriorityInsights(
     result.low.push({
       id: "low-mindset",
       priority: "low",
-      title: isGu ? "બાળકના પ્રયત્નોની પ્રશંસા" : "Praise Effort & Curiosity",
-      observation: isGu ? `${child} ના સારા પ્રયત્નો અને મહેનતની પ્રશંસા કરવાથી તેનો આત્મવિશ્વાસ વધે છે.` : `${child} responds best when hard work is praised over perfection.`,
-      actionStep: isGu ? `કહો: "તેં ખૂબ સરસ પ્રયત્ન કર્યો, મને તારા પર ગર્વ છે!"` : `Tell ${child}: "I love how persistent you were today!"`,
-      whyItMatters: isGu ? "પ્રશંસાથી બાળક અઘરા વિષયોથી ડર્યા વગર શીખવા તૈયાર થાય છે." : "Validating effort builds lifelong academic resilience.",
+      title: isGu ? "બાળકના પ્રયત્નોની પ્રશંસા" : isHi ? "प्रयास और जिज्ञासा की सराहना" : "Praise Effort & Curiosity",
+      observation: isGu ? `${child} ના સારા પ્રયત્નો અને મહેનતની પ્રશંસા કરવાથી તેનો આત્મવિશ્વાસ વધે છે.` : isHi ? `${child} के सही प्रयासों और कड़ी मेहनत की सराहना करने से आत्मविश्वास बढ़ता है।` : `${child} responds best when hard work is praised over perfection.`,
+      actionStep: isGu ? `કહો: "તેં ખૂબ સરસ પ્રયત્ન કર્યો, મને તારા પર ગર્વ છે!"` : isHi ? `कहें: "मुझे बहुत गर्व है कि आपने आज इतनी लगन से कोशिश की!"` : `Tell ${child}: "I love how persistent you were today!"`,
+      whyItMatters: isGu ? "પ્રશંસાથી બાળક અઘરા વિષયોથી ડર્યા વગર શીખવા તૈયાર થાય છે." : isHi ? "प्रयास की सराहना से बच्चे में सीखने का हौसला मजबूत होता है।" : "Validating effort builds lifelong academic resilience.",
       badgeTag: t("priority_low", "Low Priority · Steady"),
       badgeBg: "bg-teal-50",
       badgeBorder: "border-teal-200",
       badgeText: "text-[#006a62]",
       iconBg: "bg-teal-100",
       iconColor: "text-[#006a62]",
-      headline: isGu ? "✨ પ્રયત્નો અને મહેનતની પ્રશંસા કરો" : "✨ Celebrate Daily Effort",
-      quickTakeaway: isGu ? "પ્રશંસા કરવાથી બાળકનો આત્મવિશ્વાસ બમણો થાય છે." : "Praising effort builds intrinsic learning motivation."
+      headline: isGu ? "✨ પ્રયત્નો અને મહેનતની પ્રશંસા કરો" : isHi ? "✨ दैनिक प्रयासों की सराहना करें" : "✨ Celebrate Daily Effort",
+      quickTakeaway: isGu ? "પ્રશંસા કરવાથી બાળકનો આત્મવિશ્વાસ બમણો થાય છે." : isHi ? "प्रयासों की सराहना सीखने के लिए आंतरिक प्रेरणा बनाती है।" : "Praising effort builds intrinsic learning motivation."
     });
   }
 
