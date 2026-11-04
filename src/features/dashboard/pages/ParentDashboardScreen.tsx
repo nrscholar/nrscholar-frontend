@@ -52,7 +52,7 @@ export default function ParentDashboardScreen() {
       } else {
         try {
           window.close();
-        } catch {}
+        } catch { }
       }
       return;
     }
@@ -458,6 +458,7 @@ export default function ParentDashboardScreen() {
   const translateSubjectName = (subj: string) => {
     if (!subj) return "";
     const lower = subj.toLowerCase();
+    let name = "";
     if (lower.includes("gujarati")) return t("gujarati", "Gujarati");
     if (lower.includes("math")) return t("mathematics", t("maths", "Mathematics"));
     if (lower.includes("math")) return t("mathematics", t("maths", "Mathematics"));
@@ -466,7 +467,12 @@ export default function ParentDashboardScreen() {
     if (lower.includes("social")) return t("social_science", t("social_studies", "Social Science"));
     if (lower.includes("science")) return t("science", "Science");
     if (lower.includes("hindi")) return t("hindi_subject", "Hindi");
-    return t(subj, subj);
+    else name = t(subj, subj);
+
+    if (/^[A-Za-z\s]+$/.test(name)) {
+      return name.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase());
+    }
+    return name;
   };
 
   const translateModeName = (name: string) => {
@@ -843,20 +849,20 @@ export default function ParentDashboardScreen() {
       <div className="bg-white rounded-[22px] p-4 sm:p-5 shadow-[0_4px_20px_rgba(20,23,121,0.04)] border border-slate-200/70 flex flex-col gap-3 font-sans">
 
         {/* Header Title & Badge */}
-        <div className="flex items-start justify-between">
-          <div className="flex flex-col">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-500 leading-none">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col min-w-0">
+            <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 leading-none">
               {t("subject_performance_label", "SUBJECT PERFORMANCE")}
             </span>
-            <h3 className="text-base sm:text-lg font-extrabold text-[#141779] tracking-tight mt-1">
+            <h3 className="text-base sm:text-lg font-bold text-[#141779] tracking-tight mt-1 leading-snug whitespace-nowrap">
               {t("top_subjects_daily_trend", "Top Subjects Daily Trend")}
             </h3>
-            <p className="text-xs text-slate-500 font-semibold mt-0.5">
+            <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-1 leading-normal whitespace-nowrap">
               {t("performance_last_7_days", "Performance over the last 7 active days")}
             </p>
           </div>
-          <div className="bg-indigo-50/90 border border-indigo-100/90 px-3 py-1.5 rounded-xl flex items-center justify-center shrink-0">
-            <span className="text-xs font-extrabold text-[#141779] leading-none">{t("seven_day_trend_pill", "7-DAY TREND")}</span>
+          <div className="bg-indigo-50/90 border border-indigo-100/90 px-3 py-1.5 rounded-xl flex items-center justify-center shrink-0 self-start mt-0.5">
+            <span className="text-[11px] sm:text-xs font-extrabold text-[#141779] leading-none whitespace-nowrap">{t("seven_day_trend_pill", "7-DAY TREND")}</span>
           </div>
         </div>
 
@@ -1397,8 +1403,12 @@ export default function ParentDashboardScreen() {
             title={t("kids_space", "Kids Space")}
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-[#141779] to-[#2d328f] text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-                <Sparkles size={19} className="text-amber-300" />
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-[#141779] to-[#2d328f] text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform overflow-hidden">
+                <img
+                  src="/images/kids-space-astro.png"
+                  alt="Kids Space"
+                  className="w-full h-full object-contain p-1"
+                />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">

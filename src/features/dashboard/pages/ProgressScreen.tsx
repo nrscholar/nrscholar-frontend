@@ -481,7 +481,7 @@ export default function ProgressScreen() {
             <div className="flex items-center justify-between text-[10.5px] sm:text-[12px] font-medium text-[#EEF1FF]">
               <span>{progressPercent}% {t('complete', 'Complete')}</span>
               <span className="text-white font-bold flex items-center gap-1">
-                {xpNeededForNext > 0 ? t('xp_until_level', { xp: xpNeededForNext, level: level + 1, defaultValue: `${xpNeededForNext} XP until Level ${level + 1}` }) : t('max_level_reached', 'Max Level Reached!')} →
+                {xpNeededForNext > 0 ? t('xp_until_level', { xp: xpNeededForNext, level: level + 1, defaultValue: `${xpNeededForNext} XP until Level ${level + 1}` }) : t('max_level_reached', 'Max Level Reached!')}
               </span>
             </div>
           </div>
@@ -774,8 +774,8 @@ export default function ProgressScreen() {
             
                       {/* 3. AFTER THAT: CIRCLE PROGRESS GRAPH (Chapter / Syllabus Completion for Active Subject) */}
                       <div className="flex flex-col items-center justify-center gap-1 pt-2">
-                        <span className="text-[11px] font-extrabold tracking-wider text-[#767683] uppercase">
-                          {t('chapter_completion', 'SYLLABUS & CHAPTER COMPLETION')}
+                        <span className="text-[13px] font-bold text-[#17177F] tracking-wide text-center">
+                          {t('chapter_completion', 'Syllabus & Chapter Completion')}
                         </span>
                         <span className="text-[11px] text-[#64748B] font-medium text-center max-w-xs">
                           {t('chapter_completion_sub', 'Tracks 100% finished chapters (complete all 5 missions with ≥65% mastery)')}
@@ -858,7 +858,7 @@ export default function ProgressScreen() {
                         </div>
                         <div className="flex flex-col gap-0.5 text-left">
                           <h4 className="text-[14px] font-bold text-[#17177F]">
-                            {t('great_progress_title', '💡 Great Progress!')}
+                            {t('great_progress_title', 'Great Progress!')}
                           </h4>
                           <p className="text-[13px] font-medium text-[#767683] leading-relaxed">
                             {t('insight_growth_desc', { 
@@ -881,8 +881,8 @@ export default function ProgressScreen() {
         <section className="flex flex-col gap-3 text-left">
           <div className="flex items-center justify-between px-1">
             <h2 className="text-[18px] font-semibold text-[#17177F] flex items-center gap-2">
-              <Award size={18} className="text-[#4D4BFF]" />
-              <span>🏆 {t('recent_achievements', 'Recent Achievements')}</span>
+              <span className="text-lg leading-none">🏆</span>
+              <span>{t('recent_achievements', 'Recent Achievements')}</span>
             </h2>
           </div>
 

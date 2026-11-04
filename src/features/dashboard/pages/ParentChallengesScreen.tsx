@@ -280,7 +280,7 @@ export default function ParentChallengesScreen() {
 
     try {
       await apiFetch(`/api/parent/challenges/${id}/increment`, { method: "POST" });
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const getXpForLevel = (lvl: number) => {
@@ -560,11 +560,10 @@ export default function ParentChallengesScreen() {
                   <button
                     onClick={(e) => handleIncrement(chal.id, e)}
                     disabled={chal.incrementedToday}
-                    className={`w-full font-black tracking-wide py-2.5 mt-0.5 rounded-xl border-2 active:scale-95 transition-all text-xs flex items-center justify-center gap-1.5 cursor-pointer ${
-                      chal.incrementedToday
+                    className={`w-full font-black tracking-wide py-2.5 mt-0.5 rounded-xl border-2 active:scale-95 transition-all text-xs flex items-center justify-center gap-1.5 cursor-pointer ${chal.incrementedToday
                         ? "border-slate-200 text-slate-400 bg-slate-100 font-bold"
                         : "border-[#141779] text-[#141779] bg-[#141779]/5 hover:bg-[#141779]/10"
-                    }`}
+                      }`}
                   >
                     <Star size={15} />
                     {chal.incrementedToday
@@ -620,7 +619,7 @@ export default function ParentChallengesScreen() {
                           <h4 className="font-bold text-[#141779] text-sm sm:text-base">
                             {translateChalTitle(uc.title)}
                           </h4>
-                          <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                          <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md whitespace-nowrap shrink-0">
                             {t("lesson_num", "Lesson {{num}}", { num: uc.lessonId })}
                           </span>
                         </div>
@@ -682,13 +681,12 @@ export default function ParentChallengesScreen() {
                       <button
                         onClick={() => handleClaim(chal.id, chal.xp || 200)}
                         disabled={cState !== "idle"}
-                        className={`w-full font-black py-3 rounded-full shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                          cState === "claimed"
-                            ? "bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-[#57fae9] border border-indigo-200/40 shadow-[0_4px_16px_rgba(20,23,121,0.2)] cursor-default tracking-wide"
+                        className={`w-full font-black py-3 rounded-full transition-all flex items-center justify-center gap-2 ${cState === "claimed"
+                            ? "bg-gradient-to-r from-[#006a62] via-[#059669] to-[#047857] text-white border border-teal-300/40 shadow-[0_4px_14px_rgba(0,106,98,0.25)] cursor-default tracking-wide"
                             : cState === "processing"
-                            ? "bg-[#141779]/80 text-[#57fae9] cursor-wait"
-                            : "bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-[#57fae9] shadow-[0_4px_16px_rgba(20,23,121,0.25)] hover:shadow-[0_6px_20px_rgba(20,23,121,0.35)]"
-                        }`}
+                              ? "bg-[#141779]/80 text-[#57fae9] shadow-lg cursor-wait"
+                              : "bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-[#57fae9] shadow-[0_4px_16px_rgba(20,23,121,0.25)] hover:shadow-[0_6px_20px_rgba(20,23,121,0.35)] active:scale-95 cursor-pointer"
+                          }`}
                       >
                         {cState === "idle" && (
                           <>
@@ -704,7 +702,7 @@ export default function ParentChallengesScreen() {
                         )}
                         {cState === "claimed" && (
                           <>
-                            <ShieldCheck size={20} />
+                            <ShieldCheck size={20} className="text-[#57fae9]" />
                             {t("rewards_claimed", "REWARDS CLAIMED!")}
                           </>
                         )}
