@@ -85,7 +85,7 @@ export default function MissionMapScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#17157F] font-sans pb-28 relative overflow-x-clip">
+      <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#17157F] font-sans pb-6 relative overflow-x-clip">
         {/* Background Glow Accents */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden">
           <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[35%] rounded-full bg-[#5B5CFF]/10 blur-[90px]" />
@@ -194,7 +194,7 @@ export default function MissionMapScreen() {
   const themeMeta = getThemeHeader();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#17157F] font-sans pb-44 relative selection:bg-[#5B5CFF] selection:text-white overflow-x-clip">
+    <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#17157F] font-sans pb-6 relative selection:bg-[#5B5CFF] selection:text-white overflow-x-clip">
       {/* Background World Glow Accents */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[35%] rounded-full bg-[#5B5CFF]/10 blur-[90px]" />
@@ -202,35 +202,38 @@ export default function MissionMapScreen() {
       </div>
 
       {/* Top Header Bar */}
-      <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex items-center justify-between bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-xs px-4 py-3 gap-2">
-        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          <button
-            onClick={() => navigate("/practice/chapters")}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-200 hover:bg-slate-50 active:scale-95 transition-all shadow-xs shrink-0 cursor-pointer"
-          >
-            <ArrowLeft size={20} className="text-[#141779]" />
-          </button>
-          <div className="flex flex-col min-w-0">
-            <span className="text-[10px] text-[#4f46e5] bg-[#eef2ff] font-black px-2 py-0.5 rounded-full border border-indigo-100 shrink-0 inline-block w-fit mb-0.5">
-              {userClass} • {t('mission_roadmap', 'Mission Roadmap')}
-            </span>
-            <h1 className="text-sm font-black text-slate-900 leading-tight truncate">
-              {chapterTitle}
-            </h1>
-          </div>
-        </div>
-
+      <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 relative flex items-center justify-between bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-xs px-4 py-3">
+        {/* 1. Left: Back Button */}
         <button
-          onClick={() => navigate("/notifications")}
-          className="w-9 h-9 rounded-2xl bg-slate-50 shadow-2xs flex items-center justify-center hover:bg-slate-100 transition-all shrink-0 border border-slate-100 relative"
+          type="button"
+          onClick={() => navigate("/practice/chapters")}
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-200 hover:bg-slate-50 active:scale-95 transition-all shadow-xs shrink-0 cursor-pointer z-10"
+          aria-label="Back"
         >
-          <Bell size={16} className="text-[#1c1970]" />
-          {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border border-white pointer-events-none z-10">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
-          )}
+          <ArrowLeft size={20} className="text-[#141779]" />
         </button>
+
+        {/* 2. Middle: Dynamic Chapter Title (Centered) */}
+        <h1 className="absolute left-1/2 -translate-x-1/2 text-base md:text-lg font-bold text-[#1E255E] tracking-tight truncate max-w-[60%] text-center">
+          {chapterTitle}
+        </h1>
+
+        {/* 3. Right: Notification Bell Button */}
+        <div className="relative z-10">
+          <button
+            type="button"
+            onClick={() => navigate("/notifications")}
+            className="w-10 h-10 rounded-full bg-white shadow-xs border border-slate-200 flex items-center justify-center text-slate-700 hover:bg-slate-50 active:scale-95 transition-all shrink-0 cursor-pointer relative"
+            aria-label="Notifications"
+          >
+            <Bell size={18} className="text-[#1c1970]" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border border-white pointer-events-none z-10">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </button>
+        </div>
       </header>
 
       {/* Hero Banner Card */}
@@ -318,7 +321,8 @@ export default function MissionMapScreen() {
           {missions.map((m: any, index: number) => {
             const isCompleted = m.status === "completed";
             const isRetest = m.status === "retest";
-            const isUnlocked = m.status === "unlocked" || isCompleted || isRetest || Boolean(m.hasDraft);
+            const hasAttempted = isCompleted || isRetest || Boolean(m.attempts > 0) || (m.accuracy !== undefined && m.accuracy !== null && (m.accuracy > 0 || m.status === "retest"));
+            const isUnlocked = m.status === "unlocked" || isCompleted || isRetest || Boolean(m.hasDraft) || hasAttempted;
             const isLocked = !isUnlocked;
 
             const savedAns = getScopedItem(`user_answers_${chapterId}_${m.seq}`);
@@ -397,7 +401,7 @@ export default function MissionMapScreen() {
                     }`}
                   >
                     <div className="flex justify-between items-start">
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-0 flex-1 pr-2">
                         <div className="flex items-center gap-1.5 mb-0.5">
                           <p className="text-[10px] font-bold text-[#767683] uppercase tracking-wider">
                             {t('mission', 'MISSION')} {m.seq}
@@ -411,14 +415,27 @@ export default function MissionMapScreen() {
                         <h4 className="text-sm sm:text-base font-black text-[#17157F] leading-snug truncate">
                           {t(m.title.toLowerCase().replace(/ /g, '_'), { defaultValue: m.title })}
                         </h4>
-                        <p className="text-xs text-[#767683] mt-0.5 font-medium flex items-center gap-2">
-                          <span className="flex items-center gap-1 whitespace-nowrap">🎯 {t('quiz', 'Quiz')}</span>
-                          <span className="text-slate-300">|</span>
-                          <span className="flex items-center gap-1 truncate">👹 {t(m.bossName.toLowerCase().replace(/ /g, '_'), { defaultValue: m.bossName })}</span>
-                        </p>
+                        <div className="flex items-center gap-2 mt-1.5 text-xs text-slate-500 font-medium overflow-hidden">
+                          {/* Quiz Pill / Tag */}
+                          <div className="inline-flex items-center gap-1 shrink-0">
+                            <span className="text-xs">🎯</span>
+                            <span className="text-slate-600">{t('quiz', 'Quiz')}</span>
+                          </div>
+
+                          {/* Subtle Vertical Divider with Clear Spacing */}
+                          <span className="text-slate-300 select-none mx-1.5 font-light">|</span>
+
+                          {/* Dragon Subtitle / Nest Name */}
+                          <div className="inline-flex items-center gap-1.5 min-w-0">
+                            <span className="text-xs shrink-0">👹</span>
+                            <span className="truncate text-slate-600 text-[11px] sm:text-xs">
+                              {t(m.bossName.toLowerCase().replace(/ /g, '_'), { defaultValue: m.bossName })}
+                            </span>
+                          </div>
+                        </div>
                       </div>
 
-                      {(isCompleted || isRetest || (m.accuracy !== undefined && m.accuracy > 0)) && (
+                      {(hasAttempted || (m.accuracy !== undefined && m.accuracy !== null && m.accuracy > 0)) && (
                         <div className="shrink-0 flex items-center gap-1 bg-[#EEF1FF] text-[#17157F] px-2.5 py-1 rounded-xl border border-[#5B5CFF]/30 shadow-2xs ml-2">
                           <span className="text-xs">🎯</span>
                           <span className="text-xs font-black">{m.accuracy ?? 0}%</span>
@@ -432,7 +449,7 @@ export default function MissionMapScreen() {
                         <span className="text-xs text-indigo-600 font-bold flex items-center gap-1">
                           {t('in_progress_sub', '⚡ In progress...')}
                         </span>
-                      ) : isCompleted || isRetest ? (
+                      ) : isCompleted || isRetest || hasAttempted ? (
                         <div className="flex items-center gap-1">
                           {[1, 2, 3].map((starIndex) => (
                             <Star
@@ -456,7 +473,7 @@ export default function MissionMapScreen() {
                           if (hasInProgressSession) {
                             navigate(`/mission-play?chapterId=${chapterId}&missionSeq=${m.seq}`);
                           } else {
-                            const isReplaying = isCompleted;
+                            const isReplaying = isCompleted || isRetest || hasAttempted;
                             removeScopedItem(`user_answers_${chapterId}_${m.seq}`);
                             removeScopedItem(`mission_phase_${chapterId}_${m.seq}`);
                             removeScopedItem(`mission_timer_${chapterId}_${m.seq}`);
@@ -487,7 +504,7 @@ export default function MissionMapScreen() {
                             ? "bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white border border-[#5B5CFF]"
                             : isCompleted
                             ? "bg-[#45D483] hover:bg-[#34c774] text-white border border-[#45D483]"
-                            : isRetest
+                            : (isRetest || hasAttempted)
                             ? "bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white border border-[#5B5CFF]"
                             : isUnlocked
                             ? "bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white shadow-[0_4px_14px_rgba(91,92,255,0.4)] hover:brightness-110 border border-[#5B5CFF]"
@@ -504,10 +521,10 @@ export default function MissionMapScreen() {
                             <RotateCcw size={13} strokeWidth={2.5} />
                             <span>{t('replay', 'Replay')}</span>
                           </>
-                        ) : isRetest ? (
+                        ) : (isRetest || hasAttempted) ? (
                           <>
-                            <span>{t('retest', 'Re-test')}</span>
-                            <Play size={13} className="fill-white" />
+                            <RotateCcw size={13} strokeWidth={2.5} />
+                            <span>{t('replay', 'Replay')}</span>
                           </>
                         ) : isUnlocked ? (
                           <>

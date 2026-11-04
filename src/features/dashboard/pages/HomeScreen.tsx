@@ -1,14 +1,16 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Bookmark, BookOpen, Brain, CheckCircle, ChevronRight, Clock, Gift, Map, Shield, Star, Bell, Crown, Gem, Swords, Trophy, Users, ChevronDown } from "lucide-react";
+import { Bookmark, BookOpen, Brain, CheckCircle, ChevronRight, Clock, Gift, Map, Shield, Star, Bell, Crown, Gem, Swords, Trophy, Users, ChevronDown, X } from "lucide-react";
 import { useEffect, useState, useMemo, useCallback, lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import AdventureHero from "../../../components/AdventureHero";
+import { showInteractiveNotification, triggerDevicePushNotification } from "../../../services/pushNotificationService";
 import { startNavigationProgress } from "../../../components/NavigationProgressBar";
 import { getScopedItem, setScopedItem, getActiveUserContext, normalizeClassLevel } from "../../../utils/sessionCache";
 import { loadClassSkills } from "../../../data/neuroplay/skillsLoader";
 import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
+import { useUserStatsStore } from "../../../services/userStatsStore";
 
 const ChildSwitcherModal = lazy(() => import("../../../components/ChildSwitcherModal"));
 
@@ -32,6 +34,16 @@ export default function HomeScreen() {
   const [childName, setChildName] = useState<string>(() => userData?.childName || "Explorer");
   const [childPhoto, setChildPhoto] = useState<string>(() => userData?.childPhoto || "");
   const [userLevel, setUserLevel] = useState<number>(() => userData?.level || 1);
+  const { 
+    level: storeLevel, 
+    xp: storeXp, 
+    coins: storeCoins, 
+    streakDays: storeStreak, 
+    childName: storeChildName, 
+    childPhoto: storeChildPhoto,
+    syncFromUserData
+  } = useUserStatsStore();
+  const effectiveLevel = storeLevel || userLevel || 1;
   const [streakDays, setStreakDays] = useState<number>(() => userData?.streakDays || 0);
   const [showSwitcher, setShowSwitcher] = useState(false);
   const [showDailyMissionModal, setShowDailyMissionModal] = useState(false);
@@ -40,8 +52,26 @@ export default function HomeScreen() {
   const [dailyLimitReached, setDailyLimitReached] = useState(false);
   const [todayCompletedCount, setTodayCompletedCount] = useState(0);
 
-  const [missions, setMissions] = useState<any[]>([]);
-  const [isMissionsLoading, setIsMissionsLoading] = useState(true);
+  const [missions, setMissions] = useState<any[]>(() => {
+    try {
+      const cached = localStorage.getItem("daily_missions_cache");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {
+      // Fallback
+    }
+    return [];
+  });
+  const [isMissionsLoading, setIsMissionsLoading] = useState(() => {
+    try {
+      const cached = localStorage.getItem("daily_missions_cache");
+      return !cached || cached === "[]";
+    } catch {
+      return true;
+    }
+  });
   const [retentionStreak, setRetentionStreak] = useState<any>(null);
   const [retentionTrigger] = useState(0);
 
@@ -52,10 +82,12 @@ export default function HomeScreen() {
         const msData = await msRes.json();
         if (msData && Array.isArray(msData)) {
           setMissions(msData);
+          try { localStorage.setItem("daily_missions_cache", JSON.stringify(msData)); } catch { /* Ignore */ }
         } else if (msData && Array.isArray(msData.missions)) {
           setMissions(msData.missions);
           setDailyLimitReached(msData.daily_limit_reached || false);
           setTodayCompletedCount(msData.today_completed_count || 0);
+          try { localStorage.setItem("daily_missions_cache", JSON.stringify(msData.missions)); } catch { /* Ignore */ }
         }
       }
     } catch (e) {
@@ -265,7 +297,32 @@ export default function HomeScreen() {
       const res = await apiFetch(notifUrl);
       const json = await res.json();
       if (json.success && json.data) {
-        setUnreadCount(json.data.filter((n: any) => !n.isRead).length);
+        const unread = json.data.filter((n: any) => !n.isRead);
+        setUnreadCount(unread.length);
+
+        // Dispatch in-app alert for newly received unread notifications without missing them
+        if (unread.length > 0) {
+          const latestUnread = unread[0];
+          const notifId = latestUnread._id;
+          const lastAlerted = sessionStorage.getItem("last_alerted_notif_id");
+          if (notifId && lastAlerted !== notifId) {
+            const notifTime = latestUnread.createdAt ? new Date(latestUnread.createdAt).getTime() : 0;
+            const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+            if (notifTime > fiveMinutesAgo) {
+              sessionStorage.setItem("last_alerted_notif_id", notifId);
+              const isMissionComplete = (latestUnread.title || "").toUpperCase().includes("MISSION COMPLETED") ||
+                (latestUnread.title || "").toUpperCase().includes("MYSTERY SOLVED") ||
+                (latestUnread.title || "").toUpperCase().includes("LESSON COMPLETE");
+              showInteractiveNotification(
+                latestUnread.title,
+                latestUnread.message,
+                latestUnread.screen || "/notifications",
+                latestUnread.type || "general",
+                !isMissionComplete
+              );
+            }
+          }
+        }
       }
     } catch (e) { }
   };
@@ -452,6 +509,7 @@ export default function HomeScreen() {
       const data = await response.json();
       if (data.success) {
         const u = data.data.user;
+        syncFromUserData(u);
         setUserData(u);
         setXp(u.xp || 0);
         setCoins(u.coins || 0);
@@ -522,7 +580,7 @@ export default function HomeScreen() {
                   try {
                     sessionStorage.setItem("spin_wheel_cached_balances", JSON.stringify(spinData.balances));
                     localStorage.setItem("spin_wheel_cached_balances", JSON.stringify(spinData.balances));
-                  } catch (_) {}
+                  } catch (_) { }
                   const dailyCount = spinData.balances.daily_spins_balance || 0;
                   const hasSpin = dailyCount > 0 || (spinData.balances.event_spins_balance || 0) > 0;
                   setHasFreeSpin(hasSpin);
@@ -609,6 +667,7 @@ export default function HomeScreen() {
       if (cached) {
         try {
           const u = JSON.parse(cached);
+          syncFromUserData(u);
           setUserData(u);
           setXp(u.xp || 0);
           setCoins(u.coins || 0);
@@ -628,7 +687,7 @@ export default function HomeScreen() {
               const total = 100;
               const percent = Math.min(100, Math.max(0, Math.round((completed / total) * 100)));
               setShadowArenaProgress({ completed, total, percent });
-            } catch (e) {}
+            } catch (e) { }
           }
           fetchShadowArenaProgress(u);
         } catch (e) {
@@ -652,7 +711,7 @@ export default function HomeScreen() {
     };
   }, [retentionTrigger]);
 
-  const completeMission = async (missionId: string) => {
+  const completeMission = async (missionId: string, missionObj?: any) => {
     try {
       const res = await apiFetch("/api/retention/missions/complete", {
         method: "POST",
@@ -667,6 +726,28 @@ export default function HomeScreen() {
         }
         if (data.coinReward) setCoins(prev => prev + (data.coinReward || 0));
         if (data.xpReward) setXp(prev => prev + (data.xpReward || 0));
+
+        const taskTitle = data.title || missionObj?.title || `Mission #${data.seq || missionObj?.seq || ''}`;
+        const earnedXp = data.xpReward ?? missionObj?.xp_reward ?? 20;
+        const earnedCoins = data.coinReward ?? missionObj?.coin_reward ?? 10;
+
+        let childName = "Your child";
+        try {
+          const cached = localStorage.getItem("userData");
+          if (cached) {
+            const u = JSON.parse(cached);
+            childName = u.childName || u.fullName || "Your child";
+          }
+        } catch (_) {}
+
+        // Trigger Device Push Notification with child's name and exact task title
+        triggerDevicePushNotification(
+          "🎯 DAILY QUEST COMPLETED!",
+          `${childName} completed quest "${taskTitle}" and claimed +${earnedXp} XP & +${earnedCoins} Coins! 🚀`,
+          "/home"
+        );
+
+        window.dispatchEvent(new Event("userDataUpdated"));
         fetchMissions();
       }
     } catch (e) {
@@ -682,17 +763,24 @@ export default function HomeScreen() {
     if (!missions || missions.length === 0) return [];
 
     const filteredList = missions.filter((m) => {
-      const isDone = m.status === "completed";
-      if (questTab === 'completed') return isDone;
-      if (questTab === 'active') return !isDone;
+      const isClaimed = m.status === "completed" || m.status === "claimed";
+      const isUnclaimed = m.status === "ready_to_claim" || (Number(m.current_progress || 0) >= Number(m.target_progress || 1) && !isClaimed);
+      const isCompleted = isClaimed || isUnclaimed;
+      const isActive = !isCompleted;
+
+      if (questTab === 'completed') return isCompleted;
+      if (questTab === 'active') return isActive;
       return true;
     });
 
     const sortedList = [...filteredList].sort((a, b) => {
-      const isDoneA = a.status === "completed";
-      const isReadyA = a.status === "ready_to_claim" || (a.current_progress >= (a.target_progress || 1) && !isDoneA);
-      const isDoneB = b.status === "completed";
-      const isReadyB = b.status === "ready_to_claim" || (b.current_progress >= (b.target_progress || 1) && !isDoneB);
+      const isClaimedA = a.status === "completed" || a.status === "claimed";
+      const isReadyA = a.status === "ready_to_claim" || (Number(a.current_progress || 0) >= Number(a.target_progress || 1) && !isClaimedA);
+      const isDoneA = isClaimedA;
+
+      const isClaimedB = b.status === "completed" || b.status === "claimed";
+      const isReadyB = b.status === "ready_to_claim" || (Number(b.current_progress || 0) >= Number(b.target_progress || 1) && !isClaimedB);
+      const isDoneB = isClaimedB;
 
       const orderA = isReadyA ? 0 : isDoneA ? 2 : 1;
       const orderB = isReadyB ? 0 : isDoneB ? 2 : 1;
@@ -700,7 +788,7 @@ export default function HomeScreen() {
       return (a.seq || 0) - (b.seq || 0);
     });
 
-    return sortedList.slice(0, 3);
+    return sortedList;
   }, [missions, questTab]);
 
   const effectiveTheme = useMemo(() => {
@@ -771,7 +859,7 @@ export default function HomeScreen() {
                 {userData?.childClass || getActiveUserContext().classLevel || ""}
               </span>
               <span className="text-[10.5px] text-slate-400 font-extrabold whitespace-nowrap">
-                Lvl {userLevel}
+                Lvl {effectiveLevel}
               </span>
               {userData?.children && userData.children.length > 1 && (
                 <button
@@ -843,9 +931,9 @@ export default function HomeScreen() {
           missionCoinReward={activeMission ? (activeMission.coin_reward ?? activeMission.coinReward ?? activeMission.coins) : undefined}
         />
 
-        {/* 2. SIX QUICK ACTION BENTO GRID (2x3 Cards with Continue Learning, Good Habits, Journey, My Collections, Brain Quest, Shadow Arena) */}
+        {/* 2. FIVE QUICK ACTION BENTO GRID (2+2+1 Cards: Continue Learning, Good Habits, My Collections, Neuro Play, Shadow Arena) */}
         <section className="grid grid-cols-2 gap-3">
-          {/* Continue Learning */}
+          {/* Card 1: Continue Learning (Soft Periwinkle / Royal Sky) */}
           {(() => {
             const isLoading = isContinueLearningLoading && !continueLearningProgress.total;
             const classCurriculumTotal = journeyData?.totalCurrentClassChapters ?? journeyData?.totalTierChapters;
@@ -859,17 +947,17 @@ export default function HomeScreen() {
             return (
               <button
                 onClick={() => navigate("/practice/chapters")}
-                className="bg-[#e0e0ff] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#c7c7ff]/70 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
+                className="bg-[#EEF2FF] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#C7D2FE] shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
               >
-                <div className="w-9 h-9 rounded-full bg-[rgba(20,23,121,0.12)] flex items-center justify-center">
-                  <BookOpen size={18} className="text-[#141779]" />
+                <div className="w-10 h-10 rounded-full bg-[#E0E7FF] flex items-center justify-center shrink-0">
+                  <BookOpen size={19} className="text-[#4338CA]" />
                 </div>
-                <div className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
-                  <ChevronRight size={14} />
+                <div className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-xs group-hover:translate-x-0.5 transition-transform">
+                  <ChevronRight size={15} />
                 </div>
                 <div className="mt-2">
-                  <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('continue_learning')}</h3>
-                  <p className="text-[11px] text-[#525266] font-bold leading-relaxed mb-2 truncate">{t('math_science_quests')}</p>
+                  <h3 className="text-[15px] font-bold text-slate-900 leading-snug mb-1 truncate">{t('continue_learning')}</h3>
+                  <p className="text-xs text-slate-500 font-medium leading-relaxed mb-2 truncate">{t('math_science_quests')}</p>
                   {isLoading ? (
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-[#141779]/70">
@@ -882,11 +970,12 @@ export default function HomeScreen() {
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      <div className="text-[9.5px] font-extrabold text-[#141779] truncate">
-                        {progressText}
+                      <div className="text-[9.5px] font-extrabold text-[#4338CA] truncate flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#4F46E5] shrink-0" />
+                        <span className="truncate">{progressText}</span>
                       </div>
-                      <div className="w-full h-1.5 bg-[#c7c7ff]/70 rounded-full overflow-hidden">
-                        <div className="h-full bg-[#141779] rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                      <div className="w-full h-1.5 bg-[#E0E7FF] rounded-full overflow-hidden">
+                        <div className="h-full bg-[#4F46E5] rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                       </div>
                     </div>
                   )}
@@ -895,7 +984,7 @@ export default function HomeScreen() {
             );
           })()}
 
-          {/* Good Habits */}
+          {/* Card 2: Good Habits (Warm Apricot / Honey Cream) */}
           {(() => {
             const isLoading = isHabitLoading && !dailyHabitData;
             const currentHabitDay = dailyHabitData?.currentDay || 1;
@@ -921,35 +1010,35 @@ export default function HomeScreen() {
             return (
               <button
                 onClick={() => navigate("/good-habits")}
-                className="bg-[#fff8ee] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#fed7aa]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
+                className="bg-[#FFFBEB] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#FDE68A] shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
               >
-                <div className="w-9 h-9 rounded-full bg-[#ffedd5] flex items-center justify-center">
-                  <Star size={18} className="text-[#f97316] fill-[#f97316]" />
+                <div className="w-10 h-10 rounded-full bg-[#FEF3C7] flex items-center justify-center shrink-0">
+                  <Star size={19} className="text-[#D97706] fill-[#D97706]" />
                 </div>
-                <div className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
-                  <ChevronRight size={14} />
+                <div className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-xs group-hover:translate-x-0.5 transition-transform">
+                  <ChevronRight size={15} />
                 </div>
                 <div className="mt-2">
-                  <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('good_habits', 'Good Habits')}</h3>
-                  <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-2 truncate">{t('daily_lessons_rewards', 'Daily lessons & rewards')}</p>
+                  <h3 className="text-[15px] font-bold text-slate-900 leading-snug mb-1 truncate">{t('good_habits', 'Good Habits')}</h3>
+                  <p className="text-xs text-slate-500 font-medium leading-relaxed mb-2 truncate">{t('daily_lessons_rewards', 'Daily lessons & rewards')}</p>
                   {isLoading ? (
                     <div className="space-y-1">
-                      <div className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-orange-400">
-                        <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse shrink-0" />
+                      <div className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-[#D97706]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#D97706] animate-pulse shrink-0" />
                         <span className="animate-pulse truncate">{t('loading', 'Loading...')}</span>
                       </div>
-                      <div className="w-full h-1.5 bg-orange-100/80 rounded-full overflow-hidden">
-                        <div className="h-full bg-orange-300/60 rounded-full animate-pulse transition-all duration-500" style={{ width: '0%' }} />
+                      <div className="w-full h-1.5 bg-[#FEF3C7] rounded-full overflow-hidden">
+                        <div className="h-full bg-[#F59E0B] rounded-full animate-pulse transition-all duration-500" style={{ width: '0%' }} />
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      <div className="text-[9.5px] font-extrabold text-[#f97316] truncate flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#f97316] shrink-0" />
+                      <div className="text-[9.5px] font-extrabold text-[#D97706] truncate flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] shrink-0" />
                         <span className="truncate">{habitsDoneText}</span>
                       </div>
-                      <div className="w-full h-1.5 bg-orange-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-orange-400 rounded-full transition-all duration-500" style={{ width: `${habitsBarWidth}%` }} />
+                      <div className="w-full h-1.5 bg-[#FEF3C7] rounded-full overflow-hidden">
+                        <div className="h-full bg-[#F59E0B] rounded-full transition-all duration-500" style={{ width: `${habitsBarWidth}%` }} />
                       </div>
                     </div>
                   )}
@@ -958,12 +1047,12 @@ export default function HomeScreen() {
             );
           })()}
 
-          {/* Journey */}
+          {/* Card 3: Journey (Fresh Emerald / Mint) */}
           {(() => {
             const isLoading = isJourneyLoading && !journeyData;
             const activeClassNum = (() => {
               const raw = getActiveUserContext().classLevel || userData?.childClass || "Class 1";
-              const m = String(raw).match(/\d+/);
+              const m = String(raw).match(/d+/);
               return m ? parseInt(m[0], 10) : 1;
             })();
 
@@ -993,17 +1082,17 @@ export default function HomeScreen() {
             return (
               <button
                 onClick={() => navigate("/practice/journey-map")}
-                className="bg-[#e6fbf7] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#b2f5ea]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
+                className="bg-[#ECFDF5] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#A7F3D0] shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
               >
-                <div className="w-9 h-9 rounded-full bg-[#ccfbf1] flex items-center justify-center">
-                  <BookOpen size={18} className="text-[#0d9488]" />
+                <div className="w-10 h-10 rounded-full bg-[#D1FAE5] flex items-center justify-center shrink-0">
+                  <BookOpen size={19} className="text-[#059669]" />
                 </div>
-                <div className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
-                  <ChevronRight size={14} />
+                <div className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-xs group-hover:translate-x-0.5 transition-transform">
+                  <ChevronRight size={15} />
                 </div>
                 <div className="mt-2">
-                  <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('journey', 'Journey')}</h3>
-                  <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-2 truncate">{t('explorer_map', 'Explorer Map & Stages')}</p>
+                  <h3 className="text-[15px] font-bold text-slate-900 leading-snug mb-1 truncate">{t('journey', 'Journey')}</h3>
+                  <p className="text-xs text-slate-500 font-medium leading-relaxed mb-2 truncate">{t('explorer_map', 'Explorer Map & Stages')}</p>
                   {isLoading ? (
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-[#0d9488]/70">
@@ -1016,14 +1105,14 @@ export default function HomeScreen() {
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      <div className="text-[9.5px] font-extrabold text-[#0d9488] truncate flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#0d9488] shrink-0" />
+                      <div className="text-[9.5px] font-extrabold text-[#059669] truncate flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] shrink-0" />
                         <span className="truncate">
                           {journeyProgressText}
                         </span>
                       </div>
-                      <div className="w-full h-1.5 bg-[#ccfbf1] rounded-full overflow-hidden">
-                        <div className="h-full bg-[#0d9488] rounded-full transition-all duration-500" style={{ width: `${journeyPct}%` }} />
+                      <div className="w-full h-1.5 bg-[#D1FAE5] rounded-full overflow-hidden">
+                        <div className="h-full bg-[#10B981] rounded-full transition-all duration-500" style={{ width: `${journeyPct}%` }} />
                       </div>
                     </div>
                   )}
@@ -1032,20 +1121,20 @@ export default function HomeScreen() {
             );
           })()}
 
-          {/* My Collections */}
+          {/* Card 4: My Collections (Blush Rose / Coral) */}
           <button
             onClick={() => navigate("/practice/collections")}
-            className="bg-[#fff1f3] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#fecdd3]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group"
+            className="bg-[#FFF1F2] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#FECDD3] shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
           >
-            <div className="w-9 h-9 rounded-full bg-[#ffe4e6] flex items-center justify-center">
-              <Trophy size={18} className="text-[#e11d48]" />
+            <div className="w-10 h-10 rounded-full bg-[#FFE4E6] flex items-center justify-center shrink-0">
+              <Trophy size={19} className="text-[#E11D48]" />
             </div>
-            <div className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
-              <ChevronRight size={14} />
+            <div className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-xs group-hover:translate-x-0.5 transition-transform">
+              <ChevronRight size={15} />
             </div>
             <div className="mt-2">
-              <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('my_collections', 'My Collections')}</h3>
-              <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-2 truncate">{t('unlocked_cards_badges', 'Unlocked cards & badges')}</p>
+              <h3 className="text-[15px] font-bold text-slate-900 leading-snug mb-1 truncate">{t('my_collections', 'My Collections')}</h3>
+              <p className="text-xs text-slate-500 font-medium leading-relaxed mb-2 truncate">{t('unlocked_cards_badges', 'Unlocked cards & badges')}</p>
               <div className="flex items-center gap-1.5 pt-0.5">
                 <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-amber-500 to-yellow-400 text-white flex items-center justify-center shadow-2xs border border-amber-200/50">
                   <Star size={12} className="fill-white" />
@@ -1063,7 +1152,7 @@ export default function HomeScreen() {
             </div>
           </button>
 
-          {/* Neuro Play */}
+          {/* Card 5: Neuro Play (Vibrant Orchid / Electric Lilac) */}
           {(() => {
             const isLoading = isNeuroPlayLoading && !neuroPlayProgress.total;
             const skillsCompleted = neuroPlayProgress.completed;
@@ -1076,17 +1165,17 @@ export default function HomeScreen() {
             return (
               <button
                 onClick={() => navigate("/neuro-play")}
-                className="bg-[#f3e8ff] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#d8b4fe]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
+                className="bg-[#FAF5FF] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#E9D5FF] shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
               >
-                <div className="w-9 h-9 rounded-full bg-[#ede9fe] flex items-center justify-center">
-                  <Brain size={18} className="text-[#8b5cf6]" />
+                <div className="w-10 h-10 rounded-full bg-[#F3E8FF] flex items-center justify-center shrink-0">
+                  <Brain size={19} className="text-[#9333EA]" />
                 </div>
-                <div className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
-                  <ChevronRight size={14} />
+                <div className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-xs group-hover:translate-x-0.5 transition-transform">
+                  <ChevronRight size={15} />
                 </div>
                 <div className="mt-2">
-                  <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('neuro_play', 'Neuro Play')}</h3>
-                  <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-2 truncate">{t('brain_skill_lab', 'Brain Skill Lab & Quests')}</p>
+                  <h3 className="text-[15px] font-bold text-slate-900 leading-snug mb-1 truncate">{t('neuro_play', 'Neuro Play')}</h3>
+                  <p className="text-xs text-slate-500 font-medium leading-relaxed mb-2 truncate">{t('brain_skill_lab', 'Brain Skill Lab & Quests')}</p>
                   {isLoading ? (
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-[#7c3aed]/70">
@@ -1099,12 +1188,12 @@ export default function HomeScreen() {
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      <div className="text-[9.5px] font-extrabold text-[#7c3aed] truncate flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#7c3aed] shrink-0" />
+                      <div className="text-[9.5px] font-extrabold text-[#9333EA] truncate flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#A855F7] shrink-0" />
                         <span className="truncate">{neuroPlayText}</span>
                       </div>
-                      <div className="w-full h-1.5 bg-[#ede9fe] rounded-full overflow-hidden">
-                        <div className="h-full bg-[#8b5cf6] rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                      <div className="w-full h-1.5 bg-[#F3E8FF] rounded-full overflow-hidden">
+                        <div className="h-full bg-[#A855F7] rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                       </div>
                     </div>
                   )}
@@ -1113,7 +1202,7 @@ export default function HomeScreen() {
             );
           })()}
 
-          {/* Shadow Arena */}
+          {/* Card 6: Shadow Arena (Crisp Ice Blue / Cyan Aqua) */}
           {(() => {
             const isLoading = isShadowArenaLoading && !shadowArenaProgress.completed;
             const fightsCompleted = Number(shadowArenaProgress.completed || 0);
@@ -1131,38 +1220,40 @@ export default function HomeScreen() {
             return (
               <button
                 onClick={() => navigate("/multiplayer-hub")}
-                className="bg-[#e8fdf5] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#b7f4d8]/60 shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
+                className="col-span-2 bg-[#ECFEFF] rounded-[24px] p-4 flex items-center justify-between border border-[#A5F3FC] shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
               >
-                <div className="w-9 h-9 rounded-full bg-[#d1fae5] flex items-center justify-center">
-                  <Swords size={18} className="text-[#059669]" />
+                <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                  <div className="w-10 h-10 rounded-full bg-[#d1fae5] flex items-center justify-center shrink-0">
+                    <Swords size={20} className="text-[#059669]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm font-black text-slate-900 leading-snug mb-0.5">{t('shadow_arena', 'Shadow Arena')}</h3>
+                    <p className="text-[11px] text-slate-500 font-bold leading-relaxed truncate">{t('challenge_friends_in_battles', 'Challenge friends in battles')}</p>
+                    {isLoading ? (
+                      <div className="space-y-1 mt-1">
+                        <div className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-[#059669]/70">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse shrink-0" />
+                          <span className="animate-pulse truncate">{t('loading', 'Loading...')}</span>
+                        </div>
+                        <div className="w-full max-w-[120px] h-1.5 bg-[#d1fae5]/80 rounded-full overflow-hidden">
+                          <div className="h-full bg-[#10b981]/40 rounded-full animate-pulse transition-all duration-500" style={{ width: '0%' }} />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-1 mt-1">
+                        <div className="text-[10px] font-black text-[#059669] truncate flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] shrink-0" />
+                          <span className="truncate">{fightsText}</span>
+                        </div>
+                        <div className="w-full max-w-[140px] h-1.5 bg-[#d1fae5] rounded-full overflow-hidden">
+                          <div className="h-full bg-[#10b981] rounded-full transition-all duration-500" style={{ width: `${fightsBarWidth}%` }} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
+                <div className="w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform shrink-0 ml-2">
                   <ChevronRight size={14} />
-                </div>
-                <div className="mt-2">
-                  <h3 className="text-sm font-black text-slate-900 leading-snug mb-1">{t('shadow_arena', 'Shadow Arena')}</h3>
-                  <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-2 truncate">{t('challenge_friends_short', 'Challenge friends in real...')}</p>
-                  {isLoading ? (
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-[#059669]/70">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse shrink-0" />
-                        <span className="animate-pulse truncate">{t('loading', 'Loading...')}</span>
-                      </div>
-                      <div className="w-full h-1.5 bg-[#d1fae5]/80 rounded-full overflow-hidden">
-                        <div className="h-full bg-[#10b981]/40 rounded-full animate-pulse transition-all duration-500" style={{ width: '0%' }} />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      <div className="text-[9.5px] font-extrabold text-[#059669] truncate flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] shrink-0" />
-                        <span className="truncate">{fightsText}</span>
-                      </div>
-                      <div className="w-full h-1.5 bg-[#d1fae5] rounded-full overflow-hidden">
-                        <div className="h-full bg-[#10b981] rounded-full transition-all duration-500" style={{ width: `${fightsBarWidth}%` }} />
-                      </div>
-                    </div>
-                  )}
                 </div>
               </button>
             );
@@ -1196,18 +1287,26 @@ export default function HomeScreen() {
       {/* DAILY MISSIONS MODAL */}
       <AnimatePresence>
         {showDailyMissionModal && (
-          <div 
+          <div
             className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-hidden"
             style={{ touchAction: "none" }}
             onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+            onClick={(e) => { if (e.target === e.currentTarget) setShowDailyMissionModal(false); }}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 30 }}
+              initial={{ scale: 0.96, opacity: 0, y: 6 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 30 }}
-              transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
-              className="bg-white text-slate-950 w-full max-w-[440px] h-auto max-h-[85vh] p-4 sm:p-6 rounded-[32px] border-2 border-slate-200 shadow-2xl flex flex-col relative overflow-hidden my-auto"
+              exit={{ scale: 0.96, opacity: 0, y: 6 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              style={{
+                overscrollBehavior: "contain",
+                touchAction: "pan-y",
+                willChange: "transform, opacity",
+                transform: "translateZ(0)",
+                backfaceVisibility: "hidden"
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white text-slate-950 w-full max-w-sm sm:max-w-[440px] min-h-[480px] max-h-[85vh] p-4 sm:p-6 rounded-[32px] border-2 border-slate-200 shadow-2xl flex flex-col relative overflow-hidden"
             >
               {/* Modal Header */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0 relative z-10">
@@ -1277,15 +1376,15 @@ export default function HomeScreen() {
               ) : (
                 /* GUARANTEED TOUCH & MOUSE SCROLL CONTAINER */
                 <div
-                  className="my-2 flex-1 min-h-0 overflow-y-auto overscroll-contain py-1 pr-1 flex flex-col gap-2.5 relative z-10 select-none [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-[#141779]/30 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-100"
+                  className="my-2 flex-1 min-h-[280px] overflow-y-auto overscroll-contain py-1 pr-1 flex flex-col gap-2.5 relative z-10 select-none [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-[#141779]/30 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-100"
                   style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
                 >
                   {(() => {
                     if (isMissionsLoading && (!missions || missions.length === 0)) {
                       return (
-                        <div className="flex flex-col gap-2.5 animate-pulse">
+                        <div className="flex flex-col gap-2.5 animate-pulse min-h-[280px]">
                           {[1, 2, 3].map((i) => (
-                            <div key={i} className="p-3 sm:p-3.5 rounded-2xl border-2 border-slate-100 bg-slate-50 flex items-center justify-between gap-3 shrink-0">
+                            <div key={i} className="p-3 sm:p-3.5 rounded-2xl border-2 border-slate-100 bg-slate-50 flex items-center justify-between gap-3 shrink-0 h-[76px]">
                               <div className="flex items-center gap-3 min-w-0 flex-1">
                                 <div className="w-11 h-11 rounded-2xl bg-slate-200 shrink-0" />
                                 <div className="min-w-0 flex-1 space-y-1.5">
@@ -1305,14 +1404,16 @@ export default function HomeScreen() {
                         <div className="py-8 text-center text-slate-500 font-bold text-sm">
                           {questTab === 'completed'
                             ? t('no_completed_quests', 'No completed quests yet!')
-                            : t('no_active_quests', 'No active quests remaining!')}
+                            : questTab === 'active'
+                              ? t('no_active_quests', 'No active quests remaining!')
+                              : t('no_quests_found', 'No quests found!')}
                         </div>
                       );
                     }
 
                     return displayMissions.map((mission) => {
-                      const isDone = mission.status === "completed";
-                      const isReady = mission.status === "ready_to_claim" || (mission.current_progress >= (mission.target_progress || 1) && !isDone);
+                      const isDone = mission.status === "completed" || mission.status === "claimed";
+                      const isReady = mission.status === "ready_to_claim" || (Number(mission.current_progress || 0) >= Number(mission.target_progress || 1) && !isDone);
                       const cur = mission.current_progress || 0;
                       const target = mission.target_progress || 1;
 
@@ -1370,7 +1471,7 @@ export default function HomeScreen() {
                             ) : isReady ? (
                               <button
                                 onClick={() => {
-                                  completeMission(mission.id || `seq_${mission.seq}`);
+                                  completeMission(mission.id || `seq_${mission.seq}`, mission);
                                 }}
                                 className="text-xs font-black text-white bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] hover:from-[#1c1970] hover:to-[#2e2aab] active:scale-95 px-3.5 py-1.5 rounded-xl shadow-md shadow-indigo-900/30 animate-pulse border border-indigo-300/40"
                               >
@@ -1389,15 +1490,7 @@ export default function HomeScreen() {
                 </div>
               )}
 
-              {/* Modal Footer */}
-              <div className="flex justify-end pt-2.5 border-t border-slate-100 shrink-0 relative z-10">
-                <button
-                  onClick={() => setShowDailyMissionModal(false)}
-                  className="px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-all active:scale-95"
-                >
-                  {t('close', 'Close')}
-                </button>
-              </div>
+
             </motion.div>
           </div>
         )}
@@ -1424,8 +1517,10 @@ export default function HomeScreen() {
         <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
           <button
             onClick={() => {
-              fetchMissions();
               setShowDailyMissionModal(true);
+              if (!missions || missions.length === 0) {
+                fetchMissions();
+              }
             }}
             className="w-12 h-12 rounded-full bg-gradient-to-br from-[#141779] to-[#25218c] border-2 border-[#FFC83D] text-[#FFC83D] shadow-[0_4px_16px_rgba(20,23,121,0.4)] flex items-center justify-center relative hover:scale-105 transition-transform"
           >
@@ -1442,16 +1537,18 @@ export default function HomeScreen() {
       {/* DAILY FREE SPIN AUTO-POPUP */}
       <AnimatePresence>
         {showSpinPopup && (
-          <div 
-            className="fixed inset-0 z-[100] bg-[#f7f9fb]/90 backdrop-blur-md flex items-center justify-center p-6"
+          <div
+            className="fixed inset-0 z-[100] bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 select-none animate-in fade-in duration-200"
             style={{ touchAction: "none" }}
             onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+            onClick={(e) => { if (e.target === e.currentTarget) setShowSpinPopup(false); }}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               style={{ overscrollBehavior: "contain" }}
+              onClick={(e) => e.stopPropagation()}
               className="bg-gradient-to-br from-[#111453]/95 via-[#141779]/95 to-[#0b0c3f]/95 text-white w-full max-w-[360px] p-7 rounded-[32px] flex flex-col items-center text-center gap-5 border border-white/10 shadow-[0_20px_50px_rgba(20,23,121,0.5)] relative overflow-hidden"
             >
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(87,250,233,0.12)_0%,transparent_65%)] pointer-events-none" />
@@ -1525,10 +1622,13 @@ export default function HomeScreen() {
           }
 
           return (
-            <div 
-              className="fixed inset-0 z-[110] bg-[#0b0c3f]/80 backdrop-blur-md flex flex-col items-center justify-center p-6"
+            <div
+              className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md transition-all duration-300"
               style={{ touchAction: "none" }}
               onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setShowStreakModal(false);
+              }}
             >
               <motion.div
                 initial={{ scale: 0.85, opacity: 0 }}
@@ -1536,8 +1636,19 @@ export default function HomeScreen() {
                 exit={{ scale: 0.85, opacity: 0 }}
                 transition={{ type: "spring", damping: 20, stiffness: 300 }}
                 style={{ overscrollBehavior: "contain" }}
+                onClick={(e) => e.stopPropagation()}
                 className="bg-gradient-to-br from-[#111453] via-[#141779] to-[#0b0c3f] text-white border border-white/15 w-full max-w-sm rounded-[32px] p-7 text-center relative shadow-[0_20px_50px_rgba(20,23,121,0.6)] flex flex-col items-center justify-between gap-6 overflow-hidden"
               >
+                {/* Top-Right Close Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowStreakModal(false)}
+                  className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-90 flex items-center justify-center text-white/80 hover:text-white transition-all cursor-pointer border border-white/10"
+                  aria-label="Close"
+                >
+                  <X size={18} strokeWidth={2.5} />
+                </button>
+
                 <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-teal-400/20 blur-2xl pointer-events-none" />
                 <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-orange-500/20 blur-2xl pointer-events-none" />
 
@@ -1560,7 +1671,7 @@ export default function HomeScreen() {
 
                   <div className="flex justify-between w-full px-1 gap-1.5">
                     {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day, idx) => {
-                      const isActive = Boolean(retentionStreak?.streakDaysOfWeek?.[idx]);
+                      const isActive = currentStreakVal > 0 && Boolean(retentionStreak?.streakDaysOfWeek?.[idx]);
 
                       return (
                         <div key={idx} className="flex flex-col items-center gap-1 flex-1">
@@ -1594,7 +1705,7 @@ export default function HomeScreen() {
                       navigate("/practice/chapters");
                     }
                   }}
-                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#57fae9] to-[#00c9b7] text-[#141779] font-black text-xs shadow-[0_4px_15px_rgba(87,250,233,0.3)] uppercase tracking-wider active:scale-95 transition-all mt-2 z-10 border-0 cursor-pointer"
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#57fae9] via-[#00f2fe] to-[#4facfe] text-[#141779] font-black text-xs shadow-[0_0_25px_rgba(87,250,233,0.5)] uppercase tracking-wider active:scale-95 transition-all mt-2 z-10 border-0 cursor-pointer"
                 >
                   {btnText}
                 </button>
@@ -1606,12 +1717,12 @@ export default function HomeScreen() {
 
       {/* STREAK REVIVAL MODAL */}
       {showRevivalModal && streakRevivalData && (
-        <div 
+        <div
           className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in select-none pointer-events-auto"
           style={{ touchAction: "none" }}
           onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
         >
-          <div 
+          <div
             className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border-2 border-red-500/30 flex flex-col items-center text-center relative overflow-hidden animate-scale-up"
             style={{ overscrollBehavior: "contain" }}
           >
@@ -1659,7 +1770,7 @@ export default function HomeScreen() {
       {/* STREAK REVIVAL CONFIRMATION MODAL */}
       <AnimatePresence>
         {showRevivalConfirmModal && streakRevivalData && (
-          <div 
+          <div
             className="fixed inset-0 z-[1001] flex items-center justify-center px-6"
             style={{ touchAction: "none" }}
             onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}

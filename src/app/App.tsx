@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, type ReactNode } from "react";
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useNavigate, useLocation } from "react-router-dom";
 const Layout = lazy(() => import("./components/Layout"));
 const ParentLayout = lazy(() => import("./components/ParentLayout"));
@@ -65,6 +65,23 @@ const TextbookChaptersScreen = lazy(() => import("../features/dashboard/pages/Te
 const ChapterReaderScreen = lazy(() => import("../features/dashboard/pages/ChapterReaderScreen"));
 const MissionMapScreen = lazy(() => import("../features/dashboard/pages/MissionMapScreen"));
 const MissionPlayScreen = lazy(() => import("../features/dashboard/pages/MissionPlayScreen"));
+
+// Admin (question bank) — separate session from student/parent
+const AdminLoginScreen = lazy(() => import("../features/admin/pages/AdminLoginScreen"));
+const QuestionBankScreen = lazy(() => import("../features/admin/pages/QuestionBankScreen"));
+const ChapterReviewScreen = lazy(() => import("../features/admin/pages/ChapterReviewScreen"));
+const QuestionStatsScreen = lazy(() => import("../features/admin/pages/QuestionStatsScreen"));
+const AllQuestionsScreen = lazy(() => import("../features/admin/pages/AllQuestionsScreen"));
+const RevisionReviewScreen = lazy(() => import("../features/admin/pages/RevisionReviewScreen"));
+const AdminProtectedRoute = lazy(() =>
+  import("../features/admin/components/AdminUI").then((m) => ({ default: m.AdminProtectedRoute }))
+);
+
+/** Student-only overlays (screen-time lock, notifications) must not cover the admin panel. */
+const StudentOnly = ({ children }: { children: ReactNode }) => {
+  const { pathname } = useLocation();
+  return pathname.startsWith("/admin") ? null : <>{children}</>;
+};
 const AuthHandler = () => {
   const navigate = useNavigate();
   useEffect(() => {
@@ -169,13 +186,18 @@ function App() {
 
 function PinGuard() {
   const location = useLocation();
+
   useEffect(() => {
-    if (location.pathname.startsWith("/parent")) {
+    const current = location.pathname;
+    if (current.startsWith("/parent")) {
       sessionStorage.setItem("last_active_portal", "parent");
     } else {
       sessionStorage.removeItem("parentPinVerified");
       sessionStorage.setItem("last_active_portal", "child");
     }
+    // Clean up any stale previous route keys to enforce clean linear navigation
+    sessionStorage.removeItem("nrs_prev_internal_route");
+    sessionStorage.removeItem("nrs_prev_parent_route");
   }, [location.pathname]);
   return null;
 }
@@ -271,6 +293,16 @@ function PinGuard() {
               </Route>
             </Route>
             
+            <Route path="/admin/login" element={<AdminLoginScreen />} />
+            <Route path="/admin" element={<AdminProtectedRoute />}>
+              <Route index element={<Navigate to="/admin/question-bank" replace />} />
+              <Route path="question-bank" element={<QuestionBankScreen />} />
+              <Route path="question-bank/:chapterId" element={<ChapterReviewScreen />} />
+              <Route path="question-stats" element={<QuestionStatsScreen />} />
+              <Route path="all-questions" element={<AllQuestionsScreen />} />
+              <Route path="question-revisions" element={<RevisionReviewScreen />} />
+            </Route>
+
             <Route path="*" element={<NotFoundScreen />} />
           </Routes>
         </Suspense>

@@ -111,7 +111,7 @@ export default function WeeklyTestQuestionsScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col pb-24 relative overflow-hidden">
+      <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col pb-6 relative overflow-hidden">
         <header className="flex items-center justify-between px-5 py-4 bg-[#f4efff] sticky top-0 z-40 animate-pulse">
           <div className="flex items-center gap-3 w-full">
             <div className="w-8 h-8 bg-gray-200 rounded-full shrink-0" />
@@ -153,7 +153,7 @@ export default function WeeklyTestQuestionsScreen() {
     : "SEE RESULTS 🏆";
 
   return (
-    <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col pb-24">
+    <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col pb-6">
       {/* Header */}
       <header className="flex items-center justify-between px-5 py-4 bg-[#f4efff] sticky top-0 z-40">
         <div className="flex items-center gap-3">

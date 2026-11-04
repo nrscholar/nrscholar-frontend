@@ -435,86 +435,72 @@ function AdventureHero({
       </div>
 
       {/* 2. TODAY'S QUEST CARD */}
-      <div className="w-full bg-white rounded-[28px] p-4 border border-slate-100 shadow-xs flex flex-col gap-3">
+      <div
+        onClick={onMissionClick || onCtaClick}
+        className="w-full bg-white rounded-[24px] sm:rounded-[28px] p-3.5 sm:p-4 border border-slate-100 shadow-xs flex items-center justify-between gap-3 cursor-pointer hover:border-indigo-100/80 active:scale-[0.99] transition-all"
+      >
         {isLoadingMission || !missionTitle ? (
-          <div className="animate-pulse flex flex-col gap-3 select-none">
-            {/* Top Header Row Skeleton */}
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="w-11 h-11 rounded-full bg-rose-50 flex items-center justify-center text-xl shrink-0">
-                  🎯
-                </div>
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <div className="h-2.5 w-24 bg-slate-200 rounded" />
-                  <div className="h-4 w-44 bg-slate-200 rounded" />
-                  <div className="h-3 w-56 bg-slate-100 rounded" />
-                </div>
+          <div className="animate-pulse flex items-center justify-between gap-3 w-full select-none">
+            {/* Left Skeleton */}
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-rose-50 flex items-center justify-center text-xl shrink-0">
+                🎯
               </div>
-              <div className="flex flex-col items-end gap-1.5 shrink-0">
-                <div className="h-3.5 w-10 bg-slate-200 rounded" />
-                <div className="w-20 h-2 bg-slate-100 rounded-full" />
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <div className="h-2.5 w-20 bg-slate-200 rounded" />
+                <div className="h-4 w-32 bg-slate-200 rounded" />
+                <div className="flex items-center gap-1.5 pt-0.5">
+                  <div className="h-4 w-14 bg-slate-100 rounded-full" />
+                  <div className="h-4 w-14 bg-slate-100 rounded-full" />
+                </div>
               </div>
             </div>
-            {/* Bottom Rewards & CTA Button Row Skeleton */}
-            <div className="flex items-center justify-between gap-1.5 pt-1">
-              <div className="h-8 w-20 rounded-2xl bg-slate-100" />
-              <div className="h-8 w-20 rounded-2xl bg-slate-100" />
-              <div className="h-8 w-32 rounded-2xl bg-slate-200" />
+            {/* Right Skeleton */}
+            <div className="flex flex-col items-end gap-1.5 shrink-0">
+              <div className="h-3.5 w-10 bg-slate-200 rounded" />
+              <div className="w-20 sm:w-24 h-2 bg-slate-100 rounded-full" />
             </div>
           </div>
         ) : (
           <>
-            {/* Top Header Row */}
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="w-11 h-11 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center text-2xl shrink-0 shadow-2xs">
-                  🎯
-                </div>
-                <div className="min-w-0 flex-1">
-                  <span className="text-[10px] font-black text-[#4f46e5] uppercase tracking-wider block">
-                    {t('todays_quest', { defaultValue: "TODAY'S QUEST" })}
-                  </span>
-                  <h4 className="text-sm font-black text-[#1c1970] leading-tight truncate mt-0.5">
-                    {t(displayMissionTitle.toLowerCase().replace(/ /g, '_'), { defaultValue: displayMissionTitle })}
-                  </h4>
-                  <p className="text-[11px] font-semibold text-slate-400 truncate mt-0.5">
-                    {missionRewardText || t('defeat_boss_desc', { defaultValue: "Complete today's active quest to earn rewards!" })}
-                  </p>
-                </div>
+            {/* Left Content: Icon + (Title, Quest Name, Reward Pills) */}
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-rose-50 border border-rose-100/80 flex items-center justify-center text-xl sm:text-2xl shrink-0 shadow-2xs">
+                🎯
               </div>
-
-              {/* Progress Meter on Right */}
-              <div className="flex flex-col items-end gap-1 shrink-0">
-                <span className="text-xs font-black text-[#4f46e5]">
-                  {displayMissionProgress.current} / {displayMissionProgress.total}
+              <div className="min-w-0 flex-1">
+                <span className="text-[10px] sm:text-[11px] font-black text-[#4f46e5] uppercase tracking-wider block leading-none mb-1">
+                  {t('todays_quest', { defaultValue: "TODAY'S QUEST" })}
                 </span>
-                <div className="w-20 h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/60 p-0.5">
-                  <div
-                    className="h-full bg-[#4f46e5] rounded-full transition-all duration-500"
-                    style={{
-                      width: `${displayMissionProgress.total > 0
-                        ? Math.min(100, (displayMissionProgress.current / displayMissionProgress.total) * 100)
-                        : 0}%`
-                    }}
-                  />
+                <h4 className="text-xs sm:text-sm font-black text-[#141779] leading-tight truncate">
+                  {t(displayMissionTitle.toLowerCase().replace(/ /g, '_'), { defaultValue: displayMissionTitle })}
+                </h4>
+                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                  <span className="bg-[#fff0f3] text-[#f43f5e] font-black border border-rose-100/80 px-2 py-0.5 rounded-full text-[10px] sm:text-[10.5px] inline-flex items-center gap-1 shadow-2xs whitespace-nowrap">
+                    🎁 +{displayXpReward} XP
+                  </span>
+                  <span className="bg-[#fffbeb] text-[#d97706] font-black border border-amber-100/80 px-2 py-0.5 rounded-full text-[10px] sm:text-[10.5px] inline-flex items-center gap-1 shadow-2xs whitespace-nowrap">
+                    🪙 +{displayCoinReward} Coins
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Bottom Rewards & CTA Button Row */}
-            <div className="flex items-center justify-between gap-1.5 pt-1">
-              <span className="bg-[#fff0f3] text-[#f43f5e] font-black border border-rose-100 px-2.5 py-2 rounded-2xl text-[10.5px] sm:text-[11px] flex items-center justify-center gap-1 shadow-2xs whitespace-nowrap">
-                🎁 +{displayXpReward} XP
+            {/* Right Content: Progress Count & Bar */}
+            <div className="flex flex-col items-end gap-1.5 shrink-0 pl-1">
+              <span className="text-xs sm:text-sm font-black text-[#141779]">
+                {displayMissionProgress.current} / {displayMissionProgress.total}
               </span>
-              <span className="bg-[#fffbeb] text-[#d97706] font-black border border-amber-100 px-2.5 py-2 rounded-2xl text-[10.5px] sm:text-[11px] flex items-center justify-center gap-1 shadow-2xs whitespace-nowrap">
-                🪙 +{displayCoinReward} Coins
-              </span>
-              <button
-                onClick={onMissionClick || onCtaClick}
-                className="bg-[#1c1970] hover:bg-[#25218c] text-white font-black text-[11px] sm:text-xs uppercase tracking-wider px-3 py-2 rounded-2xl shadow-md transition-transform active:scale-95 flex items-center justify-center gap-1 shrink-0 whitespace-nowrap cursor-pointer"
-              >
-                <span>{t('continue_quest', { defaultValue: "CONTINUE QUEST ->" })}</span>
-              </button>
+              <div className="w-20 sm:w-24 h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/60 p-0.5">
+                <div
+                  className="h-full bg-[#2563eb] rounded-full transition-all duration-500"
+                  style={{
+                    width: `${displayMissionProgress.total > 0
+                      ? Math.min(100, (displayMissionProgress.current / displayMissionProgress.total) * 100)
+                      : 0}%`
+                  }}
+                />
+              </div>
             </div>
           </>
         )}
