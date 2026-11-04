@@ -16,6 +16,7 @@ export default function ParentAchievementsScreen() {
   const [activeAchievement, setActiveAchievement] = useState<any | null>(null);
   const [badgesEarned, setBadgesEarned] = useState(0);
   const [globalRank, setGlobalRank] = useState(0);
+  const [rankPercentile, setRankPercentile] = useState(0);
   const [achievements, setAchievements] = useState<any[]>([]);
   const [parentPhoto, setParentPhoto] = useState("");
   const [username, setUsername] = useState("Parent");
@@ -73,11 +74,19 @@ export default function ParentAchievementsScreen() {
       }
 
       if (rankRes.status === "fulfilled" && rankRes.value?.success && rankRes.value.data?.rank) {
-        setGlobalRank(rankRes.value.data.rank);
+        const rData = rankRes.value.data;
+        setGlobalRank(rData.rank);
+        if (typeof rData.percentile === "number") {
+          setRankPercentile(rData.percentile);
+        } else if (rData.totalUsers && rData.totalUsers > 0) {
+          setRankPercentile(Math.round(((rData.totalUsers - rData.rank + 1) / rData.totalUsers) * 100));
+        }
       } else {
         const uXpTotal = realXp + (userObj?.xp || 0);
         const derivedRank = Math.max(1, Math.min(100, 100 - Math.floor(uXpTotal / 50)));
         setGlobalRank(derivedRank);
+        const derivedPercentile = Math.min(100, Math.max(0, Math.floor((uXpTotal / 500) * 100)));
+        setRankPercentile(derivedPercentile);
       }
 
       const defaultAchievements = [
@@ -293,19 +302,21 @@ export default function ParentAchievementsScreen() {
           </div>
 
           <div className="grid grid-cols-2 gap-4 w-full">
-            <div className="bg-white/80 backdrop-blur-md rounded-[24px] p-5 border border-slate-200/60 shadow-xs space-y-3 h-32 flex flex-col justify-between">
+            <div className="bg-white/80 backdrop-blur-md rounded-[24px] p-5 border border-slate-200/60 shadow-xs space-y-3 min-h-[160px] sm:min-h-[170px] flex flex-col justify-between">
               <div className="flex justify-between">
                 <div className="h-3 w-16 rounded-md animate-skeleton"></div>
                 <div className="w-8 h-8 rounded-xl animate-skeleton"></div>
               </div>
               <div className="h-8 w-12 rounded-lg animate-skeleton"></div>
+              <div className="w-full h-2.5 rounded-full animate-skeleton"></div>
             </div>
-            <div className="bg-white/80 backdrop-blur-md rounded-[24px] p-5 border border-slate-200/60 shadow-xs space-y-3 h-32 flex flex-col justify-between">
+            <div className="bg-white/80 backdrop-blur-md rounded-[24px] p-5 border border-slate-200/60 shadow-xs space-y-3 min-h-[160px] sm:min-h-[170px] flex flex-col justify-between">
               <div className="flex justify-between">
                 <div className="h-3 w-16 rounded-md animate-skeleton"></div>
                 <div className="w-8 h-8 rounded-xl animate-skeleton"></div>
               </div>
               <div className="h-8 w-16 rounded-lg animate-skeleton"></div>
+              <div className="w-full h-2.5 rounded-full animate-skeleton"></div>
             </div>
           </div>
 
@@ -324,6 +335,9 @@ export default function ParentAchievementsScreen() {
       </div>
     );
   }
+
+  const totalBadges = achievements.length > 0 ? achievements.length : 6;
+  const badgesPct = totalBadges > 0 ? Math.min(100, Math.max(0, Math.round((badgesEarned / totalBadges) * 100))) : 0;
 
   const filteredAchievements = achievements.filter(ach => {
     const isUnlocked = ach.currentProgress >= ach.totalRequired;
@@ -406,30 +420,74 @@ export default function ParentAchievementsScreen() {
           </div>
 
           {/* Bento Box 2: Total Badges Box */}
-          <div className="col-span-1 bento-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between h-[115px] sm:h-[120px] bg-white border border-teal-200/80">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-[#006a62] uppercase tracking-wider">{t("badges", "Badges")}</span>
-              <div className="p-1.5 bg-teal-50 rounded-lg text-[#006a62]">
-                <GraduationCap size={16} />
+          <div className="col-span-1 bento-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between min-h-[160px] sm:min-h-[170px] bg-white border border-teal-200/80">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-black text-[#006a62] uppercase tracking-wider">{t("badges", "Badges")}</span>
+                <div className="p-1.5 bg-teal-50 rounded-lg text-[#006a62]">
+                  <GraduationCap size={16} />
+                </div>
+              </div>
+              <div>
+                <div className="text-2xl sm:text-3xl font-black text-[#141779] tracking-tight">{badgesEarned}</div>
+                <span className="text-xs text-slate-600 font-black">{t("unlocked_medals", "Unlocked Medals")}</span>
               </div>
             </div>
-            <div>
-              <div className="text-2xl sm:text-3xl font-black text-[#141779] tracking-tight">{badgesEarned}</div>
-              <span className="text-xs text-slate-600 font-black">{t("unlocked_medals", "Unlocked Medals")}</span>
+
+            {/* Badges Progress Bar */}
+            <div className="w-full pt-2.5 border-t border-teal-100/80 mt-2.5">
+              <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-black mb-1">
+                <span className="text-[#006a62] uppercase tracking-wider">
+                  {badgesEarned} / {totalBadges} {t("medals_short", "Medals")}
+                </span>
+                <span className="text-[#006a62] font-black">{badgesPct}%</span>
+              </div>
+              <div className={`w-full h-2.5 sm:h-3 bg-slate-100 rounded-full overflow-hidden p-0.5 shadow-2xs ${badgesPct === 0 ? 'flex items-center' : ''}`}>
+                {badgesPct === 0 ? (
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#006a62] shrink-0" />
+                ) : (
+                  <div 
+                    style={{ width: `${badgesPct}%` }}
+                    className="h-full bg-gradient-to-r from-[#006a62] to-[#57fae9] rounded-full shadow-2xs transition-all duration-700 ease-out"
+                  />
+                )}
+              </div>
             </div>
           </div>
 
           {/* Bento Box 3: Global Rank Box */}
-          <div className="col-span-1 bento-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between h-[115px] sm:h-[120px] bg-white border border-indigo-200/80">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-[#30007f] uppercase tracking-wider">{t("rank", "Rank")}</span>
-              <div className="p-1.5 bg-indigo-50 rounded-lg text-[#30007f]">
-                <Globe size={16} />
+          <div className="col-span-1 bento-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between min-h-[160px] sm:min-h-[170px] bg-white border border-indigo-200/80">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-black text-[#30007f] uppercase tracking-wider">{t("rank", "Rank")}</span>
+                <div className="p-1.5 bg-indigo-50 rounded-lg text-[#30007f]">
+                  <Globe size={16} />
+                </div>
+              </div>
+              <div>
+                <div className="text-2xl sm:text-3xl font-black text-[#141779] tracking-tight">#{globalRank > 0 ? globalRank : 1}</div>
+                <span className="text-xs text-slate-600 font-black">{t("worldwide_position", "Worldwide Position")}</span>
               </div>
             </div>
-            <div>
-              <div className="text-2xl sm:text-3xl font-black text-[#141779] tracking-tight">#{globalRank > 0 ? globalRank : 1}</div>
-              <span className="text-xs text-slate-600 font-black">{t("worldwide_position", "Worldwide Position")}</span>
+
+            {/* Rank Progress Bar */}
+            <div className="w-full pt-2.5 border-t border-indigo-100/80 mt-2.5">
+              <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-black mb-1">
+                <span className="text-[#30007f] uppercase tracking-wider">
+                  {rankPercentile > 0 ? t("top_percentile_badge", { pct: Math.max(1, 100 - rankPercentile), defaultValue: `Top ${Math.max(1, 100 - rankPercentile)}%` }) : t("starting_rank", "Starting")}
+                </span>
+                <span className="text-[#30007f] font-black">{rankPercentile}%</span>
+              </div>
+              <div className={`w-full h-2.5 sm:h-3 bg-slate-100 rounded-full overflow-hidden p-0.5 shadow-2xs ${rankPercentile === 0 ? 'flex items-center' : ''}`}>
+                {rankPercentile === 0 ? (
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#141779] shrink-0" />
+                ) : (
+                  <div 
+                    style={{ width: `${rankPercentile}%` }}
+                    className="h-full bg-gradient-to-r from-[#141779] to-[#57fae9] rounded-full shadow-2xs transition-all duration-700 ease-out"
+                  />
+                )}
+              </div>
             </div>
           </div>
 

@@ -974,8 +974,12 @@ export default function HomeScreen() {
                         <span className="w-1.5 h-1.5 rounded-full bg-[#4F46E5] shrink-0" />
                         <span className="truncate">{progressText}</span>
                       </div>
-                      <div className="w-full h-1.5 bg-[#E0E7FF] rounded-full overflow-hidden">
-                        <div className="h-full bg-[#4F46E5] rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                      <div className={`w-full h-1.5 bg-[#E0E7FF] rounded-full overflow-hidden ${pct === 0 ? 'flex items-center' : ''}`}>
+                        {pct === 0 ? (
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#4F46E5] shrink-0" />
+                        ) : (
+                          <div className="h-full bg-[#4F46E5] rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                        )}
                       </div>
                     </div>
                   )}
@@ -1037,82 +1041,12 @@ export default function HomeScreen() {
                         <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] shrink-0" />
                         <span className="truncate">{habitsDoneText}</span>
                       </div>
-                      <div className="w-full h-1.5 bg-[#FEF3C7] rounded-full overflow-hidden">
-                        <div className="h-full bg-[#F59E0B] rounded-full transition-all duration-500" style={{ width: `${habitsBarWidth}%` }} />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </button>
-            );
-          })()}
-
-          {/* Card 3: Journey (Fresh Emerald / Mint) */}
-          {(() => {
-            const isLoading = isJourneyLoading && !journeyData;
-            const activeClassNum = (() => {
-              const raw = getActiveUserContext().classLevel || userData?.childClass || "Class 1";
-              const m = String(raw).match(/d+/);
-              return m ? parseInt(m[0], 10) : 1;
-            })();
-
-            const currentClassNodes = Array.isArray(journeyData?.nodes)
-              ? journeyData.nodes.filter((n: any) => n.minClass === activeClassNum)
-              : [];
-            const totalLevels = currentClassNodes.length || (activeClassNum >= 4 ? 4 : 3);
-            const completedLevels = currentClassNodes.filter((n: any) => Boolean(n.completed)).length;
-
-            const journeyCompleted = journeyData?.completedCurrentClassChapters ?? journeyData?.completedChapters ?? 0;
-            const journeyTotal = journeyData?.totalCurrentClassChapters ?? journeyData?.totalTierChapters ?? 0;
-            const journeyPct = typeof journeyData?.currentClassProgress === "number"
-              ? Math.min(100, Math.max(0, Math.round(journeyData.currentClassProgress)))
-              : (typeof journeyData?.journeyProgress === "number"
-                ? Math.min(100, Math.max(0, Math.round(journeyData.journeyProgress)))
-                : (typeof journeyData?.progressPercentage === "number"
-                  ? Math.min(100, Math.max(0, Math.round(journeyData.progressPercentage)))
-                  : (journeyTotal > 0 ? Math.min(100, Math.max(0, Math.round((journeyCompleted / journeyTotal) * 100))) : 0)));
-
-            const journeyProgressText = t('levels_progress_ratio', {
-              completed: completedLevels,
-              total: totalLevels,
-              pct: journeyPct,
-              defaultValue: `${completedLevels}/${totalLevels} Levels (${journeyPct}%)`
-            });
-
-            return (
-              <button
-                onClick={() => navigate("/practice/journey-map")}
-                className="bg-[#ECFDF5] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#A7F3D0] shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
-              >
-                <div className="w-10 h-10 rounded-full bg-[#D1FAE5] flex items-center justify-center shrink-0">
-                  <BookOpen size={19} className="text-[#059669]" />
-                </div>
-                <div className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-xs group-hover:translate-x-0.5 transition-transform">
-                  <ChevronRight size={15} />
-                </div>
-                <div className="mt-2">
-                  <h3 className="text-[15px] font-bold text-slate-900 leading-snug mb-1 truncate">{t('journey', 'Journey')}</h3>
-                  <p className="text-xs text-slate-500 font-medium leading-relaxed mb-2 truncate">{t('explorer_map', 'Explorer Map & Stages')}</p>
-                  {isLoading ? (
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-[#0d9488]/70">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#0d9488] animate-pulse shrink-0" />
-                        <span className="animate-pulse truncate">{t('loading', 'Loading...')}</span>
-                      </div>
-                      <div className="w-full h-1.5 bg-[#ccfbf1]/80 rounded-full overflow-hidden">
-                        <div className="h-full bg-[#0d9488]/40 rounded-full animate-pulse transition-all duration-500" style={{ width: '0%' }} />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      <div className="text-[9.5px] font-extrabold text-[#059669] truncate flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] shrink-0" />
-                        <span className="truncate">
-                          {journeyProgressText}
-                        </span>
-                      </div>
-                      <div className="w-full h-1.5 bg-[#D1FAE5] rounded-full overflow-hidden">
-                        <div className="h-full bg-[#10B981] rounded-full transition-all duration-500" style={{ width: `${journeyPct}%` }} />
+                      <div className={`w-full h-1.5 bg-[#FEF3C7] rounded-full overflow-hidden ${habitsBarWidth === 0 ? 'flex items-center' : ''}`}>
+                        {habitsBarWidth === 0 ? (
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] shrink-0" />
+                        ) : (
+                          <div className="h-full bg-[#F59E0B] rounded-full transition-all duration-500" style={{ width: `${habitsBarWidth}%` }} />
+                        )}
                       </div>
                     </div>
                   )}
@@ -1192,8 +1126,12 @@ export default function HomeScreen() {
                         <span className="w-1.5 h-1.5 rounded-full bg-[#A855F7] shrink-0" />
                         <span className="truncate">{neuroPlayText}</span>
                       </div>
-                      <div className="w-full h-1.5 bg-[#F3E8FF] rounded-full overflow-hidden">
-                        <div className="h-full bg-[#A855F7] rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                      <div className={`w-full h-1.5 bg-[#F3E8FF] rounded-full overflow-hidden ${pct === 0 ? 'flex items-center' : ''}`}>
+                        {pct === 0 ? (
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#A855F7] shrink-0" />
+                        ) : (
+                          <div className="h-full bg-[#A855F7] rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                        )}
                       </div>
                     </div>
                   )}
@@ -1245,8 +1183,12 @@ export default function HomeScreen() {
                           <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] shrink-0" />
                           <span className="truncate">{fightsText}</span>
                         </div>
-                        <div className="w-full max-w-[140px] h-1.5 bg-[#d1fae5] rounded-full overflow-hidden">
-                          <div className="h-full bg-[#10b981] rounded-full transition-all duration-500" style={{ width: `${fightsBarWidth}%` }} />
+                        <div className={`w-full max-w-[140px] h-1.5 bg-[#d1fae5] rounded-full overflow-hidden ${fightsBarWidth === 0 ? 'flex items-center' : ''}`}>
+                          {fightsBarWidth === 0 ? (
+                            <div className="w-1.5 h-1.5 rounded-full bg-[#10b981] shrink-0" />
+                          ) : (
+                            <div className="h-full bg-[#10b981] rounded-full transition-all duration-500" style={{ width: `${fightsBarWidth}%` }} />
+                          )}
                         </div>
                       </div>
                     )}

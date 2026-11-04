@@ -701,7 +701,21 @@ export default function ParentDailyTipScreen() {
   const [totalTests, setTotalTests] = useState(cachedTip?.totalTests || 0);
   const [accuracy, setAccuracy] = useState(cachedTip?.accuracy || 0);
   const [childCity, setChildCity] = useState(cachedTip?.childCity || "");
-  const [childShadowFights, setChildShadowFights] = useState<number>(cachedTip?.childShadowFights || 0);
+  const [childShadowFights, setChildShadowFights] = useState<number>(() => {
+    try {
+      const rawU = localStorage.getItem("userData");
+      if (rawU) {
+        const u = JSON.parse(rawU);
+        const ctx = getActiveUserContext();
+        const activeChild = (u.children || []).find((c: any) => c.childId === (ctx.childId || u.activeChildId)) || u.children?.[0] || u;
+        const profileFights = activeChild?.multiplayerFights ?? activeChild?.completedFights;
+        if (typeof profileFights === "number") {
+          return Math.max(0, profileFights);
+        }
+      }
+    } catch (e) {}
+    return 0;
+  });
   const [childNeuroPlayCount, setChildNeuroPlayCount] = useState<number>(cachedTip?.childNeuroPlayCount || 0);
   const [parentLessonsCount, setParentLessonsCount] = useState<number>(cachedTip?.parentLessonsCount || 0);
   const [parentChallengesCount, setParentChallengesCount] = useState<number>(cachedTip?.parentChallengesCount || 0);
@@ -981,6 +995,13 @@ export default function ParentDailyTipScreen() {
               if (tJson.data.metrics.totalTests !== undefined) {
                 setTotalTests(tJson.data.metrics.totalTests);
               }
+              if (typeof tJson.data.metrics.shadowFights === "number") {
+                setChildShadowFights(tJson.data.metrics.shadowFights);
+                nextCache.childShadowFights = tJson.data.metrics.shadowFights;
+              }
+            } else if (typeof tJson.data.shadowFights === "number") {
+              setChildShadowFights(tJson.data.shadowFights);
+              nextCache.childShadowFights = tJson.data.shadowFights;
             }
             nextCache.tip = tJson.data;
           }
@@ -989,16 +1010,18 @@ export default function ParentDailyTipScreen() {
 
       const statsPromise = (async () => {
         try {
-          const [uRes, gRes, rRes, cRes, libRes, chalRes] = await Promise.all([
+          const [uRes, gRes, rRes, cRes, libRes, chalRes, mpRes] = await Promise.all([
             apiFetch("/api/users/me").catch(() => null),
             apiFetch("/api/practice/gamification").catch(() => null),
             apiFetch(`/api/parent/report${qParams ? `?${qParams}` : ""}`).catch(() => null),
             apiFetch("/api/practice/cities").catch(() => null),
             apiFetch("/api/parent/learning-library").catch(() => null),
             apiFetch("/api/parent/challenges").catch(() => null),
+            apiFetch(`/api/multiplayer/progress${qParams ? `?${qParams}` : ""}`).catch(() => null),
           ]);
 
           let activeNeuroSkills = 0;
+          let activeChildProfile: any = null;
 
           if (uRes) {
             const uJson = await uRes.json();
@@ -1006,6 +1029,7 @@ export default function ParentDailyTipScreen() {
               const u = uJson.data.user;
               const childObj = (u.children && u.children[0]) || {};
               const activeChildObj = (u.children || []).find((c: any) => c.childId === (ctx.childId || u.activeChildId)) || childObj;
+              activeChildProfile = activeChildObj;
 
               const parentXpVal = u.parentXp !== undefined ? u.parentXp : 0;
               const parentLevelVal = u.parentLevel !== undefined ? u.parentLevel : 1;
@@ -1071,9 +1095,48 @@ export default function ParentDailyTipScreen() {
                 nextCache.subjectBreakdown = rJson.data.subjectBreakdown;
               }
 
-              const shadowFights = rJson.data.bossAnalytics?.totalAttempts ?? rJson.data.bossesWon ?? 0;
-              setChildShadowFights(shadowFights);
-              nextCache.childShadowFights = shadowFights;
+              let actualShadowFights = 0;
+              if (mpRes) {
+                try {
+                  const mpJson = await mpRes.json();
+                  if (mpJson?.success && mpJson?.data && typeof mpJson.data.completedFights === "number") {
+                    actualShadowFights = Number(mpJson.data.completedFights);
+                  }
+                } catch (e) {}
+              }
+
+              if (actualShadowFights === 0 && rJson?.data) {
+                if (typeof rJson.data.shadowFights === "number") {
+                  actualShadowFights = Number(rJson.data.shadowFights);
+                } else if (typeof rJson.data.completedShadowFights === "number") {
+                  actualShadowFights = Number(rJson.data.completedShadowFights);
+                } else if (typeof rJson.data.shadowArenaFights === "number") {
+                  actualShadowFights = Number(rJson.data.shadowArenaFights);
+                }
+              }
+
+              const childForFights = activeChildProfile || (() => {
+                try {
+                  const rawU = localStorage.getItem("userData");
+                  if (rawU) {
+                    const u = JSON.parse(rawU);
+                    return (u.children || []).find((c: any) => c.childId === (ctx.childId || u.activeChildId)) || u.children?.[0] || u;
+                  }
+                } catch (e) {}
+                return null;
+              })();
+
+              if (actualShadowFights === 0 && childForFights) {
+                const fbc = childForFights.multiplayerFightsByClass || {};
+                const currentClass = ctx.classLevel || childForFights.childClass || "Class 1";
+                const profileFights = childForFights.multiplayerFights ?? childForFights.completedFights ?? fbc[currentClass];
+                if (typeof profileFights === "number") {
+                  actualShadowFights = Math.max(0, Number(profileFights));
+                }
+              }
+
+              setChildShadowFights(actualShadowFights);
+              nextCache.childShadowFights = actualShadowFights;
 
               const readingActs = rJson.data.readingAnalytics?.chaptersRead || 0;
               const totalActs = activeNeuroSkills + readingActs;

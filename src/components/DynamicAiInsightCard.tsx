@@ -575,16 +575,15 @@ export const DynamicAiInsightCard: React.FC<DynamicAiInsightCardProps> = ({
       {/* 2. Premium Deep AI Insight Modal / Dialog */}
       {isOpen && (
         <div 
-          className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-md flex items-end sm:items-center justify-center p-3 pb-[92px] sm:p-4 animate-in fade-in duration-200 overscroll-contain select-none"
+          className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200 overscroll-contain select-none"
           style={{
-            zIndex: 60,
-            paddingBottom: "calc(5.75rem + env(safe-area-inset-bottom, 0px))"
+            zIndex: 60
           }}
           onClick={() => setIsOpen(false)}
         >
           {/* Modal Container */}
           <div 
-            className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 flex flex-col max-h-[72vh] sm:max-h-[82vh] overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 mb-1 sm:mb-0 select-text"
+            className="w-full max-w-sm sm:max-w-[420px] bg-white rounded-3xl shadow-2xl border border-slate-100 flex flex-col h-[580px] max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-200 select-text"
             style={{
               maxHeight: "min(72vh, calc(100dvh - 128px - env(safe-area-inset-bottom, 0px)))"
             }}

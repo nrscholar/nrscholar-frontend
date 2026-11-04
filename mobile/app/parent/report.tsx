@@ -144,8 +144,7 @@ export default function StudentReport() {
             <View style={styles.statBox}>
               <Text style={styles.statLabel}>TIME SPENT</Text>
               <Text style={styles.statNum}>
-                {reportData?.todayTimeMinutes ?? 0}
-                <Text style={styles.statLabel}>m</Text>
+                {reportData?.todayTimeFormatted || `${reportData?.todayTimeMinutes ?? 0}m`}
               </Text>
             </View>
             <View style={styles.statBox}>

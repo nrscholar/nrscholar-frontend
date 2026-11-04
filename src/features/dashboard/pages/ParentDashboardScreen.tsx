@@ -102,6 +102,7 @@ export default function ParentDashboardScreen() {
   const [weaknessSubjects, setWeaknessSubjects] = useState<any[]>([]);
   const [riskSubjects, setRiskSubjects] = useState<any[]>([]);
   const [todayTime, setTodayTime] = useState(0);
+  const [todayTimeFormatted, setTodayTimeFormatted] = useState<string>("0m");
   const [solvedToday, setSolvedToday] = useState(0);
   const [todayConfidenceScore, setTodayConfidenceScore] = useState(0);
 
@@ -155,7 +156,7 @@ export default function ParentDashboardScreen() {
     // to guarantee an instant, 0ms flicker-free transition
     if (!breakdownData) {
       setBreakdownData({
-        totalTimeFormatted: `${todayTime || 0}m`,
+        totalTimeFormatted: todayTimeFormatted || `${todayTime || 0}m`,
         totalSolved: solvedToday || 0,
         totalCorrect: Math.round(((solvedToday || 0) * (todayConfidenceScore || 0)) / 100),
         confidenceScore: todayConfidenceScore || 0,
@@ -175,6 +176,9 @@ export default function ParentDashboardScreen() {
       const json = await res.json();
       if (json.success && json.data) {
         setBreakdownData(json.data);
+        if (json.data.totalTimeFormatted) {
+          setTodayTimeFormatted(json.data.totalTimeFormatted);
+        }
       }
     } catch (err) {
       console.error("Failed to load breakdown", err);
@@ -259,14 +263,39 @@ export default function ParentDashboardScreen() {
           if (repJson.data.weaknessSubjects) setWeaknessSubjects(repJson.data.weaknessSubjects);
           if (repJson.data.riskSubjects) setRiskSubjects(repJson.data.riskSubjects);
           if (repJson.data.todayTimeMinutes !== undefined) setTodayTime(repJson.data.todayTimeMinutes);
+          if (repJson.data.todayTimeFormatted) setTodayTimeFormatted(repJson.data.todayTimeFormatted);
           if (repJson.data.todaySolved !== undefined) setSolvedToday(repJson.data.todaySolved);
           if (repJson.data.todayConfidenceScore !== undefined) setTodayConfidenceScore(repJson.data.todayConfidenceScore);
           if (repJson.data.weeklyTrend) setWeeklyTrend(repJson.data.weeklyTrend);
-          if (repJson.data.subjectBreakdown) setSubjectBreakdown(repJson.data.subjectBreakdown);
+          if (repJson.data.subjectBreakdown) {
+            const filteredBreakdown = (repJson.data.subjectBreakdown || []).filter((s: any) => {
+              if (typeof s.total_attempts === "number") return s.total_attempts > 0;
+              if (typeof s.totalAttempts === "number") return s.totalAttempts > 0;
+              const ansTotal = (s.correctAnswers ?? 0) + (s.wrongAnswers ?? 0);
+              if (ansTotal > 0) return true;
+              if (Array.isArray(s.timeline) && s.timeline.some((t: any) => (t.total ?? 0) > 0)) return true;
+              return false;
+            });
+            setSubjectBreakdown(filteredBreakdown);
+          }
           if (repJson.data.lastActivity) setLastActivity(repJson.data.lastActivity);
           setLastActivityDetails(repJson.data.lastActivityDetails || null);
-          if (repJson.data.top3SubjectsTrend) setTop3SubjectsTrend(repJson.data.top3SubjectsTrend);
-          if (repJson.data.allSubjectsTrend) setAllSubjectsTrend(repJson.data.allSubjectsTrend);
+          if (repJson.data.top3SubjectsTrend) {
+            const validTrend = (repJson.data.top3SubjectsTrend || []).filter((item: any) => {
+              if (item.timeline && item.timeline.some((t: any) => (t.total ?? 0) > 0)) return true;
+              if (typeof item.total_attempts === "number") return item.total_attempts > 0;
+              return false;
+            });
+            setTop3SubjectsTrend(validTrend);
+          }
+          if (repJson.data.allSubjectsTrend) {
+            const validAllTrend = (repJson.data.allSubjectsTrend || []).filter((item: any) => {
+              if (item.timeline && item.timeline.some((t: any) => (t.total ?? 0) > 0)) return true;
+              if (typeof item.total_attempts === "number") return item.total_attempts > 0;
+              return false;
+            });
+            setAllSubjectsTrend(validAllTrend);
+          }
         }
 
         // Silently prefetch today-breakdown in background for instant 0ms modal opening
@@ -279,6 +308,9 @@ export default function ParentDashboardScreen() {
           .then(json => {
             if (json.success && json.data) {
               setBreakdownData(json.data);
+              if (json.data.totalTimeFormatted) {
+                setTodayTimeFormatted(json.data.totalTimeFormatted);
+              }
             }
           })
           .catch(() => { });
@@ -487,9 +519,40 @@ export default function ParentDashboardScreen() {
   const formatTimeFormatted = (str: string) => {
     if (!str) return "";
     return str
-      .replace(/(\d+)\s*m\b/g, `$1 ${t("min_short", "m")}`)
-      .replace(/(\d+)\s*s\b/g, `$1 ${t("sec_short", "s")}`)
-      .replace(/(\d+)\s*h\b/g, `$1 ${t("hr_short", "h")}`);
+      .replace(/(\d+)\s*m\b/g, `$1${t("min_short", "m")}`)
+      .replace(/(\d+)\s*s\b/g, `$1${t("sec_short", "s")}`)
+      .replace(/(\d+)\s*h\b/g, `$1${t("hr_short", "h")}`);
+  };
+
+  const renderFormattedTimeDisplay = (timeStr: string) => {
+    if (!timeStr || timeStr === "0m" || timeStr === "0s") {
+      return (
+        <span>
+          0<span className="text-sm sm:text-base font-bold ml-0.5">{t("min_short", "m")}</span>
+        </span>
+      );
+    }
+    const regex = /(\d+)\s*([hms])/g;
+    const parts: { val: string; unit: string }[] = [];
+    let match;
+    while ((match = regex.exec(timeStr)) !== null) {
+      parts.push({ val: match[1], unit: match[2] });
+    }
+    if (parts.length === 0) {
+      return <span>{timeStr}</span>;
+    }
+    return (
+      <span className="inline-flex items-baseline justify-center flex-wrap gap-x-1.5 gap-y-0.5">
+        {parts.map((p, idx) => (
+          <span key={idx} className="inline-flex items-baseline">
+            <span>{p.val}</span>
+            <span className="text-sm sm:text-base font-bold ml-0.5">
+              {p.unit === "h" ? t("hr_short", "h") : p.unit === "m" ? t("min_short", "m") : t("sec_short", "s")}
+            </span>
+          </span>
+        ))}
+      </span>
+    );
   };
 
   const translateActivityTitle = (title: string) => {
@@ -763,60 +826,50 @@ export default function ParentDashboardScreen() {
   }
 
   const renderTop3SubjectsGraphCard = () => {
+    // Only consider subjects that have actual test attempts recorded
+    const validSubjectBreakdown = subjectBreakdown.filter((s: any) => {
+      if (typeof s.total_attempts === "number") return s.total_attempts > 0;
+      if (typeof s.totalAttempts === "number") return s.totalAttempts > 0;
+      return (s.correctAnswers ?? 0) + (s.wrongAnswers ?? 0) > 0 || (Array.isArray(s.timeline) && s.timeline.some((t: any) => (t.total ?? 0) > 0));
+    });
 
     const sourceSubjects: any[] = (allSubjectsTrend && allSubjectsTrend.length > 0)
-      ? allSubjectsTrend
+      ? allSubjectsTrend.filter((item: any) => validSubjectBreakdown.some(s => s.subject.toLowerCase() === item.subject.toLowerCase()))
       : ((top3SubjectsTrend && top3SubjectsTrend.length > 0)
-        ? top3SubjectsTrend
-        : (subjectBreakdown && subjectBreakdown.length > 0 ? subjectBreakdown : []));
+        ? top3SubjectsTrend.filter((item: any) => validSubjectBreakdown.some(s => s.subject.toLowerCase() === item.subject.toLowerCase()))
+        : validSubjectBreakdown);
 
-    let displaySubjects: { subject: string; accuracy: number; color: string; bg: string; timeline: any[] }[] = [];
-
-    if (sourceSubjects.length > 0) {
-      displaySubjects = sourceSubjects.map((item: any, idx: number) => {
-        const matchingSb = subjectBreakdown.find(s => s.subject.toLowerCase() === item.subject.toLowerCase());
-        const acc = matchingSb ? matchingSb.accuracy : (item.accuracy !== undefined ? item.accuracy : 0);
-        const colorEntry = getSubjectChartColor(item.subject, idx);
-        return {
-          subject: item.subject,
-          accuracy: acc,
-          color: colorEntry.color,
-          bg: colorEntry.bg,
-          timeline: item.timeline || []
-        };
-      });
-    } else {
-      // Dynamic fallback based on child standard and educational board
-      const chClass = (userData?.childClass || "").toLowerCase();
-      const chBoard = (userData?.childBoard || "").toLowerCase();
-      let defaultSubjNames = ["Mathematics", "English", "Hindi"];
-      if (chBoard.includes("gseb") || chBoard.includes("guj")) {
-        defaultSubjNames = ["Gujarati", "Mathematics"];
-      } else if (chClass.includes("1") || chClass.includes("2")) {
-        defaultSubjNames = ["Mathematics", "English", "Hindi"];
-      } else {
-        defaultSubjNames = ["Mathematics", "Science", "English", "Hindi"];
-      }
-
-      displaySubjects = defaultSubjNames.map((sName, idx) => {
-        const colorEntry = getSubjectChartColor(sName, idx);
-        return {
-          subject: sName,
-          accuracy: 0,
-          color: colorEntry.color,
-          bg: colorEntry.bg,
-          timeline: [
-            { day: "Sat", score: 0 },
-            { day: "Sun", score: 0 },
-            { day: "Mon", score: 0 },
-            { day: "Tue", score: 0 },
-            { day: "Wed", score: 0 },
-            { day: "Thu", score: 0 },
-            { day: "Fri", score: 0 }
-          ]
-        };
-      });
+    if (sourceSubjects.length === 0) {
+      return (
+        <div className="bg-white rounded-[22px] p-6 shadow-[0_4px_20px_rgba(20,23,121,0.04)] border border-slate-200/70 flex flex-col items-center justify-center text-center gap-2 font-sans my-1">
+          <div className="w-12 h-12 rounded-full bg-indigo-50 border border-indigo-100/80 flex items-center justify-center text-2xl mb-1">
+            📊
+          </div>
+          <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+            {t("subject_performance_label", "SUBJECT PERFORMANCE")}
+          </span>
+          <h3 className="text-base font-extrabold text-[#141779]">
+            {t("no_subject_activity_title", "No Subject Tests Attempted Yet")}
+          </h3>
+          <p className="text-xs text-slate-500 font-semibold max-w-xs leading-relaxed">
+            {t("no_subject_activity_desc", "Subject trends and performance graphs will appear once quizzes or chapter tests are attempted.")}
+          </p>
+        </div>
+      );
     }
+
+    const displaySubjects: { subject: string; accuracy: number; color: string; bg: string; timeline: any[] }[] = sourceSubjects.map((item: any, idx: number) => {
+      const matchingSb = validSubjectBreakdown.find(s => s.subject.toLowerCase() === item.subject.toLowerCase());
+      const acc = matchingSb ? matchingSb.accuracy : (item.accuracy !== undefined ? item.accuracy : 0);
+      const colorEntry = getSubjectChartColor(item.subject, idx);
+      return {
+        subject: item.subject,
+        accuracy: acc,
+        color: colorEntry.color,
+        bg: colorEntry.bg,
+        timeline: item.timeline || []
+      };
+    });
 
     let dayLabels: string[] = [];
     if (displaySubjects[0]?.timeline?.length > 0) {
@@ -1475,69 +1528,87 @@ export default function ParentDashboardScreen() {
           </div>
 
           {/* Today's Learning Metrics (Direct on card background with vertical divider) */}
-          <div className="py-1 flex items-center justify-between">
-            {/* Left Side: Today's Time */}
-            <div className="flex-1 flex flex-col items-center justify-center text-center">
-              <span className="text-2xl sm:text-3xl font-black text-[#006a62] leading-none mb-1">
-                {todayTime}<span className="text-sm sm:text-base font-bold ml-0.5">m</span>
-              </span>
-              <span className="text-xs font-black text-slate-500 uppercase tracking-wider text-center">
-                {t('todays_time', "TODAY'S TIME")}
-              </span>
-            </div>
+          {(() => {
+            const activeTodayTimeFormatted = breakdownData?.totalTimeFormatted || todayTimeFormatted || (todayTime > 0 ? `${todayTime}m` : "0m");
+            return (
+              <>
+                <div className="py-1 flex items-center justify-between">
+                  {/* Left Side: Today's Time */}
+                  <div className="flex-1 flex flex-col items-center justify-center text-center">
+                    <span className="text-2xl sm:text-3xl font-black text-[#006a62] leading-none mb-1">
+                      {renderFormattedTimeDisplay(activeTodayTimeFormatted)}
+                    </span>
+                    <span className="text-xs font-black text-slate-500 uppercase tracking-wider text-center">
+                      {t('todays_time', "TODAY'S TIME")}
+                    </span>
+                  </div>
 
-            {/* Subtle Vertical Divider */}
-            <div className="w-[1px] bg-slate-200/90 self-stretch my-1 shrink-0" />
+                  {/* Subtle Vertical Divider */}
+                  <div className="w-[1px] bg-slate-200/90 self-stretch my-1 shrink-0" />
 
-            {/* Right Side: Solved Today */}
-            <div className="flex-1 flex flex-col items-center justify-center text-center">
-              <span className="text-2xl sm:text-3xl font-black text-[#30007f] leading-none mb-1">
-                {solvedToday}
-              </span>
-              <span className="text-xs font-black text-slate-500 uppercase tracking-wider text-center">
-                {t('solved_today', 'SOLVED TODAY')}
-              </span>
-            </div>
-          </div>
+                  {/* Right Side: Solved Today */}
+                  <div className="flex-1 flex flex-col items-center justify-center text-center">
+                    <span className="text-2xl sm:text-3xl font-black text-[#30007f] leading-none mb-1">
+                      {solvedToday}
+                    </span>
+                    <span className="text-xs font-black text-slate-500 uppercase tracking-wider text-center">
+                      {t('solved_today', 'SOLVED TODAY')}
+                    </span>
+                  </div>
+                </div>
 
-          {/* Daily Confidence Score with Progress Bar & Details Affordance */}
-          <div className="w-full pt-1">
-            <div className="flex justify-between items-center mb-1.5">
-              <div className="flex items-center gap-2">
-                <span className="text-xs sm:text-[13px] font-black text-[#141779] tracking-wider uppercase">
-                  {t('daily_confidence_score', 'DAILY CONFIDENCE SCORE')}
-                </span>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    openBreakdown(e);
-                  }}
-                  className="text-xs font-bold text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-full transition-colors flex items-center gap-0.5 cursor-pointer"
-                >
-                  <span>{t('details', 'Details')}</span>
-                </button>
-              </div>
-              <span className="text-xs sm:text-sm font-black text-[#141779]">{todayConfidenceScore}%</span>
-            </div>
-            <div className="h-2 sm:h-2.5 bg-slate-100 rounded-full overflow-hidden mb-1.5 border border-slate-200/60">
-              <div
-                className="h-full bg-gradient-to-r from-[#141779] to-[#2d328f] rounded-full transition-all duration-1000 ease-out"
-                style={{ width: `${Math.min(100, Math.max(0, todayConfidenceScore))}%` }}
-              />
-            </div>
-            <p
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                openBreakdown(e);
-              }}
-              className="text-xs sm:text-[13px] text-slate-500 font-medium cursor-pointer hover:text-indigo-900 transition-colors truncate"
-            >
-              {t('confidence_score_sub', { attempts: solvedToday, defaultValue: `Based on today's correct answers (${solvedToday} attempts) • Tap for details` })}
-            </p>
-          </div>
+                {/* Daily Confidence Score with Progress Bar & Details Affordance */}
+                <div className="w-full pt-1">
+                  <div className="flex justify-between items-center mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs sm:text-[13px] font-black text-[#141779] tracking-wider uppercase">
+                        {t('daily_confidence_score', 'DAILY CONFIDENCE SCORE')}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          openBreakdown(e);
+                        }}
+                        className="text-xs font-bold text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-full transition-colors flex items-center gap-0.5 cursor-pointer"
+                      >
+                        <span>{t('details', 'Details')}</span>
+                      </button>
+                    </div>
+                    <span className="text-xs sm:text-sm font-black text-[#141779]">{todayConfidenceScore}%</span>
+                  </div>
+                  <div
+                    className="h-2 sm:h-2.5 bg-slate-100 rounded-full overflow-hidden mb-1.5 border border-slate-200/60"
+                    role="progressbar"
+                    aria-valuenow={todayConfidenceScore}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label={`Daily Confidence Score: ${todayConfidenceScore}%, Active Time: ${formatTimeFormatted(activeTodayTimeFormatted)}`}
+                  >
+                    <div
+                      className="h-full bg-gradient-to-r from-[#141779] to-[#2d328f] rounded-full transition-all duration-1000 ease-out"
+                      style={{ width: `${Math.min(100, Math.max(0, todayConfidenceScore))}%` }}
+                    />
+                  </div>
+                  <p
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      openBreakdown(e);
+                    }}
+                    className="text-xs sm:text-[13px] text-slate-500 font-medium cursor-pointer hover:text-indigo-900 transition-colors truncate"
+                  >
+                    {t('confidence_score_sub', {
+                      attempts: solvedToday,
+                      time: formatTimeFormatted(activeTodayTimeFormatted),
+                      defaultValue: `Based on today's correct answers (${solvedToday} attempts • ${formatTimeFormatted(activeTodayTimeFormatted)}) • Tap for details`
+                    })}
+                  </p>
+                </div>
+              </>
+            );
+          })()}
         </div>
 
         {/* 2. Cognitive Strengths, Weaknesses, and Risk Alerts (Screenshot 2 content) */}
@@ -2016,12 +2087,12 @@ export default function ParentDashboardScreen() {
             onTouchMove={(e) => {
               if (e.target === e.currentTarget) e.preventDefault();
             }}
-            className="fixed inset-0 bg-black/40 z-[9999] flex justify-center items-end sm:items-center p-3 pb-24 sm:p-5 backdrop-blur-sm animate-in fade-in duration-300 overscroll-contain select-none"
+            className="fixed inset-0 bg-black/40 z-[9999] flex justify-center items-center p-4 backdrop-blur-sm animate-in fade-in duration-300 overscroll-contain select-none"
             style={{ zIndex: 9999, overscrollBehavior: "contain", touchAction: "none" }}
           >
             <div
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#f7f9fb] w-full sm:w-[400px] max-w-full rounded-3xl max-h-[85vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-10 duration-300 overscroll-contain select-text mb-1 sm:mb-0"
+              className="bg-[#f7f9fb] w-full max-w-sm sm:max-w-[420px] h-[580px] max-h-[85vh] rounded-3xl flex flex-col shadow-2xl animate-in zoom-in-95 duration-200 overscroll-contain select-text overflow-hidden"
               style={{ zIndex: 10000, overscrollBehavior: "contain", touchAction: "pan-y" }}
             >
               <div className="flex justify-between items-center p-5 border-b border-gray-100 shrink-0">
@@ -2050,11 +2121,11 @@ export default function ParentDashboardScreen() {
               </div>
 
               <div
-                className="flex-1 overflow-y-auto p-5 pb-7 space-y-4 overscroll-contain"
+                className="flex-1 overflow-y-auto p-5 pb-7 space-y-4 overscroll-contain flex flex-col"
                 style={{ overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}
               >
                 {!hasEnoughData || subjectBreakdown.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center p-8 bg-slate-50 border border-slate-200/80 rounded-2xl text-center my-4">
+                  <div className="flex-1 flex flex-col items-center justify-center p-8 bg-slate-50 border border-slate-200/80 rounded-2xl text-center my-auto">
                     <span className="text-4xl mb-2">📊</span>
                     <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">{t("no_data_available", "No Data Available")}</h4>
                     <p className="text-xs text-slate-500 font-bold mt-2 leading-relaxed">
@@ -2062,7 +2133,7 @@ export default function ParentDashboardScreen() {
                     </p>
                   </div>
                 ) : modalType === "risks" && actualRiskSubjects.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center p-8 bg-emerald-50 border border-emerald-200 rounded-2xl text-center my-4">
+                  <div className="flex-1 flex flex-col items-center justify-center p-8 bg-emerald-50 border border-emerald-200 rounded-2xl text-center my-auto">
                     <span className="text-4xl mb-2">✅</span>
                     <h4 className="text-sm font-black text-emerald-900 uppercase tracking-wider">{t("no_risk_alerts", "No Risk Alerts")}</h4>
                     <p className="text-xs text-emerald-700 font-bold mt-2 leading-relaxed">
@@ -2070,7 +2141,7 @@ export default function ParentDashboardScreen() {
                     </p>
                   </div>
                 ) : modalType === "weaknesses" && actualWeakSubjects.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center p-8 bg-emerald-50 border border-emerald-200 rounded-2xl text-center my-4">
+                  <div className="flex-1 flex flex-col items-center justify-center p-8 bg-emerald-50 border border-emerald-200 rounded-2xl text-center my-auto">
                     <span className="text-4xl mb-2">🎉</span>
                     <h4 className="text-sm font-black text-emerald-900 uppercase tracking-wider">{t("no_weaknesses_title", "No Weaknesses Detected")}</h4>
                     <p className="text-xs text-emerald-700 font-bold mt-2 leading-relaxed">
@@ -2081,7 +2152,7 @@ export default function ParentDashboardScreen() {
                     </p>
                   </div>
                 ) : modalType === "strengths" && actualStrengthSubjects.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center p-8 bg-slate-50 border border-slate-200 rounded-2xl text-center my-4">
+                  <div className="flex-1 flex flex-col items-center justify-center p-8 bg-slate-50 border border-slate-200 rounded-2xl text-center my-auto">
                     <span className="text-4xl mb-2">💪</span>
                     <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">{t("no_strengths_title", "No Strengths Yet")}</h4>
                     <p className="text-xs text-slate-500 font-bold mt-2 leading-relaxed">
@@ -2459,17 +2530,16 @@ export default function ParentDashboardScreen() {
             onTouchMove={(e) => {
               if (e.target === e.currentTarget) e.preventDefault();
             }}
-            className="fixed inset-0 bg-[#0f114a]/75 backdrop-blur-md z-[99999] flex items-end sm:items-center justify-center p-3 pb-[92px] sm:p-4 font-sans animate-in fade-in duration-200 overscroll-contain select-none"
+            className="fixed inset-0 bg-[#0f114a]/75 backdrop-blur-md z-[99999] flex items-center justify-center p-4 font-sans animate-in fade-in duration-200 overscroll-contain select-none"
             style={{
               zIndex: 99999,
               overscrollBehavior: "contain",
-              touchAction: "none",
-              paddingBottom: "calc(5.75rem + env(safe-area-inset-bottom, 0px))"
+              touchAction: "none"
             }}
           >
             <div
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-[24px] sm:rounded-[32px] max-w-lg w-full max-h-[72vh] sm:max-h-[85vh] flex flex-col p-5 sm:p-6 shadow-2xl relative border border-white/60 overscroll-contain select-text mb-1 sm:mb-0"
+              className="bg-white rounded-[24px] sm:rounded-[32px] max-w-sm sm:max-w-[420px] w-full h-[580px] max-h-[85vh] flex flex-col p-5 sm:p-6 shadow-2xl relative border border-white/60 overscroll-contain select-text overflow-hidden"
               style={{
                 zIndex: 100000,
                 overscrollBehavior: "contain",

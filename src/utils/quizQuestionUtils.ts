@@ -10,7 +10,7 @@
 export interface IdentifiableQuestion {
   question_id?: string | number;
   questionId?: string | number;
-  _id?: string | number;
+  _id?: string;
   id?: string | number;
   question?: string;
   text?: string;
