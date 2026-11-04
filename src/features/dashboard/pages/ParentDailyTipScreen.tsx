@@ -691,6 +691,7 @@ export default function ParentDailyTipScreen() {
 
   // User data state
   const [childName, setChildName] = useState(cachedTip?.childName || "");
+  const [childGender, setChildGender] = useState<string>(cachedTip?.childGender || "");
   const [parentLevel, setParentLevel] = useState(cachedTip?.parentLevel || 1);
   const [childLevel, setChildLevel] = useState(cachedTip?.childLevel || 1);
   const [xp, setXp] = useState(cachedTip?.xp || 0);
@@ -723,6 +724,92 @@ export default function ParentDailyTipScreen() {
   const [deepAiPlans, setDeepAiPlans] = useState<Record<string, any>>({});
   const [selectedInsightModal, setSelectedInsightModal] = useState<PriorityInsight | null>(null);
   const [showGrowthScoreModal, setShowGrowthScoreModal] = useState<boolean>(false);
+
+  // Safe fallback helper that gracefully adapts before and after branch merge
+  const getMilestoneAvatarEmoji = (profile: any): string => {
+    if (typeof profile === "string") {
+      const g = profile.trim().toLowerCase();
+      if (g === "female" || g === "girl" || g === "f") return "👧";
+      if (g === "male" || g === "boy" || g === "m") return "👦";
+      return "👦";
+    }
+
+    const gender = (
+      profile?.gender || 
+      profile?.studentGender || 
+      profile?.childGender || 
+      profile?.sex ||
+      profile?.childSex ||
+      ""
+    ).toString().trim().toLowerCase();
+
+    if (gender === "female" || gender === "girl" || gender === "f") {
+      return "👧";
+    }
+    if (gender === "male" || gender === "boy" || gender === "m") {
+      return "👦";
+    }
+
+    // Default fallback before merge or if gender is not yet set
+    return "👦";
+  };
+
+  // Backward-compatible alias for existing callers
+  const getChildEmoji = (gender?: string): string => getMilestoneAvatarEmoji(gender);
+
+  const activeChildProfile = (() => {
+    try {
+      const ctx = getActiveUserContext();
+      if (userData) {
+        const found = (userData?.children || []).find((c: any) => c.childId === (ctx.childId || userData?.activeChildId)) || (userData?.children && userData?.children[0]);
+        if (found) {
+          return {
+            ...found,
+            gender: found.gender || found.studentGender || found.childGender || childGender || userData?.childGender || userData?.gender || ""
+          };
+        }
+      }
+      const stored = localStorage.getItem("userData") || localStorage.getItem("user");
+      if (stored) {
+        const u = JSON.parse(stored);
+        const found = (u?.children || []).find((c: any) => c.childId === (ctx.childId || u?.activeChildId)) || (u?.children && u?.children[0]);
+        if (found) {
+          return {
+            ...found,
+            gender: found.gender || found.studentGender || found.childGender || childGender || u?.childGender || u?.gender || ""
+          };
+        }
+        return {
+          gender: childGender || u?.childGender || u?.gender || u?.studentGender || ""
+        };
+      }
+    } catch {
+      // ignore
+    }
+    return { gender: childGender };
+  })();
+
+  const effectiveGender = (() => {
+    if (childGender) return childGender;
+    try {
+      const ctx = getActiveUserContext();
+      if (userData) {
+        const activeChild = (userData?.children || []).find((c: any) => c.childId === (ctx.childId || userData?.activeChildId)) || (userData?.children && userData?.children[0]);
+        const g = activeChild?.gender || activeChild?.childGender || activeChild?.sex || userData?.childGender || userData?.gender;
+        if (g) return g;
+      }
+      const stored = localStorage.getItem("userData") || localStorage.getItem("user");
+      if (stored) {
+        const u = JSON.parse(stored);
+        const activeChild = (u?.children || []).find((c: any) => c.childId === (ctx.childId || u?.activeChildId)) || (u?.children && u?.children[0]);
+        const g = activeChild?.gender || activeChild?.childGender || activeChild?.sex || u?.childGender || u?.gender;
+        if (g) return g;
+      }
+    } catch {
+      // ignore
+    }
+    return "";
+  })();
 
   // Prevent background scrolling while diagnostic insight modal or growth score modal is active
   useLockBodyScroll(Boolean(selectedInsightModal || showGrowthScoreModal));
@@ -938,6 +1025,9 @@ export default function ParentDailyTipScreen() {
             if (tJson.data.childName) {
               setChildName(tJson.data.childName);
             }
+            if (tJson.data.childGender || tJson.data.gender) {
+              setChildGender(tJson.data.childGender || tJson.data.gender);
+            }
             if (tJson.data.metrics) {
               setMetrics(tJson.data.metrics);
               nextCache.metrics = tJson.data.metrics;
@@ -992,6 +1082,12 @@ export default function ParentDailyTipScreen() {
               setXp(parentXpVal);
               setTotalStars(effectiveStars);
               setStreak(effectiveStreak);
+
+              const childGenderVal = activeChildObj.gender || activeChildObj.childGender || activeChildObj.sex || u.childGender || u.gender || "";
+              if (childGenderVal) {
+                setChildGender(childGenderVal);
+                nextCache.childGender = childGenderVal;
+              }
 
               const neuroSkills = activeChildObj.neuroplayCompletedSkills || u.neuroplayCompletedSkills || [];
               activeNeuroSkills = Array.isArray(neuroSkills) ? neuroSkills.length : 0;
@@ -2058,7 +2154,7 @@ export default function ParentDailyTipScreen() {
           {/* Child Milestones (First part) */}
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-1.5 px-1 pt-0.5">
-              <span className="text-sm">🧒</span>
+              <span className="text-sm">{getMilestoneAvatarEmoji(activeChildProfile)}</span>
               <h3 className="text-xs sm:text-[13px] font-black uppercase tracking-wider text-slate-700">
                 {t("child_milestones_title", { child: childName, defaultValue: `${childName}'s Milestones` })}
               </h3>

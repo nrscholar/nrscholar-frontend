@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   Globe, BookOpen, Flame, Lock, GraduationCap, Users, X, 
-  Settings, ArrowLeft, Trophy, Sparkles, CheckCircle2, Bell, Star
+  Settings, ArrowLeft, Trophy, CheckCircle2, Bell, Star
 } from "lucide-react";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
@@ -404,7 +404,7 @@ export default function ParentAchievementsScreen() {
             <div className="flex flex-col gap-0.5 z-10">
               <span className="text-[11px] font-black text-slate-400 tracking-wider uppercase">{t("parent_dashboard_upper", "PARENT DASHBOARD")}</span>
               <h2 className="text-lg sm:text-xl font-black text-[#141779] flex items-center gap-1.5">
-                {t("hi_user", { name: username, defaultValue: `Hi, ${username}` })} <Sparkles className="text-amber-500 animate-pulse" size={18} />
+                {t("hi_user", { name: username, defaultValue: `Hi, ${username}` })}
               </h2>
             </div>
             <div className="flex items-center justify-center bg-indigo-50 border border-indigo-100 w-11 h-11 sm:w-12 sm:h-12 rounded-xl text-[#141779] shadow-2xs shrink-0">
@@ -440,50 +440,40 @@ export default function ParentAchievementsScreen() {
             </div>
           </div>
 
-          {/* Bento Box 4: Next Milestone */}
+          {/* Milestone Progress Bar (Positioned Directly Below Badges & Rank) */}
           {nextMilestone ? (
-            <div className="col-span-2 bento-card rounded-2xl p-4 sm:p-5 flex flex-col gap-2.5 bg-white">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="relative flex h-2.5 w-2.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#006a62]"></span>
-                  </span>
-                  <span className="text-xs font-black text-[#141779]">{t("next_milestone_target", "Next Milestone Target")}</span>
+            <div className="col-span-2 w-full rounded-2xl border border-slate-100 bg-white p-4 shadow-xs">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-teal-500"></span>
+                  <span className="text-xs font-bold text-[#1E255E]">{t("next_milestone_target", "Next Milestone Target")}</span>
                 </div>
-                <span className="text-xs font-black text-[#006a62] bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full">
+                <span className="text-[11px] font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full">
                   {Math.round((nextMilestone.currentProgress / nextMilestone.totalRequired) * 100)}% {t("complete_caps", "Complete")}
                 </span>
               </div>
-              
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779] shrink-0">
-                  {React.createElement(ICON_MAP[nextMilestone.icon] || Lock, { size: 18 })}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-black text-[#141779] truncate">{translateAchText(nextMilestone.title)}</h4>
-                </div>
+
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-600 mb-1.5">
+                <span className="flex items-center gap-1 text-slate-700">
+                  <span>🔒</span> {translateAchText(nextMilestone.title)}
+                </span>
+                <span className="text-slate-400 font-medium">
+                  {nextMilestone.currentProgress} / {nextMilestone.totalRequired} {nextMilestone.progressUnit || ""}
+                </span>
               </div>
 
-              <div className="w-full">
-                <div className="flex justify-between items-center text-xs text-slate-700 font-bold mb-1">
-                  <span>{t("current_progress_label", "Current Progress")}</span>
-                  <span className="font-black text-[#141779]">
-                    {nextMilestone.currentProgress} / {nextMilestone.totalRequired} {nextMilestone.progressUnit || ""}
-                  </span>
-                </div>
-                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
-                  <div 
-                    className="h-full bg-gradient-to-r from-[#006a62] to-[#57fae9] rounded-full transition-all duration-1000 ease-out" 
-                    style={{ width: `${Math.min(100, (nextMilestone.currentProgress / nextMilestone.totalRequired) * 100)}%` }}
-                  />
-                </div>
+              {/* Progress Track & Fill */}
+              <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-teal-400 to-[#00A89F] transition-all duration-500 ease-out"
+                  style={{ width: `${Math.min(100, (nextMilestone.currentProgress / nextMilestone.totalRequired) * 100)}%` }}
+                />
               </div>
             </div>
           ) : (
-            <div className="col-span-2 bento-card rounded-2xl p-4 sm:p-5 flex items-center gap-3.5 bg-gradient-to-r from-teal-50/70 via-white to-indigo-50/70 border border-teal-200">
-              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#006a62] to-[#141779] text-amber-300 flex items-center justify-center shrink-0 shadow-sm">
-                <Trophy size={22} />
+            <div className="col-span-2 w-full rounded-2xl border border-teal-200 bg-gradient-to-r from-teal-50/70 via-white to-indigo-50/70 p-4 shadow-xs flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#006a62] to-[#141779] text-amber-300 flex items-center justify-center shrink-0 shadow-sm">
+                <Trophy size={20} />
               </div>
               <div className="flex-1 min-w-0">
                 <span className="text-[10px] font-black uppercase tracking-wider text-[#006a62] block">{t("all_milestones_unlocked", "All Milestones Unlocked")}</span>
