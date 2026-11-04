@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { BookOpen, Settings, PlayCircle, ArrowLeft, Lock, ChevronDown, Globe, Bell, Check } from "lucide-react";
+import { BookOpen, Settings, PlayCircle, ArrowLeft, Lock, ChevronDown, Globe, Bell, Check, CheckCircle2 } from "lucide-react";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
 import {
@@ -24,6 +24,11 @@ export default function ParentLessonsScreen() {
   const [xp, setXp] = useState(0);
   const [username, setUsername] = useState("Parent");
   const [profilePic, setProfilePic] = useState("");
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  useEffect(() => {
+    setIsExpanded(false);
+  }, [activeFilter]);
 
   const [contentLanguage, setContentLanguage] = useState<LessonsLanguage>(() => {
     try {
@@ -142,6 +147,19 @@ export default function ParentLessonsScreen() {
     }
   };
 
+  const filteredTopics = allTopics.filter(t => {
+    if (activeFilter === "Completed") {
+      return t.status === "completed";
+    }
+    if (activeFilter === "For You") {
+      return true;
+    }
+    const canon = getCanonicalCategory(t.originalCategory || t.category);
+    return canon === activeFilter || t.category === activeFilter;
+  });
+
+  const visibleTopics = isExpanded ? filteredTopics : filteredTopics.slice(0, 6);
+
   return (
     <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans pb-4 overflow-x-clip relative">
       <style>{`
@@ -163,7 +181,7 @@ export default function ParentLessonsScreen() {
       `}</style>
 
       {/* TopAppBar Navigation */}
-      <header className="sticky top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 rounded-b-[28px] shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex justify-between items-center px-4 sm:px-6 h-16 w-full">
+      <header className="sticky top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex justify-between items-center px-4 sm:px-6 h-16 w-full">
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
           <button 
             onClick={() => navigate(-1)} 
@@ -240,7 +258,7 @@ export default function ParentLessonsScreen() {
       <main className="flex-1 flex flex-col">
         {/* Growth Tracker */}
         <section className="px-5 sm:px-6 pt-2.5 sm:pt-3 pb-1">
-          <div className="glass-card rounded-2xl p-4 sm:p-4.5 glow-teal">
+          <div className="bg-white rounded-[24px] p-4 sm:p-5 shadow-[0_8px_24px_rgba(30,27,75,0.06)] border border-slate-100">
             <div className="flex justify-between items-end mb-2">
               <div>
                 <p className="text-xs font-bold text-[#006a62] uppercase tracking-wider">
@@ -310,21 +328,29 @@ export default function ParentLessonsScreen() {
                 ? PARENT_LESSONS_UI_TEXT.completedLessonsTitle[contentLanguage]
                 : PARENT_LESSONS_UI_TEXT.recommendedForYou[contentLanguage]}
             </h3>
-            <button 
-              onClick={() => navigate(`/parent/learning-library?lang=${encodeURIComponent(contentLanguage)}`)} 
-              className="text-[#006a62] font-bold text-xs sm:text-sm hover:underline cursor-pointer flex items-center gap-1 group"
-            >
-              <span>{PARENT_LESSONS_UI_TEXT.seeAll[contentLanguage]}</span>
-              <span className="group-hover:translate-x-0.5 transition-transform">→</span>
-            </button>
+            {filteredTopics.length > 6 && (
+              <button 
+                onClick={() => setIsExpanded(prev => !prev)} 
+                className="text-[#006a62] font-bold text-xs sm:text-sm hover:underline cursor-pointer flex items-center gap-1 group select-none"
+              >
+                <span>
+                  {isExpanded
+                    ? (contentLanguage === "hi" ? "कम देखें" : contentLanguage === "gu" ? "ઓછું જુઓ" : "Show Less")
+                    : PARENT_LESSONS_UI_TEXT.seeAll[contentLanguage]}
+                </span>
+                <span className={`transition-transform ${isExpanded ? 'group-hover:-translate-y-0.5' : 'group-hover:translate-x-0.5'}`}>
+                  {isExpanded ? '↑' : '→'}
+                </span>
+              </button>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-3 sm:gap-4 px-5 sm:px-6 pb-4">
             {(() => {
               if (loading) {
                 return Array.from({ length: 4 }).map((_, idx) => (
-                  <div key={idx} className="w-full h-full flex flex-col rounded-2xl overflow-hidden glass-card border border-white/40 shadow-sm">
-                    <div className="relative h-28 md:h-36 animate-skeleton"></div>
-                    <div className="p-3 bg-white/60 backdrop-blur-md flex-1 space-y-2">
+                  <div key={idx} className="w-full h-full flex flex-col rounded-[24px] overflow-hidden bg-white border border-slate-100 shadow-[0_4px_20px_rgba(30,27,75,0.06)]">
+                    <div className="relative h-28 sm:h-32 bg-slate-100 animate-pulse"></div>
+                    <div className="p-3 bg-white flex-1 space-y-2 border-t border-slate-100">
                       <div className="h-2.5 w-16 animate-skeleton rounded"></div>
                       <div className="h-4 w-3/4 animate-skeleton rounded"></div>
                     </div>
@@ -332,19 +358,7 @@ export default function ParentLessonsScreen() {
                 ));
               }
 
-              const filtered = allTopics.filter(t => {
-                if (activeFilter === "Completed") {
-                  return t.status === "completed";
-                }
-                if (activeFilter === "For You") {
-                  // Keep all lessons visible in "For You" catalog, including completed ones
-                  return true;
-                }
-                const canon = getCanonicalCategory(t.originalCategory || t.category);
-                return canon === activeFilter || t.category === activeFilter;
-              });
-
-              if (filtered.length === 0) {
+              if (filteredTopics.length === 0) {
                 return (
                   <div className="col-span-2 w-full py-12 px-6 text-center flex flex-col items-center justify-center bg-white/50 border border-slate-200/50 rounded-3xl shadow-sm backdrop-blur-sm">
                     <BookOpen size={48} className="text-[#141779]/30 mb-4 animate-pulse" />
@@ -370,7 +384,7 @@ export default function ParentLessonsScreen() {
                 );
               }
 
-              return filtered.map((topic) => {
+              return visibleTopics.map((topic) => {
                 const isCompleted = topic.status === "completed";
                 const isLocked = topic.status === "locked";
                 const localizedTitle = getLocalizedTopicTitle(topic.topicId, topic.title, contentLanguage);
@@ -380,60 +394,70 @@ export default function ParentLessonsScreen() {
                   <div
                     key={topic.topicId}
                     onClick={() => !isLocked && navigate(`/parent/lessons/player?id=${topic.topicId}&lang=${encodeURIComponent(contentLanguage)}`)}
-                    className={`w-full h-full flex flex-col rounded-2xl overflow-hidden glass-card group transition-all ${isLocked ? 'opacity-70 grayscale' : 'cursor-pointer hover:shadow-xl active:scale-[0.98]'}`}
+                    className={`bg-white rounded-[24px] overflow-hidden shadow-[0_4px_20px_rgba(30,27,75,0.06)] border border-slate-100 flex flex-col justify-between group transition-all relative ${
+                      isLocked ? "opacity-90" : "cursor-pointer hover:shadow-xl hover:-translate-y-1 active:scale-[0.98]"
+                    }`}
                   >
-                    <div className="relative h-28 md:h-36 overflow-hidden bg-gray-200">
+                    <div className="relative h-28 sm:h-32 overflow-hidden bg-slate-900">
                       <img
                         alt={localizedTitle}
                         src={topic.imageUrl}
-                        className={`w-full h-full object-cover ${!isLocked ? 'group-hover:scale-110' : ''} transition-transform duration-700`}
+                        className={`w-full h-full object-cover transition-transform duration-700 ${!isLocked ? 'group-hover:scale-110' : 'brightness-75'}`}
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/30 to-transparent"></div>
                       {isCompleted ? (
                         <div 
-                          className="absolute top-2 left-2 w-6 h-6 rounded-full bg-[#006a62]/95 backdrop-blur-md text-white shadow-sm border border-white/30 flex items-center justify-center"
+                          className="absolute top-2 left-2 bg-[#006a62]/90 backdrop-blur-md text-white px-2 py-0.5 rounded-full text-[9px] font-black shadow-sm border border-white/20 flex items-center gap-1 z-10"
                           title={PARENT_LESSONS_UI_TEXT.completedBadge[contentLanguage]}
                           aria-label={PARENT_LESSONS_UI_TEXT.completedBadge[contentLanguage]}
                         >
-                          <Check size={14} strokeWidth={3} className="text-white" />
+                          <CheckCircle2 size={10} className="text-[#57fae9]" />
+                          <span>+0 XP ({contentLanguage === "hi" ? "पूर्ण" : contentLanguage === "gu" ? "પૂર્ણ" : "Completed"})</span>
                         </div>
                       ) : (
-                        <div className="absolute top-2 left-2 bg-[#141779] text-white px-2.5 py-0.5 rounded-full text-xs font-black shadow-sm border border-white/20">+{topic.xp || 30} XP</div>
+                        <div className="absolute top-2 left-2 bg-[#141779] backdrop-blur-md text-white px-2 py-0.5 rounded-full text-[9px] font-black shadow-sm border border-white/20 z-10">
+                          +{topic.xp || 30} XP
+                        </div>
                       )}
-                      <div className="absolute bottom-2 right-2 bg-black/40 backdrop-blur-md text-white px-2 py-0.5 rounded-full text-xs font-bold">
+                      <div className="absolute bottom-2 right-2 bg-black/50 backdrop-blur-md text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-white/10 z-10">
                         {PARENT_LESSONS_UI_TEXT.minuteDuration(topic.duration || 3, contentLanguage)}
                       </div>
-                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        {!isLocked && <PlayCircle size={48} className="text-white drop-shadow-lg" />}
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-10">
+                        {!isLocked && <PlayCircle size={36} className="text-white drop-shadow-lg" />}
                       </div>
                       {isLocked && (
                         <div 
-                          className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[2px]"
+                          className="absolute inset-0 bg-slate-950/75 backdrop-blur-[3px] flex flex-col items-center justify-center text-white z-20 gap-1 p-2 text-center"
                           title={PARENT_LESSONS_UI_TEXT.lockedMessage[contentLanguage]}
                           aria-label={PARENT_LESSONS_UI_TEXT.lockedMessage[contentLanguage]}
                         >
-                          <Lock size={32} className="text-white drop-shadow-md" />
+                          <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-xl">
+                            <Lock size={15} />
+                          </div>
+                          <span className="text-[9px] font-extrabold text-slate-300 tracking-wider uppercase">
+                            {getLocalizedCTA("locked", contentLanguage)}
+                          </span>
                         </div>
                       )}
                     </div>
-                    <div className="p-3 bg-white/50 backdrop-blur-md flex-1 flex flex-col justify-between">
+                    <div className="p-3 bg-white backdrop-blur-md flex-1 flex flex-col justify-between text-left border-t border-slate-100">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[#006a62] text-xs font-black uppercase tracking-wider">{localizedCategory}</span>
+                          <span className="text-[9px] font-black text-[#006a62] tracking-widest uppercase block mb-0.5">{localizedCategory}</span>
                         </div>
-                        <h4 className="text-sm sm:text-base font-black text-[#141779] leading-snug pt-1 pb-1">{localizedTitle}</h4>
+                        <h4 className="text-[11px] sm:text-xs font-bold text-[#141779] leading-snug line-clamp-2">{localizedTitle}</h4>
                       </div>
-                      <div className="pt-2 border-t border-slate-100/80 flex items-center justify-between mt-1">
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between mt-1.5">
                         {isCompleted ? (
-                          <span className="text-xs font-black text-[#006a62] flex items-center gap-1 group-hover:underline">
+                          <span className="text-[11px] font-black text-[#006a62] flex items-center gap-1 group-hover:underline">
                             {getLocalizedCTA("review_lesson", contentLanguage)} →
                           </span>
                         ) : isLocked ? (
-                          <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
+                          <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
                             {getLocalizedCTA("locked", contentLanguage)}
                           </span>
                         ) : (
-                          <span className="text-xs font-black text-[#141779] group-hover:text-[#006a62] flex items-center gap-1 transition-colors">
+                          <span className="text-[11px] font-black text-[#141779] group-hover:text-[#006a62] flex items-center gap-1 transition-colors">
                             {getLocalizedCTA("start_lesson", contentLanguage)} →
                           </span>
                         )}

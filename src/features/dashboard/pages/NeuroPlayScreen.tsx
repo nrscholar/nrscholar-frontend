@@ -1035,9 +1035,9 @@ export default function NeuroPlayScreen() {
                     </p>
 
                     {/* Key Takeaway Highlight Banner */}
-                    <div className="bg-gradient-to-r from-[#141779] via-[#1e1b4b] to-[#312e81] text-white rounded-2xl p-4 shadow-md flex items-center gap-3 border border-indigo-300/20">
-                      <Sparkles size={22} className="text-[#57fae9] shrink-0 animate-pulse" />
-                      <p className="text-xs sm:text-sm font-extrabold leading-snug text-white">
+                    <div className="bg-gradient-to-r from-indigo-50/90 via-blue-50/50 to-indigo-50/80 border border-indigo-200/80 rounded-xl p-4 flex items-center gap-3">
+                      <Sparkles size={22} className="text-[#141779] shrink-0" />
+                      <p className="text-xs sm:text-sm font-extrabold leading-snug text-[#141779]">
                         {formatRichText(getText(currentCard.key_takeaway))}
                       </p>
                     </div>
