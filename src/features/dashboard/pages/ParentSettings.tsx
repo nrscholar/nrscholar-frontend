@@ -305,6 +305,7 @@ export default function ParentSettings() {
   const [childIdToDelete, setChildIdToDelete] = useState<string | null>(null);
   const [regenConfirmOpen, setRegenConfirmOpen] = useState(false);
   const [childIdToRegen, setChildIdToRegen] = useState<string | null>(null);
+  const [isRegeneratingCode, setIsRegeneratingCode] = useState(false);
 
   // Secondary Parent / Co-Parent States
   const [secondaryParents, setSecondaryParents] = useState<any[]>([]);
@@ -935,6 +936,64 @@ export default function ParentSettings() {
     }
     setChildIdToDelete(childId);
     setDeleteConfirmOpen(true);
+  };
+
+  const requestRegenCode = (childId: string) => {
+    if (isCoParent) {
+      showNotificationToast({
+        title: "Permission Denied",
+        message: "Only the Primary Parent can regenerate a child's device code.",
+        type: "warning"
+      });
+      return;
+    }
+    setChildIdToRegen(childId);
+    setRegenConfirmOpen(true);
+  };
+
+  const confirmRegenCode = async () => {
+    if (!childIdToRegen || isRegeneratingCode) return;
+
+    setIsRegeneratingCode(true);
+    try {
+      const res = await apiFetch("/api/users/child-code/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ childId: childIdToRegen })
+      });
+      const json = await res.json();
+      if (!json.success) {
+        throw new Error(json.detail || json.message || "Failed to regenerate device code");
+      }
+
+      const updatedUser = json.user;
+      if (updatedUser) {
+        localStorage.setItem("userData", JSON.stringify(updatedUser));
+        setUser(updatedUser);
+        const updatedChild = (updatedUser.children || []).find((child: any) => child.childId === childIdToRegen);
+        if (childIdToRegen === "child_2") {
+          setChild2Code(updatedChild?.uniqueCode || json.uniqueCode || "");
+        }
+        window.dispatchEvent(new Event("userDataUpdated"));
+      }
+
+      showNotificationToast({
+        title: "Device Code Regenerated",
+        message: "The child's previous device code no longer works.",
+        type: "success"
+      });
+      setRegenConfirmOpen(false);
+      setChildIdToRegen(null);
+    } catch (error: any) {
+      console.error("Failed to regenerate device code", error);
+      showNotificationToast({
+        title: "Regeneration Failed",
+        message: error.message || "Failed to regenerate the device code.",
+        type: "error"
+      });
+    } finally {
+      setIsRegeneratingCode(false);
+    }
   };
 
   const confirmDeleteChild = async () => {
@@ -1829,6 +1888,7 @@ export default function ParentSettings() {
           setChildIdToRegen(null);
         }}
         onConfirm={confirmRegenCode}
+        loading={isRegeneratingCode}
         title={t("regen_code_title", "Regenerate Device Code")}
         message={t("regen_code_msg", "Are you sure you want to regenerate a new random device code for this child? The old code will stop working immediately.")}
         confirmText={t("yes_regenerate", "Yes, Regenerate")}
