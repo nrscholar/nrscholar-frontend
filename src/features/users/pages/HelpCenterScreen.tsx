@@ -50,7 +50,7 @@ export default function HelpCenterScreen() {
         <div className="w-8" />
       </header>
 
-      <main className="px-6 pt-8 pb-24 flex flex-col gap-6">
+      <main className="px-6 pt-8 pb-4 flex flex-col gap-6">
         <div className="text-center mb-4">
           <h2 className="text-2xl font-bold text-[#141779] mb-2">{t("how_can_we_help")}</h2>
           <p className="text-[#767683] text-sm">{t("browse_faqs")}</p>

@@ -1,9 +1,11 @@
 import { NRScholarNavBrand } from "../../../components/NRScholarNavBrand";
 import { AlertCircle, ArrowLeft, CheckCircle, Delete } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useLayoutEffect } from "react";
+import { formatMobileDisplay, parseMobileInput } from "../../../utils/mobileFormatter";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
+import { showInteractiveNotification } from "../../../services/pushNotificationService";
 
 export default function ParentalGateScreen() {
   const navigate = useNavigate();
@@ -20,6 +22,16 @@ export default function ParentalGateScreen() {
   const [forgotMobile, setForgotMobile] = useState("");
   const [forgotPassword, setForgotPassword] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
+  const forgotMobileInputRef = useRef<HTMLInputElement | null>(null);
+  const nextForgotMobileCursorRef = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    if (nextForgotMobileCursorRef.current !== null && forgotMobileInputRef.current) {
+      const pos = nextForgotMobileCursorRef.current;
+      forgotMobileInputRef.current.setSelectionRange(pos, pos);
+      nextForgotMobileCursorRef.current = null;
+    }
+  });
 
   useEffect(() => {
     async function checkPinStatus() {
@@ -102,6 +114,12 @@ export default function ParentalGateScreen() {
       if (json.success) {
         sessionStorage.setItem("parentPinVerified", "true");
         setSuccessMsg("Access Granted");
+        showInteractiveNotification(
+          "Parent Access Granted 🔐",
+          "Parent PIN verified successfully! Welcome to Parent Zone.",
+          targetPath,
+          "success"
+        );
         setTimeout(() => navigate(targetPath, { replace: true }), 600);
       } else {
         const errorDetail = typeof json.detail === 'string' ? json.detail : (json.detail ? JSON.stringify(json.detail) : "");
@@ -136,6 +154,12 @@ export default function ParentalGateScreen() {
           }
         } catch {}
         setSuccessMsg("PIN Set Successfully!");
+        showInteractiveNotification(
+          "Security PIN Created 🛡️",
+          "Parent security PIN set successfully!",
+          targetPath,
+          "success"
+        );
         setTimeout(() => navigate(targetPath, { replace: true }), 1000);
       } else {
         const errorDetail = typeof json.detail === 'string' ? json.detail : (json.detail ? JSON.stringify(json.detail) : "");
@@ -170,6 +194,12 @@ export default function ParentalGateScreen() {
           }
         } catch {}
         setSuccessMsg("PIN Reset Successfully!");
+        showInteractiveNotification(
+          "PIN Reset Successful 🛡️",
+          "Your parent PIN has been reset successfully!",
+          targetPath,
+          "success"
+        );
         setTimeout(() => navigate(targetPath, { replace: true }), 1000);
       } else {
         const errorDetail = typeof json.detail === 'string' ? json.detail : (json.detail ? JSON.stringify(json.detail) : "");
@@ -183,10 +213,13 @@ export default function ParentalGateScreen() {
   };
 
   const handleMobileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.replace(/\D/g, ""); // Allow only digits
-    if (val.length <= 10) {
-      setForgotMobile(val);
-    }
+    const { clean, nextCursor } = parseMobileInput(
+      e.target.value,
+      forgotMobile,
+      e.target.selectionStart ?? e.target.value.length
+    );
+    setForgotMobile(clean);
+    nextForgotMobileCursorRef.current = nextCursor;
   };
 
   const handleVerifyCredentials = async (e?: React.FormEvent | React.KeyboardEvent) => {
@@ -412,14 +445,14 @@ export default function ParentalGateScreen() {
             
             <div className="flex flex-col gap-4">
               <input
+                ref={forgotMobileInputRef}
                 type="tel"
-                placeholder={t('mobile_number_placeholder', 'Mobile Number')}
-                value={forgotMobile}
+                placeholder={t('mobile_number_placeholder', 'Enter mobile number')}
+                value={formatMobileDisplay(forgotMobile)}
                 onChange={handleMobileChange}
                 onKeyDown={handleKeyDown}
                 autoComplete="off"
-                maxLength={10}
-                pattern="[0-9]{10}"
+                maxLength={11}
                 title="Mobile number must be exactly 10 digits"
                 readOnly
                 onFocus={(e) => e.target.removeAttribute('readOnly')}

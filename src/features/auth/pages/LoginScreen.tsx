@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useLayoutEffect } from "react";
+import { formatMobileDisplay, parseMobileInput } from "../../../utils/mobileFormatter";
+import { clearSignupState } from "../signupState";
 import { useNavigate } from "react-router-dom";
 import { Phone, Lock, Eye, EyeOff, ArrowRight, ShieldCheck } from "lucide-react";
 import { NRScholarLogo } from "../../../components/NRScholarLogo";
 import { motion } from "framer-motion";
 import { apiFetch } from "../../../api";
+import { showInteractiveNotification, registerPushNotificationToken } from "../../../services/pushNotificationService";
 
 const formatPhoneNumber = (value: string): string => {
   const cleanDigits = value.replace(/\D/g, '').slice(0, 10);
@@ -19,6 +22,41 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const mobileInputRef = useRef<HTMLInputElement>(null);
+  const nextCursorPosRef = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    if (nextCursorPosRef.current !== null && mobileInputRef.current) {
+      const pos = nextCursorPosRef.current;
+      mobileInputRef.current.setSelectionRange(pos, pos);
+      nextCursorPosRef.current = null;
+    }
+  });
+
+  // When user lands on Login screen, reset any previous signup session data and redirect if already authenticated
+  useEffect(() => {
+    const token = localStorage.getItem("userToken");
+    if (token) {
+      const storedUser = (() => {
+        try {
+          const raw = localStorage.getItem("userData");
+          return raw ? JSON.parse(raw) : null;
+        } catch { return null; }
+      })();
+      const isCoParentUser = Boolean(
+        storedUser?.isSecondaryParent ||
+        storedUser?.isCoParent ||
+        storedUser?.role === "co_parent" ||
+        storedUser?.role === "secondary_parent" ||
+        storedUser?.primary_parent_id
+      );
+      const isParent = localStorage.getItem("deviceRole") === "parent" || isCoParentUser;
+      const target = isParent ? "/parent/dashboard" : "/home";
+      navigate(target, { replace: true });
+      return;
+    }
+    clearSignupState();
+  }, [navigate]);
 
   const handleMobileKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Backspace") {
@@ -109,7 +147,27 @@ export default function LoginScreen() {
         }
 
         localStorage.setItem("deviceRole", deviceRole);
-        navigate(targetRoute);
+
+        // Immediate Post-Login Success Toast & Push Notification Dispatcher
+        const isParent = Boolean(loginAsParent || isCoParentUser || targetRoute.startsWith("/parent"));
+        const parentName = data.data.user?.fullName || "Superparent";
+        const childName = data.data.user?.childName || "Scholar";
+        const toastTitle = isParent ? "Parent Login Successful 🛡️" : "Login Successful! 🎉";
+        const toastMessage = isParent
+          ? `Welcome back, ${parentName}! Accessing parent dashboard.`
+          : `Login successful! Welcome back, ${childName}! 🚀`;
+
+        showInteractiveNotification(
+          toastTitle,
+          toastMessage,
+          targetRoute,
+          "success"
+        );
+
+        // Register push notification token in background
+        registerPushNotificationToken().catch(() => {});
+
+        navigate(targetRoute, { replace: true });
       } else {
         setErrorMsg(data.detail || data.message || "Invalid mobile number or password.");
       }
@@ -161,15 +219,19 @@ export default function LoginScreen() {
             <div className="relative flex items-center">
               <Phone size={20} className="text-slate-400 absolute left-4 pointer-events-none" />
               <input
+                ref={mobileInputRef}
                 type="tel"
-                placeholder="Enter your mobile number"
-                value={mobile}
-                maxLength={13}
-                onKeyDown={handleMobileKeyDown}
+                placeholder="Enter mobile number"
+                value={formatMobileDisplay(mobile)}
+                maxLength={11}
                 onChange={(e) => {
-                  const formatted = formatPhoneNumber(e.target.value);
-                  setMobile(formatted);
-                  if (errorMsg) setErrorMsg("");
+                  const { clean, nextCursor } = parseMobileInput(
+                    e.target.value,
+                    mobile,
+                    e.target.selectionStart ?? e.target.value.length
+                  );
+                  setMobile(clean);
+                  nextCursorPosRef.current = nextCursor;
                 }}
                 className="w-full h-14 bg-slate-50 rounded-2xl pl-12 pr-4 text-sm font-bold text-[#141779] border border-slate-200/90 focus:outline-none focus:ring-2 focus:ring-[#141779]/20 focus:border-[#141779] focus:bg-white transition-all placeholder:text-slate-400 placeholder:font-medium"
                 required
@@ -265,7 +327,7 @@ export default function LoginScreen() {
 
             <div className="flex justify-center items-center gap-1">
               <span className="text-xs text-[#767683] font-semibold">Don't have an account? </span>
-              <button type="button" onClick={() => navigate("/signup-step1")} className="text-xs font-black text-[#141779] hover:underline">
+              <button type="button" onClick={() => { clearSignupState(); navigate("/signup-step1"); }} className="text-xs font-black text-[#141779] hover:underline">
                 Sign up
               </button>
             </div>

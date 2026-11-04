@@ -310,7 +310,7 @@
         "forgot_pin_q": "Forgot PIN?",
         "verify_identity": "Verify Identity",
         "verify_credentials_desc": "Enter your account credentials to reset the Parent PIN.",
-        "mobile_number_placeholder": "Mobile Number",
+        "mobile_number_placeholder": "Enter mobile number",
         "password_placeholder": "Password",
         "verify_btn": "Verify",
         "verifying": "Verifying...",

@@ -6,30 +6,9 @@ import { useTranslation } from "react-i18next";
 import StreakModal from "../../../components/StreakModal";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 import { startNavigationProgress } from "../../../components/NavigationProgressBar";
+import { useUserStatsStore, getLevelInfo } from "../../../services/userStatsStore";
 
-// Math-aligned level thresholds matching backend
-function getLevelInfo(xp: number) {
-  if (xp < 100) {
-    return { level: 1, percent: Math.round((xp / 100) * 100), nextXp: 100, currentXp: 0 };
-  }
-  if (xp < 250) {
-    return { level: 2, percent: Math.round(((xp - 100) / 150) * 100), nextXp: 250, currentXp: 100 };
-  }
-  
-  let lvl = 3;
-  while (true) {
-    const currentThreshold = Math.floor(250 * Math.pow(1.5, lvl - 3));
-    const nextThreshold = Math.floor(250 * Math.pow(1.5, (lvl + 1) - 3));
-    if (xp >= nextThreshold) {
-      lvl++;
-    } else {
-      const range = nextThreshold - currentThreshold;
-      const progress = xp - currentThreshold;
-      const percent = Math.min(100, Math.max(0, Math.round((progress / range) * 100)));
-      return { level: lvl, percent, nextXp: nextThreshold, currentXp: currentThreshold };
-    }
-  }
-}
+// Level thresholds handled authoritatively by useUserStatsStore
 
 export default function ProfileScreen() {
   const rawNavigate = useNavigate();
@@ -43,6 +22,17 @@ export default function ProfileScreen() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [showStreakModal, setShowStreakModal] = useState(false);
   const [retentionStreak, setRetentionStreak] = useState<any>(null);
+  const { 
+    level: storeLevel, 
+    levelInfo: storeLevelInfo, 
+    xp: storeXp, 
+    coins: storeCoins, 
+    streakDays: storeStreak, 
+    childName: storeChildName, 
+    childPhoto: storeChildPhoto,
+    badges: storeBadges,
+    syncFromUserData
+  } = useUserStatsStore();
 
   const [user, setUser] = useState<any>(() => {
     const stored = localStorage.getItem("userData");
@@ -67,6 +57,7 @@ export default function ProfileScreen() {
         const response = await apiFetch("/api/users/me", {});
         const data = await response.json();
         if (data.success) {
+          syncFromUserData(data.data.user);
           setUser(data.data.user);
           localStorage.setItem("userData", JSON.stringify(data.data.user));
         }
@@ -136,12 +127,12 @@ export default function ProfileScreen() {
     await logoutUser(navigate);
   };
 
-  const xp = user.xp || 0;
-  const streakDays = user.streakDays || 0;
-  const coins = user.coins || 0;
-  const badges = user.badges || [];
+  const xp = user.xp || storeXp || 0;
+  const streakDays = user.streakDays || storeStreak || 0;
+  const coins = user.coins || storeCoins || 0;
+  const badges = user.badges || storeBadges || [];
   const levelInfo = getLevelInfo(xp);
-  const userLevel = user.level || levelInfo.level;
+  const userLevel = levelInfo.level;
   const xpNeeded = Math.max(0, levelInfo.nextXp - xp);
 
   const hasMathAce = badges.some((b: any) => typeof b === 'string' ? b.toLowerCase().includes("math") : b?.name?.toLowerCase().includes("math"));
@@ -152,7 +143,7 @@ export default function ProfileScreen() {
   const currentLang = (i18n?.language || localStorage.getItem('i18nextLng') || 'en').slice(0, 2);
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-slate-900 font-sans pb-28 max-w-md mx-auto relative overflow-x-clip selection:bg-[#141779] selection:text-white">
+    <div className="min-h-screen bg-[#f7f9fb] text-slate-900 font-sans pb-4 max-w-md mx-auto relative overflow-x-clip selection:bg-[#141779] selection:text-white">
       
       {/* TOP APP BAR (Sticky Standard Header - 100% Unified) */}
       <header className="sticky top-0 left-0 right-0 max-w-md mx-auto z-50 flex items-center justify-between px-4 pt-3 pb-3 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-[0_4px_16px_rgba(20,23,121,0.05)] gap-2">

@@ -66,7 +66,7 @@ export default function StreakModal({
           onClick={(e) => {
             if (e.target === e.currentTarget) onClose();
           }}
-          className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-white/40 backdrop-blur-md transition-all duration-300 overscroll-contain select-none"
+          className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md transition-all duration-300 overscroll-contain select-none"
           style={{ overscrollBehavior: "contain", touchAction: "none" }}
         >
           <motion.div

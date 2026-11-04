@@ -103,7 +103,7 @@ export default function NotificationsScreen() {
         </div>
       </header>
 
-      <main className="px-4 sm:px-5 pt-3.5 sm:pt-4 pb-24 flex flex-col gap-3.5 sm:gap-4 max-w-lg mx-auto w-full">
+      <main className="px-4 sm:px-5 pt-3.5 sm:pt-4 pb-6 flex flex-col gap-3.5 sm:gap-4 max-w-lg mx-auto w-full">
         {loading ? (
           <div className="relative pl-1 flex flex-col gap-3.5 sm:gap-4">
             <div className="absolute left-[22px] top-0 bottom-0 border-l-2 border-dashed border-[rgba(20,23,121,0.2)] z-0" />

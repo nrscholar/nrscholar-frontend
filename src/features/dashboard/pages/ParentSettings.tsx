@@ -1,6 +1,7 @@
 import { AnimatePresence, motion, Variants } from "framer-motion";
 import { ArrowLeft, Bell, BookOpen, Camera, Save, ShieldCheck, Timer, Trash2, UserRound, GraduationCap, Cake, ChevronDown, Check, Plus, Globe, LogOut, Edit3, RefreshCw, X, Lock, Sparkles, Flame, Trophy, AlertTriangle, Phone, Eye, EyeOff, Users, CheckCircle2, User, Circle, Shield, Loader2, Settings } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useLayoutEffect } from "react";
+import { formatMobileDisplay, parseMobileInput } from "../../../utils/mobileFormatter";
 import { useNavigate } from "react-router-dom";
 import { apiFetch, clearAuthSession, logoutUser, uploadProfilePhoto } from "../../../api";
 import { useTranslation } from "react-i18next";
@@ -192,6 +193,16 @@ export default function ParentSettings() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const coParentMobileInputRef = useRef<HTMLInputElement | null>(null);
+  const nextCoParentCursorRef = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    if (nextCoParentCursorRef.current !== null && coParentMobileInputRef.current) {
+      const pos = nextCoParentCursorRef.current;
+      coParentMobileInputRef.current.setSelectionRange(pos, pos);
+      nextCoParentCursorRef.current = null;
+    }
+  });
 
   const formatNotifTitle = (title: string) => translateNotificationTitle(title, t);
   const formatNotifMsg = (msg: string) => {
@@ -1562,7 +1573,7 @@ export default function ParentSettings() {
                             </span>
                           </div>
                           <span className="text-xs text-slate-500 font-bold flex items-center gap-1 mt-0.5 truncate">
-                            <Phone size={10} className="text-slate-400 shrink-0" /> +91 {sp.mobile}
+                            <Phone size={10} className="text-slate-400 shrink-0" /> +91 {formatMobileDisplay(sp.mobile)}
                           </span>
                         </div>
                       </div>
@@ -1867,12 +1878,19 @@ export default function ParentSettings() {
                         +91
                       </span>
                       <input
+                        ref={coParentMobileInputRef}
                         type="tel"
-                        maxLength={10}
-                        placeholder="10-digit mobile"
-                        value={coParentMobile}
+                        maxLength={11}
+                        placeholder="Enter mobile number"
+                        value={formatMobileDisplay(coParentMobile)}
                         onChange={(e) => {
-                          setCoParentMobile(e.target.value.replace(/\D/g, "").slice(0, 10));
+                          const { clean, nextCursor } = parseMobileInput(
+                            e.target.value,
+                            coParentMobile,
+                            e.target.selectionStart ?? e.target.value.length
+                          );
+                          setCoParentMobile(clean);
+                          nextCoParentCursorRef.current = nextCursor;
                           if (coParentError) setCoParentError("");
                         }}
                         className={`w-full h-9 bg-slate-50 rounded-xl pl-10 pr-8 text-xs font-bold text-slate-900 border transition-colors outline-none focus:bg-white ${isDuplicateNumber

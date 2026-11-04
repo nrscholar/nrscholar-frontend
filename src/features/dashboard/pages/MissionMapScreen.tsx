@@ -85,7 +85,7 @@ export default function MissionMapScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#17157F] font-sans pb-28 relative overflow-x-clip">
+      <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#17157F] font-sans pb-6 relative overflow-x-clip">
         {/* Background Glow Accents */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden">
           <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[35%] rounded-full bg-[#5B5CFF]/10 blur-[90px]" />
@@ -194,7 +194,7 @@ export default function MissionMapScreen() {
   const themeMeta = getThemeHeader();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#17157F] font-sans pb-44 relative selection:bg-[#5B5CFF] selection:text-white overflow-x-clip">
+    <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#17157F] font-sans pb-6 relative selection:bg-[#5B5CFF] selection:text-white overflow-x-clip">
       {/* Background World Glow Accents */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[35%] rounded-full bg-[#5B5CFF]/10 blur-[90px]" />
@@ -321,7 +321,8 @@ export default function MissionMapScreen() {
           {missions.map((m: any, index: number) => {
             const isCompleted = m.status === "completed";
             const isRetest = m.status === "retest";
-            const isUnlocked = m.status === "unlocked" || isCompleted || isRetest || Boolean(m.hasDraft);
+            const hasAttempted = isCompleted || isRetest || Boolean(m.attempts > 0) || (m.accuracy !== undefined && m.accuracy !== null && (m.accuracy > 0 || m.status === "retest"));
+            const isUnlocked = m.status === "unlocked" || isCompleted || isRetest || Boolean(m.hasDraft) || hasAttempted;
             const isLocked = !isUnlocked;
 
             const savedAns = getScopedItem(`user_answers_${chapterId}_${m.seq}`);
@@ -434,7 +435,7 @@ export default function MissionMapScreen() {
                         </div>
                       </div>
 
-                      {(isCompleted || isRetest || (m.accuracy !== undefined && m.accuracy > 0)) && (
+                      {(hasAttempted || (m.accuracy !== undefined && m.accuracy !== null && m.accuracy > 0)) && (
                         <div className="shrink-0 flex items-center gap-1 bg-[#EEF1FF] text-[#17157F] px-2.5 py-1 rounded-xl border border-[#5B5CFF]/30 shadow-2xs ml-2">
                           <span className="text-xs">🎯</span>
                           <span className="text-xs font-black">{m.accuracy ?? 0}%</span>
@@ -448,7 +449,7 @@ export default function MissionMapScreen() {
                         <span className="text-xs text-indigo-600 font-bold flex items-center gap-1">
                           {t('in_progress_sub', '⚡ In progress...')}
                         </span>
-                      ) : isCompleted || isRetest ? (
+                      ) : isCompleted || isRetest || hasAttempted ? (
                         <div className="flex items-center gap-1">
                           {[1, 2, 3].map((starIndex) => (
                             <Star
@@ -472,7 +473,7 @@ export default function MissionMapScreen() {
                           if (hasInProgressSession) {
                             navigate(`/mission-play?chapterId=${chapterId}&missionSeq=${m.seq}`);
                           } else {
-                            const isReplaying = isCompleted;
+                            const isReplaying = isCompleted || isRetest || hasAttempted;
                             removeScopedItem(`user_answers_${chapterId}_${m.seq}`);
                             removeScopedItem(`mission_phase_${chapterId}_${m.seq}`);
                             removeScopedItem(`mission_timer_${chapterId}_${m.seq}`);
@@ -503,7 +504,7 @@ export default function MissionMapScreen() {
                             ? "bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white border border-[#5B5CFF]"
                             : isCompleted
                             ? "bg-[#45D483] hover:bg-[#34c774] text-white border border-[#45D483]"
-                            : isRetest
+                            : (isRetest || hasAttempted)
                             ? "bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white border border-[#5B5CFF]"
                             : isUnlocked
                             ? "bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white shadow-[0_4px_14px_rgba(91,92,255,0.4)] hover:brightness-110 border border-[#5B5CFF]"
@@ -520,10 +521,10 @@ export default function MissionMapScreen() {
                             <RotateCcw size={13} strokeWidth={2.5} />
                             <span>{t('replay', 'Replay')}</span>
                           </>
-                        ) : isRetest ? (
+                        ) : (isRetest || hasAttempted) ? (
                           <>
-                            <span>{t('retest', 'Re-test')}</span>
-                            <Play size={13} className="fill-white" />
+                            <RotateCcw size={13} strokeWidth={2.5} />
+                            <span>{t('replay', 'Replay')}</span>
                           </>
                         ) : isUnlocked ? (
                           <>

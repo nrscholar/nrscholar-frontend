@@ -15,6 +15,9 @@ export interface ToastData {
 // Global Helper function to trigger unified toast notification from anywhere
 export const showNotificationToast = (data: ToastData) => {
   if (typeof window !== "undefined") {
+    try {
+      sessionStorage.setItem("active_toast_payload", JSON.stringify(data));
+    } catch (e) {}
     window.dispatchEvent(new CustomEvent("show-notification-toast", { detail: data }));
   }
 };
@@ -33,9 +36,41 @@ export default function GlobalNotificationBanner() {
 
     let timer: any = null;
 
+    const isMissionCompleteToast = (item: any): boolean => {
+      if (!item) return false;
+      const t = String(item.title || "").toUpperCase();
+      const m = String(item.message || "").toUpperCase();
+      return (
+        t.includes("MISSION COMPLETED") ||
+        t.includes("LESSON COMPLETE") ||
+        t.includes("MYSTERY SOLVED") ||
+        m.includes("YOUR DRAGON EGG IS GLOWING")
+      );
+    };
+
+    // Check if there is an active toast dispatched right before route transition/reload
+    try {
+      const activePayload = sessionStorage.getItem("active_toast_payload");
+      if (activePayload) {
+        sessionStorage.removeItem("active_toast_payload");
+        const parsed = JSON.parse(activePayload);
+        if (!isMissionCompleteToast(parsed)) {
+          setToast(parsed);
+          timer = setTimeout(() => setToast(null), 5000);
+        }
+      }
+    } catch (e) {}
+
     const handleToastEvent = (e: any) => {
       if (e.detail) {
+        // Exclude mission completion toasts from rendering on-screen banner
+        if (isMissionCompleteToast(e.detail)) {
+          return;
+        }
         setToast(e.detail);
+        try {
+          sessionStorage.removeItem("active_toast_payload");
+        } catch (e) {}
         if (timer) clearTimeout(timer);
         timer = setTimeout(() => setToast(null), 5000);
       }

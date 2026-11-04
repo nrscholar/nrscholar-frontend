@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useLayoutEffect } from "react";
+import { formatMobileDisplay, parseMobileInput, maskMobileDisplay } from "../../../utils/mobileFormatter";
 import { useNavigate } from "react-router-dom";
 import { Phone, Lock, Eye, EyeOff, ArrowRight, RefreshCw } from "lucide-react";
 import { NRScholarLogo } from "../../../components/NRScholarLogo";
@@ -12,6 +13,7 @@ export default function ForgotPasswordScreen() {
   // Form State
   const [step, setStep] = useState<Step>("mobile");
   const [mobile, setMobile] = useState("");
+  const [maskedMobile, setMaskedMobile] = useState("");
   const [otp, setOtp] = useState("");
   const [reqId, setReqId] = useState("");
   const [isOtpFocused, setIsOtpFocused] = useState(false);
@@ -28,8 +30,18 @@ export default function ForgotPasswordScreen() {
   const [successMsg, setSuccessMsg] = useState("");
   const [resendTimer, setResendTimer] = useState(30);
 
-  // OTP Input reference
+  // OTP and Mobile Input references
   const otpInputRef = useRef<HTMLInputElement | null>(null);
+  const mobileInputRef = useRef<HTMLInputElement | null>(null);
+  const nextMobileCursorPosRef = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    if (nextMobileCursorPosRef.current !== null && mobileInputRef.current) {
+      const pos = nextMobileCursorPosRef.current;
+      mobileInputRef.current.setSelectionRange(pos, pos);
+      nextMobileCursorPosRef.current = null;
+    }
+  });
 
   // 30s Countdown timer for OTP resend
   useEffect(() => {
@@ -87,6 +99,7 @@ export default function ForgotPasswordScreen() {
       if (data.success) {
         setSuccessMsg(data.message || "OTP sent successfully to your mobile number.");
         if (data.reqId) setReqId(data.reqId);
+        if (data.maskedMobile) setMaskedMobile(data.maskedMobile); else setMaskedMobile("");
         setOtp("");
         setStep("otp");
         setResendTimer(30);
@@ -159,6 +172,7 @@ export default function ForgotPasswordScreen() {
       if (data.success) {
         setSuccessMsg(data.message || "OTP resent successfully to your mobile number.");
         if (data.reqId) setReqId(data.reqId);
+        if (data.maskedMobile) setMaskedMobile(data.maskedMobile); else setMaskedMobile("");
         setResendTimer(30);
         setOtp("");
         otpInputRef.current?.focus();
@@ -227,7 +241,7 @@ export default function ForgotPasswordScreen() {
       case "mobile":
         return "Enter your registered mobile number to reset password";
       case "otp":
-        return `Enter the 6-digit verification code sent to +91 ${mobile}`;
+        return `Enter the 6-digit verification code sent to +91 ${maskedMobile || maskMobileDisplay(mobile)}`;
       case "password":
         return "Create a new password for your account";
       case "success":
@@ -318,13 +332,19 @@ export default function ForgotPasswordScreen() {
               <div className="relative flex items-center">
                 <Phone size={20} className="text-slate-400 absolute left-4 pointer-events-none" />
                 <input
+                  ref={mobileInputRef}
                   type="tel"
-                  placeholder="Enter 10-digit mobile number"
-                  value={mobile}
-                  maxLength={10}
+                  placeholder="Enter mobile number"
+                  value={formatMobileDisplay(mobile)}
+                  maxLength={11}
                   onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, "").slice(0, 10);
-                    setMobile(val);
+                    const { clean, nextCursor } = parseMobileInput(
+                      e.target.value,
+                      mobile,
+                      e.target.selectionStart ?? e.target.value.length
+                    );
+                    setMobile(clean);
+                    nextMobileCursorPosRef.current = nextCursor;
                     setErrorMsg("");
                   }}
                   className="w-full h-14 bg-slate-50 rounded-2xl pl-12 pr-4 text-sm font-bold text-[#141779] border border-slate-200/90 focus:outline-none focus:ring-2 focus:ring-[#141779]/20 focus:border-[#141779] focus:bg-white transition-all placeholder:text-slate-400 placeholder:font-medium"

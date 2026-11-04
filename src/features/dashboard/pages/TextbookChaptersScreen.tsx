@@ -73,7 +73,7 @@ export default function TextbookChaptersScreen() {
   let totalIndexCounter = 0;
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans flex flex-col pb-24">
+    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans flex flex-col pb-6">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-2xl border-b-2 border-slate-200/90 shadow-[0_12px_40px_rgba(20,23,121,0.14)] px-6 py-3.5 flex items-center justify-between">
         <button onClick={() => navigate(-1)} className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-gray-200 hover:bg-gray-50 active:scale-95 transition-all shadow-xs">

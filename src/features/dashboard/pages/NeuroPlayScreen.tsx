@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
+import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
+import { triggerDevicePushNotification } from "../../../services/pushNotificationService";
 
 // ─── DYNAMIC ON-DEMAND SKILLS LOADER (SPLITS 1.9MB DATA ACROSS CLASS CHUNKS) ──
 import { loadClassSkills, loadAllSkills, getCachedSkills, skillImages } from "../../../data/neuroplay/skillsLoader";
@@ -489,6 +491,24 @@ export default function NeuroPlayScreen() {
 
     const isFirstTime = !completedSkillIds.includes(selectedSkill.id);
     const xpGained = isFirstTime ? (selectedSkill.xp || 20) : 0;
+    const skillTitle = getText(selectedSkill.title) || selectedSkill.id;
+    const rewardXp = selectedSkill.xp || 20;
+
+    // Trigger Single-Line Toast & Device Push Notification for Child
+    if (!missionClaimed) {
+      showNotificationToast({
+        title: "🧠 NEUROPLAY COMPLETED!",
+        message: `NeuroPlay mission "${skillTitle}" completed successfully!`,
+        type: "success",
+        screen: "/neuroplay"
+      });
+
+      triggerDevicePushNotification(
+        "🧠 NeuroPlay Mission Completed!",
+        `NeuroPlay mission "${skillTitle}" completed successfully! +${rewardXp} XP earned! 🚀`,
+        "/neuroplay"
+      );
+    }
 
     // 1. Immediately mark skill completed in local state & localStorage
     const updatedCompleted = Array.from(new Set([...completedSkillIds, selectedSkill.id]));
@@ -511,7 +531,7 @@ export default function NeuroPlayScreen() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             skillId: selectedSkill.id,
-            xp: xpGained,
+            xp: rewardXp,
             skillTitle: getText(selectedSkill.title),
             classLevel: selectedSkill.classLevel
           })
@@ -891,7 +911,7 @@ export default function NeuroPlayScreen() {
       {/* (Ultra-Polished Light Theme • 10/10 Aesthetic Score)                */}
       {/* ═════════════════════════════════════════════════════════════════════ */}
       {viewMode === "player" && (
-        <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans pb-28 relative overflow-x-clip selection:bg-indigo-500 selection:text-white">
+        <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans pb-6 relative overflow-x-clip selection:bg-indigo-500 selection:text-white">
           
           {/* Ambient Background Glows matching application */}
           <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">

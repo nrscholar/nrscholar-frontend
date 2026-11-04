@@ -96,7 +96,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-[#f7f9fb] flex flex-col">
       {/* Main Content Area with Isolated Suspense boundary to prevent navbar unmounting */}
-      <div className="flex-1 pb-24 relative">
+      <div className="flex-1 pb-20 relative">
         <Suspense fallback={<RouteSkeletonLoader />}>
           <Outlet />
         </Suspense>

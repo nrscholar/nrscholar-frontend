@@ -14,6 +14,8 @@ const LessonIcons: Record<string, any> = {
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
 import { getLocalizedCTA } from "../data/parentLessonTranslations";
+import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
+import { triggerDevicePushNotification } from "../../../services/pushNotificationService";
 
 export default function ParentLessonPlayerScreen() {
   const { t } = useTranslation();
@@ -144,6 +146,24 @@ export default function ParentLessonPlayerScreen() {
   const handleCompleteLesson = async () => {
     if (completing) return;
     setCompleting(true);
+
+    const lessonTitle = resolveLocalized(lessonData?.title, scopedLang) || "Parenting Lesson";
+
+    // 1. Toast Notification for Parent (short, simple one-line toast message)
+    showNotificationToast({
+      title: "🎓 LESSON COMPLETED!",
+      message: `Lesson "${lessonTitle}" completed successfully!`,
+      type: "success",
+      screen: "/parent/lessons"
+    });
+
+    // 2. Browser Device Push Notification for Parent
+    triggerDevicePushNotification(
+      "🎓 Parent Lesson Completed!",
+      `You completed "${lessonTitle}". Keep up the great parenting journey! 👏`,
+      "/parent/lessons"
+    );
+
     try {
       // Invalidate session cache immediately
       sessionStorage.removeItem("parent_learning_library_cache");

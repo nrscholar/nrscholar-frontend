@@ -49,7 +49,7 @@ export default function TextbookSubjectsScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col pb-24">
+    <div className="min-h-screen bg-[#f4efff] font-sans flex flex-col pb-6">
       {/* Header */}
       <header className="flex items-center justify-between px-5 py-4 bg-[#f4efff] sticky top-0 z-40">
         <button onClick={() => navigate(-1)} className="p-1 hover:opacity-80 transition-opacity">

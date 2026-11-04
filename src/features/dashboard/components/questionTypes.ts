@@ -3,7 +3,7 @@
 export type QuestionImage = { type?: string; svg?: string; url?: string };
 
 export interface PlayableQuestion {
-  _id?: string;
+  _id?: string | number;
   question?: string;
   options?: string[];
   answer?: string;
