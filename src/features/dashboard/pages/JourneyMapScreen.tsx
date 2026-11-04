@@ -4,6 +4,7 @@ import { apiFetch } from "../../../api";
 import MapWorld from "../../../components/map/MapWorld";
 import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useUserStatsStore } from "../../../services/userStatsStore";
 
 interface City {
   _id?: string;
@@ -27,6 +28,16 @@ export default function JourneyMapScreen() {
   const [username, setUsername] = useState("");
   const [childPhoto, setChildPhoto] = useState(() => localStorage.getItem("userPhoto") || "");
   const [userLevel, setUserLevel] = useState(1);
+  const { 
+    level: storeLevel, 
+    xp: storeXp, 
+    coins: storeCoins, 
+    streakDays: storeStreak, 
+    childName: storeChildName, 
+    childPhoto: storeChildPhoto, 
+    syncFromUserData 
+  } = useUserStatsStore();
+  const effectiveLevel = storeLevel || userLevel || 1;
   const [cities, setCities] = useState<City[]>([]);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -69,6 +80,7 @@ export default function JourneyMapScreen() {
           const uData = await uRes.json();
           if (uData.success) {
             const u = uData.data.user;
+            syncFromUserData(u);
             setUserData(u);
             userFuel = u.fuel !== undefined ? u.fuel : 0;
             userXp = u.xp !== undefined ? u.xp : 0;
@@ -414,7 +426,7 @@ export default function JourneyMapScreen() {
           <MapWorld
             themeKey={journeyData?.tierKey === "scientist" ? "science" : journeyData?.tierKey === "social_proof" ? "social" : "dragon"}
             xp={xp}
-            userLevel={userLevel}
+            userLevel={effectiveLevel}
             activeClassLevel={journeyData?.classLevel || userLevel || 1}
             nodes={journeyData?.nodes}
             progressPercentage={journeyData?.progressPercentage}

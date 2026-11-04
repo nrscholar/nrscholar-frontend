@@ -9,6 +9,7 @@ import StreakModal from "../../../components/StreakModal";
 import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 import { startNavigationProgress } from "../../../components/NavigationProgressBar";
+import { useUserStatsStore } from "../../../services/userStatsStore";
 
 // In-memory runtime cache for parsed chapter arrays to ensure 0ms instantaneous tab switching
 const runtimeChapterCache = new Map<string, any[]>();
@@ -121,6 +122,15 @@ export default function ChaptersScreen() {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [showSubModal, setShowSubModal] = useState(false);
   const [showStreakModal, setShowStreakModal] = useState(false);
+  const { 
+    level: userLevel, 
+    childName: storeChildName, 
+    childClass: storeChildClass, 
+    streakDays: storeStreakDays, 
+    coins: storeCoins,
+    childPhoto: storeChildPhoto,
+    syncFromUserData
+  } = useUserStatsStore();
 
   const activeSubjectRef = useRef<string | null>(initialActive?._id || null);
 
@@ -216,6 +226,7 @@ export default function ChaptersScreen() {
     if (cachedUser) {
       try {
         const u = JSON.parse(cachedUser);
+        syncFromUserData(u);
         setChildName(u.childName || u.name || "Kid");
         setChildPhoto(u.childPhoto || u.photo || "");
         setChildClass(u.childClass || u.class_name || u.className || "");
@@ -241,6 +252,7 @@ export default function ChaptersScreen() {
           if (meJson.success && meJson.data?.user) {
             const u = meJson.data.user;
             localStorage.setItem("userData", JSON.stringify(u));
+            syncFromUserData(u);
             setChildName(u.childName || u.name || "Kid");
             setChildPhoto(u.childPhoto || u.photo || "");
             setChildClass(u.childClass || u.class_name || u.className || "");
@@ -532,7 +544,7 @@ export default function ChaptersScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#17157F] font-sans pb-44 relative selection:bg-[#5B5CFF] selection:text-white overflow-x-clip">
+    <div className="min-h-screen bg-gradient-to-b from-[#F5F3FF] via-[#EEF1FF] to-[#FFFFFF] text-[#17157F] font-sans pb-4 relative selection:bg-[#5B5CFF] selection:text-white overflow-x-clip">
       {/* Background World Glow Accents */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[35%] rounded-full bg-[#5B5CFF]/10 blur-[90px]" />
@@ -579,7 +591,7 @@ export default function ChaptersScreen() {
               {/* Line 2: Level */}
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="text-[11.5px] text-slate-400 font-extrabold whitespace-nowrap">
-                  {t('explorer_level', { defaultValue: "Explorer Level" })} {Math.min(99, completedChaptersCount + 1)}
+                  {t('explorer_level', { defaultValue: "Explorer Level" })} {userLevel}
                 </span>
               </div>
             </div>

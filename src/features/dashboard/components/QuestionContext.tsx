@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { BookOpen, ChevronDown, ChevronRight } from "lucide-react";
 
 interface ContextQuestion {
-  _id?: string;
+  _id?: string | number;
   passageId?: string;
   passage?: string;
   passagePages?: string;

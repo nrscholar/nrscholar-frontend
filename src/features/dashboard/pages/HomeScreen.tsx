@@ -5,10 +5,12 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import AdventureHero from "../../../components/AdventureHero";
+import { showInteractiveNotification, triggerDevicePushNotification } from "../../../services/pushNotificationService";
 import { startNavigationProgress } from "../../../components/NavigationProgressBar";
 import { getScopedItem, setScopedItem, getActiveUserContext, normalizeClassLevel } from "../../../utils/sessionCache";
 import { loadClassSkills } from "../../../data/neuroplay/skillsLoader";
 import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
+import { useUserStatsStore } from "../../../services/userStatsStore";
 
 const ChildSwitcherModal = lazy(() => import("../../../components/ChildSwitcherModal"));
 
@@ -32,6 +34,16 @@ export default function HomeScreen() {
   const [childName, setChildName] = useState<string>(() => userData?.childName || "Explorer");
   const [childPhoto, setChildPhoto] = useState<string>(() => userData?.childPhoto || "");
   const [userLevel, setUserLevel] = useState<number>(() => userData?.level || 1);
+  const { 
+    level: storeLevel, 
+    xp: storeXp, 
+    coins: storeCoins, 
+    streakDays: storeStreak, 
+    childName: storeChildName, 
+    childPhoto: storeChildPhoto,
+    syncFromUserData
+  } = useUserStatsStore();
+  const effectiveLevel = storeLevel || userLevel || 1;
   const [streakDays, setStreakDays] = useState<number>(() => userData?.streakDays || 0);
   const [showSwitcher, setShowSwitcher] = useState(false);
   const [showDailyMissionModal, setShowDailyMissionModal] = useState(false);
@@ -285,7 +297,32 @@ export default function HomeScreen() {
       const res = await apiFetch(notifUrl);
       const json = await res.json();
       if (json.success && json.data) {
-        setUnreadCount(json.data.filter((n: any) => !n.isRead).length);
+        const unread = json.data.filter((n: any) => !n.isRead);
+        setUnreadCount(unread.length);
+
+        // Dispatch in-app alert for newly received unread notifications without missing them
+        if (unread.length > 0) {
+          const latestUnread = unread[0];
+          const notifId = latestUnread._id;
+          const lastAlerted = sessionStorage.getItem("last_alerted_notif_id");
+          if (notifId && lastAlerted !== notifId) {
+            const notifTime = latestUnread.createdAt ? new Date(latestUnread.createdAt).getTime() : 0;
+            const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+            if (notifTime > fiveMinutesAgo) {
+              sessionStorage.setItem("last_alerted_notif_id", notifId);
+              const isMissionComplete = (latestUnread.title || "").toUpperCase().includes("MISSION COMPLETED") ||
+                (latestUnread.title || "").toUpperCase().includes("MYSTERY SOLVED") ||
+                (latestUnread.title || "").toUpperCase().includes("LESSON COMPLETE");
+              showInteractiveNotification(
+                latestUnread.title,
+                latestUnread.message,
+                latestUnread.screen || "/notifications",
+                latestUnread.type || "general",
+                !isMissionComplete
+              );
+            }
+          }
+        }
       }
     } catch (e) { }
   };
@@ -472,6 +509,7 @@ export default function HomeScreen() {
       const data = await response.json();
       if (data.success) {
         const u = data.data.user;
+        syncFromUserData(u);
         setUserData(u);
         setXp(u.xp || 0);
         setCoins(u.coins || 0);
@@ -629,6 +667,7 @@ export default function HomeScreen() {
       if (cached) {
         try {
           const u = JSON.parse(cached);
+          syncFromUserData(u);
           setUserData(u);
           setXp(u.xp || 0);
           setCoins(u.coins || 0);
@@ -672,7 +711,7 @@ export default function HomeScreen() {
     };
   }, [retentionTrigger]);
 
-  const completeMission = async (missionId: string) => {
+  const completeMission = async (missionId: string, missionObj?: any) => {
     try {
       const res = await apiFetch("/api/retention/missions/complete", {
         method: "POST",
@@ -687,6 +726,28 @@ export default function HomeScreen() {
         }
         if (data.coinReward) setCoins(prev => prev + (data.coinReward || 0));
         if (data.xpReward) setXp(prev => prev + (data.xpReward || 0));
+
+        const taskTitle = data.title || missionObj?.title || `Mission #${data.seq || missionObj?.seq || ''}`;
+        const earnedXp = data.xpReward ?? missionObj?.xp_reward ?? 20;
+        const earnedCoins = data.coinReward ?? missionObj?.coin_reward ?? 10;
+
+        let childName = "Your child";
+        try {
+          const cached = localStorage.getItem("userData");
+          if (cached) {
+            const u = JSON.parse(cached);
+            childName = u.childName || u.fullName || "Your child";
+          }
+        } catch (_) {}
+
+        // Trigger Device Push Notification with child's name and exact task title
+        triggerDevicePushNotification(
+          "🎯 DAILY QUEST COMPLETED!",
+          `${childName} completed quest "${taskTitle}" and claimed +${earnedXp} XP & +${earnedCoins} Coins! 🚀`,
+          "/home"
+        );
+
+        window.dispatchEvent(new Event("userDataUpdated"));
         fetchMissions();
       }
     } catch (e) {
@@ -798,7 +859,7 @@ export default function HomeScreen() {
                 {userData?.childClass || getActiveUserContext().classLevel || ""}
               </span>
               <span className="text-[10.5px] text-slate-400 font-extrabold whitespace-nowrap">
-                Lvl {userLevel}
+                Lvl {effectiveLevel}
               </span>
               {userData?.children && userData.children.length > 1 && (
                 <button
@@ -1410,7 +1471,7 @@ export default function HomeScreen() {
                             ) : isReady ? (
                               <button
                                 onClick={() => {
-                                  completeMission(mission.id || `seq_${mission.seq}`);
+                                  completeMission(mission.id || `seq_${mission.seq}`, mission);
                                 }}
                                 className="text-xs font-black text-white bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] hover:from-[#1c1970] hover:to-[#2e2aab] active:scale-95 px-3.5 py-1.5 rounded-xl shadow-md shadow-indigo-900/30 animate-pulse border border-indigo-300/40"
                               >
@@ -1429,15 +1490,7 @@ export default function HomeScreen() {
                 </div>
               )}
 
-              {/* Modal Footer */}
-              <div className="flex justify-end pt-2.5 border-t border-slate-100 shrink-0 relative z-10">
-                <button
-                  onClick={() => setShowDailyMissionModal(false)}
-                  className="px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-all active:scale-95"
-                >
-                  {t('close', 'Close')}
-                </button>
-              </div>
+
             </motion.div>
           </div>
         )}
@@ -1485,15 +1538,17 @@ export default function HomeScreen() {
       <AnimatePresence>
         {showSpinPopup && (
           <div
-            className="fixed inset-0 z-[100] bg-[#f7f9fb]/90 backdrop-blur-md flex items-center justify-center p-6"
+            className="fixed inset-0 z-[100] bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 select-none animate-in fade-in duration-200"
             style={{ touchAction: "none" }}
             onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+            onClick={(e) => { if (e.target === e.currentTarget) setShowSpinPopup(false); }}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               style={{ overscrollBehavior: "contain" }}
+              onClick={(e) => e.stopPropagation()}
               className="bg-gradient-to-br from-[#111453]/95 via-[#141779]/95 to-[#0b0c3f]/95 text-white w-full max-w-[360px] p-7 rounded-[32px] flex flex-col items-center text-center gap-5 border border-white/10 shadow-[0_20px_50px_rgba(20,23,121,0.5)] relative overflow-hidden"
             >
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(87,250,233,0.12)_0%,transparent_65%)] pointer-events-none" />
@@ -1568,7 +1623,7 @@ export default function HomeScreen() {
 
           return (
             <div
-              className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-white/40 backdrop-blur-md transition-all duration-300"
+              className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md transition-all duration-300"
               style={{ touchAction: "none" }}
               onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
               onClick={(e) => {

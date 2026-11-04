@@ -28,6 +28,16 @@ export async function registerPushNotificationToken(): Promise<string | null> {
       }
     }
 
+    // Browser fallback token for web clients with notification permission
+    if (!token && "Notification" in window && Notification.permission === "granted") {
+      let webClientId = localStorage.getItem("web_push_client_id");
+      if (!webClientId) {
+        webClientId = `web_${window.crypto?.randomUUID ? window.crypto.randomUUID() : Date.now()}`;
+        localStorage.setItem("web_push_client_id", webClientId);
+      }
+      token = webClientId;
+    }
+
     if (token) {
       const userToken = localStorage.getItem("userToken");
       if (userToken) {
@@ -46,22 +56,16 @@ export async function registerPushNotificationToken(): Promise<string | null> {
   }
 }
 
-export function showInteractiveNotification(
+/**
+ * Triggers device browser push notification strictly without showing any floating UI toast banner.
+ */
+export function triggerDevicePushNotification(
   title: string,
   message: string,
-  screen?: string,
-  type: string = "general"
+  screen?: string
 ) {
   if (typeof window === "undefined") return;
 
-  // 1. Dispatch custom event for top floating Toast Banner in UI
-  window.dispatchEvent(
-    new CustomEvent("show-notification-toast", {
-      detail: { title, message, screen, type }
-    })
-  );
-
-  // 2. Trigger native OS Desktop Browser Push Notification Popup
   if ("Notification" in window) {
     if (Notification.permission === "granted") {
       try {
@@ -82,9 +86,37 @@ export function showInteractiveNotification(
     } else if (Notification.permission !== "denied") {
       Notification.requestPermission().then((permission) => {
         if (permission === "granted") {
-          showInteractiveNotification(title, message, screen, type);
+          triggerDevicePushNotification(title, message, screen);
         }
       });
     }
   }
+}
+
+export function showInteractiveNotification(
+  title: string,
+  message: string,
+  screen?: string,
+  type: string = "general",
+  showToast: boolean = true
+) {
+  if (typeof window === "undefined") return;
+
+  const detail = { title, message, screen, type };
+
+  // 1. Dispatch custom event for top floating Toast Banner in UI (only if showToast is true)
+  if (showToast) {
+    try {
+      sessionStorage.setItem("active_toast_payload", JSON.stringify(detail));
+    } catch (e) {}
+
+    window.dispatchEvent(
+      new CustomEvent("show-notification-toast", {
+        detail
+      })
+    );
+  }
+
+  // 2. Trigger native OS Desktop Browser Push Notification Popup
+  triggerDevicePushNotification(title, message, screen);
 }

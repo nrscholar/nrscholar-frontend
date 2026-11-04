@@ -601,7 +601,7 @@ export default function DailyRewardsScreen() {
       )}
 
       {/* Main Canvas */}
-      <main className="relative flex-1 w-full max-w-[430px] flex flex-col items-center justify-center px-6 pt-6 pb-24 gap-6 z-10">
+      <main className="relative flex-1 w-full max-w-[430px] flex flex-col items-center justify-center px-6 pt-6 pb-6 gap-6 z-10">
         
         {/* Reward Info Header */}
         <div className="text-center space-y-1.5">

@@ -29,7 +29,7 @@ import QuestionContext from "../components/QuestionContext";
 import { ActivityQuestion, OptionList } from "../components/ActivityQuestion";
 import { activityType, imageSrc, optionImage, sameAnswer } from "../components/questionTypes";
 import { getScopedItem, setScopedItem, removeScopedItem, getActiveUserContext } from "../../../utils/sessionCache";
-import { showInteractiveNotification } from "../../../services/pushNotificationService";
+import { triggerDevicePushNotification } from "../../../services/pushNotificationService";
 import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
@@ -1005,7 +1005,9 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           timeTakenSec: totalSessionSec,
           livesRemaining: Math.max(0, 3 - finalChildDamage),
           answers: sanitizedAnswers,
-          classLevel: getActiveUserContext().classLevel
+          classLevel: getActiveUserContext().classLevel,
+          xpEarned: xpEarned,
+          coinsEarned: coinsEarned
         })
       });
       const json = await res.json();
@@ -1057,13 +1059,15 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
         window.dispatchEvent(new Event("userDataUpdated"));
 
-        // Trigger Interactive Desktop Push Notification & Floating Banner Toast
-        showInteractiveNotification(
-          "🧩 MYSTERY SOLVED!",
-          `You bagged ${json.data.earnedXp || 20} XP & ${json.data.earnedCoins || 50} Coins! Your dragon egg is glowing 🐉`,
-          "/home",
-          "gamification"
-        );
+        // Trigger Device Push Notification strictly on first-time 65%+ completion without floating Toast UI
+        if (json.data.isFirstTimeCompletion) {
+          const finalAcc = json.data.accuracy ?? json.data.runAccuracy ?? 100;
+          triggerDevicePushNotification(
+            "🎉 MISSION COMPLETED!",
+            `You completed ${missionTitle || `Mission ${missionSeq}`} with ${finalAcc}% accuracy! Bagged ${json.data.earnedXp ?? json.data.xpEarned ?? xpEarned} XP & ${json.data.earnedCoins ?? json.data.coinsEarned ?? coinsEarned} Coins! 🚀`,
+            `/practice/chapters`
+          );
+        }
         const oldStr = json.data.oldStreak !== undefined ? json.data.oldStreak : (json.data.streak || 1);
         setDisplayedStreak(oldStr);
         setStreakDaysOfWeek(json.data.streakDaysOfWeek || [false, false, false, false, false, false, false]);
@@ -1094,6 +1098,15 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
         };
         setCompletionResult(fallbackRes);
         setScopedItem(`completion_result_${chapterId}_${missionSeq}`, JSON.stringify(fallbackRes));
+
+        // Trigger Device Push Notification for fallback strictly on first-time 65%+ completion without floating Toast UI
+        if (currentAcc >= 65 && !isReplay) {
+          triggerDevicePushNotification(
+            "🎉 MISSION COMPLETED!",
+            `You completed ${missionTitle || `Mission ${missionSeq}`} with ${currentAcc}% accuracy! Bagged ${fallbackRes.earnedXp} XP & ${fallbackRes.earnedCoins} Coins! 🚀`,
+            `/practice/chapters`
+          );
+        }
       }
     } catch (e) {
       console.error("Failed to complete mission:", e);
@@ -1194,7 +1207,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     removeScopedItem(`is_replay_${chapterId}_${missionSeq}`);
 
     try {
-      // Call backend retreat endpoint to apply XP deduction & reset hearts
+      // Call backend retreat endpoint to reset hearts without XP deduction
       await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/retreat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1244,8 +1257,6 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       // Wrong Answer -> Dragon/Hero is Crying!
       setDragonCrying(true);
       setBossAngry(false);
-      setXpEarned((prev) => Math.max(0, prev - 25));
-      setCoinsEarned((prev) => Math.max(0, prev - 20));
       const newWrongCount = wrongAnswerCount + 1;
       setWrongAnswerCount(newWrongCount);
 
@@ -1343,65 +1354,71 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     }));
   }, [userAnswers, quizQuestions, bossQuestions]);
 
-  const handleQuizConfirm = () => {
-    if (!quizConfirmed) {
-      let isCorrect = false;
-      if (isDragObjects) {
-        if (isLanguageDrag) {
-          isCorrect = String(selectedDragValue).trim().toLowerCase() === String(currentQ?.answer).trim().toLowerCase();
-        } else {
-          isCorrect = (basketCount === targetCount || String(basketCount) === String(currentQ?.answer));
-        }
-      } else if (currentActivity) {
-        if (activityValue === null) return;
-        isCorrect = sameAnswer(activityValue, currentQ?.answer);
-      } else {
-        if (quizSelected === null) return;
-        const selectedOpt = currentQ?.options?.[quizSelected];
-        isCorrect = String(selectedOpt).trim().toLowerCase() === String(currentQ?.answer).trim().toLowerCase();
-      }
-
-      setQuizConfirmed(true);
-      setQuizIsCorrect(isCorrect);
-
-      const selectedValue = isDragObjects
-        ? (isLanguageDrag ? String(selectedDragValue) : String(basketCount))
-        : currentActivity
-          ? String(activityValue)
-          : (quizSelected !== null ? String(currentQ?.options?.[quizSelected]) : "");
-      const newAns = {
-        questionId: currentQ?._id,
-        questionText: currentQ?.question || currentQ?.text || currentQ?.title || "",
-        isCorrect: isCorrect,
-        selectedAnswer: selectedValue,
-        correctAnswer: currentQ?.answer || currentQ?.correctAnswer || "",
-        explanation: getQuestionExplanation(currentQ) || "",
-        imageUrl: getQuestionImage(currentQ) || "",
-        timeSpent: QUESTION_TIME_LIMIT - questionTimeLeft
-      };
-      setUserAnswers((prev) => recordUniqueAnswer(prev, newAns));
-
-      if (isCorrect) {
-        setQuizCorrectCount((prev) => prev + 1);
-        setXpEarned((prev) => prev + 15);
-        setCoinsEarned((prev) => prev + 10);
-        setStreak((prev) => prev + 1);
-      } else {
-        setXpEarned((prev) => Math.max(0, prev - 15));
-        setCoinsEarned((prev) => Math.max(0, prev - 10));
-        setStreak(1);
-      }
+  const handleGoToNextQuizQuestion = useCallback(() => {
+    setQuizConfirmed(false);
+    setQuizSelected(null);
+    setSelectedDragValue(null);
+    setBasketCount(0);
+    setQuestionTimeLeft(QUESTION_TIME_LIMIT);
+    setIsTimeout(false);
+    if (currentQuizIndex + 1 < quizQuestions.length) {
+      setCurrentQuizIndex((prev) => prev + 1);
     } else {
-      setQuizConfirmed(false);
-      setQuizSelected(null);
-      setBasketCount(0);
-      setQuestionTimeLeft(QUESTION_TIME_LIMIT);
-      setIsTimeout(false);
-      if (currentQuizIndex + 1 < quizQuestions.length) {
-        setCurrentQuizIndex((prev) => prev + 1);
+      setPhase("MINI_REWARD");
+    }
+  }, [currentQuizIndex, quizQuestions.length]);
+
+  const handleQuizAnswer = (idx: number) => {
+    if (quizConfirmed) return;
+    setQuizSelected(idx);
+  };
+
+  const handleQuizConfirm = () => {
+    if (quizConfirmed) return;
+
+    let isCorrect = false;
+    if (isDragObjects) {
+      if (isLanguageDrag) {
+        isCorrect = String(selectedDragValue).trim().toLowerCase() === String(currentQ?.answer).trim().toLowerCase();
       } else {
-        setPhase("MINI_REWARD");
+        isCorrect = (basketCount === targetCount || String(basketCount) === String(currentQ?.answer));
       }
+    } else if (currentActivity) {
+      if (activityValue === null) return;
+      isCorrect = sameAnswer(activityValue, currentQ?.answer);
+    } else {
+      if (quizSelected === null) return;
+      const selectedOpt = currentQ?.options?.[quizSelected];
+      isCorrect = String(selectedOpt).trim().toLowerCase() === String(currentQ?.answer).trim().toLowerCase();
+    }
+
+    setQuizConfirmed(true);
+    setQuizIsCorrect(isCorrect);
+
+    const selectedValue = isDragObjects
+      ? (isLanguageDrag ? String(selectedDragValue) : String(basketCount))
+      : currentActivity
+        ? String(activityValue)
+        : (quizSelected !== null ? String(currentQ?.options?.[quizSelected]) : "");
+    const newAns = {
+      questionId: currentQ?._id,
+      questionText: currentQ?.question || currentQ?.text || currentQ?.title || "",
+      isCorrect: isCorrect,
+      selectedAnswer: selectedValue,
+      correctAnswer: currentQ?.answer || currentQ?.correctAnswer || "",
+      explanation: getQuestionExplanation(currentQ) || "",
+      imageUrl: getQuestionImage(currentQ) || "",
+      timeSpent: QUESTION_TIME_LIMIT - questionTimeLeft
+    };
+    setUserAnswers((prev) => recordUniqueAnswer(prev, newAns));
+
+    if (isCorrect) {
+      setQuizCorrectCount((prev) => prev + 1);
+      setXpEarned((prev) => prev + 15);
+      setCoinsEarned((prev) => prev + 10);
+      setStreak((prev) => prev + 1);
+    } else {
+      setStreak(1);
     }
   };
 
@@ -1486,12 +1503,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     if (isCompleting) return;
     if (phase === "QUIZ" && !quizConfirmed) {
       if (questionTimeLeft <= 0) {
-        // Auto-fail on 30s timeout
+        // Auto-fail on 30s timeout: apply in-mission penalty (floored at 0 for in-game session score)
         setIsTimeout(true);
         setQuizConfirmed(true);
         setQuizIsCorrect(false);
-        setXpEarned((prev) => Math.max(0, prev - 15));
-        setCoinsEarned((prev) => Math.max(0, prev - 10));
         setStreak(1);
 
         const newAns = {
@@ -1540,6 +1555,16 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       return () => clearInterval(t);
     }
   }, [phase, questionTimeLeft, quizConfirmed, bossSelected, bossConfirmed, bossAngry, dragonCrying, executeBossAttack, currentQ?._id, activeBossQ?._id, userAnswers, isCompleting]);
+
+  // 3-second auto-transition to next question upon quiz answer or timeout
+  useEffect(() => {
+    if (phase === "QUIZ" && quizConfirmed && !isCompleting) {
+      const timer = setTimeout(() => {
+        handleGoToNextQuizQuestion();
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [phase, quizConfirmed, isCompleting, handleGoToNextQuizQuestion]);
 
   if (loading) {
     return (
@@ -1906,12 +1931,12 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
                 let style = "bg-white border-gray-200 text-[#191c1e] hover:border-[#141779]";
                 if (quizConfirmed) {
-                  if (isTimeout) {
-                    style = "bg-white border-gray-200 text-[#191c1e] opacity-60";
-                  } else if (isCorrect) {
-                    style = "bg-emerald-500 border-emerald-600 text-white font-bold";
+                  if (isCorrect) {
+                    style = "bg-emerald-500 border-emerald-600 text-white font-bold ring-2 ring-emerald-400";
                   } else if (isSelected) {
-                    style = "bg-red-500 border-red-600 text-white font-bold";
+                    style = "bg-red-500 border-red-600 text-white font-bold ring-2 ring-red-400";
+                  } else {
+                    style = "bg-white border-gray-200 text-[#191c1e] opacity-50";
                   }
                 } else if (isSelected) {
                   style = "bg-indigo-50 border-[#141779] text-[#141779] font-bold ring-2 ring-[#141779]/20";
@@ -1921,12 +1946,12 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                   <button
                     key={idx}
                     disabled={quizConfirmed}
-                    onClick={() => !quizConfirmed && setQuizSelected(idx)}
+                    onClick={() => handleQuizAnswer(idx)}
                     className={`w-full p-4 rounded-2xl border text-left font-semibold text-base transition-all flex items-center justify-between shadow-xs ${style}`}
                   >
                     <span className="flex-1 mr-4 break-words text-left">{opt}</span>
-                    {quizConfirmed && !isTimeout && isCorrect && <CheckCircle2 size={20} className="text-white" />}
-                    {quizConfirmed && !isTimeout && isSelected && !isCorrect && <XCircle size={20} className="text-white" />}
+                    {quizConfirmed && isCorrect && <CheckCircle2 size={20} className="text-white" />}
+                    {quizConfirmed && isSelected && !isCorrect && <XCircle size={20} className="text-white" />}
                   </button>
                 );
               })}
@@ -1957,23 +1982,20 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
           )}
 
           {/* Stays at the bottom of the screen, above the iPhone home indicator. */}
-          <div className="sticky bottom-0 mt-auto -mx-4 sm:-mx-6 px-4 sm:px-6 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))] bg-[#f7f9fb]">
-
-            <button
-              disabled={!quizReady && !quizConfirmed}
-              onClick={handleQuizConfirm}
-              className={`w-full py-4 rounded-2xl font-black text-base shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all ${!quizReady && !quizConfirmed
-                ? "bg-gray-300 text-gray-500 cursor-not-allowed shadow-none"
-                : !quizConfirmed
-                  ? "bg-[#141779] text-white hover:bg-[#101362]"
-                  : quizIsCorrect
-                    ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                    : "bg-red-600 text-white hover:bg-red-700"
-                }`}
-            >
-              <span>{quizConfirmed ? t('continue_btn', 'CONTINUE →') : t('check_answer', 'CHECK ANSWER')}</span>
-            </button>
-          </div>
+          {!quizConfirmed && (
+            <div className="sticky bottom-0 mt-auto -mx-4 sm:-mx-6 px-4 sm:px-6 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))] bg-[#f7f9fb]">
+              <button
+                disabled={!quizReady}
+                onClick={handleQuizConfirm}
+                className={`w-full py-4 rounded-2xl font-black text-base shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all ${!quizReady
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed shadow-none"
+                  : "bg-[#141779] text-white hover:bg-[#101362]"
+                  }`}
+              >
+                <span>{t('check_answer', 'CHECK ANSWER')}</span>
+              </button>
+            </div>
+          )}
         </main>
       )}
 

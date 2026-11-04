@@ -225,7 +225,7 @@ export default function ParentRoadmapScreen() {
         </header>
 
         {/* Roadmap Path Stages Skeleton */}
-        <main className="relative min-h-screen w-full flex flex-col items-center pt-24 pb-28 px-6">
+        <main className="relative min-h-screen w-full flex flex-col items-center pt-24 pb-6 px-6">
           <div className="w-full max-w-md flex flex-col gap-12 items-center">
             {/* Hero Stage Skeleton */}
             <div className="w-full bg-white/70 backdrop-blur-xl rounded-[28px] p-6 border-2 border-white/50 shadow-sm space-y-4">
@@ -331,7 +331,7 @@ export default function ParentRoadmapScreen() {
       </header>
 
       {/* Main Content Area */}
-      <main className="relative h-[calc(100vh-64px)] w-full flex flex-col items-center justify-center pt-2 pb-24">
+      <main className="relative h-[calc(100vh-64px)] w-full flex flex-col items-center justify-center pt-2 pb-6">
         {/* Adventure Roadmap Container */}
         <div ref={containerRef} className="relative w-full max-w-[430px] h-full flex flex-col items-center overflow-y-auto no-scrollbar pt-6 pb-10 px-4 scroll-pt-24 scroll-pb-10">
           

@@ -270,7 +270,7 @@ export default function ParentAchievementsScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f9fb] font-sans relative pb-24 overflow-x-clip">
+      <div className="min-h-screen bg-[#f7f9fb] font-sans relative pb-4 overflow-x-clip">
         {/* Top Header Skeleton */}
         <header className="sticky top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-white/40 shadow-xs flex items-center justify-between px-6 h-16">
           <div className="flex items-center gap-3">

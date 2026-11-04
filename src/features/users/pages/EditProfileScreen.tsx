@@ -202,7 +202,7 @@ export default function EditProfileScreen() {
         <div className="w-8" />
       </header>
 
-      <main className="px-6 pt-8 pb-24 max-w-md mx-auto">
+      <main className="px-6 pt-8 pb-6 max-w-md mx-auto">
         <div className="bg-[rgba(255,255,255,0.7)] rounded-3xl p-6 border-[1.5px] border-[rgba(255,255,255,0.8)] shadow-[0_2px_10px_rgba(0,0,0,0.05)]">
           <form onSubmit={handleSave} className="flex flex-col gap-5">
             {msg && (

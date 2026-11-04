@@ -6,6 +6,8 @@ import { useTranslation } from "react-i18next";
 import { getActiveUserContext } from "../../../utils/sessionCache";
 import ChildSwitcherModal from "../../../components/ChildSwitcherModal";
 import { translateNotificationTitle, translateNotificationMessage } from "../../../utils/notificationTranslator";
+import { showInteractiveNotification } from "../../../services/pushNotificationService";
+import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
 import {
   getSubjectChartColor,
   getCategorySubjectChartColor,
@@ -30,6 +32,48 @@ export default function ParentDashboardScreen() {
       return cached ? JSON.parse(cached) : null;
     } catch (e) { return null; }
   });
+
+  const lastBackClickTimeRef = useRef<number>(0);
+
+  const handleBackClick = () => {
+    // Parent Dashboard is the root screen of the Parent Portal.
+    // Clean Linear Flow: Tapping back on the dashboard never loops into inner pages or child side.
+    // It provides clean double-tap exit feedback to cleanly pop out / exit the application.
+    const now = Date.now();
+    if (now - lastBackClickTimeRef.current < 2000) {
+      // Second tap within 2 seconds -> Exit app
+      const win = window as any;
+      if (win.AndroidBridge?.exitApp) {
+        win.AndroidBridge.exitApp();
+      } else if (win.ReactNativeWebView?.postMessage) {
+        win.ReactNativeWebView.postMessage(JSON.stringify({ type: "EXIT_APP" }));
+      } else if (win.Capacitor?.Plugins?.App?.exitApp) {
+        win.Capacitor.Plugins.App.exitApp();
+      } else {
+        try {
+          window.close();
+        } catch {}
+      }
+      return;
+    }
+
+    // First tap -> Show notification toast and safely remain on Parent Dashboard
+    lastBackClickTimeRef.current = now;
+    showNotificationToast({
+      title: "NR Scholar",
+      message: "Press back again to exit",
+      type: "general"
+    });
+
+    const win = window as any;
+    if (win.AndroidBridge?.showToast) {
+      win.AndroidBridge.showToast("Press back again to exit");
+    } else if (win.ReactNativeWebView?.postMessage) {
+      win.ReactNativeWebView.postMessage(
+        JSON.stringify({ type: "SHOW_TOAST", message: "Press back again to exit" })
+      );
+    }
+  };
   const [childName, setChildName] = useState(() => userData?.childName || "Explorer");
   const cleanChildName = childName || "Explorer";
   const [parentPhoto, setParentPhoto] = useState(() => userData?.parentPhoto || "");
@@ -246,6 +290,33 @@ export default function ParentDashboardScreen() {
           setNotifications(notifJson.data);
           const uCount = notifJson.data.filter((n: any) => !n.isRead).length;
           setUnreadCount(uCount);
+
+          // Dispatch in-app alert for newly received parent notifications
+          const unreadParent = notifJson.data.filter((n: any) => !n.isRead);
+          if (unreadParent.length > 0) {
+            const latest = unreadParent[0];
+            const notifId = latest._id;
+            const lastAlerted = sessionStorage.getItem("last_alerted_parent_notif_id");
+            if (notifId && lastAlerted !== notifId) {
+              const notifTime = latest.createdAt ? new Date(latest.createdAt).getTime() : 0;
+              const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+              if (notifTime > fiveMinutesAgo) {
+                sessionStorage.setItem("last_alerted_parent_notif_id", notifId);
+                const titleUpper = (latest.title || "").toUpperCase();
+                // Strictly enforce channel rules: Main Missions, Daily Quests, and NeuroPlay Parent Mirror deliver via In-App & Push ONLY (no Toast popups)
+                const isNoToastCategory = titleUpper.includes("MISSION COMPLETED") ||
+                  titleUpper.includes("DAILY QUEST") ||
+                  titleUpper.includes("NEUROPLAY");
+                showInteractiveNotification(
+                  latest.title,
+                  latest.message,
+                  latest.screen || "/parent/dashboard",
+                  latest.type || "general",
+                  !isNoToastCategory
+                );
+              }
+            }
+          }
         }
       }
 
@@ -285,6 +356,13 @@ export default function ParentDashboardScreen() {
 
   // Lock background scrolling and touch interactions whenever any modal is active
   useLockBodyScroll(Boolean(modalType || showBreakdownModal || showNotifications));
+
+  useEffect(() => {
+    (window as any).__nrs_parent_modal_active = Boolean(modalType || showBreakdownModal);
+    return () => {
+      (window as any).__nrs_parent_modal_active = false;
+    };
+  }, [modalType, showBreakdownModal]);
 
   // Handle hardware / browser phone back button while modal is open to dismiss modal without leaving dashboard
   useEffect(() => {
@@ -583,7 +661,7 @@ export default function ParentDashboardScreen() {
         {/* Top App Bar Skeleton */}
         <header className="sticky top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 h-16 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 shadow-[0_12px_40px_rgba(20,23,121,0.14)] w-full">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full animate-skeleton shrink-0" />
+            {!isCoParent && <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full animate-skeleton shrink-0" />}
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full animate-skeleton shrink-0" />
             <div className="h-5 w-28 rounded-md animate-skeleton" />
           </div>
@@ -1243,7 +1321,7 @@ export default function ParentDashboardScreen() {
         <div className="flex items-center gap-2.5 min-w-0">
           {!isCoParent && (
             <button
-              onClick={() => navigate(-1)}
+              onClick={handleBackClick}
               className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
               aria-label="Back"
             >

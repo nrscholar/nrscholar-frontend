@@ -186,13 +186,18 @@ function App() {
 
 function PinGuard() {
   const location = useLocation();
+
   useEffect(() => {
-    if (location.pathname.startsWith("/parent")) {
+    const current = location.pathname;
+    if (current.startsWith("/parent")) {
       sessionStorage.setItem("last_active_portal", "parent");
     } else {
       sessionStorage.removeItem("parentPinVerified");
       sessionStorage.setItem("last_active_portal", "child");
     }
+    // Clean up any stale previous route keys to enforce clean linear navigation
+    sessionStorage.removeItem("nrs_prev_internal_route");
+    sessionStorage.removeItem("nrs_prev_parent_route");
   }, [location.pathname]);
   return null;
 }
