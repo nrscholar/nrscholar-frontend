@@ -33,3 +33,6 @@ mobile/build_log*.txt
 mobile/eas_build_log.txt
 mobile/scratch_log.gz
 
+
+# Claude Code personal settings
+.claude/settings.local.json

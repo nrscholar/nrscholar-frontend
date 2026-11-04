@@ -1,0 +1,54 @@
+---
+trigger: glob
+description: Rules for the Expo / React Native mobile shell and its WebView bridge to the web app — expo-router screens, API service, secure token storage, Zustand stores
+globs: mobile/**/*.ts,mobile/**/*.tsx,mobile/app.json,mobile/eas.json,src/app/App.tsx,src/api.ts
+---
+
+# Mobile shell and WebView — nrscholar-frontend
+
+`mobile/` is a separate Expo app (Expo 54, expo-router 6, React Native 0.81, React 19.1) with its own
+`package.json` and **yarn** lockfile. It renders native screens **and** opens web screens in a WebView.
+
+## Structure [Preserve]
+
+```
+mobile/
+├── app/                  expo-router routes (file = route): (tabs)/, parent/, practice/, *.tsx
+│   ├── services/api.ts   fetch wrapper: BASE_URL, token helpers (SecureStore on device, localStorage on web)
+│   ├── services/notifications.ts
+│   ├── components/       route-local components
+│   └── practice/webview.tsx   opens web-app paths in a WebView
+├── components/           shared native UI (themed-text, themed-view, ui/*)
+├── constants/theme.ts    colors/fonts
+├── hooks/                useX hooks + Zustand stores (useBossBattleStore.ts)
+├── app.json, eas.json    Expo/EAS config
+```
+
+## Rules
+
+- **API calls** go through `mobile/app/services/api.ts`. Don't call `fetch` with hardcoded hosts in screens. `BASE_URL` lives in one place. Move it to Expo config (`app.json` `extra` / `EXPO_PUBLIC_*`) when environments are introduced.
+- **Tokens** are stored with `expo-secure-store` via `saveToken`/`getToken`/`removeToken`. Never in `AsyncStorage` or plain files.
+- **State:** Zustand stores in `mobile/hooks/use<Name>Store.ts`, typed, with small focused stores. No Redux.
+- **Styling:** `StyleSheet.create` + `constants/theme.ts` colors. Avoid new hardcoded hex values and inline style objects in render.
+- **Routes:** new screens use kebab-case file names in the right group (`parent/`, `practice/`, `(tabs)/`). Use typed `router.push` paths.
+- **Platform code:** `.ios.tsx` / `.web.ts` suffixes (as in `icon-symbol.ios.tsx`) instead of scattered `Platform.OS` checks for large differences.
+- Run `yarn lint` (= `expo lint`) in `mobile/`. Don't run `eas build`, `eas submit` or `eas update`, and don't change bundle IDs, signing or versions in `app.json` unless asked.
+
+## WebView bridge (contract between `mobile/` and `src/`)
+
+How it works today:
+
+- `practice/webview.tsx` loads `WEBAPP_URL` (`https://nrscholar-frontend.vercel.app`) + a web path.
+- It passes the token **twice**: `?token=` in the URL, and `localStorage.setItem('userToken', …)` via `injectedJavaScriptBeforeContentLoaded`.
+- The web app (`src/app/App.tsx`) reads `userToken` from `localStorage` and accepts a `token` URL parameter.
+
+Rules:
+
+- Changing a web route that the shell opens, the token handoff, or storage keys (`userToken`, `userData`) affects **both apps**. Update both in the same PR and run the `impact-analysis` skill.
+- **Known risks to fix, not copy:** a token in the URL leaks into history/logs/referrers. The token is interpolated into injected JS without escaping (use `JSON.stringify(token)`). Don't add new data to the URL query.
+- New bridge messages use `window.ReactNativeWebView.postMessage(JSON.stringify({ type, payload }))` on the web side and a typed `onMessage` handler that **validates `type`** on the native side.
+- Keep `WEBAPP_URL` in one constant. Use an allow-list for navigation (`onShouldStartLoadWithRequest`) when adding external links.
+
+## Repo hygiene
+
+`mobile/.expo/` (cache) is committed today, and `mobile/android/` is a generated native project. Don't commit new `.expo/` cache files. Propose ignoring them in a separate chore PR.
