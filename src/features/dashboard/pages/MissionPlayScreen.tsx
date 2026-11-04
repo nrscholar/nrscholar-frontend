@@ -859,7 +859,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     const rawBoss = (missionData?.bossQuestions && missionData.bossQuestions.length > 0)
       ? missionData.bossQuestions
       : DEFAULT_BOSS;
-    return filterCrossUniqueQuestions(rawQuiz, rawBoss);
+    return filterCrossUniqueQuestions<any>(rawQuiz, rawBoss);
   }, [missionData?.quizQuestions, missionData?.bossQuestions]);
 
   const recordUniqueAnswer = useCallback((prevAnswers: any[], newAns: any) => {
@@ -1554,6 +1554,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
     );
   }
 
+  const isCountdownPhase = phase === "QUIZ" || phase === "BOSS";
+  const isUrgent = isCountdownPhase && questionTimeLeft <= 5 && questionTimeLeft > 0;
+  const isTimeUp = isCountdownPhase && questionTimeLeft === 0;
+
   // overflow-x-clip, not hidden: hidden makes this a scroll container and the sticky CHECK button would scroll away.
   return (
     <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] font-sans overflow-x-clip flex flex-col justify-between">
@@ -1646,20 +1650,55 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             </button>
           )}
 
-          <div className={`flex items-center gap-1 sm:gap-1.5 border px-2 sm:px-3.5 py-1 rounded-full font-mono font-extrabold text-[10px] sm:text-xs shadow-2xs transition-all shrink-0 whitespace-nowrap ${(phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5
-            ? "bg-rose-50 border-rose-300 text-rose-700 animate-pulse ring-2 ring-rose-400/40"
-            : "bg-slate-100/90 border-slate-200 text-slate-800"
-            }`}>
+          {/* Countdown Timer Pill with Child-Friendly Urgent Pop/Blink Animation */}
+          <div
+            className={`flex items-center gap-1.5 border px-2.5 sm:px-3.5 py-1 rounded-full font-mono font-extrabold text-[11px] sm:text-xs transition-all duration-200 shrink-0 whitespace-nowrap select-none ${
+              isUrgent
+                ? "bg-gradient-to-r from-rose-500 via-rose-600 to-amber-500 text-white border-rose-300 ring-2 ring-rose-400/50 shadow-md shadow-rose-500/35 animate-timer-pop"
+                : isTimeUp
+                ? "bg-rose-600 text-white border-rose-700 shadow-sm scale-95"
+                : "bg-slate-100/90 border-slate-200 text-slate-800 shadow-2xs"
+            }`}
+          >
             <div className="relative flex items-center justify-center">
-              <Clock size={12} className={(phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5 ? "text-rose-600 animate-bounce" : "text-indigo-600"} />
-              <span className={`absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ${(phase === "QUIZ" || phase === "BOSS") && questionTimeLeft <= 5 ? "bg-rose-500 animate-ping" : "bg-emerald-500 animate-ping"
-                }`} />
+              <Clock
+                size={13}
+                className={
+                  isUrgent
+                    ? "text-white animate-bounce"
+                    : isTimeUp
+                    ? "text-white"
+                    : "text-indigo-600"
+                }
+              />
+              <span
+                className={`absolute -top-0.5 -right-0.5 rounded-full ${
+                  isUrgent
+                    ? "w-2 h-2 bg-amber-300 animate-ping"
+                    : isTimeUp
+                    ? "w-1.5 h-1.5 bg-rose-300"
+                    : "w-1.5 h-1.5 bg-emerald-500 animate-ping"
+                }`}
+              />
             </div>
-            <span>
-              {phase === "QUIZ" || phase === "BOSS"
-                ? `${questionTimeLeft}s`
-                : `${Math.floor(totalSessionSec / 60).toString().padStart(2, '0')}:${(totalSessionSec % 60).toString().padStart(2, '0')}`}
-            </span>
+            {isCountdownPhase ? (
+              <span
+                key={questionTimeLeft}
+                className={`inline-flex items-center gap-0.5 ${
+                  isUrgent ? "animate-in zoom-in-75 duration-150 font-black" : ""
+                }`}
+              >
+                <span>{questionTimeLeft}s</span>
+                {isUrgent && <span className="text-[10px] animate-pulse">⚡</span>}
+              </span>
+            ) : (
+              <span>
+                {Math.floor(totalSessionSec / 60)
+                  .toString()
+                  .padStart(2, "0")}
+                :{(totalSessionSec % 60).toString().padStart(2, "0")}
+              </span>
+            )}
           </div>
         </div>
       </header>
