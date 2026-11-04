@@ -10,12 +10,12 @@ import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
 const MysteryBoxHeroSVG = ({ type }: { type?: string }) => {
   const isEpic = type === "epic";
   const isRare = type === "rare";
-  
+
   const boxGradientId = isEpic ? "epicBoxGrad" : isRare ? "rareBoxGrad" : "commonBoxGrad";
-  const glowColor = isEpic ? "#C084FC" : isRare ? "#38BDF8" : "#94A3B8";
+  const glowColor = isEpic ? "#818CF8" : isRare ? "#6C4DFF" : "#94A3B8";
 
   return (
-    <svg viewBox="0 0 160 160" className="w-28 h-28 sm:w-32 sm:h-32 drop-shadow-[0_0_25px_rgba(108,77,255,0.5)]">
+    <svg viewBox="0 0 160 160" className="w-28 h-28 sm:w-32 sm:h-32 drop-shadow-[0_0_25px_rgba(108,77,255,0.4)]">
       <defs>
         <linearGradient id="epicBoxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#E879F9" />
@@ -23,9 +23,9 @@ const MysteryBoxHeroSVG = ({ type }: { type?: string }) => {
           <stop offset="100%" stopColor="#6B21A8" />
         </linearGradient>
         <linearGradient id="rareBoxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#38BDF8" />
-          <stop offset="50%" stopColor="#0284C7" />
-          <stop offset="100%" stopColor="#0369A1" />
+          <stop offset="0%" stopColor="#818CF8" />
+          <stop offset="50%" stopColor="#6C4DFF" />
+          <stop offset="100%" stopColor="#4338CA" />
         </linearGradient>
         <linearGradient id="commonBoxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#94A3B8" />
@@ -51,7 +51,7 @@ const MysteryBoxHeroSVG = ({ type }: { type?: string }) => {
         <circle cx="80" cy="95" r="10" fill="#FFD45A" stroke="#FFFFFF" strokeWidth="2" />
         <path d="M 80 91 L 80 97 M 78 97 L 82 97" stroke="#1E1B4B" strokeWidth="2.5" strokeLinecap="round" />
         <path d="M 40 35 L 45 40 L 40 45 L 35 40 Z" fill="#FFD45A" />
-        <path d="M 125 35 L 128 38 L 125 41 L 122 38 Z" fill="#27F2E6" />
+        <path d="M 125 35 L 128 38 L 125 41 L 122 38 Z" fill="#818CF8" />
         <path d="M 135 90 L 138 93 L 135 96 L 132 93 Z" fill="#FFD45A" />
       </g>
     </svg>
@@ -79,14 +79,14 @@ export default function InventoryScreen() {
   const [userLevel, setUserLevel] = useState(1);
   const extractClassNum = (u: any): number => {
     if (!u) return 1;
-    const rawClass = u.childClass 
-      || u.activeChild?.childClass 
-      || u.activeChild?.classLevel 
-      || u.children?.[0]?.childClass 
-      || u.children?.[0]?.classLevel 
-      || u.classLevel 
-      || u.grade 
-      || u.studentClass 
+    const rawClass = u.childClass
+      || u.activeChild?.childClass
+      || u.activeChild?.classLevel
+      || u.children?.[0]?.childClass
+      || u.children?.[0]?.classLevel
+      || u.classLevel
+      || u.grade
+      || u.studentClass
       || u.standard;
     const match = String(rawClass || "").match(/\d+/);
     return match ? parseInt(match[0], 10) : 1;
@@ -98,7 +98,7 @@ export default function InventoryScreen() {
       if (cached) {
         return extractClassNum(JSON.parse(cached));
       }
-    } catch (e) {}
+    } catch (e) { }
     return 1;
   });
   const [journeyData, setJourneyData] = useState<any>(null);
@@ -123,7 +123,7 @@ export default function InventoryScreen() {
         setStudentClassNum(extractClassNum(u));
         localStorage.setItem("userData", JSON.stringify(u));
       }
-    } catch (e) {}
+    } catch (e) { }
   };
 
   useEffect(() => {
@@ -137,9 +137,9 @@ export default function InventoryScreen() {
         setStreakDays(u.streakDays || u.streak_days || u.streak || 0);
         setUserLevel(u.level || Math.max(1, Math.floor((u.xp || 0) / 500) + 1));
         setStudentClassNum(extractClassNum(u));
-      } catch(e) {}
+      } catch (e) { }
     }
-    
+
     const fetchInventory = async () => {
       try {
         const res = await apiFetch("/api/retention/mystery-boxes");
@@ -161,7 +161,7 @@ export default function InventoryScreen() {
         console.error("Failed to fetch inventory data", e);
       }
     };
-    
+
     fetchProfile();
     fetchInventory();
   }, []);
@@ -189,7 +189,7 @@ export default function InventoryScreen() {
               const fData = await fragRes.json();
               setFragments(fData);
             }
-          } catch (e) {}
+          } catch (e) { }
           setHatchingType(null);
         }, 1500);
       } else {
@@ -215,7 +215,7 @@ export default function InventoryScreen() {
         setTimeout(() => {
           setRewardData(data);
           setOpeningBox(null);
-          setMysteryBoxes((prev: any) => ({...prev, [type]: Math.max(0, (prev[type] || 0) - 1)}));
+          setMysteryBoxes((prev: any) => ({ ...prev, [type]: Math.max(0, (prev[type] || 0) - 1) }));
 
           if (data.user_coins !== undefined && data.user_coins !== null) {
             setCoins(data.user_coins);
@@ -241,7 +241,7 @@ export default function InventoryScreen() {
           window.dispatchEvent(new Event("userDataUpdated"));
 
           if (data.type === 'fragment') {
-            apiFetch("/api/retention/fragments").then(r => r.json()).then(f => setFragments(f)).catch(() => {});
+            apiFetch("/api/retention/fragments").then(r => r.json()).then(f => setFragments(f)).catch(() => { });
           }
         }, 1500);
       } else {
@@ -269,7 +269,7 @@ export default function InventoryScreen() {
             if (u.activeChildId) params.append("child_id", u.activeChildId);
             const q = params.toString();
             if (q) url += `?${q}`;
-          } catch (e) {}
+          } catch (e) { }
         }
         const jRes = await apiFetch(url);
         if (jRes.ok) {
@@ -284,7 +284,7 @@ export default function InventoryScreen() {
             }
           }
         }
-      } catch (e) {}
+      } catch (e) { }
 
       try {
         const response = await apiFetch("/api/practice/cities");
@@ -308,108 +308,108 @@ export default function InventoryScreen() {
             { name: "Civilization Leader", requiredFuel: 100000 },
           ]);
         }
-      } catch (e) {}
+      } catch (e) { }
     };
     fetchCitiesAndJourney();
   }, []);
 
   // Determine active standard for the student
-  const activeClassNum = Number(journeyData?.classLevel) 
-    || studentClassNum 
+  const activeClassNum = Number(journeyData?.classLevel)
+    || studentClassNum
     || Number(journeyNodes.find(n => n.unlocked && !n.completed && !n.isPriorClass)?.minClass)
     || 1;
 
   const xpThresholds = [0, 500, 1000, 2500, 5000, 10000, 15000, 20000, 30000, 50000, 65000, 80000, 100000];
   const cities = journeyNodes.length > 0
     ? journeyNodes.map((node, index) => {
-        const minClass = node.minClass || (index < 3 ? 1 : index < 6 ? 2 : index < 9 ? 3 : 4);
-        const isCurrentClass = minClass === activeClassNum;
-        const isFutureClass = minClass > activeClassNum;
-        const isPriorClass = minClass < activeClassNum;
+      const minClass = node.minClass || (index < 3 ? 1 : index < 6 ? 2 : index < 9 ? 3 : 4);
+      const isCurrentClass = minClass === activeClassNum;
+      const isFutureClass = minClass > activeClassNum;
+      const isPriorClass = minClass < activeClassNum;
 
-        const isCompleted = Boolean(node.completed);
-        const stageProgPct = node.nodeProgressPercentage !== undefined 
-          ? Math.round(node.nodeProgressPercentage) 
-          : 0;
+      const isCompleted = Boolean(node.completed);
+      const stageProgPct = node.nodeProgressPercentage !== undefined
+        ? Math.round(node.nodeProgressPercentage)
+        : 0;
 
-        // Unlocked rule strictly identical to Dragon Journey (MapWorld.tsx):
-        // - Current class: unlocked if node.unlocked is true
-        // - Prior/other standards: unlocked ONLY IF progress > 0% or completed! If 0%, it stays locked.
-        // - Future standards: locked.
-        const isUnlocked = isCurrentClass
-          ? Boolean(node.unlocked)
-          : (isCompleted || stageProgPct > 0);
+      // Unlocked rule strictly identical to Dragon Journey (MapWorld.tsx):
+      // - Current class: unlocked if node.unlocked is true
+      // - Prior/other standards: unlocked ONLY IF progress > 0% or completed! If 0%, it stays locked.
+      // - Future standards: locked.
+      const isUnlocked = isCurrentClass
+        ? Boolean(node.unlocked)
+        : (isCompleted || stageProgPct > 0);
 
-        const isCurrent = isCurrentClass && isUnlocked && !isCompleted;
-        const isLocked = !isUnlocked;
+      const isCurrent = isCurrentClass && isUnlocked && !isCompleted;
+      const isLocked = !isUnlocked;
 
-        let status = t('status_locked', "Locked 🔒");
-        if (isFutureClass) {
-          status = t('unlocks_at_class_short', { count: minClass, defaultValue: `Unlocks at Class ${minClass} 🔒` });
-        } else if (isCompleted) {
-          status = t('status_completed', "Completed 🎉");
-        } else if (isCurrent) {
-          status = t('status_current_location', "Current Location 📍");
-        } else if (isUnlocked && stageProgPct > 0) {
-          status = `${stageProgPct}% Progress 📍`;
-        } else if (isUnlocked) {
-          status = t('status_unlocked', "Unlocked 📍");
-        }
+      let status = t('status_locked', "Locked 🔒");
+      if (isFutureClass) {
+        status = t('unlocks_at_class_short', { count: minClass, defaultValue: `Unlocks at Class ${minClass} 🔒` });
+      } else if (isCompleted) {
+        status = t('status_completed', "Completed 🎉");
+      } else if (isCurrent) {
+        status = t('status_current_location', "Current Location 📍");
+      } else if (isUnlocked && stageProgPct > 0) {
+        status = `${stageProgPct}% Progress 📍`;
+      } else if (isUnlocked) {
+        status = t('status_unlocked', "Unlocked 📍");
+      }
 
-        return {
-          id: String(index),
-          name: node.name || node.title,
-          minClass,
-          isCompleted,
-          isCurrent,
-          isUnlocked,
-          isLocked,
-          isFutureClass,
-          isPriorClass,
-          stageProgPct,
-          status
-        };
-      })
+      return {
+        id: String(index),
+        name: node.name || node.title,
+        minClass,
+        isCompleted,
+        isCurrent,
+        isUnlocked,
+        isLocked,
+        isFutureClass,
+        isPriorClass,
+        stageProgPct,
+        status
+      };
+    })
     : citiesData.map((cityData, index) => {
-        const minClass = index < 3 ? 1 : index < 6 ? 2 : index < 9 ? 3 : 4;
-        const isCurrentClass = minClass === activeClassNum;
-        const isFutureClass = minClass > activeClassNum;
-        const isPriorClass = minClass < activeClassNum;
-        const reqXp = xpThresholds[index] || 0;
-        const nextReqXp = xpThresholds[index + 1] || 99999;
-        
-        const isCompleted = !isFutureClass && (xp >= nextReqXp);
-        const isCurrent = isCurrentClass && (xp >= reqXp && xp < nextReqXp);
-        const isUnlocked = isCurrentClass 
-          ? (index === citiesData.findIndex(c => (index < 3 ? 1 : index < 6 ? 2 : index < 9 ? 3 : 4) === activeClassNum) || xp >= reqXp)
-          : !isFutureClass && (isCompleted || xp > reqXp);
-        const isLocked = !isUnlocked;
+      const minClass = index < 3 ? 1 : index < 6 ? 2 : index < 9 ? 3 : 4;
+      const isCurrentClass = minClass === activeClassNum;
+      const isFutureClass = minClass > activeClassNum;
+      const isPriorClass = minClass < activeClassNum;
+      const reqXp = xpThresholds[index] || 0;
+      const nextReqXp = xpThresholds[index + 1] || 99999;
 
-        let status = t('status_locked', "Locked 🔒");
-        if (isFutureClass) {
-          status = t('unlocks_at_class_short', { count: minClass, defaultValue: `Unlocks at Class ${minClass} 🔒` });
-        } else if (isCompleted) {
-          status = t('status_completed', "Completed 🎉");
-        } else if (isCurrent) {
-          status = t('status_current_location', "Current Location 📍");
-        } else if (isUnlocked) {
-          status = t('status_unlocked', "Unlocked 📍");
-        }
+      const isCompleted = !isFutureClass && (xp >= nextReqXp);
+      const isCurrent = isCurrentClass && (xp >= reqXp && xp < nextReqXp);
+      const isUnlocked = isCurrentClass
+        ? (index === citiesData.findIndex(c => (index < 3 ? 1 : index < 6 ? 2 : index < 9 ? 3 : 4) === activeClassNum) || xp >= reqXp)
+        : !isFutureClass && (isCompleted || xp > reqXp);
+      const isLocked = !isUnlocked;
 
-        return {
-          id: String(index),
-          name: cityData.name,
-          minClass,
-          isCompleted,
-          isCurrent,
-          isUnlocked,
-          isLocked,
-          isFutureClass,
-          isPriorClass,
-          stageProgPct: 0,
-          status
-        };
-      });
+      let status = t('status_locked', "Locked 🔒");
+      if (isFutureClass) {
+        status = t('unlocks_at_class_short', { count: minClass, defaultValue: `Unlocks at Class ${minClass} 🔒` });
+      } else if (isCompleted) {
+        status = t('status_completed', "Completed 🎉");
+      } else if (isCurrent) {
+        status = t('status_current_location', "Current Location 📍");
+      } else if (isUnlocked) {
+        status = t('status_unlocked', "Unlocked 📍");
+      }
+
+      return {
+        id: String(index),
+        name: cityData.name,
+        minClass,
+        isCompleted,
+        isCurrent,
+        isUnlocked,
+        isLocked,
+        isFutureClass,
+        isPriorClass,
+        stageProgPct: 0,
+        status
+      };
+    });
 
   const translateBadgeText = (text: string, defaultVal: string) => {
     if (!text) return defaultVal || "";
@@ -463,7 +463,7 @@ export default function InventoryScreen() {
   const hasArenaMaster = userLevel >= 5 || userBadges.some((b: any) => typeof b === 'string' ? b.toLowerCase().includes("arena") : b?.name?.toLowerCase().includes("arena"));
 
   const synthesizedMilestoneBadges: any[] = [];
-  
+
   if (isStreakUnlocked && !userBadges.some((b: any) => (typeof b === 'string' ? b : b?.name || '').toLowerCase().includes('streak'))) {
     synthesizedMilestoneBadges.push({
       id: "streak_master",
@@ -503,10 +503,10 @@ export default function InventoryScreen() {
 
   const customBadges = userBadges.map((b, i) => ({
     id: b.id || `custom_${i}`,
-    name: typeof b === 'string' ? b : b.name || `Badge ${i+1}`,
+    name: typeof b === 'string' ? b : b.name || `Badge ${i + 1}`,
     icon: i % 2 === 0 ? Star : Shield,
     desc: typeof b === 'string' ? "Earned achievement" : b.description || "Earned achievement",
-    color: i % 2 === 0 ? "#D97706" : "#0284C7"
+    color: i % 2 === 0 ? "#D97706" : "#6C4DFF"
   }));
 
   const badges = [...customBadges, ...synthesizedMilestoneBadges];
@@ -522,26 +522,26 @@ export default function InventoryScreen() {
   const currentCity = cities.find(c => c.isCurrent) || cities.find(c => c.isUnlocked) || cities[0];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#F4EFF7] via-[#F9F6FF] to-[#FFFFFF] text-[#141779] font-sans pb-6 relative selection:bg-[#6C4DFF] selection:text-white overflow-x-clip">
+    <div className="min-h-screen bg-gradient-to-b from-[#F7F4FE] via-[#FAF8FF] to-[#FFFFFF] text-[#141779] font-sans pb-6 relative selection:bg-[#6C4DFF] selection:text-white overflow-x-clip">
       {/* Background Soft Glow Accents */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[35%] rounded-full bg-[#6C4DFF]/10 blur-[80px]" />
-        <div className="absolute top-[35%] right-[-10%] w-[50%] h-[40%] rounded-full bg-[#F4C95D]/15 blur-[90px]" />
+        <div className="absolute top-[35%] right-[-10%] w-[50%] h-[40%] rounded-full bg-[#818CF8]/10 blur-[90px]" />
         <div className="absolute bottom-[-10%] left-[20%] w-[50%] h-[30%] rounded-full bg-[#3520A8]/5 blur-[70px]" />
       </div>
 
       {/* HEADER: MY COLLECTION */}
-      <header className="px-4 py-3 bg-white/80 backdrop-blur-md border-b border-[#E5DBFB] sticky top-0 z-50 shadow-sm">
+      <header className="px-4 py-3 bg-white/80 backdrop-blur-md border-b border-[#EDE8FC] sticky top-0 z-50 shadow-xs">
         <div className="flex items-center justify-between max-w-[430px] mx-auto w-full">
-          <button 
-            onClick={() => navigate(-1)} 
-            className="w-9 h-9 rounded-full bg-[#F4EFF7] border border-[#E5DBFB] hover:bg-[#EAE2FB] flex items-center justify-center transition-all active:scale-95"
+          <button
+            onClick={() => navigate(-1)}
+            className="w-9 h-9 rounded-full bg-[#FAF8FF] border border-[#EDE8FC] hover:bg-[#F4EFFC] flex items-center justify-center transition-all active:scale-95"
             aria-label="Back"
           >
             <ArrowLeft size={18} className="text-[#141779]" />
           </button>
-          
-          <div className="flex items-center  gap-1.5">
+
+          <div className="flex items-center gap-1.5">
             <Sparkles size={16} className="text-[#6C4DFF] animate-pulse" />
             <h1 className="text-[16px] font-black tracking-widest uppercase text-[#141779]">
               {t('my_treasure_vault', 'MY TREASURE VAULT')}
@@ -556,12 +556,12 @@ export default function InventoryScreen() {
       <main className="px-4 pt-3 max-w-[430px] mx-auto w-full relative z-10">
         {/* PLAYER COLLECTION SUMMARY HUD */}
         <section className="mb-4">
-          <div className="bg-white border-2 border-[#E5DBFB] rounded-2xl p-3.5 shadow-sm relative overflow-hidden">
+          <div className="bg-white border border-[#EDE8FC] rounded-2xl p-3.5 shadow-sm relative overflow-hidden">
             {/* Currency Badges Row */}
             <div className="flex items-center justify-between gap-3 mb-3">
               {/* Coins HUD */}
-              <div className="flex-1 bg-[#FFFBEB] border border-[#F59E0B]/40 rounded-xl px-3 py-2.5 flex items-center gap-2.5 shadow-sm">
-                <div className="w-8 h-8 rounded-lg bg-[#F59E0B]/20 border border-[#F59E0B]/50 flex items-center justify-center shrink-0">
+              <div className="flex-1 bg-[#FAF8FF] border border-[#EDE8FC] rounded-xl px-3 py-2.5 flex items-center gap-2.5 shadow-xs">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
                   <Coins size={18} className="text-[#D97706]" />
                 </div>
                 <div className="flex items-baseline gap-1.5 min-w-0">
@@ -571,19 +571,19 @@ export default function InventoryScreen() {
               </div>
 
               {/* XP HUD */}
-              <div className="flex-1 bg-[#F0F9FF] border border-[#0EA5E9]/40 rounded-xl px-3 py-2.5 flex items-center gap-2.5 shadow-sm">
-                <div className="w-8 h-8 rounded-lg bg-[#0EA5E9]/20 border border-[#0EA5E9]/50 flex items-center justify-center shrink-0">
-                  <Zap size={18} className="text-[#0284C7]" />
+              <div className="flex-1 bg-[#FAF8FF] border border-[#EDE8FC] rounded-xl px-3 py-2.5 flex items-center gap-2.5 shadow-xs">
+                <div className="w-8 h-8 rounded-lg bg-[#6C4DFF]/10 border border-[#6C4DFF]/20 flex items-center justify-center shrink-0">
+                  <Zap size={18} className="text-[#6C4DFF]" />
                 </div>
                 <div className="flex items-baseline gap-1.5 min-w-0">
                   <span className="text-base font-black text-[#141779] leading-none">{xp.toLocaleString()}</span>
-                  <span className="text-[12px] font-extrabold text-[#0284C7] tracking-wider uppercase leading-none">{t('xp_upper', 'XP')}</span>
+                  <span className="text-[12px] font-extrabold text-[#6C4DFF] tracking-wider uppercase leading-none">{t('xp_upper', 'XP')}</span>
                 </div>
               </div>
             </div>
 
             {/* Collection Level & Progress Bar */}
-            <div className="bg-[#F4EFF7] border border-[#E5DBFB] rounded-xl p-2.5">
+            <div className="bg-[#FAF8FF] border border-[#EDE8FC] rounded-xl p-2.5">
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[11px] font-black uppercase tracking-wider text-[#141779] flex items-center gap-1.5">
                   <Compass size={13} className="text-[#6C4DFF]" />
@@ -594,12 +594,12 @@ export default function InventoryScreen() {
                 </span>
               </div>
 
-              <div className="w-full h-2.5 bg-white rounded-full overflow-hidden p-0.5 border border-[#E5DBFB]">
-                <motion.div 
+              <div className="w-full h-2.5 bg-white rounded-full overflow-hidden p-0.5 border border-[#EDE8FC]">
+                <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${collectionScore}%` }}
                   transition={{ duration: 1, ease: "easeOut" }}
-                  className="h-full bg-gradient-to-r from-[#6C4DFF] via-[#512BE2] to-[#3520A8] rounded-full shadow-sm"
+                  className="h-full bg-gradient-to-r from-[#6C4DFF] via-[#512BE2] to-[#3520A8] rounded-full shadow-xs"
                 />
               </div>
             </div>
@@ -608,7 +608,7 @@ export default function InventoryScreen() {
 
         {/* COLLECTION CATEGORY NAVIGATION TABS */}
         <nav className="mb-4">
-          <div className="grid grid-cols-4 gap-1.5 bg-[#EAE2FB] p-1.5 rounded-2xl border border-[#E5DBFB] shadow-sm">
+          <div className="grid grid-cols-4 gap-1.5 bg-[#F6F3FD] p-1.5 rounded-2xl border border-[#EDE8FC] shadow-sm">
             {[
               { id: "Mystery Boxes", label: t('boxes_tab', 'BOXES'), icon: Gift },
               { id: "Dragon Academy", label: t('dragons_tab', 'DRAGONS'), icon: Sparkles },
@@ -621,13 +621,12 @@ export default function InventoryScreen() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl text-[10px] font-black transition-all duration-200 uppercase tracking-tight ${
-                    isActive
-                      ? "bg-gradient-to-r from-[#6C4DFF] to-[#3520A8] text-white shadow-md border border-[#9C7CFF]/50 scale-[1.02]"
-                      : "text-[#6D28D9] hover:bg-white/50 hover:text-[#141779]"
-                  }`}
+                  className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl text-[10px] font-black transition-all duration-200 uppercase tracking-tight ${isActive
+                      ? "bg-[#6C4DFF] text-white shadow-sm scale-[1.02]"
+                      : "text-[#6C4DFF]/70 hover:bg-white/80 hover:text-[#141779]"
+                    }`}
                 >
-                  <Icon size={16} className={`mb-1 ${isActive ? "text-[#FFD45A]" : "text-[#6D28D9]"}`} />
+                  <Icon size={16} className={`mb-1 ${isActive ? "text-white" : "text-[#6C4DFF]/70"}`} />
                   <span>{tab.label}</span>
                 </button>
               );
@@ -639,8 +638,8 @@ export default function InventoryScreen() {
         {activeTab === "Mystery Boxes" && (
           <section className="flex flex-col gap-4">
             {/* Featured Box Vault Hero Banner */}
-            <div className="bg-gradient-to-b from-[#180C4F] to-[#2B1778] rounded-2xl p-4 border-2 border-[#6C4DFF]/40 text-center relative overflow-hidden shadow-lg">
-              <div className="absolute top-2 left-3 bg-[#6C4DFF] border border-[#9C7CFF] px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider text-white shadow-sm">
+            <div className="bg-[linear-gradient(135deg,#1E1B4B,#312E81)] rounded-2xl p-4 border border-[#6C4DFF]/30 text-center relative overflow-hidden shadow-lg">
+              <div className="absolute top-2 left-3 bg-[#6C4DFF] border border-[#9C7CFF]/40 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider text-white shadow-sm">
                 {t('featured_vault', '✨ FEATURED VAULT')}
               </div>
 
@@ -656,22 +655,43 @@ export default function InventoryScreen() {
               <h2 className="text-base font-black text-white uppercase tracking-wider">
                 {t('mystery_reward_vault', 'MYSTERY REWARD VAULT')}
               </h2>
-              <p className="text-xs text-[#EAE2FB] font-medium mt-0.5">
+              <p className="text-xs text-[#C7D2FE] font-medium mt-0.5">
                 {t('open_boxes_desc', 'Open boxes to discover rare dragons, coins, and XP!')}
               </p>
 
-              <div className="mt-2.5 pt-2 border-t border-white/15 flex items-center justify-between text-[11px] font-bold text-[#EAE2FB]">
+              <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between text-[11px] font-bold text-[#C7D2FE]">
                 <span>{t('box_collection', 'BOX COLLECTION')}</span>
-                <span className="text-[#FFD45A] font-black">{t('boxes_ready', { count: totalBoxesOwned, defaultValue: `${totalBoxesOwned} BOXES READY` })}</span>
+                <span className="text-[#FCD34D] font-black">{t('boxes_ready', { count: totalBoxesOwned, defaultValue: `${totalBoxesOwned} BOXES READY` })}</span>
               </div>
             </div>
 
             {/* 2-Column Collectible Rarity Grid */}
             <div className="grid grid-cols-2 gap-3">
               {[
-                { type: "common", name: t('common_box', 'COMMON BOX'), rarity: t('common', 'COMMON'), color: "#64748B", border: "border-slate-300", glow: "shadow-sm", bg: "bg-white", text: "text-slate-700" },
-                { type: "rare", name: t('rare_box', 'RARE BOX'), rarity: t('rare', 'RARE'), color: "#0284C7", border: "border-sky-300", glow: "shadow-sm", bg: "bg-white", text: "text-sky-700" },
-                { type: "epic", name: t('epic_box', 'EPIC BOX'), rarity: t('epic', 'EPIC'), color: "#9333EA", border: "border-purple-300", glow: "shadow-sm", bg: "bg-white", text: "text-purple-700" },
+                {
+                  type: "common",
+                  name: t('common_box', 'COMMON BOX'),
+                  rarity: t('common', 'COMMON'),
+                  color: "#64748B",
+                  borderColor: "border-slate-200",
+                  badgeClass: "bg-slate-100 text-slate-600 border-slate-300",
+                },
+                {
+                  type: "rare",
+                  name: t('rare_box', 'RARE BOX'),
+                  rarity: t('rare', 'RARE'),
+                  color: "#6C4DFF",
+                  borderColor: "border-[#6C4DFF]/30",
+                  badgeClass: "bg-[#6C4DFF]/10 text-[#6C4DFF] border-[#6C4DFF]/30",
+                },
+                {
+                  type: "epic",
+                  name: t('epic_box', 'EPIC BOX'),
+                  rarity: t('epic', 'EPIC'),
+                  color: "#9333EA",
+                  borderColor: "border-purple-200",
+                  badgeClass: "bg-purple-50 text-purple-700 border-purple-200",
+                },
               ].map(item => {
                 const count = mysteryBoxes[item.type] || 0;
                 const isOpening = openingBox === item.type;
@@ -679,23 +699,22 @@ export default function InventoryScreen() {
                 return (
                   <motion.div
                     key={item.type}
-                    animate={isOpening ? { 
+                    animate={isOpening ? {
                       x: [-6, 6, -6, 6, -3, 3, 0],
                       scale: [1, 1.04, 1]
                     } : {}}
                     transition={{ duration: 0.5, repeat: isOpening ? Infinity : 0 }}
-                    className={`${item.bg} border-2 ${item.border} ${item.glow} rounded-2xl p-3.5 flex flex-col items-center justify-between relative overflow-hidden transition-all`}
+                    className={`bg-white border ${item.borderColor || "border-[#EDE8FC]"} shadow-sm hover:shadow-md rounded-2xl p-3.5 flex flex-col items-center justify-between relative overflow-hidden transition-all`}
                   >
                     {/* Rarity Pill */}
-                    <span 
-                      className="text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider border mb-2"
-                      style={{ color: item.color, borderColor: `${item.color}50`, backgroundColor: `${item.color}15` }}
+                    <span
+                      className={`text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider border mb-2 ${item.badgeClass}`}
                     >
                       {item.rarity}
                     </span>
 
                     {/* Box Art */}
-                    <div className="w-16 h-16 rounded-full bg-[#F4EFF7] border border-[#E5DBFB] flex items-center justify-center mb-2 shadow-inner">
+                    <div className="w-16 h-16 rounded-full bg-[#FAF8FF] border border-[#EDE8FC] flex items-center justify-center mb-2 shadow-xs">
                       <Package size={32} style={{ color: item.color }} />
                     </div>
 
@@ -703,19 +722,18 @@ export default function InventoryScreen() {
                     <h3 className="text-xs font-black text-[#141779] uppercase tracking-tight text-center">
                       {item.name}
                     </h3>
-                    <p className="text-[11px] font-bold text-[#6D28D9] mb-3">
+                    <p className="text-[11px] font-bold text-[#6C4DFF] mb-3">
                       {t('owned_count', { count, defaultValue: `x${count} OWNED` })}
                     </p>
 
                     {/* Action Button */}
-                    <button 
+                    <button
                       onClick={() => openMysteryBox(item.type)}
                       disabled={count === 0 || openingBox !== null}
-                      className={`w-full py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
-                        count > 0 && openingBox !== item.type
+                      className={`w-full py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${count > 0 && openingBox !== item.type
                           ? "bg-gradient-to-r from-[#6C4DFF] to-[#3520A8] text-white shadow-md hover:brightness-110 active:scale-95 border border-[#9C7CFF]/40"
-                          : "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
-                      }`}
+                          : "bg-slate-100 text-slate-500 border border-slate-200 cursor-not-allowed"
+                        }`}
                     >
                       {isOpening ? t('opening', 'OPENING...') : count > 0 ? t('open_vault', 'OPEN VAULT') : t('locked_upper', 'LOCKED')}
                     </button>
@@ -730,39 +748,37 @@ export default function InventoryScreen() {
         {activeTab === "Dragon Academy" && (
           <section className="flex flex-col gap-4">
             {/* Dragon Academy Hero Banner */}
-            <div className="bg-gradient-to-b from-[#180C4F] to-[#2B1778] rounded-2xl p-4 border-2 border-[#FFD45A]/40 text-center relative overflow-hidden shadow-lg">
-              <div className="absolute top-2 left-3 bg-[#F59E0B] border border-[#FFD45A] px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider text-white shadow-sm">
+            <div className="bg-[linear-gradient(135deg,#1E1B4B,#312E81)] rounded-2xl p-4 border border-[#6C4DFF]/30 text-center relative overflow-hidden shadow-lg">
+              <div className="absolute top-2 left-3 bg-[#D97706] border border-amber-400/40 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider text-white shadow-sm">
                 {t('mystical_dragons', '🐉 MYSTICAL DRAGONS')}
               </div>
 
-              <span className="text-5xl block my-2 drop-shadow-[0_0_15px_rgba(255,212,90,0.6)]">🐉</span>
+              <span className="text-5xl block my-2 drop-shadow-[0_0_15px_rgba(251,191,36,0.5)]">🐉</span>
               <h2 className="text-base font-black text-white uppercase tracking-wider">
                 {t('dragon_academy', 'DRAGON ACADEMY')}
               </h2>
-              <p className="text-xs text-[#EAE2FB] font-medium mt-0.5">
+              <p className="text-xs text-[#C7D2FE] font-medium mt-0.5">
                 {t('hatch_fragments_desc', 'Hatch fragments and level up your companions!')}
               </p>
             </div>
 
             {/* Sub-tab Switcher */}
-            <div className="flex bg-[#EAE2FB] p-1 rounded-xl border border-[#E5DBFB]">
+            <div className="flex bg-[#F6F3FD] p-1 rounded-xl border border-[#EDE8FC]">
               <button
                 onClick={() => setSubTab("Journey")}
-                className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
-                  subTab === "Journey"
-                    ? "bg-gradient-to-r from-[#6C4DFF] to-[#3520A8] text-white shadow-md border border-[#9C7CFF]/40"
-                    : "text-[#6D28D9] hover:text-[#141779]"
-                }`}
+                className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${subTab === "Journey"
+                    ? "bg-[#6C4DFF] text-white shadow-sm"
+                    : "text-[#6C4DFF]/70 hover:text-[#141779]"
+                  }`}
               >
                 {t('dragon_journey_tab', 'Dragon Journey 🗺️')}
               </button>
               <button
                 onClick={() => setSubTab("Lab")}
-                className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
-                  subTab === "Lab"
-                    ? "bg-gradient-to-r from-[#6C4DFF] to-[#3520A8] text-white shadow-md border border-[#9C7CFF]/40"
-                    : "text-[#6D28D9] hover:text-[#141779]"
-                }`}
+                className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${subTab === "Lab"
+                    ? "bg-[#6C4DFF] text-white shadow-sm"
+                    : "text-[#6C4DFF]/70 hover:text-[#141779]"
+                  }`}
               >
                 {t('fragment_lab_tab', 'Fragment Lab 🧪')}
               </button>
@@ -781,26 +797,26 @@ export default function InventoryScreen() {
                 </div>
 
                 {dragons.length === 0 ? (
-                  <div className="bg-white border-2 border-[#E5DBFB] rounded-2xl p-6 text-center shadow-sm">
-                    <p className="text-xs text-[#6D28D9]">{t('no_dragons_hatched', 'No dragons hatched yet. Collect fragments in mystery boxes!')}</p>
+                  <div className="bg-white border border-[#EDE8FC] rounded-2xl p-6 text-center shadow-xs">
+                    <p className="text-xs text-slate-500">{t('no_dragons_hatched', 'No dragons hatched yet. Collect fragments in mystery boxes!')}</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-3">
                     {dragons.map((d: any, index: number) => {
                       const isNew = d.isNew || index === dragons.length - 1;
                       return (
-                        <motion.div 
-                          key={d.id || index} 
+                        <motion.div
+                          key={d.id || index}
                           animate={{ y: [-3, 3, -3] }}
                           transition={{ repeat: Infinity, duration: 2.5 + Math.random(), ease: "easeInOut" }}
-                          className="bg-white border-2 border-[#E5DBFB] hover:border-[#6C4DFF] rounded-2xl p-3.5 flex flex-col items-center relative overflow-hidden shadow-sm transition-all"
+                          className="bg-white border border-[#EDE8FC] hover:border-[#6C4DFF] rounded-2xl p-3.5 flex flex-col items-center relative overflow-hidden shadow-xs transition-all"
                         >
                           {isNew && (
                             <span className="absolute top-2 right-2 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 text-[8px] font-black px-1.5 py-0.5 rounded-full border border-amber-300 shadow-xs animate-pulse uppercase tracking-wider">
                               {t('new_badge', 'NEW')}
                             </span>
                           )}
-                          <div className="w-16 h-16 rounded-full bg-[#F4EFF7] border border-[#E5DBFB] flex items-center justify-center mb-2 shadow-inner">
+                          <div className="w-16 h-16 rounded-full bg-[#FAF8FF] border border-[#EDE8FC] flex items-center justify-center mb-2 shadow-xs">
                             <span className="text-3xl">🐉</span>
                           </div>
                           <h3 className="text-xs font-black text-[#141779] text-center uppercase tracking-tight">{t(d.name.toLowerCase().replace(/ /g, '_'), { defaultValue: d.name })}</h3>
@@ -824,14 +840,14 @@ export default function InventoryScreen() {
                 </div>
 
                 {(!fragments || fragments.length === 0) ? (
-                  <div className="bg-white border-2 border-dashed border-[#E5DBFB] rounded-2xl p-6 flex flex-col items-center justify-center text-center shadow-sm">
-                    <div className="w-14 h-14 rounded-2xl bg-[#F4EFF7] border border-[#E5DBFB] flex items-center justify-center mb-3 shadow-inner">
+                  <div className="bg-white border-2 border-dashed border-[#EDE8FC] rounded-2xl p-6 flex flex-col items-center justify-center text-center shadow-xs">
+                    <div className="w-14 h-14 rounded-2xl bg-[#FAF8FF] border border-[#EDE8FC] flex items-center justify-center mb-3 shadow-xs">
                       <span className="text-2xl">🧪</span>
                     </div>
                     <h4 className="text-xs font-black text-[#141779] mb-1 uppercase tracking-wide">
                       {t('no_fragments_yet', 'No Fragments Collected Yet')}
                     </h4>
-                    <p className="text-[11px] font-semibold text-[#767683] max-w-[260px] leading-relaxed">
+                    <p className="text-[11px] font-semibold text-slate-500 max-w-[260px] leading-relaxed">
                       {t('no_fragments_desc', 'Open Mystery Boxes & complete daily learning missions to collect rare dragon fragments!')}
                     </p>
                   </div>
@@ -856,37 +872,36 @@ export default function InventoryScreen() {
                       const isHatching = hatchingType === f.type;
 
                       return (
-                        <motion.div 
-                          key={f.type} 
+                        <motion.div
+                          key={f.type}
                           animate={isHatching ? {
                             x: [-5, 5, -5, 5, 0],
                             scale: [1, 1.03, 1]
                           } : {}}
                           transition={{ duration: 0.5, repeat: isHatching ? Infinity : 0 }}
-                          className="bg-white border-2 border-[#E5DBFB] rounded-2xl p-3 flex items-center justify-between shadow-sm"
+                          className="bg-white border border-[#EDE8FC] rounded-2xl p-3 flex items-center justify-between shadow-xs"
                         >
                           <div className="flex items-center gap-3">
-                            <div className="w-11 h-11 rounded-xl bg-[#F4EFF7] border border-[#E5DBFB] flex items-center justify-center">
+                            <div className="w-11 h-11 rounded-xl bg-[#FAF8FF] border border-[#EDE8FC] flex items-center justify-center">
                               <span className="text-xl">🧩</span>
                             </div>
                             <div>
                               <h3 className="text-xs font-black text-[#141779] capitalize">{t(f.type.toLowerCase() + '_fragments', { defaultValue: `${f.type} Fragments` })}</h3>
-                              <p className="text-[10px] font-bold text-[#6D28D9]">{t('fragments_needed', { count: f.count, needed, defaultValue: `${f.count} / ${needed} Needed` })}</p>
+                              <p className="text-[10px] font-bold text-[#6C4DFF]">{t('fragments_needed', { count: f.count, needed, defaultValue: `${f.count} / ${needed} Needed` })}</p>
                             </div>
                           </div>
 
                           {canCombine ? (
-                            <button 
+                            <button
                               onClick={() => combineFragments(f.type)}
                               disabled={hatchingType !== null}
-                              className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
-                                isHatching ? "bg-gray-400 text-white" : "bg-[#22C55E] text-white shadow-md active:scale-95"
-                              }`}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${isHatching ? "bg-gray-400 text-white" : "bg-[#22C55E] text-white shadow-md active:scale-95"
+                                }`}
                             >
                               {isHatching ? t('hatching', 'HATCHING...') : (matchingDragon ? t('upgrade', 'UPGRADE') : t('hatch', 'HATCH!'))}
                             </button>
                           ) : (
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-100 px-2 py-1 rounded-lg">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-slate-100 px-2 py-1 rounded-lg border border-slate-200">
                               {t('need_more', 'NEED MORE')}
                             </span>
                           )}
@@ -904,18 +919,18 @@ export default function InventoryScreen() {
         {activeTab === "Journey" && (
           <section className="flex flex-col gap-3.5">
             {/* Gamified Hero Expedition Card */}
-            <div className="bg-gradient-to-r from-[#140C40] via-[#241468] to-[#3B1879] rounded-2xl p-4 border border-[#FFD45A]/40 text-white relative overflow-hidden shadow-lg">
+            <div className="bg-[linear-gradient(135deg,#1E1B4B,#312E81)] rounded-2xl p-4 border border-[#6C4DFF]/30 text-white relative overflow-hidden shadow-lg">
               {/* Background Glow */}
-              <div className="absolute top-0 right-0 w-36 h-36 bg-[#6C4DFF]/25 rounded-full blur-2xl pointer-events-none" />
+              <div className="absolute top-0 right-0 w-36 h-36 bg-[#6C4DFF]/20 rounded-full blur-2xl pointer-events-none" />
               <div className="absolute bottom-0 left-10 w-24 h-24 bg-[#FFD45A]/15 rounded-full blur-xl pointer-events-none" />
 
               <div className="relative z-10 flex flex-col gap-2.5">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="bg-[#F59E0B] text-slate-950 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+                    <span className="bg-[#D97706] text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
                       ⚡ CLASS {activeClassNum} SCHOLAR
                     </span>
-                    <span className="text-[10px] font-extrabold text-[#EAE2FB] flex items-center gap-1">
+                    <span className="text-[10px] font-extrabold text-[#C7D2FE] flex items-center gap-1">
                       <Sparkles size={12} className="text-[#FFD45A]" />
                       {activeClassNum <= 4 ? "Dragon World" : activeClassNum <= 7 ? "Scientist Lab" : "Apex Realm"}
                     </span>
@@ -937,7 +952,7 @@ export default function InventoryScreen() {
 
                   <button
                     onClick={() => navigate("/practice/journey-map", { state: { scrollTo: currentCity?.id } })}
-                    className="bg-gradient-to-r from-[#6C4DFF] to-[#4F27E9] text-white text-[11px] font-black px-3 py-2 rounded-xl border border-indigo-300/40 shadow-md hover:brightness-110 active:scale-95 transition-all flex items-center gap-1 shrink-0 cursor-pointer"
+                    className="bg-gradient-to-r from-[#6C4DFF] to-[#3520A8] text-white text-[11px] font-black px-3 py-2 rounded-xl border border-indigo-300/30 shadow-md hover:brightness-110 active:scale-95 transition-all flex items-center gap-1 shrink-0 cursor-pointer"
                   >
                     <span>OPEN MAP</span>
                     <ChevronRight size={14} />
@@ -960,37 +975,37 @@ export default function InventoryScreen() {
                   1: {
                     title: "Class 1 • Hatchling Realm",
                     icon: "🥚",
-                    border: isCurrentClass ? "border-[#6C4DFF] ring-2 ring-[#6C4DFF]/20" : isAllCompleted ? "border-emerald-300" : "border-[#E5DBFB]"
+                    border: isCurrentClass ? "border-[#6C4DFF] ring-2 ring-[#6C4DFF]/20" : isAllCompleted ? "border-emerald-300" : "border-[#EDE8FC]"
                   },
                   2: {
                     title: "Class 2 • Desert Realm",
                     icon: "🔥",
-                    border: isCurrentClass ? "border-[#6C4DFF] ring-2 ring-[#6C4DFF]/20" : isAllCompleted ? "border-emerald-300" : "border-[#E5DBFB]"
+                    border: isCurrentClass ? "border-[#6C4DFF] ring-2 ring-[#6C4DFF]/20" : isAllCompleted ? "border-emerald-300" : "border-[#EDE8FC]"
                   },
                   3: {
                     title: "Class 3 • Cloud Realm",
                     icon: "☁️",
-                    border: isCurrentClass ? "border-[#6C4DFF] ring-2 ring-[#6C4DFF]/20 shadow-md" : isAllCompleted ? "border-emerald-300" : "border-[#E5DBFB]"
+                    border: isCurrentClass ? "border-[#6C4DFF] ring-2 ring-[#6C4DFF]/20 shadow-md" : isAllCompleted ? "border-emerald-300" : "border-[#EDE8FC]"
                   },
                   4: {
                     title: "Class 4 • Cosmos Realm",
                     icon: "🌌",
-                    border: isCurrentClass ? "border-[#6C4DFF] ring-2 ring-[#6C4DFF]/20" : isAllCompleted ? "border-emerald-300" : "border-[#E5DBFB]"
+                    border: isCurrentClass ? "border-[#6C4DFF] ring-2 ring-[#6C4DFF]/20" : isAllCompleted ? "border-emerald-300" : "border-[#EDE8FC]"
                   }
                 };
 
                 const theme = classThemes[cNum] || {
                   title: `Class ${cNum} • Mystery Realm`,
                   icon: "💎",
-                  border: isCurrentClass ? "border-[#6C4DFF] ring-2 ring-[#6C4DFF]/20" : "border-[#E5DBFB]"
+                  border: isCurrentClass ? "border-[#6C4DFF] ring-2 ring-[#6C4DFF]/20" : "border-[#EDE8FC]"
                 };
 
                 return (
-                  <div 
-                    key={cNum} 
-                    className={`bg-white rounded-2xl border-2 ${theme.border} p-3.5 space-y-3 transition-all ${isCurrentClass ? "shadow-md" : "shadow-xs"}`}
+                  <div
+                    key={cNum}
+                    className={`bg-white rounded-2xl border ${theme.border} p-3.5 space-y-3 transition-all ${isCurrentClass ? "shadow-md" : "shadow-xs"}`}
                   >
-                    <div className="flex items-center justify-between pb-2 border-b border-[#E5DBFB] gap-2 w-full">
+                    <div className="flex items-center justify-between pb-2 border-b border-[#EDE8FC] gap-2 w-full">
                       <div className="flex items-center gap-1.5 min-w-0 flex-1">
                         <span className="text-sm shrink-0">{theme.icon}</span>
                         <h3 className="text-[12px] font-black text-[#141779] uppercase tracking-wide truncate">
@@ -998,15 +1013,14 @@ export default function InventoryScreen() {
                         </h3>
                       </div>
 
-                      <span className={`text-[9.5px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 whitespace-nowrap flex items-center gap-1 ${
-                        isCurrentClass 
-                          ? "bg-[#6C4DFF] text-white shadow-xs" 
-                          : isAllCompleted 
-                          ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                          : hasAnyProgress
-                          ? "bg-amber-100 text-amber-800 border border-amber-300"
-                          : "bg-slate-100 text-slate-500 border border-slate-200"
-                      }`}>
+                      <span className={`text-[9.5px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 whitespace-nowrap flex items-center gap-1 ${isCurrentClass
+                          ? "bg-[#6C4DFF] text-white shadow-xs"
+                          : isAllCompleted
+                            ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                            : hasAnyProgress
+                              ? "bg-amber-100 text-amber-800 border border-amber-300"
+                              : "bg-slate-100 text-slate-500 border border-slate-200"
+                        }`}>
                         {isCurrentClass ? (
                           <>
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-300 animate-ping" />
@@ -1030,29 +1044,27 @@ export default function InventoryScreen() {
                         const isLocked = !isUnlocked;
 
                         return (
-                          <div 
-                            key={item.id} 
+                          <div
+                            key={item.id}
                             onClick={isUnlocked ? () => navigate("/practice/journey-map", { state: { scrollTo: item.id } }) : undefined}
-                            className={`rounded-xl p-3 flex items-center justify-between border transition-all ${
-                              isCurrent 
-                                ? 'bg-gradient-to-r from-[#F4EFFF] via-[#FAF7FF] to-white border-2 border-[#6C4DFF] shadow-sm cursor-pointer hover:border-[#5835F5] active:scale-[0.99]' 
-                                : isCompleted 
-                                ? 'bg-emerald-50/25 border border-emerald-200/80 hover:border-emerald-400 shadow-2xs cursor-pointer active:scale-[0.99]' 
-                                : isUnlocked 
-                                ? 'bg-white border border-[#E5DBFB] hover:border-[#6C4DFF] shadow-2xs cursor-pointer active:scale-[0.99]' 
-                                : 'bg-slate-50/70 border border-slate-200/80 opacity-50 cursor-not-allowed pointer-events-none select-none'
-                            }`}
+                            className={`rounded-xl p-3 flex items-center justify-between border transition-all ${isCurrent
+                                ? 'bg-gradient-to-r from-[#FAF8FF] via-[#F4EFFC] to-white border-2 border-[#6C4DFF] shadow-sm cursor-pointer hover:border-[#5835F5] active:scale-[0.99]'
+                                : isCompleted
+                                  ? 'bg-emerald-50/25 border border-emerald-200/80 hover:border-emerald-400 shadow-2xs cursor-pointer active:scale-[0.99]'
+                                  : isUnlocked
+                                    ? 'bg-white border border-[#EDE8FC] hover:border-[#6C4DFF] shadow-2xs cursor-pointer active:scale-[0.99]'
+                                    : 'bg-slate-50/70 border border-slate-200/80 opacity-50 cursor-not-allowed pointer-events-none select-none'
+                              }`}
                           >
                             <div className="flex items-center gap-3 min-w-0 flex-1">
-                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
-                                isCurrent 
-                                  ? 'bg-gradient-to-tr from-[#6C4DFF] to-[#8C6DFF] text-white border-[#6C4DFF] shadow-xs relative' 
-                                  : isCompleted 
-                                  ? 'bg-emerald-600 text-white border-emerald-500 shadow-2xs' 
-                                  : isUnlocked 
-                                  ? 'bg-[#141779] text-white border-[#141779]' 
-                                  : 'bg-slate-200 text-slate-400 border-slate-300'
-                              }`}>
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${isCurrent
+                                  ? 'bg-[#6C4DFF] text-white border-[#6C4DFF] shadow-xs relative'
+                                  : isCompleted
+                                    ? 'bg-emerald-600 text-white border-emerald-500 shadow-2xs'
+                                    : isUnlocked
+                                      ? 'bg-[#141779] text-white border-[#141779]'
+                                      : 'bg-slate-200 text-slate-500 border-slate-300'
+                                }`}>
                                 {isCurrent ? (
                                   <>
                                     <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
@@ -1069,14 +1081,12 @@ export default function InventoryScreen() {
                               </div>
 
                               <div className="min-w-0 flex-1">
-                                <h4 className={`text-xs font-black uppercase tracking-wide truncate ${
-                                  isCurrent ? 'text-[#141779]' : isCompleted ? 'text-slate-800' : isUnlocked ? 'text-[#141779]' : 'text-slate-400'
-                                }`}>
+                                <h4 className={`text-xs font-black uppercase tracking-wide truncate ${isCurrent ? 'text-[#141779]' : isCompleted ? 'text-slate-800' : isUnlocked ? 'text-[#141779]' : 'text-slate-500'
+                                  }`}>
                                   {t(item.name.toLowerCase().trim().replace(/\s+/g, '_'), { defaultValue: item.name })}
                                 </h4>
-                                <p className={`text-[9.5px] font-black uppercase tracking-wider mt-0.5 ${
-                                  isCurrent ? 'text-[#6C4DFF]' : isCompleted ? 'text-emerald-600' : isUnlocked ? 'text-indigo-600' : 'text-slate-400'
-                                }`}>
+                                <p className={`text-[9.5px] font-black uppercase tracking-wider mt-0.5 ${isCurrent ? 'text-[#6C4DFF]' : isCompleted ? 'text-emerald-600' : isUnlocked ? 'text-[#6C4DFF]' : 'text-slate-500'
+                                  }`}>
                                   {item.status}
                                 </p>
                               </div>
@@ -1093,12 +1103,12 @@ export default function InventoryScreen() {
                                   ✓ Done
                                 </span>
                               ) : isUnlocked ? (
-                                <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-lg border border-indigo-200 flex items-center gap-0.5">
+                                <span className="text-[10px] font-bold text-[#6C4DFF] bg-[#FAF8FF] px-2.5 py-0.5 rounded-lg border border-[#EDE8FC] flex items-center gap-0.5">
                                   Play
                                   <ChevronRight size={13} />
                                 </span>
                               ) : (
-                                <span className="text-[9.5px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200 flex items-center gap-1">
+                                <span className="text-[9.5px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200 flex items-center gap-1">
                                   <Lock size={11} /> Locked
                                 </span>
                               )}
@@ -1128,10 +1138,10 @@ export default function InventoryScreen() {
             </div>
 
             {badges.length === 0 ? (
-              <div className="bg-white border-2 border-[#E5DBFB] rounded-2xl p-8 flex flex-col items-center text-center shadow-sm">
+              <div className="bg-white border border-[#EDE8FC] rounded-2xl p-8 flex flex-col items-center text-center shadow-xs">
                 <Shield size={44} className="text-gray-300 mb-3" />
                 <h3 className="text-sm font-bold text-[#141779] mb-1">{t('no_badges_unlocked', 'No Badges Unlocked Yet')}</h3>
-                <p className="text-xs text-[#6D28D9] max-w-[220px]">
+                <p className="text-xs text-slate-500 max-w-[220px]">
                   {t('keep_exploring_badges', 'Keep exploring and opening Epic Mystery Boxes to unlock rare badges!')}
                 </p>
               </div>
@@ -1140,18 +1150,18 @@ export default function InventoryScreen() {
                 {badges.map((item) => {
                   const Icon = item.icon;
                   return (
-                    <div 
-                      key={item.id} 
-                      className="bg-white border-2 border-[#E5DBFB] rounded-2xl p-3.5 flex flex-col items-center gap-2 shadow-sm relative overflow-hidden"
+                    <div
+                      key={item.id}
+                      className="bg-white border border-[#EDE8FC] rounded-2xl p-3.5 flex flex-col items-center gap-2 shadow-xs relative overflow-hidden"
                     >
-                      <div 
-                        className="w-14 h-14 rounded-full flex items-center justify-center border shadow-inner" 
+                      <div
+                        className="w-14 h-14 rounded-full flex items-center justify-center border shadow-inner"
                         style={{ backgroundColor: `${item.color}15`, borderColor: `${item.color}40` }}
                       >
                         <Icon size={28} style={{ color: item.color }} />
                       </div>
                       <h3 className="text-xs font-black text-[#141779] text-center leading-tight uppercase tracking-tight">{translateBadgeText(item.name, item.name)}</h3>
-                      <p className="text-[10px] font-medium text-[#6D28D9] text-center leading-snug">{translateBadgeText(item.desc, item.desc)}</p>
+                      <p className="text-[10px] font-medium text-slate-500 text-center leading-snug">{translateBadgeText(item.desc, item.desc)}</p>
                     </div>
                   );
                 })}
@@ -1164,7 +1174,7 @@ export default function InventoryScreen() {
       {/* REWARD DISCOVERY MODAL */}
       <AnimatePresence>
         {rewardData && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -1172,33 +1182,33 @@ export default function InventoryScreen() {
             onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
             className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
           >
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.6, y: 30 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.6, opacity: 0 }}
               transition={{ type: "spring", damping: 15 }}
               style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
-              className="bg-white border-2 border-[#F59E0B] w-full max-w-xs rounded-3xl p-6 pt-9 text-center relative shadow-2xl mt-6"
+              className="bg-white border-2 border-[#D97706] w-full max-w-xs rounded-3xl p-6 pt-9 text-center relative shadow-2xl mt-6"
             >
               <div className="absolute -top-10 left-1/2 -translate-x-1/2 z-10">
-                <motion.div 
+                <motion.div
                   animate={{ rotate: [0, -10, 10, -10, 10, 0] }}
                   transition={{ delay: 0.2, duration: 0.5 }}
-                  className="w-20 h-20 bg-gradient-to-br from-[#F59E0B] to-[#D97706] rounded-full flex items-center justify-center border-4 border-white shadow-xl"
+                  className="w-20 h-20 bg-gradient-to-br from-amber-500 to-[#D97706] rounded-full flex items-center justify-center border-4 border-white shadow-xl"
                 >
                   <PartyPopper size={36} className="text-white" />
                 </motion.div>
               </div>
-              
+
               <h2 className="text-xl font-black text-[#141779] mt-6 mb-1 uppercase tracking-wider">
                 {t('treasure_unlocked', 'TREASURE UNLOCKED!')}
               </h2>
-              <p className="text-[#6D28D9] text-xs mb-5">
+              <p className="text-slate-600 text-xs mb-5">
                 {t('discovered_reward_desc', 'You discovered a new reward inside the vault!')}
               </p>
-              
-              <div className="bg-[#F4EFF7] rounded-2xl p-5 mb-5 border-2 border-[#E5DBFB] shadow-inner">
-                <motion.span 
+
+              <div className="bg-[#FAF8FF] rounded-2xl p-5 mb-5 border border-[#EDE8FC] shadow-inner">
+                <motion.span
                   animate={{ scale: [1, 1.25, 1] }}
                   transition={{ repeat: Infinity, duration: 2 }}
                   className="text-4xl block mb-2"
@@ -1209,8 +1219,8 @@ export default function InventoryScreen() {
                   {rewardData.amount > 0 ? `+${rewardData.amount} ` : ''}{t(rewardData.name?.toLowerCase()?.replace(/ /g, '_') || 'reward', { defaultValue: rewardData.name })}
                 </h3>
               </div>
-              
-              <button 
+
+              <button
                 onClick={() => setRewardData(null)}
                 className="w-full bg-gradient-to-r from-[#6C4DFF] to-[#3520A8] text-white font-black py-3 rounded-xl hover:brightness-110 active:scale-95 transition-all text-sm uppercase tracking-wider shadow-md border border-[#9C7CFF]/40"
               >

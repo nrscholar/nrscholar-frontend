@@ -435,75 +435,76 @@ export default function KidsActivityScreen() {
                               {/* Content Card */}
                               <div 
                                 onClick={() => setSelectedActivity(activity)}
-                                className="ml-5 sm:ml-6 bg-white rounded-[20px] p-3.5 sm:p-4 border border-slate-200/80 shadow-xs hover:shadow-md transition-all cursor-pointer hover:scale-[1.01]"
+                                className="ml-5 sm:ml-6 bg-white rounded-2xl sm:rounded-[22px] p-3.5 sm:p-4 border border-slate-200/90 shadow-[0_2px_12px_rgba(20,23,121,0.03)] hover:shadow-[0_4px_18px_rgba(20,23,121,0.08)] transition-all cursor-pointer hover:-translate-y-0.5"
                               >
-                                <div className="flex justify-between items-start gap-2 mb-1.5">
-                                  <h3 className="text-sm font-black text-[#141779] leading-tight min-w-0 flex-1">{activityTitle}</h3>
-                                  <span className="text-[11px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0 whitespace-nowrap">
-                                    <Clock size={11} /> {activity.time || (activity.createdAt ? new Date(activity.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : t("just_now", "Just now"))}
+                                <div className="flex justify-between items-start gap-2.5 mb-2">
+                                  <h3 
+                                    className="text-sm font-black text-[#141779] leading-snug min-w-0 flex-1 line-clamp-2"
+                                    title={activityTitle}
+                                  >
+                                    {activityTitle}
+                                  </h3>
+                                  <span className="h-6 text-[11px] font-bold text-slate-500 bg-slate-100/90 border border-slate-200/80 px-2.5 rounded-full flex items-center gap-1 shrink-0 whitespace-nowrap mt-0.5">
+                                    <Clock size={11} className="text-slate-400 shrink-0" />
+                                    <span>{activity.time || (activity.createdAt ? new Date(activity.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : t("just_now", "Just now"))}</span>
                                   </span>
                                 </div>
 
                                 {activity.description && (
-                                  <p className="text-xs text-slate-700 font-bold leading-snug mb-1.5">
+                                  <p className="text-xs text-slate-600 font-semibold leading-snug mb-2 line-clamp-2">
                                     {activity.description}
                                   </p>
                                 )}
                                 
-                                <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  {activity.subject && (
+                                    <div className="h-6 inline-flex items-center gap-1 px-2.5 rounded-full bg-rose-50 border border-rose-200/90 text-rose-700 text-[10.5px] font-black uppercase tracking-wider shrink-0 whitespace-nowrap">
+                                      <Layers size={10} className="shrink-0" />
+                                      <span className="truncate max-w-[120px]">{translateSubjectName(activity.subject)}</span>
+                                    </div>
+                                  )}
+
                                   {activity.attemptNumber && (
-                                    <span className="text-[11px] font-black text-amber-800 bg-amber-100/90 border border-amber-300 px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">
+                                    <span className="h-6 inline-flex items-center px-2.5 rounded-full bg-amber-50 border border-amber-200/90 text-amber-900 text-[10.5px] font-black shrink-0 whitespace-nowrap">
                                       {t("attempt_number", { num: activity.attemptNumber, defaultValue: `Attempt #${activity.attemptNumber}` })}
                                     </span>
                                   )}
 
                                   {Boolean(activity.totalQuestions && activity.totalQuestions > 0) && (
-                                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-[#006a62] shrink-0 whitespace-nowrap">
-                                      <CheckCircle2 size={11} />
-                                      <span className="text-[11px] font-black tracking-wide">
+                                    <div className="h-6 inline-flex items-center gap-1 px-2.5 rounded-full bg-teal-50 border border-teal-200/90 text-[#006a62] text-[10.5px] font-black tracking-wide shrink-0 whitespace-nowrap">
+                                      <CheckCircle2 size={11} className="shrink-0" />
+                                      <span>
                                         {activity.correctQuestions || 0}/{activity.totalQuestions}
                                       </span>
                                     </div>
                                   )}
                                   
                                   {activity.timeTaken !== undefined && (
-                                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-[#141779] shrink-0 whitespace-nowrap">
-                                      <Clock size={11} />
-                                      <span className="text-[11px] font-black tracking-wide">
+                                    <div className="h-6 inline-flex items-center gap-1 px-2.5 rounded-full bg-indigo-50 border border-indigo-200/90 text-[#141779] text-[10.5px] font-black tracking-wide shrink-0 whitespace-nowrap">
+                                      <Clock size={11} className="shrink-0" />
+                                      <span>
                                         {formatTime(activity.timeTaken)}
                                       </span>
                                     </div>
                                   )}
-                                  
-                                  {activity.subject && (
-                                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 shrink-0 whitespace-nowrap ml-auto">
-                                      <Layers size={10} />
-                                      <span className="text-[11px] font-black uppercase tracking-wide truncate max-w-[120px]">{translateSubjectName(activity.subject)}</span>
-                                    </div>
-                                  )}
                                 </div>
 
-                                {activity.type === 'reading' || !activity.details || activity.details.length === 0 ? (
-                                  <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs font-black">
-                                    <span className="flex items-center gap-1 text-slate-600 font-bold">
-                                      <BookOpen size={12} className="text-slate-500" />
-                                      {activity.type === 'reading' ? t("reading_session", "Reading Session") : `0 ${t("questions_plural", "questions")}`}
+                                <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
+                                  <span className="flex items-center gap-1.5 text-slate-500 font-bold text-[11px] sm:text-xs min-w-0">
+                                    <BookOpen size={13} className="text-slate-400 shrink-0" />
+                                    <span className="truncate">
+                                      {activity.type === 'reading' 
+                                        ? t("reading_session", "Reading Session") 
+                                        : (!activity.details || activity.details.length === 0)
+                                          ? `0 ${t("questions_plural", "questions")}`
+                                          : `${activity.details.length} ${activity.details.length === 1 ? t("question_singular", "question") : t("questions_plural", "questions")}`}
                                     </span>
-                                    <span className="flex items-center gap-0.5 text-[#141779] font-black hover:underline transition-all">
-                                      {activity.type === 'reading' ? t("view_details", "View Details") : t("show_more", "View More")} <ChevronRight size={14} className="mt-[0.5px]" />
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs font-black">
-                                    <span className="flex items-center gap-1 text-slate-600 font-bold">
-                                      <BookOpen size={12} className="text-slate-500" />
-                                      {activity.details.length} {activity.details.length === 1 ? t("question_singular", "question") : t("questions_plural", "questions")}
-                                    </span>
-                                    <span className="flex items-center gap-0.5 text-[#141779] font-black hover:underline transition-all">
-                                      {t("show_more", "View More")} <ChevronRight size={14} className="mt-[0.5px]" />
-                                    </span>
-                                  </div>
-                                )}
+                                  </span>
+                                  <span className="flex items-center gap-0.5 text-[#141779] font-black text-xs hover:text-indigo-700 hover:translate-x-0.5 transition-all shrink-0 ml-2">
+                                    <span>{activity.type === 'reading' ? t("view_details", "Details") : t("show_more", "View More")}</span>
+                                    <ChevronRight size={14} className="mt-[0.5px] shrink-0" />
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           );

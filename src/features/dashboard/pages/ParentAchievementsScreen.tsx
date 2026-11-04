@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { 
-  Globe, BookOpen, Flame, Lock, GraduationCap, Users, X, 
+import {
+  Globe, BookOpen, Flame, Lock, GraduationCap, Users, X,
   Settings, ArrowLeft, Trophy, CheckCircle2, Bell, Star
 } from "lucide-react";
 import { apiFetch } from "../../../api";
@@ -63,7 +63,7 @@ export default function ParentAchievementsScreen() {
           const cCount = cached.topics.filter((t: any) => t.status === "completed").length;
           completedLessonsCount = Math.max(completedLessonsCount, cCount);
         }
-      } catch (_) {}
+      } catch (_) { }
 
       let completedChallengesCount = 0;
       if (chalRes.status === "fulfilled" && chalRes.value?.success && Array.isArray(chalRes.value.data?.challenges)) {
@@ -210,10 +210,10 @@ export default function ParentAchievementsScreen() {
   const lockedAchievements = achievements.filter(ach => ach.currentProgress < ach.totalRequired);
   const nextMilestone = lockedAchievements.length > 0
     ? lockedAchievements.reduce((prev, curr) => {
-        const prevRatio = prev.currentProgress / prev.totalRequired;
-        const currRatio = curr.currentProgress / curr.totalRequired;
-        return currRatio > prevRatio ? curr : prev;
-      })
+      const prevRatio = prev.currentProgress / prev.totalRequired;
+      const currRatio = curr.currentProgress / curr.totalRequired;
+      return currRatio > prevRatio ? curr : prev;
+    })
     : null;
 
   const translateAchText = (text: string) => {
@@ -357,24 +357,17 @@ export default function ParentAchievementsScreen() {
       {/* Top Header */}
       <header className="sticky top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-2xl border-b-2 border-slate-200/90 shadow-[0_12px_40px_rgba(20,23,121,0.14)] flex items-center justify-between px-4 sm:px-6 h-16 w-full">
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-          <button 
-            onClick={() => navigate(-1)} 
+          <button
+            onClick={() => navigate(-1)}
             className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
             aria-label={t("back", "Back")}
           >
             <ArrowLeft size={19} />
           </button>
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-slate-200/80 overflow-hidden bg-white shrink-0 shadow-2xs">
-            <img 
-              alt="Parent Profile" 
-              className="w-full h-full object-cover"
-              src={parentPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=141779&color=ffffff&bold=true`}
-            />
-          </div>
           <span className="text-base sm:text-lg font-black text-[#141779] tracking-tight truncate leading-tight">{t("achievements", "Achievements")}</span>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          <button 
+          <button
             onClick={() => navigate('/parent/settings')}
             className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-slate-50/90 border border-slate-200/80 shadow-2xs hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all text-[#141779] shrink-0 cursor-pointer"
             aria-label={t("settings", "Settings")}
@@ -395,10 +388,10 @@ export default function ParentAchievementsScreen() {
 
       {/* Main Bento Layout Container */}
       <main className="w-full max-w-lg mx-auto pt-3 sm:pt-4 pb-4 px-4 sm:px-5 flex flex-col items-center no-scrollbar relative gap-3.5">
-        
+
         {/* Bento Grid */}
         <div className="w-full grid grid-cols-2 gap-3 sm:gap-3.5 mt-0.5">
-          
+
           {/* Bento Box 1: Welcome & Profile Info */}
           <div className="col-span-2 bento-card rounded-2xl p-4 sm:p-5 flex items-center justify-between relative overflow-hidden bg-white">
             <div className="flex flex-col gap-0.5 z-10">
@@ -485,63 +478,39 @@ export default function ParentAchievementsScreen() {
           )}
 
           {/* Filters Bar */}
-          <div className="col-span-2 flex flex-col gap-2.5 mt-2 mb-1 px-0.5">
-            {/* Title Row - Guaranteed Single Line */}
-            <div className="flex items-center justify-between">
-              <h3 className="text-base sm:text-lg font-black text-[#141779] whitespace-nowrap tracking-tight">
-                {t("achievement_wall", "Achievement Wall")}
-              </h3>
-              <span className="text-xs font-bold text-slate-500 whitespace-nowrap">
-                {badgesEarned} / {achievements.length} {t("unlocked", "Unlocked")}
-              </span>
-            </div>
-
-            {/* Filter Tabs Row - Placed Neatly Below */}
-            <div className="w-full">
-              <div className="grid grid-cols-3 bg-slate-200/80 p-1 rounded-xl border border-slate-300/60 gap-1 w-full">
-                <button 
-                  type="button"
-                  onClick={() => setFilter("all")} 
-                  className={`text-xs font-black py-2 px-2.5 sm:px-3.5 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap ${
-                    filter === "all" ? "bg-[#141779] text-white shadow-2xs" : "text-slate-700 hover:text-[#141779] hover:bg-white/50"
-                  }`}
-                >
-                  <span>{t("all", "All")}</span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
-                    filter === "all" ? "bg-white/20 text-white" : "bg-slate-300/80 text-slate-700"
-                  }`}>
-                    {achievements.length}
-                  </span>
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => setFilter("unlocked")} 
-                  className={`text-xs font-black py-2 px-2.5 sm:px-3.5 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap ${
-                    filter === "unlocked" ? "bg-[#141779] text-white shadow-2xs" : "text-slate-700 hover:text-[#141779] hover:bg-white/50"
-                  }`}
-                >
-                  <span>{t("unlocked", "Unlocked")}</span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
-                    filter === "unlocked" ? "bg-white/20 text-white" : "bg-teal-100 text-[#006a62]"
-                  }`}>
-                    {badgesEarned}
-                  </span>
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => setFilter("locked")} 
-                  className={`text-xs font-black py-2 px-2.5 sm:px-3.5 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap ${
-                    filter === "locked" ? "bg-[#141779] text-white shadow-2xs" : "text-slate-700 hover:text-[#141779] hover:bg-white/50"
-                  }`}
-                >
-                  <span>{t("locked", "Locked")}</span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
-                    filter === "locked" ? "bg-white/20 text-white" : "bg-slate-300/80 text-slate-700"
-                  }`}>
-                    {Math.max(0, achievements.length - badgesEarned)}
-                  </span>
-                </button>
-              </div>
+          <div className="col-span-2 flex items-center justify-between mt-1 mb-0.5 px-0.5">
+            <span className="text-base font-black text-[#141779]">{t("achievement_wall", "Achievement Wall")}</span>
+            <div className="flex bg-slate-200/80 p-1 rounded-xl border border-slate-300/60 gap-1">
+              <button
+                type="button"
+                onClick={() => setFilter("all")}
+                className={`text-xs font-black px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${filter === "all" ? "bg-[#141779] text-white shadow-2xs" : "text-slate-700 hover:text-[#141779] hover:bg-white/50"}`}
+              >
+                <span>{t("all", "All")}</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${filter === "all" ? "bg-white/20 text-white" : "bg-slate-300/80 text-slate-700"}`}>
+                  {achievements.length}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilter("unlocked")}
+                className={`text-xs font-black px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${filter === "unlocked" ? "bg-[#141779] text-white shadow-2xs" : "text-slate-700 hover:text-[#141779] hover:bg-white/50"}`}
+              >
+                <span>{t("unlocked", "Unlocked")}</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${filter === "unlocked" ? "bg-white/20 text-white" : "bg-teal-100 text-[#006a62]"}`}>
+                  {badgesEarned}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilter("locked")}
+                className={`text-xs font-black px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${filter === "locked" ? "bg-[#141779] text-white shadow-2xs" : "text-slate-700 hover:text-[#141779] hover:bg-white/50"}`}
+              >
+                <span>{t("locked", "Locked")}</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${filter === "locked" ? "bg-white/20 text-white" : "bg-slate-300/80 text-slate-700"}`}>
+                  {Math.max(0, achievements.length - badgesEarned)}
+                </span>
+              </button>
             </div>
           </div>
 
@@ -551,18 +520,16 @@ export default function ParentAchievementsScreen() {
             const percent = Math.min(100, Math.round((ach.currentProgress / ach.totalRequired) * 100));
             const IconComponent = ICON_MAP[ach.icon] || Lock;
             const isSelected = activeAchievement?.id === ach.id;
-            
+
             return (
-              <div 
-                key={ach.id} 
+              <div
+                key={ach.id}
                 onClick={() => showDetails(ach)}
-                className={`col-span-1 bento-card rounded-2xl p-4 flex flex-col items-center justify-between text-center min-h-[155px] cursor-pointer relative overflow-hidden transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
-                  isSelected ? "bento-card-active border-[#141779] ring-2 ring-[#141779]/20" : ""
-                } ${
-                  isUnlocked 
-                    ? "bg-gradient-to-b from-white via-white to-teal-50/30 border-teal-200/80 shadow-2xs" 
+                className={`col-span-1 bento-card rounded-2xl p-4 flex flex-col items-center justify-between text-center min-h-[155px] cursor-pointer relative overflow-hidden transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${isSelected ? "bento-card-active border-[#141779] ring-2 ring-[#141779]/20" : ""
+                  } ${isUnlocked
+                    ? "bg-gradient-to-b from-white via-white to-teal-50/30 border-teal-200/80 shadow-2xs"
                     : "bg-white border-slate-200/80"
-                }`}
+                  }`}
               >
                 {/* Visual Badge with Progress Ring */}
                 <div className="relative w-14 h-14 flex items-center justify-center shrink-0 mt-1">
@@ -575,13 +542,12 @@ export default function ParentAchievementsScreen() {
                       d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                     />
                     <path
-                      className={`${
-                        isUnlocked 
-                          ? "text-[#006a62]" 
-                          : percent > 0 
-                          ? "text-[#141779]" 
+                      className={`${isUnlocked
+                        ? "text-[#006a62]"
+                        : percent > 0
+                          ? "text-[#141779]"
                           : "text-transparent"
-                      } transition-all duration-700 ease-out`}
+                        } transition-all duration-700 ease-out`}
                       strokeDasharray={`${percent}, 100`}
                       strokeWidth="3.2"
                       strokeLinecap="round"
@@ -590,11 +556,10 @@ export default function ParentAchievementsScreen() {
                       d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                     />
                   </svg>
-                  <div className={`absolute inset-0 m-1.5 rounded-full flex items-center justify-center shadow-2xs ${
-                    isUnlocked
-                      ? "bg-gradient-to-br from-[#141779] to-[#006a62] text-amber-300"
-                      : "bg-slate-100 text-slate-400"
-                  }`}>
+                  <div className={`absolute inset-0 m-1.5 rounded-full flex items-center justify-center shadow-2xs ${isUnlocked
+                    ? "bg-gradient-to-br from-[#141779] to-[#006a62] text-amber-300"
+                    : "bg-slate-100 text-slate-400"
+                    }`}>
                     <IconComponent size={20} />
                   </div>
                   {isUnlocked ? (
@@ -613,9 +578,8 @@ export default function ParentAchievementsScreen() {
                 </div>
 
                 {/* Short Badge Title Only */}
-                <h5 className={`text-xs sm:text-sm font-black leading-tight w-full truncate mt-2.5 ${
-                  isUnlocked ? "text-[#141779]" : "text-slate-700"
-                }`}>
+                <h5 className={`text-xs sm:text-sm font-black leading-tight w-full truncate mt-2.5 ${isUnlocked ? "text-[#141779]" : "text-slate-700"
+                  }`}>
                   {translateAchText(ach.title)}
                 </h5>
 
@@ -653,11 +617,11 @@ export default function ParentAchievementsScreen() {
 
         {/* Bento Details Sliding Bottom Drawer */}
         {activeAchievement && (
-          <div 
+          <div
             onTouchMove={(e) => {
               if (e.target === e.currentTarget) e.preventDefault();
             }}
-            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-[99999] flex items-end justify-center p-3 pb-24 sm:p-4 animate-fade-in overscroll-contain select-none" 
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-[99999] flex items-end justify-center p-3 pb-24 sm:p-4 animate-fade-in overscroll-contain select-none"
             style={{
               zIndex: 99999,
               overscrollBehavior: "contain",
@@ -666,35 +630,33 @@ export default function ParentAchievementsScreen() {
             }}
             onClick={hideDetails}
           >
-            <div 
+            <div
               className="w-full max-w-lg bg-white rounded-3xl p-6 shadow-2xl border border-slate-200 flex flex-col gap-4 animate-slide-up overscroll-contain select-text mb-1 sm:mb-0 max-h-[80vh] overflow-y-auto"
               style={{ zIndex: 100000, overscrollBehavior: "contain", touchAction: "pan-y" }}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Drawer Pull Element */}
               <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto -mt-2 mb-2"></div>
-              
+
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-md ${
-                    activeAchievement.currentProgress >= activeAchievement.totalRequired
-                      ? "bg-gradient-to-br from-[#141779] to-[#30007f]"
-                      : "bg-slate-200 text-slate-500"
-                  }`}>
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-md ${activeAchievement.currentProgress >= activeAchievement.totalRequired
+                    ? "bg-gradient-to-br from-[#141779] to-[#30007f]"
+                    : "bg-slate-200 text-slate-500"
+                    }`}>
                     {React.createElement(ICON_MAP[activeAchievement.icon] || Lock, { size: 24 })}
                   </div>
                   <div>
                     <h3 className="text-base font-black text-[#141779]">{translateAchText(activeAchievement.title)}</h3>
-                    <span className={`text-xs font-black px-2.5 py-0.5 rounded-full ${
-                      activeAchievement.currentProgress >= activeAchievement.totalRequired
-                        ? "bg-teal-50 text-[#006a62] border border-teal-200"
-                        : "bg-slate-100 text-slate-600 border border-slate-200"
-                    }`}>
+                    <span className={`text-xs font-black px-2.5 py-0.5 rounded-full ${activeAchievement.currentProgress >= activeAchievement.totalRequired
+                      ? "bg-teal-50 text-[#006a62] border border-teal-200"
+                      : "bg-slate-100 text-slate-600 border border-slate-200"
+                      }`}>
                       {activeAchievement.currentProgress >= activeAchievement.totalRequired ? t("completed_unlocked", "Completed & Unlocked") : t("in_progress", "In Progress")}
                     </span>
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={hideDetails}
                   className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:text-[#141779] transition-colors"
                 >
@@ -716,19 +678,19 @@ export default function ParentAchievementsScreen() {
                   </span>
                 </div>
                 <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
-                  <div 
-                    className="h-full bg-gradient-to-r from-[#141779] to-[#30007f] rounded-full transition-all duration-1000 ease-out" 
+                  <div
+                    className="h-full bg-gradient-to-r from-[#141779] to-[#30007f] rounded-full transition-all duration-1000 ease-out"
                     style={{ width: `${Math.min(100, (activeAchievement.currentProgress / activeAchievement.totalRequired) * 100)}%` }}
                   />
                 </div>
                 <div className="text-xs text-slate-600 font-bold text-center mt-1">
-                  {activeAchievement.currentProgress >= activeAchievement.totalRequired 
-                    ? t("congrats_unlocked", "🎉 Congratulations! You have unlocked this milestone reward.") 
+                  {activeAchievement.currentProgress >= activeAchievement.totalRequired
+                    ? t("congrats_unlocked", "🎉 Congratulations! You have unlocked this milestone reward.")
                     : t("keep_going_to_unlock", { count: activeAchievement.totalRequired - activeAchievement.currentProgress, defaultValue: `Keep going! Only ${activeAchievement.totalRequired - activeAchievement.currentProgress} more to unlock.` })}
                 </div>
               </div>
 
-              <button 
+              <button
                 onClick={hideDetails}
                 className="w-full bg-[#141779] text-white py-3 rounded-full font-black text-sm shadow-md hover:bg-[#1e23a0] active:scale-95 transition-all mt-2"
               >

@@ -2,7 +2,8 @@ import { AnimatePresence, motion, Variants } from "framer-motion";
 import { ArrowLeft, Bell, BookOpen, Camera, Save, ShieldCheck, Timer, Trash2, UserRound, GraduationCap, Cake, ChevronDown, Check, Plus, Globe, LogOut, Edit3, RefreshCw, X, Lock, Sparkles, Flame, Trophy, AlertTriangle, Phone, Eye, EyeOff, Users, CheckCircle2, User, Circle, Shield, Loader2, Settings } from "lucide-react";
 import { useEffect, useState, useRef, useLayoutEffect } from "react";
 import { formatMobileDisplay, parseMobileInput } from "../../../utils/mobileFormatter";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import GrowthScoreCard from "../../../components/GrowthScoreCard";
 import { apiFetch, clearAuthSession, logoutUser, uploadProfilePhoto } from "../../../api";
 import { useTranslation } from "react-i18next";
 import { translateNotificationTitle, translateNotificationMessage } from "../../../utils/notificationTranslator";
@@ -173,7 +174,19 @@ const itemVariants: Variants = {
 export default function ParentSettings() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<"main" | "profile">("main");
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const initialTab = (location.state as any)?.tab || searchParams.get("tab") || "main";
+  const [activeTab, setActiveTab] = useState<"main" | "profile">(initialTab === "profile" ? "profile" : "main");
+
+  useEffect(() => {
+    const tabParam = (location.state as any)?.tab || new URLSearchParams(location.search).get("tab");
+    if (tabParam === "profile") {
+      setActiveTab("profile");
+    } else if (tabParam === "main") {
+      setActiveTab("main");
+    }
+  }, [location]);
   const [user, setUser] = useState<any>(null);
 
   const [screenTimeMinutes, setScreenTimeMinutes] = useState(0);
@@ -278,6 +291,7 @@ export default function ParentSettings() {
   const [child1Age, setChild1Age] = useState("");
   const [child1Board, setChild1Board] = useState("");
   const [child1Photo, setChild1Photo] = useState("");
+  const [child1Code, setChild1Code] = useState("");
 
   // Child 2 Profile States
   const [hasChild2, setHasChild2] = useState(false);
@@ -286,8 +300,12 @@ export default function ParentSettings() {
   const [child2Age, setChild2Age] = useState("");
   const [child2Board, setChild2Board] = useState("");
   const [child2Photo, setChild2Photo] = useState("");
+  const [child2Code, setChild2Code] = useState("");
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [childIdToDelete, setChildIdToDelete] = useState<string | null>(null);
+  const [regenConfirmOpen, setRegenConfirmOpen] = useState(false);
+  const [childIdToRegen, setChildIdToRegen] = useState<string | null>(null);
+  const [isRegeneratingCode, setIsRegeneratingCode] = useState(false);
 
   // Secondary Parent / Co-Parent States
   const [secondaryParents, setSecondaryParents] = useState<any[]>([]);
@@ -569,12 +587,14 @@ export default function ParentSettings() {
                 setChild1Age(fallbackAge1 ? (typeof fallbackAge1 === 'string' && fallbackAge1.includes('Years') ? fallbackAge1 : `${fallbackAge1} Years`) : "");
                 setChild1Board(k1.childBoard || u.childBoard || "");
                 setChild1Photo(k1.childPhoto || u.childPhoto || "");
+                setChild1Code(k1.uniqueCode || u.uniqueCode || "");
               } else {
                 setChild1Name(u.childName || "");
                 setChild1Class(u.childClass || "");
                 setChild1Age(u.childAge ? `${u.childAge} Years` : "");
                 setChild1Board(u.childBoard || "");
                 setChild1Photo(u.childPhoto || "");
+                setChild1Code(u.uniqueCode || "");
               }
 
               const k2 = kids.length > 1 ? (kids.find((k: any) => k.childId === "child_2") || kids[1]) : null;
@@ -585,6 +605,7 @@ export default function ParentSettings() {
                 setChild2Age(k2.childAge ? `${k2.childAge} Years` : "");
                 setChild2Board(k2.childBoard || "");
                 setChild2Photo(k2.childPhoto || "");
+                setChild2Code(k2.uniqueCode || "");
               } else {
                 setHasChild2(false);
               }
@@ -641,6 +662,7 @@ export default function ParentSettings() {
             setChild1Age(age1 ? (typeof age1 === "string" && age1.includes("Years") ? age1 : `${age1} Years`) : "");
             setChild1Board(k1.childBoard || "");
             setChild1Photo(k1.childPhoto || "");
+            setChild1Code(k1.uniqueCode || "");
           }
           const k2 = kids.length > 1 ? (kids.find((k: any) => k.childId === "child_2") || kids[1]) : null;
           if (k2) {
@@ -650,10 +672,11 @@ export default function ParentSettings() {
             setChild2Age(k2.childAge ? `${k2.childAge} Years` : "");
             setChild2Board(k2.childBoard || "");
             setChild2Photo(k2.childPhoto || "");
+            setChild2Code(k2.uniqueCode || "");
           } else {
             setHasChild2(false);
             setChild2Name(""); setChild2Class(""); setChild2Age("");
-            setChild2Board(""); setChild2Photo("");
+            setChild2Board(""); setChild2Photo(""); setChild2Code("");
           }
           fetchNotifications(u.activeChildId);
           fetchSecondaryParents();
@@ -769,6 +792,7 @@ export default function ParentSettings() {
           setChild1Age(a1 ? (typeof a1 === "string" && a1.includes("Years") ? a1 : `${a1} Years`) : "");
           setChild1Board(k1.childBoard || "");
           setChild1Photo(k1.childPhoto || "");
+          setChild1Code(k1.uniqueCode || "");
         }
         const k2 = kids.length > 1 ? (kids.find((k: any) => k.childId === "child_2") || kids[1]) : null;
         if (k2) {
@@ -778,10 +802,11 @@ export default function ParentSettings() {
           setChild2Age(k2.childAge ? `${k2.childAge} Years` : "");
           setChild2Board(k2.childBoard || "");
           setChild2Photo(k2.childPhoto || "");
+          setChild2Code(k2.uniqueCode || "");
         } else {
           setHasChild2(false);
           setChild2Name(""); setChild2Class(""); setChild2Age("");
-          setChild2Board(""); setChild2Photo("");
+          setChild2Board(""); setChild2Photo(""); setChild2Code("");
         }
       }
 
@@ -913,6 +938,64 @@ export default function ParentSettings() {
     setDeleteConfirmOpen(true);
   };
 
+  const requestRegenCode = (childId: string) => {
+    if (isCoParent) {
+      showNotificationToast({
+        title: "Permission Denied",
+        message: "Only the Primary Parent can regenerate a child's device code.",
+        type: "warning"
+      });
+      return;
+    }
+    setChildIdToRegen(childId);
+    setRegenConfirmOpen(true);
+  };
+
+  const confirmRegenCode = async () => {
+    if (!childIdToRegen || isRegeneratingCode) return;
+
+    setIsRegeneratingCode(true);
+    try {
+      const res = await apiFetch("/api/users/child-code/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ childId: childIdToRegen })
+      });
+      const json = await res.json();
+      if (!json.success) {
+        throw new Error(json.detail || json.message || "Failed to regenerate device code");
+      }
+
+      const updatedUser = json.user;
+      if (updatedUser) {
+        localStorage.setItem("userData", JSON.stringify(updatedUser));
+        setUser(updatedUser);
+        const updatedChild = (updatedUser.children || []).find((child: any) => child.childId === childIdToRegen);
+        if (childIdToRegen === "child_2") {
+          setChild2Code(updatedChild?.uniqueCode || json.uniqueCode || "");
+        }
+        window.dispatchEvent(new Event("userDataUpdated"));
+      }
+
+      showNotificationToast({
+        title: "Device Code Regenerated",
+        message: "The child's previous device code no longer works.",
+        type: "success"
+      });
+      setRegenConfirmOpen(false);
+      setChildIdToRegen(null);
+    } catch (error: any) {
+      console.error("Failed to regenerate device code", error);
+      showNotificationToast({
+        title: "Regeneration Failed",
+        message: error.message || "Failed to regenerate the device code.",
+        type: "error"
+      });
+    } finally {
+      setIsRegeneratingCode(false);
+    }
+  };
+
   const confirmDeleteChild = async () => {
     if (!childIdToDelete) return;
     const childId = childIdToDelete;
@@ -943,6 +1026,7 @@ export default function ParentSettings() {
           setChild1Age(k1.childAge ? `${k1.childAge} Years` : "");
           setChild1Board(k1.childBoard || "");
           setChild1Photo(k1.childPhoto || "");
+          setChild1Code(k1.uniqueCode || "");
         }
         const k2 = kids.length > 1 ? kids.find((k: any) => k.childId === "child_2") : null;
         if (k2) {
@@ -952,6 +1036,7 @@ export default function ParentSettings() {
           setChild2Age(k2.childAge ? `${k2.childAge} Years` : "");
           setChild2Board(k2.childBoard || "");
           setChild2Photo(k2.childPhoto || "");
+          setChild2Code(k2.uniqueCode || "");
         }
 
         showNotificationToast({
@@ -988,6 +1073,7 @@ export default function ParentSettings() {
       setChild2Age("");
       setChild2Board("");
       setChild2Photo("");
+      setChild2Code("");
     }
   };
 
@@ -1076,6 +1162,11 @@ export default function ParentSettings() {
               <div className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 group-hover:translate-x-1 transition-transform relative z-10 shrink-0">
                 <ArrowLeft size={16} className="text-[#141779] rotate-180" />
               </div>
+            </motion.div>
+
+            {/* ── Growth Score Section ── */}
+            <motion.div variants={itemVariants}>
+              <GrowthScoreCard childName={child1Name || user?.childName} />
             </motion.div>
 
             {/* Screen Time Section */}
@@ -1363,6 +1454,27 @@ export default function ParentSettings() {
                   />
                 </div>
 
+                <div className="flex flex-col gap-1.5 mt-0.5">
+                  <label className="text-xs font-black text-slate-600 uppercase tracking-wider ml-1">{t("child_device_code_label", "Child Device Code (Scholar Login)")}</label>
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex items-center justify-between">
+                    <span className="text-base sm:text-lg font-black tracking-widest text-[#141779]">
+                      {child1Code || "N/A"}
+                    </span>
+                    {!isCoParent ? (
+                      <button
+                        type="button"
+                        onClick={() => requestRegenCode("child_1")}
+                        className="px-3 py-1.5 rounded-full text-xs font-black bg-indigo-50 text-[#141779] border border-indigo-100 hover:bg-indigo-100 transition-colors cursor-pointer"
+                      >
+                        {t("regenerate", "Regenerate")}
+                      </button>
+                    ) : (
+                      <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
+                        <Lock size={12} /> {t("view_only", "View-only")}
+                      </span>
+                    )}
+                  </div>
+                </div>
 
               </div>
             </motion.div>
@@ -1501,6 +1613,7 @@ export default function ParentSettings() {
                   setChild2Age("6 Years");
                   setChild2Board("CBSE (NCERT)");
                   setChild2Photo("");
+                  setChild2Code("");
                 }}
                 className="w-full py-3.5 border-2 border-dashed border-[#141779]/30 rounded-2xl text-[#141779] font-black text-sm flex items-center justify-center gap-2 hover:bg-[#141779]/5 transition-all bg-white cursor-pointer"
               >
@@ -1718,6 +1831,7 @@ export default function ParentSettings() {
           setChildIdToRegen(null);
         }}
         onConfirm={confirmRegenCode}
+        loading={isRegeneratingCode}
         title={t("regen_code_title", "Regenerate Device Code")}
         message={t("regen_code_msg", "Are you sure you want to regenerate a new random device code for this child? The old code will stop working immediately.")}
         confirmText={t("yes_regenerate", "Yes, Regenerate")}
