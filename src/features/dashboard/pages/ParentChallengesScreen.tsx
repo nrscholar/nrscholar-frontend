@@ -28,7 +28,7 @@ import { useTranslation } from "react-i18next";
 import StreakModal from "../../../components/StreakModal";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
-import { COMMUNICATION_CHALLENGES, GrowthChallengeItem } from "../data/growthChallengesData";
+import { PARENT_GROWTH_CHALLENGES, COMMUNICATION_CHALLENGES, GrowthChallengeItem } from "../data/growthChallengesData";
 
 export default function ParentChallengesScreen() {
   const { t, i18n } = useTranslation();
@@ -157,16 +157,20 @@ export default function ParentChallengesScreen() {
       }
       setUnlockedLessonCount(currentUnlockedLesson);
 
-      // 2. Map unlocked lessons to challenges (5 challenges per lesson)
-      const unlockedMissionCount = Math.min(50, currentUnlockedLesson * 5);
-      const unlockedMissions = COMMUNICATION_CHALLENGES.slice(0, unlockedMissionCount);
-      const lockedUpcoming = COMMUNICATION_CHALLENGES.slice(
+      // 2. Map unlocked lessons to challenges (50 challenges per lesson, up to 500 total)
+      const unlockedMissionCount = Math.min(500, currentUnlockedLesson * 50);
+      const allChallengesList = PARENT_GROWTH_CHALLENGES.length > 0 ? PARENT_GROWTH_CHALLENGES : COMMUNICATION_CHALLENGES;
+      const unlockedMissions = allChallengesList.slice(0, unlockedMissionCount);
+      const lockedUpcoming = allChallengesList.slice(
         unlockedMissionCount,
-        Math.min(50, unlockedMissionCount + 5)
+        Math.min(500, unlockedMissionCount + 3)
       );
 
-      // 3. Extract backend saved progress and claim states
+      // 3. Extract backend saved progress, claim states, and day-wise scheduled active/upcoming items
       const backendProgressMap = new Map<string, any>();
+      let backendActiveChallenges: any[] = [];
+      let backendUpcomingChallenges: any[] = [];
+
       if (resChal) {
         try {
           const jsonChal = await resChal.json();
@@ -176,6 +180,10 @@ export default function ParentChallengesScreen() {
               if (c && c.id != null) backendProgressMap.set(String(c.id), c);
               if (c && c.challengeId != null) backendProgressMap.set(String(c.challengeId), c);
             });
+            backendActiveChallenges = listRaw.filter((c: any) => !c.isCompleted);
+            if (Array.isArray(jsonChal.data.upcoming) && jsonChal.data.upcoming.length > 0) {
+              backendUpcomingChallenges = jsonChal.data.upcoming;
+            }
           }
         } catch (e) {
           console.error("Error reading challenge states:", e);
@@ -206,12 +214,38 @@ export default function ParentChallengesScreen() {
         }
       });
 
-      setChallenges(mergedUnlocked);
-      setUpcoming(lockedUpcoming);
+      // Prioritize day-wise rotated backend active challenges so today's 3 missions appear first
+      let finalChallenges = mergedUnlocked;
+      if (backendActiveChallenges.length > 0) {
+        const activeIds = new Set(backendActiveChallenges.map((c) => String(c.id ?? c.challengeId)));
+        const priorityActive: any[] = [];
+        const otherChallenges: any[] = [];
+
+        mergedUnlocked.forEach((c) => {
+          if (activeIds.has(String(c.id)) || activeIds.has(String(c.challengeId))) {
+            priorityActive.push(c);
+          } else {
+            otherChallenges.push(c);
+          }
+        });
+
+        // If backend returned active challenges that weren't in mergedUnlocked, include them
+        backendActiveChallenges.forEach((beChal) => {
+          const beId = String(beChal.id ?? beChal.challengeId);
+          if (!priorityActive.some((c) => String(c.id) === beId || String(c.challengeId) === beId)) {
+            priorityActive.push(beChal);
+          }
+        });
+
+        finalChallenges = [...priorityActive, ...otherChallenges];
+      }
+
+      setChallenges(finalChallenges);
+      setUpcoming(backendUpcomingChallenges.length > 0 ? backendUpcomingChallenges : lockedUpcoming);
       setTotalActive(unlockedMissionCount);
 
       const newClaimState: Record<string, "idle" | "processing" | "claimed"> = {};
-      mergedUnlocked.forEach((c: any) => {
+      finalChallenges.forEach((c: any) => {
         if (c.claimed) newClaimState[c.id] = "claimed";
         else newClaimState[c.id] = "idle";
       });
@@ -449,8 +483,8 @@ export default function ParentChallengesScreen() {
           <span className="text-[#141779] font-extrabold text-xs sm:text-sm">
             {t("active_count_of", {
               activeCount: activeChallenges.length,
-              totalActive: unlockedLessonCount * 5,
-              defaultValue: `${activeChallenges.length} of ${unlockedLessonCount * 5} Active`,
+              totalActive: unlockedLessonCount * 50,
+              defaultValue: `${activeChallenges.length} of ${unlockedLessonCount * 50} Active`,
             })}
           </span>
         </div>
