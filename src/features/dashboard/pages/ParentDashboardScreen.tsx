@@ -382,7 +382,9 @@ export default function ParentDashboardScreen() {
     const lower = subj.toLowerCase();
     if (lower.includes("gujarati")) return t("gujarati", "Gujarati");
     if (lower.includes("math")) return t("mathematics", t("maths", "Mathematics"));
+    if (lower.includes("math")) return t("mathematics", t("maths", "Mathematics"));
     if (lower.includes("english")) return t("english_subject", "English");
+    if (lower.includes("social")) return t("social_science", t("social_studies", "Social Science"));
     if (lower.includes("social")) return t("social_science", t("social_studies", "Social Science"));
     if (lower.includes("science")) return t("science", "Science");
     if (lower.includes("hindi")) return t("hindi_subject", "Hindi");
