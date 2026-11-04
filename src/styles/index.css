@@ -1,147 +1,163 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-html, body {
-  overflow-x: clip;
-}
-.overflow-x-hidden {
-  overflow-x: clip !important;
-}
-body {
-  font-family: 'Quicksand', sans-serif;
-  background-color: #f7f9fb;
-}
-.glass-card {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(16px);
-  border: 1.5px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
-}
-.map-path {
-  stroke-dasharray: 8;
-  animation: dash 20s linear infinite;
-}
-@keyframes dash {
-  to { stroke-dashoffset: -100; }
-}
-.glow-pulse {
-  animation: pulse-glow 2s infinite ease-in-out;
-}
-@keyframes pulse-glow {
-  0%, 100% { filter: drop-shadow(0 0 5px rgba(87, 250, 233, 0.6)); }
-  50% { filter: drop-shadow(0 0 15px rgba(87, 250, 233, 0.9)); }
-}
-.no-scrollbar::-webkit-scrollbar { display: none; }
-
-/* ── XP / Journey progress bar ───────────────────────────────────────────── */
-.xp-progress-bar {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 100%;
-  height: 10px;
-  border-radius: 9999px;
-  overflow: hidden;
-  display: block;
-  border: none;
-  background: transparent;
-}
-/* Track (background) */
-.xp-progress-bar::-webkit-progress-bar {
-  background: rgba(20, 23, 121, 0.1);
-  border-radius: 9999px;
-}
-/* Filled value — gradient left → right */
-.xp-progress-bar::-webkit-progress-value {
-  background: linear-gradient(to right, #141779, #57fae9);
-  border-radius: 9999px;
-  transition: width 0.5s ease;
-}
-/* Firefox */
-.xp-progress-bar::-moz-progress-bar {
-  background: linear-gradient(to right, #141779, #57fae9);
-  border-radius: 9999px;
-  transition: width 0.3s ease;
-}
-
-
-@keyframes shimmer {
-  100% { transform: translateX(100%) rotate(45deg); }
-}
-
-@keyframes skeleton-shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-.animate-skeleton {
-  background: linear-gradient(90deg, #cbd5e1 0%, #ffffff 50%, #cbd5e1 100%);
-  background-size: 200% 100%;
-  animation: skeleton-shimmer 1.4s infinite ease-in-out;
-}
-
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-3px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.2s ease-out forwards;
-}
-
-/* Hide scrollbar for Chrome, Safari and Opera */
-*::-webkit-scrollbar {
-  display: none;
-}
-
-/* Hide scrollbar for IE, Edge and Firefox */
-* {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
-}
-
-
-/* Custom CSS Keyframes for Shimmer & Breathing (Lucky Wheel Spin Button) */
-@keyframes buttonShimmer {
-  0% { transform: translateX(-150%) skewX(-20deg); }
-  50%, 100% { transform: translateX(250%) skewX(-20deg); }
-}
-
-@keyframes buttonBreathe {
-  0%, 100% { 
-    transform: scale(1); 
-    box-shadow: 0 10px 22px -4px rgba(0, 168, 159, 0.35); 
-  }
-  50% { 
-    transform: scale(1.02); 
-    box-shadow: 0 14px 28px -3px rgba(0, 168, 159, 0.5); 
-  }
-}
-
-.spin-btn-breathe {
-  animation: buttonBreathe 3s ease-in-out infinite;
-  will-change: transform, box-shadow;
-}
-
-.spin-btn-breathe:active {
-  animation: none !important;
-  transform: scale(0.95) !important;
-  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.25), 0 4px 10px -2px rgba(0, 168, 159, 0.4) !important;
-  transition: transform 150ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 150ms ease !important;
-}
-
-.spin-shimmer-sweep {
-  animation: buttonShimmer 3.5s ease-in-out infinite;
-  will-change: transform;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+  overflow-x: clip;
+}
+.overflow-x-hidden {
+  overflow-x: clip !important;
+}
+body {
+  font-family: 'Quicksand', sans-serif;
+  background-color: #f7f9fb;
+}
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px);
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+}
+.map-path {
+  stroke-dasharray: 8;
+  animation: dash 20s linear infinite;
+}
+@keyframes dash {
+  to { stroke-dashoffset: -100; }
+}
+.glow-pulse {
+  animation: pulse-glow 2s infinite ease-in-out;
+}
+@keyframes pulse-glow {
+  0%, 100% { filter: drop-shadow(0 0 5px rgba(87, 250, 233, 0.6)); }
+  50% { filter: drop-shadow(0 0 15px rgba(87, 250, 233, 0.9)); }
+}
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* ── XP / Journey progress bar ───────────────────────────────────────────── */
+.xp-progress-bar {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 10px;
+  border-radius: 9999px;
+  overflow: hidden;
+  display: block;
+  border: none;
+  background: transparent;
+}
+/* Track (background) */
+.xp-progress-bar::-webkit-progress-bar {
+  background: rgba(20, 23, 121, 0.1);
+  border-radius: 9999px;
+}
+/* Filled value — gradient left → right */
+.xp-progress-bar::-webkit-progress-value {
+  background: linear-gradient(to right, #141779, #57fae9);
+  border-radius: 9999px;
+  transition: width 0.5s ease;
+}
+/* Firefox */
+.xp-progress-bar::-moz-progress-bar {
+  background: linear-gradient(to right, #141779, #57fae9);
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+
+@keyframes shimmer {
+  100% { transform: translateX(100%) rotate(45deg); }
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-skeleton {
+  background: linear-gradient(90deg, #cbd5e1 0%, #ffffff 50%, #cbd5e1 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s infinite ease-in-out;
+}
+
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+*::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+* {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+
+/* Custom CSS Keyframes for Shimmer & Breathing (Lucky Wheel Spin Button) */
+@keyframes buttonShimmer {
+  0% { transform: translateX(-150%) skewX(-20deg); }
+  50%, 100% { transform: translateX(250%) skewX(-20deg); }
+}
+
+@keyframes buttonBreathe {
+  0%, 100% { 
+    transform: scale(1); 
+    box-shadow: 0 10px 22px -4px rgba(30, 37, 94, 0.3); 
+  }
+  50% { 
+    transform: scale(1.02); 
+    box-shadow: 0 14px 28px -3px rgba(30, 37, 94, 0.45); 
+  }
+}
+
+.spin-btn-breathe {
+  animation: buttonBreathe 3s ease-in-out infinite;
+  will-change: transform, box-shadow;
+}
+
+.spin-btn-breathe:active {
+  animation: none !important;
+  transform: scale(0.95) !important;
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.25), 0 4px 10px -2px rgba(30, 37, 94, 0.4) !important;
+  transition: transform 150ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 150ms ease !important;
+}
+
+.spin-shimmer-sweep {
+  animation: buttonShimmer 3.5s ease-in-out infinite;
+  will-change: transform;
+}
+/* Child-Friendly Urgent Timer Pop/Blink Animation (<= 5s) */
+@keyframes timerPop {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 14px -2px rgba(244, 63, 94, 0.4);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 6px 20px 2px rgba(244, 63, 94, 0.65);
+  }
+}
+
+.animate-timer-pop {
+  animation: timerPop 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+  will-change: transform, box-shadow;
+}

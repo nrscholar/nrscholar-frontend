@@ -743,15 +743,29 @@ export default function DailyRewardsScreen() {
             /* State 3: Spinning / In-Progress State */
             <button
               disabled={true}
-              className="w-full py-4 rounded-full font-black text-lg tracking-wider uppercase flex items-center justify-center gap-2 border border-teal-200/40 bg-[#00A89F]/80 text-white opacity-80 cursor-wait scale-95 shadow-md transition-all duration-300 select-none"
+              className="w-full py-4 rounded-full font-black text-lg tracking-wider uppercase flex items-center justify-center gap-2.5 bg-[#1E255E]/85 text-white cursor-wait scale-95 shadow-md transition-all duration-200 select-none border border-indigo-400/30"
             >
-              <Sparkles className="w-5 h-5 text-white animate-spin shrink-0" />
-              <span>{t('spinning', 'SPINNING')}</span>
-              <span className="inline-flex gap-0.5 tracking-normal">
-                <span className="animate-bounce [animation-delay:0ms]">.</span>
-                <span className="animate-bounce [animation-delay:150ms]">.</span>
-                <span className="animate-bounce [animation-delay:300ms]">.</span>
-              </span>
+              {/* Exactly 1 Single Rotating Spinner Icon */}
+              <svg
+                className="animate-spin w-5 h-5 text-white shrink-0"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v8H4z"
+                />
+              </svg>
+              <span>{t('spinning', 'SPINNING...')}</span>
             </button>
           ) : getSpinBalance() > 0 ? (
             /* State 1 & 2: Idle / Ready State & Press Micro-Interaction */
@@ -759,16 +773,15 @@ export default function DailyRewardsScreen() {
               type="button"
               onClick={startSpin}
               disabled={isSpinning || isBuying}
-              className="relative overflow-hidden w-full py-4 rounded-full font-black text-lg tracking-wider uppercase flex items-center justify-center gap-2 border border-teal-300/40 bg-gradient-to-r from-[#00A89F] via-[#00BFA5] to-[#00C49F] hover:brightness-105 hover:scale-[1.02] text-white cursor-pointer shadow-lg shadow-[#00A89F]/35 hover:shadow-cyan-500/40 spin-btn-breathe select-none active:scale-95 duration-150"
+              className="relative overflow-hidden w-full py-4 rounded-full font-black text-lg tracking-wider uppercase flex items-center justify-center gap-2 border border-indigo-400/40 bg-gradient-to-r from-[#1E255E] to-[#2B3585] hover:brightness-110 hover:scale-[1.02] text-white cursor-pointer shadow-lg shadow-[#1E255E]/30 spin-btn-breathe select-none active:scale-95 duration-150"
             >
               {/* Translucent Shimmer Sweep Overlay */}
               <div className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden rounded-full">
-                <div className="w-1/2 h-full bg-gradient-to-r from-transparent via-white/30 to-transparent spin-shimmer-sweep" />
+                <div className="w-1/2 h-full bg-gradient-to-r from-transparent via-white/25 to-transparent spin-shimmer-sweep" />
               </div>
 
-              <span className="relative z-10 flex items-center justify-center gap-2">
+              <span className="relative z-10 flex items-center justify-center">
                 <span>{t('spin', 'SPIN')}</span>
-                <span className="text-base">✨</span>
               </span>
             </button>
           ) : (
