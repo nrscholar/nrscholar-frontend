@@ -4,7 +4,6 @@ import { ArrowLeft, Rocket, Sun, Compass, Globe, Moon, CheckCircle, Lock, Bell, 
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../../api";
-import { prefetchPdf } from "../../../utils/pdfCache";
 import { getScopedItem, setScopedItem, getActiveUserContext } from "../../../utils/sessionCache";
 import StreakModal from "../../../components/StreakModal";
 import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
@@ -437,12 +436,6 @@ export default function ChaptersScreen() {
                 activeSubjectRef.current = null;
               }
               return pruned;
-            });
-          } else {
-            // Prefetch first 3 chapter PDFs in the background
-            chData.data.slice(0, 3).forEach((c: any) => {
-              const cid = c._id || c.chapterId;
-              if (cid) prefetchPdf(cid);
             });
           }
         } else {
