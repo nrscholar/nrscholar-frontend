@@ -1847,7 +1847,7 @@ export default function ParentDashboardScreen() {
               </div>
             </button>
 
-            {/* 4. Rewards */}
+            {/* 4. Achievement */}
             <button
               type="button"
               onClick={() => navigate('/parent/achievements')}
@@ -1863,7 +1863,7 @@ export default function ParentDashboardScreen() {
               </div>
               <div className="w-full min-w-0">
                 <h4 className="text-xs sm:text-sm font-black text-[#141779] group-hover:text-emerald-700 transition-colors leading-tight truncate">
-                  {t("rewards", "Rewards")}
+                  {t("achievement", "Achievement")}
                 </h4>
                 <p
                   className="text-xs sm:text-[13px] text-slate-500 font-medium truncate mt-0.5 leading-tight"

@@ -1077,63 +1077,6 @@ export default function ParentSettings() {
     }
   };
 
-  const requestRegenCode = (childId: string) => {
-    if (isCoParent) {
-      showNotificationToast({
-        title: "Permission Denied",
-        message: "To add a new child or modify family settings, please log in using the Primary Parent account.",
-        type: "warning"
-      });
-      return;
-    }
-    setChildIdToRegen(childId);
-    setRegenConfirmOpen(true);
-  };
-
-  const confirmRegenCode = async () => {
-    if (!childIdToRegen) return;
-    const childId = childIdToRegen;
-    setRegenConfirmOpen(false);
-    setChildIdToRegen(null);
-    try {
-      const res = await apiFetch("/api/users/child-code/update", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ childId })
-      });
-      const json = await res.json();
-      if (json.success && json.uniqueCode) {
-        if (childId === "child_1") {
-          setChild1Code(json.uniqueCode);
-        } else {
-          setChild2Code(json.uniqueCode);
-        }
-        if (json.user) {
-          localStorage.setItem("userData", JSON.stringify(json.user));
-          setUser(json.user);
-          window.dispatchEvent(new Event("userDataUpdated"));
-        }
-        showNotificationToast({
-          title: "Code Regenerated",
-          message: "Device code regenerated successfully! 🎉",
-          type: "success"
-        });
-      } else {
-        showNotificationToast({
-          title: "Regenerate Failed",
-          message: json.detail || json.message || "Failed to regenerate code.",
-          type: "warning"
-        });
-      }
-    } catch (e) {
-      showNotificationToast({
-        title: "Connection Error",
-        message: "Error connecting to server.",
-        type: "error"
-      });
-    }
-  };
-
   const isScreenTimeOn = screenTimeMinutes > 0 && screenTimeMinutes < 9999;
 
   return (
