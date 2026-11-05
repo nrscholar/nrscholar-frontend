@@ -131,7 +131,7 @@ const RootRedirect = () => {
   const token = localStorage.getItem("userToken");
   if (!token) {
     const hasSeenSplash = localStorage.getItem("hasSeenSplash") === "true";
-    return <Navigate to={hasSeenSplash ? "/login" : "/splash"} replace />;
+    return hasSeenSplash ? <Navigate to="/login" replace /> : <SplashScreen />;
   }
 
   const currentUser = (() => {
@@ -221,8 +221,6 @@ function PinGuard() {
             <Route path="/" element={<RootRedirect />} />
             
             {/* Public Routes */}
-            <Route path="/splash" element={<SplashScreen />} />
-            <Route path="/welcome" element={<SplashScreen />} />
             <Route path="/login" element={<LoginScreen />} />
             <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
             <Route path="/signup-step1" element={<SignupStep1Screen />} />
