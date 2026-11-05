@@ -170,15 +170,32 @@ export default function MapWorld({
   };
 
   const isClickingRef = useRef(false);
+  const tabRefs = useRef<Record<number, HTMLButtonElement | null>>({});
+  const tabsContainerRef = useRef<HTMLDivElement | null>(null);
 
-  // Smooth auto-scroll to current user class section on mount
+  // Auto-scroll active class tab into center view in the horizontal tabs container
+  const centerTabInView = (cNum: number, smooth: boolean = true) => {
+    const activeTabEl = tabRefs.current[cNum];
+    if (activeTabEl && tabsContainerRef.current) {
+      const container = tabsContainerRef.current;
+      const targetScrollLeft = activeTabEl.offsetLeft - (container.offsetWidth / 2) + (activeTabEl.offsetWidth / 2);
+      container.scrollTo({
+        left: Math.max(0, targetScrollLeft),
+        behavior: smooth ? 'smooth' : 'auto'
+      });
+    }
+  };
+
+  // Smooth auto-scroll to current user class section & center active tab on mount
   useEffect(() => {
+    setActiveNavClass(inferredActiveClass);
     const targetId = `class-section-${inferredActiveClass}`;
     const timer = setTimeout(() => {
       const el = document.getElementById(targetId);
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
+      centerTabInView(inferredActiveClass, true);
     }, 350);
     return () => clearTimeout(timer);
   }, [inferredActiveClass]);
@@ -209,6 +226,11 @@ export default function MapWorld({
     return () => window.removeEventListener("scroll", handleScroll);
   }, [classNumbers]);
 
+  // Center tab whenever activeNavClass changes
+  useEffect(() => {
+    centerTabInView(activeNavClass, true);
+  }, [activeNavClass]);
+
   const scrollToClass = (cNum: number) => {
     isClickingRef.current = true;
     setActiveNavClass(cNum);
@@ -216,16 +238,22 @@ export default function MapWorld({
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+    centerTabInView(cNum, true);
+    if (cNum !== inferredActiveClass) {
+      setLockedNotice(`🔒 Class ${cNum} is locked. Only your joined Class ${inferredActiveClass} is accessible.`);
+      setTimeout(() => setLockedNotice(null), 3500);
+    }
     setTimeout(() => {
       isClickingRef.current = false;
     }, 850);
   };
 
-  // Determine global index of current playable node
-  let currentStageIndex = rawStages.findIndex(s => s.unlocked && !s.nodeData?.completed);
+  // Determine global index of current playable node within the active class
+  let currentStageIndex = rawStages.findIndex(s => s.minClass === inferredActiveClass && s.unlocked && !s.nodeData?.completed);
   if (currentStageIndex === -1) {
-    const lastUnlocked = rawStages.map(s => s.unlocked).lastIndexOf(true);
-    currentStageIndex = lastUnlocked !== -1 ? lastUnlocked : 0;
+    const lastUnlockedInClass = rawStages.map((s, idx) => s.minClass === inferredActiveClass && s.unlocked ? idx : -1).filter(idx => idx !== -1).pop();
+    currentStageIndex = lastUnlockedInClass !== undefined ? lastUnlockedInClass : rawStages.findIndex(s => s.minClass === inferredActiveClass);
+    if (currentStageIndex === -1) currentStageIndex = 0;
   }
 
   const getStageState = (stage: any, index: number) => {
@@ -249,32 +277,41 @@ export default function MapWorld({
       <div className="absolute top-48 right-0 w-44 h-44 rounded-full opacity-15 pointer-events-none"
         style={{ background: tv.accentTo, filter: "blur(60px)" }} />
 
-      {/* ULTRA-PREMIUM FLOATING CLASS SEGMENTED CONTROLLER (9.5+ RATING) */}
-      <div className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-xl border-b border-slate-200/80 px-2 py-2 flex items-center justify-center shadow-xs">
-        <div className="flex items-center justify-between gap-1 max-w-[420px] w-full bg-slate-100/90 p-1.5 rounded-full border border-slate-200/80 shadow-inner">
-          {classNumbers.map((cNum) => {
-            const isUserCurrentClass = cNum === inferredActiveClass;
-            const isSelected = activeNavClass === cNum;
-            const isPastClass = cNum < inferredActiveClass;
-            const classStages = rawStages.filter(s => s.minClass === cNum);
-            const isClassMastered = classStages.length > 0 && classStages.every(s => Boolean(s.nodeData?.completed));
-            const iconBadge = isUserCurrentClass ? "⚡" : isClassMastered ? "✓" : isPastClass ? "📖" : "🔒";
+      {/* ULTRA-PREMIUM FLOATING CLASS SEGMENTED CONTROLLER (HORIZONTALLY SCROLLABLE CLASS 1 TO 10) */}
+      <div className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-xl border-b border-slate-200/80 shadow-xs">
+        <div
+          ref={tabsContainerRef}
+          className="w-full max-w-[430px] mx-auto overflow-x-auto scroll-smooth no-scrollbar px-3 py-2 flex items-center"
+          style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none" }}
+        >
+          <div className="inline-flex items-center gap-1.5 p-1 rounded-full bg-slate-100/90 border border-slate-200/80 shadow-inner shrink-0">
+            {classNumbers.map((cNum) => {
+              const isUserCurrentClass = cNum === inferredActiveClass;
+              const isSelected = activeNavClass === cNum;
+              const isLockedClass = cNum !== inferredActiveClass;
+              const iconBadge = isUserCurrentClass ? "⚡" : "🔒";
 
-            return (
-              <button
-                key={cNum}
-                onClick={() => scrollToClass(cNum)}
-                className={`flex-1 py-2 px-1 rounded-full text-[11px] font-black uppercase tracking-tight transition-all duration-300 inline-flex items-center justify-center gap-1 leading-none whitespace-nowrap shrink-0 ${
-                  isSelected
-                    ? "bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white shadow-md shadow-indigo-900/30 scale-[1.03] border border-indigo-300/40"
-                    : "bg-white/80 text-slate-600 border border-slate-200/80 hover:bg-white hover:text-slate-900"
-                }`}
-              >
-                <span className="text-[10px] shrink-0">{iconBadge}</span>
-                <span className="whitespace-nowrap">{`Class ${cNum}`}</span>
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={cNum}
+                  ref={(el) => { tabRefs.current[cNum] = el; }}
+                  onClick={() => scrollToClass(cNum)}
+                  className={`py-2 px-3.5 rounded-full text-[11px] font-black uppercase tracking-tight transition-all duration-300 inline-flex items-center justify-center gap-1.5 leading-none whitespace-nowrap shrink-0 ${
+                    isSelected
+                      ? isUserCurrentClass
+                        ? "bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white shadow-md shadow-indigo-900/30 scale-[1.03] border border-indigo-300/40"
+                        : "bg-slate-800 text-white shadow-md border border-slate-700 scale-[1.02]"
+                      : isUserCurrentClass
+                      ? "bg-indigo-50 text-[#141779] border border-indigo-200 hover:bg-indigo-100 font-black"
+                      : "bg-white/80 text-slate-500 border border-slate-200/80 hover:bg-white hover:text-slate-700"
+                  }`}
+                >
+                  <span className="text-[10px] shrink-0">{iconBadge}</span>
+                  <span className="whitespace-nowrap">{`Class ${cNum}`}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -301,10 +338,8 @@ export default function MapWorld({
         {classNumbers.map((cNum) => {
           const classStages = stagesByClass.get(cNum) || [];
           const headerInfo = getClassHeaderInfo(cNum);
-          const isCompletedClass = cNum < inferredActiveClass;
           const isCurrentClass = cNum === inferredActiveClass;
-          const isLockedClass = cNum > inferredActiveClass;
-          const isAllStagesCompleted = classStages.length > 0 && classStages.every(s => Boolean(s.nodeData?.completed));
+          const isLockedClass = cNum !== inferredActiveClass;
 
           return (
             <div key={cNum} id={`class-section-${cNum}`} className="w-full flex flex-col">
@@ -314,6 +349,7 @@ export default function MapWorld({
                 <div className={`
                   w-full rounded-[24px] p-4 border-2 shadow-md relative overflow-hidden transition-all text-white
                   ${headerInfo.gradient}
+                  ${isLockedClass ? "opacity-85 saturate-[0.85]" : ""}
                 `}>
                   <div className="flex flex-col gap-2.5">
                     {/* Top row: Realm emoji + Status badge */}
@@ -333,19 +369,13 @@ export default function MapWorld({
                             ⚡ {t('current_class', 'CURRENT CLASS')}
                           </span>
                         )}
-                        {isCompletedClass && isAllStagesCompleted && (
-                          <span className="bg-emerald-500/30 border border-emerald-400 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1 shadow-xs whitespace-nowrap shrink-0">
-                            ✓ {t('completed_upper', 'COMPLETED')}
-                          </span>
-                        )}
-                        {isCompletedClass && !isAllStagesCompleted && (
-                          <span className="bg-white/20 border border-white/30 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1 shadow-xs whitespace-nowrap shrink-0">
-                            📚 CLASS {cNum}
-                          </span>
-                        )}
                         {isLockedClass && (
                           <span className="bg-black/35 text-white border border-white/35 text-[8.5px] font-black px-2.5 py-1 rounded-full uppercase tracking-tight inline-flex items-center gap-1 backdrop-blur-md whitespace-nowrap shrink-0 flex-shrink-0 shadow-xs">
-                            🔒 <span className="whitespace-nowrap inline-block">{t('unlocks_at_class', { count: cNum, defaultValue: `UNLOCKS AT CLASS ${cNum}` })}</span>
+                            🔒 <span className="whitespace-nowrap inline-block">
+                              {cNum > inferredActiveClass 
+                                ? t('unlocks_at_class', { count: cNum, defaultValue: `UNLOCKS AT CLASS ${cNum}` }) 
+                                : `CLASS ${cNum} LOCKED`}
+                            </span>
                           </span>
                         )}
                       </div>
@@ -364,21 +394,20 @@ export default function MapWorld({
               {/* CLASS STAGE CARDS */}
               {classStages.map((stage) => {
                 const globalIndex = rawStages.findIndex(s => s.id === stage.id);
-                const isNodeCompleted = Boolean(stage.nodeData ? stage.nodeData.completed : false);
-                const stageProgPct = stage.nodeData?.nodeProgressPercentage !== undefined
+                const isNodeCompleted = isCurrentClass && Boolean(stage.nodeData ? stage.nodeData.completed : false);
+                const stageProgPct = isCurrentClass && stage.nodeData?.nodeProgressPercentage !== undefined
                   ? Math.round(stage.nodeData.nodeProgressPercentage)
                   : 0;
 
                 // Unlocked rule:
-                // - Current standard (cNum === inferredActiveClass): unlocked if stage is active/unlocked in current class
-                // - Prior/other standards (cNum < inferredActiveClass): unlocked ONLY IF progress > 0% or completed! If 0%, it stays locked.
-                // - Future standards (cNum > inferredActiveClass): locked.
+                // Only the joined/current class (cNum === inferredActiveClass) can have unlocked stages!
+                // All other classes are strictly locked.
                 const isNodeUnlocked = isCurrentClass
                   ? Boolean(stage.nodeData ? stage.nodeData.unlocked : stage.unlocked)
-                  : (isNodeCompleted || stageProgPct > 0);
+                  : false;
 
                 const isCompleted = isNodeCompleted;
-                const isCurrent = isNodeUnlocked && !isCompleted && (isCurrentClass || stageProgPct > 0);
+                const isCurrent = isNodeUnlocked && !isCompleted;
                 const stageProgress = isCompleted ? 100 : (isNodeUnlocked ? stageProgPct : 0);
 
                 const left = isLeft(globalIndex);
@@ -442,11 +471,11 @@ export default function MapWorld({
                         whileTap={isNodeUnlocked || isCompleted ? { scale: 0.97 } : undefined}
                         onClick={() => {
                           if (isLockedClass) {
-                            setLockedNotice(`🔒 ${stage.name} unlocks when you reach Class ${cNum}!`);
-                            setTimeout(() => setLockedNotice(null), 3000);
+                            setLockedNotice(`🔒 ${stage.name} is locked. Only Class ${inferredActiveClass} is available for your account!`);
+                            setTimeout(() => setLockedNotice(null), 3500);
                           } else if (!isNodeUnlocked && !isCompleted) {
                             setLockedNotice(`🔒 ${stage.name} is locked. Complete previous chapters in Class ${cNum} to unlock!`);
-                            setTimeout(() => setLockedNotice(null), 3000);
+                            setTimeout(() => setLockedNotice(null), 3500);
                           } else {
                             setSelectedStage(stage);
                           }
@@ -535,7 +564,11 @@ export default function MapWorld({
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => {
-          const playableStage = rawStages[currentStageIndex] || rawStages[0];
+          const currentClassStages = rawStages.filter(s => s.minClass === inferredActiveClass);
+          const playableStage = currentClassStages.find(s => s.unlocked && !s.nodeData?.completed)
+            || currentClassStages.find(s => s.unlocked)
+            || currentClassStages[0]
+            || rawStages[0];
           onEnterStage(playableStage);
         }}
         className="fixed bottom-24 right-5 z-40 w-14 h-14 text-white rounded-full shadow-[0_8px_25px_rgba(20,23,121,0.4)] flex items-center justify-center border-2 border-white/20 transition-all"

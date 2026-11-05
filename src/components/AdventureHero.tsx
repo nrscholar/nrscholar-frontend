@@ -407,11 +407,15 @@ function AdventureHero({
               {t('completed_label', { percent: legProgressClamped, defaultValue: `${legProgressClamped}% COMPLETED` })}
             </span>
           </div>
-          <div className="w-full h-2 bg-white/15 rounded-full overflow-hidden p-0.5">
-            <div
-              className="h-full bg-gradient-to-r from-[#35E5D4] via-[#14C8C6] to-[#006a62] rounded-full transition-all duration-700 shadow-xs"
-              style={{ width: `${legProgressClamped}%` }}
-            />
+          <div className={`w-full h-2 bg-white/15 rounded-full overflow-hidden p-0.5 ${legProgressClamped === 0 ? 'flex items-center' : ''}`}>
+            {legProgressClamped === 0 ? (
+              <div className="w-1.5 h-1.5 rounded-full bg-[#35E5D4] shrink-0" />
+            ) : (
+              <div
+                className="h-full bg-gradient-to-r from-[#35E5D4] via-[#14C8C6] to-[#006a62] rounded-full transition-all duration-700 shadow-xs"
+                style={{ width: `${legProgressClamped}%` }}
+              />
+            )}
           </div>
           <div className="flex justify-between items-center text-[9.5px] font-extrabold text-slate-300 mt-0.5">
             <span className="truncate max-w-[60%]" title={t('unlock_label', { destination: endName, defaultValue: `${endName} Unlock` })}>
@@ -491,15 +495,19 @@ function AdventureHero({
               <span className="text-xs sm:text-sm font-black text-[#141779]">
                 {displayMissionProgress.current} / {displayMissionProgress.total}
               </span>
-              <div className="w-20 sm:w-24 h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/60 p-0.5">
-                <div
-                  className="h-full bg-[#2563eb] rounded-full transition-all duration-500"
-                  style={{
-                    width: `${displayMissionProgress.total > 0
-                      ? Math.min(100, (displayMissionProgress.current / displayMissionProgress.total) * 100)
-                      : 0}%`
-                  }}
-                />
+              <div className={`w-20 sm:w-24 h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/60 p-0.5 ${displayMissionProgress.current === 0 ? 'flex items-center' : ''}`}>
+                {displayMissionProgress.current === 0 ? (
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#2563eb] shrink-0" />
+                ) : (
+                  <div
+                    className="h-full bg-[#2563eb] rounded-full transition-all duration-500"
+                    style={{
+                      width: `${displayMissionProgress.total > 0
+                        ? Math.min(100, (displayMissionProgress.current / displayMissionProgress.total) * 100)
+                        : 0}%`
+                    }}
+                  />
+                )}
               </div>
             </div>
           </>

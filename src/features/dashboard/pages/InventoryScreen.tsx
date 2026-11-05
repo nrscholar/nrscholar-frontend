@@ -346,6 +346,8 @@ export default function InventoryScreen() {
       let status = t('status_locked', "Locked 🔒");
       if (isFutureClass) {
         status = t('unlocks_at_class_short', { count: minClass, defaultValue: `Unlocks at Class ${minClass} 🔒` });
+      } else if (!isCurrentClass) {
+        status = `Class ${minClass} Locked 🔒`;
       } else if (isCompleted) {
         status = t('status_completed', "Completed 🎉");
       } else if (isCurrent) {
@@ -622,8 +624,8 @@ export default function InventoryScreen() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl text-[10px] font-black transition-all duration-200 uppercase tracking-tight ${isActive
-                      ? "bg-[#6C4DFF] text-white shadow-sm scale-[1.02]"
-                      : "text-[#6C4DFF]/70 hover:bg-white/80 hover:text-[#141779]"
+                    ? "bg-[#6C4DFF] text-white shadow-sm scale-[1.02]"
+                    : "text-[#6C4DFF]/70 hover:bg-white/80 hover:text-[#141779]"
                     }`}
                 >
                   <Icon size={16} className={`mb-1 ${isActive ? "text-white" : "text-[#6C4DFF]/70"}`} />
@@ -731,8 +733,8 @@ export default function InventoryScreen() {
                       onClick={() => openMysteryBox(item.type)}
                       disabled={count === 0 || openingBox !== null}
                       className={`w-full py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${count > 0 && openingBox !== item.type
-                          ? "bg-gradient-to-r from-[#6C4DFF] to-[#3520A8] text-white shadow-md hover:brightness-110 active:scale-95 border border-[#9C7CFF]/40"
-                          : "bg-slate-100 text-slate-500 border border-slate-200 cursor-not-allowed"
+                        ? "bg-gradient-to-r from-[#6C4DFF] to-[#3520A8] text-white shadow-md hover:brightness-110 active:scale-95 border border-[#9C7CFF]/40"
+                        : "bg-slate-100 text-slate-500 border border-slate-200 cursor-not-allowed"
                         }`}
                     >
                       {isOpening ? t('opening', 'OPENING...') : count > 0 ? t('open_vault', 'OPEN VAULT') : t('locked_upper', 'LOCKED')}
@@ -767,8 +769,8 @@ export default function InventoryScreen() {
               <button
                 onClick={() => setSubTab("Journey")}
                 className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${subTab === "Journey"
-                    ? "bg-[#6C4DFF] text-white shadow-sm"
-                    : "text-[#6C4DFF]/70 hover:text-[#141779]"
+                  ? "bg-[#6C4DFF] text-white shadow-sm"
+                  : "text-[#6C4DFF]/70 hover:text-[#141779]"
                   }`}
               >
                 {t('dragon_journey_tab', 'Dragon Journey 🗺️')}
@@ -776,8 +778,8 @@ export default function InventoryScreen() {
               <button
                 onClick={() => setSubTab("Lab")}
                 className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${subTab === "Lab"
-                    ? "bg-[#6C4DFF] text-white shadow-sm"
-                    : "text-[#6C4DFF]/70 hover:text-[#141779]"
+                  ? "bg-[#6C4DFF] text-white shadow-sm"
+                  : "text-[#6C4DFF]/70 hover:text-[#141779]"
                   }`}
               >
                 {t('fragment_lab_tab', 'Fragment Lab 🧪')}
@@ -1014,12 +1016,12 @@ export default function InventoryScreen() {
                       </div>
 
                       <span className={`text-[9.5px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 whitespace-nowrap flex items-center gap-1 ${isCurrentClass
-                          ? "bg-[#6C4DFF] text-white shadow-xs"
-                          : isAllCompleted
-                            ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                            : hasAnyProgress
-                              ? "bg-amber-100 text-amber-800 border border-amber-300"
-                              : "bg-slate-100 text-slate-500 border border-slate-200"
+                        ? "bg-[#6C4DFF] text-white shadow-xs"
+                        : isAllCompleted
+                          ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                          : hasAnyProgress
+                            ? "bg-amber-100 text-amber-800 border border-amber-300"
+                            : "bg-slate-100 text-slate-500 border border-slate-200"
                         }`}>
                         {isCurrentClass ? (
                           <>
@@ -1048,22 +1050,22 @@ export default function InventoryScreen() {
                             key={item.id}
                             onClick={isUnlocked ? () => navigate("/practice/journey-map", { state: { scrollTo: item.id } }) : undefined}
                             className={`rounded-xl p-3 flex items-center justify-between border transition-all ${isCurrent
-                                ? 'bg-gradient-to-r from-[#FAF8FF] via-[#F4EFFC] to-white border-2 border-[#6C4DFF] shadow-sm cursor-pointer hover:border-[#5835F5] active:scale-[0.99]'
-                                : isCompleted
-                                  ? 'bg-emerald-50/25 border border-emerald-200/80 hover:border-emerald-400 shadow-2xs cursor-pointer active:scale-[0.99]'
-                                  : isUnlocked
-                                    ? 'bg-white border border-[#EDE8FC] hover:border-[#6C4DFF] shadow-2xs cursor-pointer active:scale-[0.99]'
-                                    : 'bg-slate-50/70 border border-slate-200/80 opacity-50 cursor-not-allowed pointer-events-none select-none'
+                              ? 'bg-gradient-to-r from-[#FAF8FF] via-[#F4EFFC] to-white border-2 border-[#6C4DFF] shadow-sm cursor-pointer hover:border-[#5835F5] active:scale-[0.99]'
+                              : isCompleted
+                                ? 'bg-emerald-50/25 border border-emerald-200/80 hover:border-emerald-400 shadow-2xs cursor-pointer active:scale-[0.99]'
+                                : isUnlocked
+                                  ? 'bg-white border border-[#EDE8FC] hover:border-[#6C4DFF] shadow-2xs cursor-pointer active:scale-[0.99]'
+                                  : 'bg-slate-50/70 border border-slate-200/80 opacity-50 cursor-not-allowed pointer-events-none select-none'
                               }`}
                           >
                             <div className="flex items-center gap-3 min-w-0 flex-1">
                               <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${isCurrent
-                                  ? 'bg-[#6C4DFF] text-white border-[#6C4DFF] shadow-xs relative'
-                                  : isCompleted
-                                    ? 'bg-emerald-600 text-white border-emerald-500 shadow-2xs'
-                                    : isUnlocked
-                                      ? 'bg-[#141779] text-white border-[#141779]'
-                                      : 'bg-slate-200 text-slate-500 border-slate-300'
+                                ? 'bg-[#6C4DFF] text-white border-[#6C4DFF] shadow-xs relative'
+                                : isCompleted
+                                  ? 'bg-emerald-600 text-white border-emerald-500 shadow-2xs'
+                                  : isUnlocked
+                                    ? 'bg-[#141779] text-white border-[#141779]'
+                                    : 'bg-slate-200 text-slate-500 border-slate-300'
                                 }`}>
                                 {isCurrent ? (
                                   <>

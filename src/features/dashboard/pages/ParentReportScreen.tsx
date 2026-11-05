@@ -972,7 +972,7 @@ export default function ParentReportScreen() {
 
     displaySolved = globalAttempted;
     displayAccuracy = globalAccuracy;
-    displayTime = globalTimeMinutes;
+    displayTime = (dateFilter === "today" && reportData?.todayTimeFormatted) ? reportData.todayTimeFormatted : `${globalTimeMinutes}m`;
 
     filteredQA = {
       totalAttempted: globalAttempted,

@@ -310,7 +310,7 @@ export default function ParentDashboard() {
           {/* Today's Stats & Current City */}
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
-              <Text style={[styles.statNum, { color: C.secondary }]}>{report?.todayTimeMinutes || 0}m</Text>
+              <Text style={[styles.statNum, { color: C.secondary }]}>{report?.todayTimeFormatted || (report?.todayTimeMinutes ? `${report.todayTimeMinutes}m` : "0m")}</Text>
               <Text style={styles.statLabel}>Today's Time</Text>
             </View>
             <View style={styles.statBox}>

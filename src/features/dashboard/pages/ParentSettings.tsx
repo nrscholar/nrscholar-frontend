@@ -1563,27 +1563,7 @@ export default function ParentSettings() {
                     />
                   </div>
 
-                  <div className="flex flex-col gap-1.5 mt-0.5">
-                    <label className="text-xs font-black text-slate-600 uppercase tracking-wider ml-1">{t("child_device_code_label", "Child Device Code (Scholar Login)")}</label>
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex items-center justify-between">
-                      <span className="text-base sm:text-lg font-black tracking-widest text-[#141779]">
-                        {child2Code || "N/A"}
-                      </span>
-                      {!isCoParent ? (
-                        <button
-                          type="button"
-                          onClick={() => requestRegenCode("child_2")}
-                          className="px-3 py-1.5 rounded-full text-xs font-black bg-indigo-50 text-[#141779] border border-indigo-100 hover:bg-indigo-100 transition-colors cursor-pointer"
-                        >
-                          {t("regenerate", "Regenerate")}
-                        </button>
-                      ) : (
-                        <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
-                          <Lock size={12} /> {t("view_only", "View-only")}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+
                 </div>
               </motion.div>
             ) : isCoParent ? (
