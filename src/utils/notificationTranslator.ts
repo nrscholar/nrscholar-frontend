@@ -101,15 +101,26 @@ export function translateNotificationMessage(msg: string, t: any, childName?: st
   }
 
   // 4. Daily Progress Report Message
-  if (/daily report for today/i.test(translated) || /Study Time:/i.test(translated)) {
+  if (/daily report/i.test(translated) || /Study Time:/i.test(translated)) {
+    const isYesterday = /yesterday/i.test(translated) || /Good morning/i.test(translated);
     const timeMatch = translated.match(/Study Time:\s*([\d\w\s]+?)(?:🎯|📈|Great|$)/i);
     const qMatch = translated.match(/Questions Solved:\s*(\d+)/i);
     const scoreMatch = translated.match(/Confidence Score:\s*(\d+%\s*[^!\.]*)/i);
-    const nameMatch = translated.match(/Here is (?:(.*?)’s|(.*?)\s+)?daily report for today/i);
-    const child = nameMatch ? (nameMatch[1] || nameMatch[2] || '').trim() : '';
+    const nameMatch = translated.match(/Here is (?:(.*?)’s|(.*?)\s+)?daily report/i);
+    let child = nameMatch ? (nameMatch[1] || nameMatch[2] || '').trim() : '';
+    child = child.replace(/['’]s$/i, '').trim();
+    if (child.toLowerCase() === 'you' || child.toLowerCase() === 'your') {
+      child = '';
+    }
     const time = timeMatch ? timeMatch[1].trim() : '6 mins';
     const questions = qMatch ? qMatch[1] : '27';
     const confidence = scoreMatch ? scoreMatch[1].trim() : '89%';
+
+    if (isYesterday) {
+      const childPrefix = child ? `${child}'s` : 'your';
+      return `Good morning! 🌅 Here is ${childPrefix} daily report for yesterday: ⏱️ Study Time: ${time} 🎯 Questions Solved: ${questions} 📈 Confidence Score: ${confidence} Keep up the great work! Let's conquer new chapters today! 🚀`;
+    }
+
     if (child) {
       return t('notif_msg_daily_report_full_child', { child, time, questions, confidence, defaultValue: `Good evening! 🌌 Here is ${child}'s daily report for today: ⏱️ Study Time: ${time} 🎯 Questions Solved: ${questions} 📈 Confidence Score: ${confidence} Great job today! Rest well and see you tomorrow! 🚀` });
     }

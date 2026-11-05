@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Bell, Star, Lock, Sparkles, Check, CheckCircle2, BookOpen } from "lucide-react";
+import { ArrowLeft, Bell, Star, Lock, Sparkles, Check, CheckCircle2, BookOpen, Tag } from "lucide-react";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
@@ -78,8 +78,8 @@ export default function HabitsScreen() {
   return (
     <div className="min-h-screen bg-[#F8FAFF] bg-gradient-to-b from-[#F0F4FF] via-[#F8FAFF] to-[#FFFFFF] text-slate-900 w-full flex flex-col items-center overflow-x-clip font-sans relative pb-12">
       {/* Soft ambient background glows */}
-      <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[320px] h-[180px] bg-[#12D6D1]/8 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-48 right-2 w-[220px] h-[220px] bg-[#8C68F6]/6 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[320px] h-[180px] bg-[#141779]/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-48 right-2 w-[220px] h-[220px] bg-[#141779]/4 rounded-full blur-3xl pointer-events-none" />
 
       {/* Header */}
       <header className="w-full z-40 bg-white/90 backdrop-blur-md border-b border-slate-100/80 flex justify-between items-center px-5 py-3.5 max-w-[430px] mx-auto sticky top-0 shadow-2xs">
@@ -88,15 +88,15 @@ export default function HabitsScreen() {
             onClick={() => navigate(-1)} 
             className="w-9 h-9 hover:bg-slate-100 active:scale-95 rounded-full transition-all flex items-center justify-center shrink-0"
           >
-            <ArrowLeft size={20} className="text-[#2D328F]" />
+            <ArrowLeft size={20} className="text-[#141779]" />
           </button>
-          <h1 className="text-lg font-black tracking-tight text-[#2D328F]">{t('good_habits', 'Good Habits')}</h1>
+          <h1 className="text-lg font-black tracking-tight text-[#141779]">{t('good_habits', 'Good Habits')}</h1>
         </div>
         <button 
           onClick={() => navigate("/notifications")} 
           className="w-9 h-9 rounded-full bg-white shadow-2xs flex items-center justify-center hover:bg-slate-50 active:scale-95 transition-all relative shrink-0 border border-slate-200/80"
         >
-          <Bell size={18} className="text-[#2D328F]" />
+          <Bell size={18} className="text-[#141779]" />
           {unreadCount > 0 && (
             <span className="absolute top-0.5 right-0.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white" />
           )}
@@ -107,17 +107,17 @@ export default function HabitsScreen() {
         
         {/* Main Title Section */}
         <div className="text-center space-y-1">
-          <h2 className="text-2xl sm:text-[26px] font-black text-[#1E255E] tracking-tight">
+          <h2 className="text-2xl sm:text-[26px] font-black text-[#141779] tracking-tight">
             {t('daily_habit_journey', 'Daily Habit Journey')}
           </h2>
-          <p className="text-[11px] sm:text-xs font-black text-[#1E255E] uppercase tracking-wider flex items-center justify-center gap-1">
+          <p className="text-[11px] sm:text-xs font-black text-[#141779]/80 uppercase tracking-wider flex items-center justify-center gap-1">
             <span>{t('build_smart_habits_desc', 'BUILD SMART HABITS, GAIN GOLD STARS!')}</span>
             <span className="text-[#FBBF24]">⭐</span>
           </p>
         </div>
 
         {/* Progress Journey Bar Component */}
-        <div className="w-full bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-[0_4px_20px_rgba(45,50,143,0.04)] relative">
+        <div className="w-full bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-[0_4px_20px_rgba(20,23,121,0.05)] relative">
           {/* Connecting Dotted Line */}
           <div className="absolute top-[38px] left-12 right-12 h-[2px] border-t-2 border-dashed border-slate-200 pointer-events-none" />
 
@@ -127,13 +127,13 @@ export default function HabitsScreen() {
             {currentDay === 1 ? (
               /* If currentDay is Day 1, Step 1 is TODAY (Active) */
               <div className="flex flex-col items-center gap-1 min-w-[70px] relative">
-                <div className="absolute -top-3.5 bg-gradient-to-r from-[#2D328F] to-[#8C68F6] text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full shadow-2xs border border-white">
+                <div className="absolute -top-3.5 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full shadow-2xs border border-white">
                   TODAY
                 </div>
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 border-white relative z-10 shadow-sm ${
                   completed 
-                    ? "bg-[#12D6D1] text-white" 
-                    : "bg-[#2D328F] text-white ring-4 ring-[#2D328F]/15"
+                    ? "bg-[#141779] text-white shadow-[#141779]/25" 
+                    : "bg-[#141779] text-white ring-4 ring-[#141779]/15"
                 }`}>
                   {completed ? (
                     <Check size={18} strokeWidth={3} className="text-white" />
@@ -141,7 +141,7 @@ export default function HabitsScreen() {
                     <Star size={17} className="fill-[#FBBF24] text-[#FBBF24]" />
                   )}
                 </div>
-                <span className={`text-[11px] font-extrabold ${completed ? "text-[#12D6D1]" : "text-[#2D328F]"}`}>
+                <span className="text-[11px] font-black text-[#141779]">
                   {completed ? "Completed" : "In Progress"}
                 </span>
                 <span className="text-[10px] font-medium text-slate-400">Day 1</span>
@@ -149,10 +149,10 @@ export default function HabitsScreen() {
             ) : (
               /* If currentDay > 1 (e.g. Day 5), Step 1 is the Previous Day (Completed) */
               <div className="flex flex-col items-center gap-1 min-w-[70px]">
-                <div className="w-10 h-10 rounded-full bg-[#12D6D1] text-white flex items-center justify-center shadow-xs border-2 border-white relative">
+                <div className="w-10 h-10 rounded-full bg-[#141779] text-white flex items-center justify-center shadow-xs shadow-[#141779]/20 border-2 border-white relative">
                   <Check size={18} strokeWidth={3} className="text-white" />
                 </div>
-                <span className="text-[11px] font-extrabold text-[#12D6D1]">Completed</span>
+                <span className="text-[11px] font-black text-[#141779]">Completed</span>
                 <span className="text-[10px] font-medium text-slate-400">Day {currentDay - 1}</span>
               </div>
             )}
@@ -170,13 +170,13 @@ export default function HabitsScreen() {
             ) : (
               /* If currentDay > 1 (e.g. Day 5), Step 2 is TODAY (Active) */
               <div className="flex flex-col items-center gap-1 min-w-[70px] relative">
-                <div className="absolute -top-3.5 bg-gradient-to-r from-[#2D328F] to-[#8C68F6] text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full shadow-2xs border border-white">
+                <div className="absolute -top-3.5 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full shadow-2xs border border-white">
                   TODAY
                 </div>
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 border-white relative z-10 shadow-sm ${
                   completed 
-                    ? "bg-[#12D6D1] text-white" 
-                    : "bg-[#2D328F] text-white ring-4 ring-[#2D328F]/15"
+                    ? "bg-[#141779] text-white shadow-[#141779]/25" 
+                    : "bg-[#141779] text-white ring-4 ring-[#141779]/15"
                 }`}>
                   {completed ? (
                     <Check size={18} strokeWidth={3} className="text-white" />
@@ -184,7 +184,7 @@ export default function HabitsScreen() {
                     <Star size={17} className="fill-[#FBBF24] text-[#FBBF24]" />
                   )}
                 </div>
-                <span className={`text-[11px] font-extrabold ${completed ? "text-[#12D6D1]" : "text-[#2D328F]"}`}>
+                <span className="text-[11px] font-black text-[#141779]">
                   {completed ? "Completed" : "In Progress"}
                 </span>
                 <span className="text-[10px] font-medium text-slate-400">Day {currentDay}</span>
@@ -216,7 +216,7 @@ export default function HabitsScreen() {
         </div>
 
         {/* Daily Lesson Hero Card */}
-        <div className="bg-white rounded-3xl p-5 sm:p-6 flex flex-col border border-[#FBBF24]/30 shadow-[0_8px_30px_rgba(45,50,143,0.06)] w-full relative overflow-hidden">
+        <div className="bg-white rounded-3xl p-5 sm:p-6 flex flex-col border border-slate-200/80 shadow-[0_8px_30px_rgba(20,23,121,0.06)] w-full relative overflow-hidden">
           {loading ? (
             <div className="py-6 flex flex-col items-center justify-center w-full animate-pulse gap-3">
               <div className="w-14 h-14 bg-slate-200 rounded-2xl mb-2" />
@@ -227,58 +227,66 @@ export default function HabitsScreen() {
             </div>
           ) : (
             <>
-              {/* Top Tag Badges Header */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <span className="px-3 py-1 bg-[#8C68F6]/10 text-[#8C68F6] text-[10px] font-black uppercase tracking-wider rounded-full border border-[#8C68F6]/20">
-                    {t('lesson_label', { day: currentDay, defaultValue: `LESSON ${currentDay}` })}
-                  </span>
-                  <span className="px-2.5 py-1 bg-amber-50 text-amber-700 text-[10px] font-black uppercase tracking-wider rounded-full border border-amber-200/60 flex items-center gap-1">
-                    <span className="text-[#FBBF24]">⭐</span>
-                    <span>{habit?.category || 'HONESTY'}</span>
+              {/* Category Indicator Header Badge */}
+              <div className="flex items-center mb-3.5">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50/80 border border-indigo-100/90 shadow-2xs">
+                  <div className="flex items-center gap-1 bg-[#141779] text-white px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-2xs">
+                    <Tag size={10} className="stroke-[2.5]" />
+                    <span>{t('category_label', 'Category')}</span>
+                  </div>
+                  <span className="text-xs font-black text-[#141779] tracking-wide pr-1">
+                    {habit?.category || 'General'}
                   </span>
                 </div>
-                {completed && (
-                  <span className="text-xs font-extrabold text-[#12D6D1] flex items-center gap-1 bg-[#12D6D1]/10 px-2.5 py-1 rounded-full border border-[#12D6D1]/20">
-                    <CheckCircle2 size={13} />
-                    <span>Done</span>
-                  </span>
-                )}
               </div>
 
-              {/* Compact Illustration & Lesson Title */}
-              <div className="flex items-center gap-3.5 mb-3">
-                <div className="w-13 h-13 rounded-2xl bg-gradient-to-br from-[#F5F3FF] to-[#EEF1FF] border border-[#8C68F6]/20 flex items-center justify-center text-2xl shrink-0 shadow-2xs">
-                  <span>🦁</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-xl font-black text-[#2D328F] leading-snug tracking-tight">
-                    {habit?.title || t('the_magic_of_honesty', 'The Magic of Honesty')}
-                  </h3>
-                </div>
+              {/* Story Title */}
+              <div className="mb-2.5">
+                <h3 className="text-xl font-black text-[#141779] leading-snug tracking-tight">
+                  {habit?.title || t('the_magic_of_honesty', 'The Magic of Honesty')}
+                </h3>
               </div>
 
               {/* Story Description Paragraph */}
-              <p className="text-xs sm:text-sm font-semibold text-slate-600 leading-relaxed mb-6">
+              <p className="text-xs sm:text-sm font-semibold text-slate-600 leading-relaxed mb-4">
                 {habit?.description || t('lion_story_desc', 'Leo the Lion found a shiny coin that didn’t belong to him. Instead of keeping it, he asked his friends if they lost it. Being honest made Leo feel even braver than his roar!')}
               </p>
+
+              {/* Actionable Practice Task Box */}
+              {habit?.actionableStep && (
+                <div className="mb-5 bg-gradient-to-r from-indigo-50/90 via-blue-50/40 to-indigo-50/70 border border-indigo-100/90 rounded-2xl p-3 sm:p-3.5 flex items-start gap-2.5 shadow-2xs">
+                  <div className="w-7 h-7 rounded-xl bg-white text-[#141779] border border-indigo-100 flex items-center justify-center shrink-0 shadow-2xs">
+                    <span className="text-sm">🎯</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-[#141779] block">
+                      {t('daily_practice_goal', "Today's Practice Task")}
+                    </span>
+                    <p className="text-xs font-semibold text-slate-700 leading-snug mt-0.5">
+                      {habit.actionableStep}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Primary Action Button */}
               <button
                 disabled={completed || !habit || submitting}
                 onClick={handleComplete}
-                className={`w-full py-3.5 rounded-2xl flex items-center justify-center gap-2.5 transition-all duration-300 shadow-md ${
+                className={`w-full py-3.5 rounded-2xl flex items-center justify-center gap-2.5 transition-all duration-300 ${
                   completed 
-                    ? 'bg-[#12D6D1]/15 border border-[#12D6D1]/30 text-[#0f9f9b] font-black cursor-not-allowed' 
-                    : 'bg-gradient-to-r from-[#2D328F] via-[#3B40A4] to-[#8C68F6] hover:brightness-110 text-white font-black hover:scale-[1.01] active:scale-[0.98] border border-white/20'
+                    ? 'bg-indigo-50/90 border border-indigo-200/90 text-[#141779] font-black cursor-not-allowed shadow-none' 
+                    : 'bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] hover:brightness-110 text-white font-black hover:scale-[1.01] active:scale-[0.98] shadow-[0_4px_16px_rgba(20,23,121,0.35)] border border-indigo-300/40 cursor-pointer'
                 }`}
               >
                 {submitting ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <BookOpen size={18} className="shrink-0 text-white" />
-                    <span className="text-xs sm:text-sm font-black uppercase tracking-wider">
+                    {!completed && (
+                      <BookOpen size={18} className="shrink-0 text-white" />
+                    )}
+                    <span className={`text-xs sm:text-sm font-black uppercase tracking-wider ${completed ? 'text-[#141779]' : 'text-white'}`}>
                       {completed ? t('story_completed', 'Story Completed ✓') : t('complete_story', 'Complete Story')}
                     </span>
                   </>
