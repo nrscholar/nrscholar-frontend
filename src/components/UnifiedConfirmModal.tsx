@@ -91,7 +91,7 @@ export default function UnifiedConfirmModal({
         onTouchMove={(e) => {
           if (e.target === e.currentTarget) e.preventDefault();
         }}
-        className={`fixed inset-0 ${zIndex} flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm select-none animate-in fade-in duration-200 overscroll-contain`}
+        className={`fixed inset-0 ${zIndex} flex items-center justify-center p-4 sm:p-6 bg-black/50 backdrop-blur-sm select-none animate-in fade-in duration-200 overscroll-contain`}
         style={{ overscrollBehavior: "contain", touchAction: "none" }}
       >
         <motion.div

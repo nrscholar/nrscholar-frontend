@@ -13,6 +13,7 @@ import { triggerDevicePushNotification } from "../../../services/pushNotificatio
 
 // ─── DYNAMIC ON-DEMAND SKILLS LOADER (SPLITS 1.9MB DATA ACROSS CLASS CHUNKS) ──
 import { loadClassSkills, loadAllSkills, getCachedSkills, skillImages } from "../../../data/neuroplay/skillsLoader";
+import { progressFillStyle } from "../../../utils/progressBar";
 
 // ─── DYNAMIC ICON RENDERER WITH VIBRANT DUAL-RING BADGES ────────────────
 const renderSkillIcon = (iconName: string, category: any, size = 32) => {
@@ -688,7 +689,7 @@ export default function NeuroPlayScreen() {
               <button
                 onClick={() => setLang("en")}
                 className={`px-2.5 py-1 rounded-full text-[11px] font-black transition-all ${
-                  lang === "en" ? "bg-[#1E1B4B] text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
+                  lang === "en" ? "bg-[#141779] text-white shadow-xs" : "text-[#141779]/70 hover:text-[#141779]"
                 }`}
               >
                 EN
@@ -696,7 +697,7 @@ export default function NeuroPlayScreen() {
               <button
                 onClick={() => setLang("hi")}
                 className={`px-2.5 py-1 rounded-full text-[11px] font-black transition-all ${
-                  lang === "hi" ? "bg-[#1E1B4B] text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
+                  lang === "hi" ? "bg-[#141779] text-white shadow-xs" : "text-[#141779]/70 hover:text-[#141779]"
                 }`}
               >
                 HI
@@ -704,7 +705,7 @@ export default function NeuroPlayScreen() {
               <button
                 onClick={() => setLang("gu")}
                 className={`px-2.5 py-1 rounded-full text-[11px] font-black transition-all ${
-                  lang === "gu" ? "bg-[#1E1B4B] text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
+                  lang === "gu" ? "bg-[#141779] text-white shadow-xs" : "text-[#141779]/70 hover:text-[#141779]"
                 }`}
               >
                 GU
@@ -743,8 +744,8 @@ export default function NeuroPlayScreen() {
               {/* Progress Bar */}
               <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden shadow-inner mt-0.5">
                 <div 
-                  className="h-full rounded-full bg-gradient-to-r from-[#1E1B4B] to-[#4F46E5] transition-all duration-700 ease-out"
-                  style={{ width: `${xpProgressPercent}%` }}
+                  className="h-full rounded-full transition-all duration-700 ease-out"
+                  style={progressFillStyle(xpProgressPercent)}
                 />
               </div>
             </motion.div>
@@ -756,8 +757,8 @@ export default function NeuroPlayScreen() {
                 onClick={() => setActiveTab("for_you")}
                 className={`px-4 py-2 rounded-full text-xs font-extrabold whitespace-nowrap transition-all shadow-2xs ${
                   activeTab === "for_you"
-                    ? "bg-[#1E1B4B] text-white scale-105 shadow-md"
-                    : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80"
+                    ? "bg-[#141779] text-white scale-105 shadow-md"
+                    : "bg-white text-[#141779] hover:bg-indigo-50 border border-slate-200/80"
                 }`}
               >
                 {lang === 'hi' ? 'आपके लिए' : lang === 'gu' ? 'તમારા માટે' : 'For You'}
@@ -768,8 +769,8 @@ export default function NeuroPlayScreen() {
                 onClick={() => setActiveTab("completed")}
                 className={`px-4 py-2 rounded-full text-xs font-extrabold whitespace-nowrap transition-all shadow-2xs ${
                   activeTab === "completed"
-                    ? "bg-[#1E1B4B] text-white scale-105 shadow-md"
-                    : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80"
+                    ? "bg-[#141779] text-white scale-105 shadow-md"
+                    : "bg-white text-[#141779] hover:bg-indigo-50 border border-slate-200/80"
                 }`}
               >
                 {lang === 'hi' ? 'पूर्ण किए गए' : lang === 'gu' ? 'પૂર્ણ થયેલ' : 'Completed'}
@@ -782,8 +783,8 @@ export default function NeuroPlayScreen() {
                   onClick={() => setActiveTab(clsNum)}
                   className={`px-4 py-2 rounded-full text-xs font-extrabold whitespace-nowrap transition-all shadow-2xs ${
                     activeTab === clsNum
-                      ? "bg-[#1E1B4B] text-white scale-105 shadow-md"
-                      : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80"
+                      ? "bg-[#141779] text-white scale-105 shadow-md"
+                      : "bg-white text-[#141779] hover:bg-indigo-50 border border-slate-200/80"
                   }`}
                 >
                   {lang === 'hi' ? `कक्षा ${clsNum}` : lang === 'gu' ? `ધોરણ ${clsNum}` : `Class ${clsNum}`}
@@ -938,10 +939,10 @@ export default function NeuroPlayScreen() {
                   {activeCardIndex + 1} / {totalCards}
                 </span>
               </div>
-              <div className="bg-slate-200/80 rounded-full h-1.5 w-full overflow-hidden shadow-inner">
+              <div className="bg-slate-100 rounded-full h-1.5 w-full overflow-hidden shadow-inner">
                 <div 
-                  className="bg-gradient-to-r from-[#141779] via-[#4F46E5] to-[#7C3AED] h-full rounded-full transition-all duration-500 ease-out shadow-sm"
-                  style={{ width: `${((activeCardIndex + 1) / totalCards) * 100}%` }}
+                  className="h-full rounded-full transition-all duration-500 ease-out"
+                  style={progressFillStyle(((activeCardIndex + 1) / totalCards) * 100)}
                 />
               </div>
             </div>
@@ -951,7 +952,7 @@ export default function NeuroPlayScreen() {
               <button
                 onClick={() => setLang("en")}
                 className={`px-2 py-0.5 rounded-full text-[10px] font-black transition-all ${
-                  lang === "en" ? "bg-[#141779] text-white shadow-xs" : "text-slate-500 hover:text-[#141779]"
+                  lang === "en" ? "bg-[#141779] text-white shadow-xs" : "text-[#141779]/70 hover:text-[#141779]"
                 }`}
               >
                 EN
@@ -959,7 +960,7 @@ export default function NeuroPlayScreen() {
               <button
                 onClick={() => setLang("hi")}
                 className={`px-2 py-0.5 rounded-full text-[10px] font-black transition-all ${
-                  lang === "hi" ? "bg-[#141779] text-white shadow-xs" : "text-slate-500 hover:text-[#141779]"
+                  lang === "hi" ? "bg-[#141779] text-white shadow-xs" : "text-[#141779]/70 hover:text-[#141779]"
                 }`}
               >
                 HI
@@ -967,7 +968,7 @@ export default function NeuroPlayScreen() {
               <button
                 onClick={() => setLang("gu")}
                 className={`px-2 py-0.5 rounded-full text-[10px] font-black transition-all ${
-                  lang === "gu" ? "bg-[#141779] text-white shadow-xs" : "text-slate-500 hover:text-[#141779]"
+                  lang === "gu" ? "bg-[#141779] text-white shadow-xs" : "text-[#141779]/70 hover:text-[#141779]"
                 }`}
               >
                 GU

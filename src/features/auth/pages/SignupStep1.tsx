@@ -5,6 +5,7 @@ import { Rocket, User, Phone, Mail, MapPin } from "lucide-react";
 import { NRScholarNavBrand } from "../../../components/NRScholarNavBrand";
 import { apiFetch } from "../../../api";
 import { formatMobileDisplay, parseMobileInput } from "../../../utils/mobileFormatter";
+import { progressFillStyle } from "../../../utils/progressBar";
 
 export default function SignupStep1Screen() {
   const navigate = useNavigate();
@@ -156,8 +157,8 @@ export default function SignupStep1Screen() {
             <span className="text-xs font-bold text-[#006a62] tracking-[1px]">STEP 1 OF 3</span>
             <span className="text-xs font-bold text-[#767683]">33%</span>
           </div>
-          <div className="w-full h-2 bg-[#eceef0] rounded-full overflow-hidden">
-            <div className="h-full bg-[#57fae9] rounded-full w-[33%]" />
+          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+            <div className="h-full rounded-full transition-all duration-500 ease-out" style={progressFillStyle(33)} />
           </div>
         </div>
 

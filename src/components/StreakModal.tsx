@@ -66,7 +66,7 @@ export default function StreakModal({
           onClick={(e) => {
             if (e.target === e.currentTarget) onClose();
           }}
-          className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md transition-all duration-300 overscroll-contain select-none"
+          className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-all duration-300 overscroll-contain select-none"
           style={{ overscrollBehavior: "contain", touchAction: "none" }}
         >
           <motion.div
@@ -87,8 +87,8 @@ export default function StreakModal({
               <X size={18} strokeWidth={2.5} />
             </button>
 
-            <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-teal-400/20 blur-2xl pointer-events-none" />
-            <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-orange-500/20 blur-2xl pointer-events-none" />
+            <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-indigo-400/25 blur-2xl pointer-events-none" />
+            <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-indigo-300/20 blur-2xl pointer-events-none" />
 
             <div className="flex-1 flex flex-col items-center justify-center w-full gap-6 z-10">
               <div className="relative w-40 h-40 flex items-center justify-center">
@@ -115,7 +115,7 @@ export default function StreakModal({
                     <div key={idx} className="flex flex-col items-center gap-1 flex-1">
                       <div
                         className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black shadow-inner border ${isActive
-                            ? "bg-gradient-to-br from-amber-400 to-orange-500 border-amber-300 text-white"
+                            ? "bg-white border-white text-[#141779]"
                             : "bg-white/5 border-white/10 text-slate-400"
                           }`}
                       >
@@ -138,7 +138,7 @@ export default function StreakModal({
 
             <button
               onClick={onClose}
-              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#57fae9] via-[#00f2fe] to-[#4facfe] text-[#141779] font-black text-xs shadow-[0_0_25px_rgba(87,250,233,0.5)] uppercase tracking-wider active:scale-95 transition-all mt-4 z-10 border-0"
+              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white hover:brightness-110 font-black text-xs border border-white/25 shadow-[0_8px_24px_rgba(20,23,121,0.45)] uppercase tracking-wider active:scale-95 transition-all mt-4 z-10"
             >
               Awesome!
             </button>

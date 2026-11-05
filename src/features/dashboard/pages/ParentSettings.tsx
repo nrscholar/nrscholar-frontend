@@ -721,60 +721,53 @@ export default function ParentSettings() {
     }
     setIsSavingProfile(true);
     try {
-      // 1. Save Parent Profile
-      const parentRes = await apiFetch("/api/users/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fullName: parentName,
-          parentPhoto: parentPhoto
-        })
-      });
-      const parentData = await parentRes.json();
-      if (!parentData.success) {
-        throw new Error(parentData.message || "Failed to update parent profile");
-      }
+      // Parent save runs in parallel with the (sequential) child saves; children must stay
+      // sequential because each call rewrites the shared children array server-side.
+      const parentPromise = (async () => {
+        const parentRes = await apiFetch("/api/users/profile", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fullName: parentName, parentPhoto: parentPhoto })
+        });
+        const parentData = await parentRes.json();
+        if (!parentData.success) {
+          throw new Error(parentData.message || "Failed to update parent profile");
+        }
+        return parentData;
+      })();
 
-      // 2. Save Child 1
-      const age1Num = child1Age ? parseInt(child1Age.split(" ")[0]) : null;
-      const child1Res = await apiFetch("/api/users/children", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          childId: "child_1",
-          childName: child1Name,
-          childClass: child1Class,
-          childAge: age1Num,
-          childBoard: child1Board,
-          childPhoto: child1Photo
-        })
-      });
-      const child1Data = await child1Res.json();
-      if (!child1Data.success) {
-        throw new Error(child1Data.message || "Failed to update child 1 profile");
-      }
-
-      // 3. Save Child 2 (if enabled)
-      let finalUser = child1Data.data?.user || parentData.data?.user;
-      if (hasChild2) {
-        const age2Num = child2Age ? parseInt(child2Age.split(" ")[0]) : null;
-        const child2Res = await apiFetch("/api/users/children", {
+      const saveChild = async (childId: string, name: string, cls: string, age: string, board: string, photo: string) => {
+        const ageNum = age ? parseInt(age.split(" ")[0]) : null;
+        const res = await apiFetch("/api/users/children", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            childId: "child_2",
-            childName: child2Name,
-            childClass: child2Class,
-            childAge: age2Num,
-            childBoard: child2Board,
-            childPhoto: child2Photo
-          })
+          body: JSON.stringify({ childId, childName: name, childClass: cls, childAge: ageNum, childBoard: board, childPhoto: photo })
         });
-        const child2Data = await child2Res.json();
-        if (!child2Data.success) {
-          throw new Error(child2Data.message || "Failed to update child 2 profile");
+        const d = await res.json();
+        if (!d.success) {
+          throw new Error(d.message || `Failed to update ${childId} profile`);
         }
-        finalUser = child2Data.data?.user;
+        return d;
+      };
+
+      const childrenPromise = (async () => {
+        let last = await saveChild("child_1", child1Name, child1Class, child1Age, child1Board, child1Photo);
+        if (hasChild2) {
+          last = await saveChild("child_2", child2Name, child2Class, child2Age, child2Board, child2Photo);
+        }
+        return last;
+      })();
+
+      const [parentData, childrenData] = await Promise.all([parentPromise, childrenPromise]);
+      const parentUser = parentData.data?.user;
+      let finalUser = childrenData.data?.user || parentUser;
+      if (finalUser && parentUser) {
+        finalUser = {
+          ...finalUser,
+          fullName: parentUser.fullName ?? finalUser.fullName,
+          parentName: parentUser.parentName ?? finalUser.parentName,
+          parentPhoto: parentUser.parentPhoto ?? finalUser.parentPhoto,
+        };
       }
 
       if (finalUser) {
@@ -1603,17 +1596,23 @@ export default function ParentSettings() {
             )}
 
             {/* Secondary Parent / Guardian (Co-Parent) Card - Clean & Proportional */}
-            <motion.div variants={itemVariants} className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col gap-3">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779] shrink-0">
+            <motion.div variants={itemVariants} className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-[0_2px_10px_rgba(20,23,121,0.06)] flex flex-col gap-3">
+              <div className="flex flex-col gap-3.5">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="w-11 h-11 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#141779] shrink-0">
                     <Users size={20} />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="text-base font-black text-[#141779] truncate">
+                    <h3
+                      className="text-[15px] font-black text-[#141779] leading-snug break-words cursor-help"
+                      title={t("coparents_guardians", "Co-Parents & Guardians")}
+                    >
                       {t("coparents_guardians", "Co-Parents & Guardians")}
                     </h3>
-                    <p className="text-xs text-slate-500 font-medium truncate">
+                    <p
+                      className="text-xs text-slate-500 font-medium leading-relaxed mt-0.5 break-words cursor-help"
+                      title={t("manage_coparents_desc", "Manage independent logins for co-parents & family guardians")}
+                    >
                       {t("manage_coparents_desc", "Manage independent logins for co-parents & family guardians")}
                     </p>
                   </div>
@@ -1624,7 +1623,7 @@ export default function ParentSettings() {
                     type="button"
                     disabled
                     title={t("primary_parent_notice", "To add a new child or modify family settings, please log in using the Primary Parent account.")}
-                    className="px-3 py-1.5 bg-slate-200 text-slate-500 rounded-xl text-xs font-black tracking-wide flex items-center gap-1.5 cursor-not-allowed shrink-0"
+                    className="w-full py-3 bg-slate-200 text-slate-500 rounded-2xl text-xs font-black tracking-wide flex items-center justify-center gap-1.5 cursor-not-allowed"
                   >
                     <Lock size={13} />
                     <span>{t("primary_parent_only", "Primary Parent Only")}</span>
@@ -1641,7 +1640,7 @@ export default function ParentSettings() {
                       setCoParentRel("Mother");
                       setShowAddCoParent(true);
                     }}
-                    className="px-3.5 py-1.5 bg-[#141779] hover:bg-[#1c1970] active:scale-95 text-white rounded-xl text-xs font-black tracking-wide flex items-center gap-1.5 shadow-xs transition-all cursor-pointer shrink-0"
+                    className="w-full py-3 bg-[#141779] hover:bg-[#1c1970] active:scale-[0.98] text-white rounded-2xl text-sm font-black tracking-wide flex items-center justify-center gap-2 shadow-[0_4px_14px_rgba(20,23,121,0.25)] transition-all cursor-pointer"
                   >
                     <Plus size={15} />
                     <span>{t("add_coparent", "Add Co-Parent")}</span>
@@ -1717,8 +1716,8 @@ export default function ParentSettings() {
                   disabled={isSavingProfile}
                   className="w-full h-12 sm:h-13 bg-[#141779] hover:bg-[#1e23a0] rounded-xl sm:rounded-2xl flex items-center justify-center gap-2.5 shadow-md active:scale-95 transition-all disabled:opacity-70 text-white font-black text-sm sm:text-base cursor-pointer"
                 >
-                  <span>{isSavingProfile ? t("saving_profiles", "Saving Profiles...") : t("save_profiles", "Save Profiles")}</span>
-                  {!isSavingProfile && <Save size={18} color="white" />}
+                  {!isSavingProfile && <Save size={18} color="white" className="shrink-0" />}
+                  <span>{isSavingProfile ? t("saving", "Saving...") : t("save_profile", "Save Profile")}</span>
                 </button>
               )}
             </motion.div>
@@ -1856,7 +1855,7 @@ export default function ParentSettings() {
 
           return (
             <div
-              className="fixed inset-0 bg-[#0f114a]/80 backdrop-blur-md z-[99999] flex items-center justify-center p-3 sm:p-4 font-sans animate-in fade-in duration-200"
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[99999] flex items-center justify-center p-3 sm:p-4 font-sans animate-in fade-in duration-200"
               style={{ touchAction: "none" }}
               onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
             >
@@ -2135,7 +2134,7 @@ export default function ParentSettings() {
       {/* Notifications Side Panel / Modal Drawer */}
       {showNotifications && (
         <div
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[100] flex justify-end animate-in fade-in duration-200"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex justify-end animate-in fade-in duration-200"
           style={{ touchAction: "none" }}
           onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
         >

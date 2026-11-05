@@ -19,6 +19,7 @@ import {
 import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
 import DynamicAiInsightCard from "../../../components/DynamicAiInsightCard";
 import QuestionFeedbackItem from "../../../components/QuestionFeedbackItem";
+import { progressFillStyle } from "../../../utils/progressBar";
 
 export default function ParentDashboardScreen() {
   const { t } = useTranslation();
@@ -1587,8 +1588,8 @@ export default function ParentDashboardScreen() {
                     aria-label={`Daily Confidence Score: ${todayConfidenceScore}%, Active Time: ${formatTimeFormatted(activeTodayTimeFormatted)}`}
                   >
                     <div
-                      className="h-full bg-gradient-to-r from-[#141779] to-[#2d328f] rounded-full transition-all duration-1000 ease-out"
-                      style={{ width: `${Math.min(100, Math.max(0, todayConfidenceScore))}%` }}
+                      className="h-full rounded-full transition-all duration-500 ease-out"
+                      style={progressFillStyle(todayConfidenceScore)}
                     />
                   </div>
                   <p
@@ -1847,9 +1848,6 @@ export default function ParentDashboardScreen() {
                 <div className="w-8 h-8 rounded-xl bg-teal-50 border border-teal-200/70 text-[#006a62] flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
                   <BrainCircuit size={16} />
                 </div>
-                <span className="bg-amber-50 text-amber-800 border border-amber-200/80 text-[10px] sm:text-xs font-black uppercase px-2 py-0.5 rounded-full tracking-wider shrink-0 shadow-2xs">
-                  {t("hot", "Hot")}
-                </span>
               </div>
               <div className="w-full min-w-0">
                 <h4 className="text-xs sm:text-sm font-black text-[#141779] group-hover:text-[#006a62] transition-colors leading-tight truncate">
@@ -1874,9 +1872,6 @@ export default function ParentDashboardScreen() {
                 <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-200/70 text-[#141779] flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
                   <BookOpen size={16} />
                 </div>
-                <span className="bg-indigo-50 text-indigo-700 border border-indigo-200/80 text-[10px] sm:text-xs font-black uppercase px-2 py-0.5 rounded-full tracking-wider shrink-0 shadow-2xs">
-                  {t("new", "New")}
-                </span>
               </div>
               <div className="w-full min-w-0">
                 <h4 className="text-xs sm:text-sm font-black text-[#141779] group-hover:text-indigo-700 transition-colors leading-tight truncate">
@@ -1901,9 +1896,6 @@ export default function ParentDashboardScreen() {
                 <div className="w-8 h-8 rounded-xl bg-purple-50 border border-purple-200/70 text-[#30007f] flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
                   <Target size={16} />
                 </div>
-                <span className="bg-purple-50 text-purple-700 border border-purple-200/80 text-[10px] sm:text-xs font-black uppercase px-2 py-0.5 rounded-full tracking-wider shrink-0 shadow-2xs">
-                  {t("live", "Live")}
-                </span>
               </div>
               <div className="w-full min-w-0">
                 <h4 className="text-xs sm:text-sm font-black text-[#141779] group-hover:text-purple-700 transition-colors leading-tight truncate">
@@ -1928,9 +1920,6 @@ export default function ParentDashboardScreen() {
                 <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200/70 text-[#007168] flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
                   <Award size={16} />
                 </div>
-                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[10px] sm:text-xs font-black uppercase px-2 py-0.5 rounded-full tracking-wider shrink-0 shadow-2xs">
-                  {t("badges", "Badges")}
-                </span>
               </div>
               <div className="w-full min-w-0">
                 <h4 className="text-xs sm:text-sm font-black text-[#141779] group-hover:text-emerald-700 transition-colors leading-tight truncate">
@@ -1961,9 +1950,6 @@ export default function ParentDashboardScreen() {
                   <h4 className="text-sm sm:text-base font-black text-[#141779] group-hover:text-teal-700 transition-colors leading-tight truncate">
                     {t("learning_dna", "Learning DNA")}
                   </h4>
-                  <span className="bg-teal-50 text-teal-700 border border-teal-200/80 text-[10px] sm:text-[11px] font-black uppercase px-2 py-0.5 rounded-full tracking-wider shrink-0">
-                    {t("dna", "DNA")}
-                  </span>
                 </div>
                 <p className="text-xs sm:text-[13px] text-slate-500 font-medium truncate mt-1 leading-snug">
                   {t("learning_dna_sub", "Cognitive profile, thinking habits & telemetry")}
@@ -2087,7 +2073,7 @@ export default function ParentDashboardScreen() {
             onTouchMove={(e) => {
               if (e.target === e.currentTarget) e.preventDefault();
             }}
-            className="fixed inset-0 bg-black/40 z-[9999] flex justify-center items-center p-4 backdrop-blur-sm animate-in fade-in duration-300 overscroll-contain select-none"
+            className="fixed inset-0 bg-black/50 z-[9999] flex justify-center items-center p-4 backdrop-blur-sm animate-in fade-in duration-300 overscroll-contain select-none"
             style={{ zIndex: 9999, overscrollBehavior: "contain", touchAction: "none" }}
           >
             <div
@@ -2421,7 +2407,7 @@ export default function ParentDashboardScreen() {
             onTouchMove={(e) => {
               if (e.target === e.currentTarget) e.preventDefault();
             }}
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[9999] flex justify-end animate-in fade-in duration-200 overscroll-contain select-none"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex justify-end animate-in fade-in duration-200 overscroll-contain select-none"
             style={{ zIndex: 9999, overscrollBehavior: "contain", touchAction: "none" }}
           >
             <div
@@ -2530,7 +2516,7 @@ export default function ParentDashboardScreen() {
             onTouchMove={(e) => {
               if (e.target === e.currentTarget) e.preventDefault();
             }}
-            className="fixed inset-0 bg-[#0f114a]/75 backdrop-blur-md z-[99999] flex items-center justify-center p-4 font-sans animate-in fade-in duration-200 overscroll-contain select-none"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[99999] flex items-center justify-center p-4 font-sans animate-in fade-in duration-200 overscroll-contain select-none"
             style={{
               zIndex: 99999,
               overscrollBehavior: "contain",

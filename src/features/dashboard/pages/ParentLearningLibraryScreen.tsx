@@ -4,6 +4,7 @@ import { Search, CheckCircle, Clock, Star, Lock, ArrowLeft, ChevronDown, Chevron
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
 import { getLocalizedCategory, getLocalizedTopicTitle, getCanonicalCategory, getLocalizedCTA } from "../data/parentLessonTranslations";
+import { progressFillStyle } from "../../../utils/progressBar";
 
 const filterList = [
   "All",
@@ -326,8 +327,8 @@ export default function ParentLearningLibraryScreen() {
                   </span>
                   <span className="text-lg sm:text-xl font-bold text-[#006a62]">{progress.completed} / {progress.total}</span>
                 </div>
-                <div className="h-2.5 w-full bg-[#eceef0] rounded-full overflow-hidden">
-                  <div className="h-full bg-[#006a62] rounded-full shadow-[0_0_8px_rgba(0,106,98,0.4)]" style={{ width: `${(progress.completed / (progress.total || 1)) * 100}%` }}></div>
+                <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full transition-all duration-500 ease-out" style={progressFillStyle((progress.completed / (progress.total || 1)) * 100)}></div>
                 </div>
                 <p className="text-xs mt-1.5 text-[#767683] font-medium italic">
                   {contentLanguage === "hi"

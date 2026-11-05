@@ -1,7 +1,9 @@
+import { ClassCharacterSVG } from "./map/CharacterArt";
 import React from "react";
 import { motion } from "framer-motion";
 import { ChevronRight, Sparkles, Trophy, Zap, Target } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { progressFillStyle } from "../utils/progressBar";
 
 export interface AdventureThemeConfig {
   type: "dragon" | "science" | "social" | "space" | "ocean" | "history";
@@ -43,7 +45,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     characterIcon: "🐉",
     characterName: "Flame Dragon",
     ctaTextKey: "continue_adventure",
-    ctaText: "CONTINUE ADVENTURE →",
+    ctaText: "CONTINUE ADVENTURE",
     bgGradient: "from-[#141779] via-[#1c1970] to-[#25218c]",
     accentBorderColor: "border-indigo-400/60",
     accentTextColor: "text-[#57fae9]",
@@ -66,7 +68,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     characterIcon: "🦉",
     characterName: "Scientist Owl",
     ctaTextKey: "enter_lab",
-    ctaText: "ENTER LAB →",
+    ctaText: "CONTINUE LAB",
     bgGradient: "from-[#0b0c3f] via-[#141779] to-[#0284c7]",
     accentBorderColor: "border-cyan-400/60",
     accentTextColor: "text-cyan-200",
@@ -89,7 +91,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     characterIcon: "🦁",
     characterName: "Champion Lion",
     ctaTextKey: "take_challenge",
-    ctaText: "TAKE CHALLENGE →",
+    ctaText: "TAKE CHALLENGE",
     bgGradient: "from-[#1c1970] via-[#311075] to-[#4338ca]",
     accentBorderColor: "border-indigo-300/60",
     accentTextColor: "text-indigo-200",
@@ -112,7 +114,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     characterIcon: "🚀",
     characterName: "Astronaut Rover",
     ctaTextKey: "launch_rocket",
-    ctaText: "LAUNCH ROCKET →",
+    ctaText: "LAUNCH ROCKET",
     bgGradient: "from-slate-950 via-indigo-950 to-purple-950",
     accentBorderColor: "border-purple-400",
     accentTextColor: "text-purple-300",
@@ -135,7 +137,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     characterIcon: "🤿",
     characterName: "Deep Diver",
     ctaTextKey: "dive_deep",
-    ctaText: "DIVE DEEP →",
+    ctaText: "DIVE DEEP",
     bgGradient: "from-sky-800 via-cyan-900 to-slate-950",
     accentBorderColor: "border-teal-300",
     accentTextColor: "text-teal-200",
@@ -158,7 +160,7 @@ export const ADVENTURE_THEMES: Record<string, AdventureThemeConfig> = {
     characterIcon: "🧭",
     characterName: "Ruins Explorer",
     ctaTextKey: "explore_ruins",
-    ctaText: "EXPLORE RUINS →",
+    ctaText: "EXPLORE RUINS",
     bgGradient: "from-amber-800 via-stone-900 to-slate-950",
     accentBorderColor: "border-amber-400",
     accentTextColor: "text-amber-300",
@@ -219,6 +221,8 @@ function AdventureHero({
   const displayMissionTitle = missionTitle || theme.missionTitle;
   const displayMissionProgress = missionProgress || theme.missionProgress;
   const currentClassNum = journeyData?.classLevel;
+  // Scientist character for the first sections; medal characters for standards 8, 9 and 10
+  const heroClassLevel = Number(currentClassNum) >= 8 ? Number(currentClassNum) : themeKey === "social" ? 8 : 1;
   const activeClassNodes = currentClassNum
     ? (journeyData?.nodes?.filter((n: any) => n.minClass === currentClassNum) || [])
     : (journeyData?.nodes || []);
@@ -365,8 +369,11 @@ function AdventureHero({
               transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
               className="flex flex-col items-center group pointer-events-auto cursor-pointer will-change-transform"
             >
-              <div className="text-4xl filter drop-shadow-[0_6px_12px_rgba(0,0,0,0.5)] select-none">
-                {journeyData?.characterEmoji || theme.characterIcon}
+              <div className="filter drop-shadow-[0_6px_12px_rgba(0,0,0,0.5)] select-none">
+                <ClassCharacterSVG
+                  classLevel={heroClassLevel}
+                  size={44}
+                />
               </div>
               <span className="text-[9px] font-black bg-[#141779] text-white px-2 py-0.5 rounded-full uppercase shadow-md -mt-1 tracking-wider border border-indigo-300/50 whitespace-nowrap">
                 {t('you', { defaultValue: "YOU" })}
@@ -412,8 +419,8 @@ function AdventureHero({
               <div className="w-1.5 h-1.5 rounded-full bg-[#35E5D4] shrink-0" />
             ) : (
               <div
-                className="h-full bg-gradient-to-r from-[#35E5D4] via-[#14C8C6] to-[#006a62] rounded-full transition-all duration-700 shadow-xs"
-                style={{ width: `${legProgressClamped}%` }}
+                className="h-full rounded-full transition-all duration-700"
+                style={{ width: `${legProgressClamped}%`, background: "linear-gradient(to right, #35E5D4, #57fae9)" }}
               />
             )}
           </div>
@@ -441,7 +448,7 @@ function AdventureHero({
       {/* 2. TODAY'S QUEST CARD */}
       <div
         onClick={onMissionClick || onCtaClick}
-        className="w-full bg-white rounded-[24px] sm:rounded-[28px] p-3.5 sm:p-4 border border-slate-100 shadow-xs flex items-center justify-between gap-3 cursor-pointer hover:border-indigo-100/80 active:scale-[0.99] transition-all"
+        className="w-full bg-white rounded-[24px] sm:rounded-[28px] p-3.5 sm:p-4 border border-[#141779]/15 shadow-[0_6px_20px_rgba(20,23,121,0.12)] flex items-center justify-between gap-3 cursor-pointer hover:border-[#141779]/30 hover:shadow-[0_8px_24px_rgba(20,23,121,0.16)] active:scale-[0.99] transition-all"
       >
         {isLoadingMission || !missionTitle ? (
           <div className="animate-pulse flex items-center justify-between gap-3 w-full select-none">
@@ -497,15 +504,15 @@ function AdventureHero({
               </span>
               <div className={`w-20 sm:w-24 h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/60 p-0.5 ${displayMissionProgress.current === 0 ? 'flex items-center' : ''}`}>
                 {displayMissionProgress.current === 0 ? (
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#2563eb] shrink-0" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#141779] shrink-0" />
                 ) : (
                   <div
-                    className="h-full bg-[#2563eb] rounded-full transition-all duration-500"
-                    style={{
-                      width: `${displayMissionProgress.total > 0
+                    className="h-full rounded-full transition-all duration-500"
+                    style={progressFillStyle(
+                      displayMissionProgress.total > 0
                         ? Math.min(100, (displayMissionProgress.current / displayMissionProgress.total) * 100)
-                        : 0}%`
-                    }}
+                        : 0
+                    )}
                   />
                 )}
               </div>

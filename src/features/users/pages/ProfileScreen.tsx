@@ -7,6 +7,7 @@ import StreakModal from "../../../components/StreakModal";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 import { startNavigationProgress } from "../../../components/NavigationProgressBar";
 import { useUserStatsStore, getLevelInfo } from "../../../services/userStatsStore";
+import { progressFillStyle } from "../../../utils/progressBar";
 
 // Level thresholds handled authoritatively by useUserStatsStore
 
@@ -278,8 +279,8 @@ export default function ProfileScreen() {
                 <div className="w-1.5 h-1.5 rounded-full bg-[#141779] shrink-0" />
               ) : (
                 <div 
-                  style={{ width: `${levelInfo.percent}%` }}
-                  className="h-full bg-gradient-to-r from-[#141779] to-[#57fae9] rounded-full shadow-2xs transition-all duration-700 ease-out"
+                  style={progressFillStyle(levelInfo.percent)}
+                  className="h-full rounded-full transition-all duration-700 ease-out"
                 />
               )}
             </div>

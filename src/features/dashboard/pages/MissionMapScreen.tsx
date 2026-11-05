@@ -529,7 +529,6 @@ export default function MissionMapScreen() {
                         ) : isUnlocked ? (
                           <>
                             <span>{t('start_mission', 'Start')}</span>
-                            <Play size={13} className="fill-white" />
                           </>
                         ) : (
                           <>

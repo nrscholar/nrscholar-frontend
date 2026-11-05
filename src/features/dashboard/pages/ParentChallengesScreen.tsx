@@ -29,6 +29,7 @@ import StreakModal from "../../../components/StreakModal";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 import { showNotificationToast } from "../../../components/GlobalNotificationBanner";
 import { PARENT_GROWTH_CHALLENGES, COMMUNICATION_CHALLENGES, GrowthChallengeItem } from "../data/growthChallengesData";
+import { progressFillStyle } from "../../../utils/progressBar";
 
 export default function ParentChallengesScreen() {
   const { t, i18n } = useTranslation();
@@ -576,8 +577,8 @@ export default function ParentChallengesScreen() {
                     </div>
                     <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200/80">
                       <div
-                        className="h-full bg-gradient-to-r from-[#141779] to-[#30007f] progress-bar-glow rounded-full"
-                        style={{ width: `${progressPercent}%` }}
+                        className="h-full rounded-full transition-all duration-500 ease-out"
+                        style={progressFillStyle(progressPercent)}
                       ></div>
                     </div>
                   </div>

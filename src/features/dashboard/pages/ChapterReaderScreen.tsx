@@ -647,11 +647,12 @@ export default function ChapterReaderScreen() {
         {/* ── Floating zoom & pagination controls (clean horizontal bar positioned safely above bottom actions) ── */}
         {pdfData && Boolean(numPages) && (
           <div
-            className={`absolute left-0 right-0 flex items-center justify-center gap-2.5 flex-wrap pointer-events-none z-30 px-4 transition-all duration-300 ${
-              !loading && pageNumber === numPages
-                ? 'bottom-[76px] sm:bottom-[82px]'
-                : 'bottom-4 sm:bottom-5'
-            }`}
+            className="absolute left-0 right-0 flex items-center justify-center gap-2.5 flex-wrap pointer-events-none z-30 px-4 transition-all duration-300"
+            style={{
+              bottom: !loading && pageNumber === numPages
+                ? 'calc(88px + env(safe-area-inset-bottom, 0px))'
+                : 'calc(28px + env(safe-area-inset-bottom, 0px))',
+            }}
           >
             {/* Zoom pill */}
             <div className="bg-white/95 backdrop-blur-xl shadow-[0_4px_20px_rgb(0,0,0,0.12)] border border-slate-200/80 px-3 sm:px-4 py-1.5 rounded-full flex items-center gap-2 sm:gap-3 pointer-events-auto shrink-0">

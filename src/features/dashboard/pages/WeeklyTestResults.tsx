@@ -3,6 +3,7 @@ import { ArrowLeft, RotateCcw, Home, Bell } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { apiFetch } from "../../../api";
+import { progressFillStyle } from "../../../utils/progressBar";
 
 const SKILLS = [
   { icon: "➕", label: "Quick Addition", xp: "+15 XP", xpColor: "text-[#30007f]", progress: 0.8, progressColor: "bg-[#30007f]", iconBg: "bg-[#e8ddff]" },
@@ -220,12 +221,13 @@ export default function WeeklyTestResultsScreen() {
                     <span className="text-[15px] font-bold text-[#191c1e]">{skill.label}</span>
                     <span className={`text-[13px] font-bold ${skill.xpColor}`}>{skill.xp}</span>
                   </div>
-                  <div className="h-3 bg-[#f5f5f5] rounded-full overflow-hidden">
+                  <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${skill.progress * 100}%` }}
                       transition={{ duration: 1, ease: "easeOut" }}
-                      className={`h-full rounded-full ${skill.progressColor}`}
+                      className="h-full rounded-full"
+                      style={{ background: progressFillStyle(skill.progress * 100).background }}
                     />
                   </div>
                 </div>

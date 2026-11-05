@@ -39,6 +39,7 @@ import {
   getQuestionIdentifier,
   getNormalizedQuestionText
 } from "../../../utils/quizQuestionUtils";
+import { progressFillStyle } from "../../../utils/progressBar";
 
 type StepPhase = "INTRO" | "QUIZ" | "MINI_REWARD" | "BOSS" | "SUMMARY";
 
@@ -1784,11 +1785,16 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                 {t('question_counter', { current: currentQuizIndex + 1, total: quizQuestions.length, defaultValue: `Question ${currentQuizIndex + 1} of ${quizQuestions.length}` })}
               </span>
             </div>
-            <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-[#141779] rounded-full transition-all duration-300"
-                style={{ width: `${((currentQuizIndex + 1) / quizQuestions.length) * 100}%` }}
-              />
+            <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+              {(() => {
+                const pct = Math.max(1, Math.min(100, ((currentQuizIndex + 1) / Math.max(1, quizQuestions.length)) * 100));
+                return (
+                  <div
+                    className="h-full rounded-full transition-all duration-500 ease-out"
+                    style={progressFillStyle(pct)}
+                  />
+                );
+              })()}
             </div>
           </div>
 
@@ -2044,14 +2050,14 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       {phase === "BOSS" && (
         <main className="px-4 sm:px-6 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex-1 flex flex-col gap-3 max-w-md mx-auto w-full">
           {/* Top Outer Light Yellow/Cream Boss Stage Header Card with Premium Visual Aesthetics */}
-          <div className="bg-gradient-to-b from-[#FFFDF2] via-[#FFFBEB] to-[#F4F4FC] rounded-[32px] p-4.5 pt-5 mb-4 shadow-[0_10px_30px_rgba(20,23,121,0.08)] border-2 border-[#E2E4FA] relative backdrop-blur-md">
+          <div className="bg-gradient-to-b from-[#FFFDF2] via-[#FFFBEB] to-[#F4F4FC] rounded-[32px] p-4 pt-5 mb-4 shadow-[0_10px_30px_rgba(20,23,121,0.08)] border-2 border-[#E2E4FA] relative backdrop-blur-md">
             
             {/* Top Bar: Hero vs Boss Header */}
             <div className="flex items-center justify-between mb-3 relative z-10 px-0.5 gap-1">
 
               {/* Left: Active Child in Pill Container */}
-              <div className="flex flex-col items-start shrink-0 bg-white/95 backdrop-blur-xs px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl sm:rounded-2xl border-2 border-indigo-100/90 shadow-2xs">
-                <span className="text-[9px] xs:text-[10px] sm:text-[11px] font-black uppercase text-[#141779] tracking-wider block leading-tight whitespace-nowrap max-w-[100px] xs:max-w-[130px] truncate">
+              <div className="flex flex-col items-start shrink-0 bg-white/95 backdrop-blur-sm px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl sm:rounded-2xl border-2 border-indigo-100/90 shadow-2xs">
+                <span className="text-[9px] min-[400px]:text-[10px] sm:text-[11px] font-black uppercase text-[#141779] tracking-wider block leading-tight whitespace-nowrap max-w-[84px] min-[400px]:max-w-[120px] truncate">
                   {activeChildName ? activeChildName.toUpperCase() : "HERO"}
                 </span>
                 <div className="flex gap-0.5 sm:gap-1 mt-1">
@@ -2059,21 +2065,21 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                     <Heart
                       key={h}
                       size={13}
-                      className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${h <= childHearts ? (dragonCrying ? "text-cyan-500 fill-cyan-400 animate-ping" : "text-rose-500 fill-rose-500 drop-shadow-xs") : "text-slate-300 fill-slate-200"}`}
+                      className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${h <= childHearts ? (dragonCrying ? "text-cyan-500 fill-cyan-400 animate-ping" : "text-rose-500 fill-rose-500 drop-shadow-sm") : "text-slate-300 fill-slate-200"}`}
                     />
                   ))}
                 </div>
               </div>
 
               {/* Center: Boss Stage Badge */}
-              <div className="px-2 py-1 sm:px-3.5 sm:py-1.5 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white font-black text-[9px] xs:text-[10px] sm:text-[11px] uppercase tracking-wider rounded-full shadow-md border border-white/20 flex items-center gap-1 shrink-0 whitespace-nowrap">
+              <div className="px-2 py-1 sm:px-3.5 sm:py-1.5 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] text-white font-black text-[9px] min-[400px]:text-[10px] sm:text-[11px] uppercase tracking-wider rounded-full shadow-md border border-white/20 flex items-center gap-1 shrink-0 whitespace-nowrap">
                 <span>BOSS STAGE</span>
                 <span className="text-xs">⚔️</span>
               </div>
 
               {/* Right: Boss Name / Chapter Stage in Pill Container */}
-              <div className="flex flex-col items-end shrink-0 bg-white/95 backdrop-blur-xs px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl border border-indigo-100/80 shadow-2xs min-w-0">
-                <span className="text-[9px] xs:text-[10px] sm:text-[11px] font-black uppercase text-[#141779] tracking-wider block leading-tight text-right whitespace-nowrap max-w-[110px] xs:max-w-none truncate">
+              <div className="flex flex-col items-end shrink-0 bg-white/95 backdrop-blur-sm px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl border border-indigo-100/80 shadow-2xs min-w-0">
+                <span className="text-[9px] min-[400px]:text-[10px] sm:text-[11px] font-black uppercase text-[#141779] tracking-wider block leading-tight text-right whitespace-nowrap max-w-[84px] min-[400px]:max-w-[120px] truncate">
                   {bossName ? bossName.toUpperCase() : 'BOSS'}
                 </span>
                 <div className="flex gap-0.5 sm:gap-1 mt-1">
@@ -2081,7 +2087,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                     <Heart
                       key={h}
                       size={13}
-                      className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${h <= bossHearts ? "text-rose-500 fill-rose-500 drop-shadow-xs" : "text-slate-300 fill-slate-200"}`}
+                      className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${h <= bossHearts ? "text-rose-500 fill-rose-500 drop-shadow-sm" : "text-slate-300 fill-slate-200"}`}
                     />
                   ))}
                 </div>
@@ -2100,11 +2106,11 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                 transition={bossAngry ? { duration: 0.5, repeat: 2 } : { duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
                 className="relative z-10 flex items-center gap-3"
               >
-                <div className={`w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-indigo-50/80 border-2 border-indigo-200 flex items-center justify-center text-2xl sm:text-3xl shrink-0 shadow-xs relative ${bossAngry ? "ring-4 ring-rose-500/80 animate-pulse" : ""}`}>
+                <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-indigo-50/80 border-2 border-indigo-200 flex items-center justify-center text-2xl sm:text-3xl shrink-0 shadow-xs relative ${bossAngry ? "ring-4 ring-rose-500/80 animate-pulse" : ""}`}>
                   <span>🐉</span>
                 </div>
                 <div>
-                  <h4 className="text-base sm:text-lg font-black text-[#141779] leading-tight drop-shadow-2xs">{bossName}</h4>
+                  <h4 className="text-base sm:text-lg font-black text-[#141779] leading-tight drop-shadow-sm">{bossName}</h4>
                   <span className={`text-xs font-bold ${bossAngry ? "text-rose-600 animate-pulse" : "text-indigo-600"}`}>
                     {bossState.status}
                   </span>
@@ -2152,7 +2158,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                     className="w-auto h-auto max-h-48 sm:max-h-56 max-w-full object-contain rounded-xl select-none"
                     loading="lazy"
                   />
-                  <div className="absolute bottom-2.5 right-2.5 bg-slate-900/75 hover:bg-slate-900 text-white text-[11px] font-bold px-2.5 py-1 rounded-full backdrop-blur-xs flex items-center gap-1 shadow-xs transition-transform active:scale-95">
+                  <div className="absolute bottom-2.5 right-2.5 bg-slate-900/75 hover:bg-slate-900 text-white text-[11px] font-bold px-2.5 py-1 rounded-full backdrop-blur-sm flex items-center gap-1 shadow-xs transition-transform active:scale-95">
                     <Maximize2 size={12} />
                     <span>{t('tap_to_zoom', 'Tap to enlarge')}</span>
                   </div>
@@ -2195,7 +2201,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                       </span>
                     )}
                     {Array.from({ length: bossBasketCount }).map((_, i) => (
-                      <span key={i} className="text-3xl animate-bounce drop-shadow-xs select-none">
+                      <span key={i} className="text-3xl animate-bounce drop-shadow-sm select-none">
                         {bossObjectEmoji}
                       </span>
                     ))}
@@ -2397,12 +2403,13 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                   const xpGoalPct = Math.min(100, Math.max(34, Math.round(todayLessons * 34)));
                   return (
                     <div className="w-full max-w-xs flex flex-col gap-2 mt-3">
-                      <div className="w-full h-3.5 bg-gray-200 rounded-full overflow-hidden p-0.5 border border-gray-300">
+                      <div className="w-full h-3.5 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-gray-300">
                         <motion.div
                           initial={{ width: "0%" }}
                           animate={{ width: `${xpGoalPct}%` }}
                           transition={{ duration: 1.2, ease: "easeOut" }}
-                          className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full"
+                          className="h-full rounded-full"
+                          style={{ background: progressFillStyle(xpGoalPct).background }}
                         />
                       </div>
                       <div className="flex justify-between items-center text-[10px] font-black text-amber-600 uppercase tracking-wider px-1">
@@ -2651,10 +2658,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                     <span className="text-xl font-black text-[#141779] mt-2">
                       {completionResult?.confidenceLabel ? t(String(completionResult.confidenceLabel || "").toLowerCase().replace(/ /g, '_'), { defaultValue: completionResult.confidenceLabel }) : t('high_mastery', 'High Mastery 🚀')}
                     </span>
-                    <div className="w-full h-2 bg-gray-200 rounded-full mt-2 overflow-hidden">
+                    <div className="w-full h-2 bg-slate-100 rounded-full mt-2 overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-amber-400 to-emerald-500 rounded-full"
-                        style={{ width: `${completionResult?.confidenceScore || 90}%` }}
+                        className="h-full rounded-full"
+                        style={progressFillStyle(Number(completionResult?.confidenceScore) || 90)}
                       />
                     </div>
                   </div>
@@ -2975,7 +2982,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
 
       {showReviveModal && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 sm:p-6 text-center select-none"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 sm:p-6 text-center select-none"
           style={{ touchAction: "none" }}
           onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
         >
@@ -2985,6 +2992,14 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             style={{ overscrollBehavior: "contain" }}
             className="bg-white border border-slate-100 rounded-[32px] p-6 sm:p-7 max-w-[360px] w-full shadow-[0_20px_60px_rgba(20,23,121,0.18)] flex flex-col items-center relative text-center"
           >
+            <button
+              type="button"
+              onClick={() => setShowReviveModal(false)}
+              aria-label="Close"
+              className="absolute top-3 right-3 p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            >
+              <X size={18} />
+            </button>
             <div className="w-16 h-16 rounded-full bg-teal-50 border border-teal-200 flex items-center justify-center mb-2 shadow-xs">
               <Swords className="text-[#006a62] w-8 h-8" />
             </div>
@@ -3083,7 +3098,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
       {/* Defeat/Retreat Overlay Animation */}
       {lossOverlay.show && (
         <div
-          className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 sm:p-6 text-center select-none"
+          className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm p-4 sm:p-6 text-center select-none"
           style={{ touchAction: "none" }}
           onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
         >
@@ -3130,7 +3145,7 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setLightboxImage(null)}
-            className="fixed inset-0 z-[300] bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-4 select-none cursor-zoom-out"
+            className="fixed inset-0 z-[300] bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center p-4 select-none cursor-zoom-out"
           >
             <div className="relative max-w-3xl max-h-[90vh] w-full flex flex-col items-center">
               <button

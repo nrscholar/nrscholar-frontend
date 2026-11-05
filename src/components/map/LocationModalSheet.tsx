@@ -32,7 +32,7 @@ export default function LocationModalSheet({
         onTouchMove={(e) => {
           if (e.target === e.currentTarget) e.preventDefault();
         }}
-        className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 backdrop-blur-xs p-0 sm:p-4 select-none overscroll-contain"
+        className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4 select-none overscroll-contain"
         style={{ overscrollBehavior: "contain", touchAction: "none" }}
       >
         {/* Backdrop Tap Dismiss */}

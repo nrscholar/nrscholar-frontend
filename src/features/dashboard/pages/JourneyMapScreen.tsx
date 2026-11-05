@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import MapWorld from "../../../components/map/MapWorld";
+import { fetchAllJourneyNodes } from "../../../components/map/journeyAllClasses";
 import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useUserStatsStore } from "../../../services/userStatsStore";
@@ -124,6 +125,9 @@ export default function JourneyMapScreen() {
           const jData = await jRes.json();
           if (jData.success && jData.data) {
             setJourneyData(jData.data);
+            // Show every standard (Class 1-10), not only the current tier
+            const allNodes = await fetchAllJourneyNodes(jData.data, { board: activeChildBoard, childId: activeChildId });
+            if (allNodes) setJourneyData({ ...jData.data, nodes: allNodes });
           }
         }
       } catch (e) {

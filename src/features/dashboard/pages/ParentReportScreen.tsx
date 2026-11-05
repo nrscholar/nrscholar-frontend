@@ -6,7 +6,8 @@ import {
   Calculator, Atom, BookOpen, Star, Target, Lightbulb,
   Award, BookOpenCheck, Loader2, Brain, Zap, ShieldCheck, BookMarked,
   ChevronDown, ChevronUp, ChevronRight, BarChart2, Settings, Bell,
-  Download, SlidersHorizontal
+  Download, SlidersHorizontal,
+  X,
 } from "lucide-react";
 import { apiFetch } from "../../../api";
 import ChildSwitcherModal from "../../../components/ChildSwitcherModal";
@@ -2166,7 +2167,7 @@ function BottomSheet({ isOpen, onClose, title, children }: { isOpen: boolean, on
       onTouchMove={(e) => {
         if (e.target === e.currentTarget) e.preventDefault();
       }}
-      className="fixed inset-0 bg-slate-950/60 z-[200] flex items-end justify-center animate-in fade-in duration-200 overscroll-contain select-none"
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-end justify-center animate-in fade-in duration-200 overscroll-contain select-none"
       style={{ overscrollBehavior: "contain", touchAction: "none" }}
     >
       <div className="absolute inset-0" onClick={onClose} />
@@ -2178,8 +2179,8 @@ function BottomSheet({ isOpen, onClose, title, children }: { isOpen: boolean, on
         <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-5" />
         <div className="flex justify-between items-center mb-5">
           <h3 className="text-base font-black text-[#141779]">{title}</h3>
-          <button onClick={onClose} className="text-xs font-bold text-slate-500 hover:text-slate-900 bg-slate-100 px-3 py-1.5 rounded-full transition-colors">
-            {t("close", "Close")}
+          <button onClick={onClose} aria-label={t("close", "Close")} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-900 bg-slate-100 rounded-full transition-colors">
+            <X size={16} />
           </button>
         </div>
         {children}
