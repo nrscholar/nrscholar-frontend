@@ -527,7 +527,7 @@ export default function KidsActivityScreen() {
           onTouchMove={(e) => {
             if (e.target === e.currentTarget) e.preventDefault();
           }}
-          className="fixed inset-0 z-[100] bg-slate-900/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-6 animate-in fade-in duration-200 overscroll-contain select-none"
+          className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-6 animate-in fade-in duration-200 overscroll-contain select-none"
           style={{ overscrollBehavior: "contain", touchAction: "none" }}
         >
           <div 

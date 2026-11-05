@@ -8,6 +8,7 @@ import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 import { getScopedItem } from "../../../utils/sessionCache";
 import { filterUniqueQuestions } from "../../../utils/quizQuestionUtils";
 import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
+import { progressFillStyle } from "../../../utils/progressBar";
 
 // Hardcoded rapid fire questions for MVP multiplayer
 const BATTLE_QUESTIONS = [
@@ -69,7 +70,8 @@ export default function MultiplayerBattleScreen() {
     socket.onopen = () => {
       console.log("WebSocket connected to Shadow Arena room:", roomId);
     };
-    socket.onmessage = (event) => {
+
+    socket.onmessage = (event) => {
       console.log("WebSocket message received:", event.data);
       if (event.data.includes("opponent_quit") || event.data.includes("progress_updated") || event.data.includes("Update:")) {
         // Fetch the updated room status immediately to sync scores and progress
@@ -310,7 +312,8 @@ export default function MultiplayerBattleScreen() {
             if (rData.winnerId) setWinnerId(rData.winnerId);
           }
         }
-      } else {
+      } else if (/not found|not a player/i.test(data?.message || "")) {
+        // Only leave when the room is truly gone; a transient failed poll must not eject the player
         if (roomId && !opponentQuit) {
           sessionStorage.setItem(`left_battle_${roomId}`, "true");
           navigate("/multiplayer-hub", { replace: true });
@@ -548,8 +551,8 @@ export default function MultiplayerBattleScreen() {
               </div>
             </div>
             {/* Health/Progress Bar */}
-            <div className="w-full h-2.5 bg-[#e8ddff] rounded-full overflow-hidden border border-[#d0d0d0]">
-              <div className="h-full bg-gradient-to-r from-[#006a62] to-[#57fae9] transition-all duration-300 rounded-full" style={{ width: `${myProgress}%` }} />
+            <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden border border-[#d0d0d0]">
+              <div className="h-full transition-all duration-300 rounded-full" style={progressFillStyle(myProgress)} />
             </div>
           </div>
 
@@ -831,7 +834,7 @@ export default function MultiplayerBattleScreen() {
       <AnimatePresence>
         {showRewardModal && (
           <div 
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm select-none"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/50 backdrop-blur-sm select-none"
             style={{ touchAction: "none" }}
             onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
           >
@@ -841,6 +844,14 @@ export default function MultiplayerBattleScreen() {
               style={{ overscrollBehavior: "contain" }}
               className="bg-white rounded-[32px] p-6 sm:p-8 w-full max-w-[360px] flex flex-col items-center text-center shadow-[0_20px_60px_rgba(20,23,121,0.18)] border border-slate-100 relative"
             >
+              <button
+                type="button"
+                onClick={() => setShowRewardModal(false)}
+                aria-label="Close"
+                className="absolute top-3 right-3 p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+              >
+                <X size={18} />
+              </button>
               <div className="w-20 h-20 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-4xl mb-3 shadow-xs">
                 🎁
               </div>

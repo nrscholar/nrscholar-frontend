@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { NRScholarNavBrand } from "../../../components/NRScholarNavBrand";
-import { Rocket, ArrowLeft, Sparkles, UserRound, GraduationCap, ChevronDown, Check, BookOpen, Lock, Calendar, School } from "lucide-react";
+import { Rocket, ArrowLeft, Sparkles, UserRound, GraduationCap, ChevronDown, Check, BookOpen, Lock, Calendar, School, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getSignupState, saveSignupState } from "../signupState";
 import { showInteractiveNotification } from "../../../services/pushNotificationService";
+import { progressFillStyle } from "../../../utils/progressBar";
 
 const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect, placeholder }: any) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -42,9 +43,10 @@ const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.95, opacity: 0 }}
-                className="w-full max-w-[320px] bg-white rounded-3xl p-6 max-h-[65vh] flex flex-col shadow-2xl"
+                className="relative w-full max-w-[320px] bg-white rounded-3xl p-6 max-h-[65vh] flex flex-col shadow-2xl"
                 onClick={e => e.stopPropagation()}
               >
+                <button type="button" aria-label="Close" onClick={() => setIsOpen(false)} className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-[#464652] hover:bg-slate-100 transition-colors"><X size={20} /></button>
                 <h3 className="text-xl font-bold text-[#141779] mb-1 text-center">Select {label}</h3>
                 {isBoard && (
                   <p className="text-[11px] font-semibold text-slate-400 text-center mb-3">
@@ -309,17 +311,7 @@ export default function SignupStep2Screen() {
 
       {/* Header */}
       <header className="flex items-center px-6 py-4 bg-[rgba(255,255,255,0.8)] border-b border-[rgba(255,255,255,0.2)] sticky top-0 z-40 backdrop-blur-md">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleBack}
-            className="w-10 h-10 -ml-2 rounded-full bg-[#e0e0ff] flex items-center justify-center hover:opacity-80 transition-opacity"
-          >
-            <ArrowLeft size={24} color="#141779" />
-          </button>
-          <Rocket size={28} color="#141779" />
-          <h1 className="text-[22px] font-bold text-[#141779] tracking-[-0.5px]">NR Scholar</h1>
-        </div>
+        <NRScholarNavBrand onBack={handleBack} />
       </header>
 
       <main className="px-6 pt-8 flex flex-col items-center w-full max-w-[430px] mx-auto relative z-10">
@@ -330,8 +322,8 @@ export default function SignupStep2Screen() {
             <span className="text-xs font-bold text-[#006a62] tracking-[1px]">STEP 2 OF 3</span>
             <span className="text-xs font-bold text-[#767683]">66%</span>
           </div>
-          <div className="w-full h-2 bg-[#eceef0] rounded-full overflow-hidden">
-            <div className="h-full bg-[#57fae9] rounded-full w-[66%]" />
+          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+            <div className="h-full rounded-full transition-all duration-500 ease-out" style={progressFillStyle(66)} />
           </div>
         </div>
 
@@ -496,7 +488,7 @@ export default function SignupStep2Screen() {
                   onChange={(e) => setSchoolName(e.target.value)}
                   className="w-full h-14 bg-[rgba(255,255,255,0.5)] rounded-full pl-12 pr-6 text-base font-medium text-[#191c1e] border-2 border-white focus:outline-none focus:border-[#141779] transition-colors placeholder:text-[#c7c5d4]"
                 />
-                <School size={22} color="#006a62" className="absolute left-4" />
+                <School size={22} color="#141779" className="absolute left-4" />
               </div>
             </div>
             

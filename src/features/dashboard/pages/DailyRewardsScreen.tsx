@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Gift, History, HelpCircle, Shield, Sparkles, Star } from "lucide-react";
+import { ArrowLeft, Gift, Ticket, HelpCircle, Shield, Sparkles, Star, X } from "lucide-react";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
@@ -622,7 +622,6 @@ export default function DailyRewardsScreen() {
         <div className="relative w-full aspect-square flex items-center justify-center">
           {/* Outer Ring with marks */}
           <div className="absolute inset-0 rounded-full border border-[#141779]/10 flex items-center justify-center">
-            <div className="w-[94%] h-[94%] rounded-full border-2 border-[#141779]/5 border-dashed" />
           </div>
 
           {/* The Needle indicator */}
@@ -710,10 +709,8 @@ export default function DailyRewardsScreen() {
 
             {/* Inner Core */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-14 h-14 bg-white rounded-full shadow-[0_4px_12px_rgba(20,23,121,0.15)] flex items-center justify-center border border-slate-200">
-                <div className="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center animate-pulse">
-                  <Sparkles className="w-5 h-5 text-[#141779]" />
-                </div>
+              <div className="w-12 h-12 bg-white rounded-full shadow-[0_4px_12px_rgba(20,23,121,0.15)] flex items-center justify-center border border-slate-200">
+                <Sparkles className="w-5 h-5 text-[#141779]" />
               </div>
             </div>
           </div>
@@ -732,7 +729,7 @@ export default function DailyRewardsScreen() {
             <div className="w-full space-y-3 animate-pulse">
               <div className="w-full py-4 rounded-full font-black text-sm sm:text-base tracking-wider uppercase flex items-center justify-center gap-2.5 bg-slate-100 border border-slate-200 text-slate-400 select-none shadow-xs">
                 <div className="w-5 h-5 rounded-full border-2 border-slate-400 border-t-transparent animate-spin" />
-                <span>{t('checking_spins', 'Checking Available Spins...')}</span>
+                <span>{t('checking_spins', 'Checking Available Spins')}</span>
               </div>
               <div className="flex items-center justify-center gap-2">
                 <div className="w-3.5 h-3.5 rounded-full bg-slate-200" />
@@ -765,7 +762,7 @@ export default function DailyRewardsScreen() {
                   d="M4 12a8 8 0 018-8v8H4z"
                 />
               </svg>
-              <span>{t('spinning', 'SPINNING...')}</span>
+              <span>{t('spinning', 'SPINNING')}</span>
             </button>
           ) : getSpinBalance() > 0 ? (
             /* State 1 & 2: Idle / Ready State & Press Micro-Interaction */
@@ -799,14 +796,14 @@ export default function DailyRewardsScreen() {
                 disabled={isSpinning || isBuying}
                 className="w-full py-3.5 rounded-full font-black text-sm sm:text-base tracking-wider uppercase transition-all duration-150 transform active:scale-95 flex items-center justify-center gap-2 bg-gradient-to-r from-[#141779] via-[#1c1970] to-[#25218c] hover:brightness-110 text-white shadow-md border border-indigo-300/40 cursor-pointer"
               >
-                <span>{isBuying ? t('purchasing', 'Purchasing...') : t('buy_spin', { cost: (spinType === "daily" || spinType === "boss_revival") ? 100 : 150, defaultValue: `🛒 Buy 1 Spin (${(spinType === "daily" || spinType === "boss_revival") ? "100 🪙" : "150 🪙"})` })}</span>
+                <span>{isBuying ? t('purchasing', 'Purchasing') : t('buy_spin', { cost: (spinType === "daily" || spinType === "boss_revival") ? 100 : 150, defaultValue: `🛒 Buy 1 Spin (${(spinType === "daily" || spinType === "boss_revival") ? "100 🪙" : "150 🪙"})` })}</span>
               </button>
             </div>
           )}
 
           {!loading && (
             <div className="flex items-center justify-center gap-2 text-indigo-300 text-xs font-black">
-              <History className="w-4 h-4 text-cyan-400" />
+              <Ticket className="w-4 h-4 text-[#141779]" />
               <span className="font-bold uppercase tracking-widest text-slate-600">
                 {getSpinBalance()} {t('attempts_left', 'ATTEMPTS LEFT')}
               </span>
@@ -841,7 +838,7 @@ export default function DailyRewardsScreen() {
             </div>
           </div>
         }
-        confirmText={isBuying ? t('purchasing', 'Buying...') : t('confirm', 'Confirm')}
+        confirmText={isBuying ? t('purchasing', 'Buying') : t('confirm', 'Confirm')}
         cancelText={t('cancel', 'Cancel')}
         variant="primary"
         loading={isBuying}
@@ -863,7 +860,7 @@ export default function DailyRewardsScreen() {
               exit={{ opacity: 0 }}
               style={{ touchAction: "none" }}
               onTouchMove={(e) => e.preventDefault()}
-              className="absolute inset-0 bg-slate-950/80"
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
               onClick={handleClaim}
             />
 
@@ -876,6 +873,14 @@ export default function DailyRewardsScreen() {
               style={{ overscrollBehavior: "contain" }}
               className="relative bg-white w-full max-w-[360px] p-8 rounded-[32px] flex flex-col items-center text-center gap-6 border-2 border-slate-200 shadow-2xl overflow-hidden text-slate-950"
             >
+              <button
+                type="button"
+                onClick={handleClaim}
+                aria-label="Close"
+                className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 active:scale-90 flex items-center justify-center text-slate-500 transition-all cursor-pointer"
+              >
+                <X size={16} strokeWidth={2.5} />
+              </button>
               {/* Glow backdrop */}
               <div className="absolute inset-0 bg-radial-gradient(circle,rgba(20,23,121,0.05)_0%,transparent_70%) pointer-events-none" />
 

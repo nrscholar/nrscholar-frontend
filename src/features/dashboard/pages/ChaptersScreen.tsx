@@ -10,6 +10,7 @@ import { showNotificationToast } from "../../../components/GlobalNotificationBan
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 import { startNavigationProgress } from "../../../components/NavigationProgressBar";
 import { useUserStatsStore } from "../../../services/userStatsStore";
+import { progressFillStyle } from "../../../utils/progressBar";
 
 // In-memory runtime cache for parsed chapter arrays to ensure 0ms instantaneous tab switching
 const runtimeChapterCache = new Map<string, any[]>();
@@ -690,7 +691,7 @@ export default function ChaptersScreen() {
             {/* CHAPTER TIMELINE SKELETON (4 Cards matching 1:1 layout) */}
             <div className="relative flex flex-col gap-4">
               {/* Timeline Axis Background Line */}
-              <div className="absolute left-[28px] top-6 bottom-6 w-1 -translate-x-1/2 bg-[#5B5CFF]/20 rounded-full" />
+              <div className="absolute left-[28px] top-3 bottom-6 w-1 -translate-x-1/2 bg-[#5B5CFF]/20 rounded-full" />
 
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="flex items-start gap-3 w-full">
@@ -732,13 +733,20 @@ export default function ChaptersScreen() {
 
               {/* Progress Bar & Percentage Alignment */}
               <div className="flex items-center gap-3">
-                <div className="flex-1 h-3 bg-[#EEF1FF] rounded-full overflow-hidden p-0.5 border border-[#E0E3E5]">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progressPercent}%` }}
-                    transition={{ duration: 1, ease: "easeOut" }}
-                    className="h-full bg-gradient-to-r from-[#5B5CFF] via-[#35E5D4] to-[#45D483] rounded-full shadow-sm"
-                  />
+                <div className="flex-1 h-3 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-[#E0E3E5]">
+                  {progressPercent > 0 ? (
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${progressPercent}%` }}
+                      transition={{ duration: 1, ease: "easeOut" }}
+                      className="h-full rounded-full transition-all duration-500 ease-out"
+                      style={{ background: progressFillStyle(progressPercent).background }}
+                    />
+                  ) : (
+                    <div className="h-full flex items-center">
+                      <div className="h-full aspect-square rounded-full bg-[#141779]" />
+                    </div>
+                  )}
                 </div>
                 <span className="text-xs font-black text-[#17157F] shrink-0">
                   {progressPercent}%
@@ -755,7 +763,16 @@ export default function ChaptersScreen() {
             {/* VERTICAL LEARNING ADVENTURE MAP WITH FIXED TIMELINE AXIS */}
             <section className="relative py-2 flex flex-col gap-5">
               {/* Continuous Vertical Timeline Axis Line (Centered on 28px inside 56px Timeline Column) */}
-              <div className="absolute left-[28px] top-6 bottom-14 w-1 -translate-x-1/2 bg-gradient-to-b from-[#45D483] via-[#5B5CFF] to-[#B9BBC8]/40 -z-10 rounded-full" />
+              <div className="absolute left-[28px] top-3 bottom-14 w-1 -translate-x-1/2 bg-gradient-to-b from-[#45D483] via-[#5B5CFF] to-[#B9BBC8]/40 -z-10 rounded-full" />
+
+              {/* Journey start dot */}
+              {chapters.length > 0 && (
+                <div className="flex items-center gap-3 -mb-2 h-3">
+                  <div className="w-14 shrink-0 flex items-center justify-center">
+                    <span className="w-3.5 h-3.5 rounded-full bg-[#45D483] border-[3px] border-white shadow-[0_0_0_2px_rgba(69,212,131,0.45)]" />
+                  </div>
+                </div>
+              )}
 
               {chapters.length === 0 ? (
                 <div className="flex flex-col items-center justify-center bg-white rounded-2xl p-8 border-2 border-[#E0E3E5] border-dashed text-center my-4">
@@ -903,7 +920,7 @@ export default function ChaptersScreen() {
                                         : 'bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] text-white shadow-[0_4px_14px_rgba(91,92,255,0.4)] hover:brightness-110 active:scale-95 border border-[#5B5CFF]'
                                     }`}
                                   >
-                                    <span>{isSubLocked ? t('unlock_premium_mission', 'UNLOCK PREMIUM MISSION') : isChapInProgress ? t('continue_mission_btn', 'CONTINUE MISSION →') : t('start_mission_btn', 'START MISSION →')}</span>
+                                    <span>{isSubLocked ? t('unlock_premium_mission', 'UNLOCK PREMIUM MISSION') : isChapInProgress ? t('continue_mission_btn', 'CONTINUE MISSION') : t('start_mission_btn', 'START MISSION')}</span>
                                   </button>
                                 </div>
                               );

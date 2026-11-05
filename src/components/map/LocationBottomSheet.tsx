@@ -29,7 +29,7 @@ export default function LocationBottomSheet({
         onTouchMove={(e) => {
           if (e.target === e.currentTarget) e.preventDefault();
         }}
-        className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/40 backdrop-blur-xs p-0 sm:p-4 overscroll-contain select-none"
+        className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4 overscroll-contain select-none"
         style={{ overscrollBehavior: "contain", touchAction: "none" }}
       >
         {/* Backdrop overlay tap dismiss */}

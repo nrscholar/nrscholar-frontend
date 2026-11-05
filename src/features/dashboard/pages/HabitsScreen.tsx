@@ -228,16 +228,13 @@ export default function HabitsScreen() {
           ) : (
             <>
               {/* Category Indicator Header Badge */}
-              <div className="flex items-center mb-3.5">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50/80 border border-indigo-100/90 shadow-2xs">
-                  <div className="flex items-center gap-1 bg-[#141779] text-white px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-2xs">
-                    <Tag size={10} className="stroke-[2.5]" />
-                    <span>{t('category_label', 'Category')}</span>
-                  </div>
-                  <span className="text-xs font-black text-[#141779] tracking-wide pr-1">
-                    {habit?.category || 'General'}
-                  </span>
+              <div className="flex items-center gap-2.5 mb-3.5">
+                <div className="w-9 h-9 rounded-xl bg-[#141779] text-white flex items-center justify-center shadow-sm shrink-0">
+                  <Tag size={16} strokeWidth={2.5} />
                 </div>
+                <span className="text-sm font-black text-[#141779] tracking-wide uppercase truncate">
+                  {habit?.category || t('general', 'General')}
+                </span>
               </div>
 
               {/* Story Title */}
@@ -301,11 +298,11 @@ export default function HabitsScreen() {
           isOpen={showModal}
           onClose={() => { setShowModal(false); navigate(-1); }}
           onConfirm={() => { setShowModal(false); navigate(-1); }}
-          title={t('splendid', 'Splendid!')}
+          title={t('habit_practiced_title', 'Habit Unlocked!')}
           message={t('earned_points_desc', { points: habit?.rewardPoints || 10, defaultValue: `You earned +${habit?.rewardPoints || 10} Gold Stars for practicing this habit today!` })}
           confirmText={t('continue_journey', 'Continue Journey')}
           showCancel={false}
-          variant="success"
+          variant="primary"
           icon={<span className="text-3xl">⭐</span>}
         />
       </main>

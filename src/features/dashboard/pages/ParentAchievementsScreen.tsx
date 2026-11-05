@@ -8,6 +8,7 @@ import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
 import { getActiveUserContext } from "../../../utils/sessionCache";
 import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
+import { progressFillStyle } from "../../../utils/progressBar";
 
 export default function ParentAchievementsScreen() {
   const { t } = useTranslation();
@@ -444,11 +445,11 @@ export default function ParentAchievementsScreen() {
               </div>
               <div className={`w-full h-2.5 sm:h-3 bg-slate-100 rounded-full overflow-hidden p-0.5 shadow-2xs ${badgesPct === 0 ? 'flex items-center' : ''}`}>
                 {badgesPct === 0 ? (
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#006a62] shrink-0" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#141779] shrink-0" />
                 ) : (
                   <div 
-                    style={{ width: `${badgesPct}%` }}
-                    className="h-full bg-gradient-to-r from-[#006a62] to-[#57fae9] rounded-full shadow-2xs transition-all duration-700 ease-out"
+                    style={progressFillStyle(badgesPct)}
+                    className="h-full rounded-full transition-all duration-500 ease-out"
                   />
                 )}
               </div>
@@ -483,8 +484,8 @@ export default function ParentAchievementsScreen() {
                   <div className="w-1.5 h-1.5 rounded-full bg-[#141779] shrink-0" />
                 ) : (
                   <div 
-                    style={{ width: `${rankPercentile}%` }}
-                    className="h-full bg-gradient-to-r from-[#141779] to-[#57fae9] rounded-full shadow-2xs transition-all duration-700 ease-out"
+                    style={progressFillStyle(rankPercentile)}
+                    className="h-full rounded-full transition-all duration-500 ease-out"
                   />
                 )}
               </div>
@@ -515,10 +516,16 @@ export default function ParentAchievementsScreen() {
 
               {/* Progress Track & Fill */}
               <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-teal-400 to-[#00A89F] transition-all duration-500 ease-out"
-                  style={{ width: `${Math.min(100, (nextMilestone.currentProgress / nextMilestone.totalRequired) * 100)}%` }}
-                />
+                {nextMilestone.currentProgress > 0 ? (
+                  <div
+                    className="h-full rounded-full transition-all duration-500 ease-out"
+                    style={progressFillStyle(Math.min(100, (nextMilestone.currentProgress / nextMilestone.totalRequired) * 100))}
+                  />
+                ) : (
+                  <div className="h-full flex items-center">
+                    <div className="w-2 h-2 rounded-full bg-[#00A89F]" />
+                  </div>
+                )}
               </div>
             </div>
           ) : (
@@ -679,7 +686,7 @@ export default function ParentAchievementsScreen() {
             onTouchMove={(e) => {
               if (e.target === e.currentTarget) e.preventDefault();
             }}
-            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-[99999] flex items-end justify-center p-3 pb-24 sm:p-4 animate-fade-in overscroll-contain select-none"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[99999] flex items-end justify-center p-3 pb-24 sm:p-4 animate-fade-in overscroll-contain select-none"
             style={{
               zIndex: 99999,
               overscrollBehavior: "contain",
@@ -737,8 +744,8 @@ export default function ParentAchievementsScreen() {
                 </div>
                 <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
                   <div
-                    className="h-full bg-gradient-to-r from-[#141779] to-[#30007f] rounded-full transition-all duration-1000 ease-out"
-                    style={{ width: `${Math.min(100, (activeAchievement.currentProgress / activeAchievement.totalRequired) * 100)}%` }}
+                    className="h-full rounded-full transition-all duration-500 ease-out"
+                    style={progressFillStyle(Math.min(100, (activeAchievement.currentProgress / activeAchievement.totalRequired) * 100))}
                   />
                 </div>
                 <div className="text-xs text-slate-600 font-bold text-center mt-1">

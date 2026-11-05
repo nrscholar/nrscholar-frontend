@@ -8,6 +8,7 @@ import QuestionContext from "../components/QuestionContext";
 import UnifiedConfirmModal from "../../../components/UnifiedConfirmModal";
 import { getScopedItem, setScopedItem, getActiveUserContext } from "../../../utils/sessionCache";
 import { filterUniqueQuestions } from "../../../utils/quizQuestionUtils";
+import { progressFillStyle } from "../../../utils/progressBar";
 
 const SparkleParticles = lazy(() => import("../../../components/SparkleParticles"));
 
@@ -515,10 +516,10 @@ export default function ChapterQuestionsScreen() {
               <span className="text-xs font-bold text-[#1d0052] tracking-[0.5px]">KEEP GOING!</span>
             </div>
           </div>
-          <div className="h-6 bg-[#e6e6e6] rounded-full overflow-hidden p-[5px]">
+          <div className="h-6 bg-slate-100 rounded-full overflow-hidden p-[5px]">
             <div 
-              className="h-full bg-[#30007f] rounded-lg transition-all duration-300"
-              style={{ width: `${progress + 10}%` }}
+              className="h-full rounded-lg transition-all duration-300"
+              style={progressFillStyle(Math.min(100, progress + 10))}
             />
           </div>
         </div>

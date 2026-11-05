@@ -30,6 +30,13 @@ export default function ForgotPasswordScreen() {
   const [successMsg, setSuccessMsg] = useState("");
   const [resendTimer, setResendTimer] = useState(30);
 
+  // Auto-dismiss success messages (e.g. "OTP verified successfully!") after 4s
+  useEffect(() => {
+    if (!successMsg) return;
+    const t = setTimeout(() => setSuccessMsg(""), 4000);
+    return () => clearTimeout(t);
+  }, [successMsg]);
+
   // OTP and Mobile Input references
   const otpInputRef = useRef<HTMLInputElement | null>(null);
   const mobileInputRef = useRef<HTMLInputElement | null>(null);
@@ -223,9 +230,7 @@ export default function ForgotPasswordScreen() {
       setLoading(false);
 
       if (data.success) {
-        setSuccessMsg(data.message || "Your password has been reset successfully!");
-        setStep("success");
-        setTimeout(() => navigate("/login"), 2500);
+        navigate("/login", { replace: true });
       } else {
         setErrorMsg(data.detail || data.message || "Failed to reset password.");
       }
@@ -636,22 +641,6 @@ export default function ForgotPasswordScreen() {
               </div>
             </div>
           </form>
-        )}
-
-        {/* ════════════════════════════════════════════════════════════════════
-            STEP 4: SUCCESS CONFIRMATION
-           ════════════════════════════════════════════════════════════════════ */}
-        {step === "success" && (
-          <div className="w-full max-w-[350px] flex flex-col gap-4 mt-2">
-            <button
-              type="button"
-              onClick={() => navigate("/login")}
-              className="w-full h-14 bg-[#141779] rounded-full flex items-center justify-center gap-3 shadow-[0_4px_15px_rgba(20,23,121,0.3)] text-white text-base font-bold uppercase tracking-wider hover:opacity-90 active:scale-98 transition-all"
-            >
-              <span>Back to Login</span>
-              <ArrowRight size={20} color="white" />
-            </button>
-          </div>
         )}
 
       </div>

@@ -24,6 +24,11 @@ export default function MultiplayerRoomScreen() {
       if (isLeavingRef.current) return;
 
       if (data.success && data.data) {
+        if (["cancelled", "finished", "opponent_quit"].includes(data.data.status)) {
+          isLeavingRef.current = true;
+          setError(t('room_closed', 'This room has been closed by the host.'));
+          return;
+        }
         setRoom(data.data);
         if (data.data.status === "playing" || data.data.status === "ready") {
           isStartingBattleRef.current = true;
@@ -34,9 +39,11 @@ export default function MultiplayerRoomScreen() {
           }
           navigate(`/multiplayer-battle/${roomId}`, { replace: true });
         }
-      } else {
+      } else if (/not found|not a player/i.test(data?.message || "")) {
+        isLeavingRef.current = true;
         setError(data.message || "Room not found");
       }
+      // other failures (e.g. transient auth/network) are retried on the next poll
     } catch (e) {
       console.error(e);
     }
@@ -52,11 +59,19 @@ export default function MultiplayerRoomScreen() {
   }, [roomId, navigate]);
 
   // Cleanly quit/cancel room on backend if user leaves or unmounts before battle starts
+  // (deferred so React StrictMode's simulated unmount/remount doesn't cancel a fresh room)
+  const quitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
+    if (quitTimerRef.current) {
+      clearTimeout(quitTimerRef.current);
+      quitTimerRef.current = null;
+    }
     return () => {
-      if (!isStartingBattleRef.current && roomId && !isLeavingRef.current) {
-        apiFetch(`/api/multiplayer/room/${roomId}/quit`, { method: "POST" }).catch(() => {});
-      }
+      quitTimerRef.current = setTimeout(() => {
+        if (!isStartingBattleRef.current && roomId && !isLeavingRef.current) {
+          apiFetch(`/api/multiplayer/room/${roomId}/quit`, { method: "POST" }).catch(() => {});
+        }
+      }, 300);
     };
   }, [roomId]);
 

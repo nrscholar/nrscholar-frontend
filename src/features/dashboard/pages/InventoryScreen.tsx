@@ -1,10 +1,12 @@
+import { fetchAllJourneyNodes } from "../../../components/map/journeyAllClasses";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Coins, Zap, Shield, MapPin, Package, Star, Gift, PartyPopper, Lock, Sparkles, Trophy, ChevronRight, Compass, Flame, Check } from "lucide-react";
+import { ArrowLeft, Coins, Zap, Shield, MapPin, Package, Star, Gift, PartyPopper, Lock, Sparkles, Trophy, ChevronRight, Compass, Flame, Check, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "../../../api";
 import { useTranslation } from "react-i18next";
 import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
+import { progressFillStyle } from "../../../utils/progressBar";
 
 // Stylized 3D Treasure Box Hero SVG
 const MysteryBoxHeroSVG = ({ type }: { type?: string }) => {
@@ -281,6 +283,12 @@ export default function InventoryScreen() {
             }
             if (jData.data.nodes?.length > 0) {
               setJourneyNodes(jData.data.nodes);
+              // Show every standard (Class 1-10), not just the current tier
+              try {
+                const cachedU = JSON.parse(localStorage.getItem("userData") || "{}");
+                const allNodes = await fetchAllJourneyNodes(jData.data, { board: cachedU.childBoard, childId: cachedU.activeChildId });
+                if (allNodes && allNodes.length > 0) setJourneyNodes(allNodes);
+              } catch (e) { }
             }
           }
         }
@@ -596,12 +604,13 @@ export default function InventoryScreen() {
                 </span>
               </div>
 
-              <div className="w-full h-2.5 bg-white rounded-full overflow-hidden p-0.5 border border-[#EDE8FC]">
+              <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-[#EDE8FC]">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${collectionScore}%` }}
                   transition={{ duration: 1, ease: "easeOut" }}
-                  className="h-full bg-gradient-to-r from-[#6C4DFF] via-[#512BE2] to-[#3520A8] rounded-full shadow-xs"
+                  className="h-full rounded-full"
+                  style={{ background: progressFillStyle(collectionScore).background }}
                 />
               </div>
             </div>
@@ -993,7 +1002,13 @@ export default function InventoryScreen() {
                     title: "Class 4 • Cosmos Realm",
                     icon: "🌌",
                     border: isCurrentClass ? "border-[#6C4DFF] ring-2 ring-[#6C4DFF]/20" : isAllCompleted ? "border-emerald-300" : "border-[#EDE8FC]"
-                  }
+                  },
+                  5: { title: "Class 5 • Discovery Lab", icon: "🧪", border: isCurrentClass ? "border-[#6C4DFF] ring-2 ring-[#6C4DFF]/20" : isAllCompleted ? "border-emerald-300" : "border-[#EDE8FC]" },
+                  6: { title: "Class 6 • Energy Station", icon: "⚡", border: isCurrentClass ? "border-[#6C4DFF] ring-2 ring-[#6C4DFF]/20" : isAllCompleted ? "border-emerald-300" : "border-[#EDE8FC]" },
+                  7: { title: "Class 7 • Genius Citadel", icon: "💡", border: isCurrentClass ? "border-[#6C4DFF] ring-2 ring-[#6C4DFF]/20" : isAllCompleted ? "border-emerald-300" : "border-[#EDE8FC]" },
+                  8: { title: "Class 8 • Bronze League", icon: "🥉", border: isCurrentClass ? "border-[#6C4DFF] ring-2 ring-[#6C4DFF]/20" : isAllCompleted ? "border-emerald-300" : "border-[#EDE8FC]" },
+                  9: { title: "Class 9 • Gold League", icon: "🥇", border: isCurrentClass ? "border-[#6C4DFF] ring-2 ring-[#6C4DFF]/20" : isAllCompleted ? "border-emerald-300" : "border-[#EDE8FC]" },
+                  10: { title: "Class 10 • Diamond Apex", icon: "💎", border: isCurrentClass ? "border-[#6C4DFF] ring-2 ring-[#6C4DFF]/20" : isAllCompleted ? "border-emerald-300" : "border-[#EDE8FC]" }
                 };
 
                 const theme = classThemes[cNum] || {
@@ -1024,10 +1039,7 @@ export default function InventoryScreen() {
                             : "bg-slate-100 text-slate-500 border border-slate-200"
                         }`}>
                         {isCurrentClass ? (
-                          <>
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-300 animate-ping" />
-                            ⚡ Active Realm
-                          </>
+                          <>⚡ Active Realm</>
                         ) : isAllCompleted ? (
                           "✓ Mastered"
                         ) : hasAnyProgress ? (
@@ -1068,11 +1080,7 @@ export default function InventoryScreen() {
                                     : 'bg-slate-200 text-slate-500 border-slate-300'
                                 }`}>
                                 {isCurrent ? (
-                                  <>
-                                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
-                                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 border border-white" />
-                                    <MapPin size={18} className="text-white" />
-                                  </>
+                                  <MapPin size={18} className="text-white" />
                                 ) : isCompleted ? (
                                   <Check size={18} className="stroke-[3]" />
                                 ) : isUnlocked ? (
@@ -1182,7 +1190,7 @@ export default function InventoryScreen() {
             exit={{ opacity: 0 }}
             style={{ touchAction: "none" }}
             onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
-            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
           >
             <motion.div
               initial={{ scale: 0.6, y: 30 }}
@@ -1192,6 +1200,14 @@ export default function InventoryScreen() {
               style={{ overscrollBehavior: "contain", touchAction: "pan-y" }}
               className="bg-white border-2 border-[#D97706] w-full max-w-xs rounded-3xl p-6 pt-9 text-center relative shadow-2xl mt-6"
             >
+              <button
+                type="button"
+                onClick={() => setRewardData(null)}
+                aria-label="Close"
+                className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 active:scale-90 flex items-center justify-center text-slate-500 transition-all"
+              >
+                <X size={16} strokeWidth={2.5} />
+              </button>
               <div className="absolute -top-10 left-1/2 -translate-x-1/2 z-10">
                 <motion.div
                   animate={{ rotate: [0, -10, 10, -10, 10, 0] }}

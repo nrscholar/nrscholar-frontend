@@ -1,5 +1,5 @@
 import { NRScholarNavBrand } from "../../../components/NRScholarNavBrand";
-import { AlertCircle, ArrowLeft, CheckCircle, Delete } from "lucide-react";
+import { AlertCircle, ArrowLeft, CheckCircle, Delete, Eye, EyeOff, X } from "lucide-react";
 import { useEffect, useState, useRef, useLayoutEffect } from "react";
 import { formatMobileDisplay, parseMobileInput } from "../../../utils/mobileFormatter";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -19,6 +19,8 @@ export default function ParentalGateScreen() {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotError, setForgotError] = useState("");
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotMobile, setForgotMobile] = useState("");
   const [forgotPassword, setForgotPassword] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
@@ -58,6 +60,7 @@ export default function ParentalGateScreen() {
     if (pin.length < 4) {
       const nextPin = pin + digit;
       setPin(nextPin);
+      setErrorMsg("");
       
       if (mode === "enter" && nextPin.length === 4) {
         validatePin(nextPin);
@@ -103,6 +106,7 @@ export default function ParentalGateScreen() {
   };
 
   const validatePin = async (enteredPin: string) => {
+    setErrorMsg("");
     try {
       const res = await apiFetch("/api/parent/verify-pin", {
         method: "POST",
@@ -113,6 +117,7 @@ export default function ParentalGateScreen() {
       
       if (json.success) {
         sessionStorage.setItem("parentPinVerified", "true");
+        setErrorMsg("");
         setSuccessMsg("Access Granted");
         showInteractiveNotification(
           "Parent Access Granted 🔐",
@@ -225,11 +230,11 @@ export default function ParentalGateScreen() {
   const handleVerifyCredentials = async (e?: React.FormEvent | React.KeyboardEvent) => {
     if (e) e.preventDefault();
     if (!/^\d{10}$/.test(forgotMobile)) {
-      setErrorMsg("Mobile number must be exactly 10 digits.");
+      setForgotError(t('mobile_10_digits_error', 'Mobile number must be exactly 10 digits.'));
       return;
     }
     setIsVerifying(true);
-    setErrorMsg("");
+    setForgotError("");
     try {
       const res = await apiFetch("/api/users/login", {
         method: "POST",
@@ -247,10 +252,10 @@ export default function ParentalGateScreen() {
         setMode("reset-step1");
         setTimeout(() => setSuccessMsg(""), 3000);
       } else {
-        setErrorMsg(json.message || "Invalid mobile number or password.");
+        setForgotError(json.message || t('invalid_mobile_or_password', 'Invalid mobile number or password.'));
       }
     } catch (err) {
-      setErrorMsg("Network error verifying identity.");
+      setForgotError(t('network_error_verifying', 'Network error verifying identity.'));
     } finally {
       setIsVerifying(false);
     }
@@ -263,6 +268,8 @@ export default function ParentalGateScreen() {
   };
 
   const handleForgotPin = () => {
+    setForgotError("");
+    setShowForgotPassword(false);
     setShowForgotModal(true);
   };
 
@@ -439,7 +446,8 @@ export default function ParentalGateScreen() {
       {/* Forgot PIN Modal */}
       {showForgotModal && (
         <div className="absolute inset-0 z-[100] flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl w-full max-w-[340px] p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+          <div className="relative bg-white rounded-3xl w-full max-w-[340px] p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+            <button type="button" aria-label="Close" onClick={() => setShowForgotModal(false)} className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-[#464652] hover:bg-[#f2f4f6] transition-colors"><X size={20} /></button>
             <h3 className="text-xl font-bold text-[#141779] mb-2">{t('verify_identity', 'Verify Identity')}</h3>
             <p className="text-sm text-[#464652] mb-6">{t('verify_credentials_desc', 'Enter your account credentials to reset the Parent PIN.')}</p>
             
@@ -449,35 +457,51 @@ export default function ParentalGateScreen() {
                 type="tel"
                 placeholder={t('mobile_number_placeholder', 'Enter mobile number')}
                 value={formatMobileDisplay(forgotMobile)}
-                onChange={handleMobileChange}
+                onChange={(e) => { handleMobileChange(e); setForgotError(""); }}
                 onKeyDown={handleKeyDown}
                 autoComplete="off"
                 maxLength={11}
                 title="Mobile number must be exactly 10 digits"
                 readOnly
                 onFocus={(e) => e.target.removeAttribute('readOnly')}
-                className="w-full px-4 py-3 rounded-xl border border-[#d8dadc] focus:outline-none focus:border-[#006a62] focus:ring-1 focus:ring-[#006a62]"
+                className="w-full px-4 py-3 rounded-xl border border-[#d8dadc] focus:outline-none focus:border-[#141779] focus:ring-1 focus:ring-[#141779]"
                 required
               />
-              <input
-                type="password"
-                placeholder={t('password_placeholder', 'Password')}
-                value={forgotPassword}
-                onChange={(e) => setForgotPassword(e.target.value)}
-                onKeyDown={handleKeyDown}
-                autoComplete="off"
-                readOnly
-                onFocus={(e) => e.target.removeAttribute('readOnly')}
-                className="w-full px-4 py-3 rounded-xl border border-[#d8dadc] focus:outline-none focus:border-[#006a62] focus:ring-1 focus:ring-[#006a62]"
-                required
-              />
-              
+              <div className="relative">
+                <input
+                  type={showForgotPassword ? "text" : "password"}
+                  placeholder={t('password_placeholder', 'Password')}
+                  value={forgotPassword}
+                  onChange={(e) => { setForgotPassword(e.target.value); setForgotError(""); }}
+                  onKeyDown={handleKeyDown}
+                  autoComplete="off"
+                  readOnly
+                  onFocus={(e) => e.target.removeAttribute('readOnly')}
+                  className="w-full pl-4 pr-11 py-3 rounded-xl border border-[#d8dadc] focus:outline-none focus:border-[#141779] focus:ring-1 focus:ring-[#141779]"
+                  required
+                />
+                <button
+                  type="button"
+                  aria-label={showForgotPassword ? t('hide_password', 'Hide password') : t('show_password', 'Show password')}
+                  onClick={() => setShowForgotPassword(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-[#141779] transition-colors"
+                >
+                  {showForgotPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              {forgotError && (
+                <div className="flex items-center gap-2 text-[#ba1a1a] bg-[#ffdad6] px-3 py-2 rounded-xl text-xs font-bold">
+                  <AlertCircle size={14} className="shrink-0" />
+                  <span>{forgotError}</span>
+                </div>
+              )}
+
               <div className="flex flex-col gap-3 mt-4">
                 <button
                   type="button"
                   onClick={() => handleVerifyCredentials()}
                   disabled={isVerifying || !forgotMobile || !forgotPassword}
-                  className="w-full py-3.5 rounded-xl font-bold text-white bg-[#006a62] disabled:opacity-50 transition-opacity flex items-center justify-center"
+                  className="w-full py-3.5 rounded-xl font-bold text-white bg-[#141779] disabled:opacity-50 transition-opacity flex items-center justify-center"
                 >
                   {isVerifying ? t('verifying', 'Verifying...') : t('verify_btn', 'Verify')}
                 </button>

@@ -1,3 +1,4 @@
+import { ClassCharacterSVG } from "./CharacterArt";
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { WORLD_THEMES, MapWorldThemeConfig, MapStageConfig } from "./AdventureTheme";
@@ -356,7 +357,7 @@ export default function MapWorld({
                     <div className="flex items-center justify-between gap-2 w-full">
                       <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
                         <div className="w-8 h-8 rounded-xl bg-white/20 border border-white/30 backdrop-blur-md flex items-center justify-center text-base shrink-0 shadow-xs">
-                          {headerInfo.icon}
+                          {cNum <= 1 || cNum >= 8 ? <ClassCharacterSVG classLevel={cNum} size={24} /> : headerInfo.icon}
                         </div>
                         <span className="text-[9.5px] font-black uppercase tracking-wider text-white/90 whitespace-nowrap truncate shrink min-w-0">
                           {headerInfo.subtitle}

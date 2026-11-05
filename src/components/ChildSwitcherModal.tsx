@@ -193,7 +193,7 @@ export default function ChildSwitcherModal({ isOpen, onClose, user, onUserUpdate
       onTouchMove={(e) => {
         if (e.target === e.currentTarget) e.preventDefault();
       }}
-      className="fixed inset-0 bg-[#0f114a]/80 backdrop-blur-md z-[99999] flex items-center justify-center p-3 pb-24 sm:p-4 font-sans animate-in fade-in duration-200 overscroll-contain select-none"
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[99999] flex items-center justify-center p-3 pb-24 sm:p-4 font-sans animate-in fade-in duration-200 overscroll-contain select-none"
       style={{ zIndex: 99999, overscrollBehavior: "contain", touchAction: "none" }}
     >
       <div 

@@ -20,7 +20,7 @@ export default function LocationPreview({ landmark, onClose, onEnter }: Location
   return (
     <AnimatePresence>
       <div 
-        className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 backdrop-blur-sm p-0 sm:p-4"
+        className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4"
         style={{ touchAction: "none" }}
         onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
       >

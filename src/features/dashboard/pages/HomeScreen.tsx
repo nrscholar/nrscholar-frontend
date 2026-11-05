@@ -5,12 +5,14 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { apiFetch } from "../../../api";
 import AdventureHero from "../../../components/AdventureHero";
+import LevelUpModal from "../../../components/LevelUpModal";
 import { showInteractiveNotification, triggerDevicePushNotification } from "../../../services/pushNotificationService";
 import { startNavigationProgress } from "../../../components/NavigationProgressBar";
 import { getScopedItem, setScopedItem, getActiveUserContext, normalizeClassLevel } from "../../../utils/sessionCache";
 import { loadClassSkills } from "../../../data/neuroplay/skillsLoader";
 import { useLockBodyScroll } from "../../../utils/useLockBodyScroll";
 import { useUserStatsStore } from "../../../services/userStatsStore";
+import { progressFillStyle } from "../../../utils/progressBar";
 
 const ChildSwitcherModal = lazy(() => import("../../../components/ChildSwitcherModal"));
 
@@ -47,6 +49,7 @@ export default function HomeScreen() {
   const [streakDays, setStreakDays] = useState<number>(() => userData?.streakDays || 0);
   const [showSwitcher, setShowSwitcher] = useState(false);
   const [showDailyMissionModal, setShowDailyMissionModal] = useState(false);
+  const [levelUpTo, setLevelUpTo] = useState<number | null>(null);
   const [questTab, setQuestTab] = useState<'all' | 'active' | 'completed'>('all');
 
   const [dailyLimitReached, setDailyLimitReached] = useState(false);
@@ -806,6 +809,18 @@ export default function HomeScreen() {
     return "dragon";
   }, [searchParams, journeyData?.tierKey, userData?.childClass]);
 
+  // Detect a level increase (since the last level we showed for this child) and celebrate it
+  useEffect(() => {
+    if (!effectiveLevel) return;
+    const key = `lastSeenLevel:${userData?.activeChildId || userData?.children?.[0]?.childId || "default"}`;
+    try {
+      const prevRaw = localStorage.getItem(key);
+      const prev = prevRaw ? Number(prevRaw) : 0;
+      if (prev > 0 && effectiveLevel > prev) setLevelUpTo(effectiveLevel);
+      if (!prev || effectiveLevel > prev) localStorage.setItem(key, String(effectiveLevel));
+    } catch { }
+  }, [effectiveLevel, userData?.activeChildId]);
+
   const handleCtaClick = useCallback(() => {
     startNavigationProgress();
     navigate("/practice/journey-map");
@@ -947,7 +962,7 @@ export default function HomeScreen() {
             return (
               <button
                 onClick={() => navigate("/practice/chapters")}
-                className="bg-[#EEF2FF] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#C7D2FE] shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
+                className="bg-[#EEF2FF] rounded-[24px] p-4 flex flex-col justify-between min-h-[168px] border border-[#C7D2FE] shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
               >
                 <div className="w-10 h-10 rounded-full bg-[#E0E7FF] flex items-center justify-center shrink-0">
                   <BookOpen size={19} className="text-[#4338CA]" />
@@ -955,7 +970,7 @@ export default function HomeScreen() {
                 <div className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-xs group-hover:translate-x-0.5 transition-transform">
                   <ChevronRight size={15} />
                 </div>
-                <div className="mt-2">
+                <div className="mt-3">
                   <h3 className="text-[15px] font-bold text-slate-900 leading-snug mb-1 truncate">{t('continue_learning')}</h3>
                   <p className="text-xs text-slate-500 font-medium leading-relaxed mb-2 truncate">{t('math_science_quests')}</p>
                   {isLoading ? (
@@ -974,11 +989,11 @@ export default function HomeScreen() {
                         <span className="w-1.5 h-1.5 rounded-full bg-[#4F46E5] shrink-0" />
                         <span className="truncate">{progressText}</span>
                       </div>
-                      <div className={`w-full h-1.5 bg-[#E0E7FF] rounded-full overflow-hidden ${pct === 0 ? 'flex items-center' : ''}`}>
+                      <div className={`w-full h-1.5 bg-slate-100 rounded-full overflow-hidden ${pct === 0 ? 'flex items-center' : ''}`}>
                         {pct === 0 ? (
-                          <div className="w-1.5 h-1.5 rounded-full bg-[#4F46E5] shrink-0" />
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#141779] shrink-0" />
                         ) : (
-                          <div className="h-full bg-[#4F46E5] rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                          <div className="h-full rounded-full transition-all duration-500" style={progressFillStyle(pct)} />
                         )}
                       </div>
                     </div>
@@ -1014,7 +1029,7 @@ export default function HomeScreen() {
             return (
               <button
                 onClick={() => navigate("/good-habits")}
-                className="bg-[#FFFBEB] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#FDE68A] shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
+                className="bg-[#FFFBEB] rounded-[24px] p-4 flex flex-col justify-between min-h-[168px] border border-[#FDE68A] shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
               >
                 <div className="w-10 h-10 rounded-full bg-[#FEF3C7] flex items-center justify-center shrink-0">
                   <Star size={19} className="text-[#D97706] fill-[#D97706]" />
@@ -1022,7 +1037,7 @@ export default function HomeScreen() {
                 <div className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-xs group-hover:translate-x-0.5 transition-transform">
                   <ChevronRight size={15} />
                 </div>
-                <div className="mt-2">
+                <div className="mt-3">
                   <h3 className="text-[15px] font-bold text-slate-900 leading-snug mb-1 truncate">{t('good_habits', 'Good Habits')}</h3>
                   <p className="text-xs text-slate-500 font-medium leading-relaxed mb-2 truncate">{t('daily_lessons_rewards', 'Daily lessons & rewards')}</p>
                   {isLoading ? (
@@ -1043,94 +1058,9 @@ export default function HomeScreen() {
                       </div>
                       <div className={`w-full h-1.5 bg-[#FEF3C7] rounded-full overflow-hidden ${habitsBarWidth === 0 ? 'flex items-center' : ''}`}>
                         {habitsBarWidth === 0 ? (
-                          <div className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] shrink-0" />
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#141779] shrink-0" />
                         ) : (
-                          <div className="h-full bg-[#F59E0B] rounded-full transition-all duration-500" style={{ width: `${habitsBarWidth}%` }} />
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </button>
-            );
-          })()}
-
-          {/* Card 4: My Collections (Blush Rose / Coral) */}
-          <button
-            onClick={() => navigate("/practice/collections")}
-            className="bg-[#FFF1F2] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#FECDD3] shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
-          >
-            <div className="w-10 h-10 rounded-full bg-[#FFE4E6] flex items-center justify-center shrink-0">
-              <Trophy size={19} className="text-[#E11D48]" />
-            </div>
-            <div className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-xs group-hover:translate-x-0.5 transition-transform">
-              <ChevronRight size={15} />
-            </div>
-            <div className="mt-2">
-              <h3 className="text-[15px] font-bold text-slate-900 leading-snug mb-1 truncate">{t('my_collections', 'My Collections')}</h3>
-              <p className="text-xs text-slate-500 font-medium leading-relaxed mb-2 truncate">{t('unlocked_cards_badges', 'Unlocked cards & badges')}</p>
-              <div className="flex items-center gap-1.5 pt-0.5">
-                <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-amber-500 to-yellow-400 text-white flex items-center justify-center shadow-2xs border border-amber-200/50">
-                  <Star size={12} className="fill-white" />
-                </div>
-                <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-500 text-white flex items-center justify-center shadow-2xs border border-purple-200/50">
-                  <Crown size={12} className="fill-white" />
-                </div>
-                <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-rose-500 to-pink-400 text-white flex items-center justify-center shadow-2xs border border-pink-200/50">
-                  <BookOpen size={12} />
-                </div>
-                <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-cyan-500 to-blue-500 text-white flex items-center justify-center shadow-2xs border border-cyan-200/50">
-                  <Gem size={12} />
-                </div>
-              </div>
-            </div>
-          </button>
-
-          {/* Card 5: Neuro Play (Vibrant Orchid / Electric Lilac) */}
-          {(() => {
-            const isLoading = isNeuroPlayLoading && !neuroPlayProgress.total;
-            const skillsCompleted = neuroPlayProgress.completed;
-            const totalSkills = neuroPlayProgress.total;
-            const pct = neuroPlayProgress.percent;
-            const neuroPlayText = totalSkills > 0
-              ? t('skills_completed_ratio', { completed: skillsCompleted, total: totalSkills, defaultValue: `${skillsCompleted}/${totalSkills} Skills completed` })
-              : t('day_1_quests', 'Day 1 Quests (M01 & M02)');
-
-            return (
-              <button
-                onClick={() => navigate("/neuro-play")}
-                className="bg-[#FAF5FF] rounded-[24px] p-4 flex flex-col justify-between min-h-[145px] h-[145px] border border-[#E9D5FF] shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
-              >
-                <div className="w-10 h-10 rounded-full bg-[#F3E8FF] flex items-center justify-center shrink-0">
-                  <Brain size={19} className="text-[#9333EA]" />
-                </div>
-                <div className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-xs group-hover:translate-x-0.5 transition-transform">
-                  <ChevronRight size={15} />
-                </div>
-                <div className="mt-2">
-                  <h3 className="text-[15px] font-bold text-slate-900 leading-snug mb-1 truncate">{t('neuro_play', 'Neuro Play')}</h3>
-                  <p className="text-xs text-slate-500 font-medium leading-relaxed mb-2 truncate">{t('brain_skill_lab', 'Brain Skill Lab & Quests')}</p>
-                  {isLoading ? (
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-[#7c3aed]/70">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#7c3aed] animate-pulse shrink-0" />
-                        <span className="animate-pulse truncate">{t('loading', 'Loading...')}</span>
-                      </div>
-                      <div className="w-full h-1.5 bg-[#ede9fe]/80 rounded-full overflow-hidden">
-                        <div className="h-full bg-[#8b5cf6]/40 rounded-full animate-pulse transition-all duration-500" style={{ width: '0%' }} />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      <div className="text-[9.5px] font-extrabold text-[#9333EA] truncate flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#A855F7] shrink-0" />
-                        <span className="truncate">{neuroPlayText}</span>
-                      </div>
-                      <div className={`w-full h-1.5 bg-[#F3E8FF] rounded-full overflow-hidden ${pct === 0 ? 'flex items-center' : ''}`}>
-                        {pct === 0 ? (
-                          <div className="w-1.5 h-1.5 rounded-full bg-[#A855F7] shrink-0" />
-                        ) : (
-                          <div className="h-full bg-[#A855F7] rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                          <div className="h-full rounded-full transition-all duration-500" style={progressFillStyle(habitsBarWidth)} />
                         )}
                       </div>
                     </div>
@@ -1158,48 +1088,130 @@ export default function HomeScreen() {
             return (
               <button
                 onClick={() => navigate("/multiplayer-hub")}
-                className="col-span-2 bg-[#ECFEFF] rounded-[24px] p-4 flex items-center justify-between border border-[#A5F3FC] shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
+                className="bg-[#ECFEFF] rounded-[24px] p-4 flex flex-col justify-between min-h-[168px] border border-[#A5F3FC] shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
               >
-                <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                  <div className="w-10 h-10 rounded-full bg-[#d1fae5] flex items-center justify-center shrink-0">
-                    <Swords size={20} className="text-[#059669]" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-sm font-black text-slate-900 leading-snug mb-0.5">{t('shadow_arena', 'Shadow Arena')}</h3>
-                    <p className="text-[11px] text-slate-500 font-bold leading-relaxed truncate">{t('challenge_friends_in_battles', 'Challenge friends in battles')}</p>
-                    {isLoading ? (
-                      <div className="space-y-1 mt-1">
-                        <div className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-[#059669]/70">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse shrink-0" />
-                          <span className="animate-pulse truncate">{t('loading', 'Loading...')}</span>
-                        </div>
-                        <div className="w-full max-w-[120px] h-1.5 bg-[#d1fae5]/80 rounded-full overflow-hidden">
-                          <div className="h-full bg-[#10b981]/40 rounded-full animate-pulse transition-all duration-500" style={{ width: '0%' }} />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-1 mt-1">
-                        <div className="text-[10px] font-black text-[#059669] truncate flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] shrink-0" />
-                          <span className="truncate">{fightsText}</span>
-                        </div>
-                        <div className={`w-full max-w-[140px] h-1.5 bg-[#d1fae5] rounded-full overflow-hidden ${fightsBarWidth === 0 ? 'flex items-center' : ''}`}>
-                          {fightsBarWidth === 0 ? (
-                            <div className="w-1.5 h-1.5 rounded-full bg-[#10b981] shrink-0" />
-                          ) : (
-                            <div className="h-full bg-[#10b981] rounded-full transition-all duration-500" style={{ width: `${fightsBarWidth}%` }} />
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                <div className="w-10 h-10 rounded-full bg-[#d1fae5] flex items-center justify-center shrink-0">
+                  <Swords size={19} className="text-[#059669]" />
                 </div>
-                <div className="w-7 h-7 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform shrink-0 ml-2">
-                  <ChevronRight size={14} />
+                <div className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-xs group-hover:translate-x-0.5 transition-transform">
+                  <ChevronRight size={15} />
+                </div>
+                <div className="mt-3">
+                  <h3 className="text-[15px] font-bold text-slate-900 leading-snug mb-1 truncate">{t('shadow_arena', 'Shadow Arena')}</h3>
+                  <p className="text-xs text-slate-500 font-medium leading-relaxed mb-2 truncate">{t('challenge_friends_in_battles', 'Challenge friends in battles')}</p>
+                  {isLoading ? (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-[#059669]/70">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse shrink-0" />
+                        <span className="animate-pulse truncate">{t('loading', 'Loading...')}</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-[#d1fae5]/80 rounded-full overflow-hidden">
+                        <div className="h-full bg-[#10b981]/40 rounded-full animate-pulse transition-all duration-500" style={{ width: '0%' }} />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <div className="text-[9.5px] font-extrabold text-[#059669] truncate flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] shrink-0" />
+                        <span className="truncate">{fightsText}</span>
+                      </div>
+                      <div className={`w-full h-1.5 bg-[#d1fae5] rounded-full overflow-hidden ${fightsBarWidth === 0 ? 'flex items-center' : ''}`}>
+                        {fightsBarWidth === 0 ? (
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#141779] shrink-0" />
+                        ) : (
+                          <div className="h-full rounded-full transition-all duration-500" style={progressFillStyle(fightsBarWidth)} />
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </button>
             );
           })()}
+
+          {/* Card 5: Neuro Play (Vibrant Orchid / Electric Lilac) */}
+          {(() => {
+            const isLoading = isNeuroPlayLoading && !neuroPlayProgress.total;
+            const skillsCompleted = neuroPlayProgress.completed;
+            const totalSkills = neuroPlayProgress.total;
+            const pct = neuroPlayProgress.percent;
+            const neuroPlayText = totalSkills > 0
+              ? t('skills_completed_ratio', { completed: skillsCompleted, total: totalSkills, defaultValue: `${skillsCompleted}/${totalSkills} Skills completed` })
+              : t('day_1_quests', 'Day 1 Quests (M01 & M02)');
+
+            return (
+              <button
+                onClick={() => navigate("/neuro-play")}
+                className="bg-[#FAF5FF] rounded-[24px] p-4 flex flex-col justify-between min-h-[168px] border border-[#E9D5FF] shadow-2xs text-left hover:scale-[1.02] transition-transform relative overflow-hidden group cursor-pointer"
+              >
+                <div className="w-10 h-10 rounded-full bg-[#F3E8FF] flex items-center justify-center shrink-0">
+                  <Brain size={19} className="text-[#9333EA]" />
+                </div>
+                <div className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-xs group-hover:translate-x-0.5 transition-transform">
+                  <ChevronRight size={15} />
+                </div>
+                <div className="mt-3">
+                  <h3 className="text-[15px] font-bold text-slate-900 leading-snug mb-1 truncate">{t('neuro_play', 'Neuro Play')}</h3>
+                  <p className="text-xs text-slate-500 font-medium leading-relaxed mb-2 truncate">{t('brain_skill_lab', 'Brain Skill Lab & Quests')}</p>
+                  {isLoading ? (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-[#7c3aed]/70">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#7c3aed] animate-pulse shrink-0" />
+                        <span className="animate-pulse truncate">{t('loading', 'Loading...')}</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-[#ede9fe]/80 rounded-full overflow-hidden">
+                        <div className="h-full bg-[#8b5cf6]/40 rounded-full animate-pulse transition-all duration-500" style={{ width: '0%' }} />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <div className="text-[9.5px] font-extrabold text-[#9333EA] truncate flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#A855F7] shrink-0" />
+                        <span className="truncate">{neuroPlayText}</span>
+                      </div>
+                      <div className={`w-full h-1.5 bg-[#F3E8FF] rounded-full overflow-hidden ${pct === 0 ? 'flex items-center' : ''}`}>
+                        {pct === 0 ? (
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#141779] shrink-0" />
+                        ) : (
+                          <div className="h-full rounded-full transition-all duration-500" style={progressFillStyle(pct)} />
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </button>
+            );
+          })()}
+
+          {/* Card 4: My Collections (Blush Rose / Coral) - compact row, same size as Parent Space */}
+          <button
+            onClick={() => navigate("/practice/collections")}
+            className="col-span-2 bg-[#FFF1F2] rounded-[24px] p-3.5 flex justify-between items-center gap-2 border border-[#FECDD3] shadow-2xs text-left hover:bg-[#FFE4E6]/60 transition-all group cursor-pointer"
+          >
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="w-10 h-10 rounded-full bg-[#FFE4E6] flex items-center justify-center shrink-0">
+                <Trophy size={18} className="text-[#E11D48]" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-sm font-black text-slate-900 truncate">{t('my_collections', 'My Collections')}</h3>
+                <p className="text-[11px] text-slate-500 font-semibold truncate">{t('unlocked_cards_badges', 'Unlocked cards & badges')}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <div className="w-5 h-5 rounded-md bg-gradient-to-tr from-amber-500 to-yellow-400 text-white flex items-center justify-center border border-amber-200/50">
+                <Star size={10} className="fill-white" />
+              </div>
+              <div className="w-5 h-5 rounded-md bg-gradient-to-tr from-purple-600 to-indigo-500 text-white flex items-center justify-center border border-purple-200/50">
+                <Crown size={10} className="fill-white" />
+              </div>
+              <div className="w-5 h-5 rounded-md bg-gradient-to-tr from-cyan-500 to-blue-500 text-white flex items-center justify-center border border-cyan-200/50">
+                <Gem size={10} />
+              </div>
+              <div className="w-7 h-7 ml-1 rounded-full bg-white border border-slate-100 text-slate-500 flex items-center justify-center shadow-2xs group-hover:translate-x-0.5 transition-transform">
+                <ChevronRight size={14} />
+              </div>
+            </div>
+          </button>
         </section>
 
         {/* 4. PARENT SPACE LINK CARD */}
@@ -1226,11 +1238,17 @@ export default function HomeScreen() {
         </section>
       </main>
 
+      <LevelUpModal
+        isOpen={levelUpTo !== null}
+        level={levelUpTo || effectiveLevel}
+        onClose={() => setLevelUpTo(null)}
+      />
+
       {/* DAILY MISSIONS MODAL */}
       <AnimatePresence>
         {showDailyMissionModal && (
           <div
-            className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-hidden"
+            className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-hidden"
             style={{ touchAction: "none" }}
             onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
             onClick={(e) => { if (e.target === e.currentTarget) setShowDailyMissionModal(false); }}
@@ -1248,7 +1266,7 @@ export default function HomeScreen() {
                 backfaceVisibility: "hidden"
               }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white text-slate-950 w-full max-w-sm sm:max-w-[440px] min-h-[480px] max-h-[85vh] p-4 sm:p-6 rounded-[32px] border-2 border-slate-200 shadow-2xl flex flex-col relative overflow-hidden"
+              className="bg-white text-slate-950 w-full max-w-sm sm:max-w-[440px] max-h-[88vh] p-4 sm:p-6 rounded-[32px] border-2 border-slate-200 shadow-2xl flex flex-col relative overflow-hidden"
             >
               {/* Modal Header */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0 relative z-10">
@@ -1318,7 +1336,7 @@ export default function HomeScreen() {
               ) : (
                 /* GUARANTEED TOUCH & MOUSE SCROLL CONTAINER */
                 <div
-                  className="my-2 flex-1 min-h-[280px] overflow-y-auto overscroll-contain py-1 pr-1 flex flex-col gap-2.5 relative z-10 select-none [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-[#141779]/30 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-100"
+                  className="my-2 h-[318px] shrink-0 overflow-y-auto overscroll-contain py-1 pr-1 flex flex-col gap-2.5 relative z-10 select-none [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-[#141779]/30 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-100"
                   style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
                 >
                   {(() => {
@@ -1343,7 +1361,7 @@ export default function HomeScreen() {
 
                     if (displayMissions.length === 0) {
                       return (
-                        <div className="py-8 text-center text-slate-500 font-bold text-sm">
+                        <div className="flex-1 flex items-center justify-center text-center text-slate-500 font-bold text-sm">
                           {questTab === 'completed'
                             ? t('no_completed_quests', 'No completed quests yet!')
                             : questTab === 'active'
@@ -1480,7 +1498,7 @@ export default function HomeScreen() {
       <AnimatePresence>
         {showSpinPopup && (
           <div
-            className="fixed inset-0 z-[100] bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 select-none animate-in fade-in duration-200"
+            className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 select-none animate-in fade-in duration-200"
             style={{ touchAction: "none" }}
             onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
             onClick={(e) => { if (e.target === e.currentTarget) setShowSpinPopup(false); }}
@@ -1493,21 +1511,25 @@ export default function HomeScreen() {
               onClick={(e) => e.stopPropagation()}
               className="bg-gradient-to-br from-[#111453]/95 via-[#141779]/95 to-[#0b0c3f]/95 text-white w-full max-w-[360px] p-7 rounded-[32px] flex flex-col items-center text-center gap-5 border border-white/10 shadow-[0_20px_50px_rgba(20,23,121,0.5)] relative overflow-hidden"
             >
+              <button
+                type="button"
+                onClick={() => setShowSpinPopup(false)}
+                className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-90 flex items-center justify-center text-white/80 hover:text-white transition-all cursor-pointer border border-white/10"
+                aria-label="Close"
+              >
+                <X size={18} strokeWidth={2.5} />
+              </button>
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(87,250,233,0.12)_0%,transparent_65%)] pointer-events-none" />
               <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-teal-400/20 blur-2xl pointer-events-none" />
               <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-indigo-500/20 blur-2xl pointer-events-none" />
 
               <div className="relative w-20 h-20 rounded-full bg-[rgba(87,250,233,0.08)] flex items-center justify-center border border-[#57fae9]/40 shadow-[0_0_30px_rgba(87,250,233,0.25)] z-10">
-                <div
-                  className="absolute inset-[-6px] border-2 border-dashed border-[#57fae9]/40 rounded-full pointer-events-none"
-                  style={{ animation: 'spin 20s linear infinite' }}
-                />
                 <Gift className="w-10 h-10 text-[#57fae9] filter drop-shadow-[0_0_8px_rgba(87,250,233,0.6)] animate-pulse" />
               </div>
 
               <div className="z-10">
                 <span className="px-3.5 py-1 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-[0_2px_10px_rgba(249,115,22,0.3)] mb-3.5 inline-block border-0">
-                  Daily Bonus 🎁
+                  Daily Bonus
                 </span>
                 <h3 className="text-2xl font-black text-white tracking-tight drop-shadow-sm bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-teal-200">
                   Free Spin Available!
@@ -1525,7 +1547,7 @@ export default function HomeScreen() {
                   }}
                   className="w-full py-4 bg-gradient-to-r from-[#57fae9] via-[#00f2fe] to-[#4facfe] text-[#141779] font-black rounded-2xl hover:scale-[1.03] active:scale-95 transition-all uppercase tracking-widest text-[11px] shadow-[0_0_25px_rgba(87,250,233,0.5)] flex items-center justify-center gap-2 border-0"
                 >
-                  <span>🎰 Spin Now</span>
+                  <span>Spin Now</span>
                 </button>
                 <button
                   onClick={() => setShowSpinPopup(false)}
@@ -1565,7 +1587,7 @@ export default function HomeScreen() {
 
           return (
             <div
-              className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md transition-all duration-300"
+              className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-all duration-300"
               style={{ touchAction: "none" }}
               onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
               onClick={(e) => {
@@ -1591,8 +1613,8 @@ export default function HomeScreen() {
                   <X size={18} strokeWidth={2.5} />
                 </button>
 
-                <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-teal-400/20 blur-2xl pointer-events-none" />
-                <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-orange-500/20 blur-2xl pointer-events-none" />
+                <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-indigo-400/25 blur-2xl pointer-events-none" />
+                <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-indigo-300/20 blur-2xl pointer-events-none" />
 
                 <div className="flex-1 flex flex-col items-center justify-center w-full gap-5 z-10">
                   <div className="relative w-36 h-36 flex items-center justify-center">
@@ -1619,7 +1641,7 @@ export default function HomeScreen() {
                         <div key={idx} className="flex flex-col items-center gap-1 flex-1">
                           <div
                             className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black transition-all duration-300 ${isActive
-                              ? "bg-gradient-to-br from-amber-400 to-orange-500 border-2 border-amber-300 text-white shadow-[0_0_12px_rgba(251,191,36,0.6)] scale-110"
+                              ? "bg-white border-2 border-white text-[#141779] shadow-[0_0_12px_rgba(255,255,255,0.45)] scale-110"
                               : "bg-white/10 border border-white/15 text-slate-300 opacity-60"
                               }`}
                           >
@@ -1647,7 +1669,7 @@ export default function HomeScreen() {
                       navigate("/practice/chapters");
                     }
                   }}
-                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#57fae9] via-[#00f2fe] to-[#4facfe] text-[#141779] font-black text-xs shadow-[0_0_25px_rgba(87,250,233,0.5)] uppercase tracking-wider active:scale-95 transition-all mt-2 z-10 border-0 cursor-pointer"
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#5B5CFF] via-[#2925A5] to-[#17157F] hover:brightness-110 text-white font-black text-xs border border-white/25 shadow-[0_8px_24px_rgba(20,23,121,0.45)] uppercase tracking-wider active:scale-95 transition-all mt-2 z-10 cursor-pointer"
                 >
                   {btnText}
                 </button>
@@ -1660,7 +1682,7 @@ export default function HomeScreen() {
       {/* STREAK REVIVAL MODAL */}
       {showRevivalModal && streakRevivalData && (
         <div
-          className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in select-none pointer-events-auto"
+          className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in select-none pointer-events-auto"
           style={{ touchAction: "none" }}
           onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
         >
@@ -1721,7 +1743,7 @@ export default function HomeScreen() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-slate-950/80 backdrop-blur-xs"
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
               onClick={() => !revivalLoading && setShowRevivalConfirmModal(false)}
             />
 
@@ -1733,6 +1755,14 @@ export default function HomeScreen() {
               style={{ overscrollBehavior: "contain" }}
               className="relative bg-white w-full max-w-[360px] p-6 rounded-[32px] flex flex-col items-center text-center gap-5 border-2 border-indigo-100 shadow-2xl overflow-hidden z-10 text-slate-950"
             >
+              <button
+                type="button"
+                onClick={() => !revivalLoading && setShowRevivalConfirmModal(false)}
+                className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 active:scale-90 flex items-center justify-center text-slate-500 transition-all cursor-pointer"
+                aria-label="Close"
+              >
+                <X size={16} strokeWidth={2.5} />
+              </button>
               <div className="w-16 h-16 rounded-full bg-indigo-50 border-2 border-indigo-200 flex items-center justify-center text-3xl shadow-inner">
                 🔥
               </div>

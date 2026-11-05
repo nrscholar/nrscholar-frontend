@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, UserRound, GraduationCap, Cake, BookOpen, Save, Camera, ChevronDown, Check, Lock, Sparkles } from "lucide-react";
+import { X, ArrowLeft, UserRound, GraduationCap, Cake, BookOpen, Save, Camera, ChevronDown, Check, Lock, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch, uploadProfilePhoto } from "../../../api";
@@ -38,7 +38,7 @@ const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect
               exit={{ opacity: 0 }}
               style={{ touchAction: "none" }}
               onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
-              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6 select-none"
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6 select-none"
               onClick={() => setIsOpen(false)}
             >
               <motion.div
@@ -50,7 +50,15 @@ const CustomDropdown = ({ label, icon: Icon, iconColor, value, options, onSelect
                 className="w-full max-w-[360px] bg-white rounded-[32px] p-6 sm:p-7 max-h-[70vh] flex flex-col shadow-[0_20px_60px_rgba(20,23,121,0.18)] border border-slate-100 relative"
                 onClick={e => e.stopPropagation()}
               >
-                <h3 className="text-xl font-black text-[#141779] mb-1 text-center">Select {label}</h3>
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  aria-label="Close"
+                  className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+                <h3 className="text-xl font-black text-[#141779] mb-1 text-center px-8">Select {label}</h3>
                 {isBoard && (
                   <p className="text-[11px] font-semibold text-slate-400 text-center mb-3">
                     Only CBSE & GSEB are currently active
@@ -173,7 +181,7 @@ export default function EditProfileScreen() {
         localStorage.setItem("userData", JSON.stringify(data.data.user));
         window.dispatchEvent(new Event("userDataUpdated"));
         setMsg(t('profile_updated_successfully'));
-        setTimeout(() => navigate(-1), 1500);
+        setTimeout(() => navigate(-1), 600);
       } else {
         setMsg(data.message || t('failed_to_update_profile'));
       }
@@ -290,8 +298,8 @@ export default function EditProfileScreen() {
               disabled={loading}
               className="mt-4 w-full h-14 bg-[#141779] rounded-full flex items-center justify-center gap-3 shadow-[0_4px_15px_rgba(20,23,121,0.3)] hover:opacity-90 transition-opacity disabled:opacity-70"
             >
+              {!loading && <Save size={22} color="white" className="shrink-0" />}
               <span className="text-white text-lg font-semibold">{loading ? t('saving') : t('save_profile')}</span>
-              {!loading && <Save size={22} color="white" />}
             </button>
           </form>
         </div>

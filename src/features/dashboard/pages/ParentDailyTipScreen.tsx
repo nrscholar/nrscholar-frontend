@@ -1685,7 +1685,7 @@ export default function ParentDailyTipScreen() {
 
               return (
                 <div
-                  className="fixed inset-0 z-[99999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 pb-24 sm:p-4 sm:pb-6 overscroll-contain touch-none select-none animate-in fade-in duration-150"
+                  className="fixed inset-0 z-[99999] bg-black/50 backdrop-blur-sm flex items-center justify-center p-3 pb-24 sm:p-4 sm:pb-6 overscroll-contain touch-none select-none animate-in fade-in duration-150"
                   style={{
                     zIndex: 99999,
                     paddingBottom: "calc(5.5rem + env(safe-area-inset-bottom, 0px))"

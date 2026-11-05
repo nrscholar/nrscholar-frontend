@@ -2,6 +2,7 @@ import { Sparkles, ArrowLeft } from "lucide-react";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../api";
+import { progressFillStyle } from "../../../utils/progressBar";
 
 const InteractiveCompanion = lazy(() => import("../../../components/InteractiveCompanion"));
 
@@ -148,10 +149,10 @@ export default function EvolutionScreen() {
               <span className="text-label-md font-bold text-primary">{Math.round(percentage)}%</span>
             </div>
             
-            <div className="w-full h-4 bg-surface-container rounded-full overflow-hidden mb-4 shadow-inner">
+            <div className="w-full h-4 bg-slate-100 rounded-full overflow-hidden mb-4 shadow-inner">
               <div 
-                className="h-full bg-gradient-to-r from-primary to-secondary-fixed transition-all duration-1000 ease-out relative"
-                style={{ width: `${percentage}%` }}
+                className="h-full rounded-full transition-all duration-1000 ease-out relative"
+                style={progressFillStyle(percentage)}
               >
                 <div className="absolute inset-0 bg-white/20 animate-[pulse_2s_ease-in-out_infinite]" />
               </div>

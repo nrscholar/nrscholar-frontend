@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { NRScholarNavBrand } from "../../../components/NRScholarNavBrand";
-import { Rocket, ArrowLeft, Lock, Shield, Eye, EyeOff, CheckCircle2, Circle, XCircle, Sparkles, PartyPopper } from "lucide-react";
+import { Rocket, ArrowLeft, Lock, Shield, Eye, EyeOff, CheckCircle2, Circle, XCircle, Sparkles, PartyPopper, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "../../../api";
 import { getSignupState, clearSignupState } from "../signupState";
 import { showInteractiveNotification, registerPushNotificationToken } from "../../../services/pushNotificationService";
+import { progressFillStyle } from "../../../utils/progressBar";
 
 export default function SignupStep3Screen() {
   const navigate = useNavigate();
@@ -183,8 +184,8 @@ export default function SignupStep3Screen() {
 
         // 3. Trigger immediate interactive Push Notification
         showInteractiveNotification(
-          "🎉 Welcome to NR Scholar!",
-          `Welcome aboard, ${fullName}! Your cosmic adventure with ${childName || "your child"} begins now! 🚀`,
+          "Welcome to NR Scholar!",
+          "Your account is ready.",
           "/home",
           "success"
         );
@@ -214,16 +215,7 @@ export default function SignupStep3Screen() {
 
       {/* Header */}
       <header className="flex items-center px-6 py-4 bg-[rgba(247,249,251,0.8)] border-b border-[rgba(255,255,255,0.2)] sticky top-0 z-40 backdrop-blur-md">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleBack}
-            className="w-10 h-10 -ml-2 rounded-full bg-[#e0e0ff] flex items-center justify-center hover:opacity-80 transition-opacity"
-          >
-            <ArrowLeft size={24} color="#141779" />
-          </button>
-          <Rocket size={28} color="#141779" />
-          <h1 className="text-[22px] font-bold text-[#141779] tracking-[-0.5px]">NR Scholar</h1>
-        </div>
+        <NRScholarNavBrand onBack={handleBack} />
       </header>
 
       <main className="px-6 pt-8 flex flex-col items-center w-full max-w-[430px] mx-auto relative z-10">
@@ -234,8 +226,8 @@ export default function SignupStep3Screen() {
             <span className="text-xs font-bold text-[#006a62] tracking-[1px]">STEP 3 OF 3</span>
             <span className="text-xs font-bold text-[#006a62]">100%</span>
           </div>
-          <div className="w-full h-2 bg-[#eceef0] rounded-full overflow-hidden">
-            <div className="h-full bg-[#57fae9] rounded-full w-full" />
+          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+            <div className="h-full rounded-full transition-all duration-500 ease-out" style={progressFillStyle(100)} />
           </div>
         </div>
 
@@ -322,23 +314,6 @@ export default function SignupStep3Screen() {
                   {showConfirmPassword ? <Eye size={22} color="#767683" /> : <EyeOff size={22} color="#767683" />}
                 </button>
               </div>
-
-              {/* Instant Visual Matching Feedback */}
-              {hasConfirmValue && (
-                <div className="px-3 pt-0.5">
-                  {isPasswordMatch ? (
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600">
-                      <CheckCircle2 size={16} />
-                      <span>Passwords match perfectly</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-rose-600">
-                      <XCircle size={16} />
-                      <span>Passwords do not match yet</span>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
             
             <button type="submit" className="hidden" />
@@ -434,7 +409,7 @@ export default function SignupStep3Screen() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md select-none"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm select-none"
           >
             <motion.div
               initial={{ scale: 0.88, opacity: 0, y: 20 }}
@@ -443,6 +418,7 @@ export default function SignupStep3Screen() {
               transition={{ type: "spring", stiffness: 350, damping: 25 }}
               className="relative w-full max-w-[400px] bg-white rounded-[32px] p-7 shadow-[0_24px_60px_rgba(20,23,121,0.35)] border border-white flex flex-col items-center text-center overflow-hidden"
             >
+              <button type="button" aria-label="Close" onClick={() => navigate("/home", { replace: true })} className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full flex items-center justify-center text-[#464652] hover:bg-slate-100 transition-colors"><X size={20} /></button>
               {/* Decorative Background Glow */}
               <div className="absolute -top-24 -right-24 w-48 h-48 bg-[#57fae9]/30 rounded-full blur-2xl pointer-events-none" />
               <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-[#141779]/15 rounded-full blur-2xl pointer-events-none" />
@@ -468,7 +444,7 @@ export default function SignupStep3Screen() {
               </h3>
               
               <p className="text-sm font-medium text-[#464652] leading-relaxed mb-6">
-                Welcome aboard, <span className="font-bold text-[#141779]">{fullName || "Parent"}</span>! The learning cockpit for <span className="font-bold text-[#006a62]">{childName || "your child"}</span> has been calibrated and is ready for launch.
+                Your account is ready.
               </p>
 
               {/* Child Profile Confirmation Card */}

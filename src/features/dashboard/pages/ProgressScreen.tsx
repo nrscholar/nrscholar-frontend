@@ -7,6 +7,7 @@ import { apiFetch } from "../../../api";
 import StreakModal from "../../../components/StreakModal";
 import { getScopedItem, setScopedItem } from "../../../utils/sessionCache";
 import { useUserStatsStore, getLevelInfo } from "../../../services/userStatsStore";
+import { progressFillStyle } from "../../../utils/progressBar";
 
 // Level thresholds handled authoritatively by useUserStatsStore
 
@@ -474,7 +475,8 @@ export default function ProgressScreen() {
                 initial={{ width: 0 }}
                 animate={{ width: `${progressPercent}%` }}
                 transition={{ duration: 0.8, ease: "easeOut" }}
-                className="h-full bg-gradient-to-r from-[#38E4D4] via-[#40C98A] to-[#FFC83D] rounded-full shadow-[0_0_12px_rgba(255,255,255,0.4)]"
+                className="h-full rounded-full shadow-[0_0_12px_rgba(255,255,255,0.4)]"
+                style={{ background: "#57fae9" }}
               />
             </div>
 

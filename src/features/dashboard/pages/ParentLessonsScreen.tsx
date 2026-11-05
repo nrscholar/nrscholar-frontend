@@ -11,6 +11,7 @@ import {
   PARENT_LESSONS_UI_TEXT
 } from "./parentLessonsTranslations";
 import { getLocalizedCTA } from "../data/parentLessonTranslations";
+import { progressFillStyle } from "../../../utils/progressBar";
 
 export default function ParentLessonsScreen() {
   const { i18n } = useTranslation();
@@ -278,13 +279,10 @@ export default function ParentLessonsScreen() {
                 ? Math.min(100, Math.round((xp / xpEnd) * 100))
                 : 100;
               return (
-                <div className="w-full h-2.5 rounded-full overflow-hidden bg-[rgba(20,23,121,0.10)] mt-1">
+                <div className="w-full h-2.5 rounded-full overflow-hidden bg-slate-100 mt-1">
                   <div
-                    className="h-full rounded-full transition-all duration-700"
-                    style={{
-                      width: `${pct}%`,
-                      background: "linear-gradient(to right, #141779, #2d328f)"
-                    }}
+                    className="h-full rounded-full transition-all duration-500 ease-out"
+                    style={progressFillStyle(pct)}
                   />
                 </div>
               );

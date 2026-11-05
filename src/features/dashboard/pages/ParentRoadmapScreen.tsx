@@ -4,6 +4,7 @@ import { Rocket, Star, Check, Sparkles, Brain, Lock, Trophy, BookOpen, TrendingU
 import { apiFetch } from "../../../api";
 import { getActiveUserContext } from "../../../utils/sessionCache";
 import { useTranslation } from "react-i18next";
+import { progressFillStyle } from "../../../utils/progressBar";
 
 const IconMap: Record<string, any> = {
   Check,
@@ -417,8 +418,8 @@ export default function ParentRoadmapScreen() {
                       </div>
                       <h3 className="text-2xl font-bold text-[#141779] mb-2">{translateStageTitle(stage.title)}</h3>
                       
-                      <div className="w-full bg-[#eceef0] rounded-full h-2 mb-1 overflow-hidden">
-                        <div className="bg-[#006a62] h-full rounded-full transition-all duration-1000" style={{ width: `${stage.progress}%` }}></div>
+                      <div className="w-full bg-slate-100 rounded-full h-2 mb-1 overflow-hidden">
+                        <div className="h-full rounded-full transition-all duration-500 ease-out" style={progressFillStyle(stage.progress)}></div>
                       </div>
                       {stage.nextStageName && (
                         <p className="text-xs text-[#464652] font-bold mb-3">
