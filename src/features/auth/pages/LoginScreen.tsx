@@ -1,18 +1,12 @@
-import { useState, useEffect, useRef, useLayoutEffect } from "react";
-import { formatMobileDisplay, parseMobileInput } from "../../../utils/mobileFormatter";
-import { clearSignupState } from "../signupState";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Phone, Lock, Eye, EyeOff, ArrowRight, ShieldCheck } from "lucide-react";
 import { NRScholarLogo } from "../../../components/NRScholarLogo";
 import { motion } from "framer-motion";
 import { apiFetch } from "../../../api";
 import { showInteractiveNotification, registerPushNotificationToken } from "../../../services/pushNotificationService";
-
-const formatPhoneNumber = (value: string): string => {
-  const cleanDigits = value.replace(/\D/g, '').slice(0, 10);
-  if (cleanDigits.length <= 5) return cleanDigits;
-  return `${cleanDigits.slice(0, 5)} - ${cleanDigits.slice(5)}`;
-};
+import { formatMobileDisplay, parseMobileInput } from "../../../utils/mobileFormatter";
+import { clearSignupState } from "../signupState";
 
 export default function LoginScreen() {
   const navigate = useNavigate();
@@ -22,63 +16,31 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const mobileInputRef = useRef<HTMLInputElement>(null);
+  const mobileInputRef = useRef<HTMLInputElement | null>(null);
   const nextCursorPosRef = useRef<number | null>(null);
 
   useLayoutEffect(() => {
     if (nextCursorPosRef.current !== null && mobileInputRef.current) {
-      const pos = nextCursorPosRef.current;
-      mobileInputRef.current.setSelectionRange(pos, pos);
+      const position = nextCursorPosRef.current;
+      mobileInputRef.current.setSelectionRange(position, position);
       nextCursorPosRef.current = null;
     }
   });
 
-  // When user lands on Login screen, reset any previous signup session data and redirect if already authenticated
+  // Modern onboarding & auth guard:
+  // 1. If already logged in -> go straight to dashboard
+  // 2. If first time opening app (or cleared data) and has NOT seen splash -> route to splash
   useEffect(() => {
     const token = localStorage.getItem("userToken");
     if (token) {
-      const storedUser = (() => {
-        try {
-          const raw = localStorage.getItem("userData");
-          return raw ? JSON.parse(raw) : null;
-        } catch { return null; }
-      })();
-      const isCoParentUser = Boolean(
-        storedUser?.isSecondaryParent ||
-        storedUser?.isCoParent ||
-        storedUser?.role === "co_parent" ||
-        storedUser?.role === "secondary_parent" ||
-        storedUser?.primary_parent_id
-      );
-      const isParent = localStorage.getItem("deviceRole") === "parent" || isCoParentUser;
-      const target = isParent ? "/parent/dashboard" : "/home";
-      navigate(target, { replace: true });
+      navigate("/home", { replace: true });
       return;
     }
-    clearSignupState();
-  }, [navigate]);
-
-  const handleMobileKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Backspace") {
-      const input = e.currentTarget;
-      const { selectionStart, selectionEnd } = input;
-      if (
-        selectionStart !== null &&
-        selectionStart === selectionEnd &&
-        selectionStart > 5 &&
-        selectionStart <= 8
-      ) {
-        e.preventDefault();
-        const clean = mobile.replace(/\D/g, '');
-        const newDigits = clean.slice(0, 4) + clean.slice(5);
-        const formatted = formatPhoneNumber(newDigits);
-        setMobile(formatted);
-        setTimeout(() => {
-          input.setSelectionRange(4, 4);
-        }, 0);
-      }
+    const hasSeenSplash = localStorage.getItem("hasSeenSplash") === "true";
+    if (!hasSeenSplash) {
+      navigate("/", { replace: true });
     }
-  };
+  }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -179,7 +141,7 @@ export default function LoginScreen() {
 
   return (
     <div className="min-h-screen bg-[#f7f9fb] font-sans flex flex-col relative overflow-hidden">
-      
+
       {/* Top 35%: Hero Header */}
       <div className="h-[35vh] w-full relative">
         <img
@@ -192,7 +154,7 @@ export default function LoginScreen() {
 
       {/* Bottom 65%: Login Card */}
       <div className="flex-1 bg-white rounded-t-[36px] -mt-8 border-t border-slate-100 shadow-[0_-10px_35px_rgba(0,0,0,0.08)] relative z-10 flex flex-col items-center pt-6 px-6 pb-6 select-none">
-        
+
         {/* Brand Identity */}
         <div className="flex flex-col items-center mb-5 text-center">
           <div className="inline-flex items-center gap-2 select-none mb-1">
@@ -206,11 +168,11 @@ export default function LoginScreen() {
           <p className="text-xs text-[#767683] font-semibold">Welcome back! Sign in to continue</p>
         </div>
 
-        
+
 
         {/* STREAMLINED UNIFIED LOGIN FORM */}
         <form onSubmit={handleLogin} className="w-full max-w-[350px] flex flex-col gap-4 mb-6">
-          
+
           {/* Phone Number */}
           <div className="flex flex-col gap-1">
             <label className="text-[11px] font-bold text-slate-600 px-1 uppercase tracking-wider">
@@ -332,16 +294,6 @@ export default function LoginScreen() {
               </button>
             </div>
 
-            <div className="flex justify-center items-center pt-1">
-              <button
-                type="button"
-                onClick={() => navigate("/splash")}
-                className="text-[11px] font-bold text-slate-400 hover:text-[#141779] transition-colors flex items-center gap-1"
-              >
-                <span>✨ Explore App Journeys (Class 1–10)</span>
-                <ArrowRight size={12} />
-              </button>
-            </div>
           </div>
         </form>
 

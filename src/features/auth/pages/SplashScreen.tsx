@@ -9,10 +9,10 @@ import {
   Sparkles,
   ArrowRight,
   ChevronRight,
-  BookOpen,
   Award,
   Zap,
 } from "lucide-react";
+import NRScholarLogo from "../../../components/NRScholarLogo";
 
 interface SlideData {
   id: number;
@@ -127,6 +127,14 @@ export default function SplashScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(1);
 
+  // If already authenticated, bypass splash and route directly to dashboard
+  useEffect(() => {
+    const token = localStorage.getItem("userToken");
+    if (token) {
+      navigate("/home", { replace: true });
+    }
+  }, [navigate]);
+
   // Allow keyboard navigation for testing
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -201,9 +209,7 @@ export default function SplashScreen() {
         {/* 1. Header Bar: Logo + Skip */}
         <header className="flex items-center justify-between pt-1 pb-2">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-[#141779] flex items-center justify-center shadow-md shadow-[#141779]/20">
-              <BookOpen size={16} className="text-white" />
-            </div>
+            <NRScholarLogo size={32} />
             <span className="font-black text-[#141779] tracking-tight text-base">
               NR Scholar
             </span>
