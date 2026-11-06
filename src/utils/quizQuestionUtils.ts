@@ -59,6 +59,7 @@ export function getNormalizedQuestionText(q: IdentifiableQuestion | null | undef
   if (!q || typeof q !== "object") return "";
   const rawText =
     q.question ??
+    q.q ??
     q.text ??
     q.title ??
     q.interaction?.details?.question ??
