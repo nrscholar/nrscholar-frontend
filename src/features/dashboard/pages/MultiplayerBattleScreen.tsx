@@ -158,7 +158,7 @@ export default function MultiplayerBattleScreen() {
 
   // Sync state
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
-  const [timeLeft, setTimeLeft] = useState(15);
+  const [timeLeft, setTimeLeft] = useState(30);
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [waitTimer, setWaitTimer] = useState(0);
 
@@ -355,7 +355,7 @@ export default function MultiplayerBattleScreen() {
     setSelectedOption(selectedIndex);
     setIsAdvancing(true);
 
-    const timeTaken = Math.max(1, 15 - timeLeft);
+    const timeTaken = Math.max(1, 30 - timeLeft);
     const currentQObj = questions[currentQ];
     const isCorrect = selectedIndex !== -1 && selectedIndex === currentQObj?.a;
 
@@ -403,7 +403,7 @@ export default function MultiplayerBattleScreen() {
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [roomId]);
 
-  // Server-Authoritative 15-Second Per-Question Timer Synchronization
+  // Server-Authoritative 30-Second Per-Question Timer Synchronization
   useEffect(() => {
     if (!room || room.status !== "playing" || isFinished || opponentQuit || questions.length === 0) return;
 
@@ -416,7 +416,7 @@ export default function MultiplayerBattleScreen() {
       const isoQStart = rawQStart.endsWith("Z") ? rawQStart : rawQStart + "Z";
       const qStartedAtMs = new Date(isoQStart).getTime();
       const elapsedSec = (Date.now() - qStartedAtMs) / 1000;
-      const remaining = Math.max(0, Math.ceil(15 - elapsedSec));
+      const remaining = Math.max(0, Math.ceil(30 - elapsedSec));
       setTimeLeft(remaining);
 
       if (remaining === 0 && canSubmitAnswer) {
