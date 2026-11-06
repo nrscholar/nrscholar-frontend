@@ -1213,7 +1213,8 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          answers: userAnswers
+          answers: userAnswers,
+          classLevel: getActiveUserContext().classLevel
         })
       });
       // Delete draft on server explicitly
@@ -1607,7 +1608,10 @@ export default function MissionPlayScreen() { // MissionPlayScreen.tsx - NR Scho
                 await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/retreat`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ answers: userAnswers })
+                  body: JSON.stringify({
+                    answers: userAnswers,
+                    classLevel: getActiveUserContext().classLevel
+                  })
                 });
                 await apiFetch(`/api/practice/chapters/${chapterId}/missions/${missionSeq}/draft`, {
                   method: "DELETE"
